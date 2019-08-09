@@ -275,7 +275,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     return (CGRect(origin: CGPoint(), size: detailFrame.size), ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: LayoutMetrics(widthClass: .regular, heightClass: .regular), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
                 }
             case .single:
-                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: layout.size.height > 900.0 ? .regular : .compact), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                var heightClass: ContainerViewLayoutSizeClass
+                if (layout.size.width < 375.0 && layout.size.height > 700.0) || layout.size.height > 900.0 {
+                    heightClass = .regular
+                } else {
+                    heightClass = .compact
+                }
+                
+                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: heightClass), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
         }
     }
     
@@ -296,58 +303,54 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.controllerView.addSubview(self.controllerView.separatorView)
                 }
                 
-               let navigationBackgroundFrame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: CGSize(width: lastControllerFrameAndLayout.0.width, height: (layout.statusBarHeight ?? 0.0) + 44.0))
-                
                 if let backgroundDetailsMode = self.backgroundDetailsMode {
-                    
                     switch backgroundDetailsMode {
-                    case let .image(image):
-                        if let detailsBackground = self.controllerView.detailsBackground {
-                            self.controllerView.detailsBackground = nil
-                            transition.updateAlpha(node: detailsBackground, alpha: 0.0, completion: { [weak detailsBackground] _ in
-                                detailsBackground?.removeFromSupernode()
-                            })
-                        }
-                        let emptyDetailView: UIImageView
-                        if let emptyView = self.controllerView.emptyDetailView {
-                            emptyDetailView = emptyView
-                        } else {
-                            emptyDetailView = UIImageView()
-                            emptyDetailView.alpha = 0.0
-                            self.controllerView.emptyDetailView = emptyDetailView
-                        }
-                        emptyDetailView.image = image
-                        if emptyDetailView.superview == nil {
-                            self.controllerView.insertSubview(emptyDetailView, at: 0)
-                        }
-                        transition.updateAlpha(layer: emptyDetailView.layer, alpha: 1.0)
-                        
-                        emptyDetailView.frame = CGRect(origin: CGPoint(x: masterData.0.maxX + floor((lastControllerFrameAndLayout.0.size.width - image.size.width) / 2.0), y: floor((lastControllerFrameAndLayout.0.size.height - image.size.height) / 2.0)), size: image.size)
+                        case let .image(image):
+                            if let detailsBackground = self.controllerView.detailsBackground {
+                                self.controllerView.detailsBackground = nil
+                                transition.updateAlpha(node: detailsBackground, alpha: 0.0, completion: { [weak detailsBackground] _ in
+                                    detailsBackground?.removeFromSupernode()
+                                })
+                            }
+                            let emptyDetailView: UIImageView
+                            if let emptyView = self.controllerView.emptyDetailView {
+                                emptyDetailView = emptyView
+                            } else {
+                                emptyDetailView = UIImageView()
+                                emptyDetailView.alpha = 0.0
+                                self.controllerView.emptyDetailView = emptyDetailView
+                            }
+                            emptyDetailView.image = image
+                            if emptyDetailView.superview == nil {
+                                self.controllerView.insertSubview(emptyDetailView, at: 0)
+                            }
+                            transition.updateAlpha(layer: emptyDetailView.layer, alpha: 1.0)
+                            
+                            emptyDetailView.frame = CGRect(origin: CGPoint(x: masterData.0.maxX + floor((lastControllerFrameAndLayout.0.size.width - image.size.width) / 2.0), y: floor((lastControllerFrameAndLayout.0.size.height - image.size.height) / 2.0)), size: image.size)
 
                         
-                    case let .wallpaper(image):
-                        if let emptyDetailView = self.controllerView.emptyDetailView {
-                            self.controllerView.emptyDetailView = nil
-                            transition.updateAlpha(layer: emptyDetailView.layer, alpha: 0.0, completion: { [weak emptyDetailView] _ in
-                                emptyDetailView?.removeFromSuperview()
-                            })
-                        }
-                        let detailsBackground: WallpaperbackgroundNode
-                        if let background = self.controllerView.detailsBackground {
-                            detailsBackground = background
-                        } else {
-                            detailsBackground = WallpaperbackgroundNode()
-                            detailsBackground.alpha = 0.0
-                            self.controllerView.detailsBackground = detailsBackground
-                        }
-                        detailsBackground.image = image
-                        if detailsBackground.supernode == nil {
-                            self.controllerView.insertSubview(detailsBackground.view, at: 0)
-                        }
-                        transition.updateAlpha(node: detailsBackground, alpha: 1.0)
-                        detailsBackground.frame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: lastControllerFrameAndLayout.0.size)
+                        case let .wallpaper(image):
+                            if let emptyDetailView = self.controllerView.emptyDetailView {
+                                self.controllerView.emptyDetailView = nil
+                                transition.updateAlpha(layer: emptyDetailView.layer, alpha: 0.0, completion: { [weak emptyDetailView] _ in
+                                    emptyDetailView?.removeFromSuperview()
+                                })
+                            }
+                            let detailsBackground: WallpaperbackgroundNode
+                            if let background = self.controllerView.detailsBackground {
+                                detailsBackground = background
+                            } else {
+                                detailsBackground = WallpaperbackgroundNode()
+                                detailsBackground.alpha = 0.0
+                                self.controllerView.detailsBackground = detailsBackground
+                            }
+                            detailsBackground.image = image
+                            if detailsBackground.supernode == nil {
+                                self.controllerView.insertSubview(detailsBackground.view, at: 0)
+                            }
+                            transition.updateAlpha(node: detailsBackground, alpha: 1.0)
+                            detailsBackground.frame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: lastControllerFrameAndLayout.0.size)
                     }
-                    
                 } else {
                     if let emptyDetailView = self.controllerView.emptyDetailView {
                         self.controllerView.emptyDetailView = nil

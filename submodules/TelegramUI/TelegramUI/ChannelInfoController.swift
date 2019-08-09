@@ -875,7 +875,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
     }, reportChannel: {
         presentControllerImpl?(peerReportOptionsController(context: context, subject: .peer(peerId), present: { c, a in
             presentControllerImpl?(c, a)
-        }), nil)
+        }, completion: { _ in }), nil)
     }, leaveChannel: {
         let _ = (context.account.postbox.transaction { transaction -> Peer? in
             return transaction.getPeer(peerId)

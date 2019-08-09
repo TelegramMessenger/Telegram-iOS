@@ -290,7 +290,7 @@ public class PeerMediaCollectionController: TelegramController {
             if let strongSelf = self, let messageIds = strongSelf.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
                 strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
-                }), in: .window(.root))
+                }, completion: { _ in }), in: .window(.root))
             }
         }, reportMessages: { _ in
         }, deleteMessages: { _ in

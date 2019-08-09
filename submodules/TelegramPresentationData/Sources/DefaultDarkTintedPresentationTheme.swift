@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import TelegramUIPreferences
 
 private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xff6767)
@@ -322,9 +323,13 @@ private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> P
     )
 }
 
+public let defaultDarkAccentColor = UIColor(rgb: 0x2ea6ff)
 public let defaultDarkAccentPresentationTheme = makeDarkAccentPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff), preview: false)
 
 public func makeDarkAccentPresentationTheme(accentColor: UIColor?, preview: Bool) -> PresentationTheme {
-    let accentColor = accentColor ?? defaultDayAccentColor
+    var accentColor = accentColor ?? defaultDarkAccentColor
+    if accentColor == PresentationThemeBaseColor.blue.color {
+        accentColor = defaultDarkAccentColor
+    }
     return makeDarkPresentationTheme(accentColor: accentColor, preview: preview)
 }

@@ -201,7 +201,7 @@ func galleryItemForEntry(context: AccountContext, presentationData: Presentation
                             content = SystemVideoContent(url: embedUrl, imageReference: .webPage(webPage: WebpageReference(webpage), media: image), dimensions: webpageContent.embedSize ?? CGSize(width: 640.0, height: 640.0), duration: Int32(webpageContent.duration ?? 0))
                         }
                     }
-                    if content == nil, let webEmbedContent = WebEmbedVideoContent(webPage: webpage, webpageContent: webpageContent) {
+                    if content == nil, let webEmbedContent = WebEmbedVideoContent(webPage: webpage, webpageContent: webpageContent, forcedTimestamp: timecode.flatMap(Int.init)) {
                         content = webEmbedContent
                     }
             }
@@ -928,16 +928,13 @@ class GalleryController: ViewController {
             if let (media, _) = mediaForMessage(message: message) {
                 if let presentationArguments = self.presentationArguments as? GalleryControllerPresentationArguments, let transitionArguments = presentationArguments.transitionArguments(message.id, media) {
                     nodeAnimatesItself = true
-                    centralItemNode.activateAsInitial()
-                    
                     if presentationArguments.animated {
                         centralItemNode.animateIn(from: transitionArguments.transitionNode, addToTransitionSurface: transitionArguments.addToTransitionSurface)
                     }
                     
                     self._hiddenMedia.set(.single((message.id, media)))
-                } else if self.isPresentedInPreviewingContext() {
-                    centralItemNode.activateAsInitial()
                 }
+                centralItemNode.activateAsInitial()
             }
         }
         
