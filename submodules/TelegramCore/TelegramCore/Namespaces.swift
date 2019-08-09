@@ -107,6 +107,7 @@ public extension LocalMessageTags {
 
 public extension PendingMessageActionType {
     static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
+    static let updateReaction = PendingMessageActionType(rawValue: 1)
 }
 
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
@@ -135,9 +136,9 @@ public struct OperationLogTags {
 }
 
 public extension PeerSummaryCounterTags {
-    public static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
-    public static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
-    public static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
+    static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
+    static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
+    static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
 }
 
 private enum PreferencesKeyValues: Int32 {

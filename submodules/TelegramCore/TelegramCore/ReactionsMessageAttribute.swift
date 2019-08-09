@@ -31,7 +31,7 @@ public struct MessageReaction: Equatable, PostboxCoding {
     }
 }
 
-public class ReactionsMessageAttribute: MessageAttribute {
+public final class ReactionsMessageAttribute: MessageAttribute {
     public let reactions: [MessageReaction]
     
     init(reactions: [MessageReaction]) {
@@ -74,6 +74,72 @@ public class ReactionsMessageAttribute: MessageAttribute {
             }
             return ReactionsMessageAttribute(reactions: reactions)
         }
+    }
+}
+
+public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
+    var current: ReactionsMessageAttribute?
+    var pending: PendingReactionsMessageAttribute?
+    for attribute in attributes {
+        if let attribute = attribute as? ReactionsMessageAttribute {
+            current = attribute
+        } else if let attribute = attribute as? PendingReactionsMessageAttribute {
+            pending = attribute
+        }
+    }
+    
+    if let pending = pending {
+        var reactions = current?.reactions ?? []
+        for value in pending.values {
+            var found = false
+            for i in 0 ..< reactions.count {
+                if reactions[i].value == value {
+                    found = true
+                    if !reactions[i].isSelected {
+                        reactions[i].isSelected = true
+                        reactions[i].count += 1
+                    }
+                }
+            }
+            if !found {
+                reactions.append(MessageReaction(value: value, count: 1, isSelected: true))
+            }
+        }
+        for i in (0 ..< reactions.count).reversed() {
+            if reactions[i].isSelected, !pending.values.contains(reactions[i].value) {
+                if reactions[i].count == 1 {
+                    reactions.remove(at: i)
+                } else {
+                    reactions[i].isSelected = false
+                    reactions[i].count -= 1
+                }
+            }
+        }
+        if !reactions.isEmpty {
+            return ReactionsMessageAttribute(reactions: reactions)
+        } else {
+            return nil
+        }
+    } else if let current = current {
+        return current
+    } else {
+        return nil
+    }
+}
+
+public final class PendingReactionsMessageAttribute: MessageAttribute {
+    public let values: [String]
+    
+    init(values: [String]) {
+        self.values = values
+    }
+    
+    required public init(decoder: PostboxDecoder) {
+        self.values = decoder.decodeStringArrayForKey("v")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeStringArray(self.values, forKey: "v")
     }
 }
 

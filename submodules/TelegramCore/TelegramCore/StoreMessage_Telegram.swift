@@ -506,7 +506,7 @@ extension StoreMessage {
                 }
                 
                 if let editDate = editDate {
-                    attributes.append(EditedMessageAttribute(date: editDate))
+                    attributes.append(EditedMessageAttribute(date: editDate, isHidden: (flags & (1 << 21)) != 0))
                 }
                 
                 var entitiesAttribute: TextEntitiesMessageAttribute?

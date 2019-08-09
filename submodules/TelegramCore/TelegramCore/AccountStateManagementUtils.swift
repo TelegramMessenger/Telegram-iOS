@@ -647,8 +647,7 @@ func finalStateWithDifference(postbox: Postbox, network: Network, state: Account
 }
 
 private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
-    var result: [Api.Update] = []
-    
+    var otherUpdates: [Api.Update] = []
     var updatesByChannel: [PeerId: [Api.Update]] = [:]
     
     for update in updates {
@@ -675,7 +674,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                         updatesByChannel[peerId]!.append(update)
                     }
                 } else {
-                    result.append(update)
+                    otherUpdates.append(update)
                 }
             case let .updateEditChannelMessage(message, _, _):
                 if let peerId = apiMessagePeerId(message) {
@@ -685,7 +684,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                         updatesByChannel[peerId]!.append(update)
                     }
                 } else {
-                    result.append(update)
+                    otherUpdates.append(update)
                 }
             case let .updateChannelWebPage(channelId, _, _, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
@@ -702,9 +701,11 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                     updatesByChannel[peerId]!.append(update)
                 }
             default:
-                result.append(update)
+                otherUpdates.append(update)
         }
     }
+    
+    var result: [Api.Update] = []
     
     for (_, updates) in updatesByChannel {
         let sortedUpdates = updates.sorted(by: { lhs, rhs in
@@ -747,6 +748,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
         })
         result.append(contentsOf: sortedUpdates)
     }
+    result.append(contentsOf: otherUpdates)
     
     return result
 }
