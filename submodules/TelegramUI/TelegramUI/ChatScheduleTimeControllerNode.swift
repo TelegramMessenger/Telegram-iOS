@@ -11,6 +11,7 @@ import ShareController
 
 class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
+    private let mode: ChatScheduleTimeControllerMode
     private var presentationData: PresentationData
     
     private let dimNode: ASDisplayNode
@@ -31,8 +32,9 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext) {
+    init(context: AccountContext, mode: ChatScheduleTimeControllerMode) {
         self.context = context
+        self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.wrappingScrollNode = ASScrollNode()
@@ -54,8 +56,16 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentBackgroundNode.displayWithoutProcessing = true
         self.contentBackgroundNode.image = roundedBackground
         
+        let title: String
+        switch mode {
+            case .scheduledMessages:
+                title = self.presentationData.strings.Conversation_ScheduleMessage_Title
+            case .reminders:
+                title = self.presentationData.strings.Conversation_SetReminder_Title
+        }
+        
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Conversation_ScheduleMessage_Title, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
         
         self.separatorNode = ASDisplayNode()
         //self.separatorNode.backgroundColor = self.theme.controlColor
@@ -68,7 +78,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.pickerView = UIDatePicker()
         self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)
         self.pickerView.datePickerMode = .dateAndTime
-        self.pickerView.date = Date() //Date(timeIntervalSince1970: Double(roundDateToDays(currentValue)))
         self.pickerView.locale = localeWithStrings(self.presentationData.strings)
         
         self.dateFormatter = DateFormatter()
@@ -96,7 +105,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         self.pickerView.timeZone = TimeZone.current
         self.pickerView.minuteInterval = 5
-        self.pickerView.minimumDate = Date()
         self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
         
         self.pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
@@ -107,11 +115,32 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.cancelButton.addTarget(self, action: #selector(self.cancelButtonPressed), forControlEvents: .touchUpInside)
         self.doneButton.pressed = { [weak self] in
             if let strongSelf = self {
-                strongSelf.completion?(Int32(strongSelf.pickerView.date.timeIntervalSince1970))
+                if strongSelf.pickerView.date < Date() {
+                    strongSelf.updateMinimumDate()
+                    strongSelf.pickerView.layer.addShakeAnimation()
+                } else {
+                    strongSelf.completion?(Int32(strongSelf.pickerView.date.timeIntervalSince1970))
+                }
             }
         }
         
+        self.updateMinimumDate()
         self.updateButtonTitle()
+    }
+    
+    private func updateMinimumDate() {
+        let timeZone = TimeZone(secondsFromGMT: 0)!
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let currentDate = Date()
+        var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: currentDate)
+        components.second = 0
+        let minute = (components.minute ?? 0) % 5
+        
+        if let date = calendar.date(byAdding: .minute, value: 5 - minute, to: calendar.date(from: components)!) {
+            self.pickerView.minimumDate = date
+            self.pickerView.date = date
+        }
     }
     
     override func didLoad() {
@@ -123,19 +152,39 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     }
     
     private func updateButtonTitle() {
-        let calendar = Calendar.current
+        let calendar = Calendar(identifier: .gregorian)
         let date = self.pickerView.date
         
         let time = stringForMessageTimestamp(timestamp: Int32(date.timeIntervalSince1970), dateTimeFormat: self.presentationData.dateTimeFormat)
-        if calendar.isDateInToday(date) {
-            self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).0
-        } else {
-            self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).0
+        switch mode {
+            case .scheduledMessages:
+                if calendar.isDateInToday(date) {
+                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendToday(time).0
+                } else if calendar.isDateInTomorrow(date) {
+                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendTomorrow(time).0
+                } else {
+                    self.doneButton.title = self.presentationData.strings.Conversation_ScheduleMessage_SendOn(self.dateFormatter.string(from: date), time).0
+                }
+            case .reminders:
+                if calendar.isDateInToday(date) {
+                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindToday(time).0
+                } else if calendar.isDateInTomorrow(date) {
+                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindTomorrow(time).0
+                } else {
+                    self.doneButton.title = self.presentationData.strings.Conversation_SetReminder_RemindOn(self.dateFormatter.string(from: date), time).0
+                }
         }
     }
     
     @objc private func datePickerUpdated() {
         self.updateButtonTitle()
+        if self.pickerView.date < Date() {
+            self.doneButton.alpha = 0.4
+            self.doneButton.isUserInteractionEnabled = false
+        } else {
+            self.doneButton.alpha = 1.0
+            self.doneButton.isUserInteractionEnabled = true
+        }
     }
     
     @objc func cancelButtonPressed() {

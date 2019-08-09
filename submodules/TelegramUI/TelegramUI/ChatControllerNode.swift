@@ -129,7 +129,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var requestUpdateChatInterfaceState: (Bool, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
-    var sendMessages: ([EnqueueMessage], Bool?, Bool) -> Void = { _, _, _ in }
+    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Bool) -> Void = { _, _, _, _ in }
     var displayAttachmentMenu: () -> Void = { }
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
@@ -284,7 +284,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self {
-                if strongSelf.chatPresentationInterfaceState.isScheduledMessages {
+                if strongSelf.chatPresentationInterfaceState.isScheduledMessages && strongSelf.chatPresentationInterfaceState.editMessageState == nil {
                     strongSelf.controllerInteraction.scheduleCurrentMessage()
                 } else {
                     strongSelf.sendCurrentMessage()
@@ -2049,11 +2049,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                         var webpage: TelegramMediaWebpage?
                         if self.chatPresentationInterfaceState.interfaceState.composeDisableUrlPreview != nil {
-                            attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews], scheduleTime: scheduleTime))
+                            attributes.append(OutgoingContentInfoMessageAttribute(flags: [.disableLinkPreviews]))
                         } else {
-                            if let scheduleTime = scheduleTime {
-                                attributes.append(OutgoingContentInfoMessageAttribute(flags: [], scheduleTime: scheduleTime))
-                            }
                             webpage = self.chatPresentationInterfaceState.urlPreview?.1
                         }
                         messages.append(.message(text: text.string, attributes: attributes, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil))
@@ -2077,7 +2074,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     
                     if case .peer = self.chatLocation {
-                        self.sendMessages(messages, silentPosting, messages.count > 1)
+                        self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
                     }
                 }
             }

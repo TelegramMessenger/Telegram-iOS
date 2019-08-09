@@ -365,7 +365,14 @@ class GalleryController: ViewController {
             switch source {
                 case .peerMessagesAtId:
                     if let tags = tagsForMessage(message!) {
-                        let view = context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), anchor: .index(message!.index), count: 50, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, excludeNamespaces: [Namespaces.Message.CloudScheduled], orderStatistics: [.combinedLocation])
+                        var excludeNamespaces: [MessageId.Namespace]
+                        if message!.id.namespace == Namespaces.Message.CloudScheduled {
+                            excludeNamespaces = [Namespaces.Message.Cloud, Namespaces.Message.Local, Namespaces.Message.SecretIncoming]
+                        } else {
+                            excludeNamespaces = [Namespaces.Message.CloudScheduled]
+                        }
+                        
+                        let view = context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), anchor: .index(message!.index), count: 50, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, excludeNamespaces: excludeNamespaces, orderStatistics: [.combinedLocation])
                         
                         return view
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in

@@ -61,7 +61,12 @@ final class ChatSendMessageActionSheetController: ViewController {
             forwardedCount = forwardMessageIds.count
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
+        var reminders = false
+        if case let .peer(peerId) = self.interfaceState.chatLocation, peerId == context.account.peerId {
+            reminders = true
+        }
+        
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in

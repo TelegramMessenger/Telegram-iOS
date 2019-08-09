@@ -894,14 +894,13 @@ public final class PendingMessageManager {
                         if attribute.flags.contains(.disableLinkPreviews) {
                             flags |= Int32(1 << 1)
                         }
-                        if let time = attribute.scheduleTime {
-                            flags |= Int32(1 << 10)
-                            scheduleTime = time
-                        }
                     } else if let attribute = attribute as? NotificationInfoMessageAttribute {
                         if attribute.flags.contains(.muted) {
                             flags |= Int32(1 << 5)
                         }
+                    } else if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
+                        flags |= Int32(1 << 10)
+                        scheduleTime = attribute.scheduleTime
                     }
                 }
                 

@@ -25,6 +25,8 @@
 		09EC0DE922C6825D00E7185B /* AppUpdate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DE822C6825D00E7185B /* AppUpdate.swift */; };
 		09EDAD382213120C0012A50B /* AutodownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD372213120C0012A50B /* AutodownloadSettings.swift */; };
 		09EDAD3A22131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */; };
+		09FC986B22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */; };
+		09FC986D22FD99D400915E37 /* ScheduledMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FC986C22FD99D400915E37 /* ScheduledMessages.swift */; };
 		9F06831021A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
 		9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */; };
 		9F10CE8C20613CDB002DD61A /* TelegramDeviceContactImportInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B2F7732052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift */; };
@@ -844,6 +846,8 @@
 		09EC0DE822C6825D00E7185B /* AppUpdate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdate.swift; sourceTree = "<group>"; };
 		09EDAD372213120C0012A50B /* AutodownloadSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadSettings.swift; sourceTree = "<group>"; };
 		09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAutodownloadSettingsUpdates.swift; sourceTree = "<group>"; };
+		09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingScheduleInfoMessageAttribute.swift; sourceTree = "<group>"; };
+		09FC986C22FD99D400915E37 /* ScheduledMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledMessages.swift; sourceTree = "<group>"; };
 		9F06830F21A40DEC001D8EDB /* NotificationExceptionsList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationExceptionsList.swift; sourceTree = "<group>"; };
 		9FC8ADAA206BBFF10094F7B4 /* RecentWebSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentWebSessions.swift; sourceTree = "<group>"; };
 		C205FEA71EB3B75900455808 /* ExportMessageLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ExportMessageLink.swift; sourceTree = "<group>"; };
@@ -1498,6 +1502,7 @@
 				C28725411EF967E700613564 /* NotificationInfoMessageAttribute.swift */,
 				C210DD611FBDB90800F673D8 /* SourceReferenceMessageAttribute.swift */,
 				D0439B5F228EDE430067E026 /* ContentRequiresValidationMessageAttribute.swift */,
+				09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -1699,6 +1704,7 @@
 				D0E8B8B22044706300605593 /* ForwardGame.swift */,
 				D0119CAF20CA9EA800895300 /* MarkAllChatsAsRead.swift */,
 				D023E67721540624008C27D1 /* UpdateMessageMedia.swift */,
+				09FC986C22FD99D400915E37 /* ScheduledMessages.swift */,
 			);
 			name = Messages;
 			sourceTree = "<group>";
@@ -2223,6 +2229,7 @@
 				D00DBBD71E64E41100DB5485 /* CreateSecretChat.swift in Sources */,
 				C2FD33EB1E696C78008D13D4 /* GroupsInCommon.swift in Sources */,
 				D0FA8BB01E1FEC7E001E855B /* SecretChatEncryptionConfig.swift in Sources */,
+				09FC986B22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift in Sources */,
 				D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */,
 				D03B0D091D62255C00955575 /* EnqueueMessage.swift in Sources */,
 				D0CA8E4B227209C4008A74C3 /* ManagedSynchronizeGroupMessageStats.swift in Sources */,
@@ -2231,6 +2238,7 @@
 				D00D343C1E6EC9770057B307 /* TelegramMediaGame.swift in Sources */,
 				D033FEB01E61EB0200644997 /* PeerContactSettings.swift in Sources */,
 				D050F2511E4A59C200988324 /* JoinLink.swift in Sources */,
+				09FC986D22FD99D400915E37 /* ScheduledMessages.swift in Sources */,
 				D07827C91E02F59C00071108 /* InstantPage.swift in Sources */,
 				D0458C881E69B4AB00FB34C1 /* OutgoingContentInfoMessageAttribute.swift in Sources */,
 				D07827CB1E02F5B200071108 /* RichText.swift in Sources */,

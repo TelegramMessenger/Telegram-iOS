@@ -13,6 +13,13 @@ public struct HistoryPreloadIndex: Comparable {
     public let isMuted: Bool
     public let isPriority: Bool
     
+    public init(index: ChatListIndex?, hasUnread: Bool, isMuted: Bool, isPriority: Bool) {
+        self.index = index
+        self.hasUnread = hasUnread
+        self.isMuted = isMuted
+        self.isPriority = isPriority
+    }
+    
     public static func <(lhs: HistoryPreloadIndex, rhs: HistoryPreloadIndex) -> Bool {
         if lhs.isPriority != rhs.isPriority {
             if lhs.isPriority {

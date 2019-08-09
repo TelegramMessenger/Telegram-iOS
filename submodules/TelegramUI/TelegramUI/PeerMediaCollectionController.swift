@@ -277,6 +277,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, displayMessageTooltip: { _, _, _, _ in    
         }, seekToTimecode: { _, _, _ in    
         }, scheduleCurrentMessage: {
+        }, sendScheduledMessagesNow: { _ in
+        }, editScheduledMessagesTime: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

@@ -7,6 +7,11 @@ import TelegramCore
 import SwiftSignalKit
 import AccountContext
 
+enum ChatScheduleTimeControllerMode {
+    case scheduledMessages
+    case reminders
+}
+
 final class ChatScheduleTimeController: ViewController {
     private var controllerNode: ChatScheduleTimeControllerNode {
         return self.displayNode as! ChatScheduleTimeControllerNode
@@ -15,10 +20,12 @@ final class ChatScheduleTimeController: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
+    private let mode: ChatScheduleTimeControllerMode
     private let completion: (Int32) -> Void
     
-    init(context: AccountContext, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, completion: @escaping (Int32) -> Void) {
         self.context = context
+        self.mode = mode
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
@@ -31,7 +38,7 @@ final class ChatScheduleTimeController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatScheduleTimeControllerNode(context: self.context)
+        self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode)
         self.controllerNode.completion = { [weak self] time in
             self?.completion(time + 5)
             self?.dismiss()

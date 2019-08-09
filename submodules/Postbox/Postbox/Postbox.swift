@@ -1788,13 +1788,14 @@ public final class Postbox {
 
     fileprivate func getTopPeerMessageIndex(peerId: PeerId) -> MessageIndex? {
         var indices: [MessageIndex] = []
-        for namespace in self.messageHistoryIndexTable.existingNamespaces(peerId: peerId) {
+        for namespace in self.messageHistoryIndexTable.existingNamespaces(peerId: peerId) where self.seedConfiguration.chatMessagesNamespaces.contains(namespace) {
             if let index = self.messageHistoryTable.topIndexEntry(peerId: peerId, namespace: namespace) {
                 indices.append(index)
             }
         }
         return indices.max()
     }
+    
     fileprivate func getPeerChatListInclusion(_ id: PeerId) -> PeerChatListInclusion {
         if let inclusion = self.currentUpdatedChatListInclusions[id] {
             return inclusion

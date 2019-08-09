@@ -604,7 +604,7 @@ final class MessageHistoryTable: Table {
     
     func topMessage(_ peerId: PeerId) -> IntermediateMessage? {
         var topIndex: MessageIndex?
-        for namespace in self.messageHistoryIndexTable.existingNamespaces(peerId: peerId) {
+        for namespace in self.messageHistoryIndexTable.existingNamespaces(peerId: peerId) where self.seedConfiguration.chatMessagesNamespaces.contains(namespace) {
             self.valueBox.range(self.table, start: self.upperBound(peerId: peerId, namespace: namespace), end: self.lowerBound(peerId: peerId, namespace: namespace), keys: { key in
                 let index = extractKey(key)
                 if let topIndexValue = topIndex {

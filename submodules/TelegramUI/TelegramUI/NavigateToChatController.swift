@@ -15,7 +15,7 @@ public func navigateToChatController(navigationController: NavigationController,
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {
-        if let controller = controller as? ChatController, controller.chatLocation == chatLocation {
+        if let controller = controller as? ChatController, controller.chatLocation == chatLocation && controller.subject != .scheduledMessages {
             if let updateTextInputState = updateTextInputState {
                 controller.updateTextInputState(updateTextInputState)
             }
