@@ -17,7 +17,7 @@
 	<key>CFBundlePackageType</key>
 	<string>XPC!</string>
 	<key>CFBundleShortVersionString</key>
-	<string>5.10</string>
+	<string>5.11</string>
 	<key>CFBundleVersion</key>
 	<string>${BUILD_NUMBER}</string>
 	<key>NSExtension</key>
@@ -31,15 +31,15 @@
     SUBQUERY (
         $extensionItem.attachments,
         $attachment,
-        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.file-url&quot; ||
-        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.movie&quot; ||
-        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.image&quot; ||
-		ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.url&quot; ||
-		ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.text&quot; ||
-		ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.audio&quot; ||
-        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.data&quot; ||
-        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;public.vcard&quot; ||
-        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO &quot;com.apple.pkpass&quot;
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.file-url" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.movie" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.image" ||
+		ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.url" ||
+		ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.text" ||
+		ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.audio" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.data" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "public.vcard" ||
+        ANY $attachment.registeredTypeIdentifiers UTI-CONFORMS-TO "com.apple.pkpass"
     ).@count == $extensionItem.attachments.@count
 ).@count &gt; 0</string>
 		</dict>
