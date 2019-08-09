@@ -484,7 +484,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
             self?.openPeer(peerId: id, navigation: navigation, fromMessage: fromMessage)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame in
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, recognizer in
             guard let strongSelf = self, strongSelf.isNodeLoaded else {
                 return
             }
@@ -502,7 +502,33 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
-                    strongSelf.window?.presentInGlobalOverlay(ContextController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions))
+                    var actions = actions
+                    actions.insert(.action(ContextMenuActionItem(text: "Reaction", icon: { _ in nil }, action: { _, f in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                        var items: [ActionSheetItem] = []
+                        let emojis = ["👍", "😊", "🤔", "😔", "❤️"]
+                        for emoji in emojis {
+                            items.append(ActionSheetButtonItem(title: "\(emoji)", color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: updatedMessages[0].id, reactions: [emoji]).start()
+                            }))
+                        }
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        strongSelf.chatDisplayNode.dismissInput()
+                        strongSelf.present(actionSheet, in: .window(.root))
+                        f(.dismissWithoutContent)
+                    })), at: 0)
+                    strongSelf.window?.presentInGlobalOverlay(ContextController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, recognizer: recognizer))
                 })
             }
         }, navigateToMessage: { [weak self] fromId, id in
@@ -2620,12 +2646,9 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     self?.present(c, in: .window(.root), with: a)
                 }, completion: { _ in }), in: .window(.root))
             }
-        }, reportMessages: { [weak self] messages in
+        }, reportMessages: { [weak self] messages, contextController in
             if let strongSelf = self, !messages.isEmpty {
-                strongSelf.chatDisplayNode.dismissInput()
-                strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(messages.map({ $0.id }).sorted()), present: { c, a in
-                    self?.present(c, in: .window(.root), with: a)
-                }, completion: { _ in }), in: .window(.root))
+                presentPeerReportOptions(context: strongSelf.context, parent: strongSelf, contextController: contextController, subject: .messages(messages.map({ $0.id }).sorted()), completion: { _ in })
             }
         }, deleteMessages: { [weak self] messages, contextController, completion in
             if let strongSelf = self, !messages.isEmpty {

@@ -292,6 +292,18 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         inputClearButtonColor: mainSecondaryColor,
         checkContentColor: .white
     )
+    
+    let contextMenu = PresentationThemeContextMenu(
+        dimColor: UIColor(rgb: 0x000000, alpha: 0.6),
+        backgroundColor: rootNavigationBar.backgroundColor.withAlphaComponent(0.78),
+        itemSeparatorColor: UIColor(rgb: 0xFFFFFF, alpha: 0.15),
+        sectionSeparatorColor: UIColor(rgb: 0x000000, alpha: 0.2),
+        itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
+        itemHighlightedBackgroundColor: UIColor(rgb: 0xFFFFFF, alpha: 0.15),
+        primaryColor: UIColor(rgb: 0xffffff, alpha: 1.0),
+        secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.8),
+        destructiveColor: destructiveColor
+    )
 
     let inAppNotification = PresentationThemeInAppNotification(
         fillColor: mainBackgroundColor,
@@ -319,6 +331,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         chatList: chatList,
         chat: chat,
         actionSheet: actionSheet,
+        contextMenu: contextMenu,
         inAppNotification: inAppNotification,
         preview: preview
     )

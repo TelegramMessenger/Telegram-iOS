@@ -154,6 +154,7 @@ final class SharedApplicationContext {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
+    var aboveStatusbarWindow: UIWindow?
     private var dataImportSplash: LegacyDataImportSplash?
     
     let episodeId = arc4random()
@@ -227,8 +228,9 @@ final class SharedApplicationContext {
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
         let statusBarHost = ApplicationStatusBarHost()
-        let (window, hostView) = nativeWindowHostView()
+        let (window, hostView, aboveStatusbarWindow) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
+        self.aboveStatusbarWindow = aboveStatusbarWindow
         window.backgroundColor = UIColor.white
         self.window = window
         self.nativeWindow = window
@@ -434,6 +436,7 @@ final class SharedApplicationContext {
             #endif
         #endif
         
+        self.aboveStatusbarWindow?.isHidden = false
         self.window?.makeKeyAndVisible()
         
         self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())

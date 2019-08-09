@@ -431,6 +431,48 @@ extension PresentationThemeActionSheet: Codable {
     }
 }
 
+extension PresentationThemeContextMenu: Codable {
+    enum CodingKeys: String, CodingKey {
+        case dim
+        case background
+        case itemSeparator
+        case sectionSeparator
+        case itemBackground
+        case itemHighlightedBackground
+        case primary
+        case secondary
+        case destructive
+    }
+    
+    public convenience init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            dimColor: try decodeColor(values, .dim),
+            backgroundColor: try decodeColor(values, .background),
+            itemSeparatorColor: try decodeColor(values, .itemSeparator),
+            sectionSeparatorColor: try decodeColor(values, .sectionSeparator),
+            itemBackgroundColor: try decodeColor(values, .itemBackground),
+            itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBackground),
+            primaryColor: try decodeColor(values, .primary),
+            secondaryColor: try decodeColor(values, .secondary),
+            destructiveColor: try decodeColor(values, .destructive)
+        )
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try encodeColor(&values, self.dimColor, .dim)
+        try encodeColor(&values, self.backgroundColor, .background)
+        try encodeColor(&values, self.itemSeparatorColor, .itemSeparator)
+        try encodeColor(&values, self.sectionSeparatorColor, .sectionSeparator)
+        try encodeColor(&values, self.itemBackgroundColor, .itemBackground)
+        try encodeColor(&values, self.itemHighlightedBackgroundColor, .itemHighlightedBackground)
+        try encodeColor(&values, self.primaryColor, .primary)
+        try encodeColor(&values, self.secondaryColor, .secondary)
+        try encodeColor(&values, self.destructiveColor, .destructive)
+    }
+}
+
 extension PresentationThemeSwitch: Codable {
     enum CodingKeys: String, CodingKey {
         case frame
@@ -1423,6 +1465,7 @@ extension PresentationTheme: Codable {
         case chatList
         case chat
         case actionSheet
+        case contextMenu
         case notification
     }
     
@@ -1440,6 +1483,7 @@ extension PresentationTheme: Codable {
             chatList: try values.decode(PresentationThemeChatList.self, forKey: .chatList),
             chat: try values.decode(PresentationThemeChat.self, forKey: .chat),
             actionSheet: try values.decode(PresentationThemeActionSheet.self, forKey: .actionSheet),
+            contextMenu: try values.decode(PresentationThemeContextMenu.self, forKey: .contextMenu),
             inAppNotification: try values.decode(PresentationThemeInAppNotification.self, forKey: .notification)
         )
     }

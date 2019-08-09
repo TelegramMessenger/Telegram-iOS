@@ -200,6 +200,30 @@ public final class PresentationThemeActionSheet {
     }
 }
 
+public final class PresentationThemeContextMenu {
+    public let dimColor: UIColor
+    public let backgroundColor: UIColor
+    public let itemSeparatorColor: UIColor
+    public let sectionSeparatorColor: UIColor
+    public let itemBackgroundColor: UIColor
+    public let itemHighlightedBackgroundColor: UIColor
+    public let primaryColor: UIColor
+    public let secondaryColor: UIColor
+    public let destructiveColor: UIColor
+    
+    init(dimColor: UIColor, backgroundColor: UIColor, itemSeparatorColor: UIColor, sectionSeparatorColor: UIColor, itemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, primaryColor: UIColor, secondaryColor: UIColor, destructiveColor: UIColor) {
+        self.dimColor = dimColor
+        self.backgroundColor = backgroundColor
+        self.itemSeparatorColor = itemSeparatorColor
+        self.sectionSeparatorColor = sectionSeparatorColor
+        self.itemBackgroundColor = itemBackgroundColor
+        self.itemHighlightedBackgroundColor = itemHighlightedBackgroundColor
+        self.primaryColor = primaryColor
+        self.secondaryColor = secondaryColor
+        self.destructiveColor = destructiveColor
+    }
+}
+
 public final class PresentationThemeSwitch {
     public let frameColor: UIColor
     public let handleColor: UIColor
@@ -914,12 +938,13 @@ public final class PresentationTheme: Equatable {
     public let chatList: PresentationThemeChatList
     public let chat: PresentationThemeChat
     public let actionSheet: PresentationThemeActionSheet
+    public let contextMenu: PresentationThemeContextMenu
     public let inAppNotification: PresentationThemeInAppNotification
     public let preview: Bool
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
         self.author = author
         self.overallDarkAppearance = overallDarkAppearance
@@ -931,6 +956,7 @@ public final class PresentationTheme: Equatable {
         self.chatList = chatList
         self.chat = chat
         self.actionSheet = actionSheet
+        self.contextMenu = contextMenu
         self.inAppNotification = inAppNotification
         self.preview = preview
     }

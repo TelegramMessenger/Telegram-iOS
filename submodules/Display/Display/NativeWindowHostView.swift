@@ -337,7 +337,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     }
 }
 
-public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
+public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView, UIWindow) {
     let window = NativeWindow(frame: UIScreen.main.bounds)
     
     let rootViewController = WindowRootViewController()
@@ -346,7 +346,9 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     rootViewController.view.frame = CGRect(origin: CGPoint(), size: window.bounds.size)
     rootViewController.viewDidAppear(false)
     
-    let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, isRotating: {
+    let aboveStatusbarWindow = AboveStatusBarWindow(frame: UIScreen.main.bounds)
+    
+    let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, aboveStatusBarView: rootViewController.view, isRotating: {
         return window.isRotating()
     }, updateSupportedInterfaceOrientations: { orientations in
         rootViewController.orientations = orientations
@@ -422,5 +424,5 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         }
     }
     
-    return (window, hostView)
+    return (window, hostView, aboveStatusbarWindow)
 }

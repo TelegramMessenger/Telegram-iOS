@@ -3462,6 +3462,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             let updatedApparentHeight = itemNode.apparentHeight
             let apparentHeightDelta = updatedApparentHeight - previousApparentHeight
             if abs(apparentHeightDelta) > CGFloat.ulpOfOne {
+                itemNode.updateFrame(itemNode.frame, within: self.visibleSize)
+                
                 let visualInsets = self.visualInsets ?? self.insets
                 
                 if itemNode.apparentFrame.maxY <= visualInsets.top {

@@ -16,7 +16,11 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     override var frame: CGRect {
         didSet {
-            self.maskView?.frame = self.bounds
+            if let maskView = self.maskView {
+                if maskView.frame != self.bounds {
+                    maskView.frame = self.bounds
+                }
+            }
         }
     }
     
@@ -132,5 +136,12 @@ final class ChatMessageBubbleBackdrop: ASDisplayNode {
     
     func offsetSpring(value: CGFloat, duration: Double, damping: CGFloat) {
         self.backgroundContent.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: value)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: duration, initialVelocity: 0.0, damping: damping, additive: true)
+    }
+    
+    func updateFrame(_ value: CGRect, transition: ContainedViewLayoutTransition) {
+        if let maskView = self.maskView {
+            transition.updateFrame(view: maskView, frame: CGRect(origin: CGPoint(), size: value.size))
+        }
+        transition.updateFrame(node: self, frame: value)
     }
 }

@@ -435,7 +435,7 @@ final class GridMessageItemNode: GridItemNode {
                                 let _ = controllerInteraction.openMessage(message, .default)
                             }
                         case .longTap:
-                            controllerInteraction.openMessageContextMenu(message, false, self, self.bounds)
+                            controllerInteraction.openMessageContextMenu(message, false, self, self.bounds, nil)
                         default:
                             break
                     }

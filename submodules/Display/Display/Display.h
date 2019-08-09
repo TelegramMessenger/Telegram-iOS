@@ -28,7 +28,6 @@ FOUNDATION_EXPORT const unsigned char DisplayVersionString[];
 #import <Display/NavigationBarProxy.h>
 #import <UIKit/UIGestureRecognizerSubclass.h>
 #import <Display/NSWeakReference.h>
-#import <Display/FBAnimationPerformanceTracker.h>
 #import <Display/CATracingLayer.h>
 #import <Display/CASeeThroughTracingLayer.h>
 #import <Display/UIMenuItem+Icons.h>
