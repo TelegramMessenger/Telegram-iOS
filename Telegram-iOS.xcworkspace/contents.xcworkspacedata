@@ -144,6 +144,9 @@
          </FileRef>
       </Group>
       <FileRef
+         location = "group:submodules/AlertUI/AlertUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
          location = "group:submodules/RadialStatusNode/RadialStatusNode_Xcode.xcodeproj">
       </FileRef>
       <FileRef
@@ -202,6 +205,9 @@
       </FileRef>
       <FileRef
          location = "group:submodules/ContextUI/ContextUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ComposePollUI/ComposePollUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

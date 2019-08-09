@@ -2,16 +2,15 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import ItemListUI
 
-final class ItemListTextEmptyStateItem: ItemListControllerEmptyStateItem {
-    let text: String
+public final class ItemListTextEmptyStateItem: ItemListControllerEmptyStateItem {
+    public let text: String
     
-    init(text: String) {
+    public init(text: String) {
         self.text = text
     }
     
-    func isEqual(to: ItemListControllerEmptyStateItem) -> Bool {
+    public func isEqual(to: ItemListControllerEmptyStateItem) -> Bool {
         if let to = to as? ItemListTextEmptyStateItem {
             return self.text == to.text
         } else {
@@ -19,7 +18,7 @@ final class ItemListTextEmptyStateItem: ItemListControllerEmptyStateItem {
         }
     }
     
-    func node(current: ItemListControllerEmptyStateItemNode?) -> ItemListControllerEmptyStateItemNode {
+    public func node(current: ItemListControllerEmptyStateItemNode?) -> ItemListControllerEmptyStateItemNode {
         let result: ItemListTextEmptyStateItemNode
         if let current = current as? ItemListTextEmptyStateItemNode {
             result = current
@@ -31,13 +30,13 @@ final class ItemListTextEmptyStateItem: ItemListControllerEmptyStateItem {
     }
 }
 
-final class ItemListTextEmptyStateItemNode: ItemListControllerEmptyStateItemNode {
+public final class ItemListTextEmptyStateItemNode: ItemListControllerEmptyStateItemNode {
     private let textNode: ASTextNode
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private var text: String?
     
-    override init() {
+    override public init() {
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
         
@@ -46,7 +45,7 @@ final class ItemListTextEmptyStateItemNode: ItemListControllerEmptyStateItemNode
         self.addSubnode(self.textNode)
     }
     
-    func updateText(text: String) {
+    public func updateText(text: String) {
         if self.text != text {
             self.text = text
             
@@ -57,7 +56,7 @@ final class ItemListTextEmptyStateItemNode: ItemListControllerEmptyStateItemNode
         }
     }
     
-    override func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func updateLayout(layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.validLayout = (layout, navigationBarHeight)
         var insets = layout.insets(options: [.statusBar])
         insets.top += navigationBarHeight

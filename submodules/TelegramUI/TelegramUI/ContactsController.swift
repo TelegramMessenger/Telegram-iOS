@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
 import AccountContext
+import AlertUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if searchNode.expansionProgress > 0.0 && searchNode.expansionProgress < 1.0 {

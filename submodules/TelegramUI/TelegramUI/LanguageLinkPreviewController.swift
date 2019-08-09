@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import AlertUI
 
 public final class LanguageLinkPreviewController: ViewController {
     private var controllerNode: LanguageLinkPreviewControllerNode {

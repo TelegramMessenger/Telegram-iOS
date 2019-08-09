@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ActivityIndicator
 import AccountContext
+import AlertUI
 
 enum SetupTwoStepVerificationInitialState {
     case automatic

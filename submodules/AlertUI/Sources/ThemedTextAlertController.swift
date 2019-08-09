@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import TelegramCore
 import AccountContext
 
 public func textAlertController(context: AccountContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {

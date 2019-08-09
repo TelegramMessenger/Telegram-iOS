@@ -13,6 +13,7 @@ import TextFormat
 import OverlayStatusController
 import TelegramStringFormatting
 import ShareController
+import AlertUI
 
 private final class ChannelInfoControllerArguments {
     let account: Account

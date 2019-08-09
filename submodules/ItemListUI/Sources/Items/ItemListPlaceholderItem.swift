@@ -4,16 +4,15 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
-import ItemListUI
 
-class ItemListPlaceholderItem: ListViewItem, ItemListItem {
+public class ItemListPlaceholderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let style: ItemListStyle
-    let tag: ItemListItemTag?
+    public let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId, style: ItemListStyle, tag: ItemListItemTag? = nil) {
+    public init(theme: PresentationTheme, text: String, sectionId: ItemListSectionId, style: ItemListStyle, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.text = text
         self.sectionId = sectionId
@@ -21,7 +20,7 @@ class ItemListPlaceholderItem: ListViewItem, ItemListItem {
         self.tag = tag
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListPlaceholderItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -37,7 +36,7 @@ class ItemListPlaceholderItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListPlaceholderItemNode {
                 let makeLayout = nodeValue.asyncLayout()
@@ -54,29 +53,29 @@ class ItemListPlaceholderItem: ListViewItem, ItemListItem {
         }
     }
     
-    let selectable = false
+    public let selectable = false
 }
 
 private let textFont = Font.regular(13.0)
 
-class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
+public class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
     
-    let textNode: TextNode
+    public let textNode: TextNode
     
     private var item: ItemListPlaceholderItem?
     
-    override var canBeSelected: Bool {
+    override public var canBeSelected: Bool {
         return false
     }
     
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag
     }
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
@@ -95,7 +94,7 @@ class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
         self.addSubnode(self.textNode)
     }
     
-    func asyncLayout() -> (_ item: ItemListPlaceholderItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListPlaceholderItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         
         let currentItem = self.item
@@ -194,15 +193,15 @@ class ItemListPlaceholderItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateAdded(_ currentTimestamp: Double, duration: Double) {
+    override public func animateAdded(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

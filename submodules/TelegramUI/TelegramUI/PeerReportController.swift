@@ -8,6 +8,7 @@ import TelegramPresentationData
 import ItemListUI
 import AccountContext
 import ContextUI
+import AlertUI
 
 enum PeerReportSubject {
     case peer(PeerId)

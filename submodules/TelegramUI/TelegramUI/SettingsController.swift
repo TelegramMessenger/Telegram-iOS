@@ -18,6 +18,7 @@ import ItemListUI
 import AccountContext
 import OverlayStatusController
 import AvatarNode
+import AlertUI
 
 private let maximumNumberOfAccounts = 3
 

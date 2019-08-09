@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import OverlayStatusController
 import AccountContext
+import AlertUI
 
 private final class ChannelBlacklistControllerArguments {
     let account: Account

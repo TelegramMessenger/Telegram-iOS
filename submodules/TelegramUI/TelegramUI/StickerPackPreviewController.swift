@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import AccountContext
 import ShareController
 import StickerResources
+import AlertUI
 
 enum StickerPackPreviewControllerMode {
     case `default`

@@ -15,6 +15,7 @@ import AccountContext
 import TelegramStringFormatting
 import TemporaryCachedPeerDataManager
 import ShareController
+import AlertUI
 
 private final class GroupInfoArguments {
     let context: AccountContext

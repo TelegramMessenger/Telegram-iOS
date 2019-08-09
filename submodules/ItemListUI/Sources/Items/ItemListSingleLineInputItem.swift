@@ -4,9 +4,8 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
-import ItemListUI
 
-enum ItemListSingleLineInputItemType: Equatable {
+public enum ItemListSingleLineInputItemType: Equatable {
     case regular(capitalization: Bool, autocorrection: Bool)
     case password
     case email
@@ -14,7 +13,7 @@ enum ItemListSingleLineInputItemType: Equatable {
     case username
 }
 
-class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
+public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let title: NSAttributedString
@@ -25,15 +24,15 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let spacing: CGFloat
     let clearButton: Bool
     let enabled: Bool
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     let action: () -> Void
     let textUpdated: (String) -> Void
     let shouldUpdateText: (String) -> Bool
     let processPaste: ((String) -> String)?
     let updatedFocus: ((Bool) -> Void)?
-    let tag: ItemListItemTag?
+    public let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.title = title
@@ -53,7 +52,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.action = action
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListSingleLineInputItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -69,7 +68,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListSingleLineInputItemNode {
             
@@ -90,7 +89,7 @@ class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(17.0)
 
-class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemNode, ItemListItemFocusableNode {
+public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -102,11 +101,11 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
     
     private var item: ItemListSingleLineInputItem?
     
-    var tag: ItemListItemTag? {
+    public var tag: ItemListItemTag? {
         return self.item?.tag
     }
     
-    init() {
+    public init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         
@@ -147,7 +146,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.textNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(17.0)]
@@ -163,7 +162,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
     
-    func asyncLayout() -> (_ item: ItemListSingleLineInputItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListSingleLineInputItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
         let currentItem = self.item
@@ -329,11 +328,11 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
     
@@ -350,13 +349,13 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         self.item?.textUpdated(text)
     }
     
-    func focus() {
+    public func focus() {
         if !self.textNode.textField.isFirstResponder {
             self.textNode.textField.becomeFirstResponder()
         }
     }
     
-    @objc internal func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+    @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if let item = self.item, !item.shouldUpdateText(string) {
             return false
         }
@@ -380,20 +379,20 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
         return true
     }
     
-    @objc internal func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+    @objc public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         self.item?.action()
         return false
     }
     
-    @objc internal func textFieldDidBeginEditing(_ textField: UITextField) {
+    @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
         self.item?.updatedFocus?(true)
     }
     
-    @objc internal func textFieldDidEndEditing(_ textField: UITextField) {
+    @objc public func textFieldDidEndEditing(_ textField: UITextField) {
         self.item?.updatedFocus?(false)
     }
     
-    func animateError() {
+    public func animateError() {
         self.textNode.layer.addShakeAnimation()
     }
 }

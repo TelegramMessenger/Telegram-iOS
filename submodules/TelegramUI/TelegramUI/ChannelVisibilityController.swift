@@ -10,6 +10,7 @@ import ItemListUI
 import OverlayStatusController
 import AccountContext
 import ShareController
+import AlertUI
 
 private final class ChannelVisibilityControllerArguments {
     let account: Account

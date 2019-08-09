@@ -4,30 +4,34 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
-import ItemListUI
 import ActivityIndicator
 
-enum ItemListSectionHeaderAccessoryTextColor {
+public enum ItemListSectionHeaderAccessoryTextColor {
     case generic
     case destructive
 }
 
-struct ItemListSectionHeaderAccessoryText: Equatable {
-    let value: String
-    let color: ItemListSectionHeaderAccessoryTextColor
+public struct ItemListSectionHeaderAccessoryText: Equatable {
+    public let value: String
+    public let color: ItemListSectionHeaderAccessoryTextColor
+    
+    public init(value: String, color: ItemListSectionHeaderAccessoryTextColor) {
+        self.value = value
+        self.color = color
+    }
 }
 
-class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
+public class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
     let multiline: Bool
     let activityIndicator: Bool
     let accessoryText: ItemListSectionHeaderAccessoryText?
-    let sectionId: ItemListSectionId
+    public let sectionId: ItemListSectionId
     
-    let isAlwaysPlain: Bool = true
+    public let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, text: String, multiline: Bool = false, activityIndicator: Bool = false, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
+    public init(theme: PresentationTheme, text: String, multiline: Bool = false, activityIndicator: Bool = false, accessoryText: ItemListSectionHeaderAccessoryText? = nil, sectionId: ItemListSectionId) {
         self.theme = theme
         self.text = text
         self.multiline = multiline
@@ -36,7 +40,7 @@ class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
         self.sectionId = sectionId
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListSectionHeaderItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
@@ -52,7 +56,7 @@ class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             guard let nodeValue = node() as? ItemListSectionHeaderItemNode else {
                 assertionFailure()
@@ -75,7 +79,7 @@ class ItemListSectionHeaderItem: ListViewItem, ItemListItem {
 
 private let titleFont = Font.regular(14.0)
 
-class ItemListSectionHeaderItemNode: ListViewItemNode {
+public class ItemListSectionHeaderItemNode: ListViewItemNode {
     private var item: ItemListSectionHeaderItem?
     
     private let titleNode: TextNode
@@ -84,7 +88,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
     
     private let activateArea: AccessibilityAreaNode
     
-    init() {
+    public init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
@@ -105,7 +109,7 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         self.addSubnode(self.activateArea)
     }
     
-    func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListSectionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeAccessoryTextLayout = TextNode.asyncLayout(self.accessoryTextNode)
         
@@ -185,11 +189,11 @@ class ItemListSectionHeaderItemNode: ListViewItemNode {
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+    override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
     }
     
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+    override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }

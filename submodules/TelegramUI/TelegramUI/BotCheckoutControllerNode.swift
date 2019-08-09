@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TelegramUIPrivateModule
 import ItemListUI
 import AccountContext
+import AlertUI
 
 final class BotCheckoutControllerArguments {
     fileprivate let account: Account

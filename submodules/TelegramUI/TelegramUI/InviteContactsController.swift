@@ -9,6 +9,7 @@ import MessageUI
 import TelegramPresentationData
 import AccountContext
 import ShareController
+import AlertUI
 
 public class InviteContactsController: ViewController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
     private let context: AccountContext

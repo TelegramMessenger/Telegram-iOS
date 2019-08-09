@@ -32,7 +32,6 @@
 		091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */; };
 		091954792294754E00E11046 /* AnimatedStickerUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091954782294754E00E11046 /* AnimatedStickerUtils.swift */; };
 		091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
-		0921F60B228C8765001A13D7 /* ItemListPlaceholderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F60A228C8765001A13D7 /* ItemListPlaceholderItem.swift */; };
 		0921F60E228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F60D228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift */; };
 		092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */; };
 		092F36902157AB46001A9F49 /* ItemListCallListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */; };
@@ -141,7 +140,6 @@
 		09DD88F121BE1090000766BC /* CallRatingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F021BE1090000766BC /* CallRatingController.swift */; };
 		09DD88F321BF907C000766BC /* WebSearchRecentQueryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */; };
 		09DD88F521BF9730000766BC /* WebSearchRecentQueries.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */; };
-		09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */; };
 		09DE2F252269B7E80045E975 /* PasscodeSetupControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE2F242269B7E80045E975 /* PasscodeSetupControllerNode.swift */; };
 		09DE2F272269D5730045E975 /* PrivacyIntroController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE2F262269D5730045E975 /* PrivacyIntroController.swift */; };
 		09DE2F292269D5E30045E975 /* PrivacyIntroControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DE2F282269D5E30045E975 /* PrivacyIntroControllerNode.swift */; };
@@ -529,9 +527,6 @@
 		D0AA29AE1F72770D00C050AC /* ChatListItemStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA29AD1F72770D00C050AC /* ChatListItemStrings.swift */; };
 		D0AA840C1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */; };
 		D0AB262921C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */; };
-		D0AB262F21C3D3DE008F6685 /* CreatePollController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */; };
-		D0AB263121C3DB21008F6685 /* CreatePollOptionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */; };
-		D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */; };
 		D0AB269E21D56A12008F6685 /* ChannelPermissionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB269D21D56A12008F6685 /* ChannelPermissionsController.swift */; };
 		D0ACCB1A1EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */; };
 		D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */; };
@@ -634,6 +629,8 @@
 		D0C44B641FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C44B631FC64D0500227BE0 /* SwipeToDismissGestureRecognizer.swift */; };
 		D0C45E9F213FFAFD00988156 /* Lottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C45E9E213FFAFD00988156 /* Lottie.framework */; };
 		D0C683FC21AD797F00A6CAD5 /* ChatListSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C683FB21AD797F00A6CAD5 /* ChatListSelection.swift */; };
+		D0C9BFAD22FE316E00FAB518 /* ComposePollUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9BFAC22FE316E00FAB518 /* ComposePollUI.framework */; };
+		D0C9BFDF22FE349C00FAB518 /* AlertUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9BFDE22FE349C00FAB518 /* AlertUI.framework */; };
 		D0CAD90120AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */; };
 		D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */; };
 		D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */; };
@@ -1076,9 +1073,6 @@
 		D0EC6E351EB9F58900EBF1C3 /* ItemListAvatarAndNameItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D003702D1DA43052004308D3 /* ItemListAvatarAndNameItem.swift */; };
 		D0EC6E3B1EB9F58900EBF1C3 /* ItemListPeerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843D81DAAAA0C005F29E1 /* ItemListPeerItem.swift */; };
 		D0EC6E3C1EB9F58900EBF1C3 /* ItemListPeerActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843DA1DAAB138005F29E1 /* ItemListPeerActionItem.swift */; };
-		D0EC6E3E1EB9F58900EBF1C3 /* ItemListSectionHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00B3F9D1E3A4847003872C3 /* ItemListSectionHeaderItem.swift */; };
-		D0EC6E441EB9F58900EBF1C3 /* ItemListSingleLineInputItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0561DDE1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift */; };
-		D0EC6E471EB9F58900EBF1C3 /* ItemListTextEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09AEFD31E5BAF67005C1A8B /* ItemListTextEmptyStateItem.swift */; };
 		D0EC6E4D1EB9F58900EBF1C3 /* PeerInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B843CC1DA903BB005F29E1 /* PeerInfoController.swift */; };
 		D0EC6E4E1EB9F58900EBF1C3 /* GroupInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0486F091E523C8500091F0C /* GroupInfoController.swift */; };
 		D0EC6E4F1EB9F58900EBF1C3 /* ChannelVisibilityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E5E0E1E55F8B90029569A /* ChannelVisibilityController.swift */; };
@@ -1198,7 +1192,6 @@
 		091417F121EF4E5D00C8325A /* WallpaperGalleryController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryController.swift; sourceTree = "<group>"; };
 		091417F321EF4F5F00C8325A /* WallpaperGalleryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryItem.swift; sourceTree = "<group>"; };
 		091954782294754E00E11046 /* AnimatedStickerUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnimatedStickerUtils.swift; sourceTree = "<group>"; };
-		0921F60A228C8765001A13D7 /* ItemListPlaceholderItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListPlaceholderItem.swift; sourceTree = "<group>"; };
 		0921F60D228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageActionUrlAuthController.swift; sourceTree = "<group>"; };
 		092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 		092F368F2157AB46001A9F49 /* ItemListCallListItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListCallListItem.swift; sourceTree = "<group>"; };
@@ -1307,7 +1300,6 @@
 		09DD88F021BE1090000766BC /* CallRatingController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallRatingController.swift; sourceTree = "<group>"; };
 		09DD88F221BF907C000766BC /* WebSearchRecentQueryItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueryItem.swift; sourceTree = "<group>"; };
 		09DD88F421BF9730000766BC /* WebSearchRecentQueries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchRecentQueries.swift; sourceTree = "<group>"; };
-		09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextAlertController.swift; sourceTree = "<group>"; };
 		09DE2F242269B7E80045E975 /* PasscodeSetupControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasscodeSetupControllerNode.swift; sourceTree = "<group>"; };
 		09DE2F262269D5730045E975 /* PrivacyIntroController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyIntroController.swift; sourceTree = "<group>"; };
 		09DE2F282269D5E30045E975 /* PrivacyIntroControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyIntroControllerNode.swift; sourceTree = "<group>"; };
@@ -1415,7 +1407,6 @@
 		D00818CC22B595CB008A895F /* LightweightAccountData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LightweightAccountData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00ACA4C20222C280045D427 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00ACA592022897D0045D427 /* ProcessedPeerRestrictionText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessedPeerRestrictionText.swift; sourceTree = "<group>"; };
-		D00B3F9D1E3A4847003872C3 /* ItemListSectionHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSectionHeaderItem.swift; sourceTree = "<group>"; };
 		D00BDA1E1EE5B69200C64C5E /* ChannelAdminController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdminController.swift; sourceTree = "<group>"; };
 		D00C7CD81E36B2DB0080C3D5 /* ContactListNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactListNode.swift; sourceTree = "<group>"; };
 		D00C7CDB1E3776E50080C3D5 /* SecretMediaPreviewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretMediaPreviewController.swift; sourceTree = "<group>"; };
@@ -1663,7 +1654,6 @@
 		D0528E6C1E65DE3B00E2FEF5 /* WebpagePreviewAccessoryPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WebpagePreviewAccessoryPanelNode.swift; sourceTree = "<group>"; };
 		D053B4361F1A9CA000E2D58A /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		D053DADB201AAAB100993D32 /* ChatTextInputMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTextInputMenu.swift; sourceTree = "<group>"; };
-		D0561DDE1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSingleLineInputItem.swift; sourceTree = "<group>"; };
 		D0561DE71E574C3200E6B9E9 /* ChannelAdminsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelAdminsController.swift; sourceTree = "<group>"; };
 		D05677501F4CA0C2001B723E /* InstantPagePeerReferenceItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPagePeerReferenceItem.swift; sourceTree = "<group>"; };
 		D05677521F4CA0D0001B723E /* InstantPagePeerReferenceNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantPagePeerReferenceNode.swift; sourceTree = "<group>"; };
@@ -1841,7 +1831,6 @@
 		D099EA261DE765DB001AF5A8 /* ManagedMediaId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedMediaId.swift; sourceTree = "<group>"; };
 		D099EA2C1DE76782001AF5A8 /* PeerMessageManagedMediaId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerMessageManagedMediaId.swift; sourceTree = "<group>"; };
 		D099EA2E1DE775BB001AF5A8 /* ChatContextResultManagedMediaId.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatContextResultManagedMediaId.swift; sourceTree = "<group>"; };
-		D09AEFD31E5BAF67005C1A8B /* ItemListTextEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextEmptyStateItem.swift; sourceTree = "<group>"; };
 		D09D88701F86D36700BEB4C9 /* CountryList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountryList.swift; sourceTree = "<group>"; };
 		D09D88721F86D56B00BEB4C9 /* AuthorizationLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthorizationLayout.swift; sourceTree = "<group>"; };
 		D09E637B1F0E7C28003444CD /* SharedMediaPlayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SharedMediaPlayer.swift; sourceTree = "<group>"; };
@@ -1883,9 +1872,6 @@
 		D0AB0BB71D67191C002C78E7 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/SSignalKit.framework"; sourceTree = "<group>"; };
 		D0AB0BBA1D6719B5002C78E7 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessagePollBubbleContentNode.swift; sourceTree = "<group>"; };
-		D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollController.swift; sourceTree = "<group>"; };
-		D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollOptionItem.swift; sourceTree = "<group>"; };
-		D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatePollOptionActionItem.swift; sourceTree = "<group>"; };
 		D0AB269D21D56A12008F6685 /* ChannelPermissionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelPermissionsController.swift; sourceTree = "<group>"; };
 		D0ACCB191EC5E0C20079D8BF /* CallControllerKeyPreviewNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerKeyPreviewNode.swift; sourceTree = "<group>"; };
 		D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageCallBubbleContentNode.swift; sourceTree = "<group>"; };
@@ -2014,6 +2000,8 @@
 		D0C932351E0988C60074F044 /* ChatButtonKeyboardInputNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatButtonKeyboardInputNode.swift; sourceTree = "<group>"; };
 		D0C932371E09E0EA0074F044 /* ChatBotInfoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBotInfoItem.swift; sourceTree = "<group>"; };
 		D0C9323B1E0B4AE90074F044 /* DataAndStorageSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DataAndStorageSettingsController.swift; sourceTree = "<group>"; };
+		D0C9BFAC22FE316E00FAB518 /* ComposePollUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ComposePollUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9BFDE22FE349C00FAB518 /* AlertUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AlertUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatEditInterfaceMessageState.swift; sourceTree = "<group>"; };
 		D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceController.swift; sourceTree = "<group>"; };
 		D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceControllerNode.swift; sourceTree = "<group>"; };
@@ -2381,6 +2369,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9BFDF22FE349C00FAB518 /* AlertUI.framework in Frameworks */,
+				D0C9BFAD22FE316E00FAB518 /* ComposePollUI.framework in Frameworks */,
 				D09E779322FA5CEA00B9CCA7 /* AccountContext.framework in Frameworks */,
 				D09E779522FA5CEA00B9CCA7 /* ActionSheetPeerItem.framework in Frameworks */,
 				D09E779722FA5CEA00B9CCA7 /* AnimationUI.framework in Frameworks */,
@@ -2643,7 +2633,6 @@
 		09DD88F821BFD6FA000766BC /* Alert */ = {
 			isa = PBXGroup;
 			children = (
-				09DD88F921BFD70B000766BC /* ThemedTextAlertController.swift */,
 			);
 			name = Alert;
 			sourceTree = "<group>";
@@ -3481,6 +3470,8 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9BFDE22FE349C00FAB518 /* AlertUI.framework */,
+				D0C9BFAC22FE316E00FAB518 /* ComposePollUI.framework */,
 				D09E779222FA5CEA00B9CCA7 /* AccountContext.framework */,
 				D09E779422FA5CEA00B9CCA7 /* ActionSheetPeerItem.framework */,
 				D09E779622FA5CEA00B9CCA7 /* AnimationUI.framework */,
@@ -3636,9 +3627,6 @@
 		D0AB262D21C3D3CE008F6685 /* Poll */ = {
 			isa = PBXGroup;
 			children = (
-				D0AB262E21C3D3DE008F6685 /* CreatePollController.swift */,
-				D0AB263021C3DB21008F6685 /* CreatePollOptionItem.swift */,
-				D0AB263221C3DFEA008F6685 /* CreatePollOptionActionItem.swift */,
 			);
 			name = Poll;
 			sourceTree = "<group>";
@@ -4108,9 +4096,6 @@
 				D003702D1DA43052004308D3 /* ItemListAvatarAndNameItem.swift */,
 				D0B843D81DAAAA0C005F29E1 /* ItemListPeerItem.swift */,
 				D0B843DA1DAAB138005F29E1 /* ItemListPeerActionItem.swift */,
-				D00B3F9D1E3A4847003872C3 /* ItemListSectionHeaderItem.swift */,
-				D0561DDE1E56FE8200E6B9E9 /* ItemListSingleLineInputItem.swift */,
-				D09AEFD31E5BAF67005C1A8B /* ItemListTextEmptyStateItem.swift */,
 				09B4EE5521A8149C00847FA6 /* ItemListInfoItem.swift */,
 			);
 			name = Items;
@@ -4711,7 +4696,6 @@
 				D0B2F76D2052B59F00D3BFB9 /* InviteContactsController.swift */,
 				D0B2F76F2052B5A800D3BFB9 /* InviteContactsControllerNode.swift */,
 				D0B2F7712052D0DD00D3BFB9 /* InviteContactsCountPanelNode.swift */,
-				0921F60A228C8765001A13D7 /* ItemListPlaceholderItem.swift */,
 			);
 			name = Contacts;
 			sourceTree = "<group>";
@@ -5292,7 +5276,6 @@
 				D05D8B742195CD890064586F /* SetupTwoStepVerificationController.swift in Sources */,
 				D06BEC8A1F6597A80035A545 /* OverlayVideoDecoration.swift in Sources */,
 				09619B9621A4ABF600493558 /* InstantPageReferenceControllerNode.swift in Sources */,
-				D0AB263321C3DFEA008F6685 /* CreatePollOptionActionItem.swift in Sources */,
 				09FFBCDB22849CB500C33B4B /* PDF.swift in Sources */,
 				09D968A1221F7FF100B1458A /* ChatTypingActivityContentNode.swift in Sources */,
 				090E778E22AA863A00CD99F5 /* PeersNearbyIconNode.swift in Sources */,
@@ -5323,7 +5306,6 @@
 				D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */,
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
 				D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */,
-				D0AB263121C3DB21008F6685 /* CreatePollOptionItem.swift in Sources */,
 				D0EC6D021EB9F58800EBF1C3 /* diag_range.c in Sources */,
 				D0E9BA1A1F05574500F079A4 /* STPPaymentCardTextField.m in Sources */,
 				09CE95112237F3C100A7D2C3 /* SettingsSearchRecentQueries.swift in Sources */,
@@ -5417,7 +5399,6 @@
 				D0E9BAE01F0574D800F079A4 /* STPDispatchFunctions.m in Sources */,
 				D0EC6D2B1EB9F58800EBF1C3 /* FileMediaResourceStatus.swift in Sources */,
 				D0EC6D2C1EB9F58800EBF1C3 /* TouchDownGestureRecognizer.swift in Sources */,
-				09DD88FA21BFD70B000766BC /* ThemedTextAlertController.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,
 				D025402522E1E00100AC0195 /* ChatSlowmodeHintController.swift in Sources */,
 				D008177D22B46B7E008A895F /* TGContactModel.m in Sources */,
@@ -5466,7 +5447,6 @@
 				09749BC921F1BBA1008FDDE9 /* CallFeedbackController.swift in Sources */,
 				099529FA21DD8A3100805E13 /* NavigationBarSearchContentNode.swift in Sources */,
 				D0AEAE272080D6970013176E /* PaneSearchBarNode.swift in Sources */,
-				0921F60B228C8765001A13D7 /* ItemListPlaceholderItem.swift in Sources */,
 				D0EC6D4F1EB9F58800EBF1C3 /* ChatListSearchItem.swift in Sources */,
 				D0EC6D501EB9F58800EBF1C3 /* ChatListNodeEntries.swift in Sources */,
 				D0EC6D511EB9F58800EBF1C3 /* ChatListViewTransition.swift in Sources */,
@@ -5956,14 +5936,12 @@
 				D0CE8CE71F6F35A300AA2DB0 /* ChatTextInputPanelState.swift in Sources */,
 				D0AF796E22C2E26500CECCB8 /* astc.cc in Sources */,
 				D0CE6F70213EEE5000BCD44B /* CreatePasswordController.swift in Sources */,
-				D0EC6E3E1EB9F58900EBF1C3 /* ItemListSectionHeaderItem.swift in Sources */,
 				0958FBB9218AD6AF00E0CBD8 /* InstantPageFeedbackItem.swift in Sources */,
 				0940932622E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift in Sources */,
 				D00817D022B47A14008A895F /* WakeupManager.swift in Sources */,
 				D0AF798822C2E26500CECCB8 /* matrix.cc in Sources */,
 				D0E8175920122FE100B82BBB /* ChatRecentActionsFilterController.swift in Sources */,
 				D08557E722C5FEB90026D6D2 /* AnimatedStickerNode.swift in Sources */,
-				D0EC6E441EB9F58900EBF1C3 /* ItemListSingleLineInputItem.swift in Sources */,
 				D084023420E295F000065674 /* GroupStickerPackSetupController.swift in Sources */,
 				D01C06BE1FBCAF06001561AB /* ChatMessageBubbleMosaicLayout.swift in Sources */,
 				0900678D21ED5EA800530762 /* WallpaperColorPanelNode.swift in Sources */,
@@ -5973,7 +5951,6 @@
 				D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */,
 				D00817CF22B47A14008A895F /* LegacyFileImport.swift in Sources */,
 				D01A21AF1F39EA2E00DDA104 /* InstantPageTheme.swift in Sources */,
-				D0EC6E471EB9F58900EBF1C3 /* ItemListTextEmptyStateItem.swift in Sources */,
 				D0E412C62069B60600BEE4A2 /* FormControllerHeaderItem.swift in Sources */,
 				D0E412D5206A842900BEE4A2 /* SecureIdVerificationDocument.swift in Sources */,
 				D0147BA9206EA35000E40378 /* SecureIdDocumentGalleryController.swift in Sources */,
@@ -6010,7 +5987,6 @@
 				D0EC6E541EB9F58900EBF1C3 /* ConvertToSupergroupController.swift in Sources */,
 				D0EC6E561EB9F58900EBF1C3 /* UserInfoController.swift in Sources */,
 				D0EC6E571EB9F58900EBF1C3 /* GroupsInCommonController.swift in Sources */,
-				D0AB262F21C3D3DE008F6685 /* CreatePollController.swift in Sources */,
 				D0EC6E581EB9F58900EBF1C3 /* PeerSelectionController.swift in Sources */,
 				D093D7D92062A9CA00BC3599 /* SecureIdAuthControllerState.swift in Sources */,
 				D01590AB22BD467B0017C33E /* AnimationRenderer.swift in Sources */,

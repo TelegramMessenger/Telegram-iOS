@@ -9,6 +9,7 @@ import ItemListUI
 import TelegramStringFormatting
 import OverlayStatusController
 import AccountContext
+import AlertUI
 
 private final class ChannelBannedMemberControllerArguments {
     let account: Account

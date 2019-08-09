@@ -9,6 +9,7 @@ import TelegramPresentationData
 import ActivityIndicator
 import TextFormat
 import AccountContext
+import AlertUI
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme

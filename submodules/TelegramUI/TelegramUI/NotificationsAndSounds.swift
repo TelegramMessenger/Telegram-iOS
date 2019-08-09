@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import DeviceAccess
 import ItemListUI
 import AccountContext
+import AlertUI
 
 private final class NotificationsAndSoundsArguments {
     let context: AccountContext

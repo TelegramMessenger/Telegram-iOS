@@ -9,6 +9,7 @@ import TelegramPresentationData
 import ItemListUI
 import TelegramStringFormatting
 import AccountContext
+import AlertUI
 
 private enum DeviceContactInfoAction {
     case sendMessage
