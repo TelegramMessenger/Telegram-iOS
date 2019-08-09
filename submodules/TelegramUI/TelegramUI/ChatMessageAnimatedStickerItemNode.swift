@@ -790,7 +790,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     |> deliverOnMainQueue
                             }
                             
-                            if self.item?.message.text.hasPrefix("\u{2764}") ?? false {
+                            
+                            
+                            if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, firstScalar.value == 0x2764 {
                                 let _ = startTime.start(next: { [weak self] time in
                                     guard let strongSelf = self else {
                                         return
