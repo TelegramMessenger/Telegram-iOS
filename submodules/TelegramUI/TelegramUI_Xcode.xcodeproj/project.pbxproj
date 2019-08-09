@@ -196,8 +196,6 @@
 		D000CABA21EE130D0011B15D /* MapResourceToAvatarSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CAB921EE130D0011B15D /* MapResourceToAvatarSizes.swift */; };
 		D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */; };
 		D00580B321E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */; };
-		D00580B621E4C02100CB7CD3 /* UndoOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */; };
-		D00580B821E4C03400CB7CD3 /* UndoOverlayControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
 		D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
@@ -632,6 +630,7 @@
 		D0C9C00322FE37A500FAB518 /* TouchDownGesture.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C00222FE37A500FAB518 /* TouchDownGesture.framework */; };
 		D0C9C02022FE385700FAB518 /* SwipeToDismissGesture.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C01F22FE385700FAB518 /* SwipeToDismissGesture.framework */; };
 		D0C9C04722FE392100FAB518 /* DirectionalPanGesture.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C04622FE392100FAB518 /* DirectionalPanGesture.framework */; };
+		D0C9C07D22FE3B7200FAB518 /* UndoUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C07C22FE3B7200FAB518 /* UndoUI.framework */; };
 		D0CAD90120AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */; };
 		D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */; };
 		D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */; };
@@ -1363,8 +1362,6 @@
 		D002A0DC1E9CD52A00A81812 /* ChatMediaInputRecentGifsItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputRecentGifsItem.swift; sourceTree = "<group>"; };
 		D003702D1DA43052004308D3 /* ItemListAvatarAndNameItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListAvatarAndNameItem.swift; sourceTree = "<group>"; };
 		D00580B221E4B51600CB7CD3 /* DeleteChatPeerActionSheetItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeleteChatPeerActionSheetItem.swift; sourceTree = "<group>"; };
-		D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoOverlayController.swift; sourceTree = "<group>"; };
-		D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoOverlayControllerNode.swift; sourceTree = "<group>"; };
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
 		D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
@@ -2003,6 +2000,7 @@
 		D0C9C00222FE37A500FAB518 /* TouchDownGesture.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TouchDownGesture.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C01F22FE385700FAB518 /* SwipeToDismissGesture.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwipeToDismissGesture.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C04622FE392100FAB518 /* DirectionalPanGesture.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DirectionalPanGesture.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C07C22FE3B7200FAB518 /* UndoUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UndoUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatEditInterfaceMessageState.swift; sourceTree = "<group>"; };
 		D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceController.swift; sourceTree = "<group>"; };
 		D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceControllerNode.swift; sourceTree = "<group>"; };
@@ -2369,6 +2367,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C07D22FE3B7200FAB518 /* UndoUI.framework in Frameworks */,
 				D0C9C04722FE392100FAB518 /* DirectionalPanGesture.framework in Frameworks */,
 				D0C9C02022FE385700FAB518 /* SwipeToDismissGesture.framework in Frameworks */,
 				D0C9C00322FE37A500FAB518 /* TouchDownGesture.framework in Frameworks */,
@@ -2699,15 +2698,6 @@
 				094735022275B62B00EA2312 /* PasscodeLayout.swift */,
 			);
 			name = Passcode;
-			sourceTree = "<group>";
-		};
-		D00580B421E4BFE800CB7CD3 /* Undo Overlay */ = {
-			isa = PBXGroup;
-			children = (
-				D00580B521E4C02100CB7CD3 /* UndoOverlayController.swift */,
-				D00580B721E4C03400CB7CD3 /* UndoOverlayControllerNode.swift */,
-			);
-			name = "Undo Overlay";
 			sourceTree = "<group>";
 		};
 		D008178022B47450008A895F /* Notification Content */ = {
@@ -3459,6 +3449,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C07C22FE3B7200FAB518 /* UndoUI.framework */,
 				D0C9C04622FE392100FAB518 /* DirectionalPanGesture.framework */,
 				D0C9C01F22FE385700FAB518 /* SwipeToDismissGesture.framework */,
 				D0C9C00222FE37A500FAB518 /* TouchDownGesture.framework */,
@@ -3614,13 +3605,6 @@
 				D0D9DE0C20EFEA2E00F20B06 /* InstantPageMediaPlaylist.swift */,
 			);
 			name = "Shared Media Player";
-			sourceTree = "<group>";
-		};
-		D0AB262D21C3D3CE008F6685 /* Poll */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Poll;
 			sourceTree = "<group>";
 		};
 		D0AE2FDB22B1D3610058D3BC /* Bridge Audio */ = {
@@ -4392,7 +4376,6 @@
 			children = (
 				D01B27931E38F3920022A4C0 /* Item List */,
 				D093D81E20699A6000BC3599 /* Form */,
-				D00580B421E4BFE800CB7CD3 /* Undo Overlay */,
 			);
 			name = Controllers;
 			sourceTree = "<group>";
@@ -4405,7 +4388,6 @@
 				D0F69DF61D6B8A720046BCD6 /* Chat List */,
 				D0F69E0D1D6B8AB90046BCD6 /* Chat */,
 				D04281F2200E5A70009DDE36 /* Chat Recent Actions */,
-				D0AB262D21C3D3CE008F6685 /* Poll */,
 				D00DE6961E8E8E21003F0D76 /* Share */,
 				D008178022B47450008A895F /* Notification Content */,
 				D0F69E4E1D6B8BB90046BCD6 /* Media */,
@@ -5673,7 +5655,6 @@
 				D0EC6DC01EB9F58900EBF1C3 /* ChatMediaInputRecentGifsItem.swift in Sources */,
 				D06F31E4213597FF001A0F12 /* ThemeAutoNightTimeSelectionActionSheet.swift in Sources */,
 				D0477D211F61A47600412B44 /* UniversalVideoContentManager.swift in Sources */,
-				D00580B821E4C03400CB7CD3 /* UndoOverlayControllerNode.swift in Sources */,
 				D0EC6DC11EB9F58900EBF1C3 /* ChatMediaInputTrendingItem.swift in Sources */,
 				D0BCC3D620404CD8008126C2 /* ChatMessageActionSheetControllerNode.swift in Sources */,
 				D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */,
@@ -5736,7 +5717,6 @@
 				D0EB41F51F30D26A00838FE6 /* LegacySuggestionContext.swift in Sources */,
 				D0EC6DDD1EB9F58900EBF1C3 /* ChatTextInputMediaRecordingButton.swift in Sources */,
 				D0F0AAE61EC21B68005EE2A5 /* CallControllerButton.swift in Sources */,
-				D00580B621E4C02100CB7CD3 /* UndoOverlayController.swift in Sources */,
 				D0EC6DDE1EB9F58900EBF1C3 /* ChatTextInputAudioRecordingOverlayButton.swift in Sources */,
 				D0E9BAC91F05738600F079A4 /* STPAPIClient+ApplePay.m in Sources */,
 				09F79A0721C829BC00820234 /* GalleryNavigationCheckNode.swift in Sources */,

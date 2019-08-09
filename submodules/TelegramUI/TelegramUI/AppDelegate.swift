@@ -17,6 +17,7 @@ import BuildConfig
 import DeviceCheck
 import AccountContext
 import OverlayStatusController
+import UndoUI
 
 private let handleVoipNotifications = false
 

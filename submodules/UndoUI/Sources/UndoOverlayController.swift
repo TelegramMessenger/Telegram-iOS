@@ -17,7 +17,7 @@ public enum UndoOverlayContent {
 public final class UndoOverlayController: ViewController {
     private let context: AccountContext
     private let presentationData: PresentationData
-    let content: UndoOverlayContent
+    public let content: UndoOverlayContent
     private let elevatedLayout: Bool
     private let animateInAsReplacement: Bool
     private var action: (Bool) -> Void
@@ -55,7 +55,7 @@ public final class UndoOverlayController: ViewController {
         self.dismiss()
     }
     
-    func dismissWithCommitActionAndReplacementAnimation() {
+    public func dismissWithCommitActionAndReplacementAnimation() {
         self.action(true)
         (self.displayNode as! UndoOverlayControllerNode).animateOutWithReplacement(completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
