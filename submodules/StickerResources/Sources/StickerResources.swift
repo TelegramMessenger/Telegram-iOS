@@ -166,6 +166,7 @@ private func chatMessageStickerThumbnailData(postbox: Postbox, file: TelegramMed
             
             return Signal { subscriber in
                 let fetchThumbnail = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(thumbnailResource)).start()
+
                 let disposable = (thumbnailData
                 |> map { thumbnailData -> Data? in
                     return thumbnailData.complete ? try? Data(contentsOf: URL(fileURLWithPath: thumbnailData.path)) : nil
@@ -230,6 +231,7 @@ private func chatMessageStickerPackThumbnailData(postbox: Postbox, resource: Med
 public func chatMessageAnimationData(postbox: Postbox, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, synchronousLoad: Bool) -> Signal<MediaResourceData, NoError> {
     let representation = CachedAnimatedStickerRepresentation(width: Int32(width), height: Int32(height), fitzModifier: fitzModifier)
     let maybeFetched = postbox.mediaBox.cachedResourceRepresentation(resource, representation: representation, complete: false, fetch: false, attemptSynchronously: synchronousLoad)
+
     return maybeFetched
     |> take(1)
     |> mapToSignal { maybeData in

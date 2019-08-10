@@ -33,11 +33,9 @@ enum WebEmbedType {
     }
 }
 
-func webEmbedType(content: TelegramMediaWebpageLoadedContent) -> WebEmbedType {
+func webEmbedType(content: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) -> WebEmbedType {
     if let (videoId, timestamp) = extractYoutubeVideoIdAndTimestamp(url: content.url) {
-        return .youtube(videoId: videoId, timestamp: timestamp)
-//    } else if let (videoId, timestamp) = extractVimeoVideoIdAndTimestamp(url: content.url) {
-//        return .vimeo(videoId: videoId, timestamp: timestamp)
+        return .youtube(videoId: videoId, timestamp: forcedTimestamp ?? timestamp)
     } else {
         return .iframe(url: content.embedUrl ?? content.url)
     }

@@ -127,7 +127,7 @@ private final class AnimatedStickerCachedFrameSource: AnimatedStickerFrameSource
         self.queue = queue
         self.data = data
         self.scratchBuffer = Data(count: compression_decode_scratch_buffer_size(COMPRESSION_LZFSE))
-
+        
         var offset = 0
         var width = 0
         var height = 0
@@ -404,7 +404,7 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         self.addSubnode(self.renderer!)
     }
-        
+
     func setup(account: Account, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
         if width < 2 || height < 2 {
             return

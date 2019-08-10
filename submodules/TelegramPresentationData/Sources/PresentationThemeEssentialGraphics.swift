@@ -205,7 +205,6 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundOutgoingImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.checkBubbleFullImage = generateCheckImage(partial: false, color: theme.message.outgoingCheckColor)!
             self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor)!
-            
             self.chatMessageBackgroundIncomingHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopHighlightedImage = emptyImage

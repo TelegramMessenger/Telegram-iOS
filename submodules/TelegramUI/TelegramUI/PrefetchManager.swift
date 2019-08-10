@@ -45,30 +45,30 @@ private final class PrefetchManagerImpl {
         let orderedPreloadMedia = account.viewTracker.orderedPreloadMedia
         |> mapToSignal { orderedPreloadMedia in
             return loadedStickerPack(postbox: account.postbox, network: account.network, reference: .animatedEmoji, forceActualized: false)
-                |> map { result -> [PrefetchMediaItem] in
-                    let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
-                    switch result {
-                        case let .result(_, items, _):
-                            var animatedEmojiStickers: [String: StickerPackItem] = [:]
-                            for case let item as StickerPackItem in items {
-                                if let emoji = item.getStringRepresentationsOfIndexKeys().first {
-                                    animatedEmojiStickers[emoji.basicEmoji.0] = item
+            |> map { result -> [PrefetchMediaItem] in
+                let chatHistoryMediaItems = orderedPreloadMedia.map { PrefetchMediaItem.chatHistory($0) }
+                switch result {
+                    case let .result(_, items, _):
+                        var animatedEmojiStickers: [String: StickerPackItem] = [:]
+                        for case let item as StickerPackItem in items {
+                            if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                                animatedEmojiStickers[emoji.basicEmoji.0] = item
+                            }
+                        }
+                        var stickerItems: [PrefetchMediaItem] = []
+                        let popularEmoji = ["\u{2764}", "👍", "😳", "😒", "🥳"]
+                        for emoji in popularEmoji {
+                            if let sticker = animatedEmojiStickers[emoji] {
+                                if let _ = account.postbox.mediaBox.completedResourcePath(sticker.file.resource) {
+                                } else {
+                                    stickerItems.append(.animatedEmojiSticker(sticker.file))
                                 }
                             }
-                            var stickerItems: [PrefetchMediaItem] = []
-                            let popularEmoji = ["\u{2764}", "👍", "😳", "😒", "🥳"]
-                            for emoji in popularEmoji {
-                                if let sticker = animatedEmojiStickers[emoji] {
-                                    if let _ = account.postbox.mediaBox.completedResourcePath(sticker.file.resource) {
-                                    } else {
-                                        stickerItems.append(.animatedEmojiSticker(sticker.file))
-                                    }
-                                }
-                            }
-                            return stickerItems + chatHistoryMediaItems
-                        default:
-                            return chatHistoryMediaItems
-                    }
+                        }
+                        return stickerItems + chatHistoryMediaItems
+                    default:
+                        return chatHistoryMediaItems
+                }
             }
         }
         
@@ -168,18 +168,18 @@ private final class PrefetchManagerImpl {
                     if validIds.contains(id) {
                         continue
                     }
-                    
+
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
                     let peerType = MediaAutoDownloadPeerType.contact
                     
                     if shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: peerType, networkType: networkType, authorPeerId: nil, contactsPeerIds: [], media: media) {
                         automaticDownload = .full
                     }
-                    
+                
                     if case .none = automaticDownload {
                         continue
                     }
-                    
+   
                     validIds.insert(id)
                     let context: PrefetchMediaContext
                     if let current = self.contexts[id] {
@@ -196,7 +196,7 @@ private final class PrefetchManagerImpl {
                         }
                         
                         order += 1
-                    }
+                }
             }
         }
         var removeIds: [MediaId] = []

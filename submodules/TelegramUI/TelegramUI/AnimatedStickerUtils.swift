@@ -14,12 +14,7 @@ import MobileCoreServices
 let colorKeyRegex = try? NSRegularExpression(pattern: "\"k\":\\[[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\]")
 
 private func transformedWithFitzModifier(data: Data, fitzModifier: EmojiFitzModifier?) -> Data {
-    if let fitzModifier = fitzModifier, var string = String(data: data, encoding: .utf8) {
-        let color1: UIColor
-        let color2: UIColor
-        let color3: UIColor
-        let color4: UIColor
-        
+    if let fitzModifier = fitzModifier, var string = String(data: data, encoding: .utf8) {        
         var colors: [UIColor] = [0xf77e41, 0xffb139, 0xffd140, 0xffdf79].map { UIColor(rgb: $0) }
         let replacementColors: [UIColor]
         switch fitzModifier {
@@ -201,7 +196,7 @@ func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: CGSize, 
             var appendingTime: Double = 0
             var deltaTime: Double = 0
             var compressionTime: Double = 0
-            
+       
             let decompressedData = TGGUnzipData(data, 8 * 1024 * 1024)
             if let decompressedData = decompressedData {
                 let decompressedData = transformedWithFitzModifier(data: decompressedData, fitzModifier: fitzModifier)

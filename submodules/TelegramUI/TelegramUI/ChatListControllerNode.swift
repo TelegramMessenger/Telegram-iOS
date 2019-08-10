@@ -64,7 +64,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestAddContact: ((String) -> Void)?
     var dismissSelf: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
-    
+
     let debugListView = ListView()
     
     init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
@@ -100,7 +100,6 @@ final class ChatListControllerNode: ASDisplayNode {
                         if let (layout, navigationHeight, visualNavigationHeight) = strongSelf.containerLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, transition: .immediate)
                         }
-                        
                         strongSelf.isEmptyUpdated?(true)
                     }
                 case .notEmpty(false):

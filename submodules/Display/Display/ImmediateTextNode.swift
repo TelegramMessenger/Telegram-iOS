@@ -13,6 +13,7 @@ public class ImmediateTextNode: TextNode {
     public var maximumNumberOfLines: Int = 1
     public var lineSpacing: CGFloat = 0.0
     public var insets: UIEdgeInsets = UIEdgeInsets()
+    public var textShadowColor: UIColor?
     
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private var linkHighlightingNode: LinkHighlightingNode?
@@ -34,7 +35,7 @@ public class ImmediateTextNode: TextNode {
     
     public func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self)
-        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets))
+        let (layout, apply) = makeLayout(TextNodeLayoutArguments(attributedString: self.attributedText, backgroundColor: nil, maximumNumberOfLines: self.maximumNumberOfLines, truncationType: self.truncationType, constrainedSize: constrainedSize, alignment: self.textAlignment, lineSpacing: self.lineSpacing, cutout: nil, insets: self.insets, textShadowColor: self.textShadowColor))
         let _ = apply()
         if layout.numberOfLines > 1 {
             self.trailingLineWidth = layout.trailingLineWidth
