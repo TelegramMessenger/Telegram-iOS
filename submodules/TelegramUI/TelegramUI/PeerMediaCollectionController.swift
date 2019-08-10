@@ -119,7 +119,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id))
                 }
             }, openPeerMention: { _ in
-            }, openMessageContextMenu: { [weak self] message, _, _, _ in
+            }, openMessageContextMenu: { [weak self] message, _, _, _, _ in
                 var messageIds = Set<MessageId>()
                 messageIds.insert(message.id)
                 
@@ -299,8 +299,9 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     self?.present(c, in: .window(.root), with: a)
                 }, completion: { _ in }), in: .window(.root))
             }
-        }, reportMessages: { _ in
-        }, deleteMessages: { _ in
+        }, reportMessages: { _, _ in
+        }, deleteMessages: { _, _, f in
+            f(.default)
         }, forwardSelectedMessages: { [weak self] in
             if let strongSelf = self {
                 if let forwardMessageIdsSet = strongSelf.interfaceState.selectionState?.selectedIds {

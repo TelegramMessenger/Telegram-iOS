@@ -25,6 +25,7 @@ private func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) ->
 
 final class GlobalOverlayPresentationContext {
     private let statusBarHost: StatusBarHost?
+    private weak var parentView: UIView?
     
     private var controllers: [ContainableController] = []
     
@@ -32,19 +33,24 @@ final class GlobalOverlayPresentationContext {
     private var layout: ContainerViewLayout?
     
     private var ready: Bool {
-        return self.currentPresentationView() != nil && self.layout != nil
+        return self.currentPresentationView(underStatusBar: false) != nil && self.layout != nil
     }
     
-    init(statusBarHost: StatusBarHost?) {
+    init(statusBarHost: StatusBarHost?, parentView: UIView) {
         self.statusBarHost = statusBarHost
+        self.parentView = parentView
     }
     
-    private func currentPresentationView() -> UIView? {
+    private func currentPresentationView(underStatusBar: Bool) -> UIView? {
         if let statusBarHost = self.statusBarHost {
             if let keyboardWindow = statusBarHost.keyboardWindow, let keyboardView = statusBarHost.keyboardView, !keyboardView.frame.height.isZero, isViewVisibleInHierarchy(keyboardView) {
                 return keyboardWindow
             } else {
-                return statusBarHost.statusBarWindow
+                if underStatusBar, let view = self.parentView {
+                    return view
+                } else {
+                    return statusBarHost.statusBarWindow
+                }
             }
         }
         return nil
@@ -57,7 +63,13 @@ final class GlobalOverlayPresentationContext {
         |> deliverOnMainQueue
         |> timeout(2.0, queue: Queue.mainQueue(), alternate: .single(true))
         
-        if let _ = self.currentPresentationView(), let initialLayout = self.layout {
+        var underStatusBar = false
+        if let controller = controller as? ViewController {
+            if case .Hide = controller.statusBar.statusBarStyle {
+                underStatusBar = true
+            }
+        }
+        if let _ = self.currentPresentationView(underStatusBar: underStatusBar), let initialLayout = self.layout {
             controller.view.frame = CGRect(origin: CGPoint(), size: initialLayout.size)
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
             
@@ -68,7 +80,7 @@ final class GlobalOverlayPresentationContext {
                     }
                     
                     strongSelf.controllers.append(controller)
-                    if let view = strongSelf.currentPresentationView(), let layout = strongSelf.layout {
+                    if let view = strongSelf.currentPresentationView(underStatusBar: underStatusBar), let layout = strongSelf.layout {
                         (controller as? UIViewController)?.navigation_setDismiss({ [weak controller] in
                             if let strongSelf = self, let controller = controller {
                                 strongSelf.dismiss(controller)
@@ -99,7 +111,7 @@ final class GlobalOverlayPresentationContext {
     }
     
     private func dismiss(_ controller: ContainableController) {
-        if let index = self.controllers.index(where: { $0 === controller }) {
+        if let index = self.controllers.firstIndex(where: { $0 === controller }) {
             self.controllers.remove(at: index)
             controller.viewWillDisappear(false)
             controller.view.removeFromSuperview()
@@ -129,13 +141,21 @@ final class GlobalOverlayPresentationContext {
     }
     
     private func addViews() {
-        if let view = self.currentPresentationView(), let layout = self.layout {
+        if let layout = self.layout {
             for controller in self.controllers {
-                controller.viewWillAppear(false)
-                view.addSubview(controller.view)
-                controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
-                controller.containerLayoutUpdated(layout, transition: .immediate)
-                controller.viewDidAppear(false)
+                var underStatusBar = false
+                if let controller = controller as? ViewController {
+                    if case .Hide = controller.statusBar.statusBarStyle {
+                        underStatusBar = true
+                    }
+                }
+                if let view = self.currentPresentationView(underStatusBar: underStatusBar) {
+                    controller.viewWillAppear(false)
+                    view.addSubview(controller.view)
+                    controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+                    controller.containerLayoutUpdated(layout, transition: .immediate)
+                    controller.viewDidAppear(false)
+                }
             }
         }
     }

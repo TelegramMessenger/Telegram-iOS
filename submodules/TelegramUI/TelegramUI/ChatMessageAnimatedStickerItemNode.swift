@@ -12,6 +12,7 @@ import TextFormat
 import AccountContext
 import MediaResources
 import StickerResources
+import ContextUI
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -19,8 +20,8 @@ private let inlineBotNameFont = nameFont
 
 private class ChatMessageHeartbeatHaptic {
     private var hapticFeedback = HapticFeedback()
-    var timer: SwiftSignalKit.Timer?
-    var time: Double = 0
+    private var timer: SwiftSignalKit.Timer?
+    private var time: Double = 0.0
     var enabled = false {
         didSet {
             if !self.enabled {
@@ -104,6 +105,7 @@ private class ChatMessageHeartbeatHaptic {
 }
 
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     let imageNode: TransformImageNode
     private let animationNode: AnimatedStickerNode
     private var didSetUpAnimationNode = false
@@ -134,6 +136,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.imageNode = TransformImageNode()
         self.animationNode = AnimatedStickerNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
@@ -153,9 +156,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         self.imageNode.displaysAsynchronously = false
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.animationNode)
-        self.addSubnode(self.dateAndStatusNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.imageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.animationNode)
+        self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
     }
     
     deinit {
@@ -568,6 +572,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
                         transition = .animated(duration: duration, curve: .spring)
@@ -583,6 +590,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     strongSelf.animationNode.frame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
                     strongSelf.animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     imageApply()
+                    
+                    strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -820,7 +829,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.item?.controllerInteraction.clickThroughMessage()
                 case .longTap, .doubleTap:
                     if let item = self.item, self.imageNode.frame.contains(location) {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
                     }
                 case .hold:
                     break
@@ -1018,5 +1027,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

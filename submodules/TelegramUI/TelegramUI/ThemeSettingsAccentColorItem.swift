@@ -24,13 +24,6 @@ private func generateSwatchImage(color: PresentationThemeAccentColor, selected: 
         if selected {
             context.fillEllipse(in: bounds.insetBy(dx: 4.0, dy: 4.0))
             context.strokeEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
-            
-            if false, color.baseColor != .white && color.baseColor != .black {
-                context.setFillColor(UIColor.white.cgColor)
-                context.fillEllipse(in: CGRect(x: 11.0, y: 18.0, width: 4.0, height: 4.0))
-                context.fillEllipse(in: CGRect(x: 18.0, y: 18.0, width: 4.0, height: 4.0))
-                context.fillEllipse(in: CGRect(x: 25.0, y: 18.0, width: 4.0, height: 4.0))
-            }
         } else {
             context.fillEllipse(in: bounds)
         }
@@ -44,15 +37,13 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     let colors: [PresentationThemeBaseColor]
     let currentColor: PresentationThemeAccentColor
     let updated: (PresentationThemeAccentColor) -> Void
-    let toggleSlider: (PresentationThemeBaseColor) -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, sectionId: ItemListSectionId, colors: [PresentationThemeBaseColor], currentColor: PresentationThemeAccentColor, updated: @escaping (PresentationThemeAccentColor) -> Void, toggleSlider: @escaping (PresentationThemeBaseColor) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, sectionId: ItemListSectionId, colors: [PresentationThemeBaseColor], currentColor: PresentationThemeAccentColor, updated: @escaping (PresentationThemeAccentColor) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.colors = colors
         self.currentColor = currentColor
         self.updated = updated
-        self.toggleSlider = toggleSlider
         self.tag = tag
         self.sectionId = sectionId
     }
@@ -274,10 +265,6 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             item.updated(accentColor)
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)
-                            }
-                            
-                            if imageNode == selectedNode {
-                                item.toggleSlider(accentColor.baseColor)
                             }
                         })
                         

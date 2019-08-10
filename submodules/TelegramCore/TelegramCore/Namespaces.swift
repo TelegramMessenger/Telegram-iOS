@@ -108,6 +108,7 @@ public extension LocalMessageTags {
 
 public extension PendingMessageActionType {
     static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
+    static let updateReaction = PendingMessageActionType(rawValue: 1)
 }
 
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]

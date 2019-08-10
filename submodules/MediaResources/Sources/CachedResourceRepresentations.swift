@@ -279,10 +279,11 @@ public final class CachedAnimatedStickerFirstFrameRepresentation: CachedMediaRes
     }
     
     public var uniqueId: String {
+        let version: Int = 1
         if let fitzModifier = self.fitzModifier {
-            return "animated-sticker-first-frame-\(self.width)x\(self.height)-fitz\(fitzModifier.rawValue)-v1"
+            return "animated-sticker-first-frame-\(self.width)x\(self.height)-fitz\(fitzModifier.rawValue)-v\(version)"
         } else {
-            return "animated-sticker-first-frame-\(self.width)x\(self.height)-v1"
+            return "animated-sticker-first-frame-\(self.width)x\(self.height)-v\(version)"
         }
     }
     

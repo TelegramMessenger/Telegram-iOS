@@ -172,7 +172,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                         navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId)))
                     })
                 } else {
-                    navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId), messageId: nil))
+                    navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId)))
                 }
             }
             

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import AccountContext
 import LocalizedPeerData
+import ContextUI
 
 struct ChatMessageItemWidthFill {
     let compactInset: CGFloat
@@ -672,6 +673,10 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+        return nil
+    }
+    
+    func getMessageContextSourceNode() -> ContextContentContainingNode? {
         return nil
     }
     

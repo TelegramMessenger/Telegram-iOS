@@ -647,8 +647,7 @@ func finalStateWithDifference(postbox: Postbox, network: Network, state: Account
 }
 
 private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
-    var result: [Api.Update] = []
-    
+    var otherUpdates: [Api.Update] = []
     var updatesByChannel: [PeerId: [Api.Update]] = [:]
     
     for update in updates {
@@ -675,7 +674,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                         updatesByChannel[peerId]!.append(update)
                     }
                 } else {
-                    result.append(update)
+                    otherUpdates.append(update)
                 }
             case let .updateEditChannelMessage(message, _, _):
                 if let peerId = apiMessagePeerId(message) {
@@ -685,7 +684,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                         updatesByChannel[peerId]!.append(update)
                     }
                 } else {
-                    result.append(update)
+                    otherUpdates.append(update)
                 }
             case let .updateChannelWebPage(channelId, _, _, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
@@ -702,9 +701,11 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                     updatesByChannel[peerId]!.append(update)
                 }
             default:
-                result.append(update)
+                otherUpdates.append(update)
         }
     }
+    
+    var result: [Api.Update] = []
     
     for (_, updates) in updatesByChannel {
         let sortedUpdates = updates.sorted(by: { lhs, rhs in
@@ -747,6 +748,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
         })
         result.append(contentsOf: sortedUpdates)
     }
+    result.append(contentsOf: otherUpdates)
     
     return result
 }
@@ -1287,6 +1289,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateLangPack(langCode: langCode, difference: difference)
             case let .updateMessagePoll(_, pollId, poll, results):
                 updatedState.updateMessagePoll(MediaId(namespace: Namespaces.Media.CloudPoll, id: pollId), poll: poll, results: results)
+            case let .updateMessageReactions(peer, msgId, reactions):
+                updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), reactions: reactions)
             case let .updateFolderPeers(folderPeers, _, _):
                 for folderPeer in folderPeers {
                     switch folderPeer {
@@ -2023,7 +2027,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2292,6 +2296,26 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     updatedPoll = updatedPoll.withUpdatedResults(TelegramMediaPollResults(apiResults: results), min: resultsMin)
                     updateMessageMedia(transaction: transaction, id: pollId, media: updatedPoll)
                 }
+            case let .UpdateMessageReactions(messageId, reactions):
+                transaction.updateMessage(messageId, update: { currentMessage in
+                    var storeForwardInfo: StoreMessageForwardInfo?
+                    if let forwardInfo = currentMessage.forwardInfo {
+                        storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: forwardInfo.authorSignature)
+                    }
+                    var attributes = currentMessage.attributes
+                    var found = false
+                    loop: for j in 0 ..< attributes.count {
+                        if let attribute = attributes[j] as? ReactionsMessageAttribute {
+                            attributes[j] = attribute.withUpdatedResults(reactions)
+                            found = true
+                            break loop
+                        }
+                    }
+                    if !found {
+                        attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
+                    }
+                    return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+                })
             case let .UpdateMedia(id, media):
                 if let media = media as? TelegramMediaWebpage {
                     updatedWebpages[id] = media

@@ -98,10 +98,9 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let updatedTheme: (PresentationThemeReference) -> Void
     let currentColor: PresentationThemeAccentColor?
     let updatedColor: (PresentationThemeAccentColor) -> Void
-    let displayColorSlider: Bool
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, currentColor: PresentationThemeAccentColor?, updatedColor: @escaping (PresentationThemeAccentColor) -> Void, displayColorSlider: Bool, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, currentColor: PresentationThemeAccentColor?, updatedColor: @escaping (PresentationThemeAccentColor) -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.themes = themes
@@ -110,7 +109,6 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
         self.updatedTheme = updatedTheme
         self.currentColor = currentColor
         self.updatedColor = updatedColor
-        self.displayColorSlider = displayColorSlider
         self.tag = tag
         self.sectionId = sectionId
     }
@@ -219,8 +217,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     private let scrollNode: ASScrollNode
     private var nodes: [ThemeSettingsThemeItemIconNode] = []
     
-    private let colorSlider: ThemeSettingsColorSliderNode
-    
     private var item: ThemeSettingsThemeItem?
     private var layoutParams: ListViewItemLayoutParams?
     
@@ -240,26 +236,15 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
         
         self.scrollNode = ASScrollNode()
         
-        self.colorSlider = ThemeSettingsColorSliderNode()
-        
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.scrollNode)
-        self.addSubnode(self.colorSlider)
     }
     
     override func didLoad() {
         super.didLoad()
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
-        
-        self.colorSlider.view.disablesInteractiveTransitionGestureRecognizer = true
-        
-        self.colorSlider.valueChanged = { [weak self] value in
-            if let strongSelf = self, let item = strongSelf.item, let currentColor = item.currentColor {
-                item.updatedColor(PresentationThemeAccentColor(baseColor: currentColor.baseColor, value: value))
-            }
-        }
     }
     
     private func scrollToNode(_ node: ThemeSettingsThemeItemIconNode, animated: Bool) {
@@ -325,8 +310,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
                     strongSelf.scrollNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: layoutSize.width, height: layoutSize.height))
-                    strongSelf.colorSlider.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layoutSize.width, height: layoutSize.height))
-                    strongSelf.colorSlider.updateLayout(size: strongSelf.colorSlider.frame.size, transition: .immediate)
                     
                     let nodeInset: CGFloat = 4.0
                     let nodeSize = CGSize(width: 116.0, height: 112.0)
@@ -393,30 +376,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                     if updated, let selectedNode = selectedNode {
                         strongSelf.scrollToNode(selectedNode, animated: false)
                     }
-                    
-                    let transition: ContainedViewLayoutTransition
-                    if currentItem == nil {
-                        transition = .immediate
-                    } else {
-                        transition = .animated(duration: 0.3, curve: .easeInOut)
-                    }
-                    
-                    let previousBaseColor = strongSelf.colorSlider.baseColor
-                    let newBaseColor = item.currentColor?.baseColor ?? .blue
-                    if newBaseColor != .black && newBaseColor != .white {
-                        strongSelf.colorSlider.baseColor = newBaseColor
-                    }
-                    if previousBaseColor != newBaseColor {
-                        strongSelf.colorSlider.value = item.currentColor?.value ?? 0.5
-                    }
-                    
-                    strongSelf.scrollNode.allowsGroupOpacity = true
-                    transition.updateAlpha(node: strongSelf.scrollNode, alpha: item.displayColorSlider ? 0.0 : 1.0, completion: { [weak self] finished in
-                        if let strongSelf = self, finished {
-                            strongSelf.scrollNode.allowsGroupOpacity = false
-                        }
-                    })
-                    transition.updateAlpha(node: strongSelf.colorSlider, alpha: item.displayColorSlider ? 1.0 : 0.0)
                 }
             })
         }

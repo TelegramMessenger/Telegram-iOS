@@ -87,3 +87,43 @@ CABasicAnimation * _Nonnull makeSpringBounceAnimation(NSString * _Nonnull keyPat
 CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t) {
     return [(CASpringAnimation *)animation valueAt:t];
 }
+
+@interface CustomBlurEffect : UIBlurEffect
+
+@property (nonatomic) double blurRadius;
+@property (nonatomic) double colorBurnTintAlpha;
+@property (nonatomic) double colorBurnTintLevel;
+@property (nonatomic, retain) UIColor *colorTint;
+@property (nonatomic) double colorTintAlpha;
+@property (nonatomic) bool darkenWithSourceOver;
+@property (nonatomic) double darkeningTintAlpha;
+@property (nonatomic) double darkeningTintHue;
+@property (nonatomic) double darkeningTintSaturation;
+@property (nonatomic) double grayscaleTintAlpha;
+@property (nonatomic) double grayscaleTintLevel;
+@property (nonatomic) bool lightenGrayscaleWithSourceOver;
+@property (nonatomic) double saturationDeltaFactor;
+@property (nonatomic) double scale;
+@property (nonatomic) double zoom;
+
++ (id)effectWithStyle:(long long)arg1;
+
+@end
+
+void testZoomBlurEffect(UIVisualEffect *effect) {
+}
+
+UIBlurEffect *makeCustomZoomBlurEffect() {
+    NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
+    CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
+    result.blurRadius = 7.0;
+    result.zoom = 0.015;
+    result.colorTint = nil;
+    result.colorTintAlpha = 0.0;
+    result.darkeningTintAlpha = 0.0;
+    result.grayscaleTintAlpha = 0.0;
+    result.saturationDeltaFactor = 1.0;
+    result.scale = 0.5;
+    
+    return result;
+}

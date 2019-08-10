@@ -82,6 +82,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var restrictedNode: ChatRecentActionsEmptyNode?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
+    private var visibleAreaInset = UIEdgeInsets()
     
     private var searchNavigationNode: ChatSearchNavigationContentNode?
     
@@ -853,7 +854,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
         }
         
-        self.loadingNode.updateLayout(size: contentBounds.size, insets: UIEdgeInsets(top: containerInsets.top, left: 0.0, bottom: containerInsets.bottom + contentBottomInset, right: 0.0), transition: transition)
+        let visibleAreaInset = UIEdgeInsets(top: containerInsets.top, left: 0.0, bottom: containerInsets.bottom + inputPanelsHeight, right: 0.0)
+        self.visibleAreaInset = visibleAreaInset
+        self.loadingNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, transition: transition)
         
         if let containerNode = self.containerNode {
             contentBottomInset += 8.0
@@ -1553,6 +1556,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func textInputNode() -> EditableTextNode? {
         return self.textInputPanelNode?.textInputNode
+    }
+    
+    func frameForVisibleArea() -> CGRect {
+        return CGRect(origin: CGPoint(x: self.visibleAreaInset.left, y: self.visibleAreaInset.top), size: CGSize(width: self.bounds.size.width - self.visibleAreaInset.left - self.visibleAreaInset.right, height: self.bounds.size.height - self.visibleAreaInset.top - self.visibleAreaInset.bottom))
     }
     
     func frameForInputPanelAccessoryButton(_ item: ChatTextInputAccessoryItem) -> CGRect? {

@@ -1,6 +1,25 @@
 import Foundation
 import UIKit
 import UIKit.UIGestureRecognizerSubclass
+import AsyncDisplayKit
+
+private func cancelScrollViewGestures(view: UIView?) {
+    if let view = view {
+        if let gestureRecognizers = view.gestureRecognizers {
+            for recognizer in gestureRecognizers {
+                if let recognizer = recognizer as? UIPanGestureRecognizer {
+                    switch recognizer.state {
+                    case .began, .possible:
+                        recognizer.state = .ended
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+        cancelScrollViewGestures(view: view.superview)
+    }
+}
 
 private class TapLongTapOrDoubleTapGestureRecognizerTimerTarget: NSObject {
     weak var target: TapLongTapOrDoubleTapGestureRecognizer?
@@ -47,6 +66,10 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
     public private(set) var lastRecognizedGestureAndLocation: (TapLongTapOrDoubleTapGesture, CGPoint)?
     
     public var tapActionAtPoint: ((CGPoint) -> TapLongTapOrDoubleTapGestureRecognizerAction)?
+    public var longTap: ((CGPoint, TapLongTapOrDoubleTapGestureRecognizer) -> Void)?
+    private var recognizedLongTap: Bool = false
+    public var externalUpdated: ((UIView?, CGPoint) -> Void)?
+    public var externalEnded: (((UIView?, CGPoint)?) -> Void)?
     public var highlight: ((CGPoint?) -> Void)?
     
     public var hapticFeedback: HapticFeedback?
@@ -73,13 +96,21 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         self.tapCount = 0
         self.touchCount = 0
         self.hapticFeedback = nil
+        self.recognizedLongTap = false
         
         if self.highlightPoint != nil {
             self.highlightPoint = nil
             self.highlight?(nil)
         }
         
+        self.externalUpdated = nil
+        self.externalEnded = nil
+        
         super.reset()
+    }
+    
+    public func cancel() {
+        self.state = .cancelled
     }
     
     fileprivate func longTapEvent() {
@@ -87,6 +118,13 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         self.timer = nil
         if let (location, _) = self.touchLocationAndTimestamp {
             self.lastRecognizedGestureAndLocation = (.longTap, location)
+            if let longTap = self.longTap {
+                self.recognizedLongTap = true
+                longTap(location, self)
+                cancelScrollViewGestures(view: self.view?.superview)
+                self.state = .began
+                return
+            }
         } else {
             self.lastRecognizedGestureAndLocation = nil
         }
@@ -184,6 +222,12 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
             return
         }
         
+        if self.recognizedLongTap, let externalUpdated = self.externalUpdated {
+            let location = touch.location(in: self.view)
+            externalUpdated(self.view, location)
+            return
+        }
+        
         if let touch = touches.first, let (touchLocation, _) = self.touchLocationAndTimestamp {
             let location = touch.location(in: self.view)
             let distance = CGPoint(x: location.x - touchLocation.x, y: location.y - touchLocation.y)
@@ -208,6 +252,12 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         if let (gesture, location) = self.lastRecognizedGestureAndLocation, case .hold = gesture {
             self.lastRecognizedGestureAndLocation = (.hold, location)
             self.state = .ended
+            return
+        }
+        
+        if let (gesture, location) = self.lastRecognizedGestureAndLocation, case .longTap = gesture, self.recognizedLongTap {
+            self.externalEnded?((self.view, location))
+            self.state = .cancelled
             return
         }
         
@@ -251,6 +301,8 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
             self.highlightPoint = nil
             self.highlight?(nil)
         }
+        
+        self.externalEnded?(nil)
         
         self.state = .cancelled
     }

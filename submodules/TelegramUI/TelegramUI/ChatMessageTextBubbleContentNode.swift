@@ -161,7 +161,20 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     rawText = item.presentationData.strings.Conversation_UnsupportedMediaPlaceholder
                     messageEntities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]
                 } else {
-                    rawText = item.message.text
+                    var reactionsString = ""
+                    if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                        reactionsString += "\n\nReactions:"
+                        
+                        for reaction in reactionsAttribute.reactions {
+                            reactionsString += "\n[\(reaction.value)"
+                            if reaction.isSelected {
+                                reactionsString += "✓"
+                            }
+                            reactionsString += "]"
+                        }
+                    }
+                    
+                    rawText = item.message.text + reactionsString
                     
                     for attribute in item.message.attributes {
                         if let attribute = attribute as? TextEntitiesMessageAttribute {

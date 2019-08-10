@@ -339,6 +339,7 @@ public extension UIView {
         }
         if let snapshot = snapshot {
             snapshot.frame = self.frame
+            snapshot.bounds = self.bounds
             return snapshot
         }
         
@@ -358,6 +359,7 @@ public extension CALayer {
         }
         if let snapshot = snapshot {
             snapshot.frame = self.frame
+            snapshot.bounds = self.bounds
             return snapshot
         }
         

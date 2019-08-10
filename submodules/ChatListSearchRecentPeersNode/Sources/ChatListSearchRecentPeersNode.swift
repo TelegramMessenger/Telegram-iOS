@@ -8,7 +8,6 @@ import TelegramCore
 import TelegramPresentationData
 import MergeLists
 import HorizontalPeerItem
-import UnreadSearchBadge
 import ListSectionHeaderNode
 
 private func calculateItemCustomWidth(width: CGFloat) -> CGFloat {
@@ -33,7 +32,7 @@ private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
     let index: Int
     let peer: Peer
     let presence: PeerPresence?
-    let unreadBadge: UnreadSearchBadge?
+    let unreadBadge: (Int32, Bool)?
     let theme: PresentationTheme
     let strings: PresentationStrings
     let itemCustomWidth: CGFloat?
@@ -58,7 +57,10 @@ private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
         } else if (lhs.presence != nil) != (rhs.presence != nil) {
             return false
         }
-        if lhs.unreadBadge != rhs.unreadBadge {
+        if lhs.unreadBadge?.0 != rhs.unreadBadge?.0 {
+            return false
+        }
+        if lhs.unreadBadge?.1 != rhs.unreadBadge?.1 {
             return false
         }
         if lhs.theme !== rhs.theme {
@@ -145,7 +147,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         let peersDisposable = DisposableSet()
         
-        let recent: Signal<([Peer], [PeerId: UnreadSearchBadge], [PeerId : PeerPresence]), NoError> = recentPeers(account: account)
+        let recent: Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId : PeerPresence]), NoError> = recentPeers(account: account)
         |> filter { value -> Bool in
             switch value {
                 case .disabled:
@@ -159,10 +161,13 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 case .disabled:
                     return .single(([], [:], [:]))
                 case let .peers(peers):
-                    return combineLatest(peers.filter { !$0.isDeleted }.map {account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: UnreadSearchBadge], [PeerId: PeerPresence]), NoError> in
-                        return account.postbox.unreadMessageCountsView(items: peerViews.map {.peer($0.peerId)}) |> map { values in
+                    return combineLatest(queue: .mainQueue(), peers.filter { !$0.isDeleted }.map {account.postbox.peerView(id: $0.id)}) |> mapToSignal { peerViews -> Signal<([Peer], [PeerId: (Int32, Bool)], [PeerId: PeerPresence]), NoError> in
+                        return account.postbox.unreadMessageCountsView(items: peerViews.map {
+                            .peer($0.peerId)
+                        })
+                        |> map { values in
                             var peers: [Peer] = []
-                            var unread: [PeerId: UnreadSearchBadge] = [:]
+                            var unread: [PeerId: (Int32, Bool)] = [:]
                             var presences: [PeerId: PeerPresence] = [:]
                             for peerView in peerViews {
                                 if let peer = peerViewMainPeer(peerView) {
@@ -178,7 +183,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                                     
                                     let unreadCount = values.count(for: .peer(peerView.peerId))
                                     if let unreadCount = unreadCount, unreadCount > 0 {
-                                        unread[peerView.peerId] = isMuted ? .muted(unreadCount) : .unmuted(unreadCount)
+                                        unread[peerView.peerId] = (unreadCount, isMuted)
                                     }
                                     
                                     if let presence = peerView.peerPresences[peer.id] {
@@ -196,7 +201,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
         
         let previous: Atomic<[ChatListSearchRecentPeersEntry]> = Atomic(value: [])
         let firstTime:Atomic<Bool> = Atomic(value: true)
-        peersDisposable.add((combineLatest(recent, self.itemCustomWidthValuePromise.get(), self.themeAndStringsPromise.get()) |> deliverOnMainQueue).start(next: { [weak self] peers, itemCustomWidth, themeAndStrings in
+        peersDisposable.add((combineLatest(queue: .mainQueue(), recent, self.itemCustomWidthValuePromise.get(), self.themeAndStringsPromise.get()) |> deliverOnMainQueue).start(next: { [weak self] peers, itemCustomWidth, themeAndStrings in
             if let strongSelf = self {
                 var entries: [ChatListSearchRecentPeersEntry] = []
                 for peer in peers.0 {

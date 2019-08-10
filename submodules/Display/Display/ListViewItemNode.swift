@@ -100,6 +100,10 @@ open class ListViewItemNode: ASDisplayNode {
         }
     }
     
+    open func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.addSubnode(accessoryItemNode)
+    }
+    
     final var headerAccessoryItemNode: ListViewAccessoryItemNode? {
         didSet {
             if let headerAccessoryItemNode = self.headerAccessoryItemNode {

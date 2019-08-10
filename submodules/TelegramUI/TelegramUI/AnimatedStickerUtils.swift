@@ -10,6 +10,7 @@ import GZip
 import RLottie
 import MediaResources
 import MobileCoreServices
+import MediaResources
 
 let colorKeyRegex = try? NSRegularExpression(pattern: "\"k\":\\[[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\,[\\d\\.]+\\]")
 

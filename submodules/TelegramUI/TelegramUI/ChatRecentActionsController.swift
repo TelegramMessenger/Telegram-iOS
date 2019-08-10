@@ -46,8 +46,9 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
-        }, reportMessages: { _ in
-        }, deleteMessages: { _ in
+        }, reportMessages: { _, _ in
+        }, deleteMessages: { _, _, f in
+            f(.default)
         }, forwardSelectedMessages: {
         }, forwardCurrentForwardMessages: {
         }, forwardMessages: { _ in
