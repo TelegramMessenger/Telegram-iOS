@@ -110,5 +110,14 @@ func personWithUser(stableId: String, user: TelegramUser) -> INPerson {
     var nameComponents = PersonNameComponents()
     nameComponents.givenName = user.firstName
     nameComponents.familyName = user.lastName
-    return INPerson(personHandle: INPersonHandle(value: stableId, type: .unknown), nameComponents: nameComponents, displayName: user.debugDisplayTitle, image: nil, contactIdentifier: stableId, customIdentifier: "tg\(user.id.toInt64())")
+    let personHandle: INPersonHandle
+    if let phone = user.phone {
+        personHandle = INPersonHandle(value: formatPhoneNumber(phone), type: .phoneNumber)
+    } else if let username = user.username {
+        personHandle = INPersonHandle(value: "@\(username)", type: .unknown)
+    } else {
+        personHandle = INPersonHandle(value: user.displayTitle, type: .unknown)
+    }
+    
+    return INPerson(personHandle: personHandle, nameComponents: nameComponents, displayName: user.debugDisplayTitle, image: nil, contactIdentifier: stableId, customIdentifier: "tg\(user.id.toInt64())")
 }

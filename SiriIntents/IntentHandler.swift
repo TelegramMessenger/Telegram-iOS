@@ -202,11 +202,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             return
         }
         
-        if filteredPersons.count > 1 {
-            completion([.disambiguation(filteredPersons)])
-            return
-        }
-        
         var allPersonsAlreadyMatched = true
         for person in filteredPersons {
             if !(person.customIdentifier ?? "").hasPrefix("tg") {
@@ -215,7 +210,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             }
         }
         
-        if allPersonsAlreadyMatched {
+        if allPersonsAlreadyMatched && filteredPersons.count == 1 {
             completion([.success(filteredPersons[0])])
             return
         }
@@ -239,29 +234,31 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         let account = self.accountPromise.get()
         
         let signal = matchingDeviceContacts(stableIds: stableIds)
-            |> take(1)
-            |> mapToSignal { matchedContacts in
-                return account
-                    |> introduceError(IntentContactsError.self)
-                    |> mapToSignal { account -> Signal<[(String, TelegramUser)], IntentContactsError> in
-                        if let account = account {
-                            return matchingCloudContacts(postbox: account.postbox, contacts: matchedContacts)
-                                |> introduceError(IntentContactsError.self)
-                        } else {
-                            return .fail(.generic)
-                        }
-                }
+        |> take(1)
+        |> mapToSignal { matchedContacts in
+            return account
+                |> introduceError(IntentContactsError.self)
+                |> mapToSignal { account -> Signal<[(String, TelegramUser)], IntentContactsError> in
+                    if let account = account {
+                        return matchingCloudContacts(postbox: account.postbox, contacts: matchedContacts)
+                        |> introduceError(IntentContactsError.self)
+                    } else {
+                        return .fail(.generic)
+                    }
+            }
         }
         self.resolvePersonsDisposable.set((signal
-            |> deliverOnMainQueue).start(next: { peers in
-                if peers.isEmpty {
-                    completion([.needsValue])
-                } else {
-                    completion(peers.map { .success(personWithUser(stableId: $0, user: $1)) })
-                }
-            }, error: { error in
-                completion([.skip])
-            }))
+        |> deliverOnMainQueue).start(next: { peers in
+            if peers.isEmpty {
+                completion([.noResult])
+            } else if peers.count == 1 {
+                completion(peers.map { .success(personWithUser(stableId: $0, user: $1)) })
+            } else {
+                completion([.disambiguation(peers.map { (personWithUser(stableId: $0, user: $1)) })])
+            }
+        }, error: { error in
+            completion([.skip])
+        }))
     }
     
     // MARK: - INSendMessageIntentHandling
