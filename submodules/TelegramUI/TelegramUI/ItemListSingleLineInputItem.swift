@@ -178,7 +178,7 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
             }
             
             let leftInset: CGFloat = 16.0 + params.leftInset
-            var rightInset: CGFloat = params.rightInset
+            var rightInset: CGFloat = 16.0 + params.rightInset
             
             if item.clearButton {
                 rightInset += 32.0
