@@ -165,38 +165,73 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
             return .complete()
         }
     } else {
-        var flags: Int32
-        switch operation.type {
-            case .forEveryone:
-                flags = (1 << 0)
-            default:
-                flags = 0
+        var isScheduled = false
+        for id in operation.messageIds {
+            if id.namespace == Namespaces.Message.CloudScheduled {
+                isScheduled = true
+                break
+            }
         }
-        
-        var signal: Signal<Void, NoError> = .complete()
-        for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
-            let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
-            let partSignal = network.request(Api.functions.messages.deleteMessages(flags: flags, id: ids.map { $0.id }))
-            |> map { result -> Api.messages.AffectedMessages? in
-                return result
-            }
-            |> `catch` { _ in
-                return .single(nil)
-            }
-            |> mapToSignal { result -> Signal<Void, NoError> in
-                if let result = result {
-                    switch result {
-                    case let .affectedMessages(pts, ptsCount):
-                        stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+        if isScheduled {
+            if let inputPeer = apiInputPeer(peer) {
+                var signal: Signal<Void, NoError> = .complete()
+                for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
+                    let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
+                    let partSignal = network.request(Api.functions.messages.deleteScheduledMessages(peer: inputPeer, id: ids.map { $0.id }))
+                    |> map { result -> Api.Updates? in
+                        return result
                     }
+                    |> `catch` { _ in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { updates -> Signal<Void, NoError> in
+                        if let updates = updates {
+                            stateManager.addUpdates(updates)
+                        }
+                        return .complete()
+                    }
+                    
+                    signal = signal
+                    |> then(partSignal)
                 }
+                return signal
+            } else {
                 return .complete()
             }
+        } else {
+            var flags: Int32
+            switch operation.type {
+                case .forEveryone:
+                    flags = (1 << 0)
+                default:
+                    flags = 0
+            }
             
-            signal = signal
-            |> then(partSignal)
+            var signal: Signal<Void, NoError> = .complete()
+            for s in stride(from: 0, to: operation.messageIds.count, by: 100) {
+                let ids = Array(operation.messageIds[s ..< min(s + 100, operation.messageIds.count)])
+                let partSignal = network.request(Api.functions.messages.deleteMessages(flags: flags, id: ids.map { $0.id }))
+                    |> map { result -> Api.messages.AffectedMessages? in
+                        return result
+                    }
+                    |> `catch` { _ in
+                        return .single(nil)
+                    }
+                    |> mapToSignal { result -> Signal<Void, NoError> in
+                        if let result = result {
+                            switch result {
+                            case let .affectedMessages(pts, ptsCount):
+                                stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
+                            }
+                        }
+                        return .complete()
+                }
+                
+                signal = signal
+                |> then(partSignal)
+            }
+            return signal
         }
-        return signal
     }
 }
 
@@ -216,9 +251,9 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             let reportSignal: Signal<Api.Bool, NoError>
             if let inputPeer = apiInputPeer(peer), operation.reportChatSpam {
                 reportSignal = network.request(Api.functions.messages.reportSpam(peer: inputPeer))
-                    |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                        return .single(.boolFalse)
-                    }
+                |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                    return .single(.boolFalse)
+                }
             } else {
                 reportSignal = .single(.boolTrue)
             }

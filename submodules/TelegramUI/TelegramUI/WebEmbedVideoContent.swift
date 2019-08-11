@@ -17,8 +17,9 @@ final class WebEmbedVideoContent: UniversalVideoContent {
     let webpageContent: TelegramMediaWebpageLoadedContent
     let dimensions: CGSize
     let duration: Int32
+    let forcedTimestamp: Int?
     
-    init?(webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent) {
+    init?(webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) {
         guard let embedUrl = webpageContent.embedUrl else {
             return nil
         }
@@ -27,10 +28,11 @@ final class WebEmbedVideoContent: UniversalVideoContent {
         self.webpageContent = webpageContent
         self.dimensions = webpageContent.embedSize ?? CGSize(width: 128.0, height: 128.0)
         self.duration = Int32(webpageContent.duration ?? (0 as Int))
+        self.forcedTimestamp = forcedTimestamp
     }
     
     func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webPage: self.webPage, webpageContent: self.webpageContent)
+        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp)
     }
 }
 
@@ -63,7 +65,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
     private var readyDisposable = MetaDisposable()
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil) {
         self.webpageContent = webpageContent
         
         if let embedSize = webpageContent.embedSize {
@@ -74,7 +76,7 @@ private final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoConte
     
         self.imageNode = TransformImageNode()
         
-        let embedType = webEmbedType(content: webpageContent)
+        let embedType = webEmbedType(content: webpageContent, forcedTimestamp: forcedTimestamp)
         let embedImpl = webEmbedImplementation(for: embedType)
         self.playerNode = WebEmbedPlayerNode(impl: embedImpl, intrinsicDimensions: self.intrinsicDimensions)
         

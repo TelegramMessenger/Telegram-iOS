@@ -84,6 +84,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as NotificationInfoMessageAttribute:
                 return true
+            case _ as OutgoingScheduleInfoMessageAttribute:
+                return true
             default:
                 return false
         }

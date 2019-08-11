@@ -28,7 +28,7 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
-    init(title: String? = nil, theme: PresentationTheme, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0) {
+    init(title: String? = nil, theme: PresentationTheme, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.buttonHeight = height
         self.buttonCornerRadius = cornerRadius
@@ -50,7 +50,9 @@ final class SolidRoundedButtonNode: ASDisplayNode {
         super.init()
         
         self.addSubnode(self.buttonBackgroundNode)
-        self.addSubnode(self.buttonGlossNode)
+        if gloss {
+            self.addSubnode(self.buttonGlossNode)
+        }
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.labelNode)
         
@@ -79,9 +81,8 @@ final class SolidRoundedButtonNode: ASDisplayNode {
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = width
         
-        let inset: CGFloat = 38.0
-        let buttonSize = CGSize(width: width - inset * 2.0, height: self.buttonHeight)
-        let buttonFrame = CGRect(origin: CGPoint(x: inset, y: 0.0), size: buttonSize)
+        let buttonSize = CGSize(width: width, height: self.buttonHeight)
+        let buttonFrame = CGRect(origin: CGPoint(), size: buttonSize)
         transition.updateFrame(node: self.buttonBackgroundNode, frame: buttonFrame)
         transition.updateFrame(node: self.buttonGlossNode, frame: buttonFrame)
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)

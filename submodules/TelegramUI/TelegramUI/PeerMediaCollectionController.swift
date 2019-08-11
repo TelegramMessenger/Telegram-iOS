@@ -175,7 +175,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             }
                         }*/
                     } else {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(id.peerId), messageId: id))
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(id.peerId), subject: .message(id)))
                     }
                 }
             }, clickThroughMessage: { [weak self] in
@@ -276,6 +276,9 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, openAppStorePage: {
         }, displayMessageTooltip: { _, _, _, _ in    
         }, seekToTimecode: { _, _, _ in    
+        }, scheduleCurrentMessage: {
+        }, sendScheduledMessagesNow: { _ in
+        }, editScheduledMessagesTime: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -386,6 +389,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: {
+        }, openScheduledMessages: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

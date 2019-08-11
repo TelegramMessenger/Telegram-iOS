@@ -906,7 +906,7 @@ private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, reso
             return EmptyDisposable
         }
     })
-        |> runOn(Queue.concurrentDefaultQueue())
+    |> runOn(Queue.concurrentDefaultQueue())
 }
 
 private func fetchAnimatedStickerRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {

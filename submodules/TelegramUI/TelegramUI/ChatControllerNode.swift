@@ -131,7 +131,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var requestUpdateChatInterfaceState: (Bool, Bool, (ChatInterfaceState) -> ChatInterfaceState) -> Void = { _, _, _ in }
     var requestUpdateInterfaceState: (ContainedViewLayoutTransition, Bool, (ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void = { _, _, _ in }
-    var sendMessages: ([EnqueueMessage], Bool?, Bool) -> Void = { _, _, _ in }
+    var sendMessages: ([EnqueueMessage], Bool?, Int32?, Bool) -> Void = { _, _, _, _ in }
     var displayAttachmentMenu: () -> Void = { }
     var paste: (ChatTextInputPanelPasteData) -> Void = { _ in }
     var updateTypingActivity: (Bool) -> Void = { _ in }
@@ -190,7 +190,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }*/
     
-    init(context: AccountContext, chatLocation: ChatLocation, messageId: MessageId?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
+    init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction
@@ -205,7 +205,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()
         self.titleAccessoryPanelContainer.clipsToBounds = true
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, tagMask: nil, messageId: messageId, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: chatLocation, tagMask: nil, subject: subject, controllerInteraction: controllerInteraction, selectedMessages: self.selectedMessagesPromise.get())
         self.historyNode.rotated = true
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
@@ -286,7 +286,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.textInputPanelNode?.sendMessage = { [weak self] in
             if let strongSelf = self {
-                strongSelf.sendCurrentMessage()
+                if strongSelf.chatPresentationInterfaceState.isScheduledMessages && strongSelf.chatPresentationInterfaceState.editMessageState == nil {
+                    strongSelf.controllerInteraction.scheduleCurrentMessage()
+                } else {
+                    strongSelf.sendCurrentMessage()
+                }
             }
         }
         
@@ -2011,7 +2015,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func sendCurrentMessage(silentPosting: Bool? = nil) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
                 Keyboard.applyAutocorrection()
@@ -2078,7 +2082,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                     
                     if case .peer = self.chatLocation {
-                        self.sendMessages(messages, silentPosting, messages.count > 1)
+                        self.sendMessages(messages, silentPosting, scheduleTime, messages.count > 1)
                     }
                 }
             }

@@ -4497,6 +4497,7 @@ Any member of this group will be able to see messages in the channel.";
 "Group.EditAdmin.RankAdminPlaceholder" = "admin";
 
 "Conversation.SendMessage.SendSilently" = "Send Without Sound";
+"Conversation.SendMessage.ScheduleMessage" = "Schedule Message";
 
 "Appearance.ThemeCarouselTintedNight" = "Tinted Night";
 "Appearance.ThemeCarouselNewNight" = "Night";
@@ -4590,3 +4591,30 @@ Any member of this group will be able to see messages in the channel.";
 "VoiceOver.MessageContextOpenMessageMenu" = "Open message menu";
 
 "ProxyServer.VoiceOver.Active" = "Active";
+
+"Conversation.ScheduleMessage.Title" = "Schedule Message";
+"Conversation.ScheduleMessage.SendToday" = "Send today at %@";
+"Conversation.ScheduleMessage.SendTomorrow" = "Send tomorrow at %@";
+"Conversation.ScheduleMessage.SendOn" = "Send on %@ at %@";
+
+"Conversation.SetReminder.Title" = "Set a Reminder";
+"Conversation.SetReminder.RemindToday" = "Remind today at %@";
+"Conversation.SetReminder.RemindTomorrow" = "Remind tomorrow at %@";
+"Conversation.SetReminder.RemindOn" = "Remind on %@ at %@";
+
+"ScheduledMessages.Title" = "Scheduled Messages";
+"ScheduledMessages.RemindersTitle" = "Reminders";
+"ScheduledMessages.ScheduledDate" = "Scheduled for %@";
+"ScheduledMessages.SendNow" = "Send Now";
+"ScheduledMessages.EditTime" = "Reschedule";
+"ScheduledMessages.ClearAll" = "Clear All";
+"ScheduledMessages.Delete" = "Delete";
+
+"Conversation.SendMessage.SetReminder" = "Set a Reminder";
+
+"Conversation.SelectedMessages_1" = "%@ Message Selected";
+"Conversation.SelectedMessages_2" = "%@ Messages Selected";
+"Conversation.SelectedMessages_3_10" = "%@ Messages Selected";
+"Conversation.SelectedMessages_any" = "%@ Messages Selected";
+"Conversation.SelectedMessages_many" = "%@ Messages Selected";
+"Conversation.SelectedMessages_0" = "%@ Messages Selected";

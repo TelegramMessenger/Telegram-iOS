@@ -25,8 +25,9 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
     var hasEditRights = false
     var unlimitedInterval = false
     
-    
-    if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
+    if message.id.namespace == Namespaces.Message.CloudScheduled {
+        hasEditRights = true
+    } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
     } else if let author = message.author, author.id == context.account.peerId {
         hasEditRights = true
@@ -101,6 +102,9 @@ private let starIconFilled = UIImage(bundleImageName: "Chat/Context Menu/StarIco
 
 func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> Bool {
     guard let peer = chatPresentationInterfaceState.renderedPeer?.peer else {
+        return false
+    }
+    guard !chatPresentationInterfaceState.isScheduledMessages else {
         return false
     }
     
@@ -278,7 +282,11 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         canDeleteMessage = context.account.peerId == message.author?.id
     }
     
-    if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
+    if message.id.namespace == Namespaces.Message.CloudScheduled {
+        canReply = false
+        canPin = false
+    }
+    else if messages[0].flags.intersection([.Failed, .Unsent]).isEmpty {
         switch chatPresentationInterfaceState.chatLocation {
             case .peer:
                 if let channel = messages[0].peers[messages[0].id.peerId] as? TelegramChannel {
@@ -372,8 +380,22 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
+        if data.messageActions.options.contains(.sendScheduledNow) {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { _ in return nil }, action: { _, f in
+                controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
+                f(.dismissWithoutContent)
+            })))
+        }
+        
+        if data.messageActions.options.contains(.editScheduledTime) {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { _ in return nil }, action: { _, f in
+                controllerInteraction.editScheduledMessagesTime(selectAll ? messages.map { $0.id } : [message.id])
+                f(.dismissWithoutContent)
+            })))
+        }
+        
         if data.canEdit {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_Edit, icon: { theme in
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 interfaceInteraction.setupEditMessage(messages[0].id)
@@ -668,6 +690,8 @@ struct ChatAvailableMessageActionOptions: OptionSet {
     static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
     static let cancelSending = ChatAvailableMessageActionOptions(rawValue: 1 << 6)
     static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
+    static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
+    static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
 }
 
 struct ChatAvailableMessageActions {
@@ -724,6 +748,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
         var hadPersonalIncoming = false
         var hadBanPeerId = false
         for id in messageIds {
+            let isScheduled = id.namespace == Namespaces.Message.CloudScheduled
             if optionsMap[id] == nil {
                 optionsMap[id] = []
             }
@@ -740,7 +765,11 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                         optionsMap[id]!.insert(.rateCall)
                     }
                 }
-                if id.peerId == accountPeerId {
+                if id.namespace == Namespaces.Message.CloudScheduled {
+                    optionsMap[id]!.insert(.sendScheduledNow)
+                    optionsMap[id]!.insert(.editScheduledTime)
+                    optionsMap[id]!.insert(.deleteLocally)
+                } else if id.peerId == accountPeerId {
                     if !(message.flags.isSending || message.flags.contains(.Failed)) {
                         optionsMap[id]!.insert(.forward)
                     }
@@ -781,7 +810,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                                 }
                             }
                         }
-                        
+
                         if !message.flags.contains(.Incoming) {
                             optionsMap[id]!.insert(.deleteGlobally)
                         } else {
@@ -825,7 +854,7 @@ func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messag
                             }
                         }
                     } else if let user = peer as? TelegramUser {
-                        if message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
+                        if !isScheduled && message.id.peerId.namespace != Namespaces.Peer.SecretChat && !message.containsSecretMedia && !isAction {
                             if !(message.flags.isSending || message.flags.contains(.Failed)) {
                                 optionsMap[id]!.insert(.forward)
                             }

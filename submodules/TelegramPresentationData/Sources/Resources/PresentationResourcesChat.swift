@@ -362,6 +362,25 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatInputPanelScheduleButtonImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputPanelScheduleButtonImage.rawValue, { theme in
+            return generateImage(CGSize(width: 33.0, height: 33.0), rotatedContext: { size, context in
+                context.clear(CGRect(origin: CGPoint(), size: size))
+                context.setFillColor(theme.chat.inputPanel.actionControlFillColor.cgColor)
+                context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+                
+                let imageRect = CGRect(origin: CGPoint(), size: size)
+                context.translateBy(x: imageRect.midX, y: imageRect.midY)
+                context.scaleBy(x: 1.0, y: -1.0)
+                context.translateBy(x: -imageRect.midX, y: -imageRect.midY)
+                
+                if let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/ScheduleIcon"), color: theme.chat.inputPanel.actionControlForegroundColor) {
+                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - image.size.width) / 2.0), y: floorToScreenPixels((size.height - image.size.height) / 2.0)), size: image.size))
+                }
+            })
+        })
+    }
+    
     public static func chatInputPanelVoiceButtonImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputPanelVoiceButtonImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: theme.chat.inputPanel.panelControlColor)
@@ -496,6 +515,12 @@ public struct PresentationResourcesChat {
     public static func chatInputTextFieldTimerImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputTextFieldTimerImage.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconTimer"), color: theme.chat.inputPanel.inputControlColor)
+        })
+    }
+    
+    public static func chatInputTextFieldScheduleImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputTextFieldScheduleImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconSchedule"), color: theme.chat.inputPanel.inputControlColor)
         })
     }
     

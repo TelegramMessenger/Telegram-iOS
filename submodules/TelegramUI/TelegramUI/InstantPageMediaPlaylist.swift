@@ -169,7 +169,7 @@ final class InstantPageMediaPlaylist: SharedMediaPlaylist {
         
         switch action {
             case .next, .previous:
-                if let currentItem = self.currentItem, let currentIndex = self.items.index(where: { $0.index == currentItem.index }) {
+                if let currentItem = self.currentItem, let currentIndex = self.items.firstIndex(where: { $0.index == currentItem.index }) {
                     let selectedIndex: Int?
                     switch self.order {
                         case .regular:

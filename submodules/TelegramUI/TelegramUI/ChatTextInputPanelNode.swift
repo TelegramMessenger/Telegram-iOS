@@ -113,12 +113,14 @@ private final class AccessoryItemIconButton: HighlightTrackingButton {
                 } else {
                     return (PresentationResourcesChat.chatInputTextFieldTimerImage(theme), nil, 1.0, UIEdgeInsets(top: 0.0, left: 0.0, bottom: 1.0, right: 0.0))
                 }
+            case .scheduledMessages:
+                return (PresentationResourcesChat.chatInputTextFieldScheduleImage(theme), nil, 1.0, UIEdgeInsets())
         }
     }
     
     static func calculateWidth(item: ChatTextInputAccessoryItem, image: UIImage?, text: String?, strings: PresentationStrings) -> CGFloat {
         switch item {
-            case .keyboard, .stickers, .inputButtons, .silentPost, .commands:
+            case .keyboard, .stickers, .inputButtons, .silentPost, .commands, .scheduledMessages:
                 return (image?.size.width ?? 0.0) + CGFloat(8.0)
             case let .messageAutoremoveTimeout(timeout):
                 var imageWidth = (image?.size.width ?? 0.0) + CGFloat(8.0)
@@ -775,7 +777,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     self.textPlaceholderNode.frame = CGRect(origin: self.textPlaceholderNode.frame.origin, size: placeholderSize)
                 }
                 
-                self.actionButtons.sendButtonLongPressEnabled = peer.id != interfaceState.accountPeerId && peer.id.namespace != Namespaces.Peer.SecretChat
+                self.actionButtons.sendButtonLongPressEnabled = peer.id.namespace != Namespaces.Peer.SecretChat && !interfaceState.isScheduledMessages
             }
             
             let sendButtonHasApplyIcon = interfaceState.interfaceState.editMessage != nil
@@ -798,7 +800,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     if self.actionButtons.sendButtonHasApplyIcon {
                         self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyButtonImage(interfaceState.theme), for: [])
                     } else {
-                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(interfaceState.theme), for: [])
+                        if interfaceState.isScheduledMessages {
+                            self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleButtonImage(interfaceState.theme), for: [])
+                        } else {
+                            self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(interfaceState.theme), for: [])
+                        }
                     }
                 }
             }
@@ -1413,7 +1419,11 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 if self.actionButtons.sendButtonHasApplyIcon {
                     self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelApplyButtonImage(interfaceState.theme), for: [])
                 } else {
-                    self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(interfaceState.theme), for: [])
+                    if interfaceState.isScheduledMessages {
+                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelScheduleButtonImage(interfaceState.theme), for: [])
+                    } else {
+                        self.actionButtons.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(interfaceState.theme), for: [])
+                    }
                 }
             }
         }
@@ -1704,6 +1714,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                         self.interfaceInteraction?.toggleSilentPost()
                     case .messageAutoremoveTimeout:
                         self.interfaceInteraction?.setupMessageAutoremoveTimeout()
+                    case .scheduledMessages:
+                        self.interfaceInteraction?.openScheduledMessages()
                 }
                 break
             }

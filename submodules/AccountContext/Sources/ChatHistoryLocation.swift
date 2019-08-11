@@ -12,6 +12,7 @@ public enum ChatHistoryLocation: Equatable {
     case InitialSearch(location: ChatHistoryInitialSearchLocation, count: Int)
     case Navigation(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int)
     case Scroll(index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, sourceIndex: MessageHistoryAnchorIndex, scrollPosition: ListViewScrollPosition, animated: Bool)
+    case Scheduled
 }
 
 public struct ChatHistoryLocationInput: Equatable {

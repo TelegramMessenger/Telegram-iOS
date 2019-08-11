@@ -55,6 +55,9 @@
 		094735192277483C00EA2312 /* anim_infotip.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735182277483B00EA2312 /* anim_infotip.json */; };
 		0947FCAE224043450086741C /* SettingsSearchRecentItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */; };
 		0947FCB0224055990086741C /* StringHash.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0947FCAF224055990086741C /* StringHash.swift */; };
+		09510B0F22F9347E0078CAB7 /* BundleResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09510B0E22F9347E0078CAB7 /* BundleResource.swift */; };
+		09510B1322F96E5B0078CAB7 /* ChatScheduleTimeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09510B1222F96E5B0078CAB7 /* ChatScheduleTimeController.swift */; };
+		09510B1522F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09510B1422F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift */; };
 		0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */; };
 		0957DE2322DE28FB001B4D57 /* ThemePreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0957DE2222DE28FB001B4D57 /* ThemePreviewController.swift */; };
 		0957DE2522DE2909001B4D57 /* ThemePreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0957DE2422DE2909001B4D57 /* ThemePreviewControllerNode.swift */; };
@@ -77,7 +80,6 @@
 		09797873210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09797872210633CD0077D77F /* InstantPageSettingsButtonItemNode.swift */; };
 		0979787C210642CB0077D77F /* WebEmbedPlayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787B210642CB0077D77F /* WebEmbedPlayerNode.swift */; };
 		0979787E210646C00077D77F /* YoutubeEmbedImplementation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0979787D210646C00077D77F /* YoutubeEmbedImplementation.swift */; };
-		097A581722D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097A581622D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift */; };
 		09874E4F21078FA100E190B8 /* Generic.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788321065F8C0077D77F /* Generic.html */; };
 		09874E5021078FA100E190B8 /* GenericUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788821065F8C0077D77F /* GenericUserScript.js */; };
 		09874E5121078FA100E190B8 /* Instagram.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788421065F8C0077D77F /* Instagram.html */; };
@@ -1202,6 +1204,9 @@
 		094735182277483B00EA2312 /* anim_infotip.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_infotip.json; sourceTree = "<group>"; };
 		0947FCAD224043450086741C /* SettingsSearchRecentItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchRecentItem.swift; sourceTree = "<group>"; };
 		0947FCAF224055990086741C /* StringHash.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHash.swift; sourceTree = "<group>"; };
+		09510B0E22F9347E0078CAB7 /* BundleResource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleResource.swift; sourceTree = "<group>"; };
+		09510B1222F96E5B0078CAB7 /* ChatScheduleTimeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScheduleTimeController.swift; sourceTree = "<group>"; };
+		09510B1422F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScheduleTimeControllerNode.swift; sourceTree = "<group>"; };
 		0952D1742176DEB500194860 /* NotificationMuteSettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationMuteSettingsController.swift; sourceTree = "<group>"; };
 		0957DE2222DE28FB001B4D57 /* ThemePreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePreviewController.swift; sourceTree = "<group>"; };
 		0957DE2422DE2909001B4D57 /* ThemePreviewControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePreviewControllerNode.swift; sourceTree = "<group>"; };
@@ -1233,7 +1238,6 @@
 		0979788621065F8C0077D77F /* TwitchUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = TwitchUserScript.js; sourceTree = "<group>"; };
 		0979788721065F8C0077D77F /* Youtube.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Youtube.html; sourceTree = "<group>"; };
 		0979788821065F8C0077D77F /* GenericUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = GenericUserScript.js; sourceTree = "<group>"; };
-		097A581622D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsColorSliderNode.swift; sourceTree = "<group>"; };
 		09874E3A21075BF400E190B8 /* VimeoEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VimeoEmbedImplementation.swift; sourceTree = "<group>"; };
 		09874E4021075C1700E190B8 /* GenericEmbedImplementation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericEmbedImplementation.swift; sourceTree = "<group>"; };
 		098CF79122B924E200AF6134 /* ThemeSettingsAccentColorItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsAccentColorItem.swift; sourceTree = "<group>"; };
@@ -3181,7 +3185,6 @@
 				D06F31E52135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift */,
 				09A218F422A15F1400DE6898 /* ThemeSettingsAppIconItem.swift */,
 				098CF79122B924E200AF6134 /* ThemeSettingsAccentColorItem.swift */,
-				097A581622D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift */,
 				090E777822A6A32E00CD99F5 /* ThemeSettingsThemeItem.swift */,
 				D06E4C322134A59700088087 /* ThemeAccentColorActionSheet.swift */,
 				D06E4C342134AE3C00088087 /* ThemeAutoNightSettingsController.swift */,
@@ -4473,6 +4476,8 @@
 				D025402622E1F23000AC0195 /* ChatSendButtonRadialStatusNode.swift */,
 				D025402822E1F7F500AC0195 /* ChatTextInputSlowmodePlaceholderNode.swift */,
 				D06018B422F3659900796784 /* ChatTextFormat.swift */,
+				09510B1222F96E5B0078CAB7 /* ChatScheduleTimeController.swift */,
+				09510B1422F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift */,
 				D09E778E22FA239A00B9CCA7 /* ChatMessageContextControllerContentSource.swift */,
 			);
 			name = Chat;
@@ -4723,6 +4728,7 @@
 				0910B0EE21FA532D00F8F87D /* WallpaperResources.swift */,
 				D0CCD61A222E8B4500EE1E08 /* TimeBasedVideoPreload.swift */,
 				09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */,
+				09510B0E22F9347E0078CAB7 /* BundleResource.swift */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -5322,6 +5328,7 @@
 				D0EC6D2A1EB9F58800EBF1C3 /* FetchPhotoLibraryImageResource.swift in Sources */,
 				D0E9BAE01F0574D800F079A4 /* STPDispatchFunctions.m in Sources */,
 				D0EC6D2B1EB9F58800EBF1C3 /* FileMediaResourceStatus.swift in Sources */,
+				09510B0F22F9347E0078CAB7 /* BundleResource.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,
 				D025402522E1E00100AC0195 /* ChatSlowmodeHintController.swift in Sources */,
 				D008177D22B46B7E008A895F /* TGContactModel.m in Sources */,
@@ -5479,7 +5486,6 @@
 				D0E9BA231F05577700F079A4 /* STPCard.m in Sources */,
 				D0EC6D841EB9F58800EBF1C3 /* ChatHistoryEntry.swift in Sources */,
 				D00817DC22B47A14008A895F /* ManageSharedAccountInfo.swift in Sources */,
-				097A581722D4C3FC0078B73C /* ThemeSettingsColorSliderNode.swift in Sources */,
 				D0EC6D851EB9F58800EBF1C3 /* ChatHistoryLocation.swift in Sources */,
 				D0EC6D861EB9F58800EBF1C3 /* ChatAvatarNavigationNode.swift in Sources */,
 				D0EC6D871EB9F58800EBF1C3 /* ChatTitleView.swift in Sources */,
@@ -5864,6 +5870,7 @@
 				D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */,
 				D00817CF22B47A14008A895F /* LegacyFileImport.swift in Sources */,
 				D01A21AF1F39EA2E00DDA104 /* InstantPageTheme.swift in Sources */,
+				09510B1322F96E5B0078CAB7 /* ChatScheduleTimeController.swift in Sources */,
 				D0E412C62069B60600BEE4A2 /* FormControllerHeaderItem.swift in Sources */,
 				D0E412D5206A842900BEE4A2 /* SecureIdVerificationDocument.swift in Sources */,
 				D0147BA9206EA35000E40378 /* SecureIdDocumentGalleryController.swift in Sources */,
@@ -5953,6 +5960,7 @@
 				D0EC6E7C1EB9F58900EBF1C3 /* UsernameSetupController.swift in Sources */,
 				D0471B621EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift in Sources */,
 				D0E8175B201254FA00B82BBB /* ChatRecentActionsEmptyNode.swift in Sources */,
+				09510B1522F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift in Sources */,
 				D0EC6E7D1EB9F58900EBF1C3 /* ChangePhoneNumberIntroController.swift in Sources */,
 				09F215AB2264ABA600AEDF6D /* PasscodeBackground.swift in Sources */,
 				D0EC6E7E1EB9F58900EBF1C3 /* ChangePhoneNumberController.swift in Sources */,

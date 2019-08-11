@@ -490,7 +490,7 @@ final class AuthorizedApplicationContext {
                         if let strongSelf = self, let botName = botName {
                             strongSelf.termsOfServiceProceedToBotDisposable.set((resolvePeerByName(account: strongSelf.context.account, name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
                                 if let strongSelf = self, let peerId = peerId {
-                                    self?.rootController.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId), messageId: nil))
+                                    self?.rootController.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)))
                                 }
                             }))
                         }

@@ -10,6 +10,7 @@ public struct Namespaces {
         public static let Cloud: Int32 = 0
         public static let Local: Int32 = 1
         public static let SecretIncoming: Int32 = 2
+        public static let CloudScheduled: Int32 = 3
     }
     
     public struct Media {

@@ -1226,7 +1226,7 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                     sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
-                    let chatController = ChatController(context: self.context, chatLocation: .peer(messageId.peerId), messageId: messageId, mode: .standard(previewing: true))
+                    let chatController = ChatController(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatController, sourceRect)

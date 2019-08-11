@@ -404,7 +404,7 @@ final class AnimatedStickerNode: ASDisplayNode {
         self.renderer?.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
         self.addSubnode(self.renderer!)
     }
-    
+
     func setup(account: Account, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
         if width < 2 || height < 2 {
             return
@@ -566,7 +566,7 @@ final class AnimatedStickerNode: ASDisplayNode {
                             strongSelf.started()
                         }
                     })
-                    
+
                     strongSelf.playbackStatus.set(.single(AnimatedStickerStatus(playing: false, duration: duration, timestamp: 0.0)))
                 }
             }

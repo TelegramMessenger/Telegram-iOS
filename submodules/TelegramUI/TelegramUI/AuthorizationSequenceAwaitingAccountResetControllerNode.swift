@@ -6,8 +6,6 @@ import SwiftSignalKit
 import TelegramPresentationData
 
 private func timerValueString(days: Int32, hours: Int32, minutes: Int32, color: UIColor, strings: PresentationStrings) -> NSAttributedString {
-    var string = NSMutableAttributedString()
-    
     var daysString = ""
     if days > 0 {
         daysString = strings.MessageTimer_Days(days) + " "

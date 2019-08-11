@@ -187,6 +187,75 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                 }
                 return .HistoryView(view: view, type: .Generic(type: genericType), scrollPosition: scrollPosition, flashIndicators: animated, originalScrollPosition: chatScrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
             }
+        case .Scheduled:
+            var preloaded = false
+            var fadeIn = false
+            let count = 100
+            let signal = account.viewTracker.aroundMessageHistoryViewForLocation(chatLocation, index: .upperBound, anchorIndex: .upperBound, count: count, fixedCombinedReadStates: nil, tagMask: tagMask, excludeNamespaces: [Namespaces.Message.Cloud, Namespaces.Message.Local], orderStatistics: orderStatistics)
+            return signal
+            |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
+                let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
+                
+                let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
+                
+                if preloaded {
+                    return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
+                } else {
+                    if view.isLoading {
+                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                    }
+                    var scrollPosition: ChatHistoryViewScrollPosition?
+                    
+                    if let maxReadIndex = view.maxReadIndex, tagMask == nil {
+                        let aroundIndex = maxReadIndex
+                        scrollPosition = .unread(index: maxReadIndex)
+                        
+                        var targetIndex = 0
+                        for i in 0 ..< view.entries.count {
+                            if view.entries[i].index >= aroundIndex {
+                                targetIndex = i
+                                break
+                            }
+                        }
+                        
+                        let maxIndex = targetIndex + count / 2
+                        let minIndex = targetIndex - count / 2
+                        if minIndex <= 0 && view.holeEarlier {
+                            fadeIn = true
+                            return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                        }
+                        if maxIndex >= targetIndex {
+                            if view.holeLater {
+                                fadeIn = true
+                                return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                            }
+                            if view.holeEarlier {
+                                var incomingCount: Int32 = 0
+                                inner: for entry in view.entries.reversed() {
+                                    if entry.message.flags.contains(.Incoming) {
+                                        incomingCount += 1
+                                    }
+                                }
+                                if case let .peer(peerId) = chatLocation, let combinedReadStates = view.fixedReadStates, case let .peer(readStates) = combinedReadStates, let readState = readStates[peerId], readState.count == incomingCount {
+                                } else {
+                                    fadeIn = true
+                                    return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                                }
+                            }
+                        }
+                    } else if let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
+                        scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
+                    } else {
+                        if view.entries.isEmpty && (view.holeEarlier || view.holeLater) {
+                            fadeIn = true
+                            return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
+                        }
+                    }
+                    
+                    preloaded = true
+                    return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+                }
+            }
         }
 }
 

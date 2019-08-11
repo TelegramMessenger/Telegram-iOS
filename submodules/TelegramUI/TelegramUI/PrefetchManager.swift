@@ -169,7 +169,7 @@ private final class PrefetchManagerImpl {
                     if validIds.contains(id) {
                         continue
                     }
-                
+
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
                     let peerType = MediaAutoDownloadPeerType.contact
                     
