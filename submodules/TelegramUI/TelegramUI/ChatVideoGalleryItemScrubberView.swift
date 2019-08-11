@@ -49,7 +49,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     
     override init(frame: CGRect) {
         self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 5.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: UIColor(white: 1.0, alpha: 0.42), foregroundColor: .white))
-        self.scrubberNode.allowsContinuousSeekUpdates = true
+        //self.scrubberNode.allowsContinuousSeekUpdates = true
         
         self.leftTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
         self.rightTimestampNode = MediaPlayerTimeTextNode(textColor: .white)
