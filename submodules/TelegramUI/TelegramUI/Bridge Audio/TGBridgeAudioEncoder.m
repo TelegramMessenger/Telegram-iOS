@@ -12,7 +12,7 @@
 
 static const char *AMQueueSpecific = "AMQueueSpecific";
 
-const NSInteger TGBridgeAudioEncoderSampleRate = 16000;
+const NSInteger TGBridgeAudioEncoderSampleRate = 48000;
 
 typedef enum {
     ATQueuePriorityLow,

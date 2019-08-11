@@ -10,10 +10,25 @@ struct MatchingDeviceContact {
     let firstName: String
     let lastName: String
     let phoneNumbers: [String]
+    let peerId: PeerId?
 }
 
 enum IntentContactsError {
     case generic
+}
+
+private let phonebookUsernamePathPrefix = "@id"
+private let phonebookUsernamePrefix = "https://t.me/" + phonebookUsernamePathPrefix
+
+private func parseAppSpecificContactReference(_ value: String) -> PeerId? {
+    if !value.hasPrefix(phonebookUsernamePrefix) {
+        return nil
+    }
+    let idString = String(value[value.index(value.startIndex, offsetBy: phonebookUsernamePrefix.count)...])
+    if let id = Int32(idString) {
+        return PeerId(namespace: Namespaces.Peer.CloudUser, id: id)
+    }
+    return nil
 }
 
 func matchingDeviceContacts(stableIds: [String]) -> Signal<[MatchingDeviceContact], IntentContactsError> {
@@ -21,7 +36,7 @@ func matchingDeviceContacts(stableIds: [String]) -> Signal<[MatchingDeviceContac
         return .fail(.generic)
     }
     let store = CNContactStore()
-    guard let contacts = try? store.unifiedContacts(matching: CNContact.predicateForContacts(withIdentifiers: stableIds), keysToFetch: [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor]) else {
+    guard let contacts = try? store.unifiedContacts(matching: CNContact.predicateForContacts(withIdentifiers: stableIds), keysToFetch: [CNContactFormatter.descriptorForRequiredKeys(for: .fullName), CNContactPhoneNumbersKey as CNKeyDescriptor, CNContactUrlAddressesKey as CNKeyDescriptor]) else {
         return .fail(.generic)
     }
     
@@ -34,7 +49,14 @@ func matchingDeviceContacts(stableIds: [String]) -> Signal<[MatchingDeviceContac
             }
         })
         
-        return MatchingDeviceContact(stableId: contact.identifier, firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers)
+        var contactPeerId: PeerId?
+        for address in contact.urlAddresses {
+            if address.label == "Telegram", let peerId = parseAppSpecificContactReference(address.value as String) {
+                contactPeerId = peerId
+            }
+        }
+        
+        return MatchingDeviceContact(stableId: contact.identifier, firstName: contact.givenName, lastName: contact.familyName, phoneNumbers: phoneNumbers, peerId: contactPeerId)
     }))
 }
 
@@ -52,44 +74,24 @@ func matchingCloudContacts(postbox: Postbox, contacts: [MatchingDeviceContact]) 
     return postbox.transaction { transaction -> [(String, TelegramUser)] in
         var result: [(String, TelegramUser)] = []
         outer: for peerId in transaction.getContactPeerIds() {
-            if let peer = transaction.getPeer(peerId) as? TelegramUser, let peerPhoneNumber = peer.phone {
-                for contact in contacts {
-                    for phoneNumber in contact.phoneNumbers {
-                        if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
+            if let peer = transaction.getPeer(peerId) as? TelegramUser {
+                if let peerPhoneNumber = peer.phone {
+                    for contact in contacts {
+                        for phoneNumber in contact.phoneNumbers {
+                            if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
+                                result.append((contact.stableId, peer))
+                                continue outer
+                            }
+                        }
+                    }
+                } else {
+                    for contact in contacts {
+                        if let contactPeerId = contact.peerId, contactPeerId == peerId {
                             result.append((contact.stableId, peer))
                             continue outer
                         }
                     }
                 }
-//        var parsedPhoneNumbers: [String: ParsedPhoneNumber] = [:]
-//                let parsedPeerPhoneNumber: ParsedPhoneNumber?
-//                if let number = parsedPhoneNumbers[peerPhoneNumber] {
-//                    parsedPeerPhoneNumber = number
-//                } else if let number = ParsedPhoneNumber(string: peerPhoneNumber) {
-//                    parsedPeerPhoneNumber = number
-//                    parsedPhoneNumbers[peerPhoneNumber] = number
-//                } else {
-//                    parsedPeerPhoneNumber = nil
-//                }
-//
-//                for contact in contacts {
-//                    for phoneNumber in contact.phoneNumbers {
-//                        let parsedPhoneNumber: ParsedPhoneNumber?
-//                        if let number = parsedPhoneNumbers[phoneNumber] {
-//                            parsedPhoneNumber = number
-//                        } else if let number = ParsedPhoneNumber(string: phoneNumber) {
-//                            parsedPhoneNumber = number
-//                            parsedPhoneNumbers[phoneNumber] = number
-//                        } else {
-//                            parsedPhoneNumber = nil
-//                        }
-//
-//                        if parsedPeerPhoneNumber == parsedPhoneNumber {
-//                            result.append((contact.stableId, peer))
-//                            continue outer
-//                        }
-//                    }
-//                }
             }
         }
         return result
