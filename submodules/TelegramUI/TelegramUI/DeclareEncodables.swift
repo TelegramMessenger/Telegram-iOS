@@ -27,7 +27,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(ICloudFileResource.self, f: { ICloudFileResource(decoder: $0) })
     declareEncodable(MediaInputSettings.self, f: { MediaInputSettings(decoder: $0) })
     declareEncodable(ContactSynchronizationSettings.self, f: { ContactSynchronizationSettings(decoder: $0) })
-    declareEncodable(CachedChannelAdminIds.self, f: { CachedChannelAdminIds(decoder: $0) })
+    declareEncodable(CachedChannelAdminRanks.self, f: { CachedChannelAdminRanks(decoder: $0) })
     declareEncodable(StickerSettings.self, f: { StickerSettings(decoder: $0) })
     declareEncodable(InstantPagePresentationSettings.self, f: { InstantPagePresentationSettings(decoder: $0) })
     declareEncodable(InstantPageStoredState.self, f: { InstantPageStoredState(decoder: $0) })

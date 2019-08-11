@@ -81,13 +81,13 @@ typedef enum {
         
         NSDictionary *outputSettings = @
         {
-            AVFormatIDKey: @(kAudioFormatLinearPCM),
-            AVSampleRateKey: @(TGBridgeAudioEncoderSampleRate),
-            AVNumberOfChannelsKey: @1,
-            AVLinearPCMBitDepthKey: @16,
-            AVLinearPCMIsFloatKey: @false,
-            AVLinearPCMIsBigEndianKey: @false,
-            AVLinearPCMIsNonInterleaved: @false
+        AVFormatIDKey: @(kAudioFormatLinearPCM),
+        AVSampleRateKey: @(TGBridgeAudioEncoderSampleRate),
+        AVNumberOfChannelsKey: @1,
+        AVLinearPCMBitDepthKey: @16,
+        AVLinearPCMIsFloatKey: @false,
+        AVLinearPCMIsBigEndianKey: @false,
+        AVLinearPCMIsNonInterleaved: @false
         };
         
         _readerOutput = [AVAssetReaderAudioMixOutput assetReaderAudioMixOutputWithAudioTracks:asset.tracks audioSettings:outputSettings];
@@ -124,76 +124,76 @@ typedef enum {
 static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 1000 * 60 * 2;
 
 - (void)startWithCompletion:(void (^)(NSString *, int32_t))completion
-{    
+{
     [[TGBridgeAudioEncoder processingQueue] dispatch:^
-    {
-        _oggWriter = [[TGOggOpusWriter alloc] init];
-        if (![_oggWriter beginWithDataItem:_tempFileItem])
-        {
-            [self cleanup];
-            return;
-        }
-        
-        [_assetReader startReading];
-        
-        while (_assetReader.status != AVAssetReaderStatusCompleted)
-        {
-            if (_assetReader.status == AVAssetReaderStatusReading)
-            {
-                CMSampleBufferRef nextBuffer = [_readerOutput copyNextSampleBuffer];
-                if (nextBuffer)
-                {
-                    AudioBufferList abl;
-                    CMBlockBufferRef blockBuffer;
-                    CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(nextBuffer, NULL, &abl, sizeof(abl), NULL, NULL, kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment, &blockBuffer);
-                    
-                    [[TGBridgeAudioEncoder processingQueue] dispatch:^
-                    {
-                        [self _processBuffer:&abl.mBuffers[0]];
-                        
-                        CFRelease(nextBuffer);
-                        CFRelease(blockBuffer);
-                    }];
-                }
-                else
-                {
-                    [[TGBridgeAudioEncoder processingQueue] dispatch:^
-                    {
-                        if (_tailLength > 0) {
-                            [_oggWriter writeFrame:(uint8_t *)_audioBuffer.bytes frameByteCount:(NSUInteger)_tailLength];
-                        }
-                    }];
-                    break;
-                }
-            }
-        }
-        
-        [[TGBridgeAudioEncoder processingQueue] dispatch:^
-        {
-            TGFileDataItem *dataItemResult = nil;
-            NSTimeInterval durationResult = 0.0;
-            
-            NSUInteger totalBytes = 0;
-            
-            if (_assetReader.status == AVAssetReaderStatusCompleted)
-            {
-                NSLog(@"finished");
-                if (_oggWriter != nil && [_oggWriter writeFrame:NULL frameByteCount:0])
-                {
-                    dataItemResult = _tempFileItem;
-                    durationResult = [_oggWriter encodedDuration];
-                    totalBytes = [_oggWriter encodedBytes];
-                }
-                
-                [self cleanup];
-            }
-            
-            //TGLog(@"[TGBridgeAudioEncoder#%x convert time: %f ms]", self, (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0);
-            
-            if (completion != nil)
-                completion(dataItemResult.path, (int32_t)durationResult);
-        }];
-    }];
+     {
+         _oggWriter = [[TGOggOpusWriter alloc] init];
+         if (![_oggWriter beginWithDataItem:_tempFileItem])
+         {
+             [self cleanup];
+             return;
+         }
+         
+         [_assetReader startReading];
+         
+         while (_assetReader.status != AVAssetReaderStatusCompleted)
+         {
+             if (_assetReader.status == AVAssetReaderStatusReading)
+             {
+                 CMSampleBufferRef nextBuffer = [_readerOutput copyNextSampleBuffer];
+                 if (nextBuffer)
+                 {
+                     AudioBufferList abl;
+                     CMBlockBufferRef blockBuffer;
+                     CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(nextBuffer, NULL, &abl, sizeof(abl), NULL, NULL, kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment, &blockBuffer);
+                     
+                     [[TGBridgeAudioEncoder processingQueue] dispatch:^
+                      {
+                          [self _processBuffer:&abl.mBuffers[0]];
+                          
+                          CFRelease(nextBuffer);
+                          CFRelease(blockBuffer);
+                      }];
+                 }
+                 else
+                 {
+                     [[TGBridgeAudioEncoder processingQueue] dispatch:^
+                      {
+                          if (_tailLength > 0) {
+                              [_oggWriter writeFrame:(uint8_t *)_audioBuffer.bytes frameByteCount:(NSUInteger)_tailLength];
+                          }
+                      }];
+                     break;
+                 }
+             }
+         }
+         
+         [[TGBridgeAudioEncoder processingQueue] dispatch:^
+          {
+              TGFileDataItem *dataItemResult = nil;
+              NSTimeInterval durationResult = 0.0;
+              
+              NSUInteger totalBytes = 0;
+              
+              if (_assetReader.status == AVAssetReaderStatusCompleted)
+              {
+                  NSLog(@"finished");
+                  if (_oggWriter != nil)
+                  {
+                      dataItemResult = _tempFileItem;
+                      durationResult = [_oggWriter encodedDuration];
+                      totalBytes = [_oggWriter encodedBytes];
+                  }
+                  
+                  [self cleanup];
+              }
+              
+              //TGLog(@"[TGBridgeAudioEncoder#%x convert time: %f ms]", self, (CFAbsoluteTimeGetCurrent() - startTime) * 1000.0);
+              
+              if (completion != nil)
+                  completion(dataItemResult.path, (int32_t)durationResult);
+          }];
+     }];
 }
 
 - (void)_processBuffer:(AudioBuffer const *)buffer
@@ -270,7 +270,7 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
 
 @implementation TGFileDataItem
 {
-     ATQueue *_queue;
+    ATQueue *_queue;
 }
 
 - (void)_commonInit
@@ -306,11 +306,11 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
         
         
         [_queue dispatch:^
-        {
-            _fileName = filePath;
-            _length = [[[NSFileManager defaultManager] attributesOfItemAtPath:_fileName error:nil][NSFileSize] unsignedIntegerValue];
-            _fileExists = [[NSFileManager defaultManager] fileExistsAtPath:_fileName];
-        }];
+         {
+             _fileName = filePath;
+             _length = [[[NSFileManager defaultManager] attributesOfItemAtPath:_fileName error:nil][NSFileSize] unsignedIntegerValue];
+             _fileExists = [[NSFileManager defaultManager] fileExistsAtPath:_fileName];
+         }];
     }
     return self;
 }
@@ -322,38 +322,38 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
 - (void)moveToPath:(NSString *)path
 {
     [_queue dispatch:^
-    {
-        [[NSFileManager defaultManager] moveItemAtPath:_fileName toPath:path error:nil];
-        _fileName = path;
-    }];
+     {
+         [[NSFileManager defaultManager] moveItemAtPath:_fileName toPath:path error:nil];
+         _fileName = path;
+     }];
 }
 
 - (void)remove
 {
     [_queue dispatch:^
-    {
-        [[NSFileManager defaultManager] removeItemAtPath:_fileName error:nil];
-    }];
+     {
+         [[NSFileManager defaultManager] removeItemAtPath:_fileName error:nil];
+     }];
 }
 
 - (void)appendData:(NSData *)data
 {
     [_queue dispatch:^
-    {
-        if (!_fileExists)
-        {
-            [[NSFileManager defaultManager] createFileAtPath:_fileName contents:nil attributes:nil];
-            _fileExists = true;
-        }
-        NSFileHandle *file = [NSFileHandle fileHandleForUpdatingAtPath:_fileName];
-        [file seekToEndOfFile];
-        [file writeData:data];
-        [file synchronizeFile];
-        [file closeFile];
-        _length += data.length;
-        
-        [_data appendData:data];
-    }];
+     {
+         if (!_fileExists)
+         {
+             [[NSFileManager defaultManager] createFileAtPath:_fileName contents:nil attributes:nil];
+             _fileExists = true;
+         }
+         NSFileHandle *file = [NSFileHandle fileHandleForUpdatingAtPath:_fileName];
+         [file seekToEndOfFile];
+         [file writeData:data];
+         [file synchronizeFile];
+         [file closeFile];
+         _length += data.length;
+         
+         [_data appendData:data];
+     }];
 }
 
 - (NSData *)readDataAtOffset:(NSUInteger)offset length:(NSUInteger)length
@@ -361,14 +361,14 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
     __block NSData *data = nil;
     
     [_queue dispatch:^
-    {
-        NSFileHandle *file = [NSFileHandle fileHandleForUpdatingAtPath:_fileName];
-        [file seekToFileOffset:(unsigned long long)offset];
-        data = [file readDataOfLength:length];
-        if (data.length != length)
-            //TGLog(@"Read data length mismatch");
-        [file closeFile];
-    } synchronous:true];
+     {
+         NSFileHandle *file = [NSFileHandle fileHandleForUpdatingAtPath:_fileName];
+         [file seekToFileOffset:(unsigned long long)offset];
+         data = [file readDataOfLength:length];
+         if (data.length != length)
+             //TGLog(@"Read data length mismatch");
+             [file closeFile];
+     } synchronous:true];
     
     return data;
 }
@@ -377,9 +377,9 @@ static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 100
 {
     __block NSUInteger result = 0;
     [_queue dispatch:^
-    {
-        result = _length;
-    } synchronous:true];
+     {
+         result = _length;
+     } synchronous:true];
     
     return result;
 }

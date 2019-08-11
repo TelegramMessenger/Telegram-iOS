@@ -24,11 +24,14 @@
 @property (nonatomic, copy) void(^onStop)(void);
 @property (nonatomic, copy) void(^onCancel)(void);
 @property (nonatomic, copy) void(^didDismiss)(void);
-
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface;
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete;
+@property (nonatomic, copy) void(^displaySlowmodeTooltip)(void);
+    
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)(void))transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView;
+    
 - (void)buttonInteractionUpdate:(CGPoint)value;
 - (void)setLocked;
+
+- (CGRect)frameForSendButton;
 
 - (void)complete;
 - (void)dismiss;

@@ -18,10 +18,6 @@ import Foundation
 public struct PendingMessageStatus: Equatable {
     public let isRunning: Bool
     public let progress: Float
-    
-    public static func ==(lhs: PendingMessageStatus, rhs: PendingMessageStatus) -> Bool {
-        return lhs.isRunning == rhs.isRunning && lhs.progress.isEqual(to: rhs.progress)
-    }
 }
 
 private enum PendingMessageState {
@@ -58,7 +54,8 @@ private final class PendingMessageContext {
     var contentType: PendingMessageUploadedContentType? = nil
     let activityDisposable = MetaDisposable()
     var status: PendingMessageStatus?
-    var statusSubscribers = Bag<(PendingMessageStatus?) -> Void>()
+    var error: PendingMessageFailureReason?
+    var statusSubscribers = Bag<(PendingMessageStatus?, PendingMessageFailureReason?) -> Void>()
     var forcedReuploadOnce: Bool = false
 }
 
@@ -66,6 +63,7 @@ public enum PendingMessageFailureReason {
     case flood
     case publicBan
     case mediaRestricted
+    case slowmodeActive
 }
 
 private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
@@ -75,6 +73,8 @@ private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
         return .publicBan
     } else if error.hasPrefix("CHAT_SEND_") && error.hasSuffix("_FORBIDDEN") {
         return .mediaRestricted
+    } else if error.hasPrefix("SLOWMODE_WAIT") {
+        return .slowmodeActive
     } else {
         return nil
     }
@@ -152,8 +152,8 @@ public final class PendingMessageManager {
     
     private let queue = Queue()
     
-    private let _hasPendingMessages = ValuePromise<Bool>(false, ignoreRepeated: true)
-    public var hasPendingMessages: Signal<Bool, NoError> {
+    private let _hasPendingMessages = ValuePromise<Set<PeerId>>(Set(), ignoreRepeated: true)
+    public var hasPendingMessages: Signal<Set<PeerId>, NoError> {
         return self._hasPendingMessages.get()
     }
     
@@ -202,7 +202,7 @@ public final class PendingMessageManager {
                     if context.status != nil {
                         context.status = nil
                         for subscriber in context.statusSubscribers.copyItems() {
-                            subscriber(nil)
+                            subscriber(nil, context.error)
                         }
                     }
                     
@@ -252,11 +252,16 @@ public final class PendingMessageManager {
                 })
             }
             
-            self._hasPendingMessages.set(!self.pendingMessageIds.isEmpty)
+            var peersWithPendingMessages = Set<PeerId>()
+            for id in self.pendingMessageIds {
+                peersWithPendingMessages.insert(id.peerId)
+            }
+            
+            self._hasPendingMessages.set(peersWithPendingMessages)
         }
     }
     
-    public func pendingMessageStatus(_ id: MessageId) -> Signal<PendingMessageStatus?, NoError> {
+    public func pendingMessageStatus(_ id: MessageId) -> Signal<(PendingMessageStatus?, PendingMessageFailureReason?), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -269,11 +274,11 @@ public final class PendingMessageManager {
                     self.messageContexts[id] = messageContext
                 }
                 
-                let index = messageContext.statusSubscribers.add({ status in
-                    subscriber.putNext(status)
+                let index = messageContext.statusSubscribers.add({ status, error in
+                    subscriber.putNext((status, error))
                 })
                 
-                subscriber.putNext(messageContext.status)
+                subscriber.putNext((messageContext.status, messageContext.error))
                 
                 disposable.set(ActionDisposable {
                     self.queue.async {
@@ -329,7 +334,7 @@ public final class PendingMessageManager {
             if status != messageContext.status {
                 messageContext.status = status
                 for subscriber in messageContext.statusSubscribers.copyItems() {
-                    subscriber(status)
+                    subscriber(messageContext.status, messageContext.error)
                 }
             }
         }
@@ -440,23 +445,7 @@ public final class PendingMessageManager {
             return .progress(1.0)
         }
         messages[0].0.sendDisposable.set((sendMessage
-        |> deliverOn(self.queue)
-        |> afterDisposed { [weak self] in
-            /*if let strongSelf = self {
-                assert(strongSelf.queue.isCurrent())
-                for (_, id, _) in messages {
-                    if let current = strongSelf.messageContexts[id] {
-                        current.status = .none
-                        for subscriber in current.statusSubscribers.copyItems() {
-                            subscriber(nil)
-                        }
-                        if current.statusSubscribers.isEmpty {
-                            strongSelf.messageContexts.removeValue(forKey: id)
-                        }
-                    }
-                }
-            }*/
-        }).start())
+        |> deliverOn(self.queue)).start())
     }
     
     private func commitSendingSingleMessage(messageContext: PendingMessageContext, messageId: MessageId, content: PendingMessageUploadedContentAndReuploadInfo) {
@@ -466,21 +455,7 @@ public final class PendingMessageManager {
             return .progress(1.0)
         }
         messageContext.sendDisposable.set((sendMessage
-        |> deliverOn(self.queue)
-        |> afterDisposed { [weak self] in
-            /*if let strongSelf = self {
-                assert(strongSelf.queue.isCurrent())
-                if let current = strongSelf.messageContexts[messageId] {
-                    current.status = .none
-                    for subscriber in current.statusSubscribers.copyItems() {
-                        subscriber(nil)
-                    }
-                    if current.statusSubscribers.isEmpty {
-                        strongSelf.messageContexts.removeValue(forKey: messageId)
-                    }
-                }
-            }*/
-        }).start(next: { [weak self] next in
+        |> deliverOn(self.queue)).start(next: { [weak self] next in
             if let strongSelf = self {
                 assert(strongSelf.queue.isCurrent())
                 
@@ -490,7 +465,7 @@ public final class PendingMessageManager {
                             let status = PendingMessageStatus(isRunning: true, progress: progress)
                             current.status = status
                             for subscriber in current.statusSubscribers.copyItems() {
-                                subscriber(status)
+                                subscriber(current.status, current.error)
                             }
                         }
                 }
@@ -508,7 +483,7 @@ public final class PendingMessageManager {
         let status = PendingMessageStatus(isRunning: true, progress: 0.0)
         messageContext.status = status
         for subscriber in messageContext.statusSubscribers.copyItems() {
-            subscriber(status)
+            subscriber(messageContext.status, messageContext.error)
         }
         self.addContextActivityIfNeeded(messageContext, peerId: id.peerId)
         
@@ -543,7 +518,7 @@ public final class PendingMessageManager {
                             let status = PendingMessageStatus(isRunning: true, progress: progress)
                             current.status = status
                             for subscriber in current.statusSubscribers.copyItems() {
-                                subscriber(status)
+                                subscriber(current.status, current.error)
                             }
                         }
                     case let .content(content):
@@ -577,7 +552,7 @@ public final class PendingMessageManager {
                     let status = PendingMessageStatus(isRunning: true, progress: 0.0)
                     context.status = status
                     for subscriber in context.statusSubscribers.copyItems() {
-                        subscriber(status)
+                        subscriber(context.status, context.error)
                     }
                     self.addContextActivityIfNeeded(context, peerId: peerId)
                     context.uploadDisposable.set((uploadSignal
@@ -591,7 +566,7 @@ public final class PendingMessageManager {
                                         let status = PendingMessageStatus(isRunning: true, progress: progress)
                                         current.status = status
                                         for subscriber in current.statusSubscribers.copyItems() {
-                                            subscriber(status)
+                                            subscriber(context.status, context.error)
                                         }
                                     }
                                 case let .content(content):
@@ -775,6 +750,15 @@ public final class PendingMessageManager {
                                     return .complete()
                                 }
                             } else if let failureReason = reasonForError(error.errorDescription), let message = messages.first?.0 {
+                                for (message, _) in messages {
+                                    if let context = strongSelf.messageContexts[message.id] {
+                                        context.error = failureReason
+                                        for f in context.statusSubscribers.copyItems() {
+                                            f(context.status, context.error)
+                                        }
+                                    }
+                                }
+                                
                                 if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                                     for subscriber in context.messageFailedSubscribers.copyItems() {
                                         subscriber(failureReason)
@@ -895,9 +879,7 @@ public final class PendingMessageManager {
                 var replyMessageId: Int32?
                 
                 var flags: Int32 = 0
-                
-                flags |= (1 << 7)
-                
+        
                 for attribute in message.attributes {
                     if let replyAttribute = attribute as? ReplyMessageAttribute {
                         replyMessageId = replyAttribute.messageId.id
@@ -918,11 +900,16 @@ public final class PendingMessageManager {
                     }
                 }
                 
-                if let _ = replyMessageId {
-                    flags |= Int32(1 << 0)
-                }
-                if let _ = messageEntities {
-                    flags |= Int32(1 << 3)
+                if case .forward = content.content {
+                } else {
+                    flags |= (1 << 7)
+                    
+                    if let _ = replyMessageId {
+                        flags |= Int32(1 << 0)
+                    }
+                    if let _ = messageEntities {
+                        flags |= Int32(1 << 3)
+                    }
                 }
                 
                 let dependencyTag = PendingMessageRequestDependencyTag(messageId: messageId)
@@ -936,7 +923,7 @@ public final class PendingMessageManager {
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: 0, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -988,6 +975,13 @@ public final class PendingMessageManager {
                                 return
                             }
                         } else if let failureReason = reasonForError(error.errorDescription) {
+                            if let context = strongSelf.messageContexts[message.id] {
+                                context.error = failureReason
+                                for f in context.statusSubscribers.copyItems() {
+                                    f(context.status, context.error)
+                                }
+                            }
+                            
                             if let context = strongSelf.peerSummaryContexts[message.id.peerId] {
                                 for subscriber in context.messageFailedSubscribers.copyItems() {
                                     subscriber(failureReason)

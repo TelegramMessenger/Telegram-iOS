@@ -64,13 +64,12 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none)
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
                 let message = item.message
-                
                 let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                 
                 let horizontalInset = layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
                 
-                let bubbleTheme = item.presentationData.theme.theme.chat.bubble
+                let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
                 var titleString: String?
                 var callDuration: Int32?
@@ -105,12 +104,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     titleString = baseString
                 }
                 
-                var attributedTitle: NSAttributedString?
-                if message.flags.contains(.Incoming) {
-                    attributedTitle = NSAttributedString(string: titleString ?? "", font: titleFont, textColor: bubbleTheme.incomingPrimaryTextColor)
-                } else {
-                    attributedTitle = NSAttributedString(string: titleString ?? "", font: titleFont, textColor: bubbleTheme.outgoingPrimaryTextColor)
-                }
+                let attributedTitle = NSAttributedString(string: titleString ?? "", font: titleFont, textColor: messageTheme.primaryTextColor)
                 
                 var callIcon: UIImage?
                 if callSuccessful {
@@ -143,9 +137,8 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     statusText = dateText
                 }
                 
-                var attributedLabel: NSAttributedString?
-                attributedLabel = NSAttributedString(string: statusText, font: labelFont, textColor: message.effectivelyIncoming(item.context.account.peerId) ? bubbleTheme.incomingFileDurationColor : bubbleTheme.outgoingFileDurationColor)
-                
+                let attributedLabel = NSAttributedString(string: statusText, font: labelFont, textColor: messageTheme.fileDurationColor)
+
                 let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedTitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 let (labelLayout, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: attributedLabel, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: textConstrainedSize, alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 

@@ -21,7 +21,7 @@ class NavigationTransitionCoordinator {
         }
         set(value) {
             self._progress = value
-            self.updateProgress()
+            self.updateProgress(transition: .immediate)
         }
     }
     
@@ -39,8 +39,9 @@ class NavigationTransitionCoordinator {
     
     private(set) var animatingCompletion = false
     private var currentCompletion: (() -> Void)?
-    private var didUpdateProgress:((CGFloat)->Void)?
-    init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat) -> Void)? = nil) {
+    private var didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    
+    init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)? = nil) {
         self.transition = transition
         self.container = container
         self.didUpdateProgress = didUpdateProgress
@@ -79,14 +80,14 @@ class NavigationTransitionCoordinator {
         self.viewSuperview?.insertSubview(self.shadowView, belowSubview: dimView)
         
         self.maybeCreateNavigationBarTransition()
-        self.updateProgress()
+        self.updateProgress(transition: .immediate)
     }
 
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func updateProgress() {
+    func updateProgress(transition: ContainedViewLayoutTransition) {
         let position: CGFloat
         switch self.transition {
             case .Push:
@@ -111,7 +112,7 @@ class NavigationTransitionCoordinator {
         
         self.updateNavigationBarTransition()
         
-        self.didUpdateProgress?(self.progress)
+        self.didUpdateProgress?(self.progress, transition)
     }
     
     func updateNavigationBarTransition() {

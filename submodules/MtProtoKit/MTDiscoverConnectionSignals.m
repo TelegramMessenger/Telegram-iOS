@@ -70,7 +70,8 @@
     
     bool extendedPadding = false;
     if (secret != nil) {
-        if ([MTSocksProxySettings secretSupportsExtendedPadding:secret]) {
+        MTProxySecret *parsedSecret = [MTProxySecret parseData:secret];
+        if ([parsedSecret isKindOfClass:[MTProxySecretType1 class]] || [parsedSecret isKindOfClass:[MTProxySecretType2 class]]) {
             extendedPadding = true;
         }
     }

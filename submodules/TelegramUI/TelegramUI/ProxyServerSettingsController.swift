@@ -15,7 +15,7 @@ private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String
     switch server.connection {
     case let .mtp(secret):
-        let secret = hexString(secret)
+        let secret = MTProxySecret.parseData(secret)?.serializeToString() ?? ""
         link = "https://t.me/proxy?server=\(server.host)&port=\(server.port)"
         link += "&secret=\(secret.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
     case let .socks5(username, password):
@@ -103,7 +103,7 @@ private enum ProxySettingsEntry: ItemListNodeEntry {
             case .credentialsSecret:
                 return 10
             case .share:
-                return 11
+                return 12
         }
     }
     
@@ -208,13 +208,7 @@ private struct ProxyServerSettingsControllerState: Equatable {
             case .socks5:
                 break
             case .mtp:
-                let data = dataWithHexString(self.secret)
-                var secretIsValid = false
-                if data.count == 16 {
-                    secretIsValid = true
-                } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                    secretIsValid = true
-                }
+                let secretIsValid = MTProxySecret.parse(self.secret) != nil
                 if !secretIsValid {
                     return false
                 }
@@ -258,15 +252,9 @@ private func proxyServerSettings(with state: ProxyServerSettingsControllerState)
             case .socks5:
                 return ProxyServerSettings(host: state.host, port: port, connection: .socks5(username: state.username.isEmpty ? nil : state.username, password: state.password.isEmpty ? nil : state.password))
             case .mtp:
-                let data = dataWithHexString(state.secret)
-                var secretIsValid = false
-                if data.count == 16 {
-                    secretIsValid = true
-                } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                    secretIsValid = true
-                }
-                if secretIsValid {
-                    return ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: data))
+                let parsedSecret = MTProxySecret.parse(state.secret)
+                if let parsedSecret = parsedSecret {
+                    return ProxyServerSettings(host: state.host, port: port, connection: .mtp(secret: parsedSecret.serialize()))
                 }
         }
     }
@@ -296,8 +284,8 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         }
     } else {
         if let proxy = parseProxyUrl(UIPasteboard.general.string ?? "") {
-            if let secret = proxy.secret, secret.count == 16 || (secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret)) {
-                pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: secret))
+            if let secret = proxy.secret, let parsedSecret = MTProxySecret.parseData(secret) {
+                pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: parsedSecret.serialize()))
             } else {
                 pasteboardSettings = ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .socks5(username: proxy.username, password: proxy.password))
             }

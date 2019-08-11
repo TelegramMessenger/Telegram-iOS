@@ -23,10 +23,10 @@
 
 - (instancetype)init
 {
-    return [self initWithGroupingAllowed:false];
+    return [self initWithGroupingAllowed:false selectionLimit:30];
 }
 
-- (instancetype)initWithGroupingAllowed:(bool)allowGrouping
+- (instancetype)initWithGroupingAllowed:(bool)allowGrouping selectionLimit:(int)selectionLimit
 {
     self = [super init];
     if (self != nil)
@@ -40,6 +40,7 @@
         _groupingChangedPipe = [[SPipe alloc] init];
         
         _allowGrouping = allowGrouping;
+        _selectionLimit = selectionLimit;
     }
     return self;
 }
@@ -60,21 +61,28 @@
     return _groupingChangedPipe.signalProducer();
 }
 
-- (void)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected
+- (bool)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected
 {
-    [self setItem:item selected:selected animated:false sender:nil];
+    return [self setItem:item selected:selected animated:false sender:nil];
 }
 
-- (void)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected animated:(bool)animated sender:(id)sender
+- (bool)setItem:(id<TGMediaSelectableItem>)item selected:(bool)selected animated:(bool)animated sender:(id)sender
 {
     if (![(id)item conformsToProtocol:@protocol(TGMediaSelectableItem)])
-        return;
-
+        return false;
+    
     NSString *identifier = item.uniqueIdentifier;
     if (selected)
     {
         if (_selectionMap[identifier] != nil)
-            return;
+            return false;
+        
+        if (_selectedIdentifiers.count >= _selectionLimit) {
+            if (_selectionLimitExceeded) {
+                _selectionLimitExceeded();
+            }
+            return false;
+        }
         
         _selectionMap[identifier] = item;
         [_selectedIdentifiers addObject:identifier];
@@ -82,13 +90,15 @@
     else
     {
         if (_selectionMap[identifier] == nil)
-            return;
+            return false;
         
         [_selectionMap removeObjectForKey:identifier];
         [_selectedIdentifiers removeObject:identifier];
     }
     
     _pipe.sink([TGMediaSelectionChange changeWithItem:item selected:selected animated:animated sender:sender]);
+    
+    return true;
 }
 
 - (NSUInteger)indexOfItem:(id<TGMediaSelectableItem>)item
@@ -125,15 +135,18 @@
     return [_selectedIdentifiers containsObject:identifier];
 }
 
-- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item
+- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item success:(bool *)success
 {
-    return [self toggleItemSelection:item animated:false sender:nil];
+    return [self toggleItemSelection:item animated:false sender:nil success:success];
 }
 
-- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item animated:(bool)animated sender:(id)sender
+- (bool)toggleItemSelection:(id<TGMediaSelectableItem>)item animated:(bool)animated sender:(id)sender success:(bool *)success
 {
     bool newValue = ![self isItemSelected:item];
-    [self setItem:item selected:newValue animated:animated sender:sender];
+    bool result = [self setItem:item selected:newValue animated:animated sender:sender];
+    if (success) {
+        *success = result;
+    }
     
     return newValue;
 }

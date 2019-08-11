@@ -125,7 +125,10 @@ open class NavigationController: UINavigationController, ContainableController, 
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
     
-    public var ready: Promise<Bool> = Promise(true)
+    private let _ready = Promise<Bool>(true)
+    open var ready: Promise<Bool> {
+        return self._ready
+    }
     
     private var masterDetailsBlackout: MasterDetailLayoutBlackout?
     private var backgroundDetailsMode: NavigationEmptyDetailsBackgoundMode?
@@ -272,7 +275,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     return (CGRect(origin: CGPoint(), size: detailFrame.size), ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: LayoutMetrics(widthClass: .regular, heightClass: .regular), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
                 }
             case .single:
-                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: layout.size.height > 900.0 ? .regular : .compact), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
         }
     }
     
@@ -751,7 +754,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
-            navigationTransitionCoordinator.updateProgress()
+            navigationTransitionCoordinator.updateProgress(transition: transition)
         }
     }
     
@@ -836,23 +839,22 @@ open class NavigationController: UINavigationController, ContainableController, 
                     bottomController.viewWillAppear(true)
                     let bottomView = bottomController.view!
                     
-                    if let bottomController = bottomController as? ViewController {
-                        bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
-                    }
-                    
-                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar, didUpdateProgress: { [weak self] progress in
+                    let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: topView, topNavigationBar: (topController as? ViewController)?.navigationBar, bottomView: bottomView, bottomNavigationBar: (bottomController as? ViewController)?.navigationBar, didUpdateProgress: { [weak self] progress, transition in
                         if let strongSelf = self {
                             for i in 0 ..< strongSelf._viewControllers.count {
                                 if let controller = strongSelf._viewControllers[i].controller as? ViewController {
                                     if i < strongSelf._viewControllers.count - 1 {
-                                        controller.updateNavigationCustomData((strongSelf.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0 - progress, transition: .immediate)
+                                        controller.updateNavigationCustomData((strongSelf.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0 - progress, transition: transition)
                                     } else {
-                                        controller.updateNavigationCustomData(nil, progress: 1.0 - progress, transition: .immediate)
+                                        controller.updateNavigationCustomData(nil, progress: 1.0 - progress, transition: transition)
                                     }
                                 }
                             }
                         }
                     })
+                    if let bottomController = bottomController as? ViewController {
+                        bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
+                    }
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
                 }
             case UIGestureRecognizerState.changed:

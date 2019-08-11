@@ -1183,7 +1183,7 @@ public class Account {
         
         self.networkTypeValue.set(currentNetworkType())
         
-        let serviceTasksMasterBecomeMaster = shouldBeServiceTaskMaster.get()
+        let serviceTasksMasterBecomeMaster = self.shouldBeServiceTaskMaster.get()
         |> distinctUntilChanged
         |> deliverOn(self.serviceQueue)
         
@@ -1193,7 +1193,7 @@ public class Account {
             }
         }))
         
-        let shouldBeMaster = combineLatest(shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
+        let shouldBeMaster = combineLatest(self.shouldBeServiceTaskMaster.get(), postbox.isMasterClient())
         |> map { [weak self] shouldBeMaster, isMaster -> Bool in
             if shouldBeMaster == .always && !isMaster {
                 self?.postbox.becomeMasterClient()
@@ -1246,7 +1246,7 @@ public class Account {
         
         let importantBackgroundOperations: [Signal<AccountRunningImportantTasks, NoError>] = [
             managedSynchronizeChatInputStateOperations(postbox: self.postbox, network: self.network) |> map { $0 ? AccountRunningImportantTasks.other : [] },
-            self.pendingMessageManager.hasPendingMessages |> map { $0 ? AccountRunningImportantTasks.pendingMessages : [] },
+            self.pendingMessageManager.hasPendingMessages |> map { !$0.isEmpty ? AccountRunningImportantTasks.pendingMessages : [] },
             self.accountPresenceManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] },
             self.notificationAutolockReportManager.isPerformingUpdate() |> map { $0 ? AccountRunningImportantTasks.other : [] }
         ]
@@ -1303,8 +1303,11 @@ public class Account {
         self.managedOperationsDisposable.add(managedLocalizationUpdatesOperations(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
-        
         self.managedOperationsDisposable.add(managedNotificationSettingsBehaviors(postbox: self.postbox).start())
+        
+        if !self.supplementary {
+            self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
+        }
         
         let mediaBox = postbox.mediaBox
         self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in

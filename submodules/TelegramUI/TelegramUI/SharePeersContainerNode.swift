@@ -73,7 +73,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let controllerInteraction: ShareControllerInteraction
     private let switchToAnotherAccount: () -> Void
     
-    private let accountPeer: Peer
+    let accountPeer: Peer
     private let foundPeers = Promise<[RenderedPeer]>([])
     
     private let disposable = MetaDisposable()
@@ -97,6 +97,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
+    let peersValue = Promise<[(RenderedPeer, PeerPresence?)]>()
+    
     init(sharedContext: SharedAccountContext, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
@@ -106,7 +108,9 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.accountPeer = accountPeer
         self.switchToAnotherAccount = switchToAnotherAccount
         
-        let items: Signal<[SharePeerEntry], NoError> = combineLatest(.single(peers), self.foundPeers.get())
+        self.peersValue.set(.single(peers))
+        
+        let items: Signal<[SharePeerEntry], NoError> = combineLatest(self.peersValue.get(), self.foundPeers.get())
         |> map { initialPeers, foundPeers -> [SharePeerEntry] in
             var entries: [SharePeerEntry] = []
             var index: Int32 = 0

@@ -5,6 +5,14 @@ import CoreText
 
 private let defaultFont = UIFont.systemFont(ofSize: 15.0)
 
+private final class TextNodeStrikethrough {
+    let frame: CGRect
+    
+    init(frame: CGRect) {
+        self.frame = frame
+    }
+}
+
 private final class TextNodeLine {
     let line: CTLine
     let frame: CGRect
@@ -21,7 +29,7 @@ private final class TextNodeLine {
     }
 }
 
-private final class TextNodeStrikethrough {
+private final class TextNodeBlockQuote {
     let frame: CGRect
     
     init(frame: CGRect) {
@@ -83,8 +91,10 @@ public final class TextNodeLayoutArguments {
     public let lineSpacing: CGFloat
     public let cutout: TextNodeCutout?
     public let insets: UIEdgeInsets
+    public let lineColor: UIColor?
+    public let textShadowColor: UIColor?
     
-    public init(attributedString: NSAttributedString?, backgroundColor: UIColor? = nil, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment = .natural, lineSpacing: CGFloat = 0.12, cutout: TextNodeCutout? = nil, insets: UIEdgeInsets = UIEdgeInsets()) {
+    public init(attributedString: NSAttributedString?, backgroundColor: UIColor? = nil, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment = .natural, lineSpacing: CGFloat = 0.12, cutout: TextNodeCutout? = nil, insets: UIEdgeInsets = UIEdgeInsets(), lineColor: UIColor? = nil, textShadowColor: UIColor? = nil) {
         self.attributedString = attributedString
         self.backgroundColor = backgroundColor
         self.maximumNumberOfLines = maximumNumberOfLines
@@ -94,6 +104,8 @@ public final class TextNodeLayoutArguments {
         self.lineSpacing = lineSpacing
         self.cutout = cutout
         self.insets = insets
+        self.lineColor = lineColor
+        self.textShadowColor = textShadowColor
     }
 }
 
@@ -111,9 +123,12 @@ public final class TextNodeLayout: NSObject {
     public let truncated: Bool
     fileprivate let firstLineOffset: CGFloat
     fileprivate let lines: [TextNodeLine]
+    fileprivate let blockQuotes: [TextNodeBlockQuote]
+    fileprivate let lineColor: UIColor?
+    fileprivate let textShadowColor: UIColor?
     public let hasRTL: Bool
     
-    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], backgroundColor: UIColor?) {
+    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?) {
         self.attributedString = attributedString
         self.maximumNumberOfLines = maximumNumberOfLines
         self.truncationType = truncationType
@@ -126,7 +141,10 @@ public final class TextNodeLayout: NSObject {
         self.truncated = truncated
         self.firstLineOffset = firstLineOffset
         self.lines = lines
+        self.blockQuotes = blockQuotes
         self.backgroundColor = backgroundColor
+        self.lineColor = lineColor
+        self.textShadowColor = textShadowColor
         var hasRTL = false
         for line in lines {
             if line.isRTL {
@@ -561,7 +579,7 @@ public class TextNode: ASDisplayNode {
         }
     }
     
-    private class func calculateLayout(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets) -> TextNodeLayout {
+    private class func calculateLayout(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, backgroundColor: UIColor?, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacingFactor: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, lineColor: UIColor?, textShadowColor: UIColor?) -> TextNodeLayout {
         if let attributedString = attributedString {
             let stringLength = attributedString.length
             
@@ -582,11 +600,12 @@ public class TextNode: ASDisplayNode {
             let fontLineSpacing = floor(fontLineHeight * lineSpacingFactor)
             
             var lines: [TextNodeLine] = []
+            var blockQuotes: [TextNodeBlockQuote] = []
             
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
             if maybeTypesetter == nil {
-                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], backgroundColor: backgroundColor)
+                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
             }
             
             let typesetter = maybeTypesetter!
@@ -682,10 +701,27 @@ public class TextNode: ASDisplayNode {
                         truncated = true
                     }
                     
+                    var headIndent: CGFloat = 0.0
+                    attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                        if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
+                            let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
+                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                            let x = lowerX < upperX ? lowerX : upperX
+                            strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                        } else if let paragraphStyle = attributes[NSAttributedStringKey.paragraphStyle] as? NSParagraphStyle {
+                            headIndent = paragraphStyle.headIndent
+                            
+                        }
+                    }
+                    
                     let lineWidth = min(constrainedSize.width, ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine))))
-                    let lineFrame = CGRect(x: lineCutoutOffset, y: lineOriginY, width: lineWidth, height: fontLineHeight)
+                    let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                     layoutSize.height += fontLineHeight + fontLineSpacing
                     layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
+                    
+                    if headIndent > 0.0 {
+                        blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
+                    }
                     
                     var isRTL = false
                     let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
@@ -696,16 +732,7 @@ public class TextNode: ASDisplayNode {
                         }
                     }
                     
-                    attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                        if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
-                            let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                            let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
-                            let x = lowerX < upperX ? lowerX : upperX
-                            strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                        }
-                    }
                     lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs))
-                    
                     break
                 } else {
                     if lineCharacterCount > 0 {
@@ -719,10 +746,26 @@ public class TextNode: ASDisplayNode {
                         let coreTextLine = CTTypesetterCreateLineWithOffset(typesetter, lineRange, 100.0)
                         lastLineCharacterIndex += lineCharacterCount
                         
+                        var headIndent: CGFloat = 0.0
+                        attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
+                            if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
+                                let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
+                                let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
+                                let x = lowerX < upperX ? lowerX : upperX
+                                strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
+                            } else if let paragraphStyle = attributes[NSAttributedStringKey.paragraphStyle] as? NSParagraphStyle {
+                                headIndent = paragraphStyle.headIndent
+                            }
+                        }
+                        
                         let lineWidth = ceil(CGFloat(CTLineGetTypographicBounds(coreTextLine, nil, nil, nil) - CTLineGetTrailingWhitespaceWidth(coreTextLine)))
-                        let lineFrame = CGRect(x: lineCutoutOffset, y: lineOriginY, width: lineWidth, height: fontLineHeight)
+                        let lineFrame = CGRect(x: lineCutoutOffset + headIndent, y: lineOriginY, width: lineWidth, height: fontLineHeight)
                         layoutSize.height += fontLineHeight
                         layoutSize.width = max(layoutSize.width, lineWidth + lineAdditionalWidth)
+                        
+                        if headIndent > 0.0 {
+                            blockQuotes.append(TextNodeBlockQuote(frame: lineFrame))
+                        }
                         
                         var isRTL = false
                         let glyphRuns = CTLineGetGlyphRuns(coreTextLine) as NSArray
@@ -733,14 +776,6 @@ public class TextNode: ASDisplayNode {
                             }
                         }
                         
-                        attributedString.enumerateAttributes(in: NSMakeRange(lineRange.location, lineRange.length), options: []) { attributes, range, _ in
-                            if let _ = attributes[NSAttributedStringKey.strikethroughStyle] {
-                                let lowerX = floor(CTLineGetOffsetForStringIndex(coreTextLine, range.location, nil))
-                                let upperX = ceil(CTLineGetOffsetForStringIndex(coreTextLine, range.location + range.length, nil))
-                                let x = lowerX < upperX ? lowerX : upperX
-                                strikethroughs.append(TextNodeStrikethrough(frame: CGRect(x: x, y: 0.0, width: abs(upperX - lowerX), height: fontLineHeight)))
-                            }
-                        }
                         lines.append(TextNodeLine(line: coreTextLine, frame: lineFrame, range: NSMakeRange(lineRange.location, lineRange.length), isRTL: isRTL, strikethroughs: strikethroughs))
                     } else {
                         if !lines.isEmpty {
@@ -762,9 +797,9 @@ public class TextNode: ASDisplayNode {
                 }
             }
             
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, backgroundColor: backgroundColor)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
         } else {
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], backgroundColor: backgroundColor)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
         }
     }
     
@@ -797,13 +832,14 @@ public class TextNode: ASDisplayNode {
                 context.fill(bounds)
             }
             
+            if let textShadowColor = layout.textShadowColor {
+                context.setTextDrawingMode(.fill)
+                context.setShadow(offset: CGSize(width: 0.0, height: 1.0), blur: 0.0, color: textShadowColor.cgColor)
+            }
+            
             let textMatrix = context.textMatrix
             let textPosition = context.textPosition
-            //CGContextSaveGState(context)
-            
             context.textMatrix = CGAffineTransform(scaleX: 1.0, y: -1.0)
-            
-            //let clipRect = CGContextGetClipBoundingBox(context)
             
             let alignment = layout.alignment
             let offset = CGPoint(x: layout.insets.left, y: layout.insets.top)
@@ -832,7 +868,34 @@ public class TextNode: ASDisplayNode {
                 }
             }
             
-            //CGContextRestoreGState(context)
+            var blockQuoteFrames: [CGRect] = []
+            var currentBlockQuoteFrame: CGRect?
+            for blockQuote in layout.blockQuotes {
+                if let frame = currentBlockQuoteFrame {
+                    if blockQuote.frame.minY - frame.maxY < 20.0 {
+                        currentBlockQuoteFrame = frame.union(blockQuote.frame)
+                    } else {
+                        blockQuoteFrames.append(frame)
+                        currentBlockQuoteFrame = frame
+                    }
+                } else {
+                    currentBlockQuoteFrame = blockQuote.frame
+                }
+            }
+            
+            if let frame = currentBlockQuoteFrame {
+                blockQuoteFrames.append(frame)
+            }
+            
+            for frame in blockQuoteFrames {
+                if let lineColor = layout.lineColor {
+                    context.setFillColor(lineColor.cgColor)
+                }
+                let rect = UIBezierPath(roundedRect: CGRect(x: frame.minX - 9.0, y: frame.minY - 14.0, width: 2.0, height: frame.height), cornerRadius: 1.0)
+                context.addPath(rect.cgPath)
+                context.fillPath()
+            }
+            
             context.textMatrix = textMatrix
             context.textPosition = CGPoint(x: textPosition.x, y: textPosition.y)
         }
@@ -872,11 +935,11 @@ public class TextNode: ASDisplayNode {
                 if stringMatch {
                     layout = existingLayout
                 } else {
-                    layout = TextNode.calculateLayout(attributedString: arguments.attributedString, maximumNumberOfLines: arguments.maximumNumberOfLines, truncationType: arguments.truncationType, backgroundColor: arguments.backgroundColor, constrainedSize: arguments.constrainedSize, alignment: arguments.alignment, lineSpacingFactor: arguments.lineSpacing, cutout: arguments.cutout, insets: arguments.insets)
+                    layout = TextNode.calculateLayout(attributedString: arguments.attributedString, maximumNumberOfLines: arguments.maximumNumberOfLines, truncationType: arguments.truncationType, backgroundColor: arguments.backgroundColor, constrainedSize: arguments.constrainedSize, alignment: arguments.alignment, lineSpacingFactor: arguments.lineSpacing, cutout: arguments.cutout, insets: arguments.insets, lineColor: arguments.lineColor, textShadowColor: arguments.textShadowColor)
                     updated = true
                 }
             } else {
-                layout = TextNode.calculateLayout(attributedString: arguments.attributedString, maximumNumberOfLines: arguments.maximumNumberOfLines, truncationType: arguments.truncationType, backgroundColor: arguments.backgroundColor, constrainedSize: arguments.constrainedSize, alignment: arguments.alignment, lineSpacingFactor: arguments.lineSpacing, cutout: arguments.cutout, insets: arguments.insets)
+                layout = TextNode.calculateLayout(attributedString: arguments.attributedString, maximumNumberOfLines: arguments.maximumNumberOfLines, truncationType: arguments.truncationType, backgroundColor: arguments.backgroundColor, constrainedSize: arguments.constrainedSize, alignment: arguments.alignment, lineSpacingFactor: arguments.lineSpacing, cutout: arguments.cutout, insets: arguments.insets, lineColor: arguments.lineColor, textShadowColor: arguments.textShadowColor)
                 updated = true
             }
             

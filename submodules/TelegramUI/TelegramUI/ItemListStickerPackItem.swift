@@ -47,13 +47,14 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
     let control: ItemListStickerPackItemControl
     let editing: ItemListStickerPackItemEditing
     let enabled: Bool
+    let playAnimatedStickers: Bool
     let sectionId: ItemListSectionId
     let action: (() -> Void)?
     let setPackIdWithRevealedOptions: (ItemCollectionId?, ItemCollectionId?) -> Void
     let addPack: () -> Void
     let removePack: () -> Void
     
-    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, account: Account, packInfo: StickerPackCollectionInfo, itemCount: String, topItem: StickerPackItem?, unread: Bool, control: ItemListStickerPackItemControl, editing: ItemListStickerPackItemEditing, enabled: Bool, playAnimatedStickers: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPackIdWithRevealedOptions: @escaping (ItemCollectionId?, ItemCollectionId?) -> Void, addPack: @escaping () -> Void, removePack: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.account = account
@@ -64,6 +65,7 @@ final class ItemListStickerPackItem: ListViewItem, ItemListItem {
         self.control = control
         self.editing = editing
         self.enabled = enabled
+        self.playAnimatedStickers = playAnimatedStickers
         self.sectionId = sectionId
         self.action = action
         self.setPackIdWithRevealedOptions = setPackIdWithRevealedOptions
@@ -162,7 +164,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
             let isVisible = self.visibility != .none
             
             if wasVisible != isVisible {
-                self.animationNode?.visibility = isVisible
+                self.animationNode?.visibility = isVisible && (self.layoutParams?.0.playAnimatedStickers ?? true)
             }
         }
     }
@@ -369,13 +371,18 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         
                         if fileUpdated {
                             imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: stillImageSize, boundingSize: stillImageSize, intrinsicInsets: UIEdgeInsets()))
-                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, representation: representation)
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: representation.resource)
                         }
-                    case .animated:
+                    case let .animated(resource):
                         imageSize = imageBoundingSize
+                    
+                        if fileUpdated {
+                            imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageBoundingSize, boundingSize: imageBoundingSize, intrinsicInsets: UIEdgeInsets()))
+                            updatedImageSignal = chatMessageStickerPackThumbnail(postbox: item.account.postbox, resource: resource, animated: true)
+                        }
                 }
                 if fileUpdated, let resourceReference = resourceReference {
-                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: resourceReference)
+                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, reference: resourceReference)
                 }
             } else {
                 updatedImageSignal = .single({ _ in return nil })
@@ -550,6 +557,8 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                             case .still:
                                 transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
                             case let .animated(resource):
+                                transition.updateFrame(node: strongSelf.imageNode, frame: imageFrame)
+                                
                                 let animationNode: AnimatedStickerNode
                                 if let current = strongSelf.animationNode {
                                     animationNode = current
@@ -558,8 +567,10 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
                                     animationNode.setup(account: item.account, resource: resource, width: 80, height: 80, mode: .cached)
-                                    animationNode.visibility = strongSelf.visibility != .none
                                 }
+                                animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
+                                animationNode.isHidden = !item.playAnimatedStickers
+                                strongSelf.imageNode.isHidden = item.playAnimatedStickers
                                 if let animationNode = strongSelf.animationNode {
                                     transition.updateFrame(node: animationNode, frame: imageFrame)
                                 }

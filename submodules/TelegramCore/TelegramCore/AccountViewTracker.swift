@@ -193,10 +193,6 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocation, additi
                     result.append(.peerChatState(peerId))
                 }
             }
-        /*case let .group(groupId):
-            if result.index(where: { if case .peerGroupState = $0 { return true } else { return false } }) == nil {
-                result.append(.peerGroupState(groupId))
-            }*/
     }
     return result
 }

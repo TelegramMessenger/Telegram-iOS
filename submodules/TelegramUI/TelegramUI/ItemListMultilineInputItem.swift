@@ -309,7 +309,7 @@ class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNodeDelega
     }
     
     func editableTextNodeShouldPaste(_ editableTextNode: ASEditableTextNode) -> Bool {
-        if let item = self.item {
+        if let _ = self.item {
             let text: String? = UIPasteboard.general.string
             if let _ = text {
                 return true

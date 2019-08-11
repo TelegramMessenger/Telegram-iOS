@@ -31,6 +31,22 @@ struct ChatInterfaceHighlightedState: Equatable {
     }
 }
 
+struct ChatInterfaceStickerSettings: Equatable {
+    let loopAnimatedStickers: Bool
+    
+    public init(loopAnimatedStickers: Bool) {
+        self.loopAnimatedStickers = loopAnimatedStickers
+    }
+    
+    public init(stickerSettings: StickerSettings) {
+        self.loopAnimatedStickers = stickerSettings.loopAnimatedStickers
+    }
+    
+    static func ==(lhs: ChatInterfaceStickerSettings, rhs: ChatInterfaceStickerSettings) -> Bool {
+        return lhs.loopAnimatedStickers == rhs.loopAnimatedStickers
+    }
+}
+
 public enum ChatControllerInteractionLongTapAction {
     case url(String)
     case mention(String)
@@ -61,9 +77,10 @@ public final class ChatControllerInteraction {
     let navigateToMessage: (MessageId, MessageId) -> Void
     let clickThroughMessage: () -> Void
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
+    let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, Bool) -> Void
-    let sendGif: (FileMediaReference) -> Void
+    let sendSticker: (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool
+    let sendGif: (FileMediaReference, ASDisplayNode, CGRect) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool) -> Void
     let requestMessageActionUrlAuth: (String, MessageId, Int32) -> Void
     let activateSwitchInline: (PeerId?, String) -> Void
@@ -104,9 +121,11 @@ public final class ChatControllerInteraction {
     var contextHighlightedState: ChatInterfaceHighlightedState?
     var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     var pollActionState: ChatInterfacePollActionState
+    var stickerSettings: ChatInterfaceStickerSettings
     var searchTextHighightState: String?
+    var seenOneTimeAnimatedMedia = Set<MessageId>()
     
-    init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (FileMediaReference, Bool) -> Void, sendGif: @escaping (FileMediaReference) -> Void, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, requestMessageActionUrlAuth: @escaping (String, MessageId, Int32) -> Void, activateSwitchInline: @escaping (PeerId?, String) -> Void, openUrl: @escaping (String, Bool, Bool?) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, openWallpaper: @escaping (Message) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping (Message) -> Bool, navigateToFirstDateMessage: @escaping(Int32) ->Void, requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void, addContact: @escaping (String) -> Void, rateCall: @escaping (Message, CallId) -> Void, requestSelectMessagePollOption: @escaping (MessageId, Data) -> Void, openAppStorePage: @escaping () -> Void, displayMessageTooltip: @escaping (MessageId, String, ASDisplayNode?, CGRect?) -> Void, seekToTimecode: @escaping (Message, Double, Bool) -> Void, requestMessageUpdate: @escaping (MessageId) -> Void, cancelInteractiveKeyboardGestures: @escaping () -> Void, automaticMediaDownloadSettings: MediaAutoDownloadSettings, pollActionState: ChatInterfacePollActionState) {
+    init(openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool, openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, Message?) -> Void, openPeerMention: @escaping (String) -> Void, openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect) -> Void, navigateToMessage: @escaping (MessageId, MessageId) -> Void, clickThroughMessage: @escaping () -> Void, toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void, sendCurrentMessage: @escaping (Bool) -> Void, sendMessage: @escaping (String) -> Void, sendSticker: @escaping (FileMediaReference, Bool, ASDisplayNode, CGRect) -> Bool, sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect) -> Bool, requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool) -> Void, requestMessageActionUrlAuth: @escaping (String, MessageId, Int32) -> Void, activateSwitchInline: @escaping (PeerId?, String) -> Void, openUrl: @escaping (String, Bool, Bool?) -> Void, shareCurrentLocation: @escaping () -> Void, shareAccountContact: @escaping () -> Void, sendBotCommand: @escaping (MessageId?, String) -> Void, openInstantPage: @escaping (Message, ChatMessageItemAssociatedData?) -> Void, openWallpaper: @escaping (Message) -> Void, openHashtag: @escaping (String?, String) -> Void, updateInputState: @escaping ((ChatTextInputState) -> ChatTextInputState) -> Void, updateInputMode: @escaping ((ChatInputMode) -> ChatInputMode) -> Void, openMessageShareMenu: @escaping (MessageId) -> Void, presentController: @escaping  (ViewController, Any?) -> Void, navigationController: @escaping () -> NavigationController?, presentGlobalOverlayController: @escaping (ViewController, Any?) -> Void, callPeer: @escaping (PeerId) -> Void, longTap: @escaping (ChatControllerInteractionLongTapAction, Message?) -> Void, openCheckoutOrReceipt: @escaping (MessageId) -> Void, openSearch: @escaping () -> Void, setupReply: @escaping (MessageId) -> Void, canSetupReply: @escaping (Message) -> Bool, navigateToFirstDateMessage: @escaping(Int32) ->Void, requestRedeliveryOfFailedMessages: @escaping (MessageId) -> Void, addContact: @escaping (String) -> Void, rateCall: @escaping (Message, CallId) -> Void, requestSelectMessagePollOption: @escaping (MessageId, Data) -> Void, openAppStorePage: @escaping () -> Void, displayMessageTooltip: @escaping (MessageId, String, ASDisplayNode?, CGRect?) -> Void, seekToTimecode: @escaping (Message, Double, Bool) -> Void, requestMessageUpdate: @escaping (MessageId) -> Void, cancelInteractiveKeyboardGestures: @escaping () -> Void, automaticMediaDownloadSettings: MediaAutoDownloadSettings, pollActionState: ChatInterfacePollActionState, stickerSettings: ChatInterfaceStickerSettings) {
         self.openMessage = openMessage
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention
@@ -114,6 +133,7 @@ public final class ChatControllerInteraction {
         self.navigateToMessage = navigateToMessage
         self.clickThroughMessage = clickThroughMessage
         self.toggleMessagesSelection = toggleMessagesSelection
+        self.sendCurrentMessage = sendCurrentMessage
         self.sendMessage = sendMessage
         self.sendSticker = sendSticker
         self.sendGif = sendGif
@@ -154,11 +174,12 @@ public final class ChatControllerInteraction {
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         
         self.pollActionState = pollActionState
+        self.stickerSettings = stickerSettings
     }
     
     static var `default`: ChatControllerInteraction {
         return ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendMessage: { _ in }, sendSticker: { _, _ in }, sendGif: { _ in }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            return false }, openPeer: { _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _ in }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in }, navigationController: {
             return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { _, _ in }, openCheckoutOrReceipt: { _ in }, openSearch: { }, setupReply: { _ in
@@ -175,6 +196,6 @@ public final class ChatControllerInteraction {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
-           pollActionState: ChatInterfacePollActionState())
+           pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
     }
 }

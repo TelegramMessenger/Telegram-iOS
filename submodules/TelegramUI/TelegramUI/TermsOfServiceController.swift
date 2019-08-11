@@ -34,7 +34,7 @@ public class TermsOfServiceControllerTheme {
 
 public extension TermsOfServiceControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
-        self.init(statusBarStyle: presentationTheme.rootController.statusBar.style.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
+        self.init(statusBarStyle: presentationTheme.rootController.statusBarStyle.style, navigationBackground: presentationTheme.rootController.navigationBar.backgroundColor, navigationSeparator: presentationTheme.rootController.navigationBar.separatorColor, listBackground: presentationTheme.list.blocksBackgroundColor, itemBackground: presentationTheme.list.itemBlocksBackgroundColor, itemSeparator: presentationTheme.list.itemBlocksSeparatorColor, primary: presentationTheme.list.itemPrimaryTextColor, accent: presentationTheme.list.itemAccentColor, disabled: presentationTheme.rootController.navigationBar.disabledButtonColor)
     }
     
     var presentationTheme: PresentationTheme {
@@ -46,8 +46,8 @@ public extension TermsOfServiceControllerTheme {
                 theme = defaultDarkPresentationTheme
             case defaultDarkAccentPresentationTheme.list.itemBlocksBackgroundColor.argb:
                 theme = defaultDarkAccentPresentationTheme
-        default:
-            theme = defaultPresentationTheme
+            default:
+                theme = defaultPresentationTheme
         }
         return theme
     }

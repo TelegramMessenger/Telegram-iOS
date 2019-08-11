@@ -73,7 +73,7 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
         let placeholderText = strings.Common_Search
         let searchBarFont = Font.regular(17.0)
         
-        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
+        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
         super.init()
         
@@ -155,7 +155,7 @@ final class AuthorizationSequenceCountrySelectionController: ViewController {
         
         super.init(navigationBarPresentationData:  NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         
         let navigationContentNode = AuthorizationSequenceCountrySelectionNavigationContentNode(theme: theme, strings: strings, cancel: { [weak self] in
             self?.dismissed?()

@@ -122,8 +122,8 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 updatedContactInfo = info
                 
-                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor)
-                textString = NSAttributedString(string: info, font: textFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.bubble.incomingPrimaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingPrimaryTextColor)
+                titleString = NSAttributedString(string: displayName, font: titleFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.accentTextColor : item.presentationData.theme.theme.chat.message.outgoing.accentTextColor)
+                textString = NSAttributedString(string: info, font: textFont, textColor: item.message.effectivelyIncoming(item.context.account.peerId) ? item.presentationData.theme.theme.chat.message.incoming.primaryTextColor : item.presentationData.theme.theme.chat.message.outgoing.primaryTextColor)
             } else {
                 updatedContactInfo = nil
             }
@@ -190,19 +190,19 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                 if item.message.effectivelyIncoming(item.context.account.peerId) {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonIncoming(item.presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonIncoming(item.presentationData.theme.theme)!
-                    titleColor = item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor
+                    titleColor = item.presentationData.theme.theme.chat.message.incoming.accentTextColor
                     
                     let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: true, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
                     titleHighlightedColor = bubbleColors.fill
-                    avatarPlaceholderColor = item.presentationData.theme.theme.chat.bubble.incomingMediaPlaceholderColor
+                    avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor
                 } else {
                     buttonImage = PresentationResourcesChat.chatMessageAttachedContentButtonOutgoing(item.presentationData.theme.theme)!
                     buttonHighlightedImage = PresentationResourcesChat.chatMessageAttachedContentHighlightedButtonOutgoing(item.presentationData.theme.theme)!
-                    titleColor = item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                    titleColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     
                     let bubbleColors = bubbleColorComponents(theme: item.presentationData.theme.theme, incoming: false, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
                     titleHighlightedColor = bubbleColors.fill
-                    avatarPlaceholderColor = item.presentationData.theme.theme.chat.bubble.outgoingMediaPlaceholderColor
+                    avatarPlaceholderColor = item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
                 }
                 
                 let (buttonWidth, continueLayout) = makeButtonLayout(constrainedSize.width, buttonImage, buttonHighlightedImage, nil, nil, item.presentationData.strings.Conversation_ViewContactDetails, titleColor, titleHighlightedColor)

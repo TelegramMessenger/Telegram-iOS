@@ -254,38 +254,22 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
         if automaticThemeShouldSwitchNow(parameters, currentTheme: themeSettings.theme) {
             effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
-            switch effectiveChatWallpaper {
-                case .builtin, .color:
-                    switch themeSettings.automaticThemeSwitchSetting.theme {
-                        case .nightAccent:
-                            effectiveChatWallpaper = .color(0x18222d)
-                        case .nightGrayscale:
-                            effectiveChatWallpaper = .color(0x000000)
-                        default:
-                            break
-                    }
-                default:
-                    break
-            }
         } else {
             effectiveTheme = themeSettings.theme
         }
         
-        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
+        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
+        themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
         
-        switch effectiveTheme {
-            case let .builtin(reference):
-                switch reference {
-                    case .dayClassic:
-                        themeValue = defaultPresentationTheme
-                    case .nightGrayscale:
-                        themeValue = defaultDarkPresentationTheme
-                    case .nightAccent:
-                        themeValue = defaultDarkAccentPresentationTheme
-                    case .day:
-                        themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
-                }
+        if effectiveTheme != themeSettings.theme {
+            switch effectiveChatWallpaper {
+                case .builtin, .color:
+                    effectiveChatWallpaper = themeValue.chat.defaultWallpaper
+                default:
+                    break
+            }
         }
+        
         let dateTimeFormat = currentDateTimeFormat()
         let stringsValue: PresentationStrings
         if let localizationSettings = localizationSettings {
@@ -348,7 +332,7 @@ private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchPar
     switch currentTheme {
         case let .builtin(builtin):
             switch builtin {
-                case .nightAccent, .nightGrayscale:
+                case .nightAccent, .night:
                     return false
                 default:
                     break
@@ -488,9 +472,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                         fetch.dispose()
                         data.dispose()
                     }
-                    }
-                    |> afterNext { color in
-                        serviceBackgroundColorForWallpaper = (wallpaper, color)
+                }
+                |> afterNext { color in
+                    serviceBackgroundColorForWallpaper = (wallpaper, color)
                 }
             }
         }
@@ -529,44 +513,25 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
                         
                         if shouldSwitch {
-                            let automaticTheme = PresentationThemeReference.builtin(themeSettings.automaticThemeSwitchSetting.theme)
+                            let automaticTheme: PresentationThemeReference = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
                             if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[automaticTheme.index] {
                                 effectiveChatWallpaper = themeSpecificWallpaper
-                            } else {
-                                switch effectiveChatWallpaper {
-                                case .builtin, .color:
-                                    switch themeSettings.automaticThemeSwitchSetting.theme {
-                                    case .nightAccent:
-                                        effectiveChatWallpaper = .color(0x18222d)
-                                    case .nightGrayscale:
-                                        effectiveChatWallpaper = .color(0x000000)
-                                    default:
-                                        break
-                                    }
-                                default:
-                                    break
-                                }
                             }
                             effectiveTheme = automaticTheme
                         } else {
                             effectiveTheme = themeSettings.theme
                         }
                         
-                        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color ?? defaultDayAccentColor
+                        let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
+                        let themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
                         
-                        let themeValue: PresentationTheme
-                        switch effectiveTheme {
-                            case let .builtin(reference):
-                                switch reference {
-                                    case .dayClassic:
-                                        themeValue = makeDefaultPresentationTheme(serviceBackgroundColor: serviceBackgroundColor)
-                                    case .nightGrayscale:
-                                        themeValue = defaultDarkPresentationTheme
-                                    case .nightAccent:
-                                        themeValue = defaultDarkAccentPresentationTheme
-                                    case .day:
-                                        themeValue = makeDefaultDayPresentationTheme(accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
-                                }
+                        if effectiveTheme != themeSettings.theme && themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] == nil {
+                            switch effectiveChatWallpaper {
+                                case .builtin, .color:
+                                    effectiveChatWallpaper = themeValue.chat.defaultWallpaper
+                                default:
+                                    break
+                            }
                         }
                         
                         let localizationSettings: LocalizationSettings?

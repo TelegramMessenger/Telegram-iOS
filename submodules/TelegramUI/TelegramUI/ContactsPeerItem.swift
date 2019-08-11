@@ -303,7 +303,6 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     private var isHighlighted: Bool = false
 
-    
     private var peerPresenceManager: PeerPresenceStatusManager?
     private var layoutParams: (ContactsPeerItem, ListViewItemLayoutParams, Bool, Bool, Bool)?
     var chatPeer: Peer? {
@@ -318,7 +317,8 @@ class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             return nil
         }
     }
-    private var item: ContactsPeerItem? {
+    
+    var item: ContactsPeerItem? {
         return self.layoutParams?.0
     }
     

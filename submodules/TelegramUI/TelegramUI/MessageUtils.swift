@@ -18,12 +18,4 @@ extension Message {
             return false
         }
     }
-    
-    var elligibleForLargeEmoji: Bool {
-        if self.media.isEmpty && !self.text.isEmpty && self.text.containsOnlyEmoji && self.text.emojis.count < 4 {
-            return true
-        } else {
-            return false
-        }
-    }
 }

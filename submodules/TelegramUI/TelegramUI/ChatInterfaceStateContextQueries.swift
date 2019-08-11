@@ -7,9 +7,13 @@ import TelegramUIPreferences
 import TelegramUIPrivateModule
 import LegacyComponents
 
+enum ChatContextQueryError {
+    case inlineBotLocationRequest(PeerId)
+}
+
 enum ChatContextQueryUpdate {
     case remove
-    case update(ChatPresentationInputQuery, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>)
+    case update(ChatPresentationInputQuery, Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError>)
 }
 
 func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentQueryStates: inout [ChatPresentationInputQueryKind: (ChatPresentationInputQuery, Disposable)]) -> [ChatPresentationInputQueryKind: ChatContextQueryUpdate] {
@@ -55,10 +59,10 @@ func contextQueryResultStateForChatInterfacePresentationState(_ chatPresentation
     return updates
 }
 
-private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> {
+private func updatedContextQueryResultStateForQuery(context: AccountContext, peer: Peer, inputQuery: ChatPresentationInputQuery, previousQuery: ChatPresentationInputQuery?) -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> {
     switch inputQuery {
         case let .emoji(query):
-            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
             if let previousQuery = previousQuery {
                 switch previousQuery {
                     case .emoji:
@@ -69,11 +73,12 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             } else {
                 signal = .single({ _ in return .stickers([]) })
             }
-            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
+            let stickers: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = context.sharedContext.accountManager.transaction { transaction -> StickerSettings in
                 let stickerSettings: StickerSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
                 return stickerSettings
             }
-            |> mapToSignal { stickerSettings -> Signal<[FoundStickerItem], NoError> in
+            |> introduceError(ChatContextQueryError.self)
+            |> mapToSignal { stickerSettings -> Signal<[FoundStickerItem], ChatContextQueryError> in
                 let scope: SearchStickersScope
                 switch stickerSettings.emojiStickerSuggestionMode {
                     case .none:
@@ -83,7 +88,8 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     case .installed:
                         scope = [.installed]
                 }
-                return searchStickers(account: context.account, query: query.trimmedEmoji, scope: scope)
+                return searchStickers(account: context.account, query: query.basicEmoji.0, scope: scope)
+                |> introduceError(ChatContextQueryError.self)
             }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in
@@ -92,7 +98,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             }
             return signal |> then(stickers)
         case let .hashtag(query):
-            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
             if let previousQuery = previousQuery {
                 switch previousQuery {
                     case .hashtag:
@@ -104,7 +110,8 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 signal = .single({ _ in return .hashtags([]) })
             }
             
-            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = recentlyUsedHashtags(postbox: context.account.postbox) |> map { hashtags -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+            let hashtags: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = recentlyUsedHashtags(postbox: context.account.postbox)
+                |> map { hashtags -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 let normalizedQuery = query.lowercased()
                 var result: [String] = []
                 for hashtag in hashtags {
@@ -114,12 +121,13 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 return { _ in return .hashtags(result) }
             }
+            |> introduceError(ChatContextQueryError.self)
             
             return signal |> then(hashtags)
         case let .mention(query, types):
             let normalizedQuery = query.lowercased()
             
-            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
             if let previousQuery = previousQuery {
                 switch previousQuery {
                     case .mention:
@@ -168,12 +176,13 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 return { _ in return .mentions(sortedPeers) }
             }
+            |> introduceError(ChatContextQueryError.self)
             
             return signal |> then(participants)
         case let .command(query):
             let normalizedQuery = query.lowercased()
             
-            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
             if let previousQuery = previousQuery {
                 switch previousQuery {
                     case .command:
@@ -185,22 +194,22 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 signal = .single({ _ in return .commands([]) })
             }
             
-            let participants = peerCommands(account: context.account, id: peer.id)
-                |> map { commands -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                    let filteredCommands = commands.commands.filter { command in
-                        if command.command.text.hasPrefix(normalizedQuery) {
-                            return true
-                        }
-                        return false
+            let commands = peerCommands(account: context.account, id: peer.id)
+            |> map { commands -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                let filteredCommands = commands.commands.filter { command in
+                    if command.command.text.hasPrefix(normalizedQuery) {
+                        return true
                     }
-                    let sortedCommands = filteredCommands
-                    return { _ in return .commands(sortedCommands) }
+                    return false
+                }
+                let sortedCommands = filteredCommands
+                return { _ in return .commands(sortedCommands) }
             }
-            
-            return signal |> then(participants)
+            |> introduceError(ChatContextQueryError.self)
+            return signal |> then(commands)
         case let .contextRequest(addressName, query):
             var delayRequest = true
-            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .complete()
+            var signal: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .complete()
             if let previousQuery = previousQuery {
                 switch previousQuery {
                     case let .contextRequest(currentAddressName, currentContextQuery) where currentAddressName == addressName:
@@ -228,16 +237,20 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     return .single(nil)
                 }
             }
-            |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> in
+            |> introduceError(ChatContextQueryError.self)
+            |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
                     let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
+                    |> mapError { error -> ChatContextQueryError in
+                        return .inlineBotLocationRequest(user.id)
+                    }
                     |> map { results -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                         return { _ in
                             return .contextRequestResult(user, results)
                         }
                     }
                     
-                    let botResult: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError> = .single({ previousResult in
+                    let botResult: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> = .single({ previousResult in
                         var passthroughPreviousResult: ChatContextResultCollection?
                         if let previousResult = previousResult {
                             if case let .contextRequestResult(previousUser, previousResults) = previousResult {
@@ -249,9 +262,10 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         return .contextRequestResult(user, passthroughPreviousResult)
                     })
                     
-                    let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, NoError>
+                    let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError>
                     if delayRequest {
-                        maybeDelayedContextResults = contextResults |> delay(0.4, queue: Queue.concurrentDefaultQueue())
+                        maybeDelayedContextResults = contextResults
+                        |> delay(0.4, queue: Queue.concurrentDefaultQueue())
                     } else {
                         maybeDelayedContextResults = contextResults
                     }
@@ -291,6 +305,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in return .emojis(result, range) }
             }
+            |> introduceError(ChatContextQueryError.self)
     }
 }
 

@@ -72,9 +72,9 @@ public func channelAdminIds(postbox: Postbox, network: Network, peerId: PeerId, 
                     let users = users.filter({ user in
                         return participants.contains(where: { participant in
                             switch participant {
-                            case let .channelParticipantAdmin(_, userId, _, _, _, _):
+                            case let .channelParticipantAdmin(_, userId, _, _, _, _, _):
                                 return user.peerId.id == userId
-                            case let .channelParticipantCreator(userId):
+                            case let .channelParticipantCreator(_, userId, _):
                                 return user.peerId.id == userId
                             default:
                                 return false

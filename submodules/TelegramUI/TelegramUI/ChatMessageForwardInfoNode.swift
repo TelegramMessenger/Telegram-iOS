@@ -44,7 +44,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             
             switch type {
                 case let .bubble(incoming):
-                    titleColor = incoming ? presentationData.theme.theme.chat.bubble.incomingAccentTextColor : presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                    titleColor = incoming ? presentationData.theme.theme.chat.message.incoming.accentTextColor : presentationData.theme.theme.chat.message.outgoing.accentTextColor
                     completeSourceString = strings.Message_ForwardedMessage(peerString)
                 case .standalone:
                     let serviceColor = serviceMessageColorComponents(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
@@ -90,7 +90,6 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             let (textLayout, textApply) = textNodeLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: constrainedSize.width - credibilityIconWidth, height: constrainedSize.height), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             return (CGSize(width: textLayout.size.width + credibilityIconWidth, height: textLayout.size.height), {
-
                 let node: ChatMessageForwardInfoNode
                 if let maybeNode = maybeNode {
                     node = maybeNode

@@ -66,7 +66,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
     case recentActions(PresentationTheme, String)
     
     case adminsHeader(PresentationTheme, String)
-    case adminPeerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Bool, Int32, RenderedChannelParticipant, ItemListPeerItemEditing, Bool)
+    case adminPeerItem(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Bool, Int32, RenderedChannelParticipant, ItemListPeerItemEditing, Bool, Bool)
     case addAdmin(PresentationTheme, String, Bool)
     case adminsInfo(PresentationTheme, String)
     
@@ -89,7 +89,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 return .index(4)
             case .adminsInfo:
                 return .index(5)
-            case let .adminPeerItem(_, _, _, _, _, _, participant, _, _):
+            case let .adminPeerItem(_, _, _, _, _, _, participant, _, _, _):
                 return .peer(participant.peer.id)
         }
     }
@@ -108,8 +108,8 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .adminPeerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsIsGroup, lhsIndex, lhsParticipant, lhsEditing, lhsEnabled):
-                if case let .adminPeerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsIsGroup, rhsIndex, rhsParticipant, rhsEditing, rhsEnabled) = rhs {
+            case let .adminPeerItem(lhsTheme, lhsStrings, lhsDateTimeFormat, lhsNameOrder, lhsIsGroup, lhsIndex, lhsParticipant, lhsEditing, lhsEnabled, lhsHasAction):
+                if case let .adminPeerItem(rhsTheme, rhsStrings, rhsDateTimeFormat, rhsNameOrder, rhsIsGroup, rhsIndex, rhsParticipant, rhsEditing, rhsEnabled, rhsHasAction) = rhs {
                     if lhsTheme !== rhsTheme {
                         return false
                     }
@@ -135,6 +135,9 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         return false
                     }
                     if lhsEnabled != rhsEnabled {
+                        return false
+                    }
+                    if lhsHasAction != rhsHasAction {
                         return false
                     }
                     return true
@@ -167,11 +170,11 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                     default:
                         return true
                 }
-            case let .adminPeerItem(_, _, _, _, _, index, _, _, _):
+            case let .adminPeerItem(_, _, _, _, _, index, _, _, _, _):
                 switch rhs {
                     case .recentActions, .adminsHeader, .addAdmin:
                         return false
-                    case let .adminPeerItem(_, _, _, _, _, rhsIndex, _, _, _):
+                    case let .adminPeerItem(_, _, _, _, _, rhsIndex, _, _, _, _):
                         return index < rhsIndex
                     default:
                         return true
@@ -196,14 +199,13 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                 })
             case let .adminsHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
-            case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled):
+            case let .adminPeerItem(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, participant, editing, enabled, hasAction):
                 let peerText: String
-                let action: (() -> Void)?
+                var action: (() -> Void)?
                 switch participant.participant {
                     case .creator:
                         peerText = strings.Channel_Management_LabelOwner
-                        action = nil
-                    case let .member(_, _, adminInfo, _):
+                    case let .member(_, _, adminInfo, _, _):
                         if let adminInfo = adminInfo {
                             if let peer = participant.peers[adminInfo.promotedBy] {
                                 if peer.id == participant.peer.id {
@@ -217,9 +219,11 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                         } else {
                             peerText = ""
                         }
-                        action = {
-                            arguments.openAdmin(participant.participant)
-                        }
+                }
+                if hasAction {
+                    action = {
+                        arguments.openAdmin(participant.participant)
+                    }
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: participant.peer, presence: nil, text: .text(peerText), label: .none, editing: editing, switchValue: nil, enabled: enabled, selectable: true, sectionId: self.section, action: action, setPeerIdWithRevealedOptions: { previousId, id in
                     arguments.setPeerIdWithRevealedOptions(previousId, id)
@@ -321,7 +325,6 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         var isGroup = false
         if case .group = peer.info {
             isGroup = true
-            
             entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         } else {
             entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
@@ -352,37 +355,39 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 switch lhs.participant {
                     case .creator:
                         lhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         lhsInvitedAt = invitedAt
                 }
                 let rhsInvitedAt: Int32
                 switch rhs.participant {
                     case .creator:
                         rhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         rhsInvitedAt = invitedAt
                 }
                 return lhsInvitedAt < rhsInvitedAt
             }) {
                 if !state.removedPeerIds.contains(participant.peer.id) {
-                    var editable = true
+                    var canEdit = true
+                    var canOpen = true
                     switch participant.participant {
                         case .creator:
-                            editable = false
-                        case let .member(id, _, adminInfo, _):
+                            canEdit = false
+                            canOpen = peer.flags.contains(.isCreator)
+                        case let .member(id, _, adminInfo, _, _):
                             if id == accountPeerId {
-                                editable = false
+                                canEdit = false
                             } else if let adminInfo = adminInfo {
                                 if peer.flags.contains(.isCreator) || adminInfo.promotedBy == accountPeerId {
-                                    editable = true
+                                    canEdit = true
                                 } else {
-                                    editable = false
+                                    canEdit = false
                                 }
                             } else {
-                                editable = false
+                                canEdit = false
                             }
                     }
-                    entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, isGroup, index, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id && existingParticipantIds.contains(participant.peer.id)))
+                    entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, isGroup, index, participant, ItemListPeerItemEditing(editable: canEdit, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id && existingParticipantIds.contains(participant.peer.id), canOpen))
                     index += 1
                 }
             }
@@ -421,37 +426,44 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                 switch lhs.participant {
                     case .creator:
                         lhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         lhsInvitedAt = invitedAt
                 }
                 let rhsInvitedAt: Int32
                 switch rhs.participant {
                     case .creator:
                         rhsInvitedAt = Int32.min
-                    case let .member(_, invitedAt, _, _):
+                    case let .member(_, invitedAt, _, _, _):
                         rhsInvitedAt = invitedAt
                 }
                 return lhsInvitedAt < rhsInvitedAt
             }) {
                 if !state.removedPeerIds.contains(participant.peer.id) {
                     var editable = true
+                    var canEdit = true
                     switch participant.participant {
-                    case .creator:
-                        editable = false
-                    case let .member(id, _, adminInfo, _):
-                        if id == accountPeerId {
+                        case .creator:
                             editable = false
-                        } else if let adminInfo = adminInfo {
-                            if peer.role == .creator || adminInfo.promotedBy == accountPeerId {
-                                editable = true
+                            if case .creator = peer.role {
+                            } else {
+                                canEdit = false
+                            }
+                        case let .member(id, _, adminInfo, _, _):
+                            if id == accountPeerId {
+                                editable = false
+                            } else if let adminInfo = adminInfo {
+                                if case .creator = peer.role {
+                                    editable = true
+                                } else if adminInfo.promotedBy == accountPeerId {
+                                    editable = true
+                                } else {
+                                    editable = false
+                                }
                             } else {
                                 editable = false
                             }
-                        } else {
-                            editable = false
-                        }
                     }
-                    entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, isGroup, index, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id && existingParticipantIds.contains(participant.peer.id)))
+                    entries.append(.adminPeerItem(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, isGroup, index, participant, ItemListPeerItemEditing(editable: editable, editing: state.editing, revealed: participant.peer.id == state.peerIdWithRevealedOptions), state.removingPeerId != participant.peer.id && existingParticipantIds.contains(participant.peer.id), canEdit))
                     index += 1
                 }
             }
@@ -540,7 +552,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                 }
             }))
         } else {
-            removeAdminDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []))
+            removeAdminDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberAdminRights(account: context.account, peerId: peerId, memberId: adminId, adminRights: TelegramChatAdminRights(flags: []), rank: nil)
             |> deliverOnMainQueue).start(completed: {
                 updateState {
                     return $0.withUpdatedRemovingPeerId(nil)
@@ -563,7 +575,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                         switch participant.participant {
                             case .creator:
                                 return
-                            case let .member(_, _, _, banInfo):
+                            case let .member(_, _, _, banInfo, _):
                                 if let banInfo = banInfo {
                                     var canUnban = false
                                     if banInfo.restrictedBy != context.account.peerId {
@@ -637,12 +649,12 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                 if let peer = peerView.peers[participant.peerId] {
                     switch participant {
                         case .creator:
-                            result.append(RenderedChannelParticipant(participant: .creator(id: peer.id), peer: peer))
+                            result.append(RenderedChannelParticipant(participant: .creator(id: peer.id, rank: nil), peer: peer))
                         case .admin:
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil), peer: peer, peers: peers))
+                            result.append(RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers))
                         case .member:
                             break
                     }

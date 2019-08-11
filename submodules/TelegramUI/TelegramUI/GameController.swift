@@ -27,7 +27,7 @@ final class GameController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.sharePressed))
         

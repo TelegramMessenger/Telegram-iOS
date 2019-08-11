@@ -106,7 +106,9 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     animationNode.started = { [weak self] in
                         self?.imageNode.alpha = 0.0
                     }
-                    animationNode.setup(account: account, resource: item.file.resource, width: 160, height: 160, mode: .cached)
+                    let dimensions = item.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    animationNode.setup(account: account, resource: item.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
                 } else {
@@ -152,7 +154,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(.standalone(media: item.file))
+            interfaceInteraction.sendSticker(.standalone(media: item.file), self, self.bounds)
         }
     }
     

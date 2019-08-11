@@ -161,10 +161,10 @@ class WallpaperGalleryController: ViewController {
         self.source = source
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: presentationData))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
         self.title = self.presentationData.strings.WallpaperPreview_Title
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         var entries: [WallpaperGalleryEntry] = []
@@ -268,7 +268,7 @@ class WallpaperGalleryController: ViewController {
         if self.title != nil {
             self.title = self.presentationData.strings.WallpaperPreview_Title
         }
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.toolbarNode?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
     }
@@ -327,7 +327,7 @@ class WallpaperGalleryController: ViewController {
                 break
         }
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let overlayNode = WallpaperGalleryOverlayNode()
         self.overlayNode = overlayNode
         self.galleryNode.overlayNode = overlayNode
@@ -609,9 +609,9 @@ class WallpaperGalleryController: ViewController {
             bottomMessageText = presentationData.strings.WallpaperPreview_CustomColorBottomText
         }
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: bottomMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes(isAdmin: false, isContact: false)), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: topMessageText, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {

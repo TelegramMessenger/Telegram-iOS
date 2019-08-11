@@ -101,7 +101,7 @@ public struct ChannelBlacklist {
         var updatedRestricted = updated.restricted
         var updatedBanned = updated.banned
         
-        if case .member(_, _, _, let maybeBanInfo) = participant.participant, let banInfo = maybeBanInfo {
+        if case let .member(_, _, _, maybeBanInfo, _) = participant.participant, let banInfo = maybeBanInfo {
             if banInfo.rights.flags.contains(.banReadMessages) {
                 updatedBanned.insert(participant, at: 0)
             } else {
@@ -144,14 +144,14 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
         return account.postbox.transaction { transaction -> Signal<(ChannelParticipant?, RenderedChannelParticipant?, Bool), NoError> in
             if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer), let _ = transaction.getPeer(account.peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
                 let updatedParticipant: ChannelParticipant
-                if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo) = currentParticipant {
+                if let currentParticipant = currentParticipant, case let .member(_, invitedAt, _, currentBanInfo, _) = currentParticipant {
                     let banInfo: ChannelParticipantBannedInfo?
                     if let rights = rights, !rights.flags.isEmpty {
                         banInfo = ChannelParticipantBannedInfo(rights: rights, restrictedBy: currentBanInfo?.restrictedBy ?? account.peerId, timestamp: currentBanInfo?.timestamp ?? Int32(Date().timeIntervalSince1970), isMember: currentBanInfo?.isMember ?? true)
                     } else {
                         banInfo = nil
                     }
-                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: nil, banInfo: banInfo)
+                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: nil, banInfo: banInfo, rank: nil)
                 } else {
                     let banInfo: ChannelParticipantBannedInfo?
                     if let rights = rights, !rights.flags.isEmpty {
@@ -159,7 +159,7 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                     } else {
                         banInfo = nil
                     }
-                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: banInfo)
+                    updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: banInfo, rank: nil)
                 }
                 
                 return account.network.request(Api.functions.channels.editBanned(channel: inputChannel, userId: inputUser, bannedRights: rights?.apiBannedRights ?? Api.ChatBannedRights.chatBannedRights(flags: 0, untilDate: 0)))
@@ -175,7 +175,7 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                         switch currentParticipant {
                             case .creator:
                                 break
-                            case let .member(_, _, adminInfo, banInfo):
+                            case let .member(_, _, adminInfo, banInfo, _):
                                 if let _ = adminInfo {
                                     wasAdmin = true
                                 }
@@ -243,7 +243,7 @@ public func updateChannelMemberBannedRights(account: Account, peerId: PeerId, me
                         if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
                             presences[memberPeer.id] = presence
                         }
-                        if case let .member(_, _, _, maybeBanInfo) = updatedParticipant, let banInfo = maybeBanInfo {
+                        if case let .member(_, _, _, maybeBanInfo, _) = updatedParticipant, let banInfo = maybeBanInfo {
                             if let peer = transaction.getPeer(banInfo.restrictedBy) {
                                 peers[peer.id] = peer
                             }

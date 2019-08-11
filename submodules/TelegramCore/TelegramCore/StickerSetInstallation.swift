@@ -39,6 +39,9 @@ public func requestStickerSet(postbox: Postbox, network: Network, reference: Sti
         case let .id(id, accessHash):
             collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)
             input = .inputStickerSetID(id: id, accessHash: accessHash)
+        case .animatedEmoji:
+            collectionId = nil
+            input = .inputStickerSetAnimatedEmoji
     }
     
     let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, NoError> = { collectionId in

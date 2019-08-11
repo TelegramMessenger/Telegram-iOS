@@ -381,6 +381,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         let content = item.content
         let firstMessage = content.firstMessage
         let incoming = item.content.effectivelyIncoming(item.context.account.peerId)
+        let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
         
         var sourceReference: SourceReferenceMessageAttribute?
         for attribute in item.content.firstMessage.attributes {
@@ -560,27 +561,26 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
         
         var authorNameString: String?
-        let authorIsAdmin: Bool
+        var authorRank: CachedChannelAdminRank?
         var authorIsChannel: Bool = false
         switch content {
             case let .message(message, _, _, attributes):
                 if let peer = message.peers[message.id.peerId] as? TelegramChannel {
                     if case .broadcast = peer.info {
-                        authorIsAdmin = false
                     } else {
                         if isCrosspostFromChannel, let sourceReference = sourceReference, let _ = firstMessage.peers[sourceReference.messageId.peerId] as? TelegramChannel {
                             authorIsChannel = true
                         }
-                        authorIsAdmin = attributes.isAdmin
+                        authorRank = attributes.rank
                     }
                 } else {
                     if isCrosspostFromChannel, let _ = firstMessage.forwardInfo?.source as? TelegramChannel {
                         authorIsChannel = true
                     }
-                    authorIsAdmin = attributes.isAdmin
+                    authorRank = attributes.rank
                 }
             case .group:
-                authorIsAdmin = false
+                break
         }
         var inlineBotNameString: String?
         var replyMessage: Message?
@@ -744,7 +744,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             if let rawAuthorNameColor = authorNameColor {
                 var dimColors = false
                 switch item.presentationData.theme.theme.name {
-                    case .builtin(.nightAccent), .builtin(.nightGrayscale):
+                    case .builtin(.nightAccent), .builtin(.night):
                         dimColors = true
                     default:
                         break
@@ -857,14 +857,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     headerSize.height += 5.0
                 }
                 
-                let inlineBotNameColor = incoming ? item.presentationData.theme.theme.chat.bubble.incomingAccentTextColor : item.presentationData.theme.theme.chat.bubble.outgoingAccentTextColor
+                let inlineBotNameColor = messageTheme.accentTextColor
                 
                 let attributedString: NSAttributedString
                 var adminBadgeString: NSAttributedString?
-                if authorIsAdmin {
-                    adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Conversation_Admin)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor)
+                if let authorRank = authorRank {
+                    let string: String
+                    switch authorRank {
+                        case .owner:
+                            string = item.presentationData.strings.Conversation_Owner
+                        case .admin:
+                            string = item.presentationData.strings.Conversation_Admin
+                        case let .custom(rank):
+                            string = rank.trimmingEmojis
+                    }
+                    adminBadgeString = NSAttributedString(string: " \(string)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 } else if authorIsChannel {
-                    adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: incoming ? item.presentationData.theme.theme.chat.bubble.incomingSecondaryTextColor : item.presentationData.theme.theme.chat.bubble.outgoingSecondaryTextColor)
+                    adminBadgeString = NSAttributedString(string: " \(item.presentationData.strings.Channel_Status)", font: inlineBotPrefixFont, textColor: messageTheme.secondaryTextColor)
                 }
                 if let authorNameString = authorNameString, let authorNameColor = authorNameColor, let inlineBotNameString = inlineBotNameString {
                     let mutableString = NSMutableAttributedString(string: "\(authorNameString) ", attributes: [NSAttributedStringKey.font: nameFont, NSAttributedStringKey.foregroundColor: authorNameColor])
@@ -1578,7 +1587,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             if mosaicStatusNode !== strongSelf.mosaicStatusNode {
                 strongSelf.mosaicStatusNode?.removeFromSupernode()
                 strongSelf.mosaicStatusNode = mosaicStatusNode
-                strongSelf.insertSubnode(mosaicStatusNode, belowSubnode: strongSelf.messageAccessibilityArea)
+                strongSelf.insertSubnode(mosaicStatusNode, aboveSubnode: strongSelf.messageAccessibilityArea)
             }
             let absoluteOrigin = mosaicStatusOrigin.offsetBy(dx: contentOrigin.x, dy: contentOrigin.y)
             mosaicStatusNode.frame = CGRect(origin: CGPoint(x: absoluteOrigin.x - layoutConstants.image.statusInsets.right - size.width, y: absoluteOrigin.y - layoutConstants.image.statusInsets.bottom - size.height), size: size)
@@ -2190,7 +2199,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         }
     }
     
-    
     override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         for contentNode in self.contentNodes {
             if let playMediaWithSound = contentNode.playMediaWithSound() {
@@ -2384,7 +2392,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
 
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.bubble.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                         self.swipeToReplyNode = swipeToReplyNode
                         self.insertSubnode(swipeToReplyNode, belowSubnode: self.messageAccessibilityArea)
                         animateReplyNodeIn = true

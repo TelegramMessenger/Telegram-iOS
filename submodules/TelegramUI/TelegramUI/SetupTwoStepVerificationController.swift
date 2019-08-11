@@ -38,7 +38,7 @@ class SetupTwoStepVerificationController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(buttonColor: self.presentationData.theme.rootController.navigationBar.accentTextColor, disabledButtonColor: self.presentationData.theme.rootController.navigationBar.disabledButtonColor, primaryTextColor: self.presentationData.theme.rootController.navigationBar.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
         
@@ -93,7 +93,7 @@ class SetupTwoStepVerificationController: ViewController {
     }
     
     private func updateThemeAndStrings() {
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         self.controllerNode.updatePresentationData(self.presentationData)

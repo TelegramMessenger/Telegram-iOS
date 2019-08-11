@@ -108,14 +108,14 @@ final class ChatMediaInputTrendingItemNode: ListViewItemNode {
             
             self.highlightNode.image = PresentationResourcesChat.chatMediaInputPanelHighlightedIconImage(theme)
             self.imageNode.image = PresentationResourcesChat.chatInputMediaPanelTrendingIconImage(theme)
-            self.badgeBackground.image = generateFilledCircleImage(diameter: 16.0, color: theme.chat.inputPanel.mediaRecordingDotColor)
+            self.badgeBackground.image = generateFilledCircleImage(diameter: 10.0, color: theme.chat.inputPanel.mediaRecordingDotColor)
             
             let imageSize = CGSize(width: 26.0, height: 26.0)
             let imageFrame = CGRect(origin: CGPoint(x: floor((boundingSize.width - imageSize.width) / 2.0) + verticalOffset, y: floor((boundingSize.height - imageSize.height) / 2.0) + UIScreenPixel), size: imageSize)
             self.imageNode.frame = imageFrame
             
             if let image = self.badgeBackground.image {
-                self.badgeBackground.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - image.size.width + 2.0, y: imageFrame.maxY - image.size.width + 3.0), size: image.size)
+                self.badgeBackground.frame = CGRect(origin: CGPoint(x: imageFrame.maxX - image.size.width - 1.0, y: imageFrame.maxY - image.size.width + 1.0), size: image.size)
             }
         }
         

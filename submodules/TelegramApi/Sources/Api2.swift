@@ -226,7 +226,7 @@ public struct payments {
     }
     public enum PaymentResult: TypeConstructorDescription {
         case paymentResult(updates: Api.Updates)
-        case paymentVerficationNeeded(url: String)
+        case paymentVerificationNeeded(url: String)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -236,9 +236,9 @@ public struct payments {
                     }
                     updates.serialize(buffer, true)
                     break
-                case .paymentVerficationNeeded(let url):
+                case .paymentVerificationNeeded(let url):
                     if boxed {
-                        buffer.appendInt32(1800845601)
+                        buffer.appendInt32(-666824391)
                     }
                     serializeString(url, buffer: buffer, boxed: false)
                     break
@@ -249,8 +249,8 @@ public struct payments {
         switch self {
                 case .paymentResult(let updates):
                 return ("paymentResult", [("updates", updates)])
-                case .paymentVerficationNeeded(let url):
-                return ("paymentVerficationNeeded", [("url", url)])
+                case .paymentVerificationNeeded(let url):
+                return ("paymentVerificationNeeded", [("url", url)])
     }
     }
     
@@ -267,12 +267,12 @@ public struct payments {
                 return nil
             }
         }
-        public static func parse_paymentVerficationNeeded(_ reader: BufferReader) -> PaymentResult? {
+        public static func parse_paymentVerificationNeeded(_ reader: BufferReader) -> PaymentResult? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
             if _c1 {
-                return Api.payments.PaymentResult.paymentVerficationNeeded(url: _1!)
+                return Api.payments.PaymentResult.paymentVerificationNeeded(url: _1!)
             }
             else {
                 return nil
@@ -496,6 +496,7 @@ public extension Api {
 public struct auth {
     public enum Authorization: TypeConstructorDescription {
         case authorization(flags: Int32, tmpSessions: Int32?, user: Api.User)
+        case authorizationSignUpRequired(flags: Int32, termsOfService: Api.help.TermsOfService?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -507,6 +508,13 @@ public struct auth {
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(tmpSessions!, buffer: buffer, boxed: false)}
                     user.serialize(buffer, true)
                     break
+                case .authorizationSignUpRequired(let flags, let termsOfService):
+                    if boxed {
+                        buffer.appendInt32(1148485274)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {termsOfService!.serialize(buffer, true)}
+                    break
     }
     }
     
@@ -514,6 +522,8 @@ public struct auth {
         switch self {
                 case .authorization(let flags, let tmpSessions, let user):
                 return ("authorization", [("flags", flags), ("tmpSessions", tmpSessions), ("user", user)])
+                case .authorizationSignUpRequired(let flags, let termsOfService):
+                return ("authorizationSignUpRequired", [("flags", flags), ("termsOfService", termsOfService)])
     }
     }
     
@@ -531,6 +541,22 @@ public struct auth {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.auth.Authorization.authorization(flags: _1!, tmpSessions: _2, user: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_authorizationSignUpRequired(_ reader: BufferReader) -> Authorization? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.help.TermsOfService?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.auth.Authorization.authorizationSignUpRequired(flags: _1!, termsOfService: _2)
             }
             else {
                 return nil
@@ -647,28 +673,27 @@ public struct auth {
     
     }
     public enum SentCode: TypeConstructorDescription {
-        case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?, termsOfService: Api.help.TermsOfService?)
+        case sentCode(flags: Int32, type: Api.auth.SentCodeType, phoneCodeHash: String, nextType: Api.auth.CodeType?, timeout: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout, let termsOfService):
+                case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout):
                     if boxed {
-                        buffer.appendInt32(955951967)
+                        buffer.appendInt32(1577067778)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     type.serialize(buffer, true)
                     serializeString(phoneCodeHash, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 1) != 0 {nextType!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(timeout!, buffer: buffer, boxed: false)}
-                    if Int(flags) & Int(1 << 3) != 0 {termsOfService!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout, let termsOfService):
-                return ("sentCode", [("flags", flags), ("type", type), ("phoneCodeHash", phoneCodeHash), ("nextType", nextType), ("timeout", timeout), ("termsOfService", termsOfService)])
+                case .sentCode(let flags, let type, let phoneCodeHash, let nextType, let timeout):
+                return ("sentCode", [("flags", flags), ("type", type), ("phoneCodeHash", phoneCodeHash), ("nextType", nextType), ("timeout", timeout)])
     }
     }
     
@@ -687,18 +712,13 @@ public struct auth {
             } }
             var _5: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_5 = reader.readInt32() }
-            var _6: Api.help.TermsOfService?
-            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
-                _6 = Api.parse(reader, signature: signature) as? Api.help.TermsOfService
-            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 1) == 0) || _4 != nil
             let _c5 = (Int(_1!) & Int(1 << 2) == 0) || _5 != nil
-            let _c6 = (Int(_1!) & Int(1 << 3) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5, termsOfService: _6)
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.auth.SentCode.sentCode(flags: _1!, type: _2!, phoneCodeHash: _3!, nextType: _4, timeout: _5)
             }
             else {
                 return nil
@@ -1295,11 +1315,17 @@ public struct contacts {
 public extension Api {
 public struct help {
     public enum AppUpdate: TypeConstructorDescription {
-        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?)
         case noAppUpdate
+        case appUpdate(flags: Int32, id: Int32, version: String, text: String, entities: [Api.MessageEntity], document: Api.Document?, url: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .noAppUpdate:
+                    if boxed {
+                        buffer.appendInt32(-1000708810)
+                    }
+                    
+                    break
                 case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
                     if boxed {
                         buffer.appendInt32(497489295)
@@ -1316,24 +1342,21 @@ public struct help {
                     if Int(flags) & Int(1 << 1) != 0 {document!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(url!, buffer: buffer, boxed: false)}
                     break
-                case .noAppUpdate:
-                    if boxed {
-                        buffer.appendInt32(-1000708810)
-                    }
-                    
-                    break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
-                return ("appUpdate", [("flags", flags), ("id", id), ("version", version), ("text", text), ("entities", entities), ("document", document), ("url", url)])
                 case .noAppUpdate:
                 return ("noAppUpdate", [])
+                case .appUpdate(let flags, let id, let version, let text, let entities, let document, let url):
+                return ("appUpdate", [("flags", flags), ("id", id), ("version", version), ("text", text), ("entities", entities), ("document", document), ("url", url)])
     }
     }
     
+        public static func parse_noAppUpdate(_ reader: BufferReader) -> AppUpdate? {
+            return Api.help.AppUpdate.noAppUpdate
+        }
         public static func parse_appUpdate(_ reader: BufferReader) -> AppUpdate? {
             var _1: Int32?
             _1 = reader.readInt32()
@@ -1366,9 +1389,6 @@ public struct help {
             else {
                 return nil
             }
-        }
-        public static func parse_noAppUpdate(_ reader: BufferReader) -> AppUpdate? {
-            return Api.help.AppUpdate.noAppUpdate
         }
     
     }

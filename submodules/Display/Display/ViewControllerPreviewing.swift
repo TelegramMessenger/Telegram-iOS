@@ -12,10 +12,11 @@ private final class ViewControllerPeekContent: PeekControllerContent {
         self.controller = controller
         var menu: [PeekControllerMenuItem] = []
         for item in controller.previewActionItems {
-            menu.append(PeekControllerMenuItem(title: item.title, color: .accent, action: { [weak controller] in
+            menu.append(PeekControllerMenuItem(title: item.title, color: .accent, action: { [weak controller] _, _ in
                 if let controller = controller, let item = item as? UIPreviewAction {
                     item.handler(item, controller)
                 }
+                return true
             }))
         }
         self.menu = menu

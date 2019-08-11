@@ -16,9 +16,9 @@ public struct PeekControllerMenuItem {
     public let title: String
     public let color: PeekControllerMenuItemColor
     public let font: PeekControllerMenuItemFont
-    public let action: () -> Void
+    public let action: (ASDisplayNode, CGRect) -> Bool
     
-    public init(title: String, color: PeekControllerMenuItemColor, font: PeekControllerMenuItemFont = .default, action: @escaping () -> Void) {
+    public init(title: String, color: PeekControllerMenuItemColor, font: PeekControllerMenuItemFont = .default, action: @escaping (ASDisplayNode, CGRect) -> Bool) {
         self.title = title
         self.color = color
         self.font = font
@@ -100,7 +100,8 @@ final class PeekControllerMenuItemNode: HighlightTrackingButtonNode {
     }
     
     @objc func buttonPressed() {
-        self.activatedAction()
-        self.item.action()
+        if self.item.action(self, self.bounds) {
+            self.activatedAction()
+        }
     }
 }

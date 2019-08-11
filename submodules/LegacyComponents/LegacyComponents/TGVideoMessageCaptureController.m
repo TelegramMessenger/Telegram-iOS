@@ -125,6 +125,9 @@ typedef enum
     UIView *(^_transitionInView)();
     id<TGLiveUploadInterface> _liveUploadInterface;
     
+    int32_t _slowmodeTimestamp;
+    UIView * (^_slowmodeView)(void);
+    
 	TGVideoMessageCaptureControllerAssets *_assets;
 }
 
@@ -134,12 +137,7 @@ typedef enum
 
 @implementation TGVideoMessageCaptureController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface
-{
-    return [self initWithContext:context assets:assets transitionInView:transitionInView parentController:parentController controlsFrame:controlsFrame isAlreadyLocked:isAlreadyLocked liveUploadInterface:liveUploadInterface pallete:nil];
-}
-
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)())transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context assets:(TGVideoMessageCaptureControllerAssets *)assets transitionInView:(UIView *(^)(void))transitionInView parentController:(TGViewController *)parentController controlsFrame:(CGRect)controlsFrame isAlreadyLocked:(bool (^)(void))isAlreadyLocked liveUploadInterface:(id<TGLiveUploadInterface>)liveUploadInterface pallete:(TGModernConversationInputMicPallete *)pallete slowmodeTimestamp:(int32_t)slowmodeTimestamp slowmodeView:(UIView *(^)(void))slowmodeView
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -150,6 +148,8 @@ typedef enum
         _liveUploadInterface = liveUploadInterface;
         _assets = assets;
         _pallete = pallete;
+        _slowmodeTimestamp = slowmodeTimestamp;
+        _slowmodeView = [slowmodeView copy];
         
         _url = [TGVideoMessageCaptureController tempOutputPath];
         _queue = [[SQueue alloc] init];
@@ -280,7 +280,14 @@ typedef enum
         [_wrapperView addSubview:_fadeView];
     }
     
-    _circleWrapperView = [[UIView alloc] initWithFrame:CGRectMake((_wrapperView.frame.size.width - 216.0f - 38.0f) / 2.0f, _wrapperView.frame.size.height + 100.0f, 216.0f + 38.0f, 216.0f + 38.0f)];
+    CGFloat circleWrapperViewLength = 216.0f + 38.0f;
+    _circleWrapperView = [[UIView alloc] initWithFrame:(CGRect){
+        .origin.x = (_wrapperView.bounds.size.width - circleWrapperViewLength) / 2.0f,
+        .origin.y = _wrapperView.bounds.size.height + circleWrapperViewLength * 0.3f,
+        .size.width = circleWrapperViewLength,
+        .size.height = circleWrapperViewLength
+    }];
+    
     _circleWrapperView.alpha = 0.0f;
     _circleWrapperView.clipsToBounds = false;
     [_wrapperView addSubview:_circleWrapperView];
@@ -305,16 +312,20 @@ typedef enum
         _placeholderView.accessibilityIgnoresInvertColors = true;
     }
     
-    _ringView = [[TGVideoMessageRingView alloc] initWithFrame:CGRectMake((_circleWrapperView.frame.size.width - 234.0f) / 2.0f, (_circleWrapperView.frame.size.height - 234.0f) / 2.0f, 234.0f, 234.0f)];
+    CGFloat ringViewLength = 234.0f;
+    _ringView = [[TGVideoMessageRingView alloc] initWithFrame:(CGRect){
+        .origin.x = (_circleWrapperView.bounds.size.width - ringViewLength) / 2.0f,
+        .origin.y = (_circleWrapperView.bounds.size.height - ringViewLength) / 2.0f,
+        .size.width = ringViewLength,
+        .size.height = ringViewLength
+    }];
     _ringView.accentColor = self.pallete != nil ? self.pallete.buttonColor : TGAccentColor();
     [_circleWrapperView addSubview:_ringView];
     
     CGRect controlsFrame = _controlsFrame;
-    CGFloat height = TGIsPad() ? 56.0f : 45.0f;
-    controlsFrame.origin.y = CGRectGetMaxY(controlsFrame) - height;
-    controlsFrame.size.height = height;
+    controlsFrame.size.width = _wrapperView.frame.size.width;
     
-    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets];
+    _controlsView = [[TGVideoMessageControls alloc] initWithFrame:controlsFrame assets:_assets slowmodeTimestamp:_slowmodeTimestamp slowmodeView:_slowmodeView];
     _controlsView.pallete = self.pallete;
     _controlsView.clipsToBounds = true;
     _controlsView.parent = self;
@@ -347,17 +358,18 @@ typedef enum
 
         };
     };
-    _controlsView.sendPressed = ^
+    _controlsView.sendPressed = ^bool 
     {
         __strong TGVideoMessageCaptureController *strongSelf = weakSelf;
-        if (strongSelf != nil)
-        {
-            [strongSelf sendPressed];
-        };
+        if (strongSelf != nil) {
+            return [strongSelf sendPressed];
+        } else {
+            return false;
+        }
     };
     [self.view addSubview:_controlsView];
     
-    _separatorView = [[UIView alloc] initWithFrame:CGRectMake(_controlsView.frame.origin.x, _controlsFrame.origin.y - TGScreenPixel, _controlsView.frame.size.width, TGScreenPixel)];
+    _separatorView = [[UIView alloc] initWithFrame:CGRectMake(controlsFrame.origin.x, controlsFrame.origin.y - TGScreenPixel, controlsFrame.size.width, TGScreenPixel)];
     _separatorView.backgroundColor = self.pallete != nil ? self.pallete.borderColor : UIColorRGB(0xb2b2b2);
     _separatorView.userInteractionEnabled = false;
     [self.view addSubview:_separatorView];
@@ -508,31 +520,33 @@ typedef enum
     
     _circleWrapperView.transform = CGAffineTransformMakeScale(0.3f, 0.3f);
     
-    CGPoint targetPosition = CGPointMake(_wrapperView.frame.size.width / 2.0f, _wrapperView.frame.size.height / 2.0f - _controlsView.frame.size.height);
+    CGPoint targetPosition = (CGPoint){
+        .x = _wrapperView.frame.size.width / 2.0f,
+        .y = _wrapperView.frame.size.height / 2.0f - _controlsView.frame.size.height
+    };
     switch (self.interfaceOrientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
-            targetPosition.x = MIN(_wrapperView.frame.size.width - _circleWrapperView.bounds.size.width / 2.0f - 20.0f, _wrapperView.frame.size.width / 4.0f * 3.0f);
-            targetPosition.y = self.view.frame.size.height / 2.0f;
             break;
-            
         case UIInterfaceOrientationLandscapeRight:
-            targetPosition.x = MAX(_circleWrapperView.bounds.size.width / 2.0f + 20.0f, _wrapperView.frame.size.width / 4.0f);
-            targetPosition.y = self.view.frame.size.height / 2.0f;
             break;
-            
         default:
             if (self.view.frame.size.height > self.view.frame.size.width && fabs(_wrapperView.frame.size.height - self.view.frame.size.height) < 50.0f)
                 targetPosition.y = _wrapperView.frame.size.height / 3.0f - 20.0f;
             
             targetPosition.y = MAX(_circleWrapperView.bounds.size.height / 2.0f + 40.0f, targetPosition.y);
-                
             break;
+    }
+    
+    if (TGIsPad()) {
+        _circleWrapperView.center = targetPosition;
     }
     
     [UIView animateWithDuration:0.5 delay:0.0 usingSpringWithDamping:0.8f initialSpringVelocity:0.2f options:kNilOptions animations:^
     {
-        _circleWrapperView.center = targetPosition;
+        if (!TGIsPad()) {
+            _circleWrapperView.center = targetPosition;
+        }
         _circleWrapperView.transform = CGAffineTransformIdentity;
     } completion:nil];
     
@@ -634,6 +648,10 @@ typedef enum
     [_controlsView setLocked];
 }
 
+- (CGRect)frameForSendButton {
+    return [_controlsView convertRect:[_controlsView frameForSendButton] toView:self.view];
+}
+
 - (bool)stop
 {
     if (!_capturePipeline.isRecording)
@@ -651,12 +669,23 @@ typedef enum
     return true;
 }
 
-- (void)sendPressed
+- (bool)sendPressed
 {
+    if (_slowmodeTimestamp != 0) {
+        int32_t timestamp = (int32_t)[[NSDate date] timeIntervalSince1970];
+        if (timestamp < _slowmodeTimestamp) {
+            if (_displaySlowmodeTooltip) {
+                _displaySlowmodeTooltip();
+            }
+            return false;
+        }
+    }
+    
     [self finishWithURL:_url dimensions:CGSizeMake(240.0f, 240.0f) duration:_duration liveUploadData:_liveUploadData thumbnailImage:_thumbnailImage];
     
     _automaticDismiss = true;
     [self dismiss:false];
+    return true;
 }
 
 - (void)unmutePressed

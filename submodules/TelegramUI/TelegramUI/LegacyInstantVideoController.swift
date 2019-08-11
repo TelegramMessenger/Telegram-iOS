@@ -88,10 +88,10 @@ final class InstantVideoController: LegacyController {
 
 func legacyInputMicPalette(from theme: PresentationTheme) -> TGModernConversationInputMicPallete {
     let inputPanelTheme = theme.chat.inputPanel
-    return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelStrokeColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
+    return TGModernConversationInputMicPallete(dark: theme.overallDarkAppearance, buttonColor: inputPanelTheme.actionControlFillColor, iconColor: inputPanelTheme.actionControlForegroundColor, backgroundColor: inputPanelTheme.panelBackgroundColor, borderColor: inputPanelTheme.panelSeparatorColor, lock: inputPanelTheme.panelControlAccentColor, textColor: inputPanelTheme.primaryTextColor, secondaryTextColor: inputPanelTheme.secondaryTextColor, recording: inputPanelTheme.mediaRecordingDotColor)
 }
 
-func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, send: @escaping (EnqueueMessage) -> Void) -> InstantVideoController {
+func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, context: AccountContext, peerId: PeerId, slowmodeState: ChatSlowmodeState?, send: @escaping (EnqueueMessage) -> Void, displaySlowmodeTooltip: @escaping (ASDisplayNode, CGRect) -> Void) -> InstantVideoController {
     let legacyController = InstantVideoController(presentation: .custom, theme: theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
     legacyController.lockOrientation = true
@@ -105,11 +105,21 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             if peerId.namespace != Namespaces.Peer.SecretChat {
                 uploadInterface = LegacyLiveUploadInterface(account: context.account)
             }
+            
+            var slowmodeValidUntil: Int32 = 0
+            if let slowmodeState = slowmodeState, case let .timestamp(timestamp) = slowmodeState.variant {
+                slowmodeValidUntil = timestamp
+            }
+            
             let controller = TGVideoMessageCaptureController(context: legacyController.context, assets: TGVideoMessageCaptureControllerAssets(send: PresentationResourcesChat.chatInputPanelSendButtonImage(theme)!, slideToCancel: PresentationResourcesChat.chatInputPanelMediaRecordingCancelArrowImage(theme)!, actionDelete: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor))!, transitionInView: {
                 return nil
             }, parentController: baseController, controlsFrame: panelFrame, isAlreadyLocked: {
                 return false
-            }, liveUploadInterface: uploadInterface, pallete: legacyInputMicPalette(from: theme))!
+            }, liveUploadInterface: uploadInterface, pallete: legacyInputMicPalette(from: theme), slowmodeTimestamp: slowmodeValidUntil, slowmodeView: {
+                let node = ChatSendButtonRadialStatusView(color: theme.chat.inputPanel.panelControlAccentColor)
+                node.slowmodeState = slowmodeState
+                return node
+            })!
             controller.finishedWithVideo = { videoUrl, previewImage, _, duration, dimensions, liveUploadData, adjustments in
                 guard let videoUrl = videoUrl else {
                     return
@@ -167,6 +177,12 @@ func legacyInstantVideoController(theme: PresentationTheme, panelFrame: CGRect, 
             controller.didDismiss = { [weak legacyController] in
                 if let legacyController = legacyController {
                     legacyController.dismiss()
+                }
+            }
+            controller.displaySlowmodeTooltip = { [weak legacyController, weak controller] in
+                if let legacyController = legacyController, let controller = controller {
+                    let rect = controller.frameForSendButton()
+                    displaySlowmodeTooltip(legacyController.displayNode, rect)
                 }
             }
             legacyController.bindCaptureController(controller)

@@ -24,7 +24,7 @@ public func parseProxyUrl(_ url: URL) -> ProxyServerSettings? {
     guard let proxy = parseProxyUrl(url.absoluteString) else {
         return nil
     }
-    if let secret = proxy.secret, secret.count == 16 || (secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret)) {
+    if let secret = proxy.secret, let _ = MTProxySecret.parseData(secret) {
         return ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .mtp(secret: secret))
     } else {
         return ProxyServerSettings(host: proxy.host, port: proxy.port, connection: .socks5(username: proxy.username, password: proxy.password))
@@ -347,6 +347,7 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                     var user: String?
                     var pass: String?
                     var secret: String?
+                    var secretHost: String?
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -360,6 +361,8 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                                     pass = value
                                 } else if queryItem.name == "secret" {
                                     secret = value
+                                } else if queryItem.name == "host" {
+                                    secretHost = value
                                 }
                             }
                         }
@@ -375,6 +378,9 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                         }
                         if let secret = secret {
                             result += "&secret=\((secret as NSString).addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) ?? "")"
+                        }
+                        if let secretHost = secretHost?.addingPercentEncoding(withAllowedCharacters: CharacterSet.urlQueryValueAllowed) {
+                            result += "&host=\(secretHost)"
                         }
                         convertedUrl = result
                     }

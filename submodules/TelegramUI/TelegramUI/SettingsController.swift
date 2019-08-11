@@ -376,7 +376,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 if badgeCount > 0 {
                     label = .badge(compactNumericCountString(Int(badgeCount), decimalSeparator: dateTimeFormat.decimalSeparator))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: PresentationDateTimeFormat(timeFormat: .regular, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ""), nameDisplayOrder: .firstLast, account: account, peer: peer, height: .generic, aliasHandling: .standard, nameStyle: .plain, presence: nil, text: .none, label: label, editing: ItemListPeerItemEditing(editable: true, editing: false, revealed: revealed), revealOptions: nil, switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
                     arguments.switchToAccount(account.id)
                 }, setPeerIdWithRevealedOptions: { lhs, rhs in
                     var lhsAccountId: AccountRecordId?
@@ -392,7 +392,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.removeAccount(account.id)
                 }, tag: SettingsEntryTag.account(account.id))
             case let .addAccount(theme, text):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, editing: false, action: {
+                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.addAccount()
                 })
             case let .proxy(theme, image, text, value):
@@ -1378,7 +1378,6 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 let accountContext = AccountContext(sharedContext: sharedContext, account: selectedAccount, limitsConfiguration: LimitsConfiguration.defaultValue)
                 let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
                 return chatListController
-                    
             }
         }
         return nil

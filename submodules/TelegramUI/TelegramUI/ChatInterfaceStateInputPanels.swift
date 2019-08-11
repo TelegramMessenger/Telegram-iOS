@@ -222,6 +222,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 let panel = ChatTextInputPanelNode(presentationInterfaceState: chatPresentationInterfaceState, presentController: { [weak interfaceInteraction] controller in
                     interfaceInteraction?.presentController(controller, nil)
                 })
+                
                 panel.interfaceInteraction = interfaceInteraction
                 panel.context = context
                 return panel

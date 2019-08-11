@@ -53,15 +53,19 @@ private final class LegacyComponentsOverlayWindowManagerImpl: NSObject, LegacyCo
     
     func bindController(_ controller: UIViewController!) {
         self.contentController = controller
+        if controller.prefersStatusBarHidden {
+            self.controller?.statusBar.statusBarStyle = .Hide
+        }
+        
         controller.state_setNeedsStatusBarAppearanceUpdate({ [weak self, weak controller] in
             if let parentController = self?.parentController, let controller = controller {
-                if parentController.statusBar.statusBarStyle != .Hide {
+                if parentController.statusBar.statusBarStyle != .Hide && !controller.prefersStatusBarHidden {
                     self?.controller?.statusBar.statusBarStyle = StatusBarStyle(systemStyle: controller.preferredStatusBarStyle)
                 }
             }
         })
         if let parentController = self.parentController {
-            if parentController.statusBar.statusBarStyle != .Hide {
+            if parentController.statusBar.statusBarStyle != .Hide && !controller.prefersStatusBarHidden {
                 self.controller?.statusBar.statusBarStyle = StatusBarStyle(systemStyle: controller.preferredStatusBarStyle)
             }
         }
@@ -340,7 +344,7 @@ public class LegacyController: ViewController, PresentableController {
         super.init(navigationBarPresentationData: navigationBarPresentationData)
         
         if let theme = theme {
-            self.statusBar.statusBarStyle = theme.rootController.statusBar.style.style
+            self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         }
         
         let contextImpl = LegacyControllerContext(controller: self, theme: theme)

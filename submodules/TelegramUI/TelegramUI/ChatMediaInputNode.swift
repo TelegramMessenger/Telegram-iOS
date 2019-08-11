@@ -329,6 +329,7 @@ final class ChatMediaInputNodeInteraction {
     let dismissPeerSpecificSettings: () -> Void
     let clearRecentlyUsedStickers: () -> Void
     
+    var stickerSettings: ChatInterfaceStickerSettings?
     var highlightedStickerItemCollectionId: ItemCollectionId?
     var highlightedItemCollectionId: ItemCollectionId?
     var previewedStickerPackItem: StickerPreviewPeekItem?
@@ -651,6 +652,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
             }
         }
+        self.inputNodeInteraction.stickerSettings = self.controllerInteraction.stickerSettings
         
         let previousEntries = Atomic<([ChatMediaInputPanelEntry], [ChatMediaInputGridEntry])>(value: ([], []))
         
@@ -842,12 +844,14 @@ final class ChatMediaInputNode: ChatInputNode {
                                 if let strongSelf = self {
                                     var menuItems: [PeekControllerMenuItem] = []
                                     menuItems = [
-                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                             if let strongSelf = self {
-                                                strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
+                                                return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                            } else {
+                                                return false
                                             }
                                         }),
-                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                        PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                             if let strongSelf = self {
                                                 if isStarred {
                                                     let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -855,17 +859,20 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                 }
                                             }
+                                            return true
                                         }),
-                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                        PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                             if let strongSelf = self {
                                                 loop: for attribute in item.file.attributes {
                                                     switch attribute {
                                                     case let .Sticker(_, packReference, _):
                                                         if let packReference = packReference {
                                                             let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                            controller.sendSticker = { file in
+                                                            controller.sendSticker = { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
-                                                                    strongSelf.controllerInteraction.sendSticker(file, false)
+                                                                    return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                } else {
+                                                                    return false
                                                                 }
                                                             }
                                                             
@@ -878,8 +885,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }
                                                 }
                                             }
+                                            return true
                                         }),
-                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                        PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
                                     ]
                                     return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: item, menu: menuItems))
                                 } else {
@@ -888,15 +896,18 @@ final class ChatMediaInputNode: ChatInputNode {
                             }
                         } else if let file = item as? FileMediaReference {
                             return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
-                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                     if let strongSelf = self {
-                                        strongSelf.controllerInteraction.sendGif(file)
+                                        return strongSelf.controllerInteraction.sendGif(file, node, rect)
+                                    } else {
+                                        return false
                                     }
                                 }),
-                                PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: {
+                                PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: { _, _ in
                                     if let strongSelf = self {
                                         let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: file).start()
                                     }
+                                    return true
                                 })
                             ])))
                         }
@@ -904,20 +915,28 @@ final class ChatMediaInputNode: ChatInputNode {
                 } else {
                     panes = [strongSelf.gifPane, strongSelf.stickerPane, strongSelf.trendingPane]
                 }
+                let panelPoint = strongSelf.view.convert(point, to: strongSelf.collectionListPanel.view)
+                if panelPoint.y < strongSelf.collectionListPanel.frame.maxY {
+                    return .single(nil)
+                }
+                
                 for pane in panes {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
-                            if let file = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
+                            if let (file, rect) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
                                 return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
-                                    PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
+                                    PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                         if let strongSelf = self {
-                                            strongSelf.controllerInteraction.sendGif(file)
+                                            return strongSelf.controllerInteraction.sendGif(file, node, rect)
+                                        } else {
+                                            return false
                                         }
                                     }),
-                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: {
+                                    PeekControllerMenuItem(title: strongSelf.strings.Common_Delete, color: .destructive, action: { _, _ in
                                         if let strongSelf = self {
                                             let _ = removeSavedGif(postbox: strongSelf.context.account.postbox, mediaId: file.media.fileId).start()
                                         }
+                                        return true
                                     })
                                 ])))
                             }
@@ -938,12 +957,14 @@ final class ChatMediaInputNode: ChatInputNode {
                                     if let strongSelf = self {
                                         var menuItems: [PeekControllerMenuItem] = []
                                         menuItems = [
-                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
+                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { node, rect in
                                                 if let strongSelf = self {
-                                                    strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false)
+                                                    return strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, node, rect)
+                                                } else {
+                                                    return false
                                                 }
                                             }),
-                                            PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: {
+                                            PeekControllerMenuItem(title: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, color: isStarred ? .destructive : .accent, action: { _, _ in
                                                 if let strongSelf = self {
                                                     if isStarred {
                                                         let _ = removeSavedSticker(postbox: strongSelf.context.account.postbox, mediaId: item.file.fileId).start()
@@ -951,17 +972,20 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         let _ = addSavedSticker(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, file: item.file).start()
                                                     }
                                                 }
+                                                return true
                                             }),
-                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                            PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                                 if let strongSelf = self {
                                                     loop: for attribute in item.file.attributes {
                                                         switch attribute {
                                                             case let .Sticker(_, packReference, _):
                                                                 if let packReference = packReference {
                                                                     let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.controllerInteraction.navigationController())
-                                                                    controller.sendSticker = { file in
+                                                                    controller.sendSticker = { file, sourceNode, sourceRect in
                                                                         if let strongSelf = self {
-                                                                            strongSelf.controllerInteraction.sendSticker(file, false)
+                                                                            return strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                                                                        } else {
+                                                                            return false
                                                                         }
                                                                     }
                                                           
@@ -974,8 +998,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         }
                                                     }
                                                 }
+                                                return true
                                             }),
-                                            PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: {})
+                                            PeekControllerMenuItem(title: strongSelf.strings.Common_Cancel, color: .accent, action: { _, _ in return true })
                                         ]
                                         return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, item: .pack(item), menu: menuItems))
                                     } else {

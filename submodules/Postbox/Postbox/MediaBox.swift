@@ -70,6 +70,7 @@ public protocol MediaResourceDataFetchCopyLocalItem {
 public enum MediaBoxFetchPriority: Int32 {
     case `default` = 0
     case elevated = 1
+    case maximum = 2
 }
 
 public enum MediaResourceDataFetchResult {
@@ -561,7 +562,7 @@ public final class MediaBox {
                                 case .incremental:
                                     break
                                 case .partial:
-                                    break
+                                    subscriber.putNext(Data())
                             }
                         }
                     }

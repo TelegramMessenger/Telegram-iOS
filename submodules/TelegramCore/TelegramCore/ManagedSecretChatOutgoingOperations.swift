@@ -504,6 +504,8 @@ private func decryptedAttributes46(_ attributes: [TelegramMediaFileAttribute], t
                             if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
                                 stickerSet = .inputStickerSetShortName(shortName: info.shortName)
                             }
+                        default:
+                            stickerSet = .inputStickerSetEmpty
                     }
                 }
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
@@ -553,6 +555,8 @@ private func decryptedAttributes73(_ attributes: [TelegramMediaFileAttribute], t
                             if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
                                 stickerSet = .inputStickerSetShortName(shortName: info.shortName)
                             }
+                        default:
+                            stickerSet = .inputStickerSetEmpty
                     }
                 }
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))
@@ -600,12 +604,14 @@ private func decryptedAttributes101(_ attributes: [TelegramMediaFileAttribute], 
                 var stickerSet: SecretApi101.InputStickerSet = .inputStickerSetEmpty
                 if let packReference = packReference {
                     switch packReference {
-                    case let .name(name):
-                        stickerSet = .inputStickerSetShortName(shortName: name)
-                    case .id:
-                        if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
-                            stickerSet = .inputStickerSetShortName(shortName: info.shortName)
-                        }
+                        case let .name(name):
+                            stickerSet = .inputStickerSetShortName(shortName: name)
+                        case .id:
+                            if let (info, _, _) = cachedStickerPack(transaction: transaction, reference: packReference) {
+                                stickerSet = .inputStickerSetShortName(shortName: info.shortName)
+                            }
+                        default:
+                            stickerSet = .inputStickerSetEmpty
                     }
                 }
                 result.append(.documentAttributeSticker(alt: displayText, stickerset: stickerSet))

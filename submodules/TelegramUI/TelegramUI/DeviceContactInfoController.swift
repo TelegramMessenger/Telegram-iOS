@@ -414,9 +414,9 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
                     arguments.setPhoneIdWithRevealedOptions(lhs, rhs)
                 }, updated: { value in
                     arguments.updatePhone(id, value)
-                }, selectLabel: nil /*{
+                }, selectLabel: {
                     arguments.updatePhoneLabel(id, label)
-                }*/, delete: {
+                }, delete: {
                     arguments.deletePhone(id)
                 }, tag: DeviceContactInfoEntryTag.editingPhone(id))
             case let .addPhoneNumber(_, theme, title):
@@ -654,8 +654,8 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     } else {
         if editingPhoneNumbers {
             for number in state.phoneNumbers {
-                let label = !number.label.isEmpty ? number.label : presentationData.strings.ContactInfo_PhoneLabelMain
-                entries.append(.editingPhoneNumber(entries.count, presentationData.theme, presentationData.strings, number.id, localizedPhoneNumberLabel(label: label, strings: presentationData.strings), number.label, number.value, state.phoneIdWithRevealedOptions == number.id))
+                let label = !number.label.isEmpty ? number.label : "_$!<Mobile>!$_"
+                entries.append(.editingPhoneNumber(entries.count, presentationData.theme, presentationData.strings, number.id, localizedPhoneNumberLabel(label: label, strings: presentationData.strings), label, number.value, state.phoneIdWithRevealedOptions == number.id))
             }
             entries.append(.addPhoneNumber(entries.count, presentationData.theme, presentationData.strings.UserInfo_AddPhone))
         } else {
@@ -927,7 +927,18 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             return state
         }
     }, updatePhoneLabel: { id, currentLabel in
-        
+        presentControllerImpl?(phoneLabelController(context: context, currentLabel: currentLabel, completion: { value in
+            updateState { state in
+                var state = state
+                for i in 0 ..< state.phoneNumbers.count {
+                    if state.phoneNumbers[i].id == id {
+                        state.phoneNumbers[i].label = value
+                        break
+                    }
+                }
+                return state
+            }
+        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, deletePhone: { id in
         updateState { state in
             var state = state

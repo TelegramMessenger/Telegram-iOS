@@ -57,10 +57,14 @@ public func markMessageContentAsConsumedInteractively(postbox: Postbox, messageI
             for i in 0 ..< updatedAttributes.count {
                 if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
                     if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
-                        updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: timestamp)
+                        var timeout = attribute.timeout
+                        if let duration = message.secretMediaDuration {
+                            timeout = max(timeout, duration)
+                        }
+                        updatedAttributes[i] = AutoremoveTimeoutMessageAttribute(timeout: timeout, countdownBeginTime: timestamp)
                         updateMessage = true
                         
-                        transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + attribute.timeout, messageId: messageId)
+                        transaction.addTimestampBasedMessageAttribute(tag: 0, timestamp: timestamp + timeout, messageId: messageId)
                         
                         if messageId.peerId.namespace == Namespaces.Peer.SecretChat {
                             var layer: SecretChatLayer?

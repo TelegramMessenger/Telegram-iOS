@@ -133,7 +133,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
     
     func setFile(context: AccountContext, fileReference: FileMediaReference) {
         if self.contextAndMedia == nil || !self.contextAndMedia!.1.media.isEqual(to: fileReference.media) {
-            let signal = chatMessageAnimatedStrickerBackingData(postbox: context.account.postbox, fileReference: fileReference, synchronousLoad: false)
+            let signal = chatMessageAnimatedStickerBackingData(postbox: context.account.postbox, fileReference: fileReference, synchronousLoad: false)
             |> mapToSignal { value -> Signal<Data, NoError> in
                 if value._1, let data = value._0 {
                     return .single(data)
@@ -336,7 +336,7 @@ final class ChatAnimationGalleryItemNode: ZoomableContentGalleryItemNode {
                     case .Fetching:
                         self.context.account.postbox.mediaBox.cancelInteractiveResourceFetch(resource.resource)
                     case .Remote:
-                        self.fetchDisposable.set(fetchedMediaResource(postbox: self.context.account.postbox, reference: resource, statsCategory: statsCategory ?? .generic).start())
+                        self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: resource, statsCategory: statsCategory ?? .generic).start())
                     default:
                         break
                 }

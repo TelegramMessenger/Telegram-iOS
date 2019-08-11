@@ -63,9 +63,9 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.panelBackgroundColor
         
         self.topSeparatorNode = ASDisplayNode()
-        self.topSeparatorNode.backgroundColor = theme.chat.inputPanel.panelStrokeColor
+        self.topSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         self.bottomSeparatorNode =  ASDisplayNode()
-        self.bottomSeparatorNode.backgroundColor = theme.chat.inputPanel.panelStrokeColor
+        self.bottomSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         
         self.textBackgroundNode = ASImageNode()
         self.textBackgroundNode.image = textInputBackgroundImage(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, fieldColor: theme.chat.inputPanel.inputBackgroundColor,  strokeColor: theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)

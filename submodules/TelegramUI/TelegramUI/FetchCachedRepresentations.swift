@@ -896,7 +896,7 @@ private func fetchEmojiRepresentation(account: Account, resource: MediaResource,
 private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerFirstFrameRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
-            return fetchCompressedLottieFirstFrameAJpeg(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { file in
+            return fetchCompressedLottieFirstFrameAJpeg(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { file in
                 subscriber.putNext(.tempFile(file))
                 subscriber.putCompletion()
             })
@@ -911,7 +911,7 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     return Signal({ subscriber in
         if let data = try? Data(contentsOf: URL(fileURLWithPath: resourceData.path), options: [.mappedIfSafe]) {
             if #available(iOS 9.0, *) {
-                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { path in
+                return experimentalConvertCompressedLottieToCombinedMp4(data: data, size: CGSize(width: CGFloat(representation.width), height: CGFloat(representation.height)), fitzModifier: representation.fitzModifier, cacheKey: "\(resource.id.uniqueId)-\(representation.uniqueId)").start(next: { path in
                     subscriber.putNext(.temporaryPath(path))
                     subscriber.putCompletion()
                 })
@@ -924,3 +924,4 @@ private func fetchAnimatedStickerRepresentation(account: Account, resource: Medi
     })
     |> runOn(Queue.concurrentDefaultQueue())
 }
+

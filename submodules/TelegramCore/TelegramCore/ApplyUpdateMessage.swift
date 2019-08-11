@@ -165,7 +165,33 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             
             let (tags, globalTags) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: attributes, media: media, textEntities: entitiesAttribute?.entities)
             
-            return .update(StoreMessage(id: updatedId, globallyUniqueId: nil, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
+            if currentMessage.id.peerId.namespace == Namespaces.Peer.CloudChannel, !currentMessage.flags.contains(.Incoming) {
+                let peerId = currentMessage.id.peerId
+                if let peer = transaction.getPeer(peerId) {
+                    if let peer = peer as? TelegramChannel {
+                        inner: switch peer.info {
+                        case let .group(info):
+                            if info.flags.contains(.slowModeEnabled), peer.adminRights == nil && !peer.flags.contains(.isCreator) {
+                                transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
+                                    var cachedData = current as? CachedChannelData ?? CachedChannelData()
+                                    if let slowModeTimeout = cachedData.slowModeTimeout {
+                                        cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: currentMessage.timestamp + slowModeTimeout)
+                                        return cachedData
+                                    } else {
+                                        return current
+                                    }
+                                })
+                            }
+                        default:
+                            break inner
+                        }
+                    }
+                }
+                
+            }
+            
+            
+            return .update(StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
         })
         for file in sentStickers {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStickers, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 20)
@@ -173,6 +199,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         for file in sentGifs {
             transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentGifs, item: OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: RecentMediaItem(file)), removeTailIfCountExceeds: 200)
         }
+        
         stateManager.addUpdates(result)
     }
 }

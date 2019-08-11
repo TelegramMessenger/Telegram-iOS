@@ -149,13 +149,24 @@ final class PrivacyIntroControllerNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.buttonTextNode, frame: buttonTextFrame)
     }
     
-    func animateIn() {
-        self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.buttonBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.buttonTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.noticeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+    func animateIn(slide: Bool) {
+        if slide {
+            self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            })
+        } else {
+            self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.buttonBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.buttonTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.noticeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        }
+    }
+    
+    func animateOut(completion: (() -> Void)? = nil) {
+        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+            completion?()
+        })
     }
     
     @objc func buttonPressed() {

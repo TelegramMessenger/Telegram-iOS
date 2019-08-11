@@ -222,27 +222,25 @@ public class ShareRootControllerImpl {
                     let requestUserInteraction: ([UnpreparedShareItemContent]) -> Signal<[PreparedShareItemContent], NoError> = { content in
                         return Signal { [weak self] subscriber in
                             switch content[0] {
-                            case let .contact(data):
-                                let controller = deviceContactInfoController(context: context, subject: .filter(peer: nil, contactId: nil, contactData: data, completion: { peer, contactData in
-                                    let phone = contactData.basicData.phoneNumbers[0].value
-                                    if let vCardData = contactData.serializedVCard() {
-                                        subscriber.putNext([.media(.media(.standalone(media: TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: vCardData))))])
+                                case let .contact(data):
+                                    let controller = deviceContactInfoController(context: context, subject: .filter(peer: nil, contactId: nil, contactData: data, completion: { peer, contactData in
+                                        let phone = contactData.basicData.phoneNumbers[0].value
+                                        if let vCardData = contactData.serializedVCard() {
+                                            subscriber.putNext([.media(.media(.standalone(media: TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: vCardData))))])
+                                        }
+                                        subscriber.putCompletion()
+                                    }), cancelled: {
+                                        cancelImpl?()
+                                    })
+                                    
+                                    if let strongSelf = self, let window = strongSelf.mainWindow {
+                                        controller.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
+                                        window.present(controller, on: .root)
                                     }
-                                    subscriber.putCompletion()
-                                }), cancelled: {
-                                    cancelImpl?()
-                                })
-                                
-                                if let strongSelf = self, let window = strongSelf.mainWindow {
-                                    controller.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
-                                    window.present(controller, on: .root)
-                                }
-                                break
+                                    break
                             }
-                            
-                            return ActionDisposable {
-                            }
-                            } |> runOn(Queue.mainQueue())
+                            return EmptyDisposable
+                        } |> runOn(Queue.mainQueue())
                     }
                     
                     let sentItems: ([PeerId], [PreparedShareItemContent], Account) -> Signal<ShareControllerExternalStatus, NoError> = { peerIds, contents, account in
@@ -271,17 +269,17 @@ public class ShareRootControllerImpl {
                                     return .single(.done)
                                 }
                                 switch state {
-                                case .preparing:
-                                    return .single(.preparing)
-                                case let .progress(value):
-                                    return .single(.progress(value))
-                                case let .userInteractionRequired(value):
-                                    return requestUserInteraction(value)
+                                    case .preparing:
+                                        return .single(.preparing)
+                                    case let .progress(value):
+                                        return .single(.progress(value))
+                                    case let .userInteractionRequired(value):
+                                        return requestUserInteraction(value)
                                         |> mapToSignal { contents -> Signal<ShareControllerExternalStatus, NoError> in
                                             return sentItems(peerIds, contents, account)
-                                    }
-                                case let .done(contents):
-                                    return sentItems(peerIds, contents, account)
+                                        }
+                                    case let .done(contents):
+                                        return sentItems(peerIds, contents, account)
                                 }
                             }
                         } else {
@@ -294,7 +292,9 @@ public class ShareRootControllerImpl {
                     }
                     
                     cancelImpl = { [weak shareController] in
-                        shareController?.dismiss()
+                        shareController?.dismiss(completion: { [weak self] in
+                            self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
+                        })
                     }
                     
                     if let strongSelf = self {
@@ -338,7 +338,7 @@ public class ShareRootControllerImpl {
                     self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
                 })])
                 strongSelf.mainWindow?.present(controller, on: .root)
-                }, completed: {}))
+            }, completed: {}))
         }
     }
 }

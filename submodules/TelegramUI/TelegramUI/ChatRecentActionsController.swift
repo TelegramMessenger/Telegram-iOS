@@ -31,7 +31,7 @@ final class ChatRecentActionsController: TelegramController {
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.interaction = ChatRecentActionsInteraction(displayInfoAlert: { [weak self] in
             if let strongSelf = self {
@@ -64,7 +64,8 @@ final class ChatRecentActionsController: TelegramController {
         }, navigateToChat: { _ in
         }, openPeerInfo: {
         }, togglePeerNotifications: {
-        }, sendContextResult: { _, _ in
+        }, sendContextResult: { _, _, _, _ in
+            return false
         }, sendBotCommand: { _, _ in
         }, sendBotStart: { _ in
         }, botSwitchChatWithPayload: { _, _ in
@@ -78,7 +79,8 @@ final class ChatRecentActionsController: TelegramController {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _ in
+        }, sendSticker: { _, _, _ in
+            return false
         }, unblockPeer: {
         }, pinMessage: { _ in
         }, unpinMessage: {
@@ -102,6 +104,8 @@ final class ChatRecentActionsController: TelegramController {
         }, unarchiveChat: {
         }, openLinkEditing: {  
         }, reportPeerIrrelevantGeoLocation: {
+        }, displaySlowmodeTooltip: { _, _ in
+        }, displaySendMessageOptions: {
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView
@@ -140,7 +144,7 @@ final class ChatRecentActionsController: TelegramController {
         let rightButton = ChatNavigationButton(action: .search, buttonItem: UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.activateSearch)))
         self.navigationItem.setRightBarButton(rightButton.buttonItem, animated: false)
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
     }
     

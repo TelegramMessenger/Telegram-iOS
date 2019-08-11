@@ -33,7 +33,7 @@ final class SecureIdAuthPasswordSetupContentNode: ASDisplayNode, SecureIdAuthCon
         self.iconNode.isLayerBacked = true
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Secure ID/EmptyPasswordIcon"), color: theme.list.freeMonoIcon)
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Secure ID/EmptyPasswordIcon"), color: theme.list.freeMonoIconColor)
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.attributedText = NSAttributedString(string: strings.Passport_PasswordDescription, font: Font.regular(14.0), textColor: theme.list.freeTextColor)

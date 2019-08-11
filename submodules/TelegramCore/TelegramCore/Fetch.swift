@@ -9,6 +9,21 @@ import SwiftSignalKit
 import Photos
 #endif
 
+private final class MediaResourceDataCopyFile : MediaResourceDataFetchCopyLocalItem {
+    let path: String
+    init(path: String) {
+        self.path = path
+    }
+    func copyTo(url: URL) -> Bool {
+        do {
+            try FileManager.default.copyItem(at: URL(fileURLWithPath: self.path), to: url)
+            return true
+        } catch {
+            return false
+        }
+    }
+}
+
 private func fetchCloudMediaLocation(account: Account, resource: TelegramMediaResource, datacenterId: Int, size: Int?, intervals: Signal<[(Range<Int>, MediaBoxFetchPriority)], NoError>, parameters: MediaResourceFetchParameters?) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return multipartFetch(postbox: account.postbox, network: account.network, mediaReferenceRevalidationContext: account.mediaReferenceRevalidationContext, resource: resource, datacenterId: datacenterId, size: size, intervals: intervals, parameters: parameters)
 }
@@ -19,12 +34,8 @@ private func fetchLocalFileResource(path: String, move: Bool) -> Signal<MediaRes
             subscriber.putNext(.moveLocalFile(path: path))
             subscriber.putCompletion()
         } else {
-            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                subscriber.putNext(.dataPart(resourceOffset: 0, data: data, range: 0 ..< data.count, complete: true))
-                subscriber.putCompletion()
-            } else {
-                subscriber.putNext(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
-            }
+            subscriber.putNext(.copyLocalItem(MediaResourceDataCopyFile(path: path)))
+            subscriber.putCompletion()
         }
         return EmptyDisposable
     }

@@ -137,8 +137,18 @@
             if (strongSelf == nil)
                 return;
             
-            [strongSelf.window endEditing:true];
+            [strongSelf.window endEditing:true];    
             strongSelf->_donePressed(strongSelf->_currentItem);
+        };
+        void(^toolbarDoneLongPressed)(id) = ^(id sender)
+        {
+            __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
+            if (strongSelf == nil)
+                return;
+            
+            [strongSelf.window endEditing:true];
+            if (strongSelf->_doneLongPressed != nil)
+                strongSelf->_doneLongPressed(strongSelf->_currentItem);
         };
         
         _muteButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, 39.0f, 39.0f)];
@@ -229,7 +239,7 @@
             
             if (_selectionContext.allowGrouping)
             {
-                _groupButton = [[TGMediaPickerGroupButton alloc] initWithFrame:CGRectMake(0, 0, 38.0f, 38.0f)];
+                /*_groupButton = [[TGMediaPickerGroupButton alloc] initWithFrame:CGRectMake(0, 0, 38.0f, 38.0f)];
                 [_groupButton setHidden:true animated:false];
                 _groupButton.selected = _selectionContext.grouping;
                 [_groupButton addTarget:self action:@selector(toggleGrouping) forControlEvents:UIControlEventTouchUpInside];
@@ -240,7 +250,7 @@
                     __strong TGMediaPickerGalleryInterfaceView *strongSelf = weakSelf;
                     if (strongSelf != nil)
                         [strongSelf->_groupButton setSelected:next.boolValue];
-                }];
+                }];*/
                 
                 if (_editingContext != nil)
                 {
@@ -342,11 +352,13 @@
         _portraitToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:TGPhotoEditorBackButtonBack doneButton:TGPhotoEditorDoneButtonSend solidBackground:false];
         _portraitToolbarView.cancelPressed = toolbarCancelPressed;
         _portraitToolbarView.donePressed = toolbarDonePressed;
+        _portraitToolbarView.doneLongPressed = toolbarDoneLongPressed;
         [_wrapperView addSubview:_portraitToolbarView];
         
         _landscapeToolbarView = [[TGPhotoToolbarView alloc] initWithBackButton:TGPhotoEditorBackButtonBack doneButton:TGPhotoEditorDoneButtonSend solidBackground:false];
         _landscapeToolbarView.cancelPressed = toolbarCancelPressed;
         _landscapeToolbarView.donePressed = toolbarDonePressed;
+        _landscapeToolbarView.doneLongPressed = toolbarDoneLongPressed;
         [_wrapperView addSubview:_landscapeToolbarView];
     }
     return self;
@@ -659,8 +671,13 @@
     
     [_checkButton setSelected:!_checkButton.selected animated:true];
     
-    if (selectableItem != nil)
+    if (selectableItem != nil) {
         [_selectionContext setItem:selectableItem selected:_checkButton.selected animated:animated sender:_checkButton];
+        bool value = [_selectionContext isItemSelected:selectableItem];
+        if (value != _checkButton.selected) {
+            [_checkButton setSelected:value animated:true];
+        }
+    }
 }
 
 - (void)photoCounterButtonPressed
@@ -1729,6 +1746,14 @@
     CGRect itemFooterViewFrame = [self itemFooterViewFrameForSize:self.frame.size];
     for (UIView *itemFooterView in _itemFooterViews)
         itemFooterView.frame = itemFooterViewFrame;
+}
+
+- (CGRect)doneButtonFrame {
+    if (UIDeviceOrientationIsPortrait([self interfaceOrientation])) {
+        return [_portraitToolbarView.doneButton convertRect:_portraitToolbarView.doneButton.bounds toView:nil];
+    } else {
+        return [_landscapeToolbarView.doneButton convertRect:_landscapeToolbarView.doneButton.bounds toView:nil];
+    }
 }
 
 @end

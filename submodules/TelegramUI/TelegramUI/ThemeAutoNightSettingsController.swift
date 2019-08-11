@@ -235,7 +235,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .themeNight(theme, title, value):
                 return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateTheme(.nightGrayscale)
+                    arguments.updateTheme(.night)
                 })
         }
     }
@@ -293,8 +293,8 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             break
         case .timeBased, .brightness:
             entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
-            entries.append(.themeNightBlue(theme, strings.Appearance_ThemeNightBlue, switchSetting.theme == .nightAccent))
-            entries.append(.themeNight(theme, strings.Appearance_ThemeNight, switchSetting.theme == .nightGrayscale))
+            entries.append(.themeNightBlue(theme, strings.Appearance_ThemeCarouselTintedNight, switchSetting.theme == .nightAccent))
+            entries.append(.themeNight(theme, strings.Appearance_ThemeCarouselNewNight, switchSetting.theme == .night))
     }
     
     return entries
@@ -302,7 +302,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
 
 private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
     let calendar = Calendar.current
-    let offset = 0//TimeZone.current.secondsFromGMT(for: Date())
+    let offset = 0
     let components = calendar.dateComponents([.hour, .minute, .second], from: Date(timeIntervalSince1970: Double(timestamp + Int32(offset))))
     return Int32(components.hour! * 60 * 60 + components.minute! * 60 + components.second!)
 }

@@ -8,11 +8,10 @@ import Postbox
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
+    var playAnimatedStickers: Bool
     
-    let sendSticker: (StickerPackItem) -> Void
-    
-    init(sendSticker: @escaping (StickerPackItem) -> Void) {
-        self.sendSticker = sendSticker
+    init(playAnimatedStickers: Bool) {
+        self.playAnimatedStickers = playAnimatedStickers
     }
 }
 
@@ -53,11 +52,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     override var isVisibleInGrid: Bool {
         didSet {
-            self.animationNode?.visibility = self.isVisibleInGrid
+            self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
         }
     }
-    
-    private let textNode: ASTextNode
     
     private var currentIsPreviewing = false
     
@@ -74,16 +71,10 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     override init() {
         self.imageNode = TransformImageNode()
         self.imageNode.isLayerBacked = !smartInvertColorsEnabled()
-        //self.imageNode.alphaTransitionOnFirstUpdate = true
-        
-        self.textNode = ASTextNode()
-        self.textNode.isUserInteractionEnabled = false
-        self.textNode.displaysAsynchronously = true
         
         super.init()
         
         self.addSubnode(self.imageNode)
-        //self.addSubnode(self.textNode)
     }
     
     deinit {
@@ -100,17 +91,10 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
         self.interaction = interaction
         
         if self.currentState == nil || self.currentState!.0 !== account || self.currentState!.1 != stickerItem {
-            var text = ""
-            for attribute in stickerItem.file.attributes {
-                if case let .Sticker(displayText, _, _) = attribute {
-                    text = displayText
-                    break
-                }
-            }
-            self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .black, paragraphAlignment: .right)
             if let dimensions = stickerItem.file.dimensions {
                 if stickerItem.file.isAnimatedSticker {
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: CGSize(width: 160.0, height: 160.0)))
+                    let dimensions = stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: account.postbox, file: stickerItem.file, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))))
                     
                     if self.animationNode == nil {
                         let animationNode = AnimatedStickerNode()
@@ -120,8 +104,9 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                             self?.imageNode.isHidden = true
                         }
                     }
-                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: 160, height: 160, mode: .cached)
-                    self.animationNode?.visibility = self.isVisibleInGrid
+                    let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
@@ -157,9 +142,6 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                 animationNode.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - imageSize.width) / 2.0), y: (bounds.size.height - imageSize.height) / 2.0), size: imageSize)
                 animationNode.updateLayout(size: imageSize)
             }
-            let boundingFrame =  CGRect(origin: CGPoint(x: floor((bounds.size.width - boundingSize.width) / 2.0), y: (bounds.size.height - boundingSize.height) / 2.0), size: boundingSize)
-            let textSize = CGSize(width: 32.0, height: 24.0)
-            self.textNode.frame = CGRect(origin: CGPoint(x: boundingFrame.maxX - 1.0 - textSize.width, y: boundingFrame.height + 10.0 - textSize.height), size: textSize)
         }
     }
     
@@ -169,7 +151,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
         if let interaction = self.interaction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interaction.sendSticker(item)
+            //interaction.sendSticker(item)
         }
     }
     

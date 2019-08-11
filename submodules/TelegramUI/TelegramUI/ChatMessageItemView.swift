@@ -698,6 +698,9 @@ public class ChatMessageItemView: ListViewItemNode {
     func updateAutomaticMediaDownloadSettings() {
     }
     
+    func updateStickerSettings() {
+    }
+    
     func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return nil
     }

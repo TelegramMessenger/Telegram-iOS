@@ -2,10 +2,11 @@ import Foundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import Display
 
 public enum PresentationBuiltinThemeReference: Int32 {
     case dayClassic = 0
-    case nightGrayscale = 1
+    case night = 1
     case day = 2
     case nightAccent = 3
 }
@@ -102,7 +103,7 @@ public enum AutomaticThemeSwitchTimeBasedSetting: PostboxCoding, Equatable {
                 encoder.encodeInt32(0, forKey: "_t")
                 encoder.encodeInt32(fromSeconds, forKey: "fromSeconds")
                 encoder.encodeInt32(toSeconds, forKey: "toSeconds")
-        case let .automatic(latitude, longitude, localizedName):
+            case let .automatic(latitude, longitude, localizedName):
                 encoder.encodeInt32(1, forKey: "_t")
                 encoder.encodeDouble(latitude, forKey: "latitude")
                 encoder.encodeDouble(longitude, forKey: "longitude")
@@ -175,53 +176,64 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
     case yellow
     case gray
     case black
+    case white
     
-    public var colorValue: Int32 {        
+    public var color: UIColor {
+        let value: UInt32
         switch self {
             case .blue:
-                return 0x007ee5
+                value = 0x007aff
             case .cyan:
-                return 0x00c2ed
+                value = 0x00c2ed
             case .green:
-                return 0x29b327
+                value = 0x29b327
             case .pink:
-                return 0xff5da2
+                value = 0xeb6ca4
             case .orange:
-                return 0xff7519
+                value = 0xf08200
             case .purple:
-                return 0x7748ff
+                value = 0x9472ee
             case .red:
-                return 0xf83b4c
+                value = 0xd33213
             case .yellow:
-                return 0xeba239
+                value = 0xedb400
             case .gray:
-                return 0x6d839e
+                value = 0x6d839e
             case .black:
-                return 0x000000
+                value = 0x000000
+            case .white:
+                value = 0xffffff
         }
-        
-//        switch self {
-//            case .blue:
-//                return 0x007aff
-//            case .cyan:
-//                return 0x00c2ed
-//            case .green:
-//                return 0x70bb23
-//            case .pink:
-//                return 0xeb6ca4
-//            case .orange:
-//                return 0xf08200
-//            case .purple:
-//                return 0x9472ee
-//            case .red:
-//                return 0xd33213
-//            case .yellow:
-//                return 0xedb400
-//            case .gray:
-//                return 0x6d839e
-//            case .black:
-//                return 0x000000
-//        }
+        return UIColor(rgb: value)
+    }
+    
+    public var edgeColors: (UIColor, UIColor) {
+        let values: (UIColor, UIColor)
+        switch self {
+            case .blue:
+                values = (UIColor(rgb: 0x394cb5), UIColor(rgb: 0x7fd3fb))
+            case .cyan:
+                values = (UIColor(rgb: 0x3472a8), UIColor(rgb: 0x76e8e8))
+            case .green:
+                values = (UIColor(rgb: 0x608236), UIColor(rgb: 0xb1e786))
+            case .pink:
+                values = (UIColor(rgb: 0xad4974), UIColor(rgb: 0xeca2d0))
+            case .orange:
+                values = (UIColor(rgb: 0xbe5d29), UIColor(rgb: 0xf3ae68))
+            case .purple:
+                values = (UIColor(rgb: 0x544292), UIColor(rgb: 0xb2a3e3))
+            case .red:
+                values = (UIColor(rgb: 0x94211b), UIColor(rgb: 0xe47e66))
+            case .yellow:
+                values = (UIColor(rgb: 0xdda23a), UIColor(rgb: 0xfbe589))
+            case .gray:
+                values = (UIColor(rgb: 0x595b70), UIColor(rgb: 0x829199))
+            case .black:
+                values = (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
+            case .white:
+                values = (UIColor(rgb: 0xffffff), UIColor(rgb: 0xffffff))
+        }
+        return values
     }
 }
 
@@ -244,8 +256,16 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         encoder.encodeDouble(Double(self.value), forKey: "v")
     }
     
-    public var color: Int32 {
-        return self.baseColor.colorValue
+    public var color: UIColor {
+//        let color: UIColor
+//        if self.value < 0.5 {
+//            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.0, fraction: 0.5 - self.value)!
+//        } else if self.value > 0.5 {
+//            color = self.baseColor.color.interpolateTo(self.baseColor.edgeColors.1, fraction: self.value - 0.5)!
+//        } else {
+//            color = self.baseColor.color
+//        }
+        return self.baseColor.color
     }
 }
 

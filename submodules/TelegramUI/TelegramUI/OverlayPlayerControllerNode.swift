@@ -64,9 +64,12 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, navigateToMessage: { _, _ in
         }, clickThroughMessage: {
         }, toggleMessagesSelection: { _, _ in
+        }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
-        }, sendSticker: { _, _ in
-        }, sendGif: { _ in
+        }, sendSticker: { _, _, _, _ in
+            return false
+        }, sendGif: { _, _, _ in
+            return false
         }, requestMessageActionCallback: { _, _, _ in
         }, requestMessageActionUrlAuth: { _, _, _ in
         }, activateSwitchInline: { _, _ in
@@ -101,7 +104,7 @@ final class OverlayPlayerControllerNode: ViewControllerTracingNode, UIGestureRec
         }, seekToTimecode: { _, _, _ in    
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
-        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState())
+        }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)

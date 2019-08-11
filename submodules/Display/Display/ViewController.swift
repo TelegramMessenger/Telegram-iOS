@@ -35,7 +35,7 @@ public enum ViewControllerPresentationAnimation {
     case modalSheet
 }
 
-public struct ViewControllerSupportedOrientations {
+public struct ViewControllerSupportedOrientations: Equatable {
     public var regularSize: UIInterfaceOrientationMask
     public var compactSize: UIInterfaceOrientationMask
     
@@ -65,9 +65,15 @@ open class ViewControllerPresentationArguments {
         return self.validLayout
     }
     
-    private let presentationContext: PresentationContext
+    public let presentationContext: PresentationContext
     
-    public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
+    public final var supportedOrientations: ViewControllerSupportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown) {
+        didSet {
+            if self.supportedOrientations != oldValue {
+                self.window?.invalidateSupportedOrientations()
+            }
+        }
+    }
     public final var lockedOrientation: UIInterfaceOrientationMask?
     public final var lockOrientation: Bool = false {
         didSet {
@@ -81,6 +87,7 @@ open class ViewControllerPresentationArguments {
     
     public final var isOpaqueWhenInOverlay: Bool = false
     public final var blocksBackgroundWhenInOverlay: Bool = false
+    public final var automaticallyControlPresentationContextLayout: Bool = true
     
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         return self.supportedOrientations
@@ -332,7 +339,9 @@ open class ViewControllerPresentationArguments {
         
         self.updateNavigationBarLayout(layout, transition: transition)
         
-        self.presentationContext.containerLayoutUpdated(layout, transition: transition)
+        if self.automaticallyControlPresentationContextLayout {
+            self.presentationContext.containerLayoutUpdated(layout, transition: transition)
+        }
         
         if let scrollToTopView = self.scrollToTopView {
             scrollToTopView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: 10.0)

@@ -32,6 +32,10 @@ final class ThemeGridController: ViewController {
     
     private var validLayout: ContainerViewLayout?
     
+    override var navigationBarRequiresEntireLayoutUpdate: Bool {
+        return false
+    }
+    
     init(context: AccountContext) {
         self.context = context
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -41,7 +45,7 @@ final class ThemeGridController: ViewController {
         
         self.title = self.presentationData.strings.Wallpaper_Title
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -94,7 +98,7 @@ final class ThemeGridController: ViewController {
             }
         }
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.Wallpaper_Search)
         
@@ -174,7 +178,7 @@ final class ThemeGridController: ViewController {
                                     switch theme {
                                         case .day:
                                             fallbackWallpaper = .color(0xffffff)
-                                        case .nightGrayscale:
+                                        case .night:
                                             fallbackWallpaper = .color(0x000000)
                                         case .nightAccent:
                                             fallbackWallpaper = .color(0x18222d)
@@ -247,7 +251,7 @@ final class ThemeGridController: ViewController {
                                             switch theme {
                                                 case .day:
                                                     wallpaper = .color(0xffffff)
-                                                case .nightGrayscale:
+                                                case .night:
                                                     wallpaper = .color(0x000000)
                                                 case .nightAccent:
                                                     wallpaper = .color(0x18222d)

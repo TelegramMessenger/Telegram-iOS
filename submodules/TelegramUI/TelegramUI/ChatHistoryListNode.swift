@@ -253,7 +253,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: StickerPackItem]) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     if case let .peer(peerId) = chatLocation {
@@ -292,7 +292,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
             }
         }
     }
-    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, contactsPeerIds: contactsPeerIds)
+    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, contactsPeerIds: contactsPeerIds, animatedEmojiStickers: animatedEmojiStickers)
     return associatedData
 }
 
@@ -305,6 +305,26 @@ private extension ChatHistoryLocationInput {
                 return true
             default:
                 return false
+        }
+    }
+}
+
+private struct ChatHistoryAnimatedEmojiConfiguration {
+    static var defaultValue: ChatHistoryAnimatedEmojiConfiguration {
+        return ChatHistoryAnimatedEmojiConfiguration(scale: 0.625)
+    }
+    
+    public let scale: CGFloat
+    
+    fileprivate init(scale: CGFloat) {
+        self.scale = scale
+    }
+    
+    static func with(appConfiguration: AppConfiguration) -> ChatHistoryAnimatedEmojiConfiguration {
+        if let data = appConfiguration.data, let scale = data["emojies_animated_zoom"] as? Double {
+            return ChatHistoryAnimatedEmojiConfiguration(scale: CGFloat(scale))
+        } else {
+            return .defaultValue
         }
     }
 }
@@ -395,7 +415,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         return self.isInteractivelyScrollingPromise.get()
     }
     
-    private var currentPresentationData: PresentationData
+    private var currentPresentationData: ChatPresentationData
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     private var presentationDataDisposable: Disposable?
     
@@ -428,9 +448,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.controllerInteraction = controllerInteraction
         self.mode = mode
         
-        self.currentPresentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.currentPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji, animatedEmojiScale: 1.0)
         
-        self.chatPresentationDataPromise = Promise(ChatPresentationData(theme: ChatPresentationThemeData(theme: self.currentPresentationData.theme, wallpaper: self.currentPresentationData.chatWallpaper), fontSize: self.currentPresentationData.fontSize, strings: self.currentPresentationData.strings, dateTimeFormat: self.currentPresentationData.dateTimeFormat, nameDisplayOrder: self.currentPresentationData.nameDisplayOrder, disableAnimations: self.currentPresentationData.disableAnimations, largeEmoji: self.currentPresentationData.largeEmoji))
+        self.chatPresentationDataPromise = Promise(self.currentPresentationData)
         
         self.prefetchManager = InChatPrefetchManager(context: context)
         
@@ -470,7 +491,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             additionalData.append(.cachedPeerDataMessages(peerId))
             additionalData.append(.peerNotificationSettings(peerId))
             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                additionalData.append(.cacheEntry(cachedChannelAdminIdsEntryId(peerId: peerId)))
+                additionalData.append(.cacheEntry(cachedChannelAdminRanksEntryId(peerId: peerId)))
                 additionalData.append(.peer(peerId))
             }
             if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat {
@@ -517,11 +538,27 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
         
+        let animatedEmojiStickers = loadedStickerPack(postbox: context.account.postbox, network: context.account.network, reference: .animatedEmoji, forceActualized: false)
+        |> map { result -> [String: StickerPackItem] in
+            switch result {
+                case let .result(_, items, _):
+                    var animatedEmojiStickers: [String: StickerPackItem] = [:]
+                    for case let item as StickerPackItem in items {
+                        if let emoji = item.getStringRepresentationsOfIndexKeys().first {
+                            animatedEmojiStickers[emoji.basicEmoji.0] = item
+                        }
+                    }
+                    return animatedEmojiStickers
+                default:
+                    return [:]
+            }
+        }
+        
         let previousHistoryAppearsCleared = Atomic<Bool?>(value: nil)
         
         let nextTransitionVersion = Atomic<Int>(value: 0)
         
-        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get()).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared in
+        let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue, historyViewUpdate, self.chatPresentationDataPromise.get(), selectedMessages, automaticDownloadNetworkType, self.historyAppearsClearedPromise.get(), animatedEmojiStickers).start(next: { [weak self] update, chatPresentationData, selectedMessages, networkType, historyAppearsCleared, animatedEmojiStickers in
             func applyHole() {
                 Queue.mainQueue().async {
                     if let strongSelf = self {
@@ -590,9 +627,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     reverse = reverseValue
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers)
                 
-                let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared), associatedData: associatedData, id: id)
+                let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: chatLocation, view: view, includeUnreadEntry: mode == .bubbles, includeEmptyEntry: mode == .bubbles && tagMask == nil, includeChatInfoEntry: mode == .bubbles, includeSearchEntry: includeSearchEntry && tagMask != nil, reverse: reverse, groupMessages: mode == .bubbles, selectedMessages: selectedMessages, presentationData: chatPresentationData, historyAppearsCleared: historyAppearsCleared, associatedData: associatedData), associatedData: associatedData, id: id)
                 let previousValueAndVersion = previousView.swap((processedView, update.1))
                 let previous = previousValueAndVersion?.0
                 
@@ -675,10 +712,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             if !context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                                 let _ = applyMaxReadIndexInteractively(postbox: context.account.postbox, stateManager: context.account.stateManager, index: messageIndex).start()
                         }
-                        /*case let .group(groupId):
-                            let _ = context.account.postbox.transaction({ transaction -> Void in
-                                transaction.applyGroupFeedInteractiveReadMaxIndex(groupId: groupId, index: messageIndex)
-                            }).start()*/
                     }
                 }
             }
@@ -723,20 +756,28 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
-        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+        let appConfiguration = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> take(1)
+        |> map { view in
+            return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+        }
+        
+        self.presentationDataDisposable = (combineLatest(context.sharedContext.presentationData, appConfiguration)
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData, appConfiguration in
             if let strongSelf = self {
                 let previousTheme = strongSelf.currentPresentationData.theme
                 let previousStrings = strongSelf.currentPresentationData.strings
-                let previousWallpaper = strongSelf.currentPresentationData.chatWallpaper
+                let previousWallpaper = strongSelf.currentPresentationData.theme.wallpaper
                 let previousDisableAnimations = strongSelf.currentPresentationData.disableAnimations
+                let previousAnimatedEmojiScale = strongSelf.currentPresentationData.animatedEmojiScale
                 
-                strongSelf.currentPresentationData = presentationData
+                let animatedEmojiConfig = ChatHistoryAnimatedEmojiConfiguration.with(appConfiguration: appConfiguration)
                 
-                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousDisableAnimations != presentationData.disableAnimations {
+                if previousTheme !== presentationData.theme || previousStrings !== presentationData.strings || previousWallpaper != presentationData.chatWallpaper || previousDisableAnimations != presentationData.disableAnimations || previousAnimatedEmojiScale != animatedEmojiConfig.scale {
                     let themeData = ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper)
-                    let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji)
+                    let chatPresentationData = ChatPresentationData(theme: themeData, fontSize: presentationData.fontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: presentationData.disableAnimations, largeEmoji: presentationData.largeEmoji, animatedEmojiScale: animatedEmojiConfig.scale)
                     
+                    strongSelf.currentPresentationData = chatPresentationData
                     strongSelf.dynamicBounceEnabled = !presentationData.disableAnimations
                     
                     strongSelf.forEachItemHeaderNode { itemHeaderNode in

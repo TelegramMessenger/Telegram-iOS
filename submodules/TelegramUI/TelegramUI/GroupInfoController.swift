@@ -91,10 +91,10 @@ private enum GroupInfoEntryTag {
     case location
 }
 
-private enum GroupInfoMemberStatus {
+private enum GroupInfoMemberStatus: Equatable {
     case member
-    case admin
-    case owner
+    case admin(rank: String?)
+    case owner(rank: String?)
 }
 
 private enum GroupEntryStableId: Hashable, Equatable {
@@ -530,10 +530,10 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .member(theme, strings, dateTimeFormat, nameDisplayOrder, _, _, peer, participant, presence, memberStatus, editing, actions, enabled, selectable):
                 let label: String?
                 switch memberStatus {
-                    case .owner:
-                        label = strings.GroupInfo_LabelOwner
-                    case .admin:
-                        label = strings.GroupInfo_LabelAdmin
+                    case let .owner(rank):
+                        label = rank?.trimmingEmojis ?? strings.GroupInfo_LabelOwner
+                    case let .admin(rank):
+                        label = rank?.trimmingEmojis ?? strings.GroupInfo_LabelAdmin
                     case .member:
                         label = nil
                 }
@@ -718,7 +718,7 @@ private func canRemoveParticipant(account: Account, channel: TelegramChannel, pa
     switch participant {
         case .creator:
             return false
-        case let .member(_, _, adminInfo, _):
+        case let .member(_, _, adminInfo, _, _):
             if channel.hasPermission(.banMembers) {
                 if let adminInfo = adminInfo {
                     return adminInfo.promotedBy == account.peerId
@@ -1013,13 +1013,13 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 let participant: ChannelParticipant
                 switch sortedParticipants[i] {
                     case .creator:
-                        participant = .creator(id: sortedParticipants[i].peerId)
-                        memberStatus = .admin
+                        participant = .creator(id: sortedParticipants[i].peerId, rank: nil)
+                        memberStatus = .owner(rank: nil)
                     case .admin:
-                        participant = .member(id: sortedParticipants[i].peerId, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil)
-                        memberStatus = .admin
+                        participant = .member(id: sortedParticipants[i].peerId, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(flags: .groupSpecific), promotedBy: account.peerId, canBeEditedByAccountPeer: true), banInfo: nil, rank: nil)
+                        memberStatus = .admin(rank: nil)
                     case .member:
-                        participant = .member(id: sortedParticipants[i].peerId, invitedAt: 0, adminInfo: nil, banInfo: nil)
+                        participant = .member(id: sortedParticipants[i].peerId, invitedAt: 0, adminInfo: nil, banInfo: nil, rank: nil)
                         memberStatus = .member
                 }
                 
@@ -1080,7 +1080,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
         if !state.temporaryParticipants.isEmpty {
             for participant in state.temporaryParticipants {
                 if !existingParticipantIds.contains(participant.peer.id) {
-                    updatedParticipants.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: participant.peer.id, invitedAt: participant.timestamp, adminInfo: nil, banInfo: nil), peer: participant.peer))
+                    updatedParticipants.append(RenderedChannelParticipant(participant: ChannelParticipant.member(id: participant.peer.id, invitedAt: participant.timestamp, adminInfo: nil, banInfo: nil, rank: nil), peer: participant.peer))
                     if let presence = participant.presence, peerPresences[participant.peer.id] == nil {
                         peerPresences[participant.peer.id] = presence
                     }
@@ -1112,11 +1112,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                 switch lhs.participant {
                     case .creator:
                         return false
-                    case let .member(lhsId, lhsInvitedAt, _, _):
+                    case let .member(lhsId, lhsInvitedAt, _, _, _):
                         switch rhs.participant {
                             case .creator:
                                 return true
-                            case let .member(rhsId, rhsInvitedAt, _, _):
+                            case let .member(rhsId, rhsInvitedAt, _, _, _):
                                 if lhsInvitedAt == rhsInvitedAt {
                                     return lhsId.id < rhsId.id
                                 }
@@ -1132,11 +1132,11 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
             let participant = sortedParticipants[i]
             let memberStatus: GroupInfoMemberStatus
             switch participant.participant {
-                case .creator:
-                    memberStatus = .owner
-                case let .member(_, _, adminInfo, _):
+                case let .creator(_, rank):
+                    memberStatus = .owner(rank: rank)
+                case let .member(_, _, adminInfo, _, rank):
                     if adminInfo != nil {
-                        memberStatus = .admin
+                        memberStatus = .admin(rank: rank)
                     } else {
                         memberStatus = .member
                     }
@@ -1152,7 +1152,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                     case .creator:
                         canPromote = false
                         canRestrict = false
-                    case let .member(_, _, adminRights, bannedRights):
+                    case let .member(_, _, adminRights, bannedRights, _):
                         if channel.hasPermission(.addAdmins) {
                             canPromote = true
                         } else {
@@ -1823,6 +1823,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                                     default:
                                         break
                                 }
+                            } else if case .tooMuchJoined = error  {
+                                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Invite_ChannelsTooMuch, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                             }
                             
                             contactsController?.dismiss()

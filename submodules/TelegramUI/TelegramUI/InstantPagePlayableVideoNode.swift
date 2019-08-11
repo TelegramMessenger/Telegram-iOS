@@ -57,7 +57,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
         self.addSubnode(self.videoNode)
         
         if let file = media.media as? TelegramMediaFile {
-            self.fetchedDisposable.set(fetchedMediaResource(postbox: context.account.postbox, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
+            self.fetchedDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: AnyMediaReference.webPage(webPage: WebpageReference(webPage), media: file).resourceReference(file.resource)).start())
             
             self.statusDisposable.set((context.account.postbox.mediaBox.resourceStatus(file.resource) |> deliverOnMainQueue).start(next: { [weak self] status in
                 displayLinkDispatcher.dispatch {

@@ -145,7 +145,6 @@ final class ChatMediaInputStickerGridItem: GridItem {
         let node = ChatMediaInputStickerGridItemNode()
         node.interfaceInteraction = self.interfaceInteraction
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem)
         node.selected = self.selected
         return node
     }
@@ -157,7 +156,6 @@ final class ChatMediaInputStickerGridItem: GridItem {
         }
         node.interfaceInteraction = self.interfaceInteraction
         node.inputNodeInteraction = self.inputNodeInteraction
-        node.setup(account: self.account, stickerItem: self.stickerItem)
         node.selected = self.selected
     }
 }
@@ -209,11 +207,6 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
     }
     
-    func setup(account: Account, stickerItem: StickerPackItem) {
-        //self.updateSelectionState(animated: false)
-        //self.updateHiddenMedia()
-    }
-    
     override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
         guard let item = item as? ChatMediaInputStickerGridItem else {
             return
@@ -231,14 +224,9 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                         }
                         self.addSubnode(animationNode)
                     }
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: CGSize(width: 160.0, height: 160.0)))
-                    if self.isPlaying {
-                        self.didSetUpAnimationNode = true
-                        self.animationNode?.setup(account: item.account, resource: item.stickerItem.file.resource, width: 160, height: 160, mode: .cached)
-                    } else {
-                        self.didSetUpAnimationNode = false
-                    }
-                    self.animationNode?.visibility = self.isPlaying
+                    let dimensions = item.stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.account.postbox, file: item.stickerItem.file, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))))
+                    self.updateVisibility()
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(item.stickerItem.file), resource: item.stickerItem.file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
@@ -280,7 +268,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             return
         }
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(.standalone(media: item.file), false)
+            interfaceInteraction.sendSticker(.standalone(media: item.file), false, self, self.bounds)
             self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
         }
     }
@@ -297,13 +285,18 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
     }
     
     func updateVisibility() {
-        let isPlaying = self.isPanelVisible && self.isVisibleInGrid
+        guard let item = self.item else {
+            return
+        }
+        let isPlaying = self.isPanelVisible && self.isVisibleInGrid && (item.interfaceInteraction?.stickerSettings.loopAnimatedStickers ?? true)
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
             self.animationNode?.visibility = isPlaying
             if let item = self.item, isPlaying, !self.didSetUpAnimationNode {
                 self.didSetUpAnimationNode = true
-                self.animationNode?.setup(account: item.account, resource: item.stickerItem.file.resource, width: 160, height: 160, mode: .cached)
+                let dimensions = item.stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                self.animationNode?.setup(account: item.account, resource: item.stickerItem.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
             }
         }
     }

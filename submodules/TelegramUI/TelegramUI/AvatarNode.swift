@@ -237,16 +237,16 @@ public final class AvatarNode: ASDisplayNode {
         }
         
         var iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
-        var backgroundColor = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.0
+        var backgroundColor = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.topColor
         let animationBackgroundNode = ASImageNode()
         animationBackgroundNode.frame = self.imageNode.frame
         if let overrideImage = self.overrideImage, case let .archivedChatsIcon(hiddenByDefault) = overrideImage {
             let backgroundColors: (UIColor, UIColor)
             if hiddenByDefault {
-                backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors
+                backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
                 iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
             } else {
-                backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors
+                backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
                 iconColor = theme.chatList.pinnedArchiveAvatarColor.foregroundColor
             }
             let colors: NSArray = [backgroundColors.1.cgColor, backgroundColors.0.cgColor]
@@ -428,10 +428,10 @@ public final class AvatarNode: ASDisplayNode {
                 let backgroundColors: (UIColor, UIColor)
                 if hiddenByDefault {
                     iconColor = theme.chatList.unpinnedArchiveAvatarColor.foregroundColor
-                    backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors
+                    backgroundColors = theme.chatList.unpinnedArchiveAvatarColor.backgroundColors.colors
                 } else {
                     iconColor = theme.chatList.pinnedArchiveAvatarColor.foregroundColor
-                    backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors
+                    backgroundColors = theme.chatList.pinnedArchiveAvatarColor.backgroundColors.colors
                 }
                 colorsArray = [backgroundColors.1.cgColor, backgroundColors.0.cgColor]
             } else {
@@ -476,7 +476,7 @@ public final class AvatarNode: ASDisplayNode {
                 context.scaleBy(x: 1.0, y: -1.0)
                 context.translateBy(x: -bounds.size.width / 2.0, y: -bounds.size.height / 2.0)
                 
-                if let editAvatarIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIcon"), color: theme.list.freeMonoIcon) {
+                if let editAvatarIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIcon"), color: theme.list.freeMonoIconColor) {
                     context.draw(editAvatarIcon.cgImage!, in: CGRect(origin: CGPoint(x: floor((bounds.size.width - editAvatarIcon.size.width) / 2.0), y: floor((bounds.size.height - editAvatarIcon.size.height) / 2.0)), size: editAvatarIcon.size))
                 }
             } else if case .archivedChatsIcon = parameters.icon {

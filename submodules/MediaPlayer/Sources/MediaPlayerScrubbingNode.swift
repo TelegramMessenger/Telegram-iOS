@@ -200,7 +200,9 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     
     public var playbackStatusUpdated: ((MediaPlayerPlaybackStatus?) -> Void)?
     public var playerStatusUpdated: ((MediaPlayerStatus?) -> Void)?
+
     public var seek: ((Double, MediaScrubState) -> Void)?
+    public var update: ((Double?, CGFloat) -> Void)?
     
     // allows to send scrubbing events with MediaScrubState.inProgress
     // intended for video nodes only
@@ -396,6 +398,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 strongSelf.scrubbingBeginTimestamp = statusValue.timestamp
                                 strongSelf.scrubbingTimestampValue = statusValue.timestamp
                                 strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.update?(strongSelf.scrubbingTimestampValue, CGFloat(statusValue.timestamp / statusValue.duration))
                                 strongSelf.updateProgressAnimations()
                             }
                         }
@@ -413,6 +416,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 }()
                                 strongSelf.scrubbingTimestampValue = timestampValue
                                 strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
+                                strongSelf.update?(timestampValue, CGFloat(timestampValue / statusValue.duration))
                                 if strongSelf.allowsContinuousSeekUpdates,
                                     let scrubbingTimestampValue = strongSelf.scrubbingTimestampValue,
                                     !equalsToPreviousTimestampValue {
@@ -439,6 +443,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 }
                                 strongSelf.debounceSeek(timestamp: scrubbingTimestampValue, mediaScrubState: .ended)
                             }
+                            strongSelf.update?(nil, 0.0)
                             strongSelf.updateProgressAnimations()
                         }
                     }
@@ -766,30 +771,19 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        var hitBounds = self.bounds
-        let hitTestSlop = self.hitTestSlop
-        hitBounds.origin.x += hitTestSlop.left
-        hitBounds.origin.y += hitTestSlop.top
-        hitBounds.size.width += -hitTestSlop.left - hitTestSlop.right
-        hitBounds.size.height += -hitTestSlop.top - hitTestSlop.bottom
-        
-        if hitBounds.contains(point) {
-            switch self.contentNodes {
-                case let .standard(node):
-                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
-                        return handleNodeContainer.view
-                    } else {
-                        return nil
-                    }
-                case let .custom(node):
-                    if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled {
-                        return handleNodeContainer.view
-                    } else {
-                        return nil
-                    }
+        switch self.contentNodes {
+        case let .standard(node):
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled, handleNodeContainer.frame.insetBy(dx: 0.0, dy: -5.0).contains(point) {
+                return handleNodeContainer.view
+            } else {
+                return nil
             }
-        } else {
-            return nil
+        case let .custom(node):
+            if let handleNodeContainer = node.handleNodeContainer, handleNodeContainer.isUserInteractionEnabled, handleNodeContainer.frame.insetBy(dx: 0.0, dy: -5.0).contains(point) {
+                return handleNodeContainer.view
+            } else {
+                return nil
+            }
         }
     }
 }

@@ -6,11 +6,17 @@ import SwiftSignalKit
 import TelegramUIPreferences
 
 public func freeMediaFileInteractiveFetched(account: Account, fileReference: FileMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    return fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(fileReference.media.resource))
+    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource))
+}
+
+func freeMediaFileInteractiveFetched(fetchManager: FetchManager, fileReference: FileMediaReference, priority: FetchManagerPriority) -> Signal<Void, NoError> {
+    let file = fileReference.media
+    let mediaReference = AnyMediaReference.standalone(media: fileReference.media)
+    return fetchManager.interactivelyFetched(category: fetchCategoryForFile(file), location: .chat(PeerId(namespace: 0, id: 0)), locationKey: .free, mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(file.resource), ranges: IndexSet(integersIn: 0 ..< Int(Int32.max) as Range<Int>), statsCategory: statsCategoryForFileWithAttributes(file.attributes), elevatedPriority: false, userInitiated: false, priority: priority)
 }
 
 func freeMediaFileResourceInteractiveFetched(account: Account, fileReference: FileMediaReference, resource: MediaResource) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    return fetchedMediaResource(postbox: account.postbox, reference: fileReference.resourceReference(resource))
+    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(resource))
 }
 
 func cancelFreeMediaFileInteractiveFetch(account: Account, file: TelegramMediaFile) {

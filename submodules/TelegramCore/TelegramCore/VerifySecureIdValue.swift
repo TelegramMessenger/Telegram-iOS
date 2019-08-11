@@ -38,7 +38,7 @@ public func secureIdPreparePhoneVerification(network: Network, value: SecureIdPh
     }
     |> map { sentCode -> SecureIdPreparePhoneVerificationPayload in
         switch sentCode {
-            case let .sentCode(_, type, phoneCodeHash, nextType, timeout, _):
+            case let .sentCode(_, type, phoneCodeHash, nextType, timeout):
                 return SecureIdPreparePhoneVerificationPayload(type: SentAuthorizationCodeType(apiType: type), nextType: nextType.flatMap(AuthorizationCodeNextType.init), timeout: timeout, phone: value.phone, phoneCodeHash: phoneCodeHash)
         }
     }

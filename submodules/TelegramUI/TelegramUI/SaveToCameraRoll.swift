@@ -45,7 +45,7 @@ private func fetchMediaData(context: AccountContext, postbox: Postbox, mediaRefe
     
     if let resource = resource {
         let fetchedData: Signal<SaveToCameraRollState, NoError> = Signal { subscriber in
-            let fetched = fetchedMediaResource(postbox: postbox, reference: mediaReference.resourceReference(resource)).start()
+            let fetched = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: mediaReference.resourceReference(resource)).start()
             let status = postbox.mediaBox.resourceStatus(resource).start(next: { status in
                 switch status {
                     case .Local:

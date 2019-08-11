@@ -17,9 +17,11 @@ final class TooltipControllerNode: ASDisplayNode {
     var arrowOnBottom: Bool = true
     
     private var dismissedByTouchOutside = false
+    private var dismissByTapOutsideSource = false
     
-    init(content: TooltipControllerContent, dismiss: @escaping () -> Void, dismissByTapOutside: Bool) {
+    init(content: TooltipControllerContent, dismiss: @escaping () -> Void, dismissByTapOutside: Bool, dismissByTapOutsideSource: Bool) {
         self.dismissByTapOutside = dismissByTapOutside
+        self.dismissByTapOutsideSource = dismissByTapOutsideSource
         
         self.containerNode = ContextMenuContainerNode()
         self.containerNode.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
@@ -124,6 +126,11 @@ final class TooltipControllerNode: ASDisplayNode {
             }
             if event.type == .touches || eventIsPresses {
                 if self.containerNode.frame.contains(point) || self.dismissByTapOutside {
+                    if !self.dismissedByTouchOutside {
+                        self.dismissedByTouchOutside = true
+                        self.dismiss()
+                    }
+                } else if self.dismissByTapOutsideSource, let sourceRect = self.sourceRect, !sourceRect.contains(point) {
                     if !self.dismissedByTouchOutside {
                         self.dismissedByTouchOutside = true
                         self.dismiss()

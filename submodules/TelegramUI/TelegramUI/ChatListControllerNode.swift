@@ -60,7 +60,8 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
     var dismissSelf: (() -> Void)?
-    
+    var isEmptyUpdated: ((Bool) -> Void)?
+
     let debugListView = ListView()
     
     init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
@@ -96,6 +97,7 @@ final class ChatListControllerNode: ASDisplayNode {
                         if let (layout, navigationHeight, visualNavigationHeight) = strongSelf.containerLayout {
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, visualNavigationHeight: visualNavigationHeight, transition: .immediate)
                         }
+                        strongSelf.isEmptyUpdated?(true)
                     }
                 case .notEmpty(false):
                     if case .group = strongSelf.groupId {
@@ -112,7 +114,7 @@ final class ChatListControllerNode: ASDisplayNode {
             switch isEmptyState {
                 case .empty(true):
                     if strongSelf.chatListEmptyIndicator == nil {
-                        let chatListEmptyIndicator = ActivityIndicator(type: .custom(strongSelf.presentationData.theme.list.itemAccentColor, 22.0, 1.0, false))
+                        let chatListEmptyIndicator = ActivityIndicator(type: .custom(strongSelf.presentationData.theme.list.itemSecondaryTextColor, 22.0, 1.0, false))
                         strongSelf.chatListEmptyIndicator = chatListEmptyIndicator
                         strongSelf.insertSubnode(chatListEmptyIndicator, belowSubnode: strongSelf.chatListNode)
                         if let (layout, navigationHeight, visualNavigationHeight) = strongSelf.containerLayout {

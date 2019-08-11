@@ -30,7 +30,7 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
             /*case .group:
                 placeholderText = "Search this feed"*/
         }
-        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
+        self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
         
         super.init()
         
@@ -82,14 +82,14 @@ final class ChatSearchNavigationContentNode: NavigationBarContentNode {
                         /*case .group:
                             placeholderText = "Search this feed"*/
                     }
-                    self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputPlaceholderTextColor)
+                    self.searchBar.placeholderString = NSAttributedString(string: placeholderText, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputPlaceholderTextColor)
                 case .members:
-                    self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputTextColor)
+                    self.searchBar.prefixString = NSAttributedString(string: strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor)
                     self.searchBar.placeholderString = nil
                 case let .member(peer):
                     let prefixString = NSMutableAttributedString()
-                    prefixString.append(NSAttributedString(string: self.strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.inputTextColor))
-                    prefixString.append(NSAttributedString(string: "\(peer.compactDisplayTitle) ", font: searchBarFont, textColor: theme.rootController.activeNavigationSearchBar.accentColor))
+                    prefixString.append(NSAttributedString(string: self.strings.Conversation_SearchByName_Prefix, font: searchBarFont, textColor: theme.rootController.navigationSearchBar.inputTextColor))
+                    prefixString.append(NSAttributedString(string: "\(peer.compactDisplayTitle) ", font: searchBarFont, textColor: theme.rootController.navigationSearchBar.accentColor))
                     self.searchBar.prefixString = prefixString
                     self.searchBar.placeholderString = nil
             }

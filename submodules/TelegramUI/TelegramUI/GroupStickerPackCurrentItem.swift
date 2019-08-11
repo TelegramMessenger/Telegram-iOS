@@ -94,7 +94,6 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
     private var item: GroupStickerPackCurrentItem?
     
     private var editableControlNode: ItemListEditableControlNode?
-    private var reorderControlNode: ItemListEditableReorderControlNode?
     
     private let fetchDisposable = MetaDisposable()
     
@@ -171,7 +170,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             var updatedNotFoundImage: UIImage?
             if currentItem?.theme !== item.theme {
                 updatedTheme = item.theme
-                updatedNotFoundImage = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/GroupStickerPackNotFound"), color: item.theme.list.freeMonoIcon)
+                updatedNotFoundImage = generateTintedImage(image: UIImage(bundleImageName: "Peer Info/GroupStickerPackNotFound"), color: item.theme.list.freeMonoIconColor)
             }
             
             let rightInset: CGFloat = params.rightInset
@@ -229,7 +228,7 @@ class GroupStickerPackCurrentItemNode: ItemListRevealOptionsItemNode {
             if fileUpdated {
                 if let file = file {
                     updatedImageSignal = chatMessageSticker(account: item.account, file: file, small: false)
-                    updatedFetchSignal = fetchedMediaResource(postbox: item.account.postbox, reference: stickerPackFileReference(file).resourceReference(file.resource))
+                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, reference: stickerPackFileReference(file).resourceReference(file.resource))
                 } else {
                     updatedImageSignal = .single({ _ in return nil })
                     updatedFetchSignal = .complete()

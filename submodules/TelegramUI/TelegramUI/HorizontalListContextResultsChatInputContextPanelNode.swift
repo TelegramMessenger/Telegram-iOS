@@ -35,7 +35,7 @@ private struct HorizontalListContextResultsChatInputContextPanelEntry: Comparabl
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, resultSelected: @escaping (ChatContextResult) -> Void) -> ListViewItem {
+    func item(account: Account, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> ListViewItem {
         return HorizontalListContextResultsChatInputPanelItem(account: account, result: self.result, resultSelected: resultSelected)
     }
 }
@@ -58,7 +58,7 @@ private final class HorizontalListContextResultsOpaqueState {
     }
 }
 
-private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], hasMore: Bool, account: Account, resultSelected: @escaping (ChatContextResult) -> Void) -> HorizontalListContextResultsChatInputContextPanelTransition {
+private func preparedTransition(from fromEntries: [HorizontalListContextResultsChatInputContextPanelEntry], to toEntries: [HorizontalListContextResultsChatInputContextPanelEntry], hasMore: Bool, account: Account, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) -> HorizontalListContextResultsChatInputContextPanelTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -136,37 +136,41 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                     if itemNode.frame.contains(convertedPoint), let itemNode = itemNode as? HorizontalListContextResultsChatInputPanelItemNode, let item = itemNode.item {
                         if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isSticker {
                             var menuItems: [PeekControllerMenuItem] = []
-                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: {
-                                item.resultSelected(item.result)
+                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_Send, color: .accent, font: .bold, action: { _, _ in
+                                return item.resultSelected(item.result, itemNode, itemNode.bounds)
                             }))
                             for case let .Sticker(_, packReference, _) in file.attributes {
                                 guard let packReference = packReference else {
                                     continue
                                 }
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: {
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.StickerPack_ViewPack, color: .accent, action: { _, _ in
                                     if let strongSelf = self {
                                         let controller = StickerPackPreviewController(context: strongSelf.context, stickerPack: packReference, parentNavigationController: strongSelf.interfaceInteraction?.getNavigationController())
-                                                    controller.sendSticker = { file in
+                                                    controller.sendSticker = { file, sourceNode, sourceRect in
                                                         if let strongSelf = self {
-                                                            strongSelf.interfaceInteraction?.sendSticker(file)
+                                                            return strongSelf.interfaceInteraction?.sendSticker(file, sourceNode, sourceRect) ?? false
+                                                        } else {
+                                                            return false
                                                         }
                                                     }
                                                     
                                                     strongSelf.interfaceInteraction?.getNavigationController()?.view.window?.endEditing(true)
                                                     strongSelf.interfaceInteraction?.presentController(controller, nil)
                                     }
+                                    return true
                                 }))
                             }
                             selectedItemNodeAndContent = (itemNode, StickerPreviewPeekContent(account: item.account, item: .found(FoundStickerItem(file: file, stringRepresentations: [])), menu: menuItems))
                         } else {
                             var menuItems: [PeekControllerMenuItem] = []
                             if case let .internalReference(internalReference) = item.result, let file = internalReference.file, file.isAnimated {
-                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: {
+                                menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.Preview_SaveGif, color: .accent, action: { _, _ in
                                     let _ = addSavedGif(postbox: strongSelf.context.account.postbox, fileReference: .standalone(media: file)).start()
+                                    return true
                                 }))
                             }
-                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: {
-                                item.resultSelected(item.result)
+                            menuItems.append(PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { _, _ in
+                                return item.resultSelected(item.result, itemNode, itemNode.bounds)
                             }))
                             selectedItemNodeAndContent = (itemNode, ChatContextResultPeekContent(account: item.account, contextResult: item.result, menu: menuItems))
                         }
@@ -244,9 +248,11 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         }
         
         let firstTime = self.currentEntries == nil
-        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, account: self.context.account, resultSelected: { [weak self] result in
+        let transition = preparedTransition(from: self.currentEntries ?? [], to: entries, hasMore: results.nextOffset != nil, account: self.context.account, resultSelected: { [weak self] result, node, rect in
             if let strongSelf = self, let interfaceInteraction = strongSelf.interfaceInteraction {
-                interfaceInteraction.sendContextResult(results, result)
+                return interfaceInteraction.sendContextResult(results, result, node, rect)
+            } else {
+                return false
             }
         })
         self.currentEntries = entries

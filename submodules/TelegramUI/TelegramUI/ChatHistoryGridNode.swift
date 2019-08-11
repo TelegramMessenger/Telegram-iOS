@@ -301,7 +301,8 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
                             }
                     }
                     
-                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: .peer(peerId), view: view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, reverse: false, groupMessages: false, selectedMessages: nil, presentationData: chatPresentationData, historyAppearsCleared: false), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: false), id: id)
+                    let associatedData = ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: false)
+                    let processedView = ChatHistoryView(originalView: view, filteredEntries: chatHistoryEntriesForView(location: .peer(peerId), view: view, includeUnreadEntry: false, includeEmptyEntry: false, includeChatInfoEntry: false, includeSearchEntry: false, reverse: false, groupMessages: false, selectedMessages: nil, presentationData: chatPresentationData, historyAppearsCleared: false, associatedData: associatedData), associatedData: associatedData, id: id)
                     let previous = previousView.swap(processedView)
                     
                     let rawTransition = preparedChatHistoryViewTransition(from: previous, to: processedView, reason: reason, reverse: false, chatLocation: .peer(peerId), controllerInteraction: controllerInteraction, scrollPosition: scrollPosition, initialData: nil, keyboardButtonsMessage: nil, cachedData: nil, cachedDataMessages: nil, readStateData: nil, flashIndicators: flashIndicators)
@@ -354,20 +355,20 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         guard let selectionState = controllerInteraction.selectionState else {return}
         
         switch recognizer.state {
-        case .began:
-            if let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId {
-                liveSelectingState = (selecting: !selectionState.selectedIds.contains(messageId), currentMessageId: messageId)
-                controllerInteraction.toggleMessagesSelection([messageId], !selectionState.selectedIds.contains(messageId))
-            }
-        case .changed:
-            if let liveSelectingState = liveSelectingState, let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId, messageId != liveSelectingState.currentMessageId {
-                controllerInteraction.toggleMessagesSelection([messageId], liveSelectingState.selecting)
-                self.liveSelectingState?.currentMessageId = messageId
-            }
-        case .ended, .failed, .cancelled:
-            liveSelectingState = nil
-        case .possible:
-            break
+            case .began:
+                if let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId {
+                    liveSelectingState = (selecting: !selectionState.selectedIds.contains(messageId), currentMessageId: messageId)
+                    controllerInteraction.toggleMessagesSelection([messageId], !selectionState.selectedIds.contains(messageId))
+                }
+            case .changed:
+                if let liveSelectingState = liveSelectingState, let itemNode = self.itemNodeAtPoint(recognizer.location(in: self.view)) as? GridMessageItemNode, let messageId = itemNode.messageId, messageId != liveSelectingState.currentMessageId {
+                    controllerInteraction.toggleMessagesSelection([messageId], liveSelectingState.selecting)
+                    self.liveSelectingState?.currentMessageId = messageId
+                }
+            case .ended, .failed, .cancelled:
+                liveSelectingState = nil
+            case .possible:
+                break
         }
     }
     

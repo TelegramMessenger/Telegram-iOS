@@ -19,6 +19,8 @@ extension UnicodeScalar {
                 return true
             case 0x1f004:
                 return true
+            case 0x2764:
+                return true
             case 0x270b, 0x2728:
                 return true
             default:
@@ -93,6 +95,16 @@ extension String {
         return emojis
     }
     
+    var trimmingEmojis: String {
+        var string: String = ""
+        self.enumerateSubstrings(in: self.startIndex ..< self.endIndex, options: .byComposedCharacterSequences) { substring, _, _, _ in
+            if let substring = substring, !substring.containsEmoji {
+                string.append(substring)
+            }
+        }
+        return string
+    }
+    
     var normalizedEmoji: String {
         var string = ""
         
@@ -117,7 +129,7 @@ extension String {
         return string
     }
     
-    var basicEmoji: String {
+    var basicEmoji: (String, String?) {
         let fitzCodes: [UInt32] = [
             0x1f3fb,
             0x1f3fc,
@@ -127,17 +139,22 @@ extension String {
         ]
         
         var string = ""
+        var fitzModifier: String?
         for scalar in self.unicodeScalars {
             if fitzCodes.contains(scalar.value) {
+                fitzModifier = String(scalar)
                 continue
             }
             string.unicodeScalars.append(scalar)
+            if scalar.value == 0x2764, self.unicodeScalars.count > 1, self.emojis.count == 1 {
+                break
+            }
         }
-        return string
+        return (string, fitzModifier)
     }
     
     var trimmedEmoji: String {
-        if self.unicodeScalars.count > 1, self.unicodeScalars.first?.value == 0x2764 {
+        if self.unicodeScalars.count > 1, self.unicodeScalars.first?.value == 0x2764, self.emojis.count == 1 {
             return String(self.unicodeScalars.prefix(self.unicodeScalars.count - 1))
         } else {
             return self

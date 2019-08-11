@@ -65,12 +65,12 @@ final class StickerPaneSearchStickerItem: GridItem {
     let account: Account
     let code: String?
     let stickerItem: FoundStickerItem
-    let selected: () -> Void
+    let selected: (ASDisplayNode, CGRect) -> Void
     let inputNodeInteraction: ChatMediaInputNodeInteraction
     
     let section: GridSection?
     
-    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping () -> Void) {
+    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
@@ -119,7 +119,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var isPlaying = false
     
     var inputNodeInteraction: ChatMediaInputNodeInteraction?
-    var selected: (() -> Void)?
+    var selected: ((ASDisplayNode, CGRect) -> Void)?
     
     var stickerItem: FoundStickerItem? {
         return self.currentState?.1
@@ -159,7 +159,9 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
                         self.animationNode = animationNode
                         self.addSubnode(animationNode)
                     }
-                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: 160, height: 160, mode: .cached)
+                    let dimensions = stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                    let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                    self.animationNode?.setup(account: account, resource: stickerItem.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {
@@ -202,7 +204,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
     }
     
     @objc func imageNodeTap(_ recognizer: UITapGestureRecognizer) {
-        self.selected?()
+        self.selected?(self, self.bounds)
     }
     
     func transitionNode() -> ASDisplayNode? {

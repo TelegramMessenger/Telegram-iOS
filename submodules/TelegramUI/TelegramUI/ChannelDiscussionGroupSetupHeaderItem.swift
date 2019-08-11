@@ -113,7 +113,7 @@ class ChannelDiscussionGroupSetupHeaderItemNode: ListViewItemNode {
                                 iconImage = UIImage(bundleImageName: "Chat/Info/DiscussDayIcon")?.precomposed()
                             case .nightAccent:
                                 iconImage = UIImage(bundleImageName: "Chat/Info/DiscussNightAccentIcon")?.precomposed()
-                            case .nightGrayscale:
+                            case .night:
                                 iconImage = UIImage(bundleImageName: "Chat/Info/DiscussNightIcon")?.precomposed()
                         }
                     case .custom:

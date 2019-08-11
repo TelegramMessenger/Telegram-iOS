@@ -26,7 +26,7 @@ final class SecretChatKeyController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBar.style.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.title = self.presentationData.strings.EncryptionKey_Title
     }
     

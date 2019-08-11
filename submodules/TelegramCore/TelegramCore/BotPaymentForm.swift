@@ -372,7 +372,7 @@ public func sendBotPaymentForm(account: Account, messageId: MessageId, validated
             case let .paymentResult(updates):
                 account.stateManager.addUpdates(updates)
                 return .done
-            case let .paymentVerficationNeeded(url):
+            case let .paymentVerificationNeeded(url):
                 return .externalVerificationRequired(url: url)
         }
     }

@@ -28,16 +28,19 @@
 @property (nonatomic) bool asFile;
 @property (nonatomic) bool inhibitMute;
 @property (nonatomic) bool disableStickers;
+@property (nonatomic) bool hasSilentPosting;
 
 @property (nonatomic, strong) NSArray *underlyingViews;
 @property (nonatomic, assign) bool openEditor;
 
 @property (nonatomic, copy) void (^cameraPressed)(TGAttachmentCameraView *cameraView);
-@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles);
+@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 
 @property (nonatomic, copy) void (^editorOpened)(void);
 @property (nonatomic, copy) void (^editorClosed)(void);
+
+@property (nonatomic, copy) void (^selectionLimitExceeded)(void);
 
 @property (nonatomic, assign) CGFloat remainingHeight;
 @property (nonatomic, assign) bool condensed;
@@ -47,6 +50,6 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping allowSelection:(bool)allowSelection allowEditing:(bool)allowEditing document:(bool)document;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context camera:(bool)hasCamera selfPortrait:(bool)selfPortrait forProfilePhoto:(bool)forProfilePhoto assetType:(TGMediaAssetType)assetType saveEditedPhotos:(bool)saveEditedPhotos allowGrouping:(bool)allowGrouping allowSelection:(bool)allowSelection allowEditing:(bool)allowEditing document:(bool)document selectionLimit:(int)selectionLimit;
 
 @end

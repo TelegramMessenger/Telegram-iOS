@@ -76,12 +76,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
         if let value = NSKeyedUnarchiver.unarchiveObject(withFile: documentsPath + "/autonight.dat") as? TGPresentationAutoNightPreferences {
             autoNightPreferences = value
         }
-        
-        var wallpaperInfo: TGWallpaperInfo?
-        if let data = UserDefaults.standard.object(forKey: "_currentWallpaperInfo") as? [AnyHashable: Any], let value = TGWallpaperInfo(dictionary: data) {
-            wallpaperInfo = value
-        }
-        
+                
         let autoDownloadPreferences: TGAutoDownloadPreferences? = NSKeyedUnarchiver.unarchiveObject(withFile: documentsPath + "/autoDownload.pref") as? TGAutoDownloadPreferences
         
         let preferencesProvider: PreferencesProvider
@@ -129,15 +124,9 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
             let inactive = (dict["inactive"] as? Bool) ?? true
             var connection: ProxyServerConnection?
             if let secretString = dict["secret"] as? String {
-                let secret = dataWithHexString(secretString)
-                var secretIsValid = false
-                if secret.count == 16 {
-                    secretIsValid = true
-                } else if secret.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(secret) {
-                    secretIsValid = true
-                }
-                if secretIsValid {
-                    connection = .mtp(secret: secret)
+                let secret = MTProxySecret.parse(secretString)
+                if let secret = secret {
+                    connection = .mtp(secret: secret.serialize())
                 }
             } else {
                 connection = .socks5(username: (dict["username"] as? String) ?? "", password: (dict["password"] as? String) ?? "")
@@ -194,7 +183,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                             }
                             settings.chatWallpaper = .color(0xffffff)
                         case 2:
-                            settings.theme = .builtin(.nightGrayscale)
+                            settings.theme = .builtin(.night)
                             settings.chatWallpaper = .color(0x00000)
                         case 3:
                             settings.theme = .builtin(.nightAccent)
@@ -224,7 +213,7 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     let nightTheme: PresentationBuiltinThemeReference
                     switch autoNightPreferences.preferredPalette {
                         case 1:
-                            nightTheme = .nightGrayscale
+                            nightTheme = .night
                         default:
                             nightTheme = .nightAccent
                     }
@@ -238,22 +227,6 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                         default:
                             break
                     }
-                }
-                
-                if let wallpaperInfo = wallpaperInfo as? TGBuiltinWallpaperInfo, wallpaperInfo.isDefault() {
-                    settings.chatWallpaper = .builtin(WallpaperSettings())
-                } else if let wallpaperInfo = wallpaperInfo as? TGRemoteWallpaperInfo, let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/wallpaper-data/_currentWallpaper.jpg")), let image = UIImage(data: data) {
-                    let url = wallpaperInfo.fullscreenUrl()!
-                    if let resource = resourceFromLegacyImageUrl(url) {
-                        settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)], WallpaperSettings())
-                        account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    }
-                } else if let wallpaperInfo = wallpaperInfo as? TGColorWallpaperInfo {
-                    settings.chatWallpaper = .color(Int32(bitPattern: wallpaperInfo.color))
-                } else if let data = try? Data(contentsOf: URL(fileURLWithPath: documentsPath + "/wallpaper-data/_currentWallpaper.jpg")), let image = UIImage(data: data) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
-                    settings.chatWallpaper = .image([TelegramMediaImageRepresentation(dimensions: image.size, resource: resource)], WallpaperSettings())
-                    account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                 }
                 
                 return settings
@@ -428,15 +401,9 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     for item in proxyList {
                         let connection: ProxyServerConnection?
                         if item.isMTProxy, let secret = item.secret {
-                            let data = dataWithHexString(secret)
-                            var secretIsValid = false
-                            if data.count == 16 {
-                                secretIsValid = true
-                            } else if data.count == 17 && MTSocksProxySettings.secretSupportsExtendedPadding(data) {
-                                secretIsValid = true
-                            }
-                            if secretIsValid {
-                                connection = .mtp(secret: data)
+                            let parsedSecret = MTProxySecret.parse(secret)
+                            if let parsedSecret = parsedSecret {
+                                connection = .mtp(secret: parsedSecret.serialize())
                             } else {
                                 connection = nil
                             }

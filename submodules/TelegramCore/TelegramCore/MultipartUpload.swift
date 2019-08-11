@@ -328,15 +328,29 @@ private final class MultipartUploadManager {
                 
                 if nextOffset < resourceData.size && partSize > 0 && (resourceData.complete || partSize == self.defaultPartSize) {
                     let partIndex = partOffset / self.defaultPartSize
-                    let fileData: Data?
+                    let partData: Data?
                     switch resourceData {
                         case let .resourceData(data):
-                            fileData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.alwaysMapped])
+                            if let file = ManagedFile(queue: nil, path: data.path, mode: .read) {
+                                file.seek(position: Int64(partOffset))
+                                let data = file.readData(count: partSize)
+                                if data.count == partSize {
+                                    partData = data
+                                } else {
+                                    partData = nil
+                                }
+                            } else {
+                                partData = nil
+                            }
                         case let .data(data):
-                            fileData = data
+                            if data.count >= partOffset + partSize {
+                                partData = data.subdata(in: partOffset ..< (partOffset + partSize))
+                            } else {
+                                partData = nil
+                            }
                     }
-                    if let fileData = fileData, fileData.count >= partOffset + partSize {
-                        let partData = self.state.transform(data: fileData.subdata(in: partOffset ..< (partOffset + partSize)))
+                    if let partData = partData {
+                        let partData = self.state.transform(data: partData)
                         var currentBigTotalParts = self.bigTotalParts
                         if self.bigParts && resourceData.complete && partOffset + partSize == resourceData.size {
                             currentBigTotalParts = (resourceData.size / self.defaultPartSize) + (resourceData.size % self.defaultPartSize == 0 ? 0 : 1)
@@ -416,7 +430,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                 case let .resource(resource):
                     dataSignal = postbox.mediaBox.resourceData(resource.resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
                     headerSize = resource.resource.headerSize
-                    fetchedResource = fetchedMediaResource(postbox: postbox, reference: resource)
+                    fetchedResource = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resource)
                     |> map { _ in }
                 case let .data(data):
                     dataSignal = .single(.data(data))

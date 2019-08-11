@@ -22,6 +22,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private var currentLayout: (CGFloat, CGFloat, CGFloat)?
     private var currentMessage: Message?
     private var previousMediaReference: AnyMediaReference?
+    
+    private let fetchDisposable = MetaDisposable()
 
     private let queue = Queue()
     
@@ -87,6 +89,10 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         self.addSubnode(self.tapButton)
         
         self.addSubnode(self.separatorNode)
+    }
+    
+    deinit {
+        self.fetchDisposable.dispose()
     }
     
     private var theme: PresentationTheme?
@@ -204,12 +210,17 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             }
             
             var updateImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
+            var updatedFetchMediaSignal: Signal<FetchResourceSourceType, FetchResourceError>?
             if mediaUpdated {
                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                     if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
                         updateImageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference)
                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
-                        if fileReference.media.isVideo {
+                        if fileReference.media.isAnimatedSticker {
+                            let dimensions = fileReference.media.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, file: fileReference.media, small: false, size: dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0)))
+                            updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource))
+                        } else if fileReference.media.isVideo {
                             updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
                             updateImageSignal = chatWebpageSnippetFile(account: context.account, fileReference: fileReference, representation: iconImageRepresentation)
@@ -246,6 +257,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     
                     if let updateImageSignal = updateImageSignal {
                         strongSelf.imageNode.setSignal(updateImageSignal)
+                    }
+                    if let updatedFetchMediaSignal = updatedFetchMediaSignal {
+                        strongSelf.fetchDisposable.set(updatedFetchMediaSignal.start())
                     }
                 }
             }

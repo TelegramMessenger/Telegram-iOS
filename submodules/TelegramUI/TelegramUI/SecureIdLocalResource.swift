@@ -95,9 +95,16 @@ func fetchSecureIdLocalImageResource(postbox: Postbox, resource: SecureIdLocalIm
                         }
                     }
                     TempBox.shared.dispose(file)
-                case .copyLocalItem:
-                    assertionFailure()
-                    break
+                case let .copyLocalItem(item):
+                    let tempFile = TempBox.shared.tempFile(fileName: "file")
+                    if item.copyTo(url: URL(fileURLWithPath: tempFile.path)) {
+                        if let data = try? Data(contentsOf: URL(fileURLWithPath: tempFile.path)) {
+                            let _ = buffer.with { buffer in
+                                buffer.data = data
+                            }
+                        }
+                    }
+                    TempBox.shared.dispose(tempFile)
                 case let .replaceHeader(data, range):
                     let _ = buffer.with { buffer in
                         if buffer.data.count < range.count {

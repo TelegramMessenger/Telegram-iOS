@@ -185,7 +185,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>5.9.1</string>
+	<string>5.10</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleURLTypes</key>
@@ -228,9 +228,7 @@
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-		<string>dbapi-3</string>
 		<string>instagram</string>
-		<string>googledrive</string>
 		<string>comgooglemaps-x-callback</string>
 		<string>foursquare</string>
 		<string>here-location</string>
@@ -257,6 +255,7 @@
 		<string>opera-https</string>
 		<string>firefox-focus</string>
 		<string>ddgQuickLink</string>
+		<string>moovit</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

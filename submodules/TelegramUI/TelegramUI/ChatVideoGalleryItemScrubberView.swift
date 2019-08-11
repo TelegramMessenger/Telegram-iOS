@@ -42,6 +42,9 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         }
     }
     
+    var updateScrubbing: (Double?) -> Void = { _ in }
+    var updateScrubbingVisual: (Double?) -> Void = { _ in }
+    var updateScrubbingHandlePosition: (CGFloat) -> Void = { _ in }
     var seek: (Double, MediaScrubState) -> Void = { _, _ in }
     
     override init(frame: CGRect) {
@@ -62,6 +65,12 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         
         self.scrubberNode.seek = { [weak self] timestamp, seekState in
             self?.seek(timestamp, seekState)
+        }
+        
+        self.scrubberNode.update = { [weak self] timestamp, position in
+            self?.updateScrubbing(timestamp)
+            self?.updateScrubbingVisual(timestamp)
+            self?.updateScrubbingHandlePosition(position)
         }
         
         self.scrubberNode.playerStatusUpdated = { [weak self] status in
@@ -165,5 +174,14 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.fileSizeNode.alpha = size.width < size.height ? 1.0 : 0.0
         
         self.scrubberNode.frame = CGRect(origin: CGPoint(x: scrubberInset, y: 6.0), size: CGSize(width: size.width - leftInset - rightInset - scrubberInset * 2.0, height: scrubberHeight))
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        var hitTestRect = self.bounds
+        let minHeightDiff = 44.0 - hitTestRect.height
+        if (minHeightDiff > 0) {
+            hitTestRect = bounds.insetBy(dx: 0, dy: -minHeightDiff / 2.0)
+        }
+        return hitTestRect.contains(point)
     }
 }

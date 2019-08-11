@@ -258,7 +258,7 @@ class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             var labelConstrain: CGFloat = params.width - params.rightInset - leftInset - 40.0 - titleLayout.size.width - 10.0
             switch item.labelStyle {
                 case .badge:
-                    labelBadgeColor = item.theme.rootController.tabBar.badgeTextColor
+                    labelBadgeColor = item.theme.list.itemCheckColors.foregroundColor
                     labelFont = badgeFont
                 case .detailText, .multilineDetailText:
                     labelBadgeColor = item.theme.list.itemSecondaryTextColor

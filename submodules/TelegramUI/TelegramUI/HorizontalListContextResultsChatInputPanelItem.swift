@@ -10,11 +10,11 @@ import AVFoundation
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
     let result: ChatContextResult
-    let resultSelected: (ChatContextResult) -> Void
+    let resultSelected: (ChatContextResult, ASDisplayNode, CGRect) -> Bool
     
     let selectable: Bool = true
     
-    public init(account: Account, result: ChatContextResult, resultSelected: @escaping (ChatContextResult) -> Void) {
+    public init(account: Account, result: ChatContextResult, resultSelected: @escaping (ChatContextResult, ASDisplayNode, CGRect) -> Bool) {
         self.account = account
         self.result = result
         self.resultSelected = resultSelected
@@ -65,10 +65,6 @@ final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
                 assertionFailure()
             }
         }
-    }
-    
-    func selected(listView: ListView) {
-        self.resultSelected(self.result)
     }
 }
 
@@ -384,7 +380,9 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             animationNode.started = { [weak self] in
                                 self?.imageNode.alpha = 0.0
                             }
-                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: 160, height: 160, mode: .cached)
+                            let dimensions = animatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
+                            let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
+                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
                     
@@ -438,5 +436,12 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                 }
             })
         }
+    }
+    
+    override func selected() {
+        guard let item = self.item else {
+            return
+        }
+        item.resultSelected(item.result, self, self.bounds)
     }
 }

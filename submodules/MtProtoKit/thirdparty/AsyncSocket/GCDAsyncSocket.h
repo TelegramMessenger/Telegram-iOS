@@ -446,8 +446,6 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
 - (BOOL)isDisconnected;
 - (BOOL)isConnected;
 
-- (void)getIsConnectedAndDisconnected:(void (^)(bool isConnected, bool isDisconnected))completion;
-
 /**
  * Returns the local or remote host and port to which this socket is connected, or nil and 0 if not connected.
  * The host will be an IP address.

@@ -39,7 +39,7 @@ int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
 - (bool)openInput {
     AVDictionary *options = nil;
     av_dict_set(&options, "usetoc", "1", 0);
-    int result = avformat_open_input(&_impl, "http://localhost/file", nil, &options);
+    int result = avformat_open_input(&_impl, "file", nil, &options);
     av_dict_free(&options);
     if (_impl != nil) {
         _impl->flags |= AVFMT_FLAG_FAST_SEEK;
@@ -54,8 +54,12 @@ int FFMpegCodecIdMPEG4 = AV_CODEC_ID_MPEG4;
     return result >= 0;
 }
 
-- (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts {
-    av_seek_frame(_impl, streamIndex, pts, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+- (void)seekFrameForStreamIndex:(int32_t)streamIndex pts:(int64_t)pts positionOnKeyframe:(bool)positionOnKeyframe {
+    int options = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
+    if (!positionOnKeyframe) {
+        options |= AVSEEK_FLAG_ANY;
+    }
+    av_seek_frame(_impl, streamIndex, pts, options);
 }
 
 - (bool)readFrameIntoPacket:(FFMpegPacket *)packet {

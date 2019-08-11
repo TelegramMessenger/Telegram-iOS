@@ -599,7 +599,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
             case let .userExceptions(theme, strings, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
+                let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
+                return ItemListDisclosureItem(theme: theme, title: text, label: label, sectionId: self.section, style: .blocks, action: {
                     let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
@@ -623,7 +624,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
             case let .groupExceptions(theme, strings, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
+                let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
+                return ItemListDisclosureItem(theme: theme, title: text, label: label, sectionId: self.section, style: .blocks, action: {
                     let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
@@ -647,7 +649,8 @@ private enum NotificationsAndSoundsEntry: ItemListNodeEntry {
                     arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 })
             case let .channelExceptions(theme, strings, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: strings.Notifications_Exceptions(Int32(value.settings.count)), sectionId: self.section, style: .blocks, action: {
+                let label = value.settings.count > 0 ? strings.Notifications_Exceptions(Int32(value.settings.count)) : strings.Notification_Exceptions_Add
+                return ItemListDisclosureItem(theme: theme, title: text, label: label, sectionId: self.section, style: .blocks, action: {
                     let controller = NotificationExceptionsController(context: arguments.context, mode: value, updatedMode: arguments.updatedExceptionMode)
                     arguments.pushController(controller)
                 })
@@ -758,34 +761,22 @@ private func notificationsAndSoundsEntries(authorizationStatus: AccessType, warn
     entries.append(.messageAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.privateChats.enabled))
     entries.append(.messagePreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.privateChats.displayPreviews))
     entries.append(.messageSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.privateChats.sound)), filteredGlobalSound(globalSettings.privateChats.sound)))
-    if !exceptions.users.isEmpty {
-        entries.append(.userExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.users))
-        entries.append(.messageNotice(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptionsHelp))
-    } else {
-        entries.append(.messageNotice(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsHelp))
-    }
+    entries.append(.userExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.users))
+    entries.append(.messageNotice(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsExceptionsHelp))
     
     entries.append(.groupHeader(presentationData.theme, presentationData.strings.Notifications_GroupNotifications.uppercased()))
     entries.append(.groupAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.groupChats.enabled))
     entries.append(.groupPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.groupChats.displayPreviews))
     entries.append(.groupSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.groupChats.sound)), filteredGlobalSound(globalSettings.groupChats.sound)))
-    if !exceptions.groups.isEmpty {
-        entries.append(.groupExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.groups))
-        entries.append(.groupNotice(presentationData.theme, presentationData.strings.Notifications_GroupNotificationsExceptionsHelp))
-    } else {
-        entries.append(.groupNotice(presentationData.theme, presentationData.strings.Notifications_GroupNotificationsHelp))
-    }
+    entries.append(.groupExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.groups))
+    entries.append(.groupNotice(presentationData.theme, presentationData.strings.Notifications_GroupNotificationsExceptionsHelp))
     
     entries.append(.channelHeader(presentationData.theme, presentationData.strings.Notifications_ChannelNotifications.uppercased()))
     entries.append(.channelAlerts(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsAlert, globalSettings.channels.enabled))
     entries.append(.channelPreviews(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsPreview, globalSettings.channels.displayPreviews))
     entries.append(.channelSound(presentationData.theme, presentationData.strings.Notifications_MessageNotificationsSound, localizedPeerNotificationSoundString(strings: presentationData.strings, sound: filteredGlobalSound(globalSettings.channels.sound)), filteredGlobalSound(globalSettings.channels.sound)))
-    if !exceptions.channels.isEmpty {
-          entries.append(.channelExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.channels))
-        entries.append(.channelNotice(presentationData.theme, presentationData.strings.Notifications_ChannelNotificationsExceptionsHelp))
-    } else {
-        entries.append(.channelNotice(presentationData.theme, presentationData.strings.Notifications_ChannelNotificationsHelp))
-    }
+    entries.append(.channelExceptions(presentationData.theme, presentationData.strings, presentationData.strings.Notifications_MessageNotificationsExceptions, exceptions.channels))
+    entries.append(.channelNotice(presentationData.theme, presentationData.strings.Notifications_ChannelNotificationsExceptionsHelp))
     
     entries.append(.inAppHeader(presentationData.theme, presentationData.strings.Notifications_InAppNotifications.uppercased()))
     entries.append(.inAppSounds(presentationData.theme, presentationData.strings.Notifications_InAppNotificationsSounds, inAppSettings.playSounds))

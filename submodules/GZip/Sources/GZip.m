@@ -42,7 +42,7 @@ NSData *TGGZipData(NSData *data, float level) {
     return output;
 }
 
-NSData * _Nullable TGGUnzipData(NSData *data)
+NSData * _Nullable TGGUnzipData(NSData *data, uint sizeLimit)
 {
     if (data.length == 0 || !TGIsGzippedData(data)) {
         return nil;
@@ -61,16 +61,22 @@ NSData * _Nullable TGGUnzipData(NSData *data)
         int status = Z_OK;
         output = [NSMutableData dataWithCapacity:data.length * 2];
         while (status == Z_OK) {
+            if (sizeLimit > 0 && stream.total_out > sizeLimit) {
+                return nil;
+            }
+            
             if (stream.total_out >= output.length) {
-                output.length += data.length / 2;
+                output.length = output.length + data.length / 2;
             }
             stream.next_out = (uint8_t *)output.mutableBytes + stream.total_out;
             stream.avail_out = (uInt)(output.length - stream.total_out);
-            status = inflate (&stream, Z_SYNC_FLUSH);
+            status = inflate(&stream, Z_SYNC_FLUSH);
         }
         if (inflateEnd(&stream) == Z_OK) {
             if (status == Z_STREAM_END) {
                 output.length = stream.total_out;
+            } else if (sizeLimit > 0 && output.length > sizeLimit) {
+                return nil;
             }
         }
     }

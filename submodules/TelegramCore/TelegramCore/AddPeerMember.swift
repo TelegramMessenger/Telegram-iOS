@@ -77,6 +77,8 @@ public enum AddChannelMemberError {
     case limitExceeded
     case tooMuchJoined
     case bot(PeerId)
+    case botDoesntSupportGroups
+    case tooMuchBots
 }
 
 public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId) -> Signal<(ChannelParticipant?, RenderedChannelParticipant), AddChannelMemberError> {
@@ -89,16 +91,16 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
             if let peer = transaction.getPeer(peerId), let memberPeer = transaction.getPeer(memberId), let inputUser = apiInputUser(memberPeer) {
                 if let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
                     let updatedParticipant: ChannelParticipant
-                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, _) = currentParticipant {
-                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil)
+                    if let currentParticipant = currentParticipant, case let .member(_, invitedAt, adminInfo, _, rank) = currentParticipant {
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: invitedAt, adminInfo: adminInfo, banInfo: nil, rank: rank)
                     } else {
-                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil)
+                        updatedParticipant = ChannelParticipant.member(id: memberId, invitedAt: Int32(Date().timeIntervalSince1970), adminInfo: nil, banInfo: nil, rank: nil)
                     }
                     return account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: [inputUser]))
                     |> map { [$0] }
                     |> `catch` { error -> Signal<[Api.Updates], AddChannelMemberError> in
                         switch error.errorDescription {
-                            case "CHANNELS_TOO_MUCH":
+                            case "USER_CHANNELS_TOO_MUCH":
                                 return .fail(.tooMuchJoined)
                             case "USERS_TOO_MUCH":
                                 return .fail(.limitExceeded)
@@ -106,6 +108,10 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                 return .fail(.restricted)
                             case "USER_BOT":
                                 return .fail(.bot(memberId))
+                            case "BOT_GROUPS_BLOCKED":
+                                return .fail(.botDoesntSupportGroups)
+                            case "BOTS_TOO_MUCH":
+                                return .fail(.tooMuchBots)
                             default:
                                 return .fail(.generic)
                         }
@@ -125,7 +131,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                                         switch currentParticipant {
                                             case .creator:
                                                 break
-                                            case let .member(_, _, _, banInfo):
+                                            case let .member(_, _, _, banInfo, _):
                                                 if let banInfo = banInfo {
                                                     wasBanned = true
                                                     wasMember = !banInfo.rights.flags.contains(.banReadMessages)
@@ -152,7 +158,7 @@ public func addChannelMember(account: Account, peerId: PeerId, memberId: PeerId)
                             if let presence = transaction.getPeerPresence(peerId: memberPeer.id) {
                                 presences[memberPeer.id] = presence
                             }
-                            if case let .member(_, _, maybeAdminInfo, maybeBannedInfo) = updatedParticipant {
+                            if case let .member(_, _, maybeAdminInfo, maybeBannedInfo, _) = updatedParticipant {
                                 if let adminInfo = maybeAdminInfo {
                                     if let peer = transaction.getPeer(adminInfo.promotedBy) {
                                         peers[peer.id] = peer
@@ -189,7 +195,6 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
         }
         
         if let peer = transaction.getPeer(peerId), let channel = peer as? TelegramChannel, let inputChannel = apiInputChannel(channel) {
-            
             let signal = account.network.request(Api.functions.channels.inviteToChannel(channel: inputChannel, users: inputUsers))
             |> mapError { error -> AddChannelMemberError in
                 switch error.errorDescription {
