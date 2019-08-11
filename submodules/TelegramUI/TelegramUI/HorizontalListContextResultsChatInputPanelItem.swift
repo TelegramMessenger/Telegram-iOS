@@ -8,6 +8,7 @@ import Postbox
 import AVFoundation
 import RadialStatusNode
 import StickerResources
+import PhotoResources
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account

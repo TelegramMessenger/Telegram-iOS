@@ -8,6 +8,7 @@ import TelegramCore
 import MapKit
 import TelegramPresentationData
 import AccountContext
+import PhotoResources
 
 public struct OpenInControllerAction {
     let title: String

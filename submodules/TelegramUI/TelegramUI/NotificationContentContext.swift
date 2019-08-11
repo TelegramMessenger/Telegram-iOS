@@ -11,6 +11,7 @@ import TelegramUIPrivateModule
 import AccountContext
 import Tuples
 import StickerResources
+import PhotoResources
 
 private enum NotificationContentAuthorizationError {
     case unauthorized

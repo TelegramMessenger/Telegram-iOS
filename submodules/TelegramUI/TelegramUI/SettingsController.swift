@@ -19,6 +19,7 @@ import AccountContext
 import OverlayStatusController
 import AvatarNode
 import AlertUI
+import TelegramNotices
 
 private let maximumNumberOfAccounts = 3
 

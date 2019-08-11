@@ -8,9 +8,9 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramVoip
-import TelegramCallsUI
 import TelegramAudio
 import AccountContext
+import TelegramNotices
 
 public final class CallController: ViewController {
     private var controllerNode: CallControllerNode {
@@ -25,6 +25,7 @@ public final class CallController: ViewController {
     private let sharedContext: SharedAccountContext
     private let account: Account
     public let call: PresentationCall
+    private let easyDebugAccess: Bool
     
     private var presentationData: PresentationData
     private var didPlayPresentationAnimation = false
@@ -42,10 +43,11 @@ public final class CallController: ViewController {
     private var audioOutputStateDisposable: Disposable?
     private var audioOutputState: ([AudioSessionOutput], AudioSessionOutput?)?
     
-    public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall) {
+    public init(sharedContext: SharedAccountContext, account: Account, call: PresentationCall, easyDebugAccess: Bool) {
         self.sharedContext = sharedContext
         self.account = account
         self.call = call
+        self.easyDebugAccess = easyDebugAccess
         
         self.presentationData = sharedContext.currentPresentationData.with { $0 }
         
@@ -102,7 +104,7 @@ public final class CallController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit)
+        self.displayNode = CallControllerNode(sharedContext: self.sharedContext, account: self.account, presentationData: self.presentationData, statusBar: self.statusBar, debugInfo: self.call.debugInfo(), shouldStayHiddenUntilConnection: !self.call.isOutgoing && self.call.isIntegratedWithCallKit, easyDebugAccess: self.easyDebugAccess)
         self.displayNodeDidLoad()
         
         self.controllerNode.toggleMute = { [weak self] in

@@ -84,7 +84,7 @@ private func adjustGMapLatitude(_ latitude: Double, offset: Int, zoom: Int) -> D
     return yToLatitude(latitudeToY(latitude) + t)
 }
 
-func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+public func fetchMapSnapshotResource(resource: MapSnapshotMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return Signal { subscriber in
         let disposable = MetaDisposable()
         

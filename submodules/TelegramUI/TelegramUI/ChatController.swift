@@ -24,6 +24,8 @@ import ContextUI
 import ComposePollUI
 import AlertUI
 import UndoUI
+import TelegramCallsUI
+import TelegramNotices
 
 public enum ChatControllerPeekActions {
     case standard

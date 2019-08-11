@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import PhotoResources
 
 private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account

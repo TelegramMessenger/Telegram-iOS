@@ -10,6 +10,7 @@ import DeviceAccess
 import ItemListUI
 import AccountContext
 import AlertUI
+import TelegramNotices
 
 private final class NotificationsAndSoundsArguments {
     let context: AccountContext

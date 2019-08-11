@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
+import PhotoResources
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()

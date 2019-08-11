@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import UniversalMediaPlayer
 import AccountContext
+import PhotoResources
 
 final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
     private let nativeSize: CGSize

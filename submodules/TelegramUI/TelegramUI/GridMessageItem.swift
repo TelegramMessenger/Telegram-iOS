@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
 import RadialStatusNode
+import PhotoResources
 
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {

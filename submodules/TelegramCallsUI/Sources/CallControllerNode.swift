@@ -5,13 +5,12 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import SwiftSignalKit
-import TelegramCallsUI
-import TelegramUIPrivateModule
 import TelegramPresentationData
 import TelegramUIPreferences
 import TelegramAudio
 import AccountContext
 import LocalizedPeerData
+import PhotoResources
 
 final class CallControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext
@@ -23,6 +22,7 @@ final class CallControllerNode: ASDisplayNode {
     private var peer: Peer?
     private let debugInfo: Signal<(String, String), NoError>
     private var forceReportRating = false
+    private let easyDebugAccess: Bool
     
     private let containerNode: ASDisplayNode
     
@@ -62,13 +62,14 @@ final class CallControllerNode: ASDisplayNode {
     var callEnded: ((Bool) -> Void)?
     var dismissedInteractively: (() -> Void)?
     
-    init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false) {
+    init(sharedContext: SharedAccountContext, account: Account, presentationData: PresentationData, statusBar: StatusBar, debugInfo: Signal<(String, String), NoError>, shouldStayHiddenUntilConnection: Bool = false, easyDebugAccess: Bool) {
         self.sharedContext = sharedContext
         self.account = account
         self.presentationData = presentationData
         self.statusBar = statusBar
         self.debugInfo = debugInfo
         self.shouldStayHiddenUntilConnection = shouldStayHiddenUntilConnection
+        self.easyDebugAccess = easyDebugAccess
         
         self.containerNode = ASDisplayNode()
         if self.shouldStayHiddenUntilConnection {
@@ -460,7 +461,7 @@ final class CallControllerNode: ASDisplayNode {
             } else {
                 let point = recognizer.location(in: recognizer.view)
                 if self.statusNode.frame.contains(point) {
-                    if !GlobalExperimentalSettings.isAppStoreBuild {
+                    if self.easyDebugAccess {
                         self.presentDebugNode()
                     } else {
                         let timestamp = CACurrentMediaTime()

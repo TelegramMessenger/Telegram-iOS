@@ -11,6 +11,7 @@ import OverlayStatusController
 import AccountContext
 import ShareController
 import AlertUI
+import TelegramNotices
 
 private final class ChannelVisibilityControllerArguments {
     let account: Account

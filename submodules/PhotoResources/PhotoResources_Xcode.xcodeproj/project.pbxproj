@@ -1,0 +1,607 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0C9C0A522FE3D6200FAB518 /* PhotoResources.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C0A322FE3D6200FAB518 /* PhotoResources.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9C0B022FE3DB800FAB518 /* PhotoResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C0AF22FE3DB800FAB518 /* PhotoResources.swift */; };
+		D0C9C0B322FE3DD000FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0B222FE3DD000FAB518 /* Foundation.framework */; };
+		D0C9C0B522FE3DD400FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0B422FE3DD400FAB518 /* UIKit.framework */; };
+		D0C9C0B722FE3DD800FAB518 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0B622FE3DD800FAB518 /* Postbox.framework */; };
+		D0C9C0B922FE3DDB00FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0B822FE3DDB00FAB518 /* SwiftSignalKit.framework */; };
+		D0C9C0BB22FE3DE000FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0BA22FE3DE000FAB518 /* Display.framework */; };
+		D0C9C0BD22FE3DE400FAB518 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0BC22FE3DE400FAB518 /* AVFoundation.framework */; };
+		D0C9C0BF22FE3DEB00FAB518 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0BE22FE3DEB00FAB518 /* ImageIO.framework */; };
+		D0C9C0C122FE3DF300FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0C022FE3DF300FAB518 /* TelegramCore.framework */; };
+		D0C9C0C322FE3DF900FAB518 /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0C222FE3DF900FAB518 /* WebP.framework */; };
+		D0C9C0C522FE3E0000FAB518 /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0C422FE3E0000FAB518 /* TelegramUIPreferences.framework */; };
+		D0C9C0C722FE3E0500FAB518 /* MediaResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0C622FE3E0500FAB518 /* MediaResources.framework */; };
+		D0C9C0C922FE3E0B00FAB518 /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0C822FE3E0B00FAB518 /* AccountContext.framework */; };
+		D0C9C0CB22FE3E1200FAB518 /* Tuples.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0CA22FE3E1200FAB518 /* Tuples.framework */; };
+		D0C9C0CD22FE3E1700FAB518 /* ImageBlur.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0CC22FE3E1700FAB518 /* ImageBlur.framework */; };
+		D0C9C0F522FE3F8400FAB518 /* TinyThumbnail.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0F422FE3F8400FAB518 /* TinyThumbnail.framework */; };
+		D0C9C0F922FE3FA500FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C0F822FE3FA500FAB518 /* FrameworkBundle.swift */; };
+		D0C9C11F22FE40B500FAB518 /* ImageTransparency.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C11E22FE40B500FAB518 /* ImageTransparency.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D0C9C0A022FE3D6200FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0A322FE3D6200FAB518 /* PhotoResources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PhotoResources.h; sourceTree = "<group>"; };
+		D0C9C0A422FE3D6200FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0C9C0AF22FE3DB800FAB518 /* PhotoResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoResources.swift; sourceTree = "<group>"; };
+		D0C9C0B222FE3DD000FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0C9C0B422FE3DD400FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D0C9C0B622FE3DD800FAB518 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0B822FE3DDB00FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0BA22FE3DE000FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0BC22FE3DE400FAB518 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		D0C9C0BE22FE3DEB00FAB518 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = System/Library/Frameworks/ImageIO.framework; sourceTree = SDKROOT; };
+		D0C9C0C022FE3DF300FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0C222FE3DF900FAB518 /* WebP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0C422FE3E0000FAB518 /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0C622FE3E0500FAB518 /* MediaResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MediaResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0C822FE3E0B00FAB518 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0CA22FE3E1200FAB518 /* Tuples.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Tuples.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0CC22FE3E1700FAB518 /* ImageBlur.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageBlur.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0F422FE3F8400FAB518 /* TinyThumbnail.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TinyThumbnail.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C0F822FE3FA500FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9C11E22FE40B500FAB518 /* ImageTransparency.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageTransparency.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0C9C09D22FE3D6200FAB518 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C11F22FE40B500FAB518 /* ImageTransparency.framework in Frameworks */,
+				D0C9C0F522FE3F8400FAB518 /* TinyThumbnail.framework in Frameworks */,
+				D0C9C0CD22FE3E1700FAB518 /* ImageBlur.framework in Frameworks */,
+				D0C9C0CB22FE3E1200FAB518 /* Tuples.framework in Frameworks */,
+				D0C9C0C922FE3E0B00FAB518 /* AccountContext.framework in Frameworks */,
+				D0C9C0C722FE3E0500FAB518 /* MediaResources.framework in Frameworks */,
+				D0C9C0C522FE3E0000FAB518 /* TelegramUIPreferences.framework in Frameworks */,
+				D0C9C0C322FE3DF900FAB518 /* WebP.framework in Frameworks */,
+				D0C9C0C122FE3DF300FAB518 /* TelegramCore.framework in Frameworks */,
+				D0C9C0BF22FE3DEB00FAB518 /* ImageIO.framework in Frameworks */,
+				D0C9C0BD22FE3DE400FAB518 /* AVFoundation.framework in Frameworks */,
+				D0C9C0BB22FE3DE000FAB518 /* Display.framework in Frameworks */,
+				D0C9C0B922FE3DDB00FAB518 /* SwiftSignalKit.framework in Frameworks */,
+				D0C9C0B722FE3DD800FAB518 /* Postbox.framework in Frameworks */,
+				D0C9C0B522FE3DD400FAB518 /* UIKit.framework in Frameworks */,
+				D0C9C0B322FE3DD000FAB518 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0C9C09622FE3D6200FAB518 = {
+			isa = PBXGroup;
+			children = (
+				D0C9C0A422FE3D6200FAB518 /* Info.plist */,
+				D0C9C0A222FE3D6200FAB518 /* Sources */,
+				D0C9C0A122FE3D6200FAB518 /* Products */,
+				D0C9C0B122FE3DD000FAB518 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D0C9C0A122FE3D6200FAB518 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C0A022FE3D6200FAB518 /* PhotoResources.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0C9C0A222FE3D6200FAB518 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C0AF22FE3DB800FAB518 /* PhotoResources.swift */,
+				D0C9C0F822FE3FA500FAB518 /* FrameworkBundle.swift */,
+				D0C9C0A322FE3D6200FAB518 /* PhotoResources.h */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D0C9C0B122FE3DD000FAB518 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C11E22FE40B500FAB518 /* ImageTransparency.framework */,
+				D0C9C0F422FE3F8400FAB518 /* TinyThumbnail.framework */,
+				D0C9C0CC22FE3E1700FAB518 /* ImageBlur.framework */,
+				D0C9C0CA22FE3E1200FAB518 /* Tuples.framework */,
+				D0C9C0C822FE3E0B00FAB518 /* AccountContext.framework */,
+				D0C9C0C622FE3E0500FAB518 /* MediaResources.framework */,
+				D0C9C0C422FE3E0000FAB518 /* TelegramUIPreferences.framework */,
+				D0C9C0C222FE3DF900FAB518 /* WebP.framework */,
+				D0C9C0C022FE3DF300FAB518 /* TelegramCore.framework */,
+				D0C9C0BE22FE3DEB00FAB518 /* ImageIO.framework */,
+				D0C9C0BC22FE3DE400FAB518 /* AVFoundation.framework */,
+				D0C9C0BA22FE3DE000FAB518 /* Display.framework */,
+				D0C9C0B822FE3DDB00FAB518 /* SwiftSignalKit.framework */,
+				D0C9C0B622FE3DD800FAB518 /* Postbox.framework */,
+				D0C9C0B422FE3DD400FAB518 /* UIKit.framework */,
+				D0C9C0B222FE3DD000FAB518 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D0C9C09B22FE3D6200FAB518 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C0A522FE3D6200FAB518 /* PhotoResources.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D0C9C09F22FE3D6200FAB518 /* PhotoResources */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0C9C0A822FE3D6200FAB518 /* Build configuration list for PBXNativeTarget "PhotoResources" */;
+			buildPhases = (
+				D0C9C09B22FE3D6200FAB518 /* Headers */,
+				D0C9C09C22FE3D6200FAB518 /* Sources */,
+				D0C9C09D22FE3D6200FAB518 /* Frameworks */,
+				D0C9C09E22FE3D6200FAB518 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PhotoResources;
+			productName = PhotoResources;
+			productReference = D0C9C0A022FE3D6200FAB518 /* PhotoResources.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0C9C09722FE3D6200FAB518 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = "Telegram Messenger LLP";
+				TargetAttributes = {
+					D0C9C09F22FE3D6200FAB518 = {
+						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
+					};
+				};
+			};
+			buildConfigurationList = D0C9C09A22FE3D6200FAB518 /* Build configuration list for PBXProject "PhotoResources_Xcode" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0C9C09622FE3D6200FAB518;
+			productRefGroup = D0C9C0A122FE3D6200FAB518 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0C9C09F22FE3D6200FAB518 /* PhotoResources */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0C9C09E22FE3D6200FAB518 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0C9C09C22FE3D6200FAB518 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C0F922FE3FA500FAB518 /* FrameworkBundle.swift in Sources */,
+				D0C9C0B022FE3DB800FAB518 /* PhotoResources.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D0C9C0A622FE3D6200FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C0A722FE3D6200FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C0A922FE3D6200FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PhotoResources;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C0AA22FE3D6200FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PhotoResources;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C0AB22FE3D8C00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C0AC22FE3D8C00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PhotoResources;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C0AD22FE3D9600FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+		D0C9C0AE22FE3D9600FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PhotoResources;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0C9C09A22FE3D6200FAB518 /* Build configuration list for PBXProject "PhotoResources_Xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C0A622FE3D6200FAB518 /* DebugAppStoreLLC */,
+				D0C9C0AB22FE3D8C00FAB518 /* DebugHockeyapp */,
+				D0C9C0A722FE3D6200FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C0AD22FE3D9600FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+		D0C9C0A822FE3D6200FAB518 /* Build configuration list for PBXNativeTarget "PhotoResources" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C0A922FE3D6200FAB518 /* DebugAppStoreLLC */,
+				D0C9C0AC22FE3D8C00FAB518 /* DebugHockeyapp */,
+				D0C9C0AA22FE3D6200FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C0AE22FE3D9600FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0C9C09722FE3D6200FAB518 /* Project object */;
+}

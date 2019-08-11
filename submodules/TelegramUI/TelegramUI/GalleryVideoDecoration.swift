@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import UniversalMediaPlayer
 import AccountContext
+import PhotoResources
 
 final class GalleryVideoDecoration: UniversalVideoDecoration {
     let backgroundNode: ASDisplayNode? = nil

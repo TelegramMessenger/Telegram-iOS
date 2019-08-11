@@ -15,6 +15,7 @@ import TelegramStringFormatting
 import AccountContext
 import ShareController
 import AlertUI
+import TelegramNotices
 
 private final class UserInfoControllerArguments {
     let account: Account

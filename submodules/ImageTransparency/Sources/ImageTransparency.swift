@@ -1,7 +1,6 @@
 import UIKit
 import Accelerate
 import Display
-import TelegramCore
 
 private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)? {
     var sourceBuffer = vImage_Buffer()
@@ -43,7 +42,7 @@ private func generateHistogram(cgImage: CGImage) -> ([[vImagePixelCount]], Int)?
     return (histogramBins, alphaBinIndex)
 }
 
-func imageHasTransparency(_ cgImage: CGImage) -> Bool {
+public func imageHasTransparency(_ cgImage: CGImage) -> Bool {
     guard cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
         return false
     }
@@ -74,7 +73,7 @@ private func scaledDrawingContext(_ cgImage: CGImage, maxSize: CGSize) -> Drawin
     return context
 }
 
-func imageRequiresInversion(_ cgImage: CGImage) -> Bool {
+public func imageRequiresInversion(_ cgImage: CGImage) -> Bool {
     guard cgImage.bitsPerComponent == 8, cgImage.bitsPerPixel == 32 else {
         return false
     }

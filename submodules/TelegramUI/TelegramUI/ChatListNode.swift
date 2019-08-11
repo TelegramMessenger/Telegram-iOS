@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import TelegramNotices
 
 public struct ChatListNodePeersFilter: OptionSet {
     public var rawValue: Int32

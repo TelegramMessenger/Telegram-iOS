@@ -19,7 +19,7 @@ public enum PermissionRequestStatus {
     case unreachable
     case allowed
     
-    init(accessType: AccessType) {
+    public init(accessType: AccessType) {
         switch accessType {
             case .notDetermined:
                 self = .requestable
@@ -40,7 +40,7 @@ public enum PermissionState: Equatable {
     case cellularData(status: PermissionRequestStatus)
     case nearbyLocation(status: PermissionRequestStatus)
     
-    var kind: PermissionKind {
+    public var kind: PermissionKind {
         switch self {
             case .contacts:
                 return .contacts

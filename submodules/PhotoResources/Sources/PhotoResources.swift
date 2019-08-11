@@ -5,7 +5,6 @@ import SwiftSignalKit
 import Display
 import AVFoundation
 import ImageIO
-import TelegramUIPrivateModule
 import TelegramCore
 #if BUCK
 import WebPImage
@@ -17,6 +16,8 @@ import MediaResources
 import AccountContext
 import Tuples
 import ImageBlur
+import TinyThumbnail
+import ImageTransparency
 
 private enum ResourceFileData {
     case data(Data)
@@ -27,7 +28,7 @@ public func largestRepresentationForPhoto(_ photo: TelegramMediaImage) -> Telegr
     return photo.representationForDisplayAtSize(CGSize(width: 1280.0, height: 1280.0))
 }
 
-func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false, tryAdditionalRepresentations: Bool = false, synchronousLoad: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
+public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 1280.0, height: 1280.0), autoFetchFullSize: Bool = false, tryAdditionalRepresentations: Bool = false, synchronousLoad: Bool = false) -> Signal<Tuple3<Data?, Data?, Bool>, NoError> {
     if let smallestRepresentation = smallestImageRepresentation(photoReference.media.representations), let largestRepresentation = photoReference.media.representationForDisplayAtSize(fullRepresentationSize) {
         let maybeFullSize = postbox.mediaBox.resourceData(largestRepresentation.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
         
@@ -601,7 +602,7 @@ private func tailContext(_ tail: Tail) -> DrawingContext {
     }
 }
 
-func addCorners(_ context: DrawingContext, arguments: TransformImageArguments) {
+public func addCorners(_ context: DrawingContext, arguments: TransformImageArguments) {
     let corners = arguments.corners
     let drawingRect = arguments.drawingRect
     if case let .Corner(radius) = corners.topLeft, radius > CGFloat.ulpOfOne {
@@ -664,7 +665,7 @@ func addCorners(_ context: DrawingContext, arguments: TransformImageArguments) {
     }
 }
 
-func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<UIImage?, NoError> {
+public func rawMessagePhoto(postbox: Postbox, photoReference: ImageMediaReference) -> Signal<UIImage?, NoError> {
     return chatMessagePhotoDatas(postbox: postbox, photoReference: photoReference, autoFetchFullSize: true)
     |> map { value -> UIImage? in
         let thumbnailData = value._0
@@ -1123,7 +1124,7 @@ public func chatMessageVideoThumbnail(account: Account, fileReference: FileMedia
     }
 }
 
-func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatSecretPhoto(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: photoReference)
     return signal
     |> map { value in
@@ -1298,7 +1299,7 @@ private func avatarGalleryThumbnailDatas(postbox: Postbox, representations: [Ima
     }
 }
 
-func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepresentationWithReference]) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepresentationWithReference]) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = avatarGalleryThumbnailDatas(postbox: account.postbox, representations: representations, fullRepresentationSize: CGSize(width: 127.0, height: 127.0), autoFetchFullSize: true)
     return signal
     |> map { value in
@@ -1383,7 +1384,7 @@ func avatarGalleryThumbnailPhoto(account: Account, representations: [ImageRepres
     }
 }
 
-func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 127.0, height: 127.0), synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference, fullRepresentationSize: CGSize = CGSize(width: 127.0, height: 127.0), synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessagePhotoDatas(postbox: account.postbox, photoReference: photoReference, fullRepresentationSize: fullRepresentationSize, autoFetchFullSize: true, synchronousLoad: synchronousLoad)
     
     return signal
@@ -1468,7 +1469,7 @@ func mediaGridMessagePhoto(account: Account, photoReference: ImageMediaReference
     }
 }
 
-func gifPaneVideoThumbnail(account: Account, videoReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func gifPaneVideoThumbnail(account: Account, videoReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     if let smallestRepresentation = smallestImageRepresentation(videoReference.media.previewRepresentations) {
         let thumbnailResource = smallestRepresentation.resource
         
@@ -1537,14 +1538,14 @@ func gifPaneVideoThumbnail(account: Account, videoReference: FileMediaReference)
     }
 }
 
-func mediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference, onlyFullSize: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func mediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference, onlyFullSize: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return internalMediaGridMessageVideo(postbox: postbox, videoReference: videoReference, onlyFullSize: onlyFullSize, synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: autoFetchFullSizeThumbnail)
     |> map {
         return $0.1
     }
 }
 
-func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference, imageReference: ImageMediaReference? = nil, onlyFullSize: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+public func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaReference, imageReference: ImageMediaReference? = nil, onlyFullSize: Bool = false, synchronousLoad: Bool = false, autoFetchFullSizeThumbnail: Bool = false) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     let signal: Signal<Tuple3<Data?, Tuple2<Data, String>?, Bool>, NoError>
     if let imageReference = imageReference {
         signal = chatMessagePhotoDatas(postbox: postbox, photoReference: imageReference, tryAdditionalRepresentations: true, synchronousLoad: synchronousLoad)
@@ -1757,7 +1758,7 @@ func internalMediaGridMessageVideo(postbox: Postbox, videoReference: FileMediaRe
     }
 }
 
-func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
+public func chatMessagePhotoStatus(context: AccountContext, messageId: MessageId, photoReference: ImageMediaReference) -> Signal<MediaResourceStatus, NoError> {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return context.fetchManager.fetchStatus(category: .image, location: .chat(messageId.peerId), locationKey: .messageId(messageId), resource: largestRepresentation.resource)
     } else {
@@ -1795,21 +1796,21 @@ public func chatMessagePhotoInteractiveFetched(context: AccountContext, photoRef
     }
 }
 
-func chatMessagePhotoCancelInteractiveFetch(account: Account, photoReference: ImageMediaReference) {
+public func chatMessagePhotoCancelInteractiveFetch(account: Account, photoReference: ImageMediaReference) {
     if let largestRepresentation = largestRepresentationForPhoto(photoReference.media) {
         return account.postbox.mediaBox.cancelInteractiveResourceFetch(largestRepresentation.resource)
     }
 }
 
-func chatMessageWebFileInteractiveFetched(account: Account, image: TelegramMediaWebFile) -> Signal<FetchResourceSourceType, FetchResourceError> {
+public func chatMessageWebFileInteractiveFetched(account: Account, image: TelegramMediaWebFile) -> Signal<FetchResourceSourceType, FetchResourceError> {
     return fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: image.resource), statsCategory: .image)
 }
 
-func chatMessageWebFileCancelInteractiveFetch(account: Account, image: TelegramMediaWebFile) {
+public func chatMessageWebFileCancelInteractiveFetch(account: Account, image: TelegramMediaWebFile) {
     return account.postbox.mediaBox.cancelInteractiveResourceFetch(image.resource)
 }
 
-func chatWebpageSnippetFileData(account: Account, fileReference: FileMediaReference, resource: MediaResource) -> Signal<Data?, NoError> {
+public func chatWebpageSnippetFileData(account: Account, fileReference: FileMediaReference, resource: MediaResource) -> Signal<Data?, NoError> {
     let resourceData = account.postbox.mediaBox.resourceData(resource)
         |> map { next in
             return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: .mappedIfSafe)
@@ -1829,7 +1830,7 @@ func chatWebpageSnippetFileData(account: Account, fileReference: FileMediaRefere
     }
 }
 
-func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageMediaReference) -> Signal<Data?, NoError> {
+public func chatWebpageSnippetPhotoData(account: Account, photoReference: ImageMediaReference) -> Signal<Data?, NoError> {
     if let closestRepresentation = photoReference.media.representationForDisplayAtSize(CGSize(width: 120.0, height: 120.0)) {
         let resourceData = account.postbox.mediaBox.resourceData(closestRepresentation.resource)
         |> map { next in
@@ -1896,7 +1897,7 @@ public func chatWebpageSnippetFile(account: Account, fileReference: FileMediaRef
     }
 }
 
-func chatWebpageSnippetPhoto(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatWebpageSnippetPhoto(account: Account, photoReference: ImageMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatWebpageSnippetPhotoData(account: account, photoReference: photoReference)
     
     return signal |> map { fullSizeData in
@@ -1939,7 +1940,7 @@ func chatWebpageSnippetPhoto(account: Account, photoReference: ImageMediaReferen
     }
 }
 
-func chatMessageVideo(postbox: Postbox, videoReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessageVideo(postbox: Postbox, videoReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return mediaGridMessageVideo(postbox: postbox, videoReference: videoReference)
 }
 
@@ -1969,7 +1970,7 @@ private func chatSecretMessageVideoData(account: Account, fileReference: FileMed
     }
 }
 
-func chatSecretMessageVideo(account: Account, videoReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatSecretMessageVideo(account: Account, videoReference: FileMediaReference) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatSecretMessageVideoData(account: account, fileReference: videoReference)
     
     return signal
@@ -2061,7 +2062,7 @@ private func orientationFromExif(orientation: Int) -> UIImage.Orientation {
     }
 }
 
-func imageOrientationFromSource(_ source: CGImageSource) -> UIImage.Orientation {
+public func imageOrientationFromSource(_ source: CGImageSource) -> UIImage.Orientation {
     if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) {
         let dict = properties as NSDictionary
         if let value = dict.object(forKey: kCGImagePropertyOrientation) as? NSNumber {
@@ -2085,7 +2086,7 @@ private func rotationFor(_ orientation: UIImage.Orientation) -> CGFloat {
     }
 }
 
-func drawImage(context: CGContext, image: CGImage, orientation: UIImage.Orientation, in rect: CGRect) {
+public func drawImage(context: CGContext, image: CGImage, orientation: UIImage.Orientation, in rect: CGRect) {
     var restore = true
     var drawRect = rect
     switch orientation {
@@ -2123,7 +2124,7 @@ func drawImage(context: CGContext, image: CGImage, orientation: UIImage.Orientat
     }
 }
 
-func chatMessageImageFile(account: Account, fileReference: FileMediaReference, thumbnail: Bool, fetched: Bool = false, autoFetchFullSizeThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMessageImageFile(account: Account, fileReference: FileMediaReference, thumbnail: Bool, fetched: Bool = false, autoFetchFullSizeThumbnail: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal: Signal<Tuple3<Data?, String?, Bool>, NoError>
     if thumbnail {
         signal = chatMessageImageFileThumbnailDatas(account: account, fileReference: fileReference, autoFetchFullSizeThumbnail: true)
@@ -2257,7 +2258,7 @@ func chatMessageImageFile(account: Account, fileReference: FileMediaReference, t
     }
 }
 
-func instantPageImageFile(account: Account, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func instantPageImageFile(account: Account, fileReference: FileMediaReference, fetched: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return chatMessageFileDatas(account: account, fileReference: fileReference, progressive: false, fetched: fetched)
     |> map { value in
         let thumbnailData = value._0
@@ -2367,7 +2368,7 @@ private func avatarGalleryPhotoDatas(account: Account, fileReference: FileMediaR
     }
 }
 
-func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentationWithReference], autoFetchFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = avatarGalleryPhotoDatas(account: account, representations: representations, autoFetchFullSize: autoFetchFullSize)
     
     return signal
@@ -2490,7 +2491,7 @@ func chatAvatarGalleryPhoto(account: Account, representations: [ImageRepresentat
     }
 }
 
-func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
+public func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -> Signal<Data?, NoError> {
     return Signal<Data?, NoError> { subscriber in
         let fetchedDisposable = account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start()
         let dataDisposable = account.postbox.mediaBox.resourceData(resource).start(next: { next in
@@ -2508,7 +2509,7 @@ func chatMapSnapshotData(account: Account, resource: MapSnapshotMediaResource) -
 
 private let locationPinImage = UIImage(named: "ModernMessageLocationPin")?.precomposed()
 
-func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMapSnapshotData(account: account, resource: resource)
     
     return signal |> map { fullSizeData in
@@ -2576,7 +2577,7 @@ func chatMapSnapshotImage(account: Account, resource: MapSnapshotMediaResource) 
     }
 }
 
-func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func chatWebFileImage(account: Account, file: TelegramMediaWebFile) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return account.postbox.mediaBox.resourceData(file.resource)
     |> map { fullSizeData in
         return { arguments in
@@ -2774,7 +2775,7 @@ private func drawAlbumArtPlaceholder(into c: CGContext, arguments: TransformImag
     }
 }
 
-func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumArt: SharedMediaPlaybackAlbumArt?, thumbnail: Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     var fileArtworkData: Signal<Data?, NoError> = .single(nil)
     if let fileReference = fileReference {
         let size = thumbnail ? CGSize(width: 48.0, height: 48.0) : CGSize(width: 320.0, height: 320.0)
@@ -2859,11 +2860,11 @@ func playerAlbumArt(postbox: Postbox, fileReference: FileMediaReference?, albumA
     }
 }
 
-func securePhoto(account: Account, resource: TelegramMediaResource, accessContext: SecureIdAccessContext) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func securePhoto(account: Account, resource: TelegramMediaResource, accessContext: SecureIdAccessContext) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return securePhotoInternal(account: account, resource: resource, accessContext: accessContext) |> map { $0.1 }
 }
 
-func securePhotoInternal(account: Account, resource: TelegramMediaResource, accessContext: SecureIdAccessContext) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
+public func securePhotoInternal(account: Account, resource: TelegramMediaResource, accessContext: SecureIdAccessContext) -> Signal<(() -> CGSize?, (TransformImageArguments) -> DrawingContext?), NoError> {
     let signal = Signal<MediaResourceData, NoError> { subscriber in
         let fetched = account.postbox.mediaBox.fetchedResource(resource, parameters: nil).start()
         let data = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false)).start(next: { next in
@@ -2994,12 +2995,12 @@ private func drawOpenInAppIconBorder(into c: CGContext, arguments: TransformImag
     c.strokePath()
 }
 
-enum OpenInAppIcon {
+public enum OpenInAppIcon {
     case resource(resource: TelegramMediaResource)
     case image(image: UIImage)
 }
 
-func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     switch appIcon {
         case let .resource(resource):
             return openInAppIconData(postbox: postbox, appIcon: resource) |> map { data in
@@ -3044,7 +3045,7 @@ func openInAppIcon(postbox: Postbox, appIcon: OpenInAppIcon) -> Signal<(Transfor
     }
 }
 
-func callDefaultBackground() -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func callDefaultBackground() -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in
         let context = DrawingContext(size: arguments.drawingSize, clear: true)
         context.withFlippedContext { c in

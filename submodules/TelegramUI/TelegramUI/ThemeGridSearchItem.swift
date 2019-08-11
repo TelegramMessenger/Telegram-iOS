@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
+import PhotoResources
 
 final class ThemeGridSearchItem: GridItem {
     let account: Account

@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import TextFormat
+import TelegramPermissions
 
 enum PermissionContentIcon {
     case image(UIImage?)
