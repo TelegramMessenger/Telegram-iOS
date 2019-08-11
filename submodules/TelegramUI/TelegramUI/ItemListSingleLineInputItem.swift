@@ -226,27 +226,31 @@ class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDelegate, It
                             secureEntry = false
                             capitalizationType = capitalization ? .sentences : .none
                             autocorrectionType = autocorrection ? .default : .no
-                            keyboardType = UIKeyboardType.default
+                            keyboardType = .default
                         case .email:
                             secureEntry = false
                             capitalizationType = .none
                             autocorrectionType = .no
-                            keyboardType = UIKeyboardType.emailAddress
+                            keyboardType = .emailAddress
                         case .password:
                             secureEntry = true
                             capitalizationType = .none
                             autocorrectionType = .no
-                            keyboardType = UIKeyboardType.default
+                            keyboardType = .default
                         case .number:
                             secureEntry = false
                             capitalizationType = .none
                             autocorrectionType = .no
-                            keyboardType = UIKeyboardType.numberPad
+                            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                                keyboardType = .asciiCapableNumberPad
+                            } else {
+                                keyboardType = .numberPad
+                            }
                         case .username:
                             secureEntry = false
                             capitalizationType = .none
                             autocorrectionType = .no
-                            keyboardType = UIKeyboardType.asciiCapable
+                            keyboardType = .asciiCapable
                     }
                     
                     if strongSelf.textNode.textField.isSecureTextEntry != secureEntry {
