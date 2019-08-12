@@ -208,6 +208,9 @@
 		D02D60AC206BA64100FEFE1E /* VerifySecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02D60AA206BA64100FEFE1E /* VerifySecureIdValue.swift */; };
 		D02DADC12139A1FC00116225 /* ContactSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02DADC02139A1FC00116225 /* ContactSyncManager.swift */; };
 		D02DADC22139A1FC00116225 /* ContactSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02DADC02139A1FC00116225 /* ContactSyncManager.swift */; };
+		D02E88522301AAA7000259C5 /* OutgoingScheduleInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */; };
+		D02E88532301AAA7000259C5 /* RegisterNotificationToken.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02B198F21FB1D520094A764 /* RegisterNotificationToken.swift */; };
+		D02E88542301AAA7000259C5 /* ScheduledMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FC986C22FD99D400915E37 /* ScheduledMessages.swift */; };
 		D03121021DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03121011DA57E93006A2A60 /* TelegramPeerNotificationSettings.swift */; };
 		D0329EA222FC5A7C00F9F071 /* MessageReactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0329EA122FC5A7C00F9F071 /* MessageReactions.swift */; };
 		D0329EA322FC5A7C00F9F071 /* MessageReactions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0329EA122FC5A7C00F9F071 /* MessageReactions.swift */; };
@@ -2637,6 +2640,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D02E88522301AAA7000259C5 /* OutgoingScheduleInfoMessageAttribute.swift in Sources */,
+				D02E88532301AAA7000259C5 /* RegisterNotificationToken.swift in Sources */,
+				D02E88542301AAA7000259C5 /* ScheduledMessages.swift in Sources */,
 				D020F00722F19C8F00BE699A /* ManagedAnimatedEmojiUpdates.swift in Sources */,
 				D05FDC3922CA45070060BFE3 /* AppUpdate.swift in Sources */,
 				D014193922AE6B85008667CB /* ChannelOwnershipTransfer.swift in Sources */,
