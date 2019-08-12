@@ -6642,7 +6642,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     
                     let targetRect = node.view.convert(rect, to: sourceView)
                     let sourceRect = CGRect(origin: CGPoint(x: floor(targetRect.midX), y: floor(targetRect.midY)), size: CGSize(width: 1.0, height: 1.0))
-                    if let parsedUrl = URL(string: string) {
+                    if let parsedUrl = parsedUrlValue {
                         if parsedUrl.scheme == "http" || parsedUrl.scheme == "https" {
                             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                 let controller = SFSafariViewController(url: parsedUrl)
