@@ -65,7 +65,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     case fontSize(PresentationTheme, PresentationFontSize)
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
     case wallpaper(PresentationTheme, String)
-    case accentColor(PresentationTheme, String, PresentationThemeAccentColor?)
+    case accentColor(PresentationTheme, PresentationThemeReference, String, PresentationThemeAccentColor?)
     case autoNightTheme(PresentationTheme, String, String)
     case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor], PresentationThemeAccentColor?)
     case iconHeader(PresentationTheme, String)
@@ -137,8 +137,8 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .accentColor(lhsTheme, lhsText, lhsColor):
-                if case let .accentColor(rhsTheme, rhsText, rhsColor) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsColor == rhsColor {
+            case let .accentColor(lhsTheme, lhsCurrentTheme, lhsText, lhsColor):
+                if case let .accentColor(rhsTheme, rhsCurrentTheme, rhsText, rhsColor) = rhs, lhsTheme === rhsTheme, lhsCurrentTheme == rhsCurrentTheme, lhsText == rhsText, lhsColor == rhsColor {
                     return true
                 } else {
                     return false
@@ -230,21 +230,20 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openWallpaperSettings()
                 })
-            case let .accentColor(theme, _, color):
+            case let .accentColor(theme, currentTheme, _, color):
+                var defaultColor = PresentationThemeAccentColor(baseColor: .blue, value: 0.5)
                 var colors = PresentationThemeBaseColor.allCases
-                if theme.overallDarkAppearance {
-                    colors = colors.filter { $0 != .black }
+                if case let .builtin(name) = currentTheme {
+                    if name == .night || name == .nightAccent {
+                        colors = colors.filter { $0 != .black }
+                    }
+                    if name == .night {
+                        colors = colors.filter { $0 != .gray }
+                        defaultColor = PresentationThemeAccentColor(baseColor: .white, value: 0.5)
+                    } else {
+                        colors = colors.filter { $0 != .white }
+                    }
                 }
-                
-                let defaultColor: PresentationThemeAccentColor
-                if case let .builtin(name) = theme.name, name == .night {
-                    colors = colors.filter { $0 != .gray }
-                    defaultColor = PresentationThemeAccentColor(baseColor: .white, value: 0.5)
-                } else {
-                    colors = colors.filter { $0 != .white }
-                    defaultColor = PresentationThemeAccentColor(baseColor: .blue, value: 0.5)
-                }
-                
                 return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: color ?? defaultColor, updated: { color in
                     arguments.selectAccentColor(color)
                 }, tag: ThemeSettingsEntryTag.accentColor)
@@ -297,7 +296,7 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index]))
     
     if theme.name != .builtin(.dayClassic) {
-        entries.append(.accentColor(presentationData.theme, strings.Appearance_AccentColor, themeSpecificAccentColors[themeReference.index]))
+        entries.append(.accentColor(presentationData.theme, themeReference, strings.Appearance_AccentColor, themeSpecificAccentColors[themeReference.index]))
     }
     
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))

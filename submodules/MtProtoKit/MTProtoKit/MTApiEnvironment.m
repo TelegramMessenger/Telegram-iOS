@@ -225,6 +225,8 @@ static NSData *base64_decode(NSString *str) {
     if (hexData == nil) {
         NSString *finalString = @"";
         finalString = [finalString stringByAppendingString:[string stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"="]]];
+        finalString = [finalString stringByReplacingOccurrencesOfString:@"-" withString:@"+"];
+        finalString = [finalString stringByReplacingOccurrencesOfString:@"_" withString:@"/"];
         while (finalString.length % 4 != 0) {
             finalString = [finalString stringByAppendingString:@"="];
         }
