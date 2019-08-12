@@ -10,6 +10,7 @@ import ItemListUI
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import ItemListPeerItem
 
 private final class ChannelBlacklistControllerArguments {
     let account: Account

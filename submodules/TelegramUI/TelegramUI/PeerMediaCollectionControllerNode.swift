@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import SearchBarNode
+import SearchUI
+import ChatListSearchItemNode
 
 struct PeerMediaCollectionMessageForGallery {
     let message: Message

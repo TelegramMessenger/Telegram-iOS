@@ -48,6 +48,7 @@
 		D0C9C3FD2300D59B00FAB518 /* ScreenCaptureDetection.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C3FC2300D59B00FAB518 /* ScreenCaptureDetection.framework */; };
 		D0C9C43B2300D6DC00FAB518 /* OpenInExternalAppUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C43A2300D6DC00FAB518 /* OpenInExternalAppUI.framework */; };
 		D0C9C4412300D91200FAB518 /* GalleryItemTransitionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4402300D91200FAB518 /* GalleryItemTransitionNode.swift */; };
+		D0C9C91723020E6100FAB518 /* ShareController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C91623020E6100FAB518 /* ShareController.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -94,6 +95,7 @@
 		D0C9C3FC2300D59B00FAB518 /* ScreenCaptureDetection.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ScreenCaptureDetection.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C43A2300D6DC00FAB518 /* OpenInExternalAppUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OpenInExternalAppUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C4402300D91200FAB518 /* GalleryItemTransitionNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryItemTransitionNode.swift; sourceTree = "<group>"; };
+		D0C9C91623020E6100FAB518 /* ShareController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ShareController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -101,6 +103,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C91723020E6100FAB518 /* ShareController.framework in Frameworks */,
 				D0C9C43B2300D6DC00FAB518 /* OpenInExternalAppUI.framework in Frameworks */,
 				D0C9C3FD2300D59B00FAB518 /* ScreenCaptureDetection.framework in Frameworks */,
 				D0C9C3C32300B73200FAB518 /* WebsiteType.framework in Frameworks */,
@@ -172,6 +175,7 @@
 		D0C9C3192300A9B900FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C91623020E6100FAB518 /* ShareController.framework */,
 				D0C9C43A2300D6DC00FAB518 /* OpenInExternalAppUI.framework */,
 				D0C9C3FC2300D59B00FAB518 /* ScreenCaptureDetection.framework */,
 				D0C9C3C22300B73200FAB518 /* WebsiteType.framework */,

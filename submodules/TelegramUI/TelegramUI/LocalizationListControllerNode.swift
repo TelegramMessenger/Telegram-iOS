@@ -11,6 +11,7 @@ import ItemListUI
 import AccountContext
 import ShareController
 import SearchBarNode
+import SearchUI
 
 private enum LanguageListSection: ItemListSectionId {
     case official

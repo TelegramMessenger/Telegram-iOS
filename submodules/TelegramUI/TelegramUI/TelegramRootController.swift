@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPrivateModule
 import AccountContext
+import ContactListUI
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext

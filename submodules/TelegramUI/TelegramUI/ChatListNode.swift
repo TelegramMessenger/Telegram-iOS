@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import TelegramNotices
+import ContactsPeerItem
 
 public struct ChatListNodePeersFilter: OptionSet {
     public var rawValue: Int32

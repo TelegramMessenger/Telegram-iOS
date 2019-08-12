@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import OverlayStatusController
 import AccountContext
 import ShareController
+import SearchUI
 
 final class ThemeGridController: ViewController {
     private var controllerNode: ThemeGridControllerNode {

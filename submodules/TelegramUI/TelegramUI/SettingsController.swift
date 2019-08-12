@@ -23,6 +23,8 @@ import TelegramNotices
 import GalleryUI
 import LegacyUI
 import PassportUI
+import SearchUI
+import ItemListPeerItem
 
 private let maximumNumberOfAccounts = 3
 

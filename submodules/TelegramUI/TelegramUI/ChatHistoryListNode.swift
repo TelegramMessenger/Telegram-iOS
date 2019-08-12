@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import MediaResources
 import AccountContext
 import TemporaryCachedPeerDataManager
+import ChatListSearchItemNode
 
 private let historyMessageCount: Int = 100
 

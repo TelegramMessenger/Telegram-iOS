@@ -959,4 +959,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
         openResolvedUrlImpl(resolvedUrl, context: context, urlContext: urlContext, navigationController: navigationController, openPeer: openPeer, sendFile: sendFile, sendSticker: sendSticker, present: present, dismissInput: dismissInput)
     }
+    
+    public func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController {
+        return deviceContactInfoController(context: context, subject: subject, completed: completed, cancelled: cancelled)
+    }
+    
+    public func makePeersNearbyController(context: AccountContext) -> ViewController {
+        return peersNearbyController(context: context)
+    }
+    
+    public func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController {
+        return ChatControllerImpl(context: context, chatLocation: chatLocation, subject: subject, botStart: botStart, mode: mode)
+    }
+    
+    public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
+        presentContactsWarningSuppressionImpl(context: context, present: present)
+    }
 }

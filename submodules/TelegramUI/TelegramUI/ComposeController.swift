@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import AlertUI
+import SearchUI
+import TelegramPermissionsUI
 
 public class ComposeController: ViewController {
     private let context: AccountContext
@@ -189,7 +191,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
-                presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
+                strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                     strongSelf.present(c, in: .window(.root), with: a)
                 })
             }

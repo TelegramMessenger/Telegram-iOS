@@ -7,6 +7,7 @@ import Postbox
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
+import SearchUI
 
 public final class PeerSelectionController: ViewController {
     private let context: AccountContext

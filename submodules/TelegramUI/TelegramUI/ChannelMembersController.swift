@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import AccountContext
 import AlertUI
+import ItemListPeerItem
 
 private final class ChannelMembersControllerArguments {
     let account: Account

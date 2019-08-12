@@ -10,6 +10,7 @@ import MergeLists
 import ActivityIndicator
 import AccountContext
 import SearchBarNode
+import SearchUI
 
 private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {

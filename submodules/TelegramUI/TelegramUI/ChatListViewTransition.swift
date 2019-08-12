@@ -4,6 +4,7 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 import MergeLists
+import SearchUI
 
 struct ChatListNodeView {
     let originalView: ChatListView

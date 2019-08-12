@@ -19,9 +19,9 @@ func openAddContact(context: AccountContext, firstName: String = "", lastName: S
                             pushController(infoController)
                         }
                     } else {
-                        pushController(deviceContactInfoController(context: context, subject: .vcard(nil, stableId, contactData)))
+                        pushController(deviceContactInfoController(context: context, subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil))
                     }
-                }), completed: completed), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }), completed: completed, cancelled: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             case .notDetermined:
                 DeviceAccess.authorizeAccess(to: .contacts)
             default:

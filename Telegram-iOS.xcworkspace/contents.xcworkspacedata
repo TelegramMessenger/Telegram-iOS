@@ -208,6 +208,15 @@
          <FileRef
             location = "group:submodules/SearchBarNode/SearchBarNode_Xcode.xcodeproj">
          </FileRef>
+         <FileRef
+            location = "group:submodules/ChatListSearchItemNode/ChatListSearchItemNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/PeersNearbyIconNode/PeersNearbyIconNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SolidRoundedButtonNode/SolidRoundedButtonNode_Xcode.xcodeproj">
+         </FileRef>
       </Group>
       <Group
          location = "container:"
@@ -247,6 +256,15 @@
          </FileRef>
          <FileRef
             location = "group:submodules/ListSectionHeaderNode/ListSectionHeaderNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ContactsPeerItem/ContactsPeerItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListPeerItem/ItemListPeerItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ChatListSearchItemHeader/ChatListSearchItemHeader_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <Group
@@ -326,6 +344,9 @@
          location = "group:submodules/UndoUI/UndoUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
+         location = "group:submodules/SearchUI/SearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
          location = "group:submodules/GameUI/GameUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
@@ -351,6 +372,12 @@
       </FileRef>
       <FileRef
          location = "group:submodules/BotPaymentsUI/BotPaymentsUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ContactListUI/ContactListUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramPermissionsUI/TelegramPermissionsUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

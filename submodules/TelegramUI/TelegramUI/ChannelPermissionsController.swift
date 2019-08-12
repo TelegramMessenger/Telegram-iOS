@@ -11,6 +11,8 @@ import OverlayStatusController
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import ItemListPeerItem
+import TelegramPermissionsUI
 
 private final class ChannelPermissionsControllerArguments {
     let account: Account

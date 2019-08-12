@@ -912,7 +912,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
                 }
-            })), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }), completed: nil, cancelled: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, shareContact: {
         shareContactImpl?()

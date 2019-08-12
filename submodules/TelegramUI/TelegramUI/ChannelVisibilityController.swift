@@ -12,6 +12,7 @@ import AccountContext
 import ShareController
 import AlertUI
 import TelegramNotices
+import ItemListPeerItem
 
 private final class ChannelVisibilityControllerArguments {
     let account: Account

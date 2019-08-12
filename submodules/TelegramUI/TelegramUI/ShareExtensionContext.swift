@@ -232,7 +232,7 @@ public class ShareRootControllerImpl {
                                             subscriber.putNext([.media(.media(.standalone(media: TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: vCardData))))])
                                         }
                                         subscriber.putCompletion()
-                                    }), cancelled: {
+                                    }), completed: nil, cancelled: {
                                         cancelImpl?()
                                     })
                                     

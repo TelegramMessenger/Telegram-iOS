@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import SearchUI
 
 enum ChannelMembersSearchControllerMode {
     case promote

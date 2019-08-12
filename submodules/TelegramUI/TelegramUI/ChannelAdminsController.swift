@@ -11,6 +11,7 @@ import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
 import UndoUI
+import ItemListPeerItem
 
 private final class ChannelAdminsControllerArguments {
     let account: Account

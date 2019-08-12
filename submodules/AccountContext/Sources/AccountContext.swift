@@ -210,6 +210,34 @@ public final class NavigateToChatControllerParams {
     }
 }
 
+public enum DeviceContactInfoSubject {
+    case vcard(Peer?, DeviceContactStableId?, DeviceContactExtendedData)
+    case filter(peer: Peer?, contactId: DeviceContactStableId?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactExtendedData) -> Void)
+    case create(peer: Peer?, contactData: DeviceContactExtendedData, isSharing: Bool, shareViaException: Bool, completion: (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void)
+    
+    public var peer: Peer? {
+        switch self {
+        case let .vcard(peer, _, _):
+            return peer
+        case let .filter(peer, _, _, _):
+            return peer
+        case .create:
+            return nil
+        }
+    }
+    
+    public var contactData: DeviceContactExtendedData {
+        switch self {
+        case let .vcard(_, _, data):
+            return data
+        case let .filter(_, _, data, _):
+            return data
+        case let .create(_, data, _, _, _):
+            return data
+        }
+    }
+}
+
 public protocol SharedAccountContext: class {
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -246,11 +274,15 @@ public protocol SharedAccountContext: class {
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
     func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
     func makePeerInfoController(context: AccountContext, peer: Peer) -> ViewController?
+    func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController
+    func makePeersNearbyController(context: AccountContext) -> ViewController
+    func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>
     func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError>
     func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void)
+    func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

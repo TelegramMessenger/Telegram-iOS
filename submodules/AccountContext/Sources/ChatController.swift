@@ -2,6 +2,7 @@ import Foundation
 import Postbox
 import TextFormat
 import Display
+import SwiftSignalKit
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
@@ -234,6 +235,20 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
     }
 }
 
+public enum ChatControllerSubject: Equatable {
+    case message(MessageId)
+    case scheduledMessages
+}
+
+public enum ChatControllerPresentationMode: Equatable {
+    case standard(previewing: Bool)
+    case overlay
+    case inline
+}
+
 public protocol ChatController: ViewController {
+    var chatLocation: ChatLocation { get }
+    var canReadHistory: ValuePromise<Bool> { get }
     
+    func updatePresentationMode(_ mode: ChatControllerPresentationMode)
 }

@@ -21,6 +21,8 @@ import PhotoResources
 import GalleryUI
 import LegacyUI
 import LocationUI
+import ItemListPeerItem
+import ContactListUI
 
 private final class GroupInfoArguments {
     let context: AccountContext

@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import GalleryUI
+import ChatListSearchItemHeader
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult

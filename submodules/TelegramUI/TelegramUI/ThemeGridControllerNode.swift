@@ -12,6 +12,7 @@ import MergeLists
 import ItemListUI
 import AccountContext
 import SearchBarNode
+import SearchUI
 
 private func areWallpapersEqual(_ lhs: TelegramWallpaper, _ rhs: TelegramWallpaper) -> Bool {
     switch lhs {

@@ -14,6 +14,7 @@ import PeerOnlineMarkerNode
 import LocalizedPeerData
 import PeerPresenceStatusManager
 import PhotoResources
+import ChatListSearchItemNode
 
 enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
@@ -29,7 +30,7 @@ enum ChatListItemContent {
     }
 }
 
-class ChatListItem: ListViewItem {
+class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let presentationData: ChatListPresentationData
     let context: AccountContext
     let peerGroupId: PeerGroupId
@@ -49,6 +50,10 @@ class ChatListItem: ListViewItem {
     }
     
     let header: ListViewItemHeader?
+    
+    var isPinned: Bool {
+        return self.index.pinningIndex != nil
+    }
     
     init(presentationData: ChatListPresentationData, context: AccountContext, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData

@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
 import AccountContext
+import ContactListUI
 
 private struct SearchResultEntry: Identifiable {
     let index: Int

@@ -12,6 +12,8 @@ import OverlayStatusController
 import DeviceLocationManager
 import AccountContext
 import AlertUI
+import ItemListPeerItem
+import TelegramPermissionsUI
 
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)

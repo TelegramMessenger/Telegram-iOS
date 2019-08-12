@@ -9,6 +9,10 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import AccountContext
+import SearchUI
+import ContactsPeerItem
+import ChatListSearchItemHeader
+import ContactListUI
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers

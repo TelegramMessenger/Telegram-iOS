@@ -14,6 +14,7 @@ import MediaResources
 import PhotoResources
 import LegacyUI
 import LocationUI
+import ItemListPeerItem
 
 public enum CreateGroupMode {
     case generic

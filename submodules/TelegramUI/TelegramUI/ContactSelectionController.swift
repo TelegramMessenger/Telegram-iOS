@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
+import ContactListUI
+import SearchUI
 
 class ContactSelectionController: ViewController, PresentableController {
     private let context: AccountContext
@@ -162,7 +164,7 @@ class ContactSelectionController: ViewController, PresentableController {
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
-                presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
+                strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                     strongSelf.present(c, in: .window(.root), with: a)
                 })
             }

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import SearchUI
 
 public class NotificationExceptionsController: ViewController {
     private let context: AccountContext

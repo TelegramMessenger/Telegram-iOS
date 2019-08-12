@@ -40,12 +40,6 @@ public enum ChatControllerPeekActions {
     case remove(() -> Void)
 }
 
-public enum ChatControllerPresentationMode: Equatable {
-    case standard(previewing: Bool)
-    case overlay
-    case inline
-}
-
 public final class ChatControllerOverlayPresentationData {
     public let expandData: (ASDisplayNode?, () -> Void)
     public init(expandData: (ASDisplayNode?, () -> Void)) {
@@ -121,11 +115,6 @@ private func calculateSlowmodeActiveUntilTimestamp(account: Account, untilTimest
 }
 
 let ChatControllerCount = Atomic<Int32>(value: 0)
-
-public enum ChatControllerSubject: Equatable {
-    case message(MessageId)
-    case scheduledMessages
-}
 
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
@@ -235,7 +224,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var historyNavigationStack = ChatHistoryNavigationStack()
     
-    let canReadHistory = ValuePromise<Bool>(true, ignoreRepeated: true)
+    public let canReadHistory = ValuePromise<Bool>(true, ignoreRepeated: true)
     private var reminderActivity: NSUserActivity?
     private var isReminderActivityEnabled: Bool = false
     
@@ -5173,7 +5162,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
                             strongSelf.sendMessages([message])
                         } else {
-                            strongSelf.present(deviceContactInfoController(context: strongSelf.context, subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
+                            strongSelf.present(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
                                 guard let strongSelf = self, !contactData.basicData.phoneNumbers.isEmpty else {
                                     return
                                 }
@@ -5191,7 +5180,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
                                     strongSelf.sendMessages([message])
                                 }
-                            })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            }), completed: nil, cancelled: nil), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                         }
                     }
                 }))
@@ -6397,7 +6386,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func addPeerContact() {
         if let peer = self.presentationInterfaceState.renderedPeer?.chatMainPeer as? TelegramUser, let peerStatusSettings = self.presentationInterfaceState.contactStatus?.peerStatusSettings, let contactData = DeviceContactExtendedData(peer: peer) {
-            self.present(deviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: true, shareViaException: peerStatusSettings.contains(.addExceptionWhenAddingContact), completion: { [weak self] peer, stableId, contactData in
+            self.present(context.sharedContext.makeDeviceContactInfoController(context: context, subject: .create(peer: peer, contactData: contactData, isSharing: true, shareViaException: peerStatusSettings.contains(.addExceptionWhenAddingContact), completion: { [weak self] peer, stableId, contactData in
                 guard let strongSelf = self else {
                     return
                 }
@@ -6407,7 +6396,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     self?.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .genericSuccess(strongSelf.presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), in: .window(.root))
                 }
-            })), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }), completed: nil, cancelled: nil), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
     
