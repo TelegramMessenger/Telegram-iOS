@@ -51,17 +51,27 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var validLayout: ContainerViewLayout?
     
     private let effectView: UIVisualEffectView
+    private var propertyAnimator: AnyObject?
+    private var displayLinkAnimator: DisplayLinkAnimator?
     private let dimNode: ASDisplayNode
     
     private let clippingNode: ASDisplayNode
     private let scrollNode: ASScrollNode
     
     private var originalProjectedContentViewFrame: (CGRect, CGRect)?
+    private var contentAreaInScreenSpace: CGRect?
     private var contentParentNode: ContextContentContainingNode?
     private let contentContainerNode: ContextContentContainerNode
     private var actionsContainerNode: ContextActionsContainerNode
     
-    init(controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextControllerContentSource, items: [ContextMenuItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void) {
+    private var didCompleteAnimationIn = false
+    private var initialContinueGesturePoint: CGPoint?
+    private var didMoveFromInitialGesturePoint = false
+    private var highlightedActionNode: ContextActionNode?
+    
+    private let hapticFeedback = HapticFeedback()
+    
+    init(controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextControllerContentSource, items: [ContextMenuItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) {
         self.theme = theme
         self.strings = strings
         self.source = source
@@ -80,11 +90,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.dimNode = ASDisplayNode()
-        if theme.chatList.searchBarKeyboardColor == .dark {
-            self.dimNode.backgroundColor = theme.chatList.backgroundColor.withAlphaComponent(0.2)
-        } else {
-            self.dimNode.backgroundColor = UIColor(rgb: 0xb8bbc1, alpha: 0.5)
-        }
+        self.dimNode.backgroundColor = theme.contextMenu.dimColor
         self.dimNode.alpha = 0.0
         
         self.clippingNode = ASDisplayNode()
@@ -109,6 +115,15 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         super.init()
         
+        if #available(iOS 10.0, *) {
+            let propertyAnimator = UIViewPropertyAnimator(duration: 0.4, curve: .linear)
+            propertyAnimator.isInterruptible = true
+            propertyAnimator.addAnimations {
+                self.effectView.effect = makeCustomZoomBlurEffect()
+            }
+            self.propertyAnimator = propertyAnimator
+        }
+        
         self.scrollNode.view.delegate = self
         
         self.view.addSubview(self.effectView)
@@ -124,6 +139,71 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         getController = { [weak controller] in
             return controller
         }
+        
+        if let recognizer = recognizer {
+            recognizer.externalUpdated = { [weak self, weak recognizer] view, point in
+                guard let strongSelf = self, let _ = recognizer else {
+                    return
+                }
+                let localPoint = strongSelf.view.convert(point, from: view)
+                let initialPoint: CGPoint
+                if let current = strongSelf.initialContinueGesturePoint {
+                    initialPoint = current
+                } else {
+                    initialPoint = localPoint
+                    strongSelf.initialContinueGesturePoint = localPoint
+                }
+                if strongSelf.didCompleteAnimationIn {
+                    if !strongSelf.didMoveFromInitialGesturePoint {
+                        let distance = abs(localPoint.y - initialPoint.y)
+                        if distance > 4.0 {
+                            strongSelf.didMoveFromInitialGesturePoint = true
+                        }
+                    }
+                    if strongSelf.didMoveFromInitialGesturePoint {
+                        let actionPoint = strongSelf.view.convert(localPoint, to: strongSelf.actionsContainerNode.view)
+                        let actionNode = strongSelf.actionsContainerNode.actionNode(at: actionPoint)
+                        if strongSelf.highlightedActionNode !== actionNode {
+                            strongSelf.highlightedActionNode?.setIsHighlighted(false)
+                            strongSelf.highlightedActionNode = actionNode
+                            if let actionNode = actionNode {
+                                actionNode.setIsHighlighted(true)
+                                strongSelf.hapticFeedback.tap()
+                            }
+                        }
+                    }
+                }
+            }
+            recognizer.externalEnded = { [weak self, weak recognizer] viewAndPoint in
+                guard let strongSelf = self, let recognizer = recognizer else {
+                    return
+                }
+                recognizer.externalUpdated = nil
+                if strongSelf.didMoveFromInitialGesturePoint {
+                    if let (view, point) = viewAndPoint {
+                        let _ = strongSelf.view.convert(point, from: view)
+                        if let highlightedActionNode = strongSelf.highlightedActionNode {
+                            strongSelf.highlightedActionNode = nil
+                            highlightedActionNode.performAction()
+                        }
+                    } else {
+                        if let highlightedActionNode = strongSelf.highlightedActionNode {
+                            strongSelf.highlightedActionNode = nil
+                            highlightedActionNode.setIsHighlighted(false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    deinit {
+        if let propertyAnimator = self.propertyAnimator {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+                propertyAnimator?.stopAnimation(true)
+            }
+        }
     }
     
     override func didLoad() {
@@ -137,11 +217,24 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func animateIn() {
+        self.hapticFeedback.impact()
+        
         let takenViewInfo = self.source.takeView()
         
         if let takenViewInfo = takenViewInfo, let parentSupernode = takenViewInfo.contentContainingNode.supernode {
             self.contentParentNode = takenViewInfo.contentContainingNode
+            let contentParentNode = takenViewInfo.contentContainingNode
+            takenViewInfo.contentContainingNode.layoutUpdated = { [weak contentParentNode, weak self] size in
+                guard let strongSelf = self, let contentParentNode = contentParentNode, let parentSupernode = contentParentNode.supernode else {
+                    return
+                }
+                strongSelf.originalProjectedContentViewFrame = (parentSupernode.view.convert(contentParentNode.frame, to: strongSelf.view), contentParentNode.view.convert(contentParentNode.contentRect, to: strongSelf.view))
+                if let validLayout = strongSelf.validLayout {
+                    strongSelf.updateLayout(layout: validLayout, transition: .animated(duration: 0.2, curve: .easeInOut), previousActionsContainerNode: nil)
+                }
+            }
             self.contentContainerNode.contentNode = takenViewInfo.contentContainingNode.contentNode
+            self.contentAreaInScreenSpace = takenViewInfo.contentAreaInScreenSpace
             self.contentContainerNode.addSubnode(takenViewInfo.contentContainingNode.contentNode)
             takenViewInfo.contentContainingNode.isExtractedToContextPreview = true
             takenViewInfo.contentContainingNode.isExtractedToContextPreviewUpdated?(true)
@@ -158,45 +251,59 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.dimNode.alpha = 1.0
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
-        UIView.animate(withDuration: 0.25, animations: {
-            if #available(iOS 9.0, *) {
-                if self.theme.chatList.searchBarKeyboardColor == .dark {
-                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                            self.effectView.effect = UIBlurEffect(style: .dark)
-                        } else {
-                            self.effectView.effect = UIBlurEffect(style: .regular)
-                            if self.effectView.subviews.count == 2 {
-                                self.effectView.subviews[1].isHidden = true
+        if let _ = self.propertyAnimator {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.25, from: 0.0, to: 1.0, update: { [weak self] value in
+                    (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
+                }, completion: { [weak self] in
+                    self?.didCompleteAnimationIn = true
+                    self?.hapticFeedback.prepareTap()
+                })
+            }
+        } else {
+            UIView.animate(withDuration: 0.25, animations: {
+                if #available(iOS 9.0, *) {
+                    if self.theme.chatList.searchBarKeyboardColor == .dark {
+                        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                                self.effectView.effect = UIBlurEffect(style: .dark)
+                            } else {
+                                self.effectView.effect = UIBlurEffect(style: .regular)
+                                if self.effectView.subviews.count == 2 {
+                                    self.effectView.subviews[1].isHidden = true
+                                }
                             }
+                        } else {
+                            self.effectView.effect = UIBlurEffect(style: .dark)
                         }
                     } else {
-                        self.effectView.effect = UIBlurEffect(style: .dark)
+                        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                            self.effectView.effect = UIBlurEffect(style: .regular)
+                        } else {
+                            self.effectView.effect = UIBlurEffect(style: .light)
+                        }
                     }
                 } else {
-                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                        self.effectView.effect = UIBlurEffect(style: .regular)
+                    self.effectView.alpha = 1.0
+                }
+            }, completion: { [weak self] _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.theme.chatList.searchBarKeyboardColor == .dark {
+                    if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
                     } else {
-                        self.effectView.effect = UIBlurEffect(style: .light)
+                        if strongSelf.effectView.subviews.count == 2 {
+                            strongSelf.effectView.subviews[1].isHidden = true
+                        }
                     }
                 }
-            } else {
-                self.effectView.alpha = 1.0
-            }
-        }, completion: { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-            if strongSelf.theme.chatList.searchBarKeyboardColor == .dark {
-                if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                } else {
-                    if strongSelf.effectView.subviews.count == 2 {
-                        strongSelf.effectView.subviews[1].isHidden = true
-                    }
-                }
-            }
-        })
-        //self.effectView.subviews[1].layer.removeAnimation(forKey: "backgroundColor")
+            })
+        }
+        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+        } else {
+            //self.effectView.subviews[1].layer.removeAnimation(forKey: "backgroundColor")
+        }
         
         self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
@@ -247,16 +354,28 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
-        UIView.animate(withDuration: 0.3, animations: {
-            if #available(iOS 9.0, *) {
-                self.effectView.effect = nil
-            } else {
-                self.effectView.alpha = 0.0
+        if let propertyAnimator = self.propertyAnimator {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.22, from: (propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete ?? 0.2, to: 0.0, update: { [weak self] value in
+                    (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
+                }, completion: { [weak self] in
+                    self?.effectView.isHidden = true
+                    completedEffect = true
+                    intermediateCompletion()
+                })
             }
-        }, completion: { _ in
-            completedEffect = true
-            intermediateCompletion()
-        })
+        } else {
+            UIView.animate(withDuration: 0.3, animations: {
+                if #available(iOS 9.0, *) {
+                    self.effectView.effect = nil
+                } else {
+                    self.effectView.alpha = 0.0
+                }
+            }, completion: { _ in
+                completedEffect = true
+                intermediateCompletion()
+            })
+        }
         
         self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
         self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
@@ -337,13 +456,20 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.contentContainerNode.updateLayout(size: contentSize, transition: transition)
             
             let maximumActionsFrameOrigin = max(60.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - actionsSize.height)
-            let originalActionsFrame = CGRect(origin: CGPoint(x: max(actionsSideInset, min(layout.size.width - actionsSize.width - actionsSideInset, originalProjectedContentViewFrame.1.minX)), y: min(originalProjectedContentViewFrame.1.maxY + contentActionsSpacing, maximumActionsFrameOrigin)), size: actionsSize)
-            let originalContentFrame = CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalActionsFrame.minY - contentActionsSpacing - originalProjectedContentViewFrame.1.size.height), size: originalProjectedContentViewFrame.1.size)
+            var originalActionsFrame = CGRect(origin: CGPoint(x: max(actionsSideInset, min(layout.size.width - actionsSize.width - actionsSideInset, originalProjectedContentViewFrame.1.minX)), y: min(originalProjectedContentViewFrame.1.maxY + contentActionsSpacing, maximumActionsFrameOrigin)), size: actionsSize)
+            var originalContentFrame = CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalActionsFrame.minY - contentActionsSpacing - originalProjectedContentViewFrame.1.size.height), size: originalProjectedContentViewFrame.1.size)
+            let topEdge = max(contentTopInset, self.contentAreaInScreenSpace?.minY ?? 0.0)
+            if originalContentFrame.minY < topEdge {
+                let requiredOffset = topEdge - originalContentFrame.minY
+                let availableOffset = max(0.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - originalActionsFrame.maxY)
+                let offset = min(requiredOffset, availableOffset)
+                originalActionsFrame = originalActionsFrame.offsetBy(dx: 0.0, dy: offset)
+                originalContentFrame = originalContentFrame.offsetBy(dx: 0.0, dy: offset)
+            }
             
             let contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalContentFrame.minY + contentTopInset)
             
             let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
-            let initialContentOffset = self.scrollNode.view.contentOffset
             if self.scrollNode.view.contentSize != scrollContentSize {
                 self.scrollNode.view.contentSize = scrollContentSize
             }
@@ -434,24 +560,25 @@ public final class ContextController: ViewController {
     private let source: ContextControllerContentSource
     private var items: [ContextMenuItem]
     
+    private weak var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    
     private var animatedDidAppear = false
     private var wasDismissed = false
-    
-    private let hapticFeedback = HapticFeedback()
     
     private var controllerNode: ContextControllerNode {
         return self.displayNode as! ContextControllerNode
     }
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, source: ContextControllerContentSource, items: [ContextMenuItem]) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, source: ContextControllerContentSource, items: [ContextMenuItem], recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil) {
         self.theme = theme
         self.strings = strings
         self.source = source
         self.items = items
+        self.recognizer = recognizer
         
         super.init(navigationBarPresentationData: nil)
         
-        self.statusBar.statusBarStyle = .Ignore
+        self.statusBar.statusBarStyle = .Hide
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -461,7 +588,7 @@ public final class ContextController: ViewController {
     override public func loadDisplayNode() {
         self.displayNode = ContextControllerNode(controller: self, theme: self.theme, strings: self.strings, source: self.source, items: self.items, beginDismiss: { [weak self] result in
             self?.dismiss(result: result)
-        })
+        }, recognizer: self.recognizer)
         
         self.displayNodeDidLoad()
     }
@@ -473,12 +600,14 @@ public final class ContextController: ViewController {
     }
     
     override public func viewDidAppear(_ animated: Bool) {
+        if self.ignoreAppearanceMethodInvocations() {
+            return
+        }
         super.viewDidAppear(animated)
         
         if !self.wasDismissed && !self.animatedDidAppear {
             self.animatedDidAppear = true
             self.controllerNode.animateIn()
-            self.hapticFeedback.impact()
         }
     }
     

@@ -35,11 +35,27 @@
          location = "group:submodules/Tuples/Tuples_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
          location = "group:submodules/SaveToCameraRoll/SaveToCameraRoll_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramNotices/TelegramNotices_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramPermissions/TelegramPermissions_Xcode.xcodeproj">
+      </FileRef>
+      <Group
+         location = "container:"
+         name = "Image Processing">
+         <FileRef
+            location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/TinyThumbnail/TinyThumbnail_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ImageTransparency/ImageTransparency_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
    </Group>
    <Group
       location = "container:"
@@ -80,6 +96,9 @@
             location = "group:submodules/MediaResources/MediaResources_Xcode.xcodeproj">
          </FileRef>
          <FileRef
+            location = "group:submodules/PhotoResources/PhotoResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
             location = "group:submodules/StickerResources/StickerResources_Xcode.xcodeproj">
          </FileRef>
       </Group>
@@ -100,6 +119,19 @@
    <Group
       location = "container:"
       name = "UI Components">
+      <Group
+         location = "container:"
+         name = "Gestures">
+         <FileRef
+            location = "group:submodules/TouchDownGesture/TouchDownGesture_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SwipeToDismissGesture/SwipeToDismissGesture_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/DirectionalPanGesture/DirectionalPanGesture_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
       <Group
          location = "container:"
          name = "Share">
@@ -143,6 +175,9 @@
             location = "group:submodules/AvatarNode/AvatarNode_Xcode.xcodeproj">
          </FileRef>
       </Group>
+      <FileRef
+         location = "group:submodules/AlertUI/AlertUI_Xcode.xcodeproj">
+      </FileRef>
       <FileRef
          location = "group:submodules/RadialStatusNode/RadialStatusNode_Xcode.xcodeproj">
       </FileRef>
@@ -202,6 +237,12 @@
       </FileRef>
       <FileRef
          location = "group:submodules/ContextUI/ContextUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/ComposePollUI/ComposePollUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/UndoUI/UndoUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

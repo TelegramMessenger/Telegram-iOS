@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramUIPreferences
 import AccountContext
 import OverlayStatusController
+import AlertUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -169,8 +170,10 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                         })
                     })
                     |> deliverOnMainQueue).start(completed: {
-                        navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId), messageId: nil))
+                        navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId)))
                     })
+                } else {
+                    navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId)))
                 }
             }
             

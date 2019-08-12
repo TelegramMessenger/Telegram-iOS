@@ -8,6 +8,7 @@ import SwiftSignalKit
 import CoreTelephony
 import TelegramPresentationData
 import AccountContext
+import AlertUI
 
 private func cleanPhoneNumber(_ text: String?) -> String {
     var cleanNumber = ""

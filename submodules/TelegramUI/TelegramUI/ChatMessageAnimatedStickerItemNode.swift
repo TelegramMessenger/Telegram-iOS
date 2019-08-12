@@ -20,8 +20,8 @@ private let inlineBotNameFont = nameFont
 
 private class ChatMessageHeartbeatHaptic {
     private var hapticFeedback = HapticFeedback()
-    var timer: SwiftSignalKit.Timer?
-    var time: Double = 0
+    private var timer: SwiftSignalKit.Timer?
+    private var time: Double = 0.0
     var enabled = false {
         didSet {
             if !self.enabled {
@@ -57,7 +57,7 @@ private class ChatMessageHeartbeatHaptic {
         if time > 2.0 {
             return
         }
-        
+
         var startTime: Double = 0.0
         var delay: Double = 0.0
         
@@ -238,7 +238,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 break
             }
         }
-        
+
         let (emoji, fitz) = item.message.text.basicEmoji
         if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file {
             if self.emojiFile?.id != emojiFile.id {
@@ -803,7 +803,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     |> deliverOnMainQueue
                             }
                             
-                            if self.item?.message.text == "❤️" {
+                            if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, firstScalar.value == 0x2764 {
                                 let _ = startTime.start(next: { [weak self] time in
                                     guard let strongSelf = self else {
                                         return
@@ -829,7 +829,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.item?.controllerInteraction.clickThroughMessage()
                 case .longTap, .doubleTap:
                     if let item = self.item, self.imageNode.frame.contains(location) {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
                     }
                 case .hold:
                     break

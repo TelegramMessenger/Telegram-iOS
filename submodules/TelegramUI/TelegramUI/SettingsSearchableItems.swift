@@ -247,15 +247,18 @@ private func stickerSearchableItems(context: AccountContext, archivedStickerPack
     items.append(SettingsSearchableItem(id: .stickers(1), title: strings.Stickers_SuggestStickers, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_SuggestStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         presentStickerSettings(context, present, .suggestOptions)
     }))
-    items.append(SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_FeaturedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_FeaturedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
+    items.append(SettingsSearchableItem(id: .stickers(2), title: strings.StickerPacksSettings_AnimatedStickers, alternate: synonyms(strings.StickerPacksSettings_AnimatedStickers), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
+        presentStickerSettings(context, present, .loopAnimatedStickers)
+    }))
+    items.append(SettingsSearchableItem(id: .stickers(3), title: strings.StickerPacksSettings_FeaturedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_FeaturedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         present(.push, featuredStickerPacksController(context: context))
     }))
     if !(archivedStickerPacks?.isEmpty ?? true) {
-        items.append(SettingsSearchableItem(id: .stickers(3), title: strings.StickerPacksSettings_ArchivedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_ArchivedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
+        items.append(SettingsSearchableItem(id: .stickers(4), title: strings.StickerPacksSettings_ArchivedPacks, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_ArchivedPacks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
             present(.push, archivedStickerPacksController(context: context, mode: .stickers, archived: archivedStickerPacks, updatedPacks: { _ in }))
         }))
     }
-    items.append(SettingsSearchableItem(id: .stickers(4), title: strings.MaskStickerSettings_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_Masks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
+    items.append(SettingsSearchableItem(id: .stickers(5), title: strings.MaskStickerSettings_Title, alternate: synonyms(strings.SettingsSearch_Synonyms_Stickers_Masks), icon: icon, breadcrumbs: [strings.ChatSettings_Stickers], present: { context, _, present in
         present(.push, installedStickerPacksController(context: context, mode: .masks, archivedPacks: nil, updatedPacks: { _ in }))
     }))
     return items

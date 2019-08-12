@@ -15,6 +15,7 @@ import AppBinaryPrivate
 #endif
 import TelegramUIPrivateModule
 import LegacyComponents
+import TelegramNotices
 
 @objc(TGPresentationState) private final class TGPresentationState: NSObject, NSCoding {
     let pallete: Int32

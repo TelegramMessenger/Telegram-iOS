@@ -275,7 +275,7 @@ private func peerIdsRequiringLocalChatStateFromDifference(_ difference: Api.upda
     switch difference {
         case let .difference(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                if let messageId = message.id {
+                if let messageId = message.id() {
                     peerIds.insert(messageId.peerId)
                 }
             }
@@ -296,7 +296,7 @@ private func peerIdsRequiringLocalChatStateFromDifference(_ difference: Api.upda
             break
         case let .differenceSlice(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
-                if let messageId = message.id {
+                if let messageId = message.id() {
                     peerIds.insert(messageId.peerId)
                 }
             }
@@ -647,8 +647,7 @@ func finalStateWithDifference(postbox: Postbox, network: Network, state: Account
 }
 
 private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
-    var result: [Api.Update] = []
-    
+    var otherUpdates: [Api.Update] = []
     var updatesByChannel: [PeerId: [Api.Update]] = [:]
     
     for update in updates {
@@ -675,7 +674,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                         updatesByChannel[peerId]!.append(update)
                     }
                 } else {
-                    result.append(update)
+                    otherUpdates.append(update)
                 }
             case let .updateEditChannelMessage(message, _, _):
                 if let peerId = apiMessagePeerId(message) {
@@ -685,7 +684,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                         updatesByChannel[peerId]!.append(update)
                     }
                 } else {
-                    result.append(update)
+                    otherUpdates.append(update)
                 }
             case let .updateChannelWebPage(channelId, _, _, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId)
@@ -702,9 +701,11 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                     updatesByChannel[peerId]!.append(update)
                 }
             default:
-                result.append(update)
+                otherUpdates.append(update)
         }
     }
+    
+    var result: [Api.Update] = []
     
     for (_, updates) in updatesByChannel {
         let sortedUpdates = updates.sorted(by: { lhs, rhs in
@@ -747,6 +748,7 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
         })
         result.append(contentsOf: sortedUpdates)
     }
+    result.append(contentsOf: otherUpdates)
     
     return result
 }
@@ -1302,6 +1304,16 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     peersNearby.append(PeerNearby(id: peer.peerId, expires: expires, distance: distance))
                 }
                 updatedState.updatePeersNearby(peersNearby)
+            case let .updateNewScheduledMessage(apiMessage):
+                if let message = StoreMessage(apiMessage: apiMessage, namespace: Namespaces.Message.CloudScheduled) {
+                    updatedState.addMessages([message], location: .Random)
+                }
+            case let .updateDeleteScheduledMessages(peer, messages):
+                var messageIds: [MessageId] = []
+                for message in messages {
+                    messageIds.append(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.CloudScheduled, id: message))
+                }
+                updatedState.deleteMessages(messageIds)
             default:
                 break
         }

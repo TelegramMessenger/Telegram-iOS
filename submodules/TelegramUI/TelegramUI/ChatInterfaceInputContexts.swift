@@ -258,6 +258,10 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                 }
                 if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
+                    if chatPresentationInterfaceState.hasScheduledMessages {
+                        accessoryItems.append(.scheduledMessages)
+                    }
+                    
                     var stickersEnabled = true
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                         if case .broadcast = peer.info, canSendMessagesToPeer(peer) {

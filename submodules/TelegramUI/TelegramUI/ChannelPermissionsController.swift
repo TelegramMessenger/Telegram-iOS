@@ -10,6 +10,7 @@ import ItemListUI
 import OverlayStatusController
 import AccountContext
 import TemporaryCachedPeerDataManager
+import AlertUI
 
 private final class ChannelPermissionsControllerArguments {
     let account: Account

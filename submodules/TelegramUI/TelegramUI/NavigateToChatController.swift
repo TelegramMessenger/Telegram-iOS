@@ -15,7 +15,7 @@ public func navigateToChatController(navigationController: NavigationController,
     var found = false
     var isFirst = true
     for controller in navigationController.viewControllers.reversed() {
-        if let controller = controller as? ChatController, controller.chatLocation == chatLocation {
+        if let controller = controller as? ChatController, controller.chatLocation == chatLocation && controller.subject != .scheduledMessages {
             if let updateTextInputState = updateTextInputState {
                 controller.updateTextInputState(updateTextInputState)
             }
@@ -60,7 +60,7 @@ public func navigateToChatController(navigationController: NavigationController,
                 }
             }
         } else {
-            controller = ChatController(context: context, chatLocation: chatLocation, messageId: messageId, botStart: botStart)
+            controller = ChatController(context: context, chatLocation: chatLocation, subject: messageId.flatMap({ .message($0) }), botStart: botStart)
         }
         controller.purposefulAction = purposefulAction
         let resolvedKeepStack: Bool

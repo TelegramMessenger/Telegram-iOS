@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramBaseController
 import AccountContext
+import AlertUI
 
 final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {
@@ -46,7 +47,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, beginMessageSelection: { _ in
         }, deleteSelectedMessages: {
         }, reportSelectedMessages: {
-        }, reportMessages: { _ in
+        }, reportMessages: { _, _ in
         }, deleteMessages: { _, _, f in
             f(.default)
         }, forwardSelectedMessages: {
@@ -109,6 +110,7 @@ final class ChatRecentActionsController: TelegramBaseController {
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: {
+        }, openScheduledMessages: {
         }, statuses: nil)
         
         self.navigationItem.titleView = self.titleView

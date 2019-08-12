@@ -12,7 +12,13 @@ enum MessageTimestampStatusFormat {
 }
 
 func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
-    var dateText = stringForMessageTimestamp(timestamp: message.timestamp, dateTimeFormat: dateTimeFormat)
+    let timestamp: Int32
+    if let scheduleTime = message.scheduleTime {
+        timestamp = scheduleTime
+    } else {
+        timestamp = message.timestamp
+    }
+    var dateText = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: dateTimeFormat)
     
     var authorTitle: String?
     if let author = message.author as? TelegramUser {

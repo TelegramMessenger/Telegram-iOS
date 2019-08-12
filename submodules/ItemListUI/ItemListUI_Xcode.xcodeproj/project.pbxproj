@@ -25,6 +25,10 @@
 		D06018BC22F3663900796784 /* ItemListSelectableControlNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06018B922F3663800796784 /* ItemListSelectableControlNode.swift */; };
 		D06018BD22F3663900796784 /* ItemListEditableDeleteControlNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06018BA22F3663900796784 /* ItemListEditableDeleteControlNode.swift */; };
 		D06018E322F366F200796784 /* CheckNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018E222F366F200796784 /* CheckNode.framework */; };
+		D0C9BFB222FE327700FAB518 /* ItemListPlaceholderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9BFAE22FE327700FAB518 /* ItemListPlaceholderItem.swift */; };
+		D0C9BFB322FE327700FAB518 /* ItemListSectionHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9BFAF22FE327700FAB518 /* ItemListSectionHeaderItem.swift */; };
+		D0C9BFB422FE327700FAB518 /* ItemListSingleLineInputItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9BFB022FE327700FAB518 /* ItemListSingleLineInputItem.swift */; };
+		D0C9BFB522FE327700FAB518 /* ItemListTextEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9BFB122FE327700FAB518 /* ItemListTextEmptyStateItem.swift */; };
 		D0D3282422F3205E00D07EE2 /* ItemListUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D3282222F3205E00D07EE2 /* ItemListUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D3286522F3366600D07EE2 /* ItemListControllerEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3286022F3366500D07EE2 /* ItemListControllerEmptyStateItem.swift */; };
 		D0D3286622F3366600D07EE2 /* ItemListControllerSegmentedTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3286122F3366500D07EE2 /* ItemListControllerSegmentedTitleView.swift */; };
@@ -62,6 +66,10 @@
 		D06018B922F3663800796784 /* ItemListSelectableControlNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSelectableControlNode.swift; sourceTree = "<group>"; };
 		D06018BA22F3663900796784 /* ItemListEditableDeleteControlNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListEditableDeleteControlNode.swift; sourceTree = "<group>"; };
 		D06018E222F366F200796784 /* CheckNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CheckNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9BFAE22FE327700FAB518 /* ItemListPlaceholderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListPlaceholderItem.swift; sourceTree = "<group>"; };
+		D0C9BFAF22FE327700FAB518 /* ItemListSectionHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSectionHeaderItem.swift; sourceTree = "<group>"; };
+		D0C9BFB022FE327700FAB518 /* ItemListSingleLineInputItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSingleLineInputItem.swift; sourceTree = "<group>"; };
+		D0C9BFB122FE327700FAB518 /* ItemListTextEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextEmptyStateItem.swift; sourceTree = "<group>"; };
 		D0D3281F22F3205E00D07EE2 /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D3282222F3205E00D07EE2 /* ItemListUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ItemListUI.h; sourceTree = "<group>"; };
 		D0D3282322F3205E00D07EE2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -108,6 +116,10 @@
 		D060185D22F35E2200796784 /* Items */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9BFAE22FE327700FAB518 /* ItemListPlaceholderItem.swift */,
+				D0C9BFAF22FE327700FAB518 /* ItemListSectionHeaderItem.swift */,
+				D0C9BFB022FE327700FAB518 /* ItemListSingleLineInputItem.swift */,
+				D0C9BFB122FE327700FAB518 /* ItemListTextEmptyStateItem.swift */,
 				D060184C22F35E1E00796784 /* ItemListActionItem.swift */,
 				D060184B22F35E1E00796784 /* ItemListActivityTextItem.swift */,
 				D060185222F35E1F00796784 /* ItemListCheckboxItem.swift */,
@@ -259,17 +271,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9BFB422FE327700FAB518 /* ItemListSingleLineInputItem.swift in Sources */,
 				D060185322F35E1F00796784 /* ItemListMultilineInputItem.swift in Sources */,
 				D06018BB22F3663900796784 /* ItemListEditableReorderControlNode.swift in Sources */,
 				D060185522F35E1F00796784 /* ItemListActivityTextItem.swift in Sources */,
 				D060186122F35F6C00796784 /* ItemListRevealOptionsNode.swift in Sources */,
 				D06018BC22F3663900796784 /* ItemListSelectableControlNode.swift in Sources */,
 				D060185822F35E1F00796784 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
+				D0C9BFB322FE327700FAB518 /* ItemListSectionHeaderItem.swift in Sources */,
 				D0D3286522F3366600D07EE2 /* ItemListControllerEmptyStateItem.swift in Sources */,
 				D060185622F35E1F00796784 /* ItemListActionItem.swift in Sources */,
 				D060185922F35E1F00796784 /* ItemListEditableItem.swift in Sources */,
 				D060185A22F35E1F00796784 /* ItemListDisclosureItem.swift in Sources */,
 				D060185422F35E1F00796784 /* ItemListTextWithLabelItem.swift in Sources */,
+				D0C9BFB222FE327700FAB518 /* ItemListPlaceholderItem.swift in Sources */,
 				D0D3286722F3366600D07EE2 /* ItemListController.swift in Sources */,
 				D0D3286822F3366600D07EE2 /* ItemListControllerSearch.swift in Sources */,
 				D060185722F35E1F00796784 /* ItemListSwitchItem.swift in Sources */,
@@ -280,6 +295,7 @@
 				D06018BD22F3663900796784 /* ItemListEditableDeleteControlNode.swift in Sources */,
 				D0D3289A22F345C500D07EE2 /* ItemListItem.swift in Sources */,
 				D060185C22F35E1F00796784 /* ItemListCheckboxItem.swift in Sources */,
+				D0C9BFB522FE327700FAB518 /* ItemListTextEmptyStateItem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

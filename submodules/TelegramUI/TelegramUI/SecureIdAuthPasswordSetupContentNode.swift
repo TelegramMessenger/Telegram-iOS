@@ -95,7 +95,7 @@ final class SecureIdAuthPasswordSetupContentNode: ASDisplayNode, SecureIdAuthCon
             self.buttonTextNode.attributedText = NSAttributedString(string: self.strings.Passport_PasswordCompleteSetup, font: buttonFont, textColor: self.theme.list.itemAccentColor)
         }
         if let width = self.validLayout {
-            self.updateLayout(width: width, transition: .immediate)
+            let _ = self.updateLayout(width: width, transition: .immediate)
         }
     }
     

@@ -75,7 +75,7 @@ public final class ContextMenuContainerNode: ASDisplayNode {
                 path.addLine(to: CGPoint(x: arrowPosition - arrowWidth / 2.0, y: maskParams.size.height - verticalInset))
             }
             path.addLine(to: CGPoint(x: cornerRadius, y: maskParams.size.height - verticalInset))
-            path.addArc(withCenter: CGPoint(x: cornerRadius, y: maskParams.size.height - cornerRadius - verticalInset), radius: cornerRadius, startAngle: CGFloat(CGFloat.pi / 2.0), endAngle: CGFloat(M_PI), clockwise: true)
+            path.addArc(withCenter: CGPoint(x: cornerRadius, y: maskParams.size.height - cornerRadius - verticalInset), radius: cornerRadius, startAngle: CGFloat(CGFloat.pi / 2.0), endAngle: CGFloat.pi, clockwise: true)
             path.close()
             
             self.cachedMaskParams = maskParams

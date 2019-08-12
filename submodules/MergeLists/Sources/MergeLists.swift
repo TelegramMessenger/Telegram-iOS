@@ -1,5 +1,6 @@
 import Foundation
 
+@inlinable
 public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) where T: Comparable, T: Identifiable {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []
@@ -180,6 +181,7 @@ public func mergeListsStableWithUpdates<T>(leftList: [T], rightList: [T], allUpd
     return (removeIndices, insertItems, updatedIndices)
 }
 
+@inlinable
 public func mergeListsStableWithUpdatesReversed<T>(leftList: [T], rightList: [T], allUpdated: Bool = false) -> ([Int], [(Int, T, Int?)], [(Int, T, Int)]) where T: Comparable, T: Identifiable {
     var removeIndices: [Int] = []
     var insertItems: [(Int, T, Int?)] = []

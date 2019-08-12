@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
+import AlertUI
 
 enum SecureIdDocumentFormScrollToSubject {
     case selfie

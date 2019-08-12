@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
+import AlertUI
 
 final class ChangePhoneNumberController: ViewController {
     private var controllerNode: ChangePhoneNumberControllerNode {

@@ -299,6 +299,18 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         checkContentColor: .white
     )
     
+    let contextMenu = PresentationThemeContextMenu(
+        dimColor: UIColor(rgb: 0x000A26, alpha: 0.2),
+        backgroundColor: UIColor(rgb: 0xF9F9F9, alpha: 0.78),
+        itemSeparatorColor: UIColor(rgb: 0x3C3C43, alpha: 0.2),
+        sectionSeparatorColor: UIColor(rgb: 0x8A8A8A, alpha: 0.2),
+        itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
+        itemHighlightedBackgroundColor: UIColor(rgb: 0x3C3C43, alpha: 0.2),
+        primaryColor: UIColor(rgb: 0x000000, alpha: 1.0),
+        secondaryColor: UIColor(rgb: 0x000000, alpha: 0.8),
+        destructiveColor: destructiveColor
+    )
+    
     let inAppNotification = PresentationThemeInAppNotification(
         fillColor: .white,
         primaryTextColor: .black,
@@ -325,6 +337,7 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         chatList: chatList,
         chat: chat,
         actionSheet: actionSheet,
+        contextMenu: contextMenu,
         inAppNotification: inAppNotification,
         preview: preview
     )

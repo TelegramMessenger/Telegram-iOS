@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import SwiftSignalKit
+import TelegramNotices
 
 final class InteractiveChatLinkPreviewsResult {
     let f: (Bool) -> Void

@@ -9,6 +9,7 @@ import AVFoundation
 import UniversalMediaPlayer
 import TelegramAudio
 import AccountContext
+import PhotoResources
 
 enum PlatformVideoContentId: Hashable {
     case message(MessageId, UInt32, MediaId)

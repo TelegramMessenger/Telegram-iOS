@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import TextFormat
+import TelegramPermissions
 
 enum PermissionContentIcon {
     case image(UIImage?)
@@ -80,7 +81,7 @@ final class PermissionContentNode: ASDisplayNode {
         self.textNode.maximumNumberOfLines = 0
         self.textNode.displaysAsynchronously = false
         
-        self.actionButton = SolidRoundedButtonNode(theme: theme, height: 48.0, cornerRadius: 9.0)
+        self.actionButton = SolidRoundedButtonNode(theme: theme, height: 48.0, cornerRadius: 9.0, gloss: true)
         
         self.footerNode = ImmediateTextNode()
         self.footerNode.textAlignment = .center
@@ -178,7 +179,8 @@ final class PermissionContentNode: ASDisplayNode {
         let titleSize = self.titleNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
         let subtitleSize = self.subtitleNode.updateLayout(CGSize(width: size.width - smallerSidePadding * 2.0, height: .greatestFiniteMagnitude))
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))
-        let buttonWidth = min(size.width, size.height)
+        let buttonInset: CGFloat = 38.0
+        let buttonWidth = min(size.width, size.height) - buttonInset * 2.0
         let buttonHeight = self.actionButton.updateLayout(width: buttonWidth, transition: transition)
         let footerSize = self.footerNode.updateLayout(CGSize(width: size.width - smallerSidePadding * 2.0, height: .greatestFiniteMagnitude))
         let privacyButtonSize = self.privacyPolicyButton.measure(CGSize(width: size.width - sidePadding * 2.0, height: .greatestFiniteMagnitude))

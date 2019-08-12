@@ -65,7 +65,7 @@ final class GlobalOverlayPresentationContext {
         
         var underStatusBar = false
         if let controller = controller as? ViewController {
-            if case .Ignore = controller.statusBar.statusBarStyle {
+            if case .Hide = controller.statusBar.statusBarStyle {
                 underStatusBar = true
             }
         }
@@ -145,7 +145,7 @@ final class GlobalOverlayPresentationContext {
             for controller in self.controllers {
                 var underStatusBar = false
                 if let controller = controller as? ViewController {
-                    if case .Ignore = controller.statusBar.statusBarStyle {
+                    if case .Hide = controller.statusBar.statusBarStyle {
                         underStatusBar = true
                     }
                 }

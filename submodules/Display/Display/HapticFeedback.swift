@@ -24,6 +24,9 @@ private final class HapticFeedbackImpl {
         if number == "1" {
             return generator
         } else {
+            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                return generator
+            }
             return nil
         }
     }()

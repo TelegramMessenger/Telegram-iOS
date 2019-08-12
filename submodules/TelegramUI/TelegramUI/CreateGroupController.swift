@@ -9,6 +9,9 @@ import TelegramUIPreferences
 import LegacyComponents
 import ItemListUI
 import AccountContext
+import AlertUI
+import MediaResources
+import PhotoResources
 
 public enum CreateGroupMode {
     case generic

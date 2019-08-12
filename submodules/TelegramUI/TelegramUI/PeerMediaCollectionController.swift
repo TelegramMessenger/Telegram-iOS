@@ -119,7 +119,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id))
                 }
             }, openPeerMention: { _ in
-            }, openMessageContextMenu: { [weak self] message, _, _, _ in
+            }, openMessageContextMenu: { [weak self] message, _, _, _, _ in
                 var messageIds = Set<MessageId>()
                 messageIds.insert(message.id)
                 
@@ -175,7 +175,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             }
                         }*/
                     } else {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(id.peerId), messageId: id))
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(id.peerId), subject: .message(id)))
                     }
                 }
             }, clickThroughMessage: { [weak self] in
@@ -276,6 +276,9 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, openAppStorePage: {
         }, displayMessageTooltip: { _, _, _, _ in    
         }, seekToTimecode: { _, _, _ in    
+        }, scheduleCurrentMessage: {
+        }, sendScheduledMessagesNow: { _ in
+        }, editScheduledMessagesTime: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -296,7 +299,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     self?.present(c, in: .window(.root), with: a)
                 }, completion: { _ in }), in: .window(.root))
             }
-        }, reportMessages: { _ in
+        }, reportMessages: { _, _ in
         }, deleteMessages: { _, _, f in
             f(.default)
         }, forwardSelectedMessages: { [weak self] in
@@ -386,6 +389,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, reportPeerIrrelevantGeoLocation: {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: {
+        }, openScheduledMessages: {
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

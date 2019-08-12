@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import AccountContext
 import ShareController
 import StickerResources
+import AlertUI
 
 enum StickerPackPreviewControllerMode {
     case `default`
@@ -127,7 +128,7 @@ final class StickerPackPreviewController: ViewController {
                 }
                 if let peer = peer {
                     strongSelf.dismiss()
-                    strongSelf.parentNavigationController?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peer.id), messageId: nil))
+                    strongSelf.parentNavigationController?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peer.id)))
                 }
             }))
         })

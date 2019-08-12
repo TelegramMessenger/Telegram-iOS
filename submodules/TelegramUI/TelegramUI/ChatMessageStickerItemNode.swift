@@ -643,7 +643,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             self.item?.controllerInteraction.clickThroughMessage()
                         case .longTap, .doubleTap:
                             if let item = self.item, self.imageNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
+                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
                             }
                         case .hold:
                             break

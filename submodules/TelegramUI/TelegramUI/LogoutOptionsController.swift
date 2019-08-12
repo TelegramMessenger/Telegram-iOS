@@ -9,6 +9,7 @@ import TelegramPresentationData
 import ItemListUI
 import OverlayStatusController
 import AccountContext
+import AlertUI
 
 private struct LogoutOptionsItemArguments {
     let addAccount: () -> Void

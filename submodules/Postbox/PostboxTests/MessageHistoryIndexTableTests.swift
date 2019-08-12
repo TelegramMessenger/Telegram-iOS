@@ -53,7 +53,7 @@ class MessageHistoryIndexTableTests: XCTestCase {
             ]
         ]
         
-        let seedConfiguration = SeedConfiguration(globalMessageIdsPeerIdNamespaces: Set(), initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, existingMessageTags: [.media], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil, messageNamespacesRequiringGroupStatsValidation: Set())
+        let seedConfiguration = SeedConfiguration(globalMessageIdsPeerIdNamespaces: Set(), initializeChatListWithHole: (topLevel: nil, groups: nil), messageHoles: messageHoles, existingMessageTags: [.media], messageTagsWithSummary: [], existingGlobalMessageTags: [], peerNamespacesRequiringMessageTextIndex: [], peerSummaryCounterTags: { _ in PeerSummaryCounterTags(rawValue: 0) }, additionalChatListIndexNamespace: nil, messageNamespacesRequiringGroupStatsValidation: Set(), chatMessagesNamespaces: Set())
         
         self.postbox = Postbox(queue: Queue.mainQueue(), basePath: path!, seedConfiguration: seedConfiguration, valueBox: self.valueBox!)
     }

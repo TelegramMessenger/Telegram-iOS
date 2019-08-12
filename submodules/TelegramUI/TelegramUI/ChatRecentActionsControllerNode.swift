@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import SafariServices
 import AccountContext
 import TemporaryCachedPeerDataManager
+import AlertUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -182,7 +183,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame in
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _ in
             self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
         }, navigateToMessage: { _, _ in }, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _ in return false }, sendGif: { _, _, _ in return false }, requestMessageActionCallback: { _, _, _ in }, requestMessageActionUrlAuth: { _, _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _ in
             self?.openUrl(url)
@@ -394,6 +395,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, displayMessageTooltip: { _, _, _, _ in
         }, seekToTimecode: { _, _, _ in
+        }, scheduleCurrentMessage: {
+        }, sendScheduledMessagesNow: { _ in
+        }, editScheduledMessagesTime: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

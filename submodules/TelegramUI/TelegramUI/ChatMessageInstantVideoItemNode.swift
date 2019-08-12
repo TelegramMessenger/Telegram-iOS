@@ -642,7 +642,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         self.item?.controllerInteraction.clickThroughMessage()
                     case .longTap, .doubleTap:
                         if let item = self.item, let videoContentNode = self.interactiveVideoNode.videoContentNode(at: self.view.convert(location, to: self.interactiveVideoNode.view)) {
-                            item.controllerInteraction.openMessageContextMenu(item.message, false, videoContentNode, videoContentNode.bounds)
+                            item.controllerInteraction.openMessageContextMenu(item.message, false, videoContentNode, videoContentNode.bounds, nil)
                         }
                     case .hold:
                         break

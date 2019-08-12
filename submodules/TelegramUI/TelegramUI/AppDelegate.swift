@@ -17,6 +17,7 @@ import BuildConfig
 import DeviceCheck
 import AccountContext
 import OverlayStatusController
+import UndoUI
 
 private let handleVoipNotifications = false
 
@@ -154,6 +155,7 @@ final class SharedApplicationContext {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
+    var aboveStatusbarWindow: UIWindow?
     private var dataImportSplash: LegacyDataImportSplash?
     
     let episodeId = arc4random()
@@ -227,8 +229,9 @@ final class SharedApplicationContext {
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
         let statusBarHost = ApplicationStatusBarHost()
-        let (window, hostView) = nativeWindowHostView()
+        let (window, hostView, aboveStatusbarWindow) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
+        self.aboveStatusbarWindow = aboveStatusbarWindow
         window.backgroundColor = UIColor.white
         self.window = window
         self.nativeWindow = window
@@ -434,6 +437,7 @@ final class SharedApplicationContext {
             #endif
         #endif
         
+        self.aboveStatusbarWindow?.isHidden = false
         self.window?.makeKeyAndVisible()
         
         self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
@@ -1122,9 +1126,9 @@ final class SharedApplicationContext {
         })
         
         if let url = launchOptions?[.url] {
-            if let url = url as? URL, url.scheme == "tg" {
+            if let url = url as? URL, url.scheme == "tg" || url.scheme == buildConfig.appSpecificUrlScheme {
                 self.openUrlWhenReady(url: url.absoluteString)
-            } else if let url = url as? String, url.lowercased().hasPrefix("tg://") {
+            } else if let url = url as? String, url.lowercased().hasPrefix("tg:") || url.lowercased().hasPrefix("\(buildConfig.appSpecificUrlScheme):") {
                 self.openUrlWhenReady(url: url)
             }
         }
@@ -1845,7 +1849,7 @@ final class SharedApplicationContext {
             notificationCenter.getNotificationSettings(completionHandler: { settings in
                 switch (settings.authorizationStatus, authorize) {
                     case (.authorized, _), (.notDetermined, true):
-                        notificationCenter.requestAuthorization(options: [.badge, .sound, .alert], completionHandler: { result, _ in
+                        notificationCenter.requestAuthorization(options: [.badge, .sound, .alert, .carPlay], completionHandler: { result, _ in
                             completion(result)
                             if result {
                                 Queue.mainQueue().async {
@@ -1867,7 +1871,7 @@ final class SharedApplicationContext {
                                         }
                                         
                                         var carPlayOptions = options
-                                        //carPlayOptions.insert(.allowInCarPlay)
+                                        carPlayOptions.insert(.allowInCarPlay)
                                         
                                         unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: carPlayOptions)
@@ -1878,7 +1882,7 @@ final class SharedApplicationContext {
                                         muteMessageCategory = UNNotificationCategory(identifier: "withMute", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                         muteMediaMessageCategory = UNNotificationCategory(identifier: "withMuteMedia", actions: [], intentIdentifiers: [], hiddenPreviewsBodyPlaceholder: hiddenContentString, options: options)
                                     } else {
-                                        let carPlayOptions: UNNotificationCategoryOptions = [] //[.allowInCarPlay]
+                                        let carPlayOptions: UNNotificationCategoryOptions = [.allowInCarPlay]
                                         
                                         unknownMessageCategory = UNNotificationCategory(identifier: "unknown", actions: [], intentIdentifiers: [], options: [])
                                         replyMessageCategory = UNNotificationCategory(identifier: "withReply", actions: [reply], intentIdentifiers: [INSearchForMessagesIntentIdentifier], options: carPlayOptions)

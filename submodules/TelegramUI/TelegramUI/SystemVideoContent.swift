@@ -9,6 +9,7 @@ import TelegramAudio
 import LegacyComponents
 import UniversalMediaPlayer
 import AccountContext
+import PhotoResources
 
 final class SystemVideoContent: UniversalVideoContent {
     let id: AnyHashable

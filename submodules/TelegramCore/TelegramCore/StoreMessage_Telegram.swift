@@ -380,7 +380,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 }
 
 extension StoreMessage {
-    convenience init?(apiMessage: Api.Message) {
+    convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
             case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, reactions):
                 let peerId: PeerId
@@ -506,7 +506,7 @@ extension StoreMessage {
                 }
                 
                 if let editDate = editDate {
-                    attributes.append(EditedMessageAttribute(date: editDate))
+                    attributes.append(EditedMessageAttribute(date: editDate, isHidden: (flags & (1 << 21)) != 0))
                 }
                 
                 var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -572,7 +572,7 @@ extension StoreMessage {
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -636,7 +636,7 @@ extension StoreMessage {
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

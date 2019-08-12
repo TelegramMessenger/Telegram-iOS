@@ -5,6 +5,7 @@ import TelegramPresentationData
 
 private enum ContextItemNode {
     case action(ContextActionNode)
+    case itemSeparator(ASDisplayNode)
     case separator(ASDisplayNode)
 }
 
@@ -12,30 +13,38 @@ final class ContextActionsContainerNode: ASDisplayNode {
     private var itemNodes: [ContextItemNode]
     
     init(theme: PresentationTheme, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
-        self.itemNodes = items.map { item in
-            switch item {
+        var itemNodes: [ContextItemNode] = []
+        for i in 0 ..< items.count {
+            switch items[i] {
             case let .action(action):
-                return .action(ContextActionNode(theme: theme, action: action, getController: getController, actionSelected: actionSelected))
+                itemNodes.append(.action(ContextActionNode(theme: theme, action: action, getController: getController, actionSelected: actionSelected)))
+                if i != items.count - 1, case .action = items[i + 1] {
+                    let separatorNode = ASDisplayNode()
+                    separatorNode.backgroundColor = theme.contextMenu.itemSeparatorColor
+                    itemNodes.append(.itemSeparator(separatorNode))
+                }
             case .separator:
                 let separatorNode = ASDisplayNode()
-                if theme.chatList.searchBarKeyboardColor == .dark {
-                    separatorNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor.withAlphaComponent(0.8)
-                } else {
-                    separatorNode.backgroundColor = UIColor(white: 0.8, alpha: 0.6)
-                }
-                return .separator(separatorNode)
+                separatorNode.backgroundColor = theme.contextMenu.sectionSeparatorColor
+                itemNodes.append(.separator(separatorNode))
             }
         }
+        
+        self.itemNodes = itemNodes
         
         super.init()
         
         self.clipsToBounds = true
         self.cornerRadius = 14.0
         
+        self.backgroundColor = theme.contextMenu.backgroundColor
+        
         self.itemNodes.forEach({ itemNode in
             switch itemNode {
             case let .action(actionNode):
                 self.addSubnode(actionNode)
+            case let .itemSeparator(separatorNode):
+                self.addSubnode(separatorNode)
             case let .separator(separatorNode):
                 self.addSubnode(separatorNode)
             }
@@ -52,7 +61,15 @@ final class ContextActionsContainerNode: ASDisplayNode {
         for i in 0 ..< self.itemNodes.count {
             switch self.itemNodes[i] {
             case let .action(itemNode):
-                let next: ContextActionNext
+                let previous: ContextActionSibling
+                let next: ContextActionSibling
+                if i == 0 {
+                    previous = .none
+                } else if case .separator = self.itemNodes[i - 1] {
+                    previous = .separator
+                } else {
+                    previous = .item
+                }
                 if i == self.itemNodes.count - 1 {
                     next = .none
                 } else if case .separator = self.itemNodes[i + 1] {
@@ -60,10 +77,13 @@ final class ContextActionsContainerNode: ASDisplayNode {
                 } else {
                     next = .item
                 }
-                let (minSize, complete) = itemNode.updateLayout(constrainedWidth: constrainedWidth, next: next)
+                let (minSize, complete) = itemNode.updateLayout(constrainedWidth: constrainedWidth, previous: previous, next: next)
                 maxWidth = max(maxWidth, minSize.width)
                 heightsAndCompletions.append((minSize.height, complete))
                 contentHeight += minSize.height
+            case .itemSeparator:
+                heightsAndCompletions.append(nil)
+                contentHeight += UIScreenPixel
             case .separator:
                 heightsAndCompletions.append(nil)
                 contentHeight += separatorHeight
@@ -82,6 +102,9 @@ final class ContextActionsContainerNode: ASDisplayNode {
                     itemCompletion(itemSize, transition)
                     verticalOffset += itemHeight
                 }
+            case let .itemSeparator(separatorNode):
+                transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: maxWidth, height: UIScreenPixel)))
+                verticalOffset += UIScreenPixel
             case let .separator(separatorNode):
                 transition.updateFrame(node: separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: verticalOffset), size: CGSize(width: maxWidth, height: separatorHeight)))
                 verticalOffset += separatorHeight
@@ -89,5 +112,19 @@ final class ContextActionsContainerNode: ASDisplayNode {
         }
         
         return CGSize(width: maxWidth, height: verticalOffset)
+    }
+    
+    func actionNode(at point: CGPoint) -> ContextActionNode? {
+        for itemNode in self.itemNodes {
+            switch itemNode {
+            case let .action(actionNode):
+                if actionNode.frame.contains(point) {
+                    return actionNode
+                }
+            default:
+                break
+            }
+        }
+        return nil
     }
 }

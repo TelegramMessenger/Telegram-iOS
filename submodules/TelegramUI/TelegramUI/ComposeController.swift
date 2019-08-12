@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import AlertUI
 
 public class ComposeController: ViewController {
     private let context: AccountContext

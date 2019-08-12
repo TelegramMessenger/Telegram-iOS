@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import TextFormat
+import PhotoResources
 
 private let titleFont = Font.medium(16.0)
 private let descriptionFont = Font.regular(14.0)
@@ -607,7 +608,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     
     override func longTapped() {
         if let item = self.item {
-            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds)
+            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds, nil)
         }
     }
 }

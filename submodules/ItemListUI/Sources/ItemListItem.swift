@@ -14,15 +14,15 @@ public protocol ItemListItem {
 }
 
 public extension ItemListItem {
-    public var isAlwaysPlain: Bool {
+    var isAlwaysPlain: Bool {
         return false
     }
     
-    public var tag: ItemListItemTag? {
+    var tag: ItemListItemTag? {
         return nil
     }
     
-    public var requestsNoInset: Bool {
+    var requestsNoInset: Bool {
         return false
     }
 }

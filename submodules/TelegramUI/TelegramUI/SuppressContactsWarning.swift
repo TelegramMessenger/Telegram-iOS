@@ -5,6 +5,8 @@ import SwiftSignalKit
 import TelegramCore
 import DeviceAccess
 import AccountContext
+import AlertUI
+import TelegramNotices
 
 func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

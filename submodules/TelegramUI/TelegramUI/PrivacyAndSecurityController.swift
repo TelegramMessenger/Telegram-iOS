@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import TelegramCallsUI
 import ItemListUI
 import AccountContext
+import TelegramNotices
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account

@@ -66,7 +66,7 @@ class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollVie
         self.contentBackgroundNode.image = roundedBackground
         
         self.titleNode = ASTextNode()
-        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InstantPage_Reference, font: Font.medium(17.0), textColor: self.theme.panelSecondaryColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.InstantPage_Reference, font: Font.bold(17.0), textColor: self.theme.panelSecondaryColor)
         
         self.separatorNode = ASDisplayNode()
         self.separatorNode.backgroundColor = self.theme.controlColor

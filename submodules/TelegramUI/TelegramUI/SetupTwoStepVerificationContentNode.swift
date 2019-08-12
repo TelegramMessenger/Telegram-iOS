@@ -73,7 +73,11 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
             case .code:
                 self.inputNode.textField.autocapitalizationType = .none
                 self.inputNode.textField.autocorrectionType = .no
-                self.inputNode.textField.keyboardType = .numberPad
+                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                    self.inputNode.textField.keyboardType = .asciiCapableNumberPad
+                } else {
+                    self.inputNode.textField.keyboardType = .numberPad
+                }
                 if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
                     self.inputNode.textField.textContentType = .oneTimeCode
                 }

@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import DirectionalPanGesture
 
 final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestureRecognizerDelegate {
     let ready = Promise<Bool>()
@@ -38,7 +39,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
     private var presentationDataDisposable: Disposable?
     private let replacementHistoryNodeReadyDisposable = MetaDisposable()
     
-    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType,  initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
+    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, requestDismiss: @escaping () -> Void, requestShare: @escaping (MessageId) -> Void) {
         self.context = context
         self.peerId = peerId
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -61,7 +62,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             }
         }, openPeer: { _, _, _ in
         }, openPeerMention: { _ in
-        }, openMessageContextMenu: { _, _, _, _ in
+        }, openMessageContextMenu: { _, _, _, _, _ in
         }, navigateToMessage: { _, _ in
         }, clickThroughMessage: {
         }, toggleMessagesSelection: { _, _ in
@@ -103,6 +104,9 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, openAppStorePage: {
         }, displayMessageTooltip: { _, _, _, _ in
         }, seekToTimecode: { _, _, _ in    
+        }, scheduleCurrentMessage: {
+        }, sendScheduledMessagesNow: { _ in
+        }, editScheduledMessagesTime: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))
@@ -131,7 +135,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .voiceOrInstantVideo
         }
         
-        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, messageId: initialMessageId, controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: currentIsReversed))
+        self.historyNode = ChatHistoryListNode(context: context, chatLocation: .peer(peerId), tagMask: tagMask, subject: .message(initialMessageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: currentIsReversed))
         
         super.init()
         
@@ -450,7 +454,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 tagMask = .voiceOrInstantVideo
         }
         
-        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), tagMask: tagMask, messageId: messageId, controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed))
+        let historyNode = ChatHistoryListNode(context: self.context, chatLocation: .peer(self.peerId), tagMask: tagMask, subject: .message(messageId), controllerInteraction: self.controllerInteraction, selectedMessages: .single(nil), mode: .list(search: false, reversed: self.currentIsReversed))
         historyNode.preloadPages = true
         historyNode.stackFromBottom = true
         historyNode.updateFloatingHeaderOffset = { [weak self] offset, _ in

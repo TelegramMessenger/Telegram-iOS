@@ -15,6 +15,7 @@ import WebP
 import Lottie
 import TelegramUIPrivateModule
 import MediaResources
+import PhotoResources
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -905,7 +906,7 @@ private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, reso
             return EmptyDisposable
         }
     })
-        |> runOn(Queue.concurrentDefaultQueue())
+    |> runOn(Queue.concurrentDefaultQueue())
 }
 
 private func fetchAnimatedStickerRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {

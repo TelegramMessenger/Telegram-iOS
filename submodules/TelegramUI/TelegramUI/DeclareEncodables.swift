@@ -1,6 +1,7 @@
 import Postbox
 import TemporaryCachedPeerDataManager
 import TelegramUIPreferences
+import TelegramNotices
 
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })

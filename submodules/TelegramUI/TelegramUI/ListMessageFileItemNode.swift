@@ -11,6 +11,7 @@ import AccountContext
 import TelegramStringFormatting
 import AccountContext
 import RadialStatusNode
+import PhotoResources
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -887,7 +888,7 @@ final class ListMessageFileItemNode: ListMessageNode {
     
     override func longTapped() {
         if let item = self.item {
-            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds)
+            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds, nil)
         }
     }
     

@@ -44,6 +44,7 @@ private enum InstalledStickerPacksSection: Int32 {
 
 public enum InstalledStickerPacksEntryTag: ItemListItemTag {
     case suggestOptions
+    case loopAnimatedStickers
     
     public func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? InstalledStickerPacksEntryTag, self == other {
