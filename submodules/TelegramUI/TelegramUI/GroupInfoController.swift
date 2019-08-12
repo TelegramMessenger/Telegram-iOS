@@ -18,6 +18,8 @@ import ShareController
 import AlertUI
 import MediaResources
 import PhotoResources
+import GalleryUI
+import LegacyUI
 
 private final class GroupInfoArguments {
     let context: AccountContext
@@ -564,7 +566,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     }))
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
-                    if let infoController = peerInfoController(context: arguments.context, peer: peer), selectable {
+                    if let infoController = arguments.context.sharedContext.makePeerInfoController(context: arguments.context, peer: peer), selectable {
                         arguments.pushController(infoController)
                     }
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -2238,7 +2240,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     return state.withUpdatedSearchingMembers(false)
                 }
             }, openPeer: { peer, _ in
-                if let infoController = peerInfoController(context: context, peer: peer) {
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
                     arguments.pushController(infoController)
                 }
             }, present: { c, a in

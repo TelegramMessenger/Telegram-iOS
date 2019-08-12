@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramPresentationData
 import StickerResources
+import AccountContext
 
 final class StickerPaneSearchStickerSection: GridSection {
     let code: String

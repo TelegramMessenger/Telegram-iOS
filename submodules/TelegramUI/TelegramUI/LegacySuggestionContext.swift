@@ -6,6 +6,7 @@ import SwiftSignalKit
 
 import TelegramUIPrivateModule
 import LegacyComponents
+import LegacyUI
 
 func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionContext {
     let context = TGSuggestionContext()

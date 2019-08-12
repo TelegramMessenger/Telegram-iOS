@@ -12,6 +12,7 @@ import AccountContext
 import AlertUI
 import MediaResources
 import PhotoResources
+import LegacyUI
 
 public enum CreateGroupMode {
     case generic

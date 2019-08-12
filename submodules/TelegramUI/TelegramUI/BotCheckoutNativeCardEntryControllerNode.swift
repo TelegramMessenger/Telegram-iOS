@@ -7,6 +7,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPrivateModule
+import CountrySelectionUI
 
 private final class BotCheckoutNativeCardEntryScrollerNodeView: UIScrollView {
     var ignoreUpdateBounds = false

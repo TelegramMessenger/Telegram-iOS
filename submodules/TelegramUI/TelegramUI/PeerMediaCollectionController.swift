@@ -12,6 +12,7 @@ import TelegramBaseController
 import OverlayStatusController
 import AccountContext
 import ShareController
+import OpenInExternalAppUI
 
 public class PeerMediaCollectionController: TelegramBaseController {
     private var validLayout: ContainerViewLayout?
@@ -232,7 +233,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                         if canOpenIn {
                                             let actionSheet = OpenInActionSheetController(context: strongSelf.context, item: .url(url: url), openUrl: { [weak self] url in
                                                 if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                                                    openExternalUrl(context: strongSelf.context, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
+                                                    strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
                                                     })
                                                 }
                                             })
@@ -607,7 +608,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, peer.restrictionText == nil {
-                                        if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
+                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
                                             (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                         }
                                     }
@@ -717,7 +718,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
     
     func deleteMessages(_ messageIds: Set<MessageId>) {
         if !messageIds.isEmpty {
-            self.messageContextDisposable.set((combineLatest(chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds), self.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { [weak self] actions, peer in
+            self.messageContextDisposable.set((combineLatest(self.context.sharedContext.chatAvailableMessageActions(postbox: self.context.account.postbox, accountPeerId: self.context.account.peerId, messageIds: messageIds), self.peer.get() |> take(1)) |> deliverOnMainQueue).start(next: { [weak self] actions, peer in
                 if let strongSelf = self, let peer = peer, !actions.options.isEmpty {
                     let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
                     var items: [ActionSheetItem] = []

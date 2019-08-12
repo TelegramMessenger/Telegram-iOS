@@ -12,6 +12,8 @@ import ItemListUI
 import AccountContext
 import AlertUI
 import TelegramNotices
+import TelegramStringFormatting
+import PasswordSetupUI
 
 final class BotCheckoutControllerArguments {
     fileprivate let account: Account

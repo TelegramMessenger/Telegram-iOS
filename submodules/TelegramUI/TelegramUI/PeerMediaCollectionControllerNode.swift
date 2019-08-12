@@ -7,6 +7,7 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import SearchBarNode
 
 struct PeerMediaCollectionMessageForGallery {
     let message: Message

@@ -1277,7 +1277,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         guard let controller = controller else {
             return
         }
-        openExternalUrl(context: context, url: url, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: controller.navigationController as? NavigationController, dismissInput: { [weak controller] in
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: controller.navigationController as? NavigationController, dismissInput: { [weak controller] in
             controller?.view.endEditing(true)
         })
     }

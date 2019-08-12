@@ -10,6 +10,7 @@ import TelegramVoip
 import OverlayStatusController
 import AccountContext
 import ContextUI
+import LegacyUI
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -346,7 +347,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         return transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
     }
     
-    dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })))
+    dataSignal = combineLatest(loadLimits, loadStickerSaveStatusSignal, loadResourceStatusSignal, context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: Set(messages.map { $0.id })))
     |> map { limitsConfiguration, stickerSaveStatus, resourceStatus, messageActions -> MessageContextMenuData in
         var canEdit = false
         if !isAction {
@@ -671,34 +672,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     }
 }
 
-struct ChatAvailableMessageActionOptions: OptionSet {
-    var rawValue: Int32
-    
-    init(rawValue: Int32) {
-        self.rawValue = rawValue
-    }
-    
-    init() {
-        self.rawValue = 0
-    }
-    
-    static let deleteLocally = ChatAvailableMessageActionOptions(rawValue: 1 << 0)
-    static let deleteGlobally = ChatAvailableMessageActionOptions(rawValue: 1 << 1)
-    static let forward = ChatAvailableMessageActionOptions(rawValue: 1 << 2)
-    static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
-    static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
-    static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
-    static let cancelSending = ChatAvailableMessageActionOptions(rawValue: 1 << 6)
-    static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
-    static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
-    static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
-}
-
-struct ChatAvailableMessageActions {
-    let options: ChatAvailableMessageActionOptions
-    let banAuthor: Peer?
-}
-
 func canPerformEditingActions(limits: LimitsConfiguration, accountPeerId: PeerId, message: Message, unlimitedInterval: Bool) -> Bool {
     if message.id.peerId == accountPeerId {
         return true
@@ -740,7 +713,7 @@ private func canPerformDeleteActions(limits: LimitsConfiguration, accountPeerId:
     return false
 }
 
-func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
+func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
     return postbox.transaction { transaction -> ChatAvailableMessageActions in
         let limitsConfiguration: LimitsConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.limitsConfiguration) as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         var optionsMap: [MessageId: ChatAvailableMessageActionOptions] = [:]

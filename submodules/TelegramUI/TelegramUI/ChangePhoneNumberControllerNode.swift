@@ -5,6 +5,8 @@ import Display
 import TelegramCore
 import CoreTelephony
 import TelegramPresentationData
+import PhoneInputNode
+import CountrySelectionUI
 
 private func generateCountryButtonBackground(color: UIColor, strokeColor: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 45.0, height: 44.0 + 6.0), rotatedContext: { size, context in

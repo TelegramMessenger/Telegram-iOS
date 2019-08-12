@@ -253,7 +253,7 @@ public class ContactsController: ViewController {
         
         self.contactsNode.contactListNode.openPrivacyPolicy = { [weak self] in
             if let strongSelf = self {
-                openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
+                strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://telegram.org/privacy", forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
             }
         }
         
@@ -527,7 +527,7 @@ public class ContactsController: ViewController {
                             return
                         }
                         if let peer = peer {
-                            if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
                                 (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                             }
                         } else {

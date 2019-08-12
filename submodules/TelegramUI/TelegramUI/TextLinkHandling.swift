@@ -8,6 +8,7 @@ import TelegramUIPreferences
 import AccountContext
 import AccountContext
 import SafariServices
+import OpenInExternalAppUI
 
 func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let presentImpl: (ViewController, Any?) -> Void = { controllerToPresent, _ in
@@ -26,7 +27,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                     peerSignal = context.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
                     navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
                         if let controller = controller, let peer = peer {
-                            if let infoController = peerInfoController(context: context, peer: peer) {
+                            if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
                                 (controller.navigationController as? NavigationController)?.pushViewController(infoController)
                             }
                         }

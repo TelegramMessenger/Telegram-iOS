@@ -38,10 +38,19 @@
          location = "group:submodules/SaveToCameraRoll/SaveToCameraRoll_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/TelegramNotices/TelegramNotices_Xcode.xcodeproj">
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/TelegramNotices/TelegramNotices_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/TelegramPermissions/TelegramPermissions_Xcode.xcodeproj">
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/TelegramPermissions/TelegramPermissions_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramStringFormatting/TelegramStringFormatting_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/WebsiteType/WebsiteType_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/ScreenCaptureDetection/ScreenCaptureDetection_Xcode.xcodeproj">
       </FileRef>
       <Group
          location = "container:"
@@ -50,10 +59,13 @@
             location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:submodules/TinyThumbnail/TinyThumbnail_Xcode.xcodeproj">
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/TinyThumbnail/TinyThumbnail_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:submodules/ImageTransparency/ImageTransparency_Xcode.xcodeproj">
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/ImageTransparency/ImageTransparency_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/ImageCompression/ImageCompression_Xcode.xcodeproj">
          </FileRef>
       </Group>
    </Group>
@@ -96,7 +108,7 @@
             location = "group:submodules/MediaResources/MediaResources_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:submodules/PhotoResources/PhotoResources_Xcode.xcodeproj">
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/PhotoResources/PhotoResources_Xcode.xcodeproj">
          </FileRef>
          <FileRef
             location = "group:submodules/StickerResources/StickerResources_Xcode.xcodeproj">
@@ -121,15 +133,50 @@
       name = "UI Components">
       <Group
          location = "container:"
+         name = "Video Content">
+         <FileRef
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/TelegramUniversalVideoContent/TelegramUniversalVideoContent_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Nodes">
+         <FileRef
+            location = "group:submodules/RadialStatusNode/RadialStatusNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LiveLocationTimerNode/LiveLocationTimerNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/CheckNode/CheckNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/SwitchNode/SwitchNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ActivityIndicator/ActivityIndicator_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ProgressNavigationButtonNode/ProgressNavigationButtonNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/PhoneInputNode/PhoneInputNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/SearchBarNode/SearchBarNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
          name = "Gestures">
          <FileRef
-            location = "group:submodules/TouchDownGesture/TouchDownGesture_Xcode.xcodeproj">
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/TouchDownGesture/TouchDownGesture_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:submodules/SwipeToDismissGesture/SwipeToDismissGesture_Xcode.xcodeproj">
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/SwipeToDismissGesture/SwipeToDismissGesture_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:submodules/DirectionalPanGesture/DirectionalPanGesture_Xcode.xcodeproj">
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/DirectionalPanGesture/DirectionalPanGesture_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <Group
@@ -142,6 +189,9 @@
       <Group
          location = "container:"
          name = "Action Sheet">
+         <FileRef
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/DateSelectionUI/DateSelectionUI_Xcode.xcodeproj">
+         </FileRef>
          <FileRef
             location = "group:submodules/ActionSheetPeerItem/ActionSheetPeerItem_Xcode.xcodeproj">
          </FileRef>
@@ -176,16 +226,13 @@
          </FileRef>
       </Group>
       <FileRef
-         location = "group:submodules/AlertUI/AlertUI_Xcode.xcodeproj">
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/LegacyUI/LegacyUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/RadialStatusNode/RadialStatusNode_Xcode.xcodeproj">
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/OpenInExternalAppUI/OpenInExternalAppUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/TelegramStringFormatting/TelegramStringFormatting_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/LiveLocationTimerNode/LiveLocationTimerNode_Xcode.xcodeproj">
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/AlertUI/AlertUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
          location = "group:submodules/OverlayStatusController/OverlayStatusController_Xcode.xcodeproj">
@@ -209,19 +256,7 @@
          location = "group:submodules/RMIntro/RMIntro_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/CheckNode/CheckNode_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/SwitchNode/SwitchNode_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
          location = "group:submodules/AnimationUI/AnimationUI_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/ActivityIndicator/ActivityIndicator_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/ProgressNavigationButtonNode/ProgressNavigationButtonNode_Xcode.xcodeproj">
       </FileRef>
       <FileRef
          location = "group:submodules/AsyncDisplayKit/AsyncDisplayKit_Xcode.xcodeproj">
@@ -239,10 +274,28 @@
          location = "group:submodules/ContextUI/ContextUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/ComposePollUI/ComposePollUI_Xcode.xcodeproj">
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/ComposePollUI/ComposePollUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/UndoUI/UndoUI_Xcode.xcodeproj">
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/UndoUI/UndoUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/GameUI/GameUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/WebUI/WebUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/PassportUI/PassportUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/CountrySelectionUI/CountrySelectionUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/GalleryUI/GalleryUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/PasswordSetupUI/PasswordSetupUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

@@ -8,6 +8,7 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import GalleryUI
 
 enum AvatarGalleryEntry: Equatable {
     case topImage([ImageRepresentationWithReference], GalleryItemIndexData?)

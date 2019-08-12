@@ -8,6 +8,8 @@ import TelegramPresentationData
 import MediaResources
 import LegacyComponents
 import AccountContext
+import LegacyUI
+import ImageCompression
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>

@@ -8,6 +8,7 @@ import SafariServices
 import TelegramPresentationData
 import AccountContext
 import ShareController
+import OpenInExternalAppUI
 
 class InstantPageReferenceControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext

@@ -10,6 +10,7 @@ import Display
 import TelegramPresentationData
 import AccountContext
 import PhotoResources
+import LegacyUI
 
 class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem {
     var isVideo: Bool {

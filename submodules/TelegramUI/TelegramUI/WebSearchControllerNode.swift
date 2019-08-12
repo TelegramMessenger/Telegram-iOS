@@ -10,12 +10,13 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import MergeLists
 import AccountContext
+import GalleryUI
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult
     
-    var hashValue: Int {
-        return result.id.hashValue
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(result.id)
     }
     
     static func ==(lhs: WebSearchContextResultStableId, rhs: WebSearchContextResultStableId) -> Bool {

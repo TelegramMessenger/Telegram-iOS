@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import SearchBarNode
 
 private let searchBarFont = Font.regular(17.0)
 let navigationBarSearchContentHeight: CGFloat = 54.0

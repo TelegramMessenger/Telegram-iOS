@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
 import AccountContext
+import SearchBarNode
 
 private final class ContactsControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {

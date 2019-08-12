@@ -18,6 +18,8 @@ import DeviceCheck
 import AccountContext
 import OverlayStatusController
 import UndoUI
+import LegacyUI
+import PassportUI
 
 private let handleVoipNotifications = false
 
@@ -1744,7 +1746,7 @@ final class SharedApplicationContext {
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
             let presentationData = context.context.sharedContext.currentPresentationData.with { $0 }
-            openExternalUrl(context: context.context, url: url, presentationData: presentationData, navigationController: context.rootController, dismissInput: {
+            context.context.sharedContext.openExternalUrl(context: context.context, urlContext: .generic, url: url, forceExternal: false, presentationData: presentationData, navigationController: context.rootController, dismissInput: {
             })
         }))
     }

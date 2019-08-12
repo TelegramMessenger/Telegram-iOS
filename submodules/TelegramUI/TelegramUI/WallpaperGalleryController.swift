@@ -12,6 +12,7 @@ import TelegramUIPreferences
 import MediaResources
 import AccountContext
 import ShareController
+import GalleryUI
 
 enum WallpaperListType {
     case wallpapers(WallpaperPresentationOptions?)

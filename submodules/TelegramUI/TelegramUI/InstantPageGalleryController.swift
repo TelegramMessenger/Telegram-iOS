@@ -9,6 +9,9 @@ import TelegramCore
 import SafariServices
 import TelegramPresentationData
 import AccountContext
+import GalleryUI
+import TelegramUniversalVideoContent
+import OpenInExternalAppUI
 
 struct InstantPageGalleryEntryLocation: Equatable {
     let position: Int32

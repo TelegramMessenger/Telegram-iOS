@@ -8,6 +8,9 @@ import Postbox
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
+import GalleryUI
+import TelegramUniversalVideoContent
+import GalleryUI
 
 class WebSearchVideoGalleryItem: GalleryItem {
     let context: AccountContext

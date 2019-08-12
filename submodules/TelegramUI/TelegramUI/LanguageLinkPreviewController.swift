@@ -47,7 +47,7 @@ public final class LanguageLinkPreviewController: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            openExternalUrl(context: strongSelf.context, url: url, presentationData: strongSelf.presentationData, navigationController: nil, dismissInput: {
+            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: false, presentationData: strongSelf.presentationData, navigationController: nil, dismissInput: {
             })
         })
         self.controllerNode.dismiss = { [weak self] in

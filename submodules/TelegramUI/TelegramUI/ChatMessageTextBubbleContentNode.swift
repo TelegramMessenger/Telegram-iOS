@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import TextFormat
 import UrlEscaping
+import TelegramUniversalVideoContent
 
 private final class CachedChatMessageText {
     let text: String

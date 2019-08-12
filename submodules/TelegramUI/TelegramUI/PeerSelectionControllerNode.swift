@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import SearchBarNode
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext

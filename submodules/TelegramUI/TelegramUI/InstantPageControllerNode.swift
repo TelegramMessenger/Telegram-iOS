@@ -11,6 +11,8 @@ import TelegramUIPreferences
 import AccountContext
 import ShareController
 import SaveToCameraRoll
+import GalleryUI
+import OpenInExternalAppUI
 
 final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -1187,7 +1189,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             }))
                         } else {
                             strongSelf.loadProgress.set(1.0)
-                            openExternalUrl(context: strongSelf.context, url: externalUrl, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {
+                            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: externalUrl, forceExternal: false, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: strongSelf.getNavigationController(), dismissInput: {
                                 self?.view.endEditing(true)
                             })
                         }
@@ -1207,7 +1209,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let strongSelf = self {
-                                            if let controller = peerInfoController(context: strongSelf.context, peer: peer) {
+                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
                                                 strongSelf.getNavigationController()?.pushViewController(controller)
                                             }
                                         }
@@ -1229,7 +1231,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: url.url), openUrl: { [weak self] url in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                openExternalUrl(context: strongSelf.context, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
+                strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: presentationData, navigationController: navigationController, dismissInput: {})
             }
         })
         self.present(actionSheet, nil)

@@ -11,6 +11,7 @@ import SafariServices
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import OpenInExternalAppUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -656,7 +657,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
                     navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true)
                 } else {
-                    if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
                         strongSelf.pushController(infoController)
                     }
                 }
@@ -678,7 +679,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {
-                    if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
                         strongSelf.pushController(infoController)
                     }
                 }
@@ -760,7 +761,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 switch result {
                     case let .externalUrl(url):
                         if let navigationController = strongSelf.getNavigationController() {
-                            openExternalUrl(context: strongSelf.context, url: url, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
+                            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: false, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
                                 self?.view.endEditing(true)
                             })
                         }

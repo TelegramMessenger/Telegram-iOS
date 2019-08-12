@@ -12,6 +12,7 @@
 		D06018B722F365D800796784 /* StringWithAppliedEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06018B622F365D700796784 /* StringWithAppliedEntities.swift */; };
 		D0A0B53B22F3714F00628AF3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0A0B53A22F3714F00628AF3 /* TelegramCore.framework */; };
 		D0A0B53D22F3726300628AF3 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0A0B53C22F3726300628AF3 /* TelegramPresentationData.framework */; };
+		D0C9C3602300AF1E00FAB518 /* AddFormatToStringWithRanges.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C35F2300AF1E00FAB518 /* AddFormatToStringWithRanges.swift */; };
 		D0D328CA22F3495C00D07EE2 /* TextFormat.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D328C822F3495C00D07EE2 /* TextFormat.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D328D522F349CB00D07EE2 /* Markdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D328D422F349CB00D07EE2 /* Markdown.swift */; };
 		D0D328D822F349F400D07EE2 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D328D722F349F400D07EE2 /* Display.framework */; };
@@ -26,6 +27,7 @@
 		D06018B622F365D700796784 /* StringWithAppliedEntities.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringWithAppliedEntities.swift; sourceTree = "<group>"; };
 		D0A0B53A22F3714F00628AF3 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0A0B53C22F3726300628AF3 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C35F2300AF1E00FAB518 /* AddFormatToStringWithRanges.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddFormatToStringWithRanges.swift; sourceTree = "<group>"; };
 		D0D328C522F3495C00D07EE2 /* TextFormat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TextFormat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D328C822F3495C00D07EE2 /* TextFormat.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TextFormat.h; sourceTree = "<group>"; };
 		D0D328C922F3495C00D07EE2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -73,6 +75,7 @@
 		D0D328C722F3495C00D07EE2 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C35F2300AF1E00FAB518 /* AddFormatToStringWithRanges.swift */,
 				D06018B622F365D700796784 /* StringWithAppliedEntities.swift */,
 				D06018B222F3650C00796784 /* ChatTextInputAttributes.swift */,
 				D06018B022F364DC00796784 /* GenerateTextEntities.swift */,
@@ -177,6 +180,7 @@
 			files = (
 				D06018B722F365D800796784 /* StringWithAppliedEntities.swift in Sources */,
 				D06018B322F3650C00796784 /* ChatTextInputAttributes.swift in Sources */,
+				D0C9C3602300AF1E00FAB518 /* AddFormatToStringWithRanges.swift in Sources */,
 				D0D328D522F349CB00D07EE2 /* Markdown.swift in Sources */,
 				D0D328E022F3526000D07EE2 /* TelegramAttributes.swift in Sources */,
 				D06018B122F364DC00796784 /* GenerateTextEntities.swift in Sources */,

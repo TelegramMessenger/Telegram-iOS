@@ -4,6 +4,7 @@ import Display
 import TelegramCore
 import Postbox
 import AccountContext
+import GalleryUI
 
 public enum NavigateToChatKeepStack {
     case `default`

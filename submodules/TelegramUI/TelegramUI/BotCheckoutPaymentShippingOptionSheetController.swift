@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import AccountContext
+import TelegramStringFormatting
 
 final class BotCheckoutPaymentShippingOptionSheetController: ActionSheetController {
     private var presentationDisposable: Disposable?

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import MergeLists
 import ActivityIndicator
 import AccountContext
+import SearchBarNode
 
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)

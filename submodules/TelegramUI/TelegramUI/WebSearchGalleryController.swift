@@ -9,6 +9,8 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import AccountContext
+import GalleryUI
+import TelegramUniversalVideoContent
 
 final class WebSearchGalleryControllerInteraction {
     let dismiss: (Bool) -> Void

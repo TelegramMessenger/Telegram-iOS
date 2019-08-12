@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AvatarNode
 import StickerResources
 import PhotoResources
+import AccountContext
 
 let allWatchRequestHandlers: [AnyClass] = [
     WatchChatListHandler.self,

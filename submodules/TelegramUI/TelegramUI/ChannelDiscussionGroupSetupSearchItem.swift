@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
+import SearchBarNode
 
 final class ChannelDiscussionGroupSetupSearchItem: ItemListControllerSearch {
     let context: AccountContext

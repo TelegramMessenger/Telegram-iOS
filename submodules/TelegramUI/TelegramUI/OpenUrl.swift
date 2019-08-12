@@ -12,6 +12,7 @@ import MtProtoKitDynamic
 import TelegramPresentationData
 import AccountContext
 import UrlEscaping
+import PassportUI
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -136,12 +137,7 @@ func formattedConfirmationCode(_ code: Int) -> String {
     return result
 }
 
-public enum OpenURLContext {
-    case generic
-    case chat
-}
-
-public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext = .generic, url: String, forceExternal: Bool = false, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
+func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
         context.sharedContext.applicationBindings.openUrl(url)
         return
@@ -197,7 +193,7 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                         case .info:
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
                             |> deliverOnMainQueue).start(next: { peer in
-                                if let infoController = peerInfoController(context: context, peer: peer) {
+                                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
                                     context.sharedContext.applicationBindings.dismissNativeController()
                                     navigationController?.pushViewController(infoController)
                                 }
@@ -476,7 +472,7 @@ public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext 
                             return transaction.getPeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: idValue))
                         }
                         |> deliverOnMainQueue).start(next: { peer in
-                            if let peer = peer, let controller = peerInfoController(context: context, peer: peer) {
+                            if let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
                                 navigationController?.pushViewController(controller)
                             }
                         })

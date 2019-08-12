@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import SearchBarNode
 
 final class ContactSelectionControllerNode: ASDisplayNode {
     var displayProgress: Bool = false {

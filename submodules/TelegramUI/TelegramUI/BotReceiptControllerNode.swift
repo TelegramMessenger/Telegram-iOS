@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
+import TelegramStringFormatting
 
 final class BotReceiptControllerArguments {
     fileprivate let account: Account

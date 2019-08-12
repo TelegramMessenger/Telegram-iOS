@@ -4,6 +4,7 @@ import Display
 import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
+import LegacyUI
 
 func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, theme: PresentationTheme, present: (ViewController, Any?) -> Void, openCurrent: (() -> Void)?, completion: @escaping (UIImage) -> Void) {
     let legacyController = LegacyController(presentation: .custom, theme: theme)

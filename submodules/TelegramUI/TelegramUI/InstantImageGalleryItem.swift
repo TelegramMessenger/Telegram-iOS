@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import PhotoResources
+import GalleryUI
 
 private struct InstantImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account

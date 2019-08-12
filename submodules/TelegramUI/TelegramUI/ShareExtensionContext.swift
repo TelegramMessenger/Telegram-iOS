@@ -8,6 +8,7 @@ import TelegramUIPreferences
 import TelegramUIPrivateModule
 import AccountContext
 import ShareController
+import LegacyUI
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 

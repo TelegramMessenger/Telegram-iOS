@@ -444,7 +444,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             }
         }))
     }, openPeer: { peer in
-        if let controller = peerInfoController(context: context, peer: peer) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
@@ -496,7 +496,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                     return state.withUpdatedSearchingMembers(false)
                 }
             }, openPeer: { peer, _ in
-                if let infoController = peerInfoController(context: context, peer: peer) {
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
                     pushControllerImpl?(infoController)
                    // arguments.pushController(infoController)
                 }

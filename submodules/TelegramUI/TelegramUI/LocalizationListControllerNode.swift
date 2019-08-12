@@ -10,6 +10,7 @@ import MergeLists
 import ItemListUI
 import AccountContext
 import ShareController
+import SearchBarNode
 
 private enum LanguageListSection: ItemListSectionId {
     case official

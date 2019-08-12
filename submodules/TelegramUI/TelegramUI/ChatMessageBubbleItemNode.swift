@@ -11,6 +11,7 @@ import AccountContext
 import TemporaryCachedPeerDataManager
 import LocalizedPeerData
 import ContextUI
+import TelegramUniversalVideoContent
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []

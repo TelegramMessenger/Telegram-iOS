@@ -9,6 +9,8 @@ import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
+import GalleryUI
+import LegacyUI
 
 private struct EditSettingsItemArguments {
     let context: AccountContext

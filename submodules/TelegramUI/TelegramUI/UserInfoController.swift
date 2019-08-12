@@ -16,6 +16,7 @@ import AccountContext
 import ShareController
 import AlertUI
 import TelegramNotices
+import GalleryUI
 
 private final class UserInfoControllerArguments {
     let account: Account

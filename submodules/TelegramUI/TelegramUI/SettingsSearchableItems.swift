@@ -8,6 +8,7 @@ import TelegramUIPreferences
 import TelegramCallsUI
 import OverlayStatusController
 import AccountContext
+import PassportUI
 
 private let maximumNumberOfAccounts = 3
 

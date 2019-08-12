@@ -12,6 +12,7 @@ import AccountContext
 import LocalizedPeerData
 import StickerResources
 import PhotoResources
+import TelegramStringFormatting
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext

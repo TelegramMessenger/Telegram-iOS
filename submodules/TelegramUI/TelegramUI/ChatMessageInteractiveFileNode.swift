@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
 import PhotoResources
+import TelegramStringFormatting
 
 private struct FetchControls {
     let fetch: () -> Void

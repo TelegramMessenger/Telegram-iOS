@@ -20,6 +20,9 @@ import OverlayStatusController
 import AvatarNode
 import AlertUI
 import TelegramNotices
+import GalleryUI
+import LegacyUI
+import PassportUI
 
 private let maximumNumberOfAccounts = 3
 

@@ -107,6 +107,44 @@ public final class AccountWithInfo: Equatable {
     }
 }
 
+public enum OpenURLContext {
+    case generic
+    case chat
+}
+
+public struct ChatAvailableMessageActionOptions: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let deleteLocally = ChatAvailableMessageActionOptions(rawValue: 1 << 0)
+    public static let deleteGlobally = ChatAvailableMessageActionOptions(rawValue: 1 << 1)
+    public static let forward = ChatAvailableMessageActionOptions(rawValue: 1 << 2)
+    public static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
+    public static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
+    public static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
+    public static let cancelSending = ChatAvailableMessageActionOptions(rawValue: 1 << 6)
+    public static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
+    public static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
+    public static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
+}
+
+public struct ChatAvailableMessageActions {
+    public var options: ChatAvailableMessageActionOptions
+    public var banAuthor: Peer?
+    
+    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?) {
+        self.options = options
+        self.banAuthor = banAuthor
+    }
+}
+
 public protocol SharedAccountContext: class {
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -142,6 +180,9 @@ public protocol SharedAccountContext: class {
     func openChatMessage(_ params: OpenChatMessageParams) -> Bool
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
     func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
+    func makePeerInfoController(context: AccountContext, peer: Peer) -> ViewController?
+    func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
+    func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> 
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

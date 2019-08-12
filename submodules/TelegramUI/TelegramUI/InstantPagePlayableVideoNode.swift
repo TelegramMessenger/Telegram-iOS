@@ -8,13 +8,15 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
+import GalleryUI
+import TelegramUniversalVideoContent
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
     let cancel: () -> Void
 }
 
-final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
+final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, GalleryItemTransitionNode {
     private let context: AccountContext
     let media: InstantPageMedia
     private let interactive: Bool
@@ -31,6 +33,10 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     private var statusDisposable = MetaDisposable()
     
     private var localIsVisible = false
+    
+    public var decoration: UniversalVideoDecoration? {
+        return nil
+    }
     
     init(context: AccountContext, webPage: TelegramMediaWebpage, theme: InstantPageTheme, media: InstantPageMedia, interactive: Bool, openMedia: @escaping (InstantPageMedia) -> Void) {
         self.context = context
@@ -74,6 +80,10 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode {
     
     deinit {
         self.fetchedDisposable.dispose()
+    }
+    
+    func isAvailableForGalleryTransition() -> Bool {
+        return true
     }
     
     override func didLoad() {

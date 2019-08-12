@@ -156,7 +156,7 @@ final class SecretChatKeyControllerNode: ViewControllerTracingNode {
             let point = recognizer.location(in: recognizer.view)
             if let attributes = self.infoNode.attributesAtPoint(point)?.1 {
                 if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                    openExternalUrl(context: self.context, url: url, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: { [weak self] in
+                    self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url, forceExternal: false, presentationData: self.presentationData, navigationController: self.getNavigationController(), dismissInput: { [weak self] in
                         self?.view.endEditing(true)
                     })
                 }

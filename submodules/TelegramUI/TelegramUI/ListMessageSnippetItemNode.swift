@@ -9,6 +9,7 @@ import TelegramPresentationData
 import ItemListUI
 import TextFormat
 import PhotoResources
+import WebsiteType
 
 private let titleFont = Font.medium(16.0)
 private let descriptionFont = Font.regular(14.0)
@@ -487,7 +488,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         if let item = self.item, let currentPrimaryUrl = self.currentPrimaryUrl {
             if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if content.instantPage != nil {
-                    if websiteType(of: content) == .instagram {
+                    if websiteType(of: content.websiteName) == .instagram {
                         if !item.controllerInteraction.openMessage(item.message, .default) {
                             item.controllerInteraction.openInstantPage(item.message, nil)
                         }

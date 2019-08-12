@@ -652,7 +652,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, openPeerInfo: { peer in
-        if let controller = peerInfoController(context: context, peer: peer) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
             pushControllerImpl?(controller)
         }
     }, openKicked: {

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import MergeLists
 import ItemListUI
 import AccountContext
+import SearchBarNode
 
 extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationContentNode {
     func activate() {

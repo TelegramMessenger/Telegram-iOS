@@ -7,6 +7,7 @@ import SwiftSignalKit
 import Display
 import TelegramPresentationData
 import AccountContext
+import TelegramStringFormatting
 
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()

@@ -9,6 +9,7 @@ import Lottie
 import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
+import GalleryUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)

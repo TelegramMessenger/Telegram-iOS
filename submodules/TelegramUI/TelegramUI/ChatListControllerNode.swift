@@ -9,6 +9,7 @@ import TelegramPresentationData
 import MergeLists
 import ActivityIndicator
 import AccountContext
+import SearchBarNode
 
 private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {

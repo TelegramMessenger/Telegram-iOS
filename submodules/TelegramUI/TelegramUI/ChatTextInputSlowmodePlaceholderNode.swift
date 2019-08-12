@@ -2,6 +2,7 @@ import Foundation
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
 
 final class ChatTextInputSlowmodePlaceholderNode: ASDisplayNode {
     private var theme: PresentationTheme

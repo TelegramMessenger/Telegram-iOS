@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TextFormat
 import AccountContext
 import ShareController
+import GalleryUI
 
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
 
