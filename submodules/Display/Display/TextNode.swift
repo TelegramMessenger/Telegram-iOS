@@ -401,11 +401,11 @@ public final class TextNodeLayout: NSObject {
                     let lineRange = NSIntersectionRange(range, line.range)
                     if lineRange.length != 0 {
                         var leftOffset: CGFloat = 0.0
-                        if lineRange.location != line.range.location {
+                        if lineRange.location != line.range.location || line.isRTL {
                             leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
                         }
                         var rightOffset: CGFloat = line.frame.width
-                        if lineRange.location + lineRange.length != line.range.length {
+                        if lineRange.location + lineRange.length != line.range.length || line.isRTL {
                             var secondaryOffset: CGFloat = 0.0
                             let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
                             rightOffset = ceil(rawOffset)
@@ -417,7 +417,10 @@ public final class TextNodeLayout: NSObject {
                         
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                         
-                        rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height))))
+                        let width = abs(rightOffset - leftOffset)
+                        if width > 1.0 {
+                            rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + (leftOffset < rightOffset ? leftOffset : rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
+                        }
                     }
                 }
                 if !rects.isEmpty {

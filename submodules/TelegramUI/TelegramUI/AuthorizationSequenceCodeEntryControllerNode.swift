@@ -151,7 +151,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeField = TextFieldNode()
         self.codeField.textField.font = Font.regular(24.0)
         self.codeField.textField.textAlignment = .center
-        self.codeField.textField.keyboardType = .numberPad
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            self.codeField.textField.keyboardType = .asciiCapableNumberPad
+        } else {
+            self.codeField.textField.keyboardType = .numberPad
+        }
         #if swift(>=4.2)
         if #available(iOSApplicationExtension 12.0, iOS 12.0, *) {
             self.codeField.textField.textContentType = .oneTimeCode

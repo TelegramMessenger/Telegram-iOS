@@ -426,39 +426,24 @@ static inline int writeOggPage(ogg_page *page, TGDataItem *fileItem)
         pages_out++;
     }
     
-    op.packet = (unsigned char *)_packet;
-    op.bytes = nbBytes;
-    op.b_o_s = 0;
-    op.granulepos = enc_granulepos;
-    if (op.e_o_s)
-    {
-        /* We compute the final GP as ceil(len*48k/input_rate). When a resampling
-         decoder does the matching floor(len*input/48k) conversion the length will
-         be exactly the same as the input.
-         */
-        op.granulepos = ((total_samples * 48000 + rate - 1) / rate) + header.preskip;
-    }
-    op.packetno = 2 + _packetId;
-    ogg_stream_packetin(&os, &op);
-    last_segments += size_segments;
+    if (framePcmBytes != NULL) {
+        op.packet = (unsigned char *)_packet;
+        op.bytes = nbBytes;
+        op.b_o_s = 0;
+        op.granulepos = enc_granulepos;
     
-    /* The downside of early reading is if the input is an exact
-     multiple of the frame_size you'll get an extra frame that needs
-     to get cropped off. The downside of late reading is added delay.
-     If your ogg_delay is 120ms or less we'll assume you want the
-     low delay behavior.
-     */
-    /*if ((!op.e_o_s) && max_ogg_delay > 5760)
-    {
-        nb_samples = inopt.read_samples(inopt.readdata, input, frame_size);
-        total_samples += nb_samples;
-        if (nb_samples < frame_size)
-            eos = 1;
-        if (nb_samples == 0)
-            op.e_o_s = 1;
+        if (op.e_o_s)
+        {
+            /* We compute the final GP as ceil(len*48k/input_rate). When a resampling
+             decoder does the matching floor(len*input/48k) conversion the length will
+             be exactly the same as the input.
+             */
+            op.granulepos = ((total_samples * 48000 + rate - 1) / rate) + header.preskip;
+        }
+        op.packetno = 2 + _packetId;
+        ogg_stream_packetin(&os, &op);
+        last_segments += size_segments;
     }
-    else
-        nb_samples = -1;*/
     
     // If the stream is over or we're sure that the delayed flush will fire, go ahead and flush now to avoid adding delay
     while ((op.e_o_s || (enc_granulepos + (frame_size * 48000 / coding_rate) - last_granulepos > max_ogg_delay) ||

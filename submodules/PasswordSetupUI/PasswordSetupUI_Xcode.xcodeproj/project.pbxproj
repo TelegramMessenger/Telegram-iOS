@@ -24,6 +24,7 @@
 		D0C9C5272300EF9900FAB518 /* ActivityIndicator.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5262300EF9900FAB518 /* ActivityIndicator.framework */; };
 		D0C9C5292300EF9E00FAB518 /* AlertUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5282300EF9E00FAB518 /* AlertUI.framework */; };
 		D0C9C52F2300F01C00FAB518 /* ResetPasswordController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C52E2300F01C00FAB518 /* ResetPasswordController.swift */; };
+		D0C9C5382301CCE200FAB518 /* ItemListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5372301CCE200FAB518 /* ItemListUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +47,7 @@
 		D0C9C5262300EF9900FAB518 /* ActivityIndicator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ActivityIndicator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C5282300EF9E00FAB518 /* AlertUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AlertUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C52E2300F01C00FAB518 /* ResetPasswordController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ResetPasswordController.swift; sourceTree = "<group>"; };
+		D0C9C5372301CCE200FAB518 /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +55,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C5382301CCE200FAB518 /* ItemListUI.framework in Frameworks */,
 				D0C9C5292300EF9E00FAB518 /* AlertUI.framework in Frameworks */,
 				D0C9C5272300EF9900FAB518 /* ActivityIndicator.framework in Frameworks */,
 				D0C9C5252300EF8E00FAB518 /* AccountContext.framework in Frameworks */,
@@ -104,6 +107,7 @@
 		D0C9C5112300EF5300FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C5372301CCE200FAB518 /* ItemListUI.framework */,
 				D0C9C5282300EF9E00FAB518 /* AlertUI.framework */,
 				D0C9C5262300EF9900FAB518 /* ActivityIndicator.framework */,
 				D0C9C5242300EF8E00FAB518 /* AccountContext.framework */,

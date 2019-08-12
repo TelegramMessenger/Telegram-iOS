@@ -105,8 +105,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         self.pickerView.timeZone = TimeZone.current
         self.pickerView.minuteInterval = 5
-        self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
-        
         self.pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
         
         self.contentContainerNode.view.addSubview(self.pickerView)
@@ -136,6 +134,10 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: currentDate)
         components.second = 0
         let minute = (components.minute ?? 0) % 5
+        
+        if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
+            self.pickerView.maximumDate = date
+        }
         
         if let date = calendar.date(byAdding: .minute, value: 5 - minute, to: calendar.date(from: components)!) {
             self.pickerView.minimumDate = date

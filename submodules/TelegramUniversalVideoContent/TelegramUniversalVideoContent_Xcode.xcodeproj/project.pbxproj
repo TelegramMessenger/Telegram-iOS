@@ -35,6 +35,7 @@
 		D0C9C3D52300BA8B00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3D42300BA8B00FAB518 /* FrameworkBundle.swift */; };
 		D0C9C4442300DC2000FAB518 /* ChatBubbleVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4422300DC2000FAB518 /* ChatBubbleVideoDecoration.swift */; };
 		D0C9C4452300DC2000FAB518 /* ChatBubbleInstantVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4432300DC2000FAB518 /* ChatBubbleInstantVideoDecoration.swift */; };
+		D0C9C5362301CCC600FAB518 /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5352301CCC600FAB518 /* PhotoResources.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +70,7 @@
 		D0C9C3D42300BA8B00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C4422300DC2000FAB518 /* ChatBubbleVideoDecoration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBubbleVideoDecoration.swift; sourceTree = "<group>"; };
 		D0C9C4432300DC2000FAB518 /* ChatBubbleInstantVideoDecoration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBubbleInstantVideoDecoration.swift; sourceTree = "<group>"; };
+		D0C9C5352301CCC600FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +78,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C5362301CCC600FAB518 /* PhotoResources.framework in Frameworks */,
 				D0C9C3D12300BA4F00FAB518 /* RadialStatusNode.framework in Frameworks */,
 				D0C9C3CF2300BA4400FAB518 /* TelegramAudio.framework in Frameworks */,
 				D0C9C3CB2300BA3300FAB518 /* LegacyComponents.framework in Frameworks */,
@@ -138,6 +141,7 @@
 		D0C9C3882300B41900FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C5352301CCC600FAB518 /* PhotoResources.framework */,
 				D0C9C3D02300BA4F00FAB518 /* RadialStatusNode.framework */,
 				D0C9C3CE2300BA4400FAB518 /* TelegramAudio.framework */,
 				D0C9C3CC2300BA3800FAB518 /* TelegramUI.framework */,

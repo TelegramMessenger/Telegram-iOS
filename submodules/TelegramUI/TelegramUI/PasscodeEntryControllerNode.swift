@@ -361,12 +361,12 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.keyboardNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         switch self.passcodeType {
-        case .digits6, .digits4:
-            self.keyboardNode.alpha = 1.0
-            self.deleteButtonNode.alpha = 1.0
-        case .alphanumeric:
-            self.keyboardNode.alpha = 0.0
-            self.deleteButtonNode.alpha = 0.0
+            case .digits6, .digits4:
+                self.keyboardNode.alpha = 1.0
+                self.deleteButtonNode.alpha = 1.0
+            case .alphanumeric:
+                self.keyboardNode.alpha = 0.0
+                self.deleteButtonNode.alpha = 0.0
         }
         
         let bottomInset = layout.inputHeight ?? 0.0

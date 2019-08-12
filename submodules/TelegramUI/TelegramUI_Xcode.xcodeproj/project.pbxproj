@@ -2070,7 +2070,6 @@
 		D0F680091EE750EE000E5906 /* ChannelBannedMemberController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelBannedMemberController.swift; sourceTree = "<group>"; };
 		D0F69CD61D6B87D30046BCD6 /* MediaManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
 		D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = TelegramUI.xcconfig; path = TelegramUI/Config/TelegramUI.xcconfig; sourceTree = "<group>"; };
-		D0F69DC21D6B89DA0046BCD6 /* TextNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TextNode.swift; sourceTree = "<group>"; };
 		D0F69DC41D6B89E10046BCD6 /* RadialProgressNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialProgressNode.swift; sourceTree = "<group>"; };
 		D0F69DCD1D6B8A0D0046BCD6 /* SearchDisplayController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchDisplayController.swift; sourceTree = "<group>"; };
 		D0F69DCE1D6B8A0D0046BCD6 /* SearchDisplayControllerContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchDisplayControllerContentNode.swift; sourceTree = "<group>"; };
@@ -3993,7 +3992,6 @@
 				D0477D191F617E4B00412B44 /* Video */,
 				D0F69DC41D6B89E10046BCD6 /* RadialProgressNode.swift */,
 				D00C7CE51E378FD00080C3D5 /* RadialTimeoutNode.swift */,
-				D0F69DC21D6B89DA0046BCD6 /* TextNode.swift */,
 				D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */,
 				D0568AAC1DF198130022E7DA /* AudioWaveformNode.swift */,
 				D0BC38621E3F9EFA0044D6FE /* EditableTokenListNode.swift */,
@@ -4942,7 +4940,6 @@
 				D008177D22B46B7E008A895F /* TGContactModel.m in Sources */,
 				D0EC6D301EB9F58800EBF1C3 /* RadialProgressNode.swift in Sources */,
 				D0EC6D311EB9F58800EBF1C3 /* RadialTimeoutNode.swift in Sources */,
-				D0EC6D321EB9F58800EBF1C3 /* TextNode.swift in Sources */,
 				D0BFAE5020AB2A1300793CF2 /* PeerBanTimeoutController.swift in Sources */,
 				09CE950A2237B93500A7D2C3 /* SettingsSearchResultItem.swift in Sources */,
 				D0AE303922B1D3620058D3BC /* LegacyBridgeAudio.swift in Sources */,

@@ -123,7 +123,11 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
                 case .number:
                     capitalizationType = .none
                     autocorrectionType = .no
-                    keyboardType = .numberPad
+                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                        keyboardType = .asciiCapableNumberPad
+                    } else {
+                        keyboardType = .numberPad
+                    }
             }
             
             if self.textField.textField.keyboardType != keyboardType {
