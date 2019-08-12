@@ -24,6 +24,7 @@
 		D0C9C35E2300AEF100FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C35D2300AEF100FAB518 /* Display.framework */; };
 		D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */; };
 		D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */; };
+		D0C9CA3823022A8300FAB518 /* NumberFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA3723022A8300FAB518 /* NumberFormat.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +47,7 @@
 		D0C9C35D2300AEF100FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CurrencyFormat.swift; sourceTree = "<group>"; };
 		D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9CA3723022A8300FAB518 /* NumberFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumberFormat.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -88,6 +90,7 @@
 		D0879AAF22F7021000C4D6B3 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9CA3723022A8300FAB518 /* NumberFormat.swift */,
 				D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */,
 				D0C9C3552300AD9900FAB518 /* MessageContentKind.swift */,
 				D0C9C3572300ADCF00FAB518 /* ServiceMessageStrings.swift */,
@@ -199,6 +202,7 @@
 				D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */,
 				D0C9C3562300AD9900FAB518 /* MessageContentKind.swift in Sources */,
+				D0C9CA3823022A8300FAB518 /* NumberFormat.swift in Sources */,
 				D0879ACA22F7063300C4D6B3 /* DateFormat.swift in Sources */,
 				D0879ABD22F705AE00C4D6B3 /* PresenceStrings.swift in Sources */,
 				D0C9C3542300AD7000FAB518 /* StringForDuration.swift in Sources */,

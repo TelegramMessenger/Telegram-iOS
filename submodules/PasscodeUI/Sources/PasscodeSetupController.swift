@@ -8,12 +8,12 @@ import Postbox
 import TelegramPresentationData
 import AccountContext
 
-enum PasscodeSetupControllerMode {
+public enum PasscodeSetupControllerMode {
     case setup(change: Bool, PasscodeEntryFieldType)
     case entry(PostboxAccessChallengeData)
 }
 
-final class PasscodeSetupController: ViewController {
+public final class PasscodeSetupController: ViewController {
     private var controllerNode: PasscodeSetupControllerNode {
         return self.displayNode as! PasscodeSetupControllerNode
     }
@@ -21,8 +21,8 @@ final class PasscodeSetupController: ViewController {
     private let context: AccountContext
     private var mode: PasscodeSetupControllerMode
     
-    var complete: ((String, Bool) -> Void)?
-    var check: ((String) -> Bool)?
+    public var complete: ((String, Bool) -> Void)?
+    public var check: ((String) -> Bool)?
     
     private let hapticFeedback = HapticFeedback()
     
@@ -30,7 +30,7 @@ final class PasscodeSetupController: ViewController {
     
     private var nextAction: UIBarButtonItem?
     
-    init(context: AccountContext, mode: PasscodeSetupControllerMode) {
+    public init(context: AccountContext, mode: PasscodeSetupControllerMode) {
         self.context = context
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -45,7 +45,7 @@ final class PasscodeSetupController: ViewController {
         self.title = self.presentationData.strings.PasscodeSettings_Title
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -126,26 +126,26 @@ final class PasscodeSetupController: ViewController {
         }
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         self.controllerNode.activateInput()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         self.controllerNode.activateInput()
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    @objc func nextPressed() {
+    @objc private func nextPressed() {
        self.controllerNode.activateNext()
     }
 }

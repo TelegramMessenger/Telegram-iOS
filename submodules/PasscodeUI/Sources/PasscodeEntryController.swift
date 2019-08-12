@@ -8,8 +8,9 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import LocalAuth
+import TelegramStringFormatting
 
-final public class PasscodeEntryControllerPresentationArguments {
+public final class PasscodeEntryControllerPresentationArguments {
     let animated: Bool
     let fadeIn: Bool
     let lockIconInitialFrame: () -> CGRect
@@ -28,7 +29,7 @@ public enum PasscodeEntryControllerBiometricsMode {
     case enabled(Data?)
 }
 
-final public class PasscodeEntryController: ViewController {
+public final class PasscodeEntryController: ViewController {
     private var controllerNode: PasscodeEntryControllerNode {
         return self.displayNode as! PasscodeEntryControllerNode
     }
@@ -88,7 +89,7 @@ final public class PasscodeEntryController: ViewController {
         self.inBackgroundDisposable?.dispose()
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     

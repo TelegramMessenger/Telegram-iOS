@@ -379,6 +379,9 @@
       <FileRef
          location = "group:submodules/TelegramPermissionsUI/TelegramPermissionsUI_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/PasscodeUI/PasscodeUI_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <FileRef
       location = "group:submodules/TelegramUI/TelegramUI_Xcode.xcodeproj">

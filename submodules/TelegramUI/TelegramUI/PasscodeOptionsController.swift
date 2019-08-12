@@ -11,6 +11,8 @@ import TelegramUIPreferences
 import ItemListUI
 import AccountContext
 import LocalAuth
+import PasscodeUI
+import TelegramStringFormatting
 
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void

@@ -51,12 +51,12 @@ private let validDigitsSet: CharacterSet = {
     return CharacterSet(charactersIn: "0".unicodeScalars.first! ... "9".unicodeScalars.first!)
 }()
 
-enum PasscodeEntryFieldType {
+public enum PasscodeEntryFieldType {
     case digits6
     case digits4
     case alphanumeric
     
-    var maxLength: Int? {
+    public var maxLength: Int? {
         switch self {
             case .digits6:
                 return 6
@@ -67,7 +67,7 @@ enum PasscodeEntryFieldType {
         }
     }
     
-    var allowedCharacters: CharacterSet? {
+    public var allowedCharacters: CharacterSet? {
         switch self {
             case .digits6, .digits4:
                 return validDigitsSet
@@ -76,7 +76,7 @@ enum PasscodeEntryFieldType {
         }
     }
     
-    var keyboardType: UIKeyboardType {
+    public var keyboardType: UIKeyboardType {
         switch self {
             case .digits6, .digits4:
                 if #available(iOS 10.0, *) {
