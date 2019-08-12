@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import LocalAuth
 
 private let titleFont = Font.regular(20.0)
 private let subtitleFont = Font.regular(15.0)

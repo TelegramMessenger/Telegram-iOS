@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
-import TelegramUIPrivateModule
+import Stripe
 
 struct BotPaymentCardInputData {
     let number: String

@@ -1,0 +1,687 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0C9C6CD2301FC9300FAB518 /* BotPaymentsUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C6CB2301FC9300FAB518 /* BotPaymentsUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9C7922301FFD000FAB518 /* BotCheckoutPasswordEntryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7792301FFC900FAB518 /* BotCheckoutPasswordEntryController.swift */; };
+		D0C9C7932301FFD000FAB518 /* BotPaymentActionItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C77A2301FFC900FAB518 /* BotPaymentActionItemNode.swift */; };
+		D0C9C7942301FFD000FAB518 /* BotPaymentDateItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C77B2301FFC900FAB518 /* BotPaymentDateItemNode.swift */; };
+		D0C9C7952301FFD000FAB518 /* BotCheckoutPaymentShippingOptionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C77C2301FFCA00FAB518 /* BotCheckoutPaymentShippingOptionSheetController.swift */; };
+		D0C9C7962301FFD000FAB518 /* BotPaymentTextItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C77D2301FFCA00FAB518 /* BotPaymentTextItemNode.swift */; };
+		D0C9C7972301FFD000FAB518 /* BotPaymentItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C77E2301FFCA00FAB518 /* BotPaymentItemNode.swift */; };
+		D0C9C7982301FFD000FAB518 /* BotCheckoutInfoControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C77F2301FFCA00FAB518 /* BotCheckoutInfoControllerNode.swift */; };
+		D0C9C7992301FFD000FAB518 /* BotPaymentCardInputItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7802301FFCA00FAB518 /* BotPaymentCardInputItemNode.swift */; };
+		D0C9C79A2301FFD000FAB518 /* BotReceiptController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7812301FFCA00FAB518 /* BotReceiptController.swift */; };
+		D0C9C79B2301FFD000FAB518 /* BotCheckoutActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7822301FFCA00FAB518 /* BotCheckoutActionButton.swift */; };
+		D0C9C79C2301FFD000FAB518 /* BotCheckoutWebInteractionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7832301FFCB00FAB518 /* BotCheckoutWebInteractionController.swift */; };
+		D0C9C79D2301FFD000FAB518 /* BotPaymentHeaderItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7842301FFCB00FAB518 /* BotPaymentHeaderItemNode.swift */; };
+		D0C9C79E2301FFD000FAB518 /* BotCheckoutInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7852301FFCB00FAB518 /* BotCheckoutInfoController.swift */; };
+		D0C9C79F2301FFD000FAB518 /* BotReceiptControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7862301FFCB00FAB518 /* BotReceiptControllerNode.swift */; };
+		D0C9C7A02301FFD000FAB518 /* BotCheckoutPaymentMethodSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7872301FFCC00FAB518 /* BotCheckoutPaymentMethodSheet.swift */; };
+		D0C9C7A12301FFD000FAB518 /* BotCheckoutWebInteractionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7882301FFCC00FAB518 /* BotCheckoutWebInteractionControllerNode.swift */; };
+		D0C9C7A22301FFD000FAB518 /* BotCheckoutPriceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7892301FFCC00FAB518 /* BotCheckoutPriceItem.swift */; };
+		D0C9C7A32301FFD000FAB518 /* BotCheckoutNativeCardEntryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C78A2301FFCC00FAB518 /* BotCheckoutNativeCardEntryController.swift */; };
+		D0C9C7A42301FFD000FAB518 /* BotPaymentDisclosureItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C78B2301FFCC00FAB518 /* BotPaymentDisclosureItemNode.swift */; };
+		D0C9C7A52301FFD000FAB518 /* BotPaymentFieldItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C78C2301FFCD00FAB518 /* BotPaymentFieldItemNode.swift */; };
+		D0C9C7A62301FFD000FAB518 /* BotCheckoutHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C78D2301FFCD00FAB518 /* BotCheckoutHeaderItem.swift */; };
+		D0C9C7A72301FFD000FAB518 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C78E2301FFCE00FAB518 /* BotCheckoutNativeCardEntryControllerNode.swift */; };
+		D0C9C7A82301FFD000FAB518 /* BotCheckoutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C78F2301FFCE00FAB518 /* BotCheckoutController.swift */; };
+		D0C9C7A92301FFD000FAB518 /* BotPaymentSwitchItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7902301FFCF00FAB518 /* BotPaymentSwitchItemNode.swift */; };
+		D0C9C7AA2301FFD000FAB518 /* BotCheckoutControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7912301FFCF00FAB518 /* BotCheckoutControllerNode.swift */; };
+		D0C9C7AD2301FFD300FAB518 /* Stripe.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7AC2301FFD300FAB518 /* Stripe.framework */; };
+		D0C9C7AF2301FFD800FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7AE2301FFD800FAB518 /* Foundation.framework */; };
+		D0C9C7B12301FFDC00FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B02301FFDC00FAB518 /* UIKit.framework */; };
+		D0C9C7B32301FFE000FAB518 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B22301FFE000FAB518 /* Postbox.framework */; };
+		D0C9C7B52301FFE500FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B42301FFE500FAB518 /* TelegramCore.framework */; };
+		D0C9C7B72301FFE900FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B62301FFE900FAB518 /* SwiftSignalKit.framework */; };
+		D0C9C7B92301FFEF00FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B82301FFEF00FAB518 /* TelegramPresentationData.framework */; };
+		D0C9C7BF2302023D00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7BE2302023D00FAB518 /* FrameworkBundle.swift */; };
+		D0C9C7E32302035800FAB518 /* LocalAuth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E22302035800FAB518 /* LocalAuth.framework */; };
+		D0C9C7E72302041100FAB518 /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E62302041100FAB518 /* AccountContext.framework */; };
+		D0C9C7E9230205A500FAB518 /* ItemListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E8230205A500FAB518 /* ItemListUI.framework */; };
+		D0C9C7EB230205D700FAB518 /* PasswordSetupUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7EA230205D700FAB518 /* PasswordSetupUI.framework */; };
+		D0C9C7EF2302061E00FAB518 /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7EE2302061E00FAB518 /* PhotoResources.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D0C9C6C82301FC9300FAB518 /* BotPaymentsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = BotPaymentsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C6CB2301FC9300FAB518 /* BotPaymentsUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BotPaymentsUI.h; sourceTree = "<group>"; };
+		D0C9C6CC2301FC9300FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0C9C7792301FFC900FAB518 /* BotCheckoutPasswordEntryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPasswordEntryController.swift; sourceTree = "<group>"; };
+		D0C9C77A2301FFC900FAB518 /* BotPaymentActionItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentActionItemNode.swift; sourceTree = "<group>"; };
+		D0C9C77B2301FFC900FAB518 /* BotPaymentDateItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentDateItemNode.swift; sourceTree = "<group>"; };
+		D0C9C77C2301FFCA00FAB518 /* BotCheckoutPaymentShippingOptionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPaymentShippingOptionSheetController.swift; sourceTree = "<group>"; };
+		D0C9C77D2301FFCA00FAB518 /* BotPaymentTextItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentTextItemNode.swift; sourceTree = "<group>"; };
+		D0C9C77E2301FFCA00FAB518 /* BotPaymentItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentItemNode.swift; sourceTree = "<group>"; };
+		D0C9C77F2301FFCA00FAB518 /* BotCheckoutInfoControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutInfoControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C7802301FFCA00FAB518 /* BotPaymentCardInputItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentCardInputItemNode.swift; sourceTree = "<group>"; };
+		D0C9C7812301FFCA00FAB518 /* BotReceiptController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotReceiptController.swift; sourceTree = "<group>"; };
+		D0C9C7822301FFCA00FAB518 /* BotCheckoutActionButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutActionButton.swift; sourceTree = "<group>"; };
+		D0C9C7832301FFCB00FAB518 /* BotCheckoutWebInteractionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutWebInteractionController.swift; sourceTree = "<group>"; };
+		D0C9C7842301FFCB00FAB518 /* BotPaymentHeaderItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentHeaderItemNode.swift; sourceTree = "<group>"; };
+		D0C9C7852301FFCB00FAB518 /* BotCheckoutInfoController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutInfoController.swift; sourceTree = "<group>"; };
+		D0C9C7862301FFCB00FAB518 /* BotReceiptControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotReceiptControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C7872301FFCC00FAB518 /* BotCheckoutPaymentMethodSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPaymentMethodSheet.swift; sourceTree = "<group>"; };
+		D0C9C7882301FFCC00FAB518 /* BotCheckoutWebInteractionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutWebInteractionControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C7892301FFCC00FAB518 /* BotCheckoutPriceItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPriceItem.swift; sourceTree = "<group>"; };
+		D0C9C78A2301FFCC00FAB518 /* BotCheckoutNativeCardEntryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutNativeCardEntryController.swift; sourceTree = "<group>"; };
+		D0C9C78B2301FFCC00FAB518 /* BotPaymentDisclosureItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentDisclosureItemNode.swift; sourceTree = "<group>"; };
+		D0C9C78C2301FFCD00FAB518 /* BotPaymentFieldItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentFieldItemNode.swift; sourceTree = "<group>"; };
+		D0C9C78D2301FFCD00FAB518 /* BotCheckoutHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutHeaderItem.swift; sourceTree = "<group>"; };
+		D0C9C78E2301FFCE00FAB518 /* BotCheckoutNativeCardEntryControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutNativeCardEntryControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C78F2301FFCE00FAB518 /* BotCheckoutController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutController.swift; sourceTree = "<group>"; };
+		D0C9C7902301FFCF00FAB518 /* BotPaymentSwitchItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentSwitchItemNode.swift; sourceTree = "<group>"; };
+		D0C9C7912301FFCF00FAB518 /* BotCheckoutControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C7AC2301FFD300FAB518 /* Stripe.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Stripe.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7AE2301FFD800FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0C9C7B02301FFDC00FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D0C9C7B22301FFE000FAB518 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7B42301FFE500FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7B62301FFE900FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7B82301FFEF00FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7BE2302023D00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9C7E22302035800FAB518 /* LocalAuth.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalAuth.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7E62302041100FAB518 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7E8230205A500FAB518 /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7EA230205D700FAB518 /* PasswordSetupUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PasswordSetupUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7EE2302061E00FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0C9C6C52301FC9300FAB518 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C7EF2302061E00FAB518 /* PhotoResources.framework in Frameworks */,
+				D0C9C7EB230205D700FAB518 /* PasswordSetupUI.framework in Frameworks */,
+				D0C9C7E9230205A500FAB518 /* ItemListUI.framework in Frameworks */,
+				D0C9C7E72302041100FAB518 /* AccountContext.framework in Frameworks */,
+				D0C9C7E32302035800FAB518 /* LocalAuth.framework in Frameworks */,
+				D0C9C7B92301FFEF00FAB518 /* TelegramPresentationData.framework in Frameworks */,
+				D0C9C7B72301FFE900FAB518 /* SwiftSignalKit.framework in Frameworks */,
+				D0C9C7B52301FFE500FAB518 /* TelegramCore.framework in Frameworks */,
+				D0C9C7B32301FFE000FAB518 /* Postbox.framework in Frameworks */,
+				D0C9C7B12301FFDC00FAB518 /* UIKit.framework in Frameworks */,
+				D0C9C7AF2301FFD800FAB518 /* Foundation.framework in Frameworks */,
+				D0C9C7AD2301FFD300FAB518 /* Stripe.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0C9C6BE2301FC9300FAB518 = {
+			isa = PBXGroup;
+			children = (
+				D0C9C6CC2301FC9300FAB518 /* Info.plist */,
+				D0C9C6CA2301FC9300FAB518 /* Sources */,
+				D0C9C6C92301FC9300FAB518 /* Products */,
+				D0C9C7AB2301FFD300FAB518 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D0C9C6C92301FC9300FAB518 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C6C82301FC9300FAB518 /* BotPaymentsUI.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0C9C6CA2301FC9300FAB518 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C7822301FFCA00FAB518 /* BotCheckoutActionButton.swift */,
+				D0C9C78F2301FFCE00FAB518 /* BotCheckoutController.swift */,
+				D0C9C7912301FFCF00FAB518 /* BotCheckoutControllerNode.swift */,
+				D0C9C78D2301FFCD00FAB518 /* BotCheckoutHeaderItem.swift */,
+				D0C9C7852301FFCB00FAB518 /* BotCheckoutInfoController.swift */,
+				D0C9C77F2301FFCA00FAB518 /* BotCheckoutInfoControllerNode.swift */,
+				D0C9C78A2301FFCC00FAB518 /* BotCheckoutNativeCardEntryController.swift */,
+				D0C9C78E2301FFCE00FAB518 /* BotCheckoutNativeCardEntryControllerNode.swift */,
+				D0C9C7792301FFC900FAB518 /* BotCheckoutPasswordEntryController.swift */,
+				D0C9C7872301FFCC00FAB518 /* BotCheckoutPaymentMethodSheet.swift */,
+				D0C9C77C2301FFCA00FAB518 /* BotCheckoutPaymentShippingOptionSheetController.swift */,
+				D0C9C7892301FFCC00FAB518 /* BotCheckoutPriceItem.swift */,
+				D0C9C7832301FFCB00FAB518 /* BotCheckoutWebInteractionController.swift */,
+				D0C9C7882301FFCC00FAB518 /* BotCheckoutWebInteractionControllerNode.swift */,
+				D0C9C77A2301FFC900FAB518 /* BotPaymentActionItemNode.swift */,
+				D0C9C7802301FFCA00FAB518 /* BotPaymentCardInputItemNode.swift */,
+				D0C9C77B2301FFC900FAB518 /* BotPaymentDateItemNode.swift */,
+				D0C9C78B2301FFCC00FAB518 /* BotPaymentDisclosureItemNode.swift */,
+				D0C9C78C2301FFCD00FAB518 /* BotPaymentFieldItemNode.swift */,
+				D0C9C7842301FFCB00FAB518 /* BotPaymentHeaderItemNode.swift */,
+				D0C9C77E2301FFCA00FAB518 /* BotPaymentItemNode.swift */,
+				D0C9C7902301FFCF00FAB518 /* BotPaymentSwitchItemNode.swift */,
+				D0C9C77D2301FFCA00FAB518 /* BotPaymentTextItemNode.swift */,
+				D0C9C7812301FFCA00FAB518 /* BotReceiptController.swift */,
+				D0C9C7862301FFCB00FAB518 /* BotReceiptControllerNode.swift */,
+				D0C9C7BE2302023D00FAB518 /* FrameworkBundle.swift */,
+				D0C9C6CB2301FC9300FAB518 /* BotPaymentsUI.h */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D0C9C7AB2301FFD300FAB518 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C7EE2302061E00FAB518 /* PhotoResources.framework */,
+				D0C9C7EA230205D700FAB518 /* PasswordSetupUI.framework */,
+				D0C9C7E8230205A500FAB518 /* ItemListUI.framework */,
+				D0C9C7E62302041100FAB518 /* AccountContext.framework */,
+				D0C9C7E22302035800FAB518 /* LocalAuth.framework */,
+				D0C9C7B82301FFEF00FAB518 /* TelegramPresentationData.framework */,
+				D0C9C7B62301FFE900FAB518 /* SwiftSignalKit.framework */,
+				D0C9C7B42301FFE500FAB518 /* TelegramCore.framework */,
+				D0C9C7B22301FFE000FAB518 /* Postbox.framework */,
+				D0C9C7B02301FFDC00FAB518 /* UIKit.framework */,
+				D0C9C7AE2301FFD800FAB518 /* Foundation.framework */,
+				D0C9C7AC2301FFD300FAB518 /* Stripe.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D0C9C6C32301FC9300FAB518 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C6CD2301FC9300FAB518 /* BotPaymentsUI.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D0C9C6C72301FC9300FAB518 /* BotPaymentsUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0C9C6D02301FC9300FAB518 /* Build configuration list for PBXNativeTarget "BotPaymentsUI" */;
+			buildPhases = (
+				D0C9C6C32301FC9300FAB518 /* Headers */,
+				D0C9C6C42301FC9300FAB518 /* Sources */,
+				D0C9C6C52301FC9300FAB518 /* Frameworks */,
+				D0C9C6C62301FC9300FAB518 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = BotPaymentsUI;
+			productName = BotPaymentsUI;
+			productReference = D0C9C6C82301FC9300FAB518 /* BotPaymentsUI.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0C9C6BF2301FC9300FAB518 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = "Telegram Messenger LLP";
+				TargetAttributes = {
+					D0C9C6C72301FC9300FAB518 = {
+						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
+					};
+				};
+			};
+			buildConfigurationList = D0C9C6C22301FC9300FAB518 /* Build configuration list for PBXProject "BotPaymentsUI_Xcode" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0C9C6BE2301FC9300FAB518;
+			productRefGroup = D0C9C6C92301FC9300FAB518 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0C9C6C72301FC9300FAB518 /* BotPaymentsUI */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0C9C6C62301FC9300FAB518 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0C9C6C42301FC9300FAB518 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C7A82301FFD000FAB518 /* BotCheckoutController.swift in Sources */,
+				D0C9C7AA2301FFD000FAB518 /* BotCheckoutControllerNode.swift in Sources */,
+				D0C9C7942301FFD000FAB518 /* BotPaymentDateItemNode.swift in Sources */,
+				D0C9C7A02301FFD000FAB518 /* BotCheckoutPaymentMethodSheet.swift in Sources */,
+				D0C9C7A92301FFD000FAB518 /* BotPaymentSwitchItemNode.swift in Sources */,
+				D0C9C7A22301FFD000FAB518 /* BotCheckoutPriceItem.swift in Sources */,
+				D0C9C79E2301FFD000FAB518 /* BotCheckoutInfoController.swift in Sources */,
+				D0C9C7A42301FFD000FAB518 /* BotPaymentDisclosureItemNode.swift in Sources */,
+				D0C9C79A2301FFD000FAB518 /* BotReceiptController.swift in Sources */,
+				D0C9C7962301FFD000FAB518 /* BotPaymentTextItemNode.swift in Sources */,
+				D0C9C79B2301FFD000FAB518 /* BotCheckoutActionButton.swift in Sources */,
+				D0C9C7992301FFD000FAB518 /* BotPaymentCardInputItemNode.swift in Sources */,
+				D0C9C7A62301FFD000FAB518 /* BotCheckoutHeaderItem.swift in Sources */,
+				D0C9C79F2301FFD000FAB518 /* BotReceiptControllerNode.swift in Sources */,
+				D0C9C7952301FFD000FAB518 /* BotCheckoutPaymentShippingOptionSheetController.swift in Sources */,
+				D0C9C79D2301FFD000FAB518 /* BotPaymentHeaderItemNode.swift in Sources */,
+				D0C9C7972301FFD000FAB518 /* BotPaymentItemNode.swift in Sources */,
+				D0C9C7A12301FFD000FAB518 /* BotCheckoutWebInteractionControllerNode.swift in Sources */,
+				D0C9C7922301FFD000FAB518 /* BotCheckoutPasswordEntryController.swift in Sources */,
+				D0C9C7932301FFD000FAB518 /* BotPaymentActionItemNode.swift in Sources */,
+				D0C9C7BF2302023D00FAB518 /* FrameworkBundle.swift in Sources */,
+				D0C9C7A72301FFD000FAB518 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */,
+				D0C9C7A52301FFD000FAB518 /* BotPaymentFieldItemNode.swift in Sources */,
+				D0C9C79C2301FFD000FAB518 /* BotCheckoutWebInteractionController.swift in Sources */,
+				D0C9C7982301FFD000FAB518 /* BotCheckoutInfoControllerNode.swift in Sources */,
+				D0C9C7A32301FFD000FAB518 /* BotCheckoutNativeCardEntryController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D0C9C6CE2301FC9300FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C6CF2301FC9300FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C6D12301FC9300FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.BotPaymentsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C6D22301FC9300FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.BotPaymentsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C6D32301FCBD00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C6D42301FCBD00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.BotPaymentsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C6D52301FCC700FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+		D0C9C6D62301FCC700FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.BotPaymentsUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0C9C6C22301FC9300FAB518 /* Build configuration list for PBXProject "BotPaymentsUI_Xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C6CE2301FC9300FAB518 /* DebugAppStoreLLC */,
+				D0C9C6D32301FCBD00FAB518 /* DebugHockeyapp */,
+				D0C9C6CF2301FC9300FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C6D52301FCC700FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+		D0C9C6D02301FC9300FAB518 /* Build configuration list for PBXNativeTarget "BotPaymentsUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C6D12301FC9300FAB518 /* DebugAppStoreLLC */,
+				D0C9C6D42301FCBD00FAB518 /* DebugHockeyapp */,
+				D0C9C6D22301FC9300FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C6D62301FCC700FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0C9C6BF2301FC9300FAB518 /* Project object */;
+}

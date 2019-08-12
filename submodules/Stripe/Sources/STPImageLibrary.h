@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import "STPCardBrand.h"
+#import <Stripe/STPCardBrand.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

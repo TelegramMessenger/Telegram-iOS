@@ -10,6 +10,7 @@ import TelegramCallsUI
 import ItemListUI
 import AccountContext
 import TelegramNotices
+import LocalAuth
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account

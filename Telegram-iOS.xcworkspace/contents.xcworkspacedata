@@ -16,6 +16,9 @@
       <FileRef
          location = "group:submodules/ffmpeg/FFMpeg_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/Stripe/Stripe_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
@@ -79,6 +82,9 @@
       </FileRef>
       <FileRef
          location = "group:submodules/MosaicLayout/MosaicLayout_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LocalAuth/LocalAuth_Xcode.xcodeproj">
       </FileRef>
       <Group
          location = "container:"
@@ -342,6 +348,9 @@
       </FileRef>
       <FileRef
          location = "group:submodules/LocationUI/LocationUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/BotPaymentsUI/BotPaymentsUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

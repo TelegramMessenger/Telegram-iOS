@@ -8,7 +8,7 @@
 #import <Foundation/Foundation.h>
 #import <PassKit/PassKit.h>
 
-#import "STPAPIClient.h"
+#import <Stripe/STPAPIClient.h>
 
 #define FAUXPAS_IGNORED_IN_FILE(...)
 FAUXPAS_IGNORED_IN_FILE(APIAvailability)

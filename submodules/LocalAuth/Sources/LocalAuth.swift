@@ -2,13 +2,13 @@ import Foundation
 import LocalAuthentication
 import SwiftSignalKit
 
-enum LocalAuthBiometricAuthentication {
+public enum LocalAuthBiometricAuthentication {
     case touchId
     case faceId
 }
 
-struct LocalAuth {
-    static let biometricAuthentication: LocalAuthBiometricAuthentication? = {
+public struct LocalAuth {
+    public static let biometricAuthentication: LocalAuthBiometricAuthentication? = {
         let context = LAContext()
         if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
             if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
@@ -28,7 +28,7 @@ struct LocalAuth {
         }
     }()
     
-    static let evaluatedPolicyDomainState: Data? = {
+    public static let evaluatedPolicyDomainState: Data? = {
         let context = LAContext()
         if context.canEvaluatePolicy(LAPolicy(rawValue: Int(kLAPolicyDeviceOwnerAuthenticationWithBiometrics))!, error: nil) {
             if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
@@ -40,7 +40,7 @@ struct LocalAuth {
         return nil
     }()
     
-    static func auth(reason: String) -> Signal<(Bool, Data?), NoError> {
+    public static func auth(reason: String) -> Signal<(Bool, Data?), NoError> {
         return Signal { subscriber in
             let context = LAContext()
             

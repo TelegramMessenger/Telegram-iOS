@@ -7,6 +7,7 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import LocalAuth
 
 final public class PasscodeEntryControllerPresentationArguments {
     let animated: Bool

@@ -7,92 +7,70 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D0C9C2C52300A21900FAB518 /* SearchBarNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C2C32300A21900FAB518 /* SearchBarNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0C9C2CD2300A2C900FAB518 /* SearchBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C2CB2300A2C900FAB518 /* SearchBarNode.swift */; };
-		D0C9C2CE2300A2C900FAB518 /* SearchBarPlaceholderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C2CC2300A2C900FAB518 /* SearchBarPlaceholderNode.swift */; };
-		D0C9C2D52300A39000FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2D42300A39000FAB518 /* Foundation.framework */; };
-		D0C9C2D72300A39300FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2D62300A39300FAB518 /* UIKit.framework */; };
-		D0C9C2D92300A39600FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2D82300A39600FAB518 /* SwiftSignalKit.framework */; };
-		D0C9C2DB2300A39B00FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2DA2300A39B00FAB518 /* AsyncDisplayKit.framework */; };
-		D0C9C2DD2300A3A000FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2DC2300A3A000FAB518 /* Display.framework */; };
-		D0C9C2DF2300A3A400FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2DE2300A3A400FAB518 /* TelegramPresentationData.framework */; };
-		D0C9C2E12300A3A800FAB518 /* ActivityIndicator.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2E02300A3A800FAB518 /* ActivityIndicator.framework */; };
-		D0C9C2E52300A44E00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C2E42300A44E00FAB518 /* FrameworkBundle.swift */; };
+		D0C9C7CF2302025D00FAB518 /* LocalAuth.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C7CD2302025D00FAB518 /* LocalAuth.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9C7DA2302032A00FAB518 /* LocalAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7D92302032900FAB518 /* LocalAuth.swift */; };
+		D0C9C7DD2302033700FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7DC2302033600FAB518 /* Foundation.framework */; };
+		D0C9C7DF2302033900FAB518 /* LocalAuthentication.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7DE2302033900FAB518 /* LocalAuthentication.framework */; };
+		D0C9C7E12302033C00FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E02302033C00FAB518 /* SwiftSignalKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D0C9C2C02300A21900FAB518 /* SearchBarNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SearchBarNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2C32300A21900FAB518 /* SearchBarNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SearchBarNode.h; sourceTree = "<group>"; };
-		D0C9C2C42300A21900FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D0C9C2CB2300A2C900FAB518 /* SearchBarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchBarNode.swift; sourceTree = "<group>"; };
-		D0C9C2CC2300A2C900FAB518 /* SearchBarPlaceholderNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchBarPlaceholderNode.swift; sourceTree = "<group>"; };
-		D0C9C2D42300A39000FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		D0C9C2D62300A39300FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		D0C9C2D82300A39600FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2DA2300A39B00FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2DC2300A3A000FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2DE2300A3A400FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2E02300A3A800FAB518 /* ActivityIndicator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ActivityIndicator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2E42300A44E00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9C7CA2302025D00FAB518 /* LocalAuth.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LocalAuth.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7CD2302025D00FAB518 /* LocalAuth.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LocalAuth.h; sourceTree = "<group>"; };
+		D0C9C7CE2302025D00FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0C9C7D92302032900FAB518 /* LocalAuth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalAuth.swift; sourceTree = "<group>"; };
+		D0C9C7DC2302033600FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0C9C7DE2302033900FAB518 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
+		D0C9C7E02302033C00FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		D0C9C2BD2300A21900FAB518 /* Frameworks */ = {
+		D0C9C7C72302025D00FAB518 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C9C2E12300A3A800FAB518 /* ActivityIndicator.framework in Frameworks */,
-				D0C9C2DF2300A3A400FAB518 /* TelegramPresentationData.framework in Frameworks */,
-				D0C9C2DD2300A3A000FAB518 /* Display.framework in Frameworks */,
-				D0C9C2DB2300A39B00FAB518 /* AsyncDisplayKit.framework in Frameworks */,
-				D0C9C2D92300A39600FAB518 /* SwiftSignalKit.framework in Frameworks */,
-				D0C9C2D72300A39300FAB518 /* UIKit.framework in Frameworks */,
-				D0C9C2D52300A39000FAB518 /* Foundation.framework in Frameworks */,
+				D0C9C7E12302033C00FAB518 /* SwiftSignalKit.framework in Frameworks */,
+				D0C9C7DF2302033900FAB518 /* LocalAuthentication.framework in Frameworks */,
+				D0C9C7DD2302033700FAB518 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D0C9C2B62300A21900FAB518 = {
+		D0C9C7C02302025D00FAB518 = {
 			isa = PBXGroup;
 			children = (
-				D0C9C2C42300A21900FAB518 /* Info.plist */,
-				D0C9C2C22300A21900FAB518 /* Sources */,
-				D0C9C2C12300A21900FAB518 /* Products */,
-				D0C9C2D32300A38F00FAB518 /* Frameworks */,
+				D0C9C7CE2302025D00FAB518 /* Info.plist */,
+				D0C9C7CC2302025D00FAB518 /* Sources */,
+				D0C9C7CB2302025D00FAB518 /* Products */,
+				D0C9C7DB2302033500FAB518 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
-		D0C9C2C12300A21900FAB518 /* Products */ = {
+		D0C9C7CB2302025D00FAB518 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D0C9C2C02300A21900FAB518 /* SearchBarNode.framework */,
+				D0C9C7CA2302025D00FAB518 /* LocalAuth.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D0C9C2C22300A21900FAB518 /* Sources */ = {
+		D0C9C7CC2302025D00FAB518 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				D0C9C2CB2300A2C900FAB518 /* SearchBarNode.swift */,
-				D0C9C2CC2300A2C900FAB518 /* SearchBarPlaceholderNode.swift */,
-				D0C9C2E42300A44E00FAB518 /* FrameworkBundle.swift */,
-				D0C9C2C32300A21900FAB518 /* SearchBarNode.h */,
+				D0C9C7D92302032900FAB518 /* LocalAuth.swift */,
+				D0C9C7CD2302025D00FAB518 /* LocalAuth.h */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
 		};
-		D0C9C2D32300A38F00FAB518 /* Frameworks */ = {
+		D0C9C7DB2302033500FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D0C9C2E02300A3A800FAB518 /* ActivityIndicator.framework */,
-				D0C9C2DE2300A3A400FAB518 /* TelegramPresentationData.framework */,
-				D0C9C2DC2300A3A000FAB518 /* Display.framework */,
-				D0C9C2DA2300A39B00FAB518 /* AsyncDisplayKit.framework */,
-				D0C9C2D82300A39600FAB518 /* SwiftSignalKit.framework */,
-				D0C9C2D62300A39300FAB518 /* UIKit.framework */,
-				D0C9C2D42300A39000FAB518 /* Foundation.framework */,
+				D0C9C7E02302033C00FAB518 /* SwiftSignalKit.framework */,
+				D0C9C7DE2302033900FAB518 /* LocalAuthentication.framework */,
+				D0C9C7DC2302033600FAB518 /* Foundation.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -100,70 +78,70 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		D0C9C2BB2300A21900FAB518 /* Headers */ = {
+		D0C9C7C52302025D00FAB518 /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C9C2C52300A21900FAB518 /* SearchBarNode.h in Headers */,
+				D0C9C7CF2302025D00FAB518 /* LocalAuth.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		D0C9C2BF2300A21900FAB518 /* SearchBarNode */ = {
+		D0C9C7C92302025D00FAB518 /* LocalAuth */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D0C9C2C82300A21900FAB518 /* Build configuration list for PBXNativeTarget "SearchBarNode" */;
+			buildConfigurationList = D0C9C7D22302025D00FAB518 /* Build configuration list for PBXNativeTarget "LocalAuth" */;
 			buildPhases = (
-				D0C9C2BB2300A21900FAB518 /* Headers */,
-				D0C9C2BC2300A21900FAB518 /* Sources */,
-				D0C9C2BD2300A21900FAB518 /* Frameworks */,
-				D0C9C2BE2300A21900FAB518 /* Resources */,
+				D0C9C7C52302025D00FAB518 /* Headers */,
+				D0C9C7C62302025D00FAB518 /* Sources */,
+				D0C9C7C72302025D00FAB518 /* Frameworks */,
+				D0C9C7C82302025D00FAB518 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = SearchBarNode;
-			productName = SearchBarNode;
-			productReference = D0C9C2C02300A21900FAB518 /* SearchBarNode.framework */;
+			name = LocalAuth;
+			productName = LocalAuth;
+			productReference = D0C9C7CA2302025D00FAB518 /* LocalAuth.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		D0C9C2B72300A21900FAB518 /* Project object */ = {
+		D0C9C7C12302025D00FAB518 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				DefaultBuildSystemTypeForWorkspace = Latest;
 				LastUpgradeCheck = 1030;
 				ORGANIZATIONNAME = "Telegram Messenger LLP";
 				TargetAttributes = {
-					D0C9C2BF2300A21900FAB518 = {
+					D0C9C7C92302025D00FAB518 = {
 						CreatedOnToolsVersion = 10.3;
 						LastSwiftMigration = 1030;
 					};
 				};
 			};
-			buildConfigurationList = D0C9C2BA2300A21900FAB518 /* Build configuration list for PBXProject "SearchBarNode_Xcode" */;
+			buildConfigurationList = D0C9C7C42302025D00FAB518 /* Build configuration list for PBXProject "LocalAuth_Xcode" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 			);
-			mainGroup = D0C9C2B62300A21900FAB518;
-			productRefGroup = D0C9C2C12300A21900FAB518 /* Products */;
+			mainGroup = D0C9C7C02302025D00FAB518;
+			productRefGroup = D0C9C7CB2302025D00FAB518 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D0C9C2BF2300A21900FAB518 /* SearchBarNode */,
+				D0C9C7C92302025D00FAB518 /* LocalAuth */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		D0C9C2BE2300A21900FAB518 /* Resources */ = {
+		D0C9C7C82302025D00FAB518 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -173,20 +151,18 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D0C9C2BC2300A21900FAB518 /* Sources */ = {
+		D0C9C7C62302025D00FAB518 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C9C2CD2300A2C900FAB518 /* SearchBarNode.swift in Sources */,
-				D0C9C2CE2300A2C900FAB518 /* SearchBarPlaceholderNode.swift in Sources */,
-				D0C9C2E52300A44E00FAB518 /* FrameworkBundle.swift in Sources */,
+				D0C9C7DA2302032A00FAB518 /* LocalAuth.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D0C9C2C62300A21900FAB518 /* DebugAppStoreLLC */ = {
+		D0C9C7D02302025D00FAB518 /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -243,14 +219,12 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
 			name = DebugAppStoreLLC;
 		};
-		D0C9C2C72300A21900FAB518 /* ReleaseAppStoreLLC */ = {
+		D0C9C7D12302025D00FAB518 /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -300,15 +274,13 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D0C9C2C92300A21900FAB518 /* DebugAppStoreLLC */ = {
+		D0C9C7D32302025D00FAB518 /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -327,7 +299,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SearchBarNode;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.LocalAuth;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -337,7 +309,7 @@
 			};
 			name = DebugAppStoreLLC;
 		};
-		D0C9C2CA2300A21900FAB518 /* ReleaseAppStoreLLC */ = {
+		D0C9C7D42302025D00FAB518 /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -356,7 +328,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SearchBarNode;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.LocalAuth;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -365,7 +337,7 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D0C9C2E22300A3E700FAB518 /* DebugHockeyapp */ = {
+		D0C9C7D52302028000FAB518 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -422,14 +394,12 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
 			name = DebugHockeyapp;
 		};
-		D0C9C2E32300A3E700FAB518 /* DebugHockeyapp */ = {
+		D0C9C7D62302028000FAB518 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -448,7 +418,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SearchBarNode;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.LocalAuth;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -458,7 +428,7 @@
 			};
 			name = DebugHockeyapp;
 		};
-		D0C9C7EC230205FE00FAB518 /* ReleaseHockeyappInternal */ = {
+		D0C9C7D72302028C00FAB518 /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -508,15 +478,13 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
 			name = ReleaseHockeyappInternal;
 		};
-		D0C9C7ED230205FE00FAB518 /* ReleaseHockeyappInternal */ = {
+		D0C9C7D82302028C00FAB518 /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -535,7 +503,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.SearchBarNode;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.LocalAuth;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -547,29 +515,29 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D0C9C2BA2300A21900FAB518 /* Build configuration list for PBXProject "SearchBarNode_Xcode" */ = {
+		D0C9C7C42302025D00FAB518 /* Build configuration list for PBXProject "LocalAuth_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0C9C2C62300A21900FAB518 /* DebugAppStoreLLC */,
-				D0C9C2E22300A3E700FAB518 /* DebugHockeyapp */,
-				D0C9C2C72300A21900FAB518 /* ReleaseAppStoreLLC */,
-				D0C9C7EC230205FE00FAB518 /* ReleaseHockeyappInternal */,
+				D0C9C7D02302025D00FAB518 /* DebugAppStoreLLC */,
+				D0C9C7D52302028000FAB518 /* DebugHockeyapp */,
+				D0C9C7D12302025D00FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C7D72302028C00FAB518 /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseAppStoreLLC;
 		};
-		D0C9C2C82300A21900FAB518 /* Build configuration list for PBXNativeTarget "SearchBarNode" */ = {
+		D0C9C7D22302025D00FAB518 /* Build configuration list for PBXNativeTarget "LocalAuth" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0C9C2C92300A21900FAB518 /* DebugAppStoreLLC */,
-				D0C9C2E32300A3E700FAB518 /* DebugHockeyapp */,
-				D0C9C2CA2300A21900FAB518 /* ReleaseAppStoreLLC */,
-				D0C9C7ED230205FE00FAB518 /* ReleaseHockeyappInternal */,
+				D0C9C7D32302025D00FAB518 /* DebugAppStoreLLC */,
+				D0C9C7D62302028000FAB518 /* DebugHockeyapp */,
+				D0C9C7D42302025D00FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C7D82302028C00FAB518 /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseAppStoreLLC;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = D0C9C2B72300A21900FAB518 /* Project object */;
+	rootObject = D0C9C7C12302025D00FAB518 /* Project object */;
 }

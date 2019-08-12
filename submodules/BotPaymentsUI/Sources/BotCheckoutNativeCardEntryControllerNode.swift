@@ -6,7 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
-import TelegramUIPrivateModule
+import Stripe
 import CountrySelectionUI
 
 private final class BotCheckoutNativeCardEntryScrollerNodeView: UIScrollView {

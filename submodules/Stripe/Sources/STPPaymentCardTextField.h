@@ -8,7 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
-#import "STPCard.h"
+#import <Stripe/STPCard.h>
 
 @class STPPaymentCardTextField;
 

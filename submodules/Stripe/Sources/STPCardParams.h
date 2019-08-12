@@ -7,9 +7,9 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "STPFormEncodable.h"
+#import <Stripe/STPFormEncodable.h>
 #if TARGET_OS_IPHONE
-#import "STPAddress.h"
+#import <Stripe/STPAddress.h>
 #endif
 
 /**

@@ -172,19 +172,13 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: textString, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: max(1.0, maxTextWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 var edited = false
-                var sentViaBot = false
                 var viewCount: Int?
                 for attribute in item.message.attributes {
-                    if let _ = attribute as? EditedMessageAttribute {
-                        edited = true
+                    if let attribute = attribute as? EditedMessageAttribute {
+                        edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let _ = attribute as? InlineBotMessageAttribute {
-                        sentViaBot = true
                     }
-                }
-                if let author = item.message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                    sentViaBot = true
                 }
                 
                 if let selectedMedia = selectedMedia {
@@ -231,7 +225,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude))
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: constrainedSize.width, height: CGFloat.greatestFiniteMagnitude))
                     statusSize = size
                     statusApply = apply
                 }

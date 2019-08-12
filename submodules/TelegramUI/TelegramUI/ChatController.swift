@@ -33,6 +33,7 @@ import OpenInExternalAppUI
 import LegacyUI
 import InstantPageUI
 import LocationUI
+import BotPaymentsUI
 
 public enum ChatControllerPeekActions {
     case standard

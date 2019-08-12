@@ -286,20 +286,8 @@
 		D04281FC200E61BC009DDE36 /* ChatRecentActionsInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FB200E61BC009DDE36 /* ChatRecentActionsInteraction.swift */; };
 		D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FD200E639A009DDE36 /* ChatRecentActionsTitleView.swift */; };
 		D0428200200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FF200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift */; };
-		D0439B5B228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */; };
 		D04554A421B42982007A6DD9 /* ConfirmPhoneNumberController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04554A321B42982007A6DD9 /* ConfirmPhoneNumberController.swift */; };
-		D0471B491EFD59170074D609 /* BotCheckoutControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B481EFD59170074D609 /* BotCheckoutControllerNode.swift */; };
-		D0471B4B1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B4A1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift */; };
-		D0471B4F1EFD84600074D609 /* BotCheckoutPriceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B4E1EFD84600074D609 /* BotCheckoutPriceItem.swift */; };
 		D0471B541EFD8ECA0074D609 /* currencies.json in Resources */ = {isa = PBXBuildFile; fileRef = D0471B531EFD8ECA0074D609 /* currencies.json */; };
-		D0471B561EFDB40F0074D609 /* BotCheckoutActionButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B551EFDB40F0074D609 /* BotCheckoutActionButton.swift */; };
-		D0471B581EFE6D020074D609 /* BotCheckoutInfoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B571EFE6D020074D609 /* BotCheckoutInfoController.swift */; };
-		D0471B5A1EFE70400074D609 /* BotCheckoutInfoControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B591EFE70400074D609 /* BotCheckoutInfoControllerNode.swift */; };
-		D0471B5C1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B5B1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift */; };
-		D0471B5E1EFEB5860074D609 /* BotPaymentHeaderItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B5D1EFEB5860074D609 /* BotPaymentHeaderItemNode.swift */; };
-		D0471B601EFEB5A70074D609 /* BotPaymentTextItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B5F1EFEB5A70074D609 /* BotPaymentTextItemNode.swift */; };
-		D0471B621EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B611EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift */; };
-		D0471B641EFEB5CB0074D609 /* BotPaymentItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0471B631EFEB5CB0074D609 /* BotPaymentItemNode.swift */; };
 		D048B339203C532800038D05 /* ChatMediaInputPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048B338203C532800038D05 /* ChatMediaInputPane.swift */; };
 		D04B4D131EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04B4D121EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift */; };
 		D04ECD721FFBF22B00DE9029 /* OpenUrl.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04ECD711FFBF22B00DE9029 /* OpenUrl.swift */; };
@@ -344,12 +332,7 @@
 		D0754D1E1EEDDF6200884F6E /* ChatMessageAttachedContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0754D1D1EEDDF6200884F6E /* ChatMessageAttachedContentNode.swift */; };
 		D0754D201EEDEBA000884F6E /* ChatMessageGameBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0754D1F1EEDEBA000884F6E /* ChatMessageGameBubbleContentNode.swift */; };
 		D0754D221EEDF89900884F6E /* ChatMessageInvoiceBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0754D211EEDF89900884F6E /* ChatMessageInvoiceBubbleContentNode.swift */; };
-		D0754D271EEE10C800884F6E /* BotCheckoutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0754D261EEE10C800884F6E /* BotCheckoutController.swift */; };
 		D077C5C122B59A800097D617 /* ApplicationContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D077C5C022B59A800097D617 /* ApplicationContext.swift */; };
-		D079FCD91F05A5550038FADE /* BotCheckoutPasswordEntryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D079FCD81F05A5550038FADE /* BotCheckoutPasswordEntryController.swift */; };
-		D079FCDD1F05C4F20038FADE /* LocalAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = D079FCDC1F05C4F20038FADE /* LocalAuth.swift */; };
-		D079FCDF1F05C9280038FADE /* BotReceiptController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D079FCDE1F05C9280038FADE /* BotReceiptController.swift */; };
-		D079FCE11F05C9380038FADE /* BotReceiptControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D079FCE01F05C9380038FADE /* BotReceiptControllerNode.swift */; };
 		D07ABBA5202A14BC003671DE /* LegacyImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07ABBA4202A14BC003671DE /* LegacyImagePicker.swift */; };
 		D07ABBAB202A1BD1003671DE /* LegacyWallpaperPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D07ABBAA202A1BD1003671DE /* LegacyWallpaperPicker.swift */; };
 		D07BCBFE1F2B792300ED97AA /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D07BCBFD1F2B792300ED97AA /* LegacyComponents.framework */; };
@@ -383,8 +366,6 @@
 		D091C7A41F8EBB1E00D7DE13 /* ChatPresentationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D091C7A31F8EBB1E00D7DE13 /* ChatPresentationData.swift */; };
 		D091C7A61F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D091C7A51F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift */; };
 		D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09250051FE5371D003F693F /* GlobalExperimentalSettings.swift */; };
-		D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */; };
-		D093D80820654A2900BC3599 /* BotPaymentDateItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D093D80720654A2900BC3599 /* BotPaymentDateItemNode.swift */; };
 		D0943AF61FDAAE7E001522CC /* MultipleAvatarsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */; };
 		D0943AFE1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */; };
 		D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */; };
@@ -540,6 +521,9 @@
 		D0C9C6592301D31200FAB518 /* LiveLocationPositionNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6582301D31200FAB518 /* LiveLocationPositionNode.framework */; };
 		D0C9C67F2301D46300FAB518 /* MosaicLayout.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C67E2301D46300FAB518 /* MosaicLayout.framework */; };
 		D0C9C6B92301D91800FAB518 /* LocationUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6B82301D91800FAB518 /* LocationUI.framework */; };
+		D0C9C7BB2301FFF900FAB518 /* Stripe.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7BA2301FFF900FAB518 /* Stripe.framework */; };
+		D0C9C7BD2301FFFE00FAB518 /* BotPaymentsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7BC2301FFFE00FAB518 /* BotPaymentsUI.framework */; };
+		D0C9C7E52302036000FAB518 /* LocalAuth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E42302036000FAB518 /* LocalAuth.framework */; };
 		D0CAD90120AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */; };
 		D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */; };
 		D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */; };
@@ -568,57 +552,7 @@
 		D0E8B8BB2044780600605593 /* ItemListSecretChatKeyItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8B8BA2044780600605593 /* ItemListSecretChatKeyItem.swift */; };
 		D0E8B8BD204479A500605593 /* SecretChatKeyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8B8BC204479A500605593 /* SecretChatKeyController.swift */; };
 		D0E8B8BF20447A4600605593 /* SecretChatKeyControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8B8BE20447A4600605593 /* SecretChatKeyControllerNode.swift */; };
-		D0E9B9E81EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9B9E71EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift */; };
 		D0E9B9EA1F00853C00F079A4 /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D0E9B9E91F00853C00F079A4 /* PhoneCountries.txt */; };
-		D0E9B9F41F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9B9F31F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift */; };
-		D0E9BA081F0446A300F079A4 /* BotCheckoutPaymentShippingOptionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA071F0446A300F079A4 /* BotCheckoutPaymentShippingOptionSheetController.swift */; };
-		D0E9BA0A1F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA091F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift */; };
-		D0E9BA0C1F04580700F079A4 /* BotCheckoutWebInteractionControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA0B1F04580700F079A4 /* BotCheckoutWebInteractionControllerNode.swift */; };
-		D0E9BA141F05574500F079A4 /* STPCardValidationState.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA0D1F05574500F079A4 /* STPCardValidationState.h */; };
-		D0E9BA151F05574500F079A4 /* STPCardValidator.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA0E1F05574500F079A4 /* STPCardValidator.h */; };
-		D0E9BA161F05574500F079A4 /* STPCardValidator.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA0F1F05574500F079A4 /* STPCardValidator.m */; };
-		D0E9BA171F05574500F079A4 /* STPPaymentCardTextFieldViewModel.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA101F05574500F079A4 /* STPPaymentCardTextFieldViewModel.h */; };
-		D0E9BA181F05574500F079A4 /* STPPaymentCardTextFieldViewModel.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA111F05574500F079A4 /* STPPaymentCardTextFieldViewModel.m */; };
-		D0E9BA191F05574500F079A4 /* STPPaymentCardTextField.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA121F05574500F079A4 /* STPPaymentCardTextField.h */; };
-		D0E9BA1A1F05574500F079A4 /* STPPaymentCardTextField.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA131F05574500F079A4 /* STPPaymentCardTextField.m */; };
-		D0E9BA201F05577700F079A4 /* STPCardParams.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA1C1F05577700F079A4 /* STPCardParams.h */; };
-		D0E9BA211F05577700F079A4 /* STPCardParams.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA1D1F05577700F079A4 /* STPCardParams.m */; };
-		D0E9BA221F05577700F079A4 /* STPCard.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA1E1F05577700F079A4 /* STPCard.h */; };
-		D0E9BA231F05577700F079A4 /* STPCard.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA1F1F05577700F079A4 /* STPCard.m */; };
-		D0E9BA251F05578900F079A4 /* STPCardBrand.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA241F05578900F079A4 /* STPCardBrand.h */; };
-		D0E9BA291F0557A600F079A4 /* STPFormEncodable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA261F0557A600F079A4 /* STPFormEncodable.h */; };
-		D0E9BA2A1F0557A600F079A4 /* STPFormEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA271F0557A600F079A4 /* STPFormEncoder.h */; };
-		D0E9BA2B1F0557A600F079A4 /* STPFormEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA281F0557A600F079A4 /* STPFormEncoder.m */; };
-		D0E9BA2E1F0557D400F079A4 /* STPAddress.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA2C1F0557D400F079A4 /* STPAddress.h */; };
-		D0E9BA2F1F0557D400F079A4 /* STPAddress.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA2D1F0557D400F079A4 /* STPAddress.m */; };
-		D0E9BA321F05583A00F079A4 /* STPPostalCodeValidator.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA301F05583A00F079A4 /* STPPostalCodeValidator.h */; };
-		D0E9BA331F05583A00F079A4 /* STPPostalCodeValidator.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA311F05583A00F079A4 /* STPPostalCodeValidator.m */; };
-		D0E9BA361F05585000F079A4 /* STPPhoneNumberValidator.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA341F05585000F079A4 /* STPPhoneNumberValidator.h */; };
-		D0E9BA371F05585000F079A4 /* STPPhoneNumberValidator.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA351F05585000F079A4 /* STPPhoneNumberValidator.m */; };
-		D0E9BA3A1F0558E800F079A4 /* NSString+Stripe.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA381F0558E800F079A4 /* NSString+Stripe.h */; };
-		D0E9BA3B1F0558E800F079A4 /* NSString+Stripe.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA391F0558E800F079A4 /* NSString+Stripe.m */; };
-		D0E9BA3F1F0558FE00F079A4 /* STPSource.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA3C1F0558FE00F079A4 /* STPSource.h */; };
-		D0E9BA401F0558FE00F079A4 /* StripeError.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA3D1F0558FE00F079A4 /* StripeError.h */; };
-		D0E9BA411F0558FE00F079A4 /* StripeError.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA3E1F0558FE00F079A4 /* StripeError.m */; };
-		D0E9BA451F0559A500F079A4 /* STPAPIResponseDecodable.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA421F0559A500F079A4 /* STPAPIResponseDecodable.h */; };
-		D0E9BA461F0559A500F079A4 /* NSDictionary+Stripe.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA431F0559A500F079A4 /* NSDictionary+Stripe.h */; };
-		D0E9BA471F0559A500F079A4 /* NSDictionary+Stripe.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA441F0559A500F079A4 /* NSDictionary+Stripe.m */; };
-		D0E9BA491F0559B600F079A4 /* STPPaymentMethod.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA481F0559B600F079A4 /* STPPaymentMethod.h */; };
-		D0E9BA4C1F0559C700F079A4 /* NSString+Stripe_CardBrands.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA4A1F0559C700F079A4 /* NSString+Stripe_CardBrands.h */; };
-		D0E9BA4D1F0559C700F079A4 /* NSString+Stripe_CardBrands.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA4B1F0559C700F079A4 /* NSString+Stripe_CardBrands.m */; };
-		D0E9BA511F0559DA00F079A4 /* STPImageLibrary.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA4E1F0559DA00F079A4 /* STPImageLibrary.h */; };
-		D0E9BA521F0559DA00F079A4 /* STPImageLibrary.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA4F1F0559DA00F079A4 /* STPImageLibrary.m */; };
-		D0E9BA531F0559DA00F079A4 /* STPImageLibrary+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA501F0559DA00F079A4 /* STPImageLibrary+Private.h */; };
-		D0E9BA561F055A0B00F079A4 /* STPFormTextField.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA541F055A0B00F079A4 /* STPFormTextField.h */; };
-		D0E9BA571F055A0B00F079A4 /* STPFormTextField.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA551F055A0B00F079A4 /* STPFormTextField.m */; };
-		D0E9BA591F055A2200F079A4 /* STPWeakStrongMacros.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA581F055A2200F079A4 /* STPWeakStrongMacros.h */; };
-		D0E9BA5C1F055A3300F079A4 /* STPBINRange.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA5A1F055A3300F079A4 /* STPBINRange.h */; };
-		D0E9BA5D1F055A3300F079A4 /* STPBINRange.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA5B1F055A3300F079A4 /* STPBINRange.m */; };
-		D0E9BA601F055A4300F079A4 /* STPDelegateProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BA5E1F055A4300F079A4 /* STPDelegateProxy.h */; };
-		D0E9BA611F055A4300F079A4 /* STPDelegateProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA5F1F055A4300F079A4 /* STPDelegateProxy.m */; };
-		D0E9BA631F055AD200F079A4 /* BotPaymentCardInputItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA621F055AD200F079A4 /* BotPaymentCardInputItemNode.swift */; };
-		D0E9BA651F055B4500F079A4 /* BotCheckoutNativeCardEntryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA641F055B4500F079A4 /* BotCheckoutNativeCardEntryController.swift */; };
-		D0E9BA671F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BA661F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift */; };
 		D0E9BA911F056F4C00F079A4 /* stp_card_amex@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA691F056F4C00F079A4 /* stp_card_amex@2x.png */; };
 		D0E9BA921F056F4C00F079A4 /* stp_card_amex@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6A1F056F4C00F079A4 /* stp_card_amex@3x.png */; };
 		D0E9BA931F056F4C00F079A4 /* stp_card_amex_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6B1F056F4C00F079A4 /* stp_card_amex_template@2x.png */; };
@@ -659,30 +593,6 @@
 		D0E9BAB61F056F4C00F079A4 /* stp_card_visa@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8E1F056F4C00F079A4 /* stp_card_visa@3x.png */; };
 		D0E9BAB71F056F4C00F079A4 /* stp_card_visa_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8F1F056F4C00F079A4 /* stp_card_visa_template@2x.png */; };
 		D0E9BAB81F056F4C00F079A4 /* stp_card_visa_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA901F056F4C00F079A4 /* stp_card_visa_template@3x.png */; };
-		D0E9BABC1F05735F00F079A4 /* STPPaymentConfiguration.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAB91F05735F00F079A4 /* STPPaymentConfiguration.h */; };
-		D0E9BABD1F05735F00F079A4 /* STPPaymentConfiguration.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BABA1F05735F00F079A4 /* STPPaymentConfiguration.m */; };
-		D0E9BABE1F05735F00F079A4 /* STPPaymentConfiguration+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BABB1F05735F00F079A4 /* STPPaymentConfiguration+Private.h */; };
-		D0E9BAC61F05738600F079A4 /* STPAPIClient.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BABF1F05738600F079A4 /* STPAPIClient.h */; };
-		D0E9BAC71F05738600F079A4 /* STPAPIClient.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAC01F05738600F079A4 /* STPAPIClient.m */; };
-		D0E9BAC81F05738600F079A4 /* STPAPIClient+ApplePay.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAC11F05738600F079A4 /* STPAPIClient+ApplePay.h */; };
-		D0E9BAC91F05738600F079A4 /* STPAPIClient+ApplePay.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAC21F05738600F079A4 /* STPAPIClient+ApplePay.m */; };
-		D0E9BACA1F05738600F079A4 /* STPAPIClient+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAC31F05738600F079A4 /* STPAPIClient+Private.h */; };
-		D0E9BACB1F05738600F079A4 /* STPAPIPostRequest.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAC41F05738600F079A4 /* STPAPIPostRequest.h */; };
-		D0E9BACC1F05738600F079A4 /* STPAPIPostRequest.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAC51F05738600F079A4 /* STPAPIPostRequest.m */; };
-		D0E9BACE1F0573AF00F079A4 /* STPBlocks.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BACD1F0573AF00F079A4 /* STPBlocks.h */; };
-		D0E9BAD11F0573C000F079A4 /* STPToken.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BACF1F0573C000F079A4 /* STPToken.h */; };
-		D0E9BAD21F0573C000F079A4 /* STPToken.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAD01F0573C000F079A4 /* STPToken.m */; };
-		D0E9BADC1F0574D800F079A4 /* PKPayment+Stripe.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAD31F0574D800F079A4 /* PKPayment+Stripe.h */; };
-		D0E9BADD1F0574D800F079A4 /* PKPayment+Stripe.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAD41F0574D800F079A4 /* PKPayment+Stripe.m */; };
-		D0E9BADE1F0574D800F079A4 /* STPBackendAPIAdapter.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAD51F0574D800F079A4 /* STPBackendAPIAdapter.h */; };
-		D0E9BADF1F0574D800F079A4 /* STPDispatchFunctions.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAD61F0574D800F079A4 /* STPDispatchFunctions.h */; };
-		D0E9BAE01F0574D800F079A4 /* STPDispatchFunctions.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAD71F0574D800F079A4 /* STPDispatchFunctions.m */; };
-		D0E9BAE11F0574D800F079A4 /* STPBankAccount.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAD81F0574D800F079A4 /* STPBankAccount.h */; };
-		D0E9BAE21F0574D800F079A4 /* STPBankAccount.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAD91F0574D800F079A4 /* STPBankAccount.m */; };
-		D0E9BAE31F0574D800F079A4 /* STPBankAccountParams.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BADA1F0574D800F079A4 /* STPBankAccountParams.h */; };
-		D0E9BAE41F0574D800F079A4 /* STPBankAccountParams.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BADB1F0574D800F079A4 /* STPBankAccountParams.m */; };
-		D0E9BAE71F0574FF00F079A4 /* STPCustomer.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E9BAE51F0574FF00F079A4 /* STPCustomer.h */; };
-		D0E9BAE81F0574FF00F079A4 /* STPCustomer.m in Sources */ = {isa = PBXBuildFile; fileRef = D0E9BAE61F0574FF00F079A4 /* STPCustomer.m */; };
 		D0EB41F51F30D26A00838FE6 /* LegacySuggestionContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EB41F41F30D26A00838FE6 /* LegacySuggestionContext.swift */; };
 		D0EB42001F30ED4F00838FE6 /* LegacyImageProcessors.h in Headers */ = {isa = PBXBuildFile; fileRef = D0EB41FE1F30ED4F00838FE6 /* LegacyImageProcessors.h */; };
 		D0EB42011F30ED4F00838FE6 /* LegacyImageProcessors.m in Sources */ = {isa = PBXBuildFile; fileRef = D0EB41FF1F30ED4F00838FE6 /* LegacyImageProcessors.m */; };
@@ -1340,22 +1250,10 @@
 		D04281FB200E61BC009DDE36 /* ChatRecentActionsInteraction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsInteraction.swift; sourceTree = "<group>"; };
 		D04281FD200E639A009DDE36 /* ChatRecentActionsTitleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsTitleView.swift; sourceTree = "<group>"; };
 		D04281FF200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsHistoryTransition.swift; sourceTree = "<group>"; };
-		D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessagePhoneNumberRequestContentNode.swift; sourceTree = "<group>"; };
 		D045549921B2F173007A6DD9 /* libturbojpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libturbojpeg.a; path = "third-party/libjpeg-turbo/libturbojpeg.a"; sourceTree = "<group>"; };
 		D04554A321B42982007A6DD9 /* ConfirmPhoneNumberController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmPhoneNumberController.swift; sourceTree = "<group>"; };
 		D04662801E68BA64006FAFC4 /* TransformOutgoingMessageMedia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TransformOutgoingMessageMedia.swift; sourceTree = "<group>"; };
-		D0471B481EFD59170074D609 /* BotCheckoutControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutControllerNode.swift; sourceTree = "<group>"; };
-		D0471B4A1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutHeaderItem.swift; sourceTree = "<group>"; };
-		D0471B4E1EFD84600074D609 /* BotCheckoutPriceItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPriceItem.swift; sourceTree = "<group>"; };
 		D0471B531EFD8ECA0074D609 /* currencies.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = currencies.json; path = TelegramUI/Resources/currencies.json; sourceTree = "<group>"; };
-		D0471B551EFDB40F0074D609 /* BotCheckoutActionButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutActionButton.swift; sourceTree = "<group>"; };
-		D0471B571EFE6D020074D609 /* BotCheckoutInfoController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutInfoController.swift; sourceTree = "<group>"; };
-		D0471B591EFE70400074D609 /* BotCheckoutInfoControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutInfoControllerNode.swift; sourceTree = "<group>"; };
-		D0471B5B1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentFieldItemNode.swift; sourceTree = "<group>"; };
-		D0471B5D1EFEB5860074D609 /* BotPaymentHeaderItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentHeaderItemNode.swift; sourceTree = "<group>"; };
-		D0471B5F1EFEB5A70074D609 /* BotPaymentTextItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentTextItemNode.swift; sourceTree = "<group>"; };
-		D0471B611EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentSwitchItemNode.swift; sourceTree = "<group>"; };
-		D0471B631EFEB5CB0074D609 /* BotPaymentItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentItemNode.swift; sourceTree = "<group>"; };
 		D04791661E79A22000F18979 /* ItemListStickerPackItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListStickerPackItem.swift; sourceTree = "<group>"; };
 		D0486F091E523C8500091F0C /* GroupInfoController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GroupInfoController.swift; sourceTree = "<group>"; };
 		D048B338203C532800038D05 /* ChatMediaInputPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMediaInputPane.swift; sourceTree = "<group>"; };
@@ -1444,7 +1342,6 @@
 		D0754D1D1EEDDF6200884F6E /* ChatMessageAttachedContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageAttachedContentNode.swift; sourceTree = "<group>"; };
 		D0754D1F1EEDEBA000884F6E /* ChatMessageGameBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageGameBubbleContentNode.swift; sourceTree = "<group>"; };
 		D0754D211EEDF89900884F6E /* ChatMessageInvoiceBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageInvoiceBubbleContentNode.swift; sourceTree = "<group>"; };
-		D0754D261EEE10C800884F6E /* BotCheckoutController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutController.swift; sourceTree = "<group>"; };
 		D07551871DDA4BB50073E051 /* TelegramLegacyComponents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = TelegramLegacyComponents.framework; path = "../TelegramLegacyComponents/build/Debug-iphoneos/TelegramLegacyComponents.framework"; sourceTree = "<group>"; };
 		D075518E1DDA4F9E0073E051 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
 		D07551901DDA4FC70073E051 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
@@ -1452,10 +1349,6 @@
 		D077C5C022B59A800097D617 /* ApplicationContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationContext.swift; sourceTree = "<group>"; };
 		D07827BC1E004A3400071108 /* ChatListSearchItemHeader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListSearchItemHeader.swift; sourceTree = "<group>"; };
 		D07827C61E01CD5900071108 /* VerticalListContextResultsChatInputPanelButtonItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VerticalListContextResultsChatInputPanelButtonItem.swift; sourceTree = "<group>"; };
-		D079FCD81F05A5550038FADE /* BotCheckoutPasswordEntryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPasswordEntryController.swift; sourceTree = "<group>"; };
-		D079FCDC1F05C4F20038FADE /* LocalAuth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LocalAuth.swift; sourceTree = "<group>"; };
-		D079FCDE1F05C9280038FADE /* BotReceiptController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotReceiptController.swift; sourceTree = "<group>"; };
-		D079FCE01F05C9380038FADE /* BotReceiptControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotReceiptControllerNode.swift; sourceTree = "<group>"; };
 		D07A7DA21D957671005BCD27 /* ListMessageSnippetItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListMessageSnippetItemNode.swift; sourceTree = "<group>"; };
 		D07A7DA41D95783C005BCD27 /* ListMessageNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListMessageNode.swift; sourceTree = "<group>"; };
 		D07ABBA4202A14BC003671DE /* LegacyImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyImagePicker.swift; sourceTree = "<group>"; };
@@ -1513,8 +1406,6 @@
 		D091C7A31F8EBB1E00D7DE13 /* ChatPresentationData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPresentationData.swift; sourceTree = "<group>"; };
 		D091C7A51F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsThemeWallpaperNode.swift; sourceTree = "<group>"; };
 		D09250051FE5371D003F693F /* GlobalExperimentalSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalExperimentalSettings.swift; sourceTree = "<group>"; };
-		D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotPaymentActionItemNode.swift; sourceTree = "<group>"; };
-		D093D80720654A2900BC3599 /* BotPaymentDateItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotPaymentDateItemNode.swift; sourceTree = "<group>"; };
 		D0943AF51FDAAE7E001522CC /* MultipleAvatarsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipleAvatarsNode.swift; sourceTree = "<group>"; };
 		D0943AFD1FDAE454001522CC /* ChatMultipleAvatarsNavigationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMultipleAvatarsNavigationNode.swift; sourceTree = "<group>"; };
 		D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedNavigationInputPanelNode.swift; sourceTree = "<group>"; };
@@ -1712,6 +1603,9 @@
 		D0C9C6582301D31200FAB518 /* LiveLocationPositionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LiveLocationPositionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C67E2301D46300FAB518 /* MosaicLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MosaicLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C6B82301D91800FAB518 /* LocationUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocationUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7BA2301FFF900FAB518 /* Stripe.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Stripe.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7BC2301FFFE00FAB518 /* BotPaymentsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BotPaymentsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C7E42302036000FAB518 /* LocalAuth.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalAuth.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatEditInterfaceMessageState.swift; sourceTree = "<group>"; };
 		D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceController.swift; sourceTree = "<group>"; };
 		D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceControllerNode.swift; sourceTree = "<group>"; };
@@ -1806,57 +1700,7 @@
 		D0E8B8BA2044780600605593 /* ItemListSecretChatKeyItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListSecretChatKeyItem.swift; sourceTree = "<group>"; };
 		D0E8B8BC204479A500605593 /* SecretChatKeyController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretChatKeyController.swift; sourceTree = "<group>"; };
 		D0E8B8BE20447A4600605593 /* SecretChatKeyControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretChatKeyControllerNode.swift; sourceTree = "<group>"; };
-		D0E9B9E71EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentDisclosureItemNode.swift; sourceTree = "<group>"; };
 		D0E9B9E91F00853C00F079A4 /* PhoneCountries.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PhoneCountries.txt; path = TelegramUI/Resources/PhoneCountries.txt; sourceTree = "<group>"; };
-		D0E9B9F31F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPaymentMethodSheet.swift; sourceTree = "<group>"; };
-		D0E9BA071F0446A300F079A4 /* BotCheckoutPaymentShippingOptionSheetController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutPaymentShippingOptionSheetController.swift; sourceTree = "<group>"; };
-		D0E9BA091F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutWebInteractionController.swift; sourceTree = "<group>"; };
-		D0E9BA0B1F04580700F079A4 /* BotCheckoutWebInteractionControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutWebInteractionControllerNode.swift; sourceTree = "<group>"; };
-		D0E9BA0D1F05574500F079A4 /* STPCardValidationState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPCardValidationState.h; sourceTree = "<group>"; };
-		D0E9BA0E1F05574500F079A4 /* STPCardValidator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPCardValidator.h; sourceTree = "<group>"; };
-		D0E9BA0F1F05574500F079A4 /* STPCardValidator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPCardValidator.m; sourceTree = "<group>"; };
-		D0E9BA101F05574500F079A4 /* STPPaymentCardTextFieldViewModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPPaymentCardTextFieldViewModel.h; sourceTree = "<group>"; };
-		D0E9BA111F05574500F079A4 /* STPPaymentCardTextFieldViewModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPPaymentCardTextFieldViewModel.m; sourceTree = "<group>"; };
-		D0E9BA121F05574500F079A4 /* STPPaymentCardTextField.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPPaymentCardTextField.h; sourceTree = "<group>"; };
-		D0E9BA131F05574500F079A4 /* STPPaymentCardTextField.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPPaymentCardTextField.m; sourceTree = "<group>"; };
-		D0E9BA1C1F05577700F079A4 /* STPCardParams.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPCardParams.h; sourceTree = "<group>"; };
-		D0E9BA1D1F05577700F079A4 /* STPCardParams.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPCardParams.m; sourceTree = "<group>"; };
-		D0E9BA1E1F05577700F079A4 /* STPCard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPCard.h; sourceTree = "<group>"; };
-		D0E9BA1F1F05577700F079A4 /* STPCard.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPCard.m; sourceTree = "<group>"; };
-		D0E9BA241F05578900F079A4 /* STPCardBrand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPCardBrand.h; sourceTree = "<group>"; };
-		D0E9BA261F0557A600F079A4 /* STPFormEncodable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPFormEncodable.h; sourceTree = "<group>"; };
-		D0E9BA271F0557A600F079A4 /* STPFormEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPFormEncoder.h; sourceTree = "<group>"; };
-		D0E9BA281F0557A600F079A4 /* STPFormEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPFormEncoder.m; sourceTree = "<group>"; };
-		D0E9BA2C1F0557D400F079A4 /* STPAddress.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPAddress.h; sourceTree = "<group>"; };
-		D0E9BA2D1F0557D400F079A4 /* STPAddress.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPAddress.m; sourceTree = "<group>"; };
-		D0E9BA301F05583A00F079A4 /* STPPostalCodeValidator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPPostalCodeValidator.h; sourceTree = "<group>"; };
-		D0E9BA311F05583A00F079A4 /* STPPostalCodeValidator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPPostalCodeValidator.m; sourceTree = "<group>"; };
-		D0E9BA341F05585000F079A4 /* STPPhoneNumberValidator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPPhoneNumberValidator.h; sourceTree = "<group>"; };
-		D0E9BA351F05585000F079A4 /* STPPhoneNumberValidator.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPPhoneNumberValidator.m; sourceTree = "<group>"; };
-		D0E9BA381F0558E800F079A4 /* NSString+Stripe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+Stripe.h"; sourceTree = "<group>"; };
-		D0E9BA391F0558E800F079A4 /* NSString+Stripe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+Stripe.m"; sourceTree = "<group>"; };
-		D0E9BA3C1F0558FE00F079A4 /* STPSource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPSource.h; sourceTree = "<group>"; };
-		D0E9BA3D1F0558FE00F079A4 /* StripeError.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StripeError.h; sourceTree = "<group>"; };
-		D0E9BA3E1F0558FE00F079A4 /* StripeError.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = StripeError.m; sourceTree = "<group>"; };
-		D0E9BA421F0559A500F079A4 /* STPAPIResponseDecodable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPAPIResponseDecodable.h; sourceTree = "<group>"; };
-		D0E9BA431F0559A500F079A4 /* NSDictionary+Stripe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSDictionary+Stripe.h"; sourceTree = "<group>"; };
-		D0E9BA441F0559A500F079A4 /* NSDictionary+Stripe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSDictionary+Stripe.m"; sourceTree = "<group>"; };
-		D0E9BA481F0559B600F079A4 /* STPPaymentMethod.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPPaymentMethod.h; sourceTree = "<group>"; };
-		D0E9BA4A1F0559C700F079A4 /* NSString+Stripe_CardBrands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+Stripe_CardBrands.h"; sourceTree = "<group>"; };
-		D0E9BA4B1F0559C700F079A4 /* NSString+Stripe_CardBrands.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+Stripe_CardBrands.m"; sourceTree = "<group>"; };
-		D0E9BA4E1F0559DA00F079A4 /* STPImageLibrary.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPImageLibrary.h; sourceTree = "<group>"; };
-		D0E9BA4F1F0559DA00F079A4 /* STPImageLibrary.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPImageLibrary.m; sourceTree = "<group>"; };
-		D0E9BA501F0559DA00F079A4 /* STPImageLibrary+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "STPImageLibrary+Private.h"; sourceTree = "<group>"; };
-		D0E9BA541F055A0B00F079A4 /* STPFormTextField.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPFormTextField.h; sourceTree = "<group>"; };
-		D0E9BA551F055A0B00F079A4 /* STPFormTextField.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPFormTextField.m; sourceTree = "<group>"; };
-		D0E9BA581F055A2200F079A4 /* STPWeakStrongMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPWeakStrongMacros.h; sourceTree = "<group>"; };
-		D0E9BA5A1F055A3300F079A4 /* STPBINRange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPBINRange.h; sourceTree = "<group>"; };
-		D0E9BA5B1F055A3300F079A4 /* STPBINRange.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPBINRange.m; sourceTree = "<group>"; };
-		D0E9BA5E1F055A4300F079A4 /* STPDelegateProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPDelegateProxy.h; sourceTree = "<group>"; };
-		D0E9BA5F1F055A4300F079A4 /* STPDelegateProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPDelegateProxy.m; sourceTree = "<group>"; };
-		D0E9BA621F055AD200F079A4 /* BotPaymentCardInputItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotPaymentCardInputItemNode.swift; sourceTree = "<group>"; };
-		D0E9BA641F055B4500F079A4 /* BotCheckoutNativeCardEntryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutNativeCardEntryController.swift; sourceTree = "<group>"; };
-		D0E9BA661F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BotCheckoutNativeCardEntryControllerNode.swift; sourceTree = "<group>"; };
 		D0E9BA691F056F4C00F079A4 /* stp_card_amex@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_amex@2x.png"; sourceTree = "<group>"; };
 		D0E9BA6A1F056F4C00F079A4 /* stp_card_amex@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_amex@3x.png"; sourceTree = "<group>"; };
 		D0E9BA6B1F056F4C00F079A4 /* stp_card_amex_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_amex_template@2x.png"; sourceTree = "<group>"; };
@@ -1897,30 +1741,6 @@
 		D0E9BA8E1F056F4C00F079A4 /* stp_card_visa@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_visa@3x.png"; sourceTree = "<group>"; };
 		D0E9BA8F1F056F4C00F079A4 /* stp_card_visa_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_visa_template@2x.png"; sourceTree = "<group>"; };
 		D0E9BA901F056F4C00F079A4 /* stp_card_visa_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_visa_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BAB91F05735F00F079A4 /* STPPaymentConfiguration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPPaymentConfiguration.h; sourceTree = "<group>"; };
-		D0E9BABA1F05735F00F079A4 /* STPPaymentConfiguration.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPPaymentConfiguration.m; sourceTree = "<group>"; };
-		D0E9BABB1F05735F00F079A4 /* STPPaymentConfiguration+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "STPPaymentConfiguration+Private.h"; sourceTree = "<group>"; };
-		D0E9BABF1F05738600F079A4 /* STPAPIClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPAPIClient.h; sourceTree = "<group>"; };
-		D0E9BAC01F05738600F079A4 /* STPAPIClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPAPIClient.m; sourceTree = "<group>"; };
-		D0E9BAC11F05738600F079A4 /* STPAPIClient+ApplePay.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "STPAPIClient+ApplePay.h"; sourceTree = "<group>"; };
-		D0E9BAC21F05738600F079A4 /* STPAPIClient+ApplePay.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "STPAPIClient+ApplePay.m"; sourceTree = "<group>"; };
-		D0E9BAC31F05738600F079A4 /* STPAPIClient+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "STPAPIClient+Private.h"; sourceTree = "<group>"; };
-		D0E9BAC41F05738600F079A4 /* STPAPIPostRequest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPAPIPostRequest.h; sourceTree = "<group>"; };
-		D0E9BAC51F05738600F079A4 /* STPAPIPostRequest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPAPIPostRequest.m; sourceTree = "<group>"; };
-		D0E9BACD1F0573AF00F079A4 /* STPBlocks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPBlocks.h; sourceTree = "<group>"; };
-		D0E9BACF1F0573C000F079A4 /* STPToken.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPToken.h; sourceTree = "<group>"; };
-		D0E9BAD01F0573C000F079A4 /* STPToken.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPToken.m; sourceTree = "<group>"; };
-		D0E9BAD31F0574D800F079A4 /* PKPayment+Stripe.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "PKPayment+Stripe.h"; sourceTree = "<group>"; };
-		D0E9BAD41F0574D800F079A4 /* PKPayment+Stripe.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "PKPayment+Stripe.m"; sourceTree = "<group>"; };
-		D0E9BAD51F0574D800F079A4 /* STPBackendAPIAdapter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPBackendAPIAdapter.h; sourceTree = "<group>"; };
-		D0E9BAD61F0574D800F079A4 /* STPDispatchFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPDispatchFunctions.h; sourceTree = "<group>"; };
-		D0E9BAD71F0574D800F079A4 /* STPDispatchFunctions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPDispatchFunctions.m; sourceTree = "<group>"; };
-		D0E9BAD81F0574D800F079A4 /* STPBankAccount.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPBankAccount.h; sourceTree = "<group>"; };
-		D0E9BAD91F0574D800F079A4 /* STPBankAccount.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPBankAccount.m; sourceTree = "<group>"; };
-		D0E9BADA1F0574D800F079A4 /* STPBankAccountParams.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPBankAccountParams.h; sourceTree = "<group>"; };
-		D0E9BADB1F0574D800F079A4 /* STPBankAccountParams.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPBankAccountParams.m; sourceTree = "<group>"; };
-		D0E9BAE51F0574FF00F079A4 /* STPCustomer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = STPCustomer.h; sourceTree = "<group>"; };
-		D0E9BAE61F0574FF00F079A4 /* STPCustomer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = STPCustomer.m; sourceTree = "<group>"; };
 		D0EB41F41F30D26A00838FE6 /* LegacySuggestionContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacySuggestionContext.swift; sourceTree = "<group>"; };
 		D0EB41FE1F30ED4F00838FE6 /* LegacyImageProcessors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LegacyImageProcessors.h; sourceTree = "<group>"; };
 		D0EB41FF1F30ED4F00838FE6 /* LegacyImageProcessors.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LegacyImageProcessors.m; sourceTree = "<group>"; };
@@ -2033,6 +1853,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C7E52302036000FAB518 /* LocalAuth.framework in Frameworks */,
+				D0C9C7BD2301FFFE00FAB518 /* BotPaymentsUI.framework in Frameworks */,
+				D0C9C7BB2301FFF900FAB518 /* Stripe.framework in Frameworks */,
 				D0C9C6B92301D91800FAB518 /* LocationUI.framework in Frameworks */,
 				D0C9C67F2301D46300FAB518 /* MosaicLayout.framework in Frameworks */,
 				D0C9C6592301D31200FAB518 /* LiveLocationPositionNode.framework in Frameworks */,
@@ -2866,39 +2689,6 @@
 			name = Sounds;
 			sourceTree = "<group>";
 		};
-		D0754D251EEE10A100884F6E /* Bot Payments */ = {
-			isa = PBXGroup;
-			children = (
-				D0E9BA1B1F05574800F079A4 /* Stripe */,
-				D0754D261EEE10C800884F6E /* BotCheckoutController.swift */,
-				D0471B481EFD59170074D609 /* BotCheckoutControllerNode.swift */,
-				D0471B4A1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift */,
-				D0471B4E1EFD84600074D609 /* BotCheckoutPriceItem.swift */,
-				D0471B551EFDB40F0074D609 /* BotCheckoutActionButton.swift */,
-				D0471B571EFE6D020074D609 /* BotCheckoutInfoController.swift */,
-				D0471B591EFE70400074D609 /* BotCheckoutInfoControllerNode.swift */,
-				D0471B631EFEB5CB0074D609 /* BotPaymentItemNode.swift */,
-				D0471B5D1EFEB5860074D609 /* BotPaymentHeaderItemNode.swift */,
-				D0471B5F1EFEB5A70074D609 /* BotPaymentTextItemNode.swift */,
-				D0471B5B1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift */,
-				D0471B611EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift */,
-				D0E9B9E71EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift */,
-				D093D80720654A2900BC3599 /* BotPaymentDateItemNode.swift */,
-				D093D7E62063E57F00BC3599 /* BotPaymentActionItemNode.swift */,
-				D0E9BA621F055AD200F079A4 /* BotPaymentCardInputItemNode.swift */,
-				D0E9B9F31F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift */,
-				D0E9BA071F0446A300F079A4 /* BotCheckoutPaymentShippingOptionSheetController.swift */,
-				D0E9BA091F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift */,
-				D0E9BA0B1F04580700F079A4 /* BotCheckoutWebInteractionControllerNode.swift */,
-				D0E9BA641F055B4500F079A4 /* BotCheckoutNativeCardEntryController.swift */,
-				D0E9BA661F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift */,
-				D079FCD81F05A5550038FADE /* BotCheckoutPasswordEntryController.swift */,
-				D079FCDE1F05C9280038FADE /* BotReceiptController.swift */,
-				D079FCE01F05C9380038FADE /* BotReceiptControllerNode.swift */,
-			);
-			name = "Bot Payments";
-			sourceTree = "<group>";
-		};
 		D07551891DDA4C7C0073E051 /* Legacy Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -2997,6 +2787,9 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C7E42302036000FAB518 /* LocalAuth.framework */,
+				D0C9C7BC2301FFFE00FAB518 /* BotPaymentsUI.framework */,
+				D0C9C7BA2301FFF900FAB518 /* Stripe.framework */,
 				D0C9C6B82301D91800FAB518 /* LocationUI.framework */,
 				D0C9C67E2301D46300FAB518 /* MosaicLayout.framework */,
 				D0C9C6582301D31200FAB518 /* LiveLocationPositionNode.framework */,
@@ -3241,7 +3034,6 @@
 			children = (
 				09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */,
 				099529B321D3E5D800805E13 /* CheckDiskSpace.swift */,
-				D079FCDC1F05C4F20038FADE /* LocalAuth.swift */,
 				D0208ADB1FA346A4001F0D5F /* RaiseToListen.swift */,
 				09D304142173C0E900C00567 /* WatchManager.swift */,
 				09EDAD29220DA6A40012A50B /* VolumeButtons.swift */,
@@ -3604,79 +3396,6 @@
 			name = "Chat History Node";
 			sourceTree = "<group>";
 		};
-		D0E9BA1B1F05574800F079A4 /* Stripe */ = {
-			isa = PBXGroup;
-			children = (
-				D0E9BAE51F0574FF00F079A4 /* STPCustomer.h */,
-				D0E9BAE61F0574FF00F079A4 /* STPCustomer.m */,
-				D0E9BAD31F0574D800F079A4 /* PKPayment+Stripe.h */,
-				D0E9BAD41F0574D800F079A4 /* PKPayment+Stripe.m */,
-				D0E9BAD51F0574D800F079A4 /* STPBackendAPIAdapter.h */,
-				D0E9BAD61F0574D800F079A4 /* STPDispatchFunctions.h */,
-				D0E9BAD71F0574D800F079A4 /* STPDispatchFunctions.m */,
-				D0E9BAD81F0574D800F079A4 /* STPBankAccount.h */,
-				D0E9BAD91F0574D800F079A4 /* STPBankAccount.m */,
-				D0E9BADA1F0574D800F079A4 /* STPBankAccountParams.h */,
-				D0E9BADB1F0574D800F079A4 /* STPBankAccountParams.m */,
-				D0E9BACF1F0573C000F079A4 /* STPToken.h */,
-				D0E9BAD01F0573C000F079A4 /* STPToken.m */,
-				D0E9BACD1F0573AF00F079A4 /* STPBlocks.h */,
-				D0E9BABF1F05738600F079A4 /* STPAPIClient.h */,
-				D0E9BAC01F05738600F079A4 /* STPAPIClient.m */,
-				D0E9BAC11F05738600F079A4 /* STPAPIClient+ApplePay.h */,
-				D0E9BAC21F05738600F079A4 /* STPAPIClient+ApplePay.m */,
-				D0E9BAC31F05738600F079A4 /* STPAPIClient+Private.h */,
-				D0E9BAC41F05738600F079A4 /* STPAPIPostRequest.h */,
-				D0E9BAC51F05738600F079A4 /* STPAPIPostRequest.m */,
-				D0E9BAB91F05735F00F079A4 /* STPPaymentConfiguration.h */,
-				D0E9BABA1F05735F00F079A4 /* STPPaymentConfiguration.m */,
-				D0E9BABB1F05735F00F079A4 /* STPPaymentConfiguration+Private.h */,
-				D0E9BA5E1F055A4300F079A4 /* STPDelegateProxy.h */,
-				D0E9BA5F1F055A4300F079A4 /* STPDelegateProxy.m */,
-				D0E9BA5A1F055A3300F079A4 /* STPBINRange.h */,
-				D0E9BA5B1F055A3300F079A4 /* STPBINRange.m */,
-				D0E9BA581F055A2200F079A4 /* STPWeakStrongMacros.h */,
-				D0E9BA541F055A0B00F079A4 /* STPFormTextField.h */,
-				D0E9BA551F055A0B00F079A4 /* STPFormTextField.m */,
-				D0E9BA4E1F0559DA00F079A4 /* STPImageLibrary.h */,
-				D0E9BA4F1F0559DA00F079A4 /* STPImageLibrary.m */,
-				D0E9BA501F0559DA00F079A4 /* STPImageLibrary+Private.h */,
-				D0E9BA4A1F0559C700F079A4 /* NSString+Stripe_CardBrands.h */,
-				D0E9BA4B1F0559C700F079A4 /* NSString+Stripe_CardBrands.m */,
-				D0E9BA481F0559B600F079A4 /* STPPaymentMethod.h */,
-				D0E9BA421F0559A500F079A4 /* STPAPIResponseDecodable.h */,
-				D0E9BA431F0559A500F079A4 /* NSDictionary+Stripe.h */,
-				D0E9BA441F0559A500F079A4 /* NSDictionary+Stripe.m */,
-				D0E9BA3C1F0558FE00F079A4 /* STPSource.h */,
-				D0E9BA3D1F0558FE00F079A4 /* StripeError.h */,
-				D0E9BA3E1F0558FE00F079A4 /* StripeError.m */,
-				D0E9BA381F0558E800F079A4 /* NSString+Stripe.h */,
-				D0E9BA391F0558E800F079A4 /* NSString+Stripe.m */,
-				D0E9BA341F05585000F079A4 /* STPPhoneNumberValidator.h */,
-				D0E9BA351F05585000F079A4 /* STPPhoneNumberValidator.m */,
-				D0E9BA301F05583A00F079A4 /* STPPostalCodeValidator.h */,
-				D0E9BA311F05583A00F079A4 /* STPPostalCodeValidator.m */,
-				D0E9BA2C1F0557D400F079A4 /* STPAddress.h */,
-				D0E9BA2D1F0557D400F079A4 /* STPAddress.m */,
-				D0E9BA261F0557A600F079A4 /* STPFormEncodable.h */,
-				D0E9BA271F0557A600F079A4 /* STPFormEncoder.h */,
-				D0E9BA281F0557A600F079A4 /* STPFormEncoder.m */,
-				D0E9BA241F05578900F079A4 /* STPCardBrand.h */,
-				D0E9BA1C1F05577700F079A4 /* STPCardParams.h */,
-				D0E9BA1D1F05577700F079A4 /* STPCardParams.m */,
-				D0E9BA1E1F05577700F079A4 /* STPCard.h */,
-				D0E9BA1F1F05577700F079A4 /* STPCard.m */,
-				D0E9BA0D1F05574500F079A4 /* STPCardValidationState.h */,
-				D0E9BA0E1F05574500F079A4 /* STPCardValidator.h */,
-				D0E9BA0F1F05574500F079A4 /* STPCardValidator.m */,
-				D0E9BA101F05574500F079A4 /* STPPaymentCardTextFieldViewModel.h */,
-				D0E9BA111F05574500F079A4 /* STPPaymentCardTextFieldViewModel.m */,
-				D0E9BA121F05574500F079A4 /* STPPaymentCardTextField.h */,
-				D0E9BA131F05574500F079A4 /* STPPaymentCardTextField.m */,
-			);
-			name = Stripe;
-			sourceTree = "<group>";
-		};
 		D0E9BA681F056F4C00F079A4 /* Stripe */ = {
 			isa = PBXGroup;
 			children = (
@@ -3880,7 +3599,6 @@
 				D0BC38681E3FB92B0044D6FE /* Compose */,
 				D0EE97131D88BB1A006C18E1 /* Peer Info */,
 				D0D2689B1D79D31500C422DA /* Peer Selection */,
-				D0754D251EEE10A100884F6E /* Bot Payments */,
 				D01BAA161ECC8DED00295217 /* Call List */,
 				D0F69E791D6B8C3B0046BCD6 /* Settings */,
 				D0C50E361E93CAF200F62E39 /* Notifications */,
@@ -4037,7 +3755,6 @@
 				D018BE57218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift */,
 				D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */,
 				099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */,
-				D0439B5A228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift */,
 				D0FAB13D22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift */,
 			);
 			name = Items;
@@ -4302,45 +4019,26 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0E9BA221F05577700F079A4 /* STPCard.h in Headers */,
 				D0AF798622C2E26500CECCB8 /* weights_quantize.h in Headers */,
-				D0E9BA591F055A2200F079A4 /* STPWeakStrongMacros.h in Headers */,
 				D0AF799022C2E26500CECCB8 /* bgra.h in Headers */,
-				D0E9BADE1F0574D800F079A4 /* STPBackendAPIAdapter.h in Headers */,
-				D0E9BAD11F0573C000F079A4 /* STPToken.h in Headers */,
 				D01590C222BDAEBC0017C33E /* TypeDefinitions.h in Headers */,
 				D0AE303622B1D3620058D3BC /* TGBridgeAudioDecoder.h in Headers */,
-				D0E9BAE71F0574FF00F079A4 /* STPCustomer.h in Headers */,
 				D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */,
 				D00817DA22B47A14008A895F /* TGPresentationAutoNightPreferences.h in Headers */,
 				D0AF797D22C2E26500CECCB8 /* endpoints_min_max.h in Headers */,
-				D0E9BAE31F0574D800F079A4 /* STPBankAccountParams.h in Headers */,
 				D0AF797222C2E26500CECCB8 /* misc.h in Headers */,
 				D0AF798222C2E26500CECCB8 /* bitmanip.h in Headers */,
-				D0E9BA361F05585000F079A4 /* STPPhoneNumberValidator.h in Headers */,
 				D0AF797C22C2E26500CECCB8 /* constants.h in Headers */,
-				D0E9BA511F0559DA00F079A4 /* STPImageLibrary.h in Headers */,
-				D0E9BA4C1F0559C700F079A4 /* NSString+Stripe_CardBrands.h in Headers */,
 				D00817E022B47A14008A895F /* UIImage+ImageEffects.h in Headers */,
 				D01590BA22BDAEBC0017C33E /* ColorVec.h in Headers */,
-				D0E9BAE11F0574D800F079A4 /* STPBankAccount.h in Headers */,
-				D0E9BACE1F0573AF00F079A4 /* STPBlocks.h in Headers */,
-				D0E9BA2A1F0557A600F079A4 /* STPFormEncoder.h in Headers */,
 				D0AF797422C2E26500CECCB8 /* matrix.h in Headers */,
 				D0AF79A322C2E36400CECCB8 /* astc.h in Headers */,
-				D0E9BA321F05583A00F079A4 /* STPPostalCodeValidator.h in Headers */,
-				D0E9BADC1F0574D800F079A4 /* PKPayment+Stripe.h in Headers */,
-				D0E9BA491F0559B600F079A4 /* STPPaymentMethod.h in Headers */,
 				D08803C51F6064CF00DD7951 /* TelegramUI.h in Headers */,
-				D0E9BA171F05574500F079A4 /* STPPaymentCardTextFieldViewModel.h in Headers */,
 				D0EB42001F30ED4F00838FE6 /* LegacyImageProcessors.h in Headers */,
 				D01590AE22BD58AD0017C33E /* YUV.h in Headers */,
 				D008177B22B46B7E008A895F /* TGContactModel.h in Headers */,
-				D0E9BA291F0557A600F079A4 /* STPFormEncodable.h in Headers */,
-				D0E9BA141F05574500F079A4 /* STPCardValidationState.h in Headers */,
 				D0AF797922C2E26500CECCB8 /* endpoints_bounding_box.h in Headers */,
 				D00701A12029F6D0006B9E34 /* TGMimeTypeMap.h in Headers */,
-				D0E9BA461F0559A500F079A4 /* NSDictionary+Stripe.h in Headers */,
 				D0AF798A22C2E26500CECCB8 /* endpoints_quantize.h in Headers */,
 				D0AF797322C2E26500CECCB8 /* tables_data_size.h in Headers */,
 				D0AF797E22C2E26500CECCB8 /* dcheck.h in Headers */,
@@ -4352,46 +4050,26 @@
 				D0AE303722B1D3620058D3BC /* TGBridgeAudioEncoder.h in Headers */,
 				D0AF798422C2E26500CECCB8 /* compress_block.h in Headers */,
 				D0AF798E22C2E26500CECCB8 /* compressed.h in Headers */,
-				D0E9BAC61F05738600F079A4 /* STPAPIClient.h in Headers */,
-				D0E9BA531F0559DA00F079A4 /* STPImageLibrary+Private.h in Headers */,
-				D0E9BA601F055A4300F079A4 /* STPDelegateProxy.h in Headers */,
-				D0E9BADF1F0574D800F079A4 /* STPDispatchFunctions.h in Headers */,
 				D00817CD22B47A14008A895F /* TGAutoDownloadPreferences.h in Headers */,
-				D0E9BACB1F05738600F079A4 /* STPAPIPostRequest.h in Headers */,
-				D0E9BA561F055A0B00F079A4 /* STPFormTextField.h in Headers */,
 				D01590C122BDAEBC0017C33E /* DDSImage.h in Headers */,
 				D0AF798122C2E26500CECCB8 /* endpoints_principal_components.h in Headers */,
 				D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */,
 				D0AF798322C2E26500CECCB8 /* endpoints.h in Headers */,
-				D0E9BABE1F05735F00F079A4 /* STPPaymentConfiguration+Private.h in Headers */,
 				D01590BB22BDAEBC0017C33E /* BC1Compression.h in Headers */,
-				D0E9BACA1F05738600F079A4 /* STPAPIClient+Private.h in Headers */,
 				D01590BC22BDAEBC0017C33E /* BMPImage.h in Headers */,
-				D0E9BA251F05578900F079A4 /* STPCardBrand.h in Headers */,
 				D0AF797522C2E26500CECCB8 /* colors.h in Headers */,
-				D0E9BAC81F05738600F079A4 /* STPAPIClient+ApplePay.h in Headers */,
-				D0E9BA451F0559A500F079A4 /* STPAPIResponseDecodable.h in Headers */,
-				D0E9BA201F05577700F079A4 /* STPCardParams.h in Headers */,
-				D0E9BA151F05574500F079A4 /* STPCardValidator.h in Headers */,
 				D0AF797B22C2E26500CECCB8 /* tables_integer_sequence_encoding.h in Headers */,
 				D0AF798C22C2E26500CECCB8 /* color.h in Headers */,
 				D00817D722B47A14008A895F /* TGBridgeServer.h in Headers */,
 				D0AF796F22C2E26500CECCB8 /* compress_texture.h in Headers */,
 				D0AF798922C2E26500CECCB8 /* vector.h in Headers */,
 				D00817CE22B47A14008A895F /* TGProxyItem.h in Headers */,
-				D0E9BA401F0558FE00F079A4 /* StripeError.h in Headers */,
 				D01590C922BE62C40017C33E /* TextureCompression.h in Headers */,
-				D0E9BA191F05574500F079A4 /* STPPaymentCardTextField.h in Headers */,
-				D0E9BA3F1F0558FE00F079A4 /* STPSource.h in Headers */,
 				D0AF797A22C2E26500CECCB8 /* tables_color_quantization.h in Headers */,
 				D008177A22B46B7E008A895F /* TGShareLocationSignals.h in Headers */,
 				D0AF798522C2E26500CECCB8 /* endpoints_encode.h in Headers */,
-				D0E9BABC1F05735F00F079A4 /* STPPaymentConfiguration.h in Headers */,
 				D01590BF22BDAEBC0017C33E /* Image.h in Headers */,
-				D0E9BA2E1F0557D400F079A4 /* STPAddress.h in Headers */,
 				D0AF797022C2E26500CECCB8 /* integer_sequence_encoding.h in Headers */,
-				D0E9BA5C1F055A3300F079A4 /* STPBINRange.h in Headers */,
-				D0E9BA3A1F0558E800F079A4 /* NSString+Stripe.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4586,12 +4264,10 @@
 				D06E4C352134AE3C00088087 /* ThemeAutoNightSettingsController.swift in Sources */,
 				D0B2F76C2052A7D600D3BFB9 /* SinglePhoneInputNode.swift in Sources */,
 				D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */,
-				D079FCDD1F05C4F20038FADE /* LocalAuth.swift in Sources */,
 				09DD5D5221ED175300D7007A /* WallpaperColorPickerNode.swift in Sources */,
 				D0B2F76820528E3D00D3BFB9 /* UserInfoEditingPhoneActionItem.swift in Sources */,
 				D0AF798D22C2E26500CECCB8 /* bgra.cc in Sources */,
 				09F79A0321C8225600820234 /* WebSearchVideoGalleryItem.swift in Sources */,
-				D0E9BA631F055AD200F079A4 /* BotPaymentCardInputItemNode.swift in Sources */,
 				D01848E821A03BDA00B6DEBD /* ChatSearchState.swift in Sources */,
 				D0208ADC1FA346A4001F0D5F /* RaiseToListen.swift in Sources */,
 				09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */,
@@ -4602,7 +4278,6 @@
 				D0EC6CC01EB9F58800EBF1C3 /* LegacyMediaPickers.swift in Sources */,
 				D0EC6CC11EB9F58800EBF1C3 /* LegacyCamera.swift in Sources */,
 				D0754D1E1EEDDF6200884F6E /* ChatMessageAttachedContentNode.swift in Sources */,
-				D0E9BAC71F05738600F079A4 /* STPAPIClient.m in Sources */,
 				D0CFBB911FD881A600B65C0D /* AudioRecordningToneData.swift in Sources */,
 				D050A466229C06460044F11A /* ChannelDiscussionGroupSearchContainerNode.swift in Sources */,
 				09F799FA21C3542D00820234 /* LegacyWebSearchGallery.swift in Sources */,
@@ -4620,22 +4295,17 @@
 				D0EC6CCD1EB9F58800EBF1C3 /* DeclareEncodables.swift in Sources */,
 				D0CFBB951FD8B05000B65C0D /* OverlayInstantVideoDecoration.swift in Sources */,
 				D0EC6CCE1EB9F58800EBF1C3 /* AccountContext.swift in Sources */,
-				D0471B5C1EFEB4F30074D609 /* BotPaymentFieldItemNode.swift in Sources */,
 				D0EC6CD11EB9F58800EBF1C3 /* UrlHandling.swift in Sources */,
 				09B4EE4D21A7B73800847FA6 /* PermissionController.swift in Sources */,
 				09F85BA521E7821500D73170 /* ThemeGridSelectionPanelNode.swift in Sources */,
-				D0E9BAD21F0573C000F079A4 /* STPToken.m in Sources */,
 				D0192D46210F4F950005FA10 /* FixSearchableListNodeScrolling.swift in Sources */,
 				D0EC6CD51EB9F58800EBF1C3 /* StoredMessageFromSearchPeer.swift in Sources */,
 				09CE950E2237E45E00A7D2C3 /* CachedFaqInstantPage.swift in Sources */,
-				D0471B5E1EFEB5860074D609 /* BotPaymentHeaderItemNode.swift in Sources */,
 				D0EC6CD71EB9F58800EBF1C3 /* EmojiUtils.swift in Sources */,
 				D0EC6CD91EB9F58800EBF1C3 /* ValidateAddressNameInteractive.swift in Sources */,
 				09B4EE5E21AC626B00847FA6 /* PermissionContentNode.swift in Sources */,
-				D0471B5A1EFE70400074D609 /* BotCheckoutInfoControllerNode.swift in Sources */,
 				09F664CA21EB4F2700AB7E26 /* ThemeGridSearchColorsItem.swift in Sources */,
 				D025402922E1F7F500AC0195 /* ChatTextInputSlowmodePlaceholderNode.swift in Sources */,
-				D0471B641EFEB5CB0074D609 /* BotPaymentItemNode.swift in Sources */,
 				D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */,
 				D0EC6CDC1EB9F58800EBF1C3 /* TelegramAccountAuxiliaryMethods.swift in Sources */,
 				D01BAA1A1ECC8E0D00295217 /* CallListControllerNode.swift in Sources */,
@@ -4655,15 +4325,12 @@
 				090E778E22AA863A00CD99F5 /* PeersNearbyIconNode.swift in Sources */,
 				D0EC6CF41EB9F58800EBF1C3 /* ManagedMediaId.swift in Sources */,
 				09D968A3221F800A00B1458A /* ChatUploadingActivityContentNode.swift in Sources */,
-				D0471B601EFEB5A70074D609 /* BotPaymentTextItemNode.swift in Sources */,
 				D0EC6CF51EB9F58800EBF1C3 /* PeerMessageManagedMediaId.swift in Sources */,
-				D0E9BA521F0559DA00F079A4 /* STPImageLibrary.m in Sources */,
 				D0EC6CF61EB9F58800EBF1C3 /* ChatContextResultManagedMediaId.swift in Sources */,
 				090E778622A9B95A00CD99F5 /* PeersNearbyController.swift in Sources */,
 				D04ECD721FFBF22B00DE9029 /* OpenUrl.swift in Sources */,
 				D056CD7A1FF3CC2A00880D28 /* ListMessagePlaybackOverlayNode.swift in Sources */,
 				D0EC6CF71EB9F58800EBF1C3 /* RecentGifManagedMediaId.swift in Sources */,
-				D0E9BA611F055A4300F079A4 /* STPDelegateProxy.m in Sources */,
 				D0EC6CF91EB9F58800EBF1C3 /* MediaManager.swift in Sources */,
 				0962E66521B3631100245FD9 /* WebSearchNavigationContentNode.swift in Sources */,
 				D0EB5ADF1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift in Sources */,
@@ -4676,10 +4343,8 @@
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
 				D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */,
 				D0EC6D021EB9F58800EBF1C3 /* diag_range.c in Sources */,
-				D0E9BA1A1F05574500F079A4 /* STPPaymentCardTextField.m in Sources */,
 				09CE95112237F3C100A7D2C3 /* SettingsSearchRecentQueries.swift in Sources */,
 				D0EC6D031EB9F58800EBF1C3 /* opus_header.c in Sources */,
-				D0E9BA371F05585000F079A4 /* STPPhoneNumberValidator.m in Sources */,
 				0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */,
 				09E4A807223D4B860038140F /* AccountUtils.swift in Sources */,
 				D069F5D0212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift in Sources */,
@@ -4709,7 +4374,6 @@
 				09F21565225C83E100AEDF6D /* ChatListStatusNode.swift in Sources */,
 				D056CD701FF147B000880D28 /* IconButtonNode.swift in Sources */,
 				D0F760DB222034910074F7E5 /* ChannelStatsController.swift in Sources */,
-				D079FCE11F05C9380038FADE /* BotReceiptControllerNode.swift in Sources */,
 				D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */,
 				09CE95002232729A00A7D2C3 /* StickerPaneSearchContentNode.swift in Sources */,
 				D00817D122B47A14008A895F /* LegacyDataImport.swift in Sources */,
@@ -4737,7 +4401,6 @@
 				D0EC6D271EB9F58800EBF1C3 /* FetchResource.swift in Sources */,
 				D09D88731F86D56B00BEB4C9 /* AuthorizationLayout.swift in Sources */,
 				D0EC6D281EB9F58800EBF1C3 /* MediaResources.swift in Sources */,
-				D0E9BA671F055B5500F079A4 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */,
 				D01590C722BE61CB0017C33E /* TextureCompression.cpp in Sources */,
 				D0EC6D291EB9F58800EBF1C3 /* FetchVideoMediaResource.swift in Sources */,
 				09EDAD2E221164440012A50B /* AutodownloadSizeLimitItem.swift in Sources */,
@@ -4745,11 +4408,8 @@
 				099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */,
 				D04281EF200E3D88009DDE36 /* GroupInfoSearchItem.swift in Sources */,
 				D081E104217F57D2003CD921 /* LanguageLinkPreviewController.swift in Sources */,
-				D0E9BAE21F0574D800F079A4 /* STPBankAccount.m in Sources */,
 				D0F67FF41EE6C10F000E5906 /* ChannelMembersSearchContainerNode.swift in Sources */,
-				D0E9BA471F0559A500F079A4 /* NSDictionary+Stripe.m in Sources */,
 				D0EC6D2A1EB9F58800EBF1C3 /* FetchPhotoLibraryImageResource.swift in Sources */,
-				D0E9BAE01F0574D800F079A4 /* STPDispatchFunctions.m in Sources */,
 				D0EC6D2B1EB9F58800EBF1C3 /* FileMediaResourceStatus.swift in Sources */,
 				09510B0F22F9347E0078CAB7 /* BundleResource.swift in Sources */,
 				D0FA08C020483F9600DD23FC /* ExtractVideoData.swift in Sources */,
@@ -4772,11 +4432,9 @@
 				D0E2CE6C222930540084E3DD /* PrefetchManager.swift in Sources */,
 				D0EB42011F30ED4F00838FE6 /* LegacyImageProcessors.m in Sources */,
 				D01590C322BDAEBC0017C33E /* BMPImage.cpp in Sources */,
-				D0E9BA3B1F0558E800F079A4 /* NSString+Stripe.m in Sources */,
 				D0CE8CE51F6F354400AA2DB0 /* ChatTextInputAccessoryItem.swift in Sources */,
 				09F215AD2264DC4500AEDF6D /* PasscodeSetupController.swift in Sources */,
 				D097C26820DD0A1D007BB4B8 /* PeerReportController.swift in Sources */,
-				D0471B491EFD59170074D609 /* BotCheckoutControllerNode.swift in Sources */,
 				09F664C621EB400A00AB7E26 /* ThemeGridSearchContentNode.swift in Sources */,
 				D01BAA181ECC8E0000295217 /* CallListController.swift in Sources */,
 				D0EC6D4B1EB9F58800EBF1C3 /* ChatListNode.swift in Sources */,
@@ -4812,7 +4470,6 @@
 				D0EC6D5B1EB9F58800EBF1C3 /* ListMessageNode.swift in Sources */,
 				D0DE66061F9A51E200EF4AE9 /* GalleryHiddenMediaManager.swift in Sources */,
 				D0EC6D5C1EB9F58800EBF1C3 /* ListMessageFileItemNode.swift in Sources */,
-				D0471B561EFDB40F0074D609 /* BotCheckoutActionButton.swift in Sources */,
 				D0671F2D2145AB28000A8AE7 /* LegacyAvatarPicker.swift in Sources */,
 				D0EC6D5D1EB9F58800EBF1C3 /* ListMessageSnippetItemNode.swift in Sources */,
 				D0EC6D5E1EB9F58800EBF1C3 /* ListMessageHoleItem.swift in Sources */,
@@ -4848,29 +4505,24 @@
 				09F85BA721E7DA5F00D73170 /* BlurredImageNode.swift in Sources */,
 				D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */,
 				D0EC6D701EB9F58800EBF1C3 /* AuthorizationSequenceCodeEntryControllerNode.swift in Sources */,
-				D0E9BA4D1F0559C700F079A4 /* NSString+Stripe_CardBrands.m in Sources */,
 				D0EC6D711EB9F58800EBF1C3 /* AuthorizationSequencePasswordEntryController.swift in Sources */,
 				D0EC6D721EB9F58800EBF1C3 /* AuthorizationSequencePasswordEntryControllerNode.swift in Sources */,
 				D0AF797622C2E26500CECCB8 /* endpoints_principal_components.cc in Sources */,
 				D0EC6D731EB9F58800EBF1C3 /* AuthorizationSequenceSignUpController.swift in Sources */,
 				D0C12EB01F9A8D1300600BB2 /* ListMessageDateHeader.swift in Sources */,
 				09B4EE5221A7CC3E00847FA6 /* SolidRoundedButtonNode.swift in Sources */,
-				D0E9BA5D1F055A3300F079A4 /* STPBINRange.m in Sources */,
 				091954792294754E00E11046 /* AnimatedStickerUtils.swift in Sources */,
 				D0EC6D741EB9F58800EBF1C3 /* AuthorizationSequenceSignUpControllerNode.swift in Sources */,
 				D0EC6D751EB9F58800EBF1C3 /* TelegramRootController.swift in Sources */,
 				D0EC6D761EB9F58800EBF1C3 /* ChatListController.swift in Sources */,
 				D0EC6D771EB9F58800EBF1C3 /* ChatListControllerNode.swift in Sources */,
 				D0EC6D781EB9F58800EBF1C3 /* ChatListTitleView.swift in Sources */,
-				D0E9B9F41F018A6700F079A4 /* BotCheckoutPaymentMethodSheet.swift in Sources */,
 				D0F6800A1EE750EE000E5906 /* ChannelBannedMemberController.swift in Sources */,
 				D0EC6D791EB9F58800EBF1C3 /* ChatListTitleLockView.swift in Sources */,
 				D03AA4DF202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift in Sources */,
 				D00817D622B47A14008A895F /* TGProxyItem.m in Sources */,
 				D0EC6D7A1EB9F58800EBF1C3 /* ChatListSearchContainerNode.swift in Sources */,
-				D0E9BACC1F05738600F079A4 /* STPAPIPostRequest.m in Sources */,
 				D0EC6D7B1EB9F58800EBF1C3 /* ChatListRecentPeersListItem.swift in Sources */,
-				D0E9BADD1F0574D800F079A4 /* PKPayment+Stripe.m in Sources */,
 				09F215A022649BCB00AEDF6D /* PasscodeEntryInputFieldNode.swift in Sources */,
 				D0EC6D7E1EB9F58800EBF1C3 /* ChatListSearchItemHeader.swift in Sources */,
 				0910B0ED21FA178C00F8F87D /* WallpaperPreviewMedia.swift in Sources */,
@@ -4882,7 +4534,6 @@
 				D01590BE22BDAEBC0017C33E /* Image.cpp in Sources */,
 				D0EC6D821EB9F58800EBF1C3 /* ChatControllerInteraction.swift in Sources */,
 				D0EC6D831EB9F58800EBF1C3 /* ChatControllerNode.swift in Sources */,
-				D0E9BA231F05577700F079A4 /* STPCard.m in Sources */,
 				D0EC6D841EB9F58800EBF1C3 /* ChatHistoryEntry.swift in Sources */,
 				D00817DC22B47A14008A895F /* ManageSharedAccountInfo.swift in Sources */,
 				D0EC6D851EB9F58800EBF1C3 /* ChatHistoryLocation.swift in Sources */,
@@ -4938,16 +4589,13 @@
 				D0EC6D9C1EB9F58900EBF1C3 /* ChatMessageInstantVideoItemNode.swift in Sources */,
 				D0750C8222B2E4EE00BE5F6E /* SharedWakeupManager.swift in Sources */,
 				D0EC6D9D1EB9F58900EBF1C3 /* ChatMessageTextBubbleContentNode.swift in Sources */,
-				D0E9BA2B1F0557A600F079A4 /* STPFormEncoder.m in Sources */,
 				D01BAA1C1ECC92F700295217 /* CallListViewTransition.swift in Sources */,
 				D00817DE22B47A14008A895F /* TGBridgeServer.m in Sources */,
 				D0FBE84F2273395C00B33B52 /* ChatListArchiveInfoItem.swift in Sources */,
-				D0439B5B228EC4A00067E026 /* ChatMessagePhoneNumberRequestContentNode.swift in Sources */,
 				09F664D021EBCFB900AB7E26 /* WallpaperCropNode.swift in Sources */,
 				D0EC6D9E1EB9F58900EBF1C3 /* ChatMessageWebpageBubbleContentNode.swift in Sources */,
 				D0750C8722B2E76300BE5F6E /* ShareExtensionContext.swift in Sources */,
 				D0EC6D9F1EB9F58900EBF1C3 /* ChatUnreadItem.swift in Sources */,
-				D0E9B9E81EFEFB9500F079A4 /* BotPaymentDisclosureItemNode.swift in Sources */,
 				D0EC6DA01EB9F58900EBF1C3 /* ChatHoleItem.swift in Sources */,
 				D0EC6DA11EB9F58900EBF1C3 /* ChatMessageSelectionNode.swift in Sources */,
 				09CE9502223272B700A7D2C3 /* GifPaneSearchContentNode.swift in Sources */,
@@ -4955,7 +4603,6 @@
 				D0EC6DA41EB9F58900EBF1C3 /* ChatMessageActionButtonsNode.swift in Sources */,
 				D0EC6DA51EB9F58900EBF1C3 /* ChatBotInfoItem.swift in Sources */,
 				D0B21B212215B539003F741D /* LogoutOptionsController.swift in Sources */,
-				D0E9BAE41F0574D800F079A4 /* STPBankAccountParams.m in Sources */,
 				D0EC6DA71EB9F58900EBF1C3 /* ChatMessageBackground.swift in Sources */,
 				D0EC6DA81EB9F58900EBF1C3 /* ChatInterfaceState.swift in Sources */,
 				D08BDF661FA8CB10009D08E1 /* EditSettingsController.swift in Sources */,
@@ -4976,7 +4623,6 @@
 				D0EC6DB01EB9F58900EBF1C3 /* ChatInterfaceInputContextPanels.swift in Sources */,
 				D0EC6DB11EB9F58900EBF1C3 /* ChatInterfaceInputNodes.swift in Sources */,
 				D0EC6DB21EB9F58900EBF1C3 /* ChatInterfaceTitlePanelNodes.swift in Sources */,
-				D0E9BA411F0558FE00F079A4 /* StripeError.m in Sources */,
 				D0EC6DB31EB9F58900EBF1C3 /* ChatInterfaceStateContextQueries.swift in Sources */,
 				D0EC6DB41EB9F58900EBF1C3 /* AccessoryPanelNode.swift in Sources */,
 				D01776BE1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift in Sources */,
@@ -4988,13 +4634,11 @@
 				D0EC6DB91EB9F58900EBF1C3 /* ChatInputNode.swift in Sources */,
 				099529AC21CDBBB200805E13 /* QRCode.swift in Sources */,
 				D0EC6DBA1EB9F58900EBF1C3 /* ChatMediaInputNode.swift in Sources */,
-				D0E9BA2F1F0557D400F079A4 /* STPAddress.m in Sources */,
 				D0EC6DBB1EB9F58900EBF1C3 /* ChatMediaInputStickerPane.swift in Sources */,
 				0910B0F121FB3DE100F8F87D /* WallpaperPatternPanelNode.swift in Sources */,
 				D08984EE2114964700918162 /* GroupPreHistorySetupController.swift in Sources */,
 				D0EC6DBC1EB9F58900EBF1C3 /* ChatMediaInputGifPane.swift in Sources */,
 				D0EC6DBD1EB9F58900EBF1C3 /* ChatMediaInputPanelEntries.swift in Sources */,
-				D0471B4F1EFD84600074D609 /* BotCheckoutPriceItem.swift in Sources */,
 				D008178222B47464008A895F /* NotificationContentContext.swift in Sources */,
 				D0EC6DBE1EB9F58900EBF1C3 /* ChatMediaInputGridEntries.swift in Sources */,
 				D0EC6DBF1EB9F58900EBF1C3 /* ChatMediaInputMetaSectionItemNode.swift in Sources */,
@@ -5005,9 +4649,7 @@
 				D0EC6DC21EB9F58900EBF1C3 /* ChatMediaInputStickerPackItem.swift in Sources */,
 				D0EC6DC31EB9F58900EBF1C3 /* ChatMediaInputStickerGridItem.swift in Sources */,
 				0947FCB0224055990086741C /* StringHash.swift in Sources */,
-				D0E9BAE81F0574FF00F079A4 /* STPCustomer.m in Sources */,
 				D0C0B59F1EE082F5000F4D2C /* ChatSearchInputPanelNode.swift in Sources */,
-				D079FCD91F05A5550038FADE /* BotCheckoutPasswordEntryController.swift in Sources */,
 				0962E66121B3512500245FD9 /* WebSearchController.swift in Sources */,
 				D0EC6DC61EB9F58900EBF1C3 /* MultiplexedSoftwareVideoSourceManager.swift in Sources */,
 				D0EC6DC71EB9F58900EBF1C3 /* SampleBufferPool.swift in Sources */,
@@ -5043,17 +4685,14 @@
 				09CE9513223825B700A7D2C3 /* CustomWallpaperPicker.swift in Sources */,
 				D0E8174C2011F8A300B82BBB /* ChatMessageEventLogPreviousMessageContentNode.swift in Sources */,
 				D0EC6DD91EB9F58900EBF1C3 /* HorizontalListContextResultsChatInputContextPanelNode.swift in Sources */,
-				D0E9BA161F05574500F079A4 /* STPCardValidator.m in Sources */,
 				D0EC6DDA1EB9F58900EBF1C3 /* HorizontalListContextResultsChatInputPanelItem.swift in Sources */,
 				D0EC6DDB1EB9F58900EBF1C3 /* ChatInputPanelNode.swift in Sources */,
 				D01BAA221ECE076100295217 /* CallListCallItem.swift in Sources */,
-				D0E9BA081F0446A300F079A4 /* BotCheckoutPaymentShippingOptionSheetController.swift in Sources */,
 				D0EC6DDC1EB9F58900EBF1C3 /* ChatTextInputPanelNode.swift in Sources */,
 				D06350AE2229A7F800FA2B32 /* InChatPrefetchManager.swift in Sources */,
 				D0EB41F51F30D26A00838FE6 /* LegacySuggestionContext.swift in Sources */,
 				D0EC6DDD1EB9F58900EBF1C3 /* ChatTextInputMediaRecordingButton.swift in Sources */,
 				D0EC6DDE1EB9F58900EBF1C3 /* ChatTextInputAudioRecordingOverlayButton.swift in Sources */,
-				D0E9BAC91F05738600F079A4 /* STPAPIClient+ApplePay.m in Sources */,
 				D0EC6DDF1EB9F58900EBF1C3 /* ChatTextInputAudioRecordingTimeNode.swift in Sources */,
 				D0EC6DE01EB9F58900EBF1C3 /* ChatTextInputAudioRecordingCancelIndicator.swift in Sources */,
 				0962E67F21BA786A00245FD9 /* WebSearchItem.swift in Sources */,
@@ -5080,7 +4719,6 @@
 				D0EC6DEC1EB9F58900EBF1C3 /* ChatToastAlertPanelNode.swift in Sources */,
 				D0EC6DED1EB9F58900EBF1C3 /* ChatHistoryNavigationButtonNode.swift in Sources */,
 				D0F4B01A211073C500912B92 /* DeviceContactInfoController.swift in Sources */,
-				D0E9BA0C1F04580700F079A4 /* BotCheckoutWebInteractionControllerNode.swift in Sources */,
 				D0EC6DF51EB9F58900EBF1C3 /* PeerMediaCollectionController.swift in Sources */,
 				D06E4C332134A59700088087 /* ThemeAccentColorActionSheet.swift in Sources */,
 				D0EC6DF61EB9F58900EBF1C3 /* PeerMediaCollectionControllerNode.swift in Sources */,
@@ -5093,14 +4731,12 @@
 				D08984F02114AE0C00918162 /* DataPrivacySettingsController.swift in Sources */,
 				D0EC6DFB1EB9F58900EBF1C3 /* AvatarGalleryController.swift in Sources */,
 				09EC5CDC22CBD33D00292E42 /* NumberFormat.swift in Sources */,
-				D0E9BA571F055A0B00F079A4 /* STPFormTextField.m in Sources */,
 				D00817DB22B47A14008A895F /* LegacyChatImport.swift in Sources */,
 				09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */,
 				090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */,
 				09D968A5221F801A00B1458A /* ChatPlayingActivityContentNode.swift in Sources */,
 				D0E8B8BB2044780600605593 /* ItemListSecretChatKeyItem.swift in Sources */,
 				D06F31E62135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift in Sources */,
-				D0E9BA0A1F0457DD00F079A4 /* BotCheckoutWebInteractionController.swift in Sources */,
 				D01590BD22BDAEBC0017C33E /* DDSImage.cpp in Sources */,
 				09F2158D225CF5BC00AEDF6D /* Pasteboard.swift in Sources */,
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
@@ -5114,9 +4750,7 @@
 				09DD88F321BF907C000766BC /* WebSearchRecentQueryItem.swift in Sources */,
 				D04554A421B42982007A6DD9 /* ConfirmPhoneNumberController.swift in Sources */,
 				D07ABBA5202A14BC003671DE /* LegacyImagePicker.swift in Sources */,
-				D0E9BABD1F05735F00F079A4 /* STPPaymentConfiguration.m in Sources */,
 				D0EC6E0E1EB9F58900EBF1C3 /* PeerAvatarImageGalleryItem.swift in Sources */,
-				D0E9BA211F05577700F079A4 /* STPCardParams.m in Sources */,
 				09F215A822649C7900AEDF6D /* PasscodeEntryKeyboardNode.swift in Sources */,
 				D0D4345C1F97CEAA00CC1806 /* ProxyServerSettingsController.swift in Sources */,
 				D08BDF641FA37BEA009D08E1 /* ChatRecordingPreviewInputPanelNode.swift in Sources */,
@@ -5163,7 +4797,6 @@
 				D0AA29AE1F72770D00C050AC /* ChatListItemStrings.swift in Sources */,
 				D0EC6E351EB9F58900EBF1C3 /* ItemListAvatarAndNameItem.swift in Sources */,
 				09F215A622649C3000AEDF6D /* PasscodeLockIconNode.swift in Sources */,
-				D0E9BA651F055B4500F079A4 /* BotCheckoutNativeCardEntryController.swift in Sources */,
 				D00ACA5A2022897D0045D427 /* ProcessedPeerRestrictionText.swift in Sources */,
 				D04203152037162700490EA5 /* MediaInputPaneTrendingItem.swift in Sources */,
 				D0EC6E3B1EB9F58900EBF1C3 /* ItemListPeerItem.swift in Sources */,
@@ -5196,7 +4829,6 @@
 				D0380DAD204ED434000414AB /* LegacyLiveUploadInterface.swift in Sources */,
 				D00817D222B47A14008A895F /* LegacyPreferencesImport.swift in Sources */,
 				D0185E882089ED5F005E1A6C /* ProxyListSettingsController.swift in Sources */,
-				D0E9BA331F05583A00F079A4 /* STPPostalCodeValidator.m in Sources */,
 				D0EC6E4F1EB9F58900EBF1C3 /* ChannelVisibilityController.swift in Sources */,
 				D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */,
 				D025A4231F79344500563950 /* FetchManager.swift in Sources */,
@@ -5210,7 +4842,6 @@
 				D0EC6E531EB9F58900EBF1C3 /* ChannelMembersController.swift in Sources */,
 				D02B676320800A00001A864A /* PaneSearchBarPlaceholderItem.swift in Sources */,
 				D081E106217F5834003CD921 /* LanguageLinkPreviewControllerNode.swift in Sources */,
-				D093D7E72063E57F00BC3599 /* BotPaymentActionItemNode.swift in Sources */,
 				098CF79222B924E200AF6134 /* ThemeSettingsAccentColorItem.swift in Sources */,
 				D0EC6E541EB9F58900EBF1C3 /* ConvertToSupergroupController.swift in Sources */,
 				D0EC6E561EB9F58900EBF1C3 /* UserInfoController.swift in Sources */,
@@ -5225,7 +4856,6 @@
 				D0EC6E5F1EB9F58900EBF1C3 /* RecentSessionsController.swift in Sources */,
 				D0EC6E601EB9F58900EBF1C3 /* BlockedPeersController.swift in Sources */,
 				D0EC6E611EB9F58900EBF1C3 /* SelectivePrivacySettingsController.swift in Sources */,
-				D0471B4B1EFD64AC0074D609 /* BotCheckoutHeaderItem.swift in Sources */,
 				D0EC6E621EB9F58900EBF1C3 /* SelectivePrivacySettingsPeersController.swift in Sources */,
 				D0DFD5E21FCE2BA50039B3B1 /* CalculatingCacheSizeItem.swift in Sources */,
 				D0EC6E631EB9F58900EBF1C3 /* TwoStepVerificationUnlockController.swift in Sources */,
@@ -5238,7 +4868,6 @@
 				D0EC6E681EB9F58900EBF1C3 /* VoiceCallDataSavingController.swift in Sources */,
 				D0EC6E691EB9F58900EBF1C3 /* NetworkUsageStatsController.swift in Sources */,
 				D0EC6E6A1EB9F58900EBF1C3 /* StorageUsageController.swift in Sources */,
-				D079FCDF1F05C9280038FADE /* BotReceiptController.swift in Sources */,
 				D0EC6E6B1EB9F58900EBF1C3 /* InstalledStickerPacksController.swift in Sources */,
 				D0EC6E6C1EB9F58900EBF1C3 /* FeaturedStickerPacksController.swift in Sources */,
 				D0B85C231FF70BF400E795B4 /* AuthorizationSequenceAwaitingAccountResetController.swift in Sources */,
@@ -5246,7 +4875,6 @@
 				D0EC6E6E1EB9F58900EBF1C3 /* ArchivedStickerPacksController.swift in Sources */,
 				09F79A0B21C832F400820234 /* WebSearchGalleryFooterContentNode.swift in Sources */,
 				D0C0B5B11EE1C421000F4D2C /* ChatDateSelectionSheet.swift in Sources */,
-				D0471B581EFE6D020074D609 /* BotCheckoutInfoController.swift in Sources */,
 				D0EC6E731EB9F58900EBF1C3 /* WallpaperGalleryToolbarNode.swift in Sources */,
 				D025A4261F79428E00563950 /* FetchManagerLocation.swift in Sources */,
 				D0EC6E741EB9F58900EBF1C3 /* ThemeGridController.swift in Sources */,
@@ -5260,7 +4888,6 @@
 				09E2D9F1226F214000EA0AA4 /* EmojiResources.swift in Sources */,
 				D0EC6E7B1EB9F58900EBF1C3 /* DebugAccountsController.swift in Sources */,
 				D0EC6E7C1EB9F58900EBF1C3 /* UsernameSetupController.swift in Sources */,
-				D0471B621EFEB5B70074D609 /* BotPaymentSwitchItemNode.swift in Sources */,
 				D0E8175B201254FA00B82BBB /* ChatRecentActionsEmptyNode.swift in Sources */,
 				09510B1522F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift in Sources */,
 				D0EC6E7D1EB9F58900EBF1C3 /* ChangePhoneNumberIntroController.swift in Sources */,
@@ -5273,7 +4900,6 @@
 				D0750C8522B2E52400BE5F6E /* ClearNotificationsManager.swift in Sources */,
 				D0EC6E811EB9F58900EBF1C3 /* NotificationContainerController.swift in Sources */,
 				090E778822A9B96100CD99F5 /* PeersNearbyHeaderItem.swift in Sources */,
-				D0754D271EEE10C800884F6E /* BotCheckoutController.swift in Sources */,
 				0952D1752176DEB500194860 /* NotificationMuteSettingsController.swift in Sources */,
 				D0EC6E821EB9F58900EBF1C3 /* NotificationContainerControllerNode.swift in Sources */,
 				D0EC6E831EB9F58900EBF1C3 /* NotificationItemContainerNode.swift in Sources */,
@@ -5282,12 +4908,10 @@
 				D0EC6E841EB9F58900EBF1C3 /* NotificationItem.swift in Sources */,
 				D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */,
 				D00817D822B47A14008A895F /* TGAutoDownloadPreferences.m in Sources */,
-				D093D80820654A2900BC3599 /* BotPaymentDateItemNode.swift in Sources */,
 				D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */,
 				D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */,
 				D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */,
 				D0FA08C8204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift in Sources */,
-				D0E9BA181F05574500F079A4 /* STPPaymentCardTextFieldViewModel.m in Sources */,
 				D0EC6E8D1EB9F58900EBF1C3 /* SecretChatKeyVisualization.m in Sources */,
 				09F664C221EAAFCB00AB7E26 /* ThemeColorsGridControllerNode.swift in Sources */,
 				D0BCC3D420404CC7008126C2 /* ChatMessageActionSheetController.swift in Sources */,

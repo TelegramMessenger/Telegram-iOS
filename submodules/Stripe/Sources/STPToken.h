@@ -7,8 +7,8 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "STPAPIResponseDecodable.h"
-#import "STPSource.h"
+#import <Stripe/STPAPIResponseDecodable.h>
+#import <Stripe/STPSource.h>
 
 @class STPCard;
 @class STPBankAccount;

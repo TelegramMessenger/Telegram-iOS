@@ -8,8 +8,8 @@
 
 #import <Foundation/Foundation.h>
 #import <PassKit/PassKit.h>
-#import "STPBlocks.h"
-#import "STPCardBrand.h"
+#import <Stripe/STPBlocks.h>
+#import <Stripe/STPCardBrand.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

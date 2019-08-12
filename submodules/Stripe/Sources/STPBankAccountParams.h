@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "STPFormEncodable.h"
+#import <Stripe/STPFormEncodable.h>
 
 typedef NS_ENUM(NSInteger, STPBankAccountHolderType) {
     STPBankAccountHolderTypeIndividual,

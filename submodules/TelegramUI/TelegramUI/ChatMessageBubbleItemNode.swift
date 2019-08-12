@@ -39,8 +39,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             } else if let action = media as? TelegramMediaAction {
                 if case .phoneCall = action.action {
                     result.append((message, ChatMessageCallBubbleContentNode.self))
-                } else if case .phoneNumberRequest = action.action {
-                    result.append((message, ChatMessagePhoneNumberRequestContentNode.self))
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self))
                 }
@@ -856,19 +854,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 let message = item.content.firstMessage
                 
                 var edited = false
-                var sentViaBot = false
                 var viewCount: Int?
                 for attribute in message.attributes {
-                    if let _ = attribute as? EditedMessageAttribute {
-                        edited = true
+                    if let attribute = attribute as? EditedMessageAttribute {
+                        edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let _ = attribute as? InlineBotMessageAttribute {
-                        sentViaBot = true
                     }
-                }
-                if let author = message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                    sentViaBot = true
                 }
                 
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
@@ -886,7 +878,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
             }
         }
         

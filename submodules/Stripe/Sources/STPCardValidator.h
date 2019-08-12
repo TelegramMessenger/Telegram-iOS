@@ -8,9 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
-#import "STPCardParams.h"
-#import "STPCardBrand.h"
-#import "STPCardValidationState.h"
+#import <Stripe/STPCardParams.h>
+#import <Stripe/STPCardBrand.h>
+#import <Stripe/STPCardValidationState.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

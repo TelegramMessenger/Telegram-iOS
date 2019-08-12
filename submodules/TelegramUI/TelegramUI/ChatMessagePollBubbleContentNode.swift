@@ -587,19 +587,13 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 let textConstrainedSize = CGSize(width: constrainedSize.width - horizontalInset, height: constrainedSize.height)
                 
                 var edited = false
-                var sentViaBot = false
                 var viewCount: Int?
                 for attribute in item.message.attributes {
-                    if let _ = attribute as? EditedMessageAttribute {
-                        edited = true
+                    if let attribute = attribute as? EditedMessageAttribute {
+                        edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let _ = attribute as? InlineBotMessageAttribute {
-                        sentViaBot = true
                     }
-                }
-                if let author = item.message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                    sentViaBot = true
                 }
                 
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
@@ -626,7 +620,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize)
                     statusSize = size
                     statusApply = apply
                 }

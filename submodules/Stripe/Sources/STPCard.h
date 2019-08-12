@@ -8,11 +8,11 @@
 
 #import <Foundation/Foundation.h>
 
-#import "STPCardBrand.h"
-#import "STPCardParams.h"
-#import "STPAPIResponseDecodable.h"
-#import "STPPaymentMethod.h"
-#import "STPSource.h"
+#import <Stripe/STPCardBrand.h>
+#import <Stripe/STPCardParams.h>
+#import <Stripe/STPAPIResponseDecodable.h>
+#import <Stripe/STPPaymentMethod.h>
+#import <Stripe/STPSource.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

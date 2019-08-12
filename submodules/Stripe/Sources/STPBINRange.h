@@ -7,7 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "STPCardBrand.h"
+#import <Stripe/STPCardBrand.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

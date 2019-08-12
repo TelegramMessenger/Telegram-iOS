@@ -267,24 +267,18 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if let statusType = dateAndStatusType {
                     var edited = false
-                    var sentViaBot = false
                     var viewCount: Int?
                     for attribute in message.attributes {
-                        if let _ = attribute as? EditedMessageAttribute {
-                            edited = true
+                        if let attribute = attribute as? EditedMessageAttribute {
+                            edited = !attribute.isHidden
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
-                        } else if let _ = attribute as? InlineBotMessageAttribute {
-                            sentViaBot = true
                         }
-                    }
-                    if let author = message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                        sentViaBot = true
                     }
                     
                     let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
                     
-                    let (size, apply) = statusLayout(context, presentationData, edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize)
                     statusSize = size
                     statusApply = apply
                 }

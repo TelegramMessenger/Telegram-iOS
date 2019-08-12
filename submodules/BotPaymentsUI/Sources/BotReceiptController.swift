@@ -8,13 +8,13 @@ import Postbox
 import TelegramPresentationData
 import AccountContext
 
-final class BotCheckoutController: ViewController {
-    private var controllerNode: BotCheckoutControllerNode {
-        return self.displayNode as! BotCheckoutControllerNode
+public final class BotReceiptController: ViewController {
+    private var controllerNode: BotReceiptControllerNode {
+        return self.displayNode as! BotReceiptControllerNode
     }
     
     private let _ready = Promise<Bool>()
-    override var ready: Promise<Bool> {
+    override public var ready: Promise<Bool> {
         return self._ready
     }
     
@@ -26,7 +26,7 @@ final class BotCheckoutController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
+    public init(context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId) {
         self.context = context
         self.invoice = invoice
         self.messageId = messageId
@@ -37,31 +37,25 @@ final class BotCheckoutController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        var title = self.presentationData.strings.Checkout_Title
+        var title = self.presentationData.strings.Checkout_Receipt_Title
         if invoice.flags.contains(.isTest) {
             title += " (Test)"
         }
         self.title = title
-        
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
     }
     
-    required init(coder aDecoder: NSCoder) {
+    required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func loadDisplayNode() {
-        let displayNode = BotCheckoutControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+    override public func loadDisplayNode() {
+        let displayNode = BotReceiptControllerNode(controller: nil, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
-        }, context: self.context, invoice: self.invoice, messageId: self.messageId, present: { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
-        }, dismissAnimated: { [weak self] in
+        }, context: self.context, invoice: self.invoice, messageId: self.messageId, dismissAnimated: { [weak self] in
             self?.dismiss()
         })
-        
-        //displayNode.enableInteractiveDismiss = true
         
         displayNode.dismiss = { [weak self] in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
@@ -72,7 +66,7 @@ final class BotCheckoutController: ViewController {
         self._ready.set(displayNode.ready)
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
@@ -89,11 +83,11 @@ final class BotCheckoutController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    override func dismiss(completion: (() -> Void)? = nil) {
+    override public func dismiss(completion: (() -> Void)? = nil) {
         self.controllerNode.animateOut(completion: completion)
     }
     
-    @objc func cancelPressed() {
+    @objc private func cancelPressed() {
         self.dismiss()
     }
 }

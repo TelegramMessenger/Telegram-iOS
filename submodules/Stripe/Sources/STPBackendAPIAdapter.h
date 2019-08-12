@@ -8,10 +8,10 @@
 
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import "STPAddress.h"
-#import "STPBlocks.h"
-#import "STPSource.h"
-#import "STPCustomer.h"
+#import <Stripe/STPAddress.h>
+#import <Stripe/STPBlocks.h>
+#import <Stripe/STPSource.h>
+#import <Stripe/STPCustomer.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

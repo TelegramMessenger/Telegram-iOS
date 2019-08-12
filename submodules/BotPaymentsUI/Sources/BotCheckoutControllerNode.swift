@@ -7,13 +7,14 @@ import TelegramCore
 import SwiftSignalKit
 import PassKit
 import TelegramPresentationData
-import TelegramUIPrivateModule
 import ItemListUI
 import AccountContext
 import AlertUI
 import TelegramNotices
 import TelegramStringFormatting
 import PasswordSetupUI
+import Stripe
+import LocalAuth
 
 final class BotCheckoutControllerArguments {
     fileprivate let account: Account
