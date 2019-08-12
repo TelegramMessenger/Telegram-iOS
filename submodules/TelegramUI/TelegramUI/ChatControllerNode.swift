@@ -23,7 +23,7 @@ private final class ChatControllerNodeView: UITracingLayerView, WindowInputAcces
         })
     }
     
-    weak var controller: ChatController?
+    weak var controller: ChatControllerImpl?
     
     func getWindowInputAccessoryHeight() -> CGFloat {
         return self.inputAccessoryHeight?() ?? 0.0
@@ -58,7 +58,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let context: AccountContext
     let chatLocation: ChatLocation
     let controllerInteraction: ChatControllerInteraction
-    private weak var controller: ChatController?
+    private weak var controller: ChatControllerImpl?
     
     let navigationBar: NavigationBar?
     
@@ -190,7 +190,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }*/
     
-    init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatController?) {
+    init(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, controllerInteraction: ChatControllerInteraction, chatPresentationInterfaceState: ChatPresentationInterfaceState, automaticMediaDownloadSettings: MediaAutoDownloadSettings, navigationBar: NavigationBar?, controller: ChatControllerImpl?) {
         self.context = context
         self.chatLocation = chatLocation
         self.controllerInteraction = controllerInteraction

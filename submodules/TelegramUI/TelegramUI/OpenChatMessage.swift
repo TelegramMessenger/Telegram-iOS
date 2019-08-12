@@ -10,6 +10,8 @@ import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
 import GalleryUI
+import InstantPageUI
+import LocationUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -412,7 +414,7 @@ func openChatInstantPage(context: AccountContext, message: Message, sourcePeerTy
 func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            let _ = (resolveUrl(account: context.account, url: content.url)
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource

@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
+import MusicAlbumArtResources
 
 private enum PeerMessagesMediaPlaylistLoadAnchor {
     case messageId(MessageId)

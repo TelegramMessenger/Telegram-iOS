@@ -947,4 +947,16 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
         return chatAvailableMessageActionsImpl(postbox: postbox, accountPeerId: accountPeerId, messageIds: messageIds)
     }
+    
+    public func navigateToChatController(_ params: NavigateToChatControllerParams) {
+        navigateToChatControllerImpl(params)
+    }
+    
+    public func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+        return resolveUrlImpl(account: account, url: url)
+    }
+    
+    public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+        openResolvedUrlImpl(resolvedUrl, context: context, urlContext: urlContext, navigationController: navigationController, openPeer: openPeer, sendFile: sendFile, sendSticker: sendSticker, present: present, dismissInput: dismissInput)
+    }
 }

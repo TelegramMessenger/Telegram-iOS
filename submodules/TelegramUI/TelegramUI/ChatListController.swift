@@ -698,9 +698,9 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                         scrollToEndIfExists = true
                     }
                     
-                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), scrollToEndIfExists: scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, completion: { [weak self] in
                         self?.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
-                    })
+                    }))
                 }
             }
         }
@@ -745,9 +745,9 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                             }
                             
                             
-                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
                                 self?.deactivateSearch(animated: false)
-                            }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [])
+                            }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                         }
                     }
@@ -776,9 +776,9 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                         }
                         
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 self?.deactivateSearch(animated: false)
-                            }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [])
+                            }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                         }
                     }
@@ -1217,7 +1217,7 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                     sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
-                    let chatController = ChatController(context: self.context, chatLocation: .peer(peerId), mode: .standard(previewing: true))
+                    let chatController = ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatController, sourceRect)
@@ -1226,7 +1226,7 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                     sourceRect = CGRect(x: sourceRect.minX, y: sourceRect.minY + bounds.minY, width: bounds.width, height: bounds.height)
                     sourceRect.size.height -= UIScreenPixel
                     
-                    let chatController = ChatController(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), mode: .standard(previewing: true))
+                    let chatController = ChatControllerImpl(context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatController, sourceRect)
@@ -1249,7 +1249,7 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
             switch item.content {
                 case let .peer(_, peer, _, _, _, _, _, _, _, _):
                     if peer.peerId.namespace != Namespaces.Peer.SecretChat {
-                        let chatController = ChatController(context: self.context, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
+                        let chatController = ChatControllerImpl(context: self.context, chatLocation: .peer(peer.peerId), mode: .standard(previewing: true))
                         chatController.canReadHistory.set(false)
                         chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                         return (chatController, sourceRect)
@@ -1272,11 +1272,11 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
     
     func previewingCommit(_ viewControllerToCommit: UIViewController) {
         if let viewControllerToCommit = viewControllerToCommit as? ViewController {
-            if let chatController = viewControllerToCommit as? ChatController {
+            if let chatController = viewControllerToCommit as? ChatControllerImpl {
                 chatController.canReadHistory.set(true)
                 chatController.updatePresentationMode(.standard(previewing: false))
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false)
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false))
                     self.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
             } else if let chatListController = viewControllerToCommit as? ChatListController {

@@ -12,6 +12,7 @@ import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
 import OpenInExternalAppUI
+import InstantPageUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -655,7 +656,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {
                 if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
-                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true)
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true))
                 } else {
                     if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
                         strongSelf.pushController(infoController)
@@ -756,7 +757,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openUrl(_ url: String) {
-        self.navigationActionDisposable.set((resolveUrl(account: self.context.account, url: url) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.navigationActionDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
                     case let .externalUrl(url):
@@ -778,7 +779,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId)
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId))
                         }
                     case let .stickerPack(name):
                         strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .name(name), parentNavigationController: strongSelf.getNavigationController()), nil)
@@ -793,11 +794,13 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:
-                        openResolvedUrl(result, context: strongSelf.context, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
                             if let strongSelf = self {
                                 strongSelf.openPeer(peerId: peerId, peer: nil)
                             }
-                        }, present: { c, a in
+                        }, sendFile: nil,
+                        sendSticker: nil,
+                        present: { c, a in
                             self?.presentController(c, a)
                         }, dismissInput: {
                             self?.view.endEditing(true)

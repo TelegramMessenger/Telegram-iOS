@@ -188,7 +188,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             if case let .externalUrl(value) = resolved {
                 context.sharedContext.applicationBindings.openUrl(value)
             } else {
-                openResolvedUrl(resolved, context: context, navigationController: navigationController, openPeer: { peerId, navigation in
+                context.sharedContext.openResolvedUrl(resolved, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peerId, navigation in
                     switch navigation {
                         case .info:
                             let _ = (context.account.postbox.loadedPeerWithId(peerId)
@@ -201,17 +201,19 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         case let .chat(_, messageId):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId), messageId: messageId)
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), messageId: messageId))
                             }
                         case let .withBotStartPayload(payload):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: payload)
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), botStart: payload))
                             }
                         default:
                             break
                     }
-                }, present: { c, a in
+                }, sendFile: nil,
+                sendSticker: nil,
+                present: { c, a in
                     context.sharedContext.applicationBindings.dismissNativeController()
                     
                     c.presentationArguments = a
@@ -224,7 +226,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
         }
         
         let handleInternalUrl: (String) -> Void = { url in
-            let _ = (resolveUrl(account: context.account, url: url)
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: url)
             |> deliverOnMainQueue).start(next: handleRevolvedUrl)
         }
         
@@ -244,7 +246,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                     if let peerId = peerId, let navigationController = navigationController {
                         context.sharedContext.applicationBindings.dismissNativeController()
-                        navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                     }
                 }
             } else if parsedUrl.host == "join" {

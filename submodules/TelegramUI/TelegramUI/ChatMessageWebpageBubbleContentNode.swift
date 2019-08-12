@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import TextFormat
 import AccountContext
 import WebsiteType
+import InstantPageUI
 
 enum InstantPageType {
     case generic

@@ -117,7 +117,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
             return false
             }, openPeer: { [weak self] id, navigation, _ in
                 if let strongSelf = self, let id = id, let navigationController = strongSelf.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id))
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id)))
                 }
             }, openPeerMention: { _ in
             }, openMessageContextMenu: { [weak self] message, _, _, _, _ in
@@ -131,7 +131,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.SharedMedia_ViewInChat, color: .accent, action: { [weak actionSheet] in
                                     actionSheet?.dismissAnimated()
                                     if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                                        navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), messageId: message.id)
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(strongSelf.peerId), messageId: message.id))
                                     }
                                 }),
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.Conversation_ContextMenuForward, color: .accent, action: { [weak actionSheet] in
@@ -176,7 +176,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                             }
                         }*/
                     } else {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(id.peerId), subject: .message(id)))
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id.peerId), subject: .message(id)))
                     }
                 }
             }, clickThroughMessage: { [weak self] in
@@ -591,17 +591,17 @@ public class PeerMediaCollectionController: TelegramBaseController {
         if external {
             resolvedUrl = .single(.externalUrl(url))
         } else {
-            resolvedUrl = resolveUrl(account: self.context.account, url: url)
+            resolvedUrl = self.context.sharedContext.resolveUrl(account: self.context.account, url: url)
         }
         
         disposable.set((resolvedUrl |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
-                openResolvedUrl(result, context: strongSelf.context, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
+                strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.navigationController as? NavigationController, openPeer: { peerId, navigation in
                     if let strongSelf = self {
                         switch navigation {
                             case let .chat(_, messageId):
                                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always)
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always))
                                 }
                             case .info:
                                 strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId)
@@ -615,13 +615,15 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                 }))
                             case let .withBotStartPayload(startPayload):
                                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload)
+                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload))
                                 }
                             default:
                                 break
                         }
                     }
-                }, present: { c, a in
+                }, sendFile: nil,
+                sendSticker: nil,
+                present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
                 }, dismissInput: {
                     self?.view.endEditing(true)
@@ -706,7 +708,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                     }
                                 }))
                                 
-                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                             }
                         }
                     })

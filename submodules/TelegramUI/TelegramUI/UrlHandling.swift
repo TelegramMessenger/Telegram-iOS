@@ -18,11 +18,6 @@ enum ParsedInternalPeerUrlParameter {
     case channelMessage(Int32)
 }
 
-enum WallpaperUrlParameter {
-    case slug(String, WallpaperPresentationOptions, UIColor?, Int32?)
-    case color(UIColor)
-}
-
 enum ParsedInternalUrl {
     case peerName(String, ParsedInternalPeerUrlParameter?)
     case peerId(PeerId)
@@ -41,24 +36,6 @@ enum ParsedInternalUrl {
 private enum ParsedUrl {
     case externalUrl(String)
     case internalUrl(ParsedInternalUrl)
-}
-
-enum ResolvedUrl {
-    case externalUrl(String)
-    case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
-    case inaccessiblePeer
-    case botStart(peerId: PeerId, payload: String)
-    case groupBotStart(peerId: PeerId, payload: String)
-    case channelMessage(peerId: PeerId, messageId: MessageId)
-    case stickerPack(name: String)
-    case instantView(TelegramMediaWebpage, String?)
-    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
-    case join(String)
-    case localization(String)
-    case confirmationCode(Int)
-    case cancelAccountReset(phone: String, hash: String)
-    case share(url: String?, text: String?, to: String?)
-    case wallpaper(WallpaperUrlParameter)
 }
 
 func parseInternalUrl(query: String) -> ParsedInternalUrl? {
@@ -389,7 +366,7 @@ func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
     return nil
 }
 
-func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
     let schemes = ["http://", "https://", ""]
     let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {

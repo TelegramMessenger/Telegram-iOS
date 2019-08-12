@@ -215,7 +215,7 @@ public class ContactsController: ViewController {
                                 scrollToEndIfExists = true
                             }
                             
-                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 if fromSearch {
                                     self?.deactivateSearch(animated: false)
                                     self?.switchToChatsController?()
@@ -224,7 +224,7 @@ public class ContactsController: ViewController {
                                 if let strongSelf = self {
                                     strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                                 }
-                            })
+                            }))
                         }
                     case let .deviceContact(id, _):
                         let _ = ((strongSelf.context.sharedContext.contactDataManager?.extendedData(stableId: id) ?? .single(nil))
@@ -434,7 +434,7 @@ public class ContactsController: ViewController {
                     return nil
                 }
                 if peer.id.namespace != Namespaces.Peer.SecretChat {
-                    let chatController = ChatController(context: self.context, chatLocation: .peer(peer.id), mode: .standard(previewing: true))
+                    let chatController = ChatControllerImpl(context: self.context, chatLocation: .peer(peer.id), mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatController, sourceRect)
@@ -451,11 +451,11 @@ public class ContactsController: ViewController {
     
     func previewingCommit(_ viewControllerToCommit: UIViewController) {
         if let viewControllerToCommit = viewControllerToCommit as? ViewController {
-            if let chatController = viewControllerToCommit as? ChatController {
+            if let chatController = viewControllerToCommit as? ChatControllerImpl {
                 chatController.canReadHistory.set(true)
                 chatController.updatePresentationMode(.standard(previewing: false))
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false)
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: chatController, context: self.context, chatLocation: chatController.chatLocation, animated: false))
                     self.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                 }
             }

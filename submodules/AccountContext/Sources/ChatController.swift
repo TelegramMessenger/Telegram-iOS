@@ -1,6 +1,7 @@
 import Foundation
 import Postbox
 import TextFormat
+import Display
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
@@ -231,4 +232,8 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
         }
         return result
     }
+}
+
+public protocol ChatController: ViewController {
+    
 }

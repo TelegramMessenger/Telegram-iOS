@@ -1316,7 +1316,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
     }
     openChatImpl = { [weak controller] in
         if let navigationController = (controller?.navigationController as? NavigationController) {
-            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
         }
     }
     shareContactImpl = { [weak controller] in
@@ -1369,7 +1369,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
         } |> deliverOnMainQueue).start(next: { currentPeerId in
             if let currentPeerId = currentPeerId {
                 if let navigationController = (controller?.navigationController as? NavigationController) {
-                    navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(currentPeerId))
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(currentPeerId)))
                 }
             } else {
                 var createSignal = createSecretChat(account: context.account, peerId: peerId)
@@ -1402,7 +1402,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
                 
                 createSecretChatDisposable.set((createSignal |> deliverOnMainQueue).start(next: { peerId in
                     if let navigationController = (controller?.navigationController as? NavigationController) {
-                        navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                     }
                 }, error: { _ in
                     if let controller = controller {
@@ -1417,9 +1417,11 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Us
         guard let controller = controller else {
             return
         }
-        openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: context, navigationController: controller.navigationController as? NavigationController, openPeer: { id, navigation in
+        context.sharedContext.openResolvedUrl(.groupBotStart(peerId: peerId, payload: ""), context: context, urlContext: .generic, navigationController: controller.navigationController as? NavigationController, openPeer: { id, navigation in
             
-        }, present: { c, a in
+        }, sendFile: nil,
+        sendSticker: nil,
+        present: { c, a in
             presentControllerImpl?(c, a)
         }, dismissInput: {
             dismissInputImpl?()

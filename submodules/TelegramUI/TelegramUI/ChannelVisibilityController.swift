@@ -1243,7 +1243,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                             }
                         })
                         if filteredPeerIds.isEmpty {
-                            navigateToChatController(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
                         } else {
                             selectionController.displayProgress = true
                             let _ = (addChannelMembers(account: context.account, peerId: peerId, memberIds: filteredPeerIds)
@@ -1252,18 +1252,18 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
                                     return
                                 }
                                 
-                                navigateToChatController(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
                             }, completed: { [weak selectionController] in
                                 guard let selectionController = selectionController, let navigationController = selectionController.navigationController as? NavigationController else {
                                     return
                                 }
                                 
-                                navigateToChatController(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true)
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(peerId), keepStack: .never, animated: true))
                             })
                         }
                     })
             } else {
-                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(context: context, chatLocation: .peer(peerId)), animated: true)
+                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)), animated: true)
             }
         }
     }

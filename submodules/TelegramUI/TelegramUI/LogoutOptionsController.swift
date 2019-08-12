@@ -174,8 +174,8 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
                 controller?.dismiss()
                 dismissImpl?()
                 
-                openResolvedUrl(resolvedUrl, context: context, navigationController: navigationController, openPeer: { peer, navigation in
-                }, present: { controller, arguments in
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
+                }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {})
             })
@@ -192,7 +192,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
                 |> deliverOnMainQueue).start(next: { peerId in
                     if let peerId = peerId {
                         dismissImpl?()
-                        pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
+                        pushControllerImpl?(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                     }
                 }))
             })

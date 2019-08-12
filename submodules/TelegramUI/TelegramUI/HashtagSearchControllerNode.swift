@@ -12,7 +12,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     private let segmentedControl: UISegmentedControl
     let listNode: ListView
     
-    var chatController: ChatController?
+    var chatController: ChatControllerImpl?
     
     private let context: AccountContext
     private let query: String
@@ -39,7 +39,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.segmentedControl.selectedSegmentIndex = 0
         
         if let peer = peer {
-            self.chatController = ChatController(context: context, chatLocation: .peer(peer.id), botStart: nil, mode: .inline)
+            self.chatController = ChatControllerImpl(context: context, chatLocation: .peer(peer.id), botStart: nil, mode: .inline)
         } else {
             self.chatController = nil
         }

@@ -13,6 +13,7 @@ import AlertUI
 import MediaResources
 import PhotoResources
 import LegacyUI
+import LocationUI
 
 public enum CreateGroupMode {
     case generic
@@ -440,7 +441,7 @@ public func createGroupController(context: AccountContext, peerIds: [PeerId], in
                             dismissImpl?()
                         })
                     } else {
-                        let controller = ChatController(context: context, chatLocation: .peer(peerId))
+                        let controller = ChatControllerImpl(context: context, chatLocation: .peer(peerId))
                         replaceControllerImpl?(controller)
                     }
                 }

@@ -431,11 +431,11 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     }
     navigateToChatImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController {
-            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: { [weak navigationController] in
-                if let navigationController = navigationController, let chatController = navigationController.viewControllers.last as? ChatController {
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: { [weak navigationController] in
+                if let navigationController = navigationController, let chatController = navigationController.viewControllers.last as? ChatControllerImpl {
                     replaceAllButRootControllerImpl?(chatController, false)
                 }
-            })
+            }))
         }
     }
     pushControllerImpl = { [weak controller] c in

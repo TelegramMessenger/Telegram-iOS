@@ -149,7 +149,7 @@ public class ComposeController: ViewController {
                         strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.context.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
-                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
+                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
                             }
                         }, error: { _ in
                             if let strongSelf = self, let controller = controller {
@@ -252,6 +252,6 @@ public class ComposeController: ViewController {
     }
     
     private func openPeer(peerId: PeerId) {
-        (self.navigationController as? NavigationController)?.replaceTopController(ChatController(context: self.context, chatLocation: .peer(peerId)), animated: true)
+        (self.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId)), animated: true)
     }
 }

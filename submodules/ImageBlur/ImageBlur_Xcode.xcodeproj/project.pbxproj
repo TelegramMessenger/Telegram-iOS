@@ -13,6 +13,7 @@
 		D0879E2122F885E800C4D6B3 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879E2022F885E800C4D6B3 /* UIKit.framework */; };
 		D0879E2422F8860300C4D6B3 /* FastBlur.m in Sources */ = {isa = PBXBuildFile; fileRef = D0879E2222F8860300C4D6B3 /* FastBlur.m */; };
 		D0879E2522F8860300C4D6B3 /* FastBlur.h in Headers */ = {isa = PBXBuildFile; fileRef = D0879E2322F8860300C4D6B3 /* FastBlur.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9C53A2301CE4E00FAB518 /* ImageBlur.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5392301CE4D00FAB518 /* ImageBlur.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +25,7 @@
 		D0879E2022F885E800C4D6B3 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D0879E2222F8860300C4D6B3 /* FastBlur.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = FastBlur.m; sourceTree = "<group>"; };
 		D0879E2322F8860300C4D6B3 /* FastBlur.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastBlur.h; sourceTree = "<group>"; };
+		D0C9C5392301CE4D00FAB518 /* ImageBlur.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImageBlur.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -61,6 +63,7 @@
 		D0879E1422F8858600C4D6B3 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C5392301CE4D00FAB518 /* ImageBlur.swift */,
 				D0879E2322F8860300C4D6B3 /* FastBlur.h */,
 				D0879E2222F8860300C4D6B3 /* FastBlur.m */,
 				D0879E1522F8858600C4D6B3 /* ImageBlur.h */,
@@ -123,6 +126,7 @@
 				TargetAttributes = {
 					D0879E1122F8858600C4D6B3 = {
 						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
 					};
 				};
 			};
@@ -158,6 +162,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C53A2301CE4E00FAB518 /* ImageBlur.swift in Sources */,
 				D0879E2422F8860300C4D6B3 /* FastBlur.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -230,6 +235,7 @@
 		D038AC1B22F886A600320981 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
@@ -249,6 +255,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = DebugHockeyapp;
@@ -312,6 +320,7 @@
 		D038AC1D22F886B100320981 /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
@@ -331,6 +340,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = ReleaseHockeyappInternal;
@@ -456,6 +466,7 @@
 		D0879E1B22F8858600C4D6B3 /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
@@ -475,6 +486,8 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = DebugAppStoreLLC;
@@ -482,6 +495,7 @@
 		D0879E1C22F8858600C4D6B3 /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
@@ -501,6 +515,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = ReleaseAppStoreLLC;

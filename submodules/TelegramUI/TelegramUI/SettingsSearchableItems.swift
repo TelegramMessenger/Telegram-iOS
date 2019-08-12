@@ -809,7 +809,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         allItems.append(contentsOf: profileItems)
         
         let savedMessages = SettingsSearchableItem(id: .savedMessages(0), title: strings.Settings_SavedMessages, alternate: synonyms(strings.SettingsSearch_Synonyms_SavedMessages), icon: .savedMessages, breadcrumbs: [], present: { context, _, present in
-            present(.push, ChatController(context: context, chatLocation: .peer(context.account.peerId)))
+            present(.push, ChatControllerImpl(context: context, chatLocation: .peer(context.account.peerId)))
         })
         allItems.append(savedMessages)
         
@@ -853,7 +853,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             let _ = (supportPeerId(account: context.account)
             |> deliverOnMainQueue).start(next: { peerId in
                 if let peerId = peerId {
-                    present(.push, ChatController(context: context, chatLocation: .peer(peerId)))
+                    present(.push, ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                 }
             })
         })
@@ -863,8 +863,8 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             
             let _ = (cachedFaqInstantPage(context: context)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
-                openResolvedUrl(resolvedUrl, context: context, navigationController: navigationController, openPeer: { peer, navigation in
-                }, present: { controller, arguments in
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: navigationController, openPeer: { peer, navigation in
+                }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
                     present(.push, controller)
                 }, dismissInput: {})
             })

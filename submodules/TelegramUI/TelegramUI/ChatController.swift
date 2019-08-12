@@ -31,6 +31,8 @@ import ScreenCaptureDetection
 import GalleryUI
 import OpenInExternalAppUI
 import LegacyUI
+import InstantPageUI
+import LocationUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -89,11 +91,11 @@ public enum NavigateToMessageLocation {
     }
 }
 
-private func isTopmostChatController(_ controller: ChatController) -> Bool {
+private func isTopmostChatController(_ controller: ChatControllerImpl) -> Bool {
     if let _ = controller.navigationController {
         var hasOther = false
         controller.window?.forEachController({ c in
-            if c is ChatController {
+            if c is ChatControllerImpl {
                 hasOther = true
             }
         })
@@ -124,7 +126,7 @@ public enum ChatControllerSubject: Equatable {
     case scheduledMessages
 }
 
-public final class ChatController: TelegramBaseController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
+public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
     weak var parentController: ViewController?
@@ -1440,7 +1442,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                     if let strongSelf = self {
                         strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime)
                         if !strongSelf.presentationInterfaceState.isScheduledMessages {
-                            let controller = ChatController(context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: .scheduledMessages)
+                            let controller = ChatControllerImpl(context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: .scheduledMessages)
                             (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                         }
                     }
@@ -1792,7 +1794,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                                 if let navigationController = strongSelf.navigationController as? NavigationController {
                                     var viewControllers = navigationController.viewControllers
                                     if let index = viewControllers.firstIndex(where: { $0 === strongSelf }) {
-                                        viewControllers[index] = ChatController(context: strongSelf.context, chatLocation: .peer(upgradedToPeerId))
+                                        viewControllers[index] = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(upgradedToPeerId))
                                         navigationController.setViewControllers(viewControllers, animated: false)
                                     }
                                 }
@@ -3040,7 +3042,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                 return
             }
             if let navigationController = strongSelf.navigationController as? NavigationController {
-                navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: nil, keepStack: .always)
+                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: nil, keepStack: .always))
             }
         }, openPeerInfo: { [weak self] in
             self?.navigationButtonAction(.openChatInfo)
@@ -3759,7 +3761,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
             }
         }, openScheduledMessages: { [weak self] in
             if let strongSelf = self {
-                let controller = ChatController(context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: .scheduledMessages)
+                let controller = ChatControllerImpl(context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: .scheduledMessages)
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
             }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
@@ -5795,7 +5797,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
             
             if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || self.presentationInterfaceState.isScheduledMessages {
                 if let navigationController = self.navigationController as? NavigationController {
-                    navigateToChatController(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), messageId: messageId, keepStack: .always)
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), messageId: messageId, keepStack: .always))
                 }
             } else if case let .peer(peerId) = self.chatLocation, (messageLocation.peerId == peerId || forceInCurrentChat) {
                 if let fromIndex = fromIndex {
@@ -5933,7 +5935,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                                 strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                                 completion?()
                             } else {
-                                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message($0) }))
+                                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message($0) }))
                                 completion?()
                             }
                         }
@@ -6019,9 +6021,9 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                         }))
                         
                         if let parentController = strongSelf.parentController {
-                            (parentController.navigationController as? NavigationController)?.replaceTopController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                            (parentController.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                         } else {
-                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                         }
                     }
                 })
@@ -6085,19 +6087,19 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                                     })
                                     |> deliverOnMainQueue).start(completed: { [weak self] in
                                         if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
-                                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, updateTextInputState: textInputState)
+                                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, updateTextInputState: textInputState))
                                         }
                                     })
                                 } else {
-                                    (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap({ .message($0) })))
+                                    (self.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap({ .message($0) })))
                                 }
                             case let .withBotStartPayload(botStart):
-                                (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), botStart: botStart))
+                                (self.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), botStart: botStart))
                             default:
                                 break
                         }
                     /*case .group:
-                        (self.navigationController as? NavigationController)?.pushViewController(ChatController(context: self.context, chatLocation: .peer(peerId), messageId: fromMessage?.id, botStart: nil))*/
+                        (self.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), messageId: fromMessage?.id, botStart: nil))*/
                 }
             } else {
                 switch navigation {
@@ -6138,7 +6140,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                                                     }
                                                 }))
                                                 
-                                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                                             }
                                         })
                                     }
@@ -6454,7 +6456,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
     }
     
     private func openResolved(_ result: ResolvedUrl) {        
-        openResolvedUrl(result, context: self.context, urlContext: .chat, navigationController: self.navigationController as? NavigationController, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat, navigationController: self.navigationController as? NavigationController, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -6465,7 +6467,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                             strongSelf.navigateToMessage(from: nil, to: .id(messageId))
                         }
                     } else if let navigationController = strongSelf.navigationController as? NavigationController {
-                        navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always)
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always))
                     }
                 case .info:
                     strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId)
@@ -6483,12 +6485,13 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                             $0.updatedBotStartPayload(startPayload.payload)
                         })
                     } else if let navigationController = strongSelf.navigationController as? NavigationController {
-                        navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload)
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload))
                     }
                 default:
                     break
                 }
-        }, sendSticker: { [weak self] f, sourceNode, sourceRect in
+            }, sendFile: nil,
+            sendSticker: { [weak self] f, sourceNode, sourceRect in
             return self?.interfaceInteraction?.sendSticker(f, sourceNode, sourceRect) ?? false
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
@@ -6532,7 +6535,7 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
             cancelImpl = { [weak self] in
                 self?.resolveUrlDisposable?.set(nil)
             }
-            disposable.set((resolveUrl(account: strongSelf.context.account, url: url)
+            disposable.set((strongSelf.context.sharedContext.resolveUrl(account: strongSelf.context.account, url: url)
             |> afterDisposed {
                 Queue.mainQueue().async {
                     progressDisposable.dispose()
@@ -6700,8 +6703,6 @@ public final class ChatController: TelegramBaseController, GalleryHiddenMediaTar
                 }
                 return nil
             }))
-        } else if let gallery = viewControllerToCommit as? InstantPageGalleryController {
-            
         }
         
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {

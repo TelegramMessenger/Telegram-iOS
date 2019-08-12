@@ -145,6 +145,71 @@ public struct ChatAvailableMessageActions {
     }
 }
 
+public enum WallpaperUrlParameter {
+    case slug(String, WallpaperPresentationOptions, UIColor?, Int32?)
+    case color(UIColor)
+}
+
+public enum ResolvedUrl {
+    case externalUrl(String)
+    case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
+    case inaccessiblePeer
+    case botStart(peerId: PeerId, payload: String)
+    case groupBotStart(peerId: PeerId, payload: String)
+    case channelMessage(peerId: PeerId, messageId: MessageId)
+    case stickerPack(name: String)
+    case instantView(TelegramMediaWebpage, String?)
+    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
+    case join(String)
+    case localization(String)
+    case confirmationCode(Int)
+    case cancelAccountReset(phone: String, hash: String)
+    case share(url: String?, text: String?, to: String?)
+    case wallpaper(WallpaperUrlParameter)
+}
+
+public enum NavigateToChatKeepStack {
+    case `default`
+    case always
+    case never
+}
+
+public final class NavigateToChatControllerParams {
+    public let navigationController: NavigationController
+    public let chatController: ChatController?
+    public let context: AccountContext
+    public let chatLocation: ChatLocation
+    public let messageId: MessageId?
+    public let botStart: ChatControllerInitialBotStart?
+    public let updateTextInputState: ChatTextInputState?
+    public let activateInput: Bool
+    public let keepStack: NavigateToChatKeepStack
+    public let purposefulAction: (() -> Void)?
+    public let scrollToEndIfExists: Bool
+    public let animated: Bool
+    public let options: NavigationAnimationOptions
+    public let parentGroupId: PeerGroupId?
+    public let completion: () -> Void
+    
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
+        self.navigationController = navigationController
+        self.chatController = chatController
+        self.context = context
+        self.chatLocation = chatLocation
+        self.messageId = messageId
+        self.botStart = botStart
+        self.updateTextInputState = updateTextInputState
+        self.activateInput = activateInput
+        self.keepStack = keepStack
+        self.purposefulAction = purposefulAction
+        self.scrollToEndIfExists = scrollToEndIfExists
+        self.animated = animated
+        self.options = options
+        self.parentGroupId = parentGroupId
+        self.completion = completion
+    }
+}
+
 public protocol SharedAccountContext: class {
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -181,8 +246,11 @@ public protocol SharedAccountContext: class {
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
     func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
     func makePeerInfoController(context: AccountContext, peer: Peer) -> ViewController?
+    func navigateToChatController(_ params: NavigateToChatControllerParams)
     func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
-    func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> 
+    func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>
+    func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError>
+    func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void)
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

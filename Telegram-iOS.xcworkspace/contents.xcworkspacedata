@@ -74,6 +74,12 @@
       <FileRef
          location = "group:submodules/GZip/GZip_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/Pdf/Pdf_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MosaicLayout/MosaicLayout_Xcode.xcodeproj">
+      </FileRef>
       <Group
          location = "container:"
          name = "Image Processing">
@@ -138,6 +144,9 @@
          <FileRef
             location = "group:submodules/StickerResources/StickerResources_Xcode.xcodeproj">
          </FileRef>
+         <FileRef
+            location = "group:submodules/MusicAlbumArtResources/MusicAlbumArtResources_Xcode.xcodeproj">
+         </FileRef>
       </Group>
    </Group>
    <Group
@@ -171,6 +180,9 @@
          </FileRef>
          <FileRef
             location = "group:submodules/LiveLocationTimerNode/LiveLocationTimerNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LiveLocationPositionNode/LiveLocationPositionNode_Xcode.xcodeproj">
          </FileRef>
          <FileRef
             location = "group:submodules/CheckNode/CheckNode_Xcode.xcodeproj">
@@ -324,6 +336,12 @@
       </FileRef>
       <FileRef
          location = "group:submodules/PasswordSetupUI/PasswordSetupUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/InstantPageUI/InstantPageUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LocationUI/LocationUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

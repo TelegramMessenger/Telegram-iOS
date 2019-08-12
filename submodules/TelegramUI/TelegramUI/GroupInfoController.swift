@@ -20,6 +20,7 @@ import MediaResources
 import PhotoResources
 import GalleryUI
 import LegacyUI
+import LocationUI
 
 private final class GroupInfoArguments {
     let context: AccountContext
@@ -2298,7 +2299,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             let infoController = groupInfoController(context: context, peerId: upgradedPeerId, membersLoaded: {
                 f()
             })
-            let chatController = ChatController(context: context, chatLocation: .peer(upgradedPeerId), mode: .standard(previewing: false))
+            let chatController = ChatControllerImpl(context: context, chatLocation: .peer(upgradedPeerId), mode: .standard(previewing: false))
             var viewControllers: [UIViewController] = []
             if let first = navigationController.viewControllers.first {
                 viewControllers.append(first)

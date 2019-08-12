@@ -1,0 +1,807 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0C9C56F2301CFA600FAB518 /* InstantPageUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C56D2301CFA600FAB518 /* InstantPageUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9C57B2301D01200FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C57A2301D01200FAB518 /* Foundation.framework */; };
+		D0C9C57D2301D01600FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C57C2301D01600FAB518 /* UIKit.framework */; };
+		D0C9C57F2301D01B00FAB518 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C57E2301D01B00FAB518 /* Postbox.framework */; };
+		D0C9C5812301D01E00FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5802301D01E00FAB518 /* TelegramCore.framework */; };
+		D0C9C5832301D02400FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5822301D02400FAB518 /* SwiftSignalKit.framework */; };
+		D0C9C5852301D02A00FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5842301D02A00FAB518 /* TelegramPresentationData.framework */; };
+		D0C9C5872301D03000FAB518 /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5862301D03000FAB518 /* TelegramUIPreferences.framework */; };
+		D0C9C5C02301D04700FAB518 /* InstantPageController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C58A2301D03E00FAB518 /* InstantPageController.swift */; };
+		D0C9C5C12301D04700FAB518 /* InstantPageFeedbackNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C58B2301D03E00FAB518 /* InstantPageFeedbackNode.swift */; };
+		D0C9C5C22301D04700FAB518 /* InstantPageSettingsItemTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C58C2301D03E00FAB518 /* InstantPageSettingsItemTheme.swift */; };
+		D0C9C5C32301D04700FAB518 /* InstantPageAudioNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C58D2301D03E00FAB518 /* InstantPageAudioNode.swift */; };
+		D0C9C5C42301D04700FAB518 /* InstantPageArticleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C58E2301D03E00FAB518 /* InstantPageArticleNode.swift */; };
+		D0C9C5C52301D04700FAB518 /* InstantPageAudioItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C58F2301D03E00FAB518 /* InstantPageAudioItem.swift */; };
+		D0C9C5C62301D04700FAB518 /* InstantPageFeedbackItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5902301D03F00FAB518 /* InstantPageFeedbackItem.swift */; };
+		D0C9C5C72301D04700FAB518 /* InstantPageGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5912301D03F00FAB518 /* InstantPageGalleryController.swift */; };
+		D0C9C5C82301D04700FAB518 /* InstantPageTableItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5922301D03F00FAB518 /* InstantPageTableItem.swift */; };
+		D0C9C5C92301D04700FAB518 /* InstantPageTextStyleStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5932301D03F00FAB518 /* InstantPageTextStyleStack.swift */; };
+		D0C9C5CA2301D04700FAB518 /* InstantPageMediaPlaylist.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5942301D03F00FAB518 /* InstantPageMediaPlaylist.swift */; };
+		D0C9C5CB2301D04700FAB518 /* InstantPageWebEmbedItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5952301D03F00FAB518 /* InstantPageWebEmbedItem.swift */; };
+		D0C9C5CC2301D04700FAB518 /* InstantPageSettingsItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5962301D03F00FAB518 /* InstantPageSettingsItemNode.swift */; };
+		D0C9C5CD2301D04700FAB518 /* InstantPageContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5972301D03F00FAB518 /* InstantPageContentNode.swift */; };
+		D0C9C5CE2301D04700FAB518 /* InstantPageSettingsThemeItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5982301D04000FAB518 /* InstantPageSettingsThemeItemNode.swift */; };
+		D0C9C5CF2301D04700FAB518 /* InstantPageSettingsFontFamilyItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5992301D04000FAB518 /* InstantPageSettingsFontFamilyItemNode.swift */; };
+		D0C9C5D02301D04700FAB518 /* InstantImageGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C59A2301D04000FAB518 /* InstantImageGalleryItem.swift */; };
+		D0C9C5D12301D04700FAB518 /* InstantPageScrollableNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C59B2301D04000FAB518 /* InstantPageScrollableNode.swift */; };
+		D0C9C5D22301D04700FAB518 /* InstantPageSettingsBacklightItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C59C2301D04000FAB518 /* InstantPageSettingsBacklightItemNode.swift */; };
+		D0C9C5D32301D04700FAB518 /* InstantPageLayoutSpacings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C59D2301D04000FAB518 /* InstantPageLayoutSpacings.swift */; };
+		D0C9C5D42301D04700FAB518 /* InstantPageArticleItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C59E2301D04000FAB518 /* InstantPageArticleItem.swift */; };
+		D0C9C5D52301D04700FAB518 /* InstantPageSettingsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C59F2301D04000FAB518 /* InstantPageSettingsNode.swift */; };
+		D0C9C5D62301D04700FAB518 /* InstantPageAnchorItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A02301D04000FAB518 /* InstantPageAnchorItem.swift */; };
+		D0C9C5D72301D04700FAB518 /* InstantPageImageNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A12301D04100FAB518 /* InstantPageImageNode.swift */; };
+		D0C9C5D82301D04700FAB518 /* InstantPageSettingsButtonItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A22301D04100FAB518 /* InstantPageSettingsButtonItemNode.swift */; };
+		D0C9C5D92301D04700FAB518 /* InstantPageShapeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A32301D04100FAB518 /* InstantPageShapeItem.swift */; };
+		D0C9C5DA2301D04700FAB518 /* InstantPageImageItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A42301D04100FAB518 /* InstantPageImageItem.swift */; };
+		D0C9C5DB2301D04700FAB518 /* InstantPageSlideshowItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A52301D04100FAB518 /* InstantPageSlideshowItemNode.swift */; };
+		D0C9C5DC2301D04700FAB518 /* InstantPageReferenceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A62301D04100FAB518 /* InstantPageReferenceControllerNode.swift */; };
+		D0C9C5DD2301D04700FAB518 /* InstantPageLinkSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A72301D04100FAB518 /* InstantPageLinkSelectionView.swift */; };
+		D0C9C5DE2301D04700FAB518 /* InstantPageGalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A82301D04200FAB518 /* InstantPageGalleryFooterContentNode.swift */; };
+		D0C9C5DF2301D04700FAB518 /* InstantPagePlayableVideoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5A92301D04200FAB518 /* InstantPagePlayableVideoItem.swift */; };
+		D0C9C5E02301D04700FAB518 /* InstantPageWebEmbedNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5AA2301D04200FAB518 /* InstantPageWebEmbedNode.swift */; };
+		D0C9C5E12301D04700FAB518 /* InstantPagePeerReferenceItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5AB2301D04200FAB518 /* InstantPagePeerReferenceItem.swift */; };
+		D0C9C5E22301D04700FAB518 /* InstantPageTileNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5AC2301D04200FAB518 /* InstantPageTileNode.swift */; };
+		D0C9C5E32301D04700FAB518 /* InstantPageSlideshowItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5AD2301D04200FAB518 /* InstantPageSlideshowItem.swift */; };
+		D0C9C5E42301D04700FAB518 /* InstantPageTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5AE2301D04200FAB518 /* InstantPageTile.swift */; };
+		D0C9C5E52301D04700FAB518 /* InstantPageSettingsSwitchItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5AF2301D04300FAB518 /* InstantPageSettingsSwitchItemNode.swift */; };
+		D0C9C5E62301D04700FAB518 /* InstantPageStoredState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B02301D04300FAB518 /* InstantPageStoredState.swift */; };
+		D0C9C5E72301D04700FAB518 /* InstantPagePeerReferenceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B12301D04300FAB518 /* InstantPagePeerReferenceNode.swift */; };
+		D0C9C5E82301D04700FAB518 /* InstantPageDetailsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B22301D04300FAB518 /* InstantPageDetailsNode.swift */; };
+		D0C9C5E92301D04700FAB518 /* InstantPageTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B32301D04300FAB518 /* InstantPageTheme.swift */; };
+		D0C9C5EA2301D04700FAB518 /* InstantPageSettingsFontSizeItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B42301D04300FAB518 /* InstantPageSettingsFontSizeItemNode.swift */; };
+		D0C9C5EB2301D04700FAB518 /* InstantPageNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B52301D04300FAB518 /* InstantPageNavigationBar.swift */; };
+		D0C9C5EC2301D04700FAB518 /* InstantPageMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B62301D04400FAB518 /* InstantPageMedia.swift */; };
+		D0C9C5ED2301D04700FAB518 /* InstantPageDetailsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B72301D04500FAB518 /* InstantPageDetailsItem.swift */; };
+		D0C9C5EE2301D04700FAB518 /* InstantPageTextItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B82301D04500FAB518 /* InstantPageTextItem.swift */; };
+		D0C9C5EF2301D04700FAB518 /* InstantPageLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5B92301D04500FAB518 /* InstantPageLayout.swift */; };
+		D0C9C5F02301D04700FAB518 /* InstantPageItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5BA2301D04500FAB518 /* InstantPageItem.swift */; };
+		D0C9C5F12301D04700FAB518 /* InstantPageNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5BB2301D04500FAB518 /* InstantPageNode.swift */; };
+		D0C9C5F22301D04700FAB518 /* InstantPageReferenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5BC2301D04600FAB518 /* InstantPageReferenceController.swift */; };
+		D0C9C5F32301D04700FAB518 /* InstantPagePlayableVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5BD2301D04600FAB518 /* InstantPagePlayableVideoNode.swift */; };
+		D0C9C5F42301D04700FAB518 /* InstantPageControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5BE2301D04600FAB518 /* InstantPageControllerNode.swift */; };
+		D0C9C5F72301D04A00FAB518 /* GalleryUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5F62301D04A00FAB518 /* GalleryUI.framework */; };
+		D0C9C5F92301D04F00FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5F82301D04F00FAB518 /* AsyncDisplayKit.framework */; };
+		D0C9C5FB2301D05400FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5FA2301D05400FAB518 /* Display.framework */; };
+		D0C9C5FD2301D0A900FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5FC2301D0A900FAB518 /* FrameworkBundle.swift */; };
+		D0C9C6272301D21600FAB518 /* MusicAlbumArtResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6262301D21600FAB518 /* MusicAlbumArtResources.framework */; };
+		D0C9C6572301D30C00FAB518 /* LiveLocationPositionNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6562301D30C00FAB518 /* LiveLocationPositionNode.framework */; };
+		D0C9C67D2301D45A00FAB518 /* MosaicLayout.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C67C2301D45A00FAB518 /* MosaicLayout.framework */; };
+		D0C9C6BB2301D92000FAB518 /* LocationUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6BA2301D92000FAB518 /* LocationUI.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D0C9C56A2301CFA600FAB518 /* InstantPageUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = InstantPageUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C56D2301CFA600FAB518 /* InstantPageUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InstantPageUI.h; sourceTree = "<group>"; };
+		D0C9C56E2301CFA600FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0C9C57A2301D01200FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0C9C57C2301D01600FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D0C9C57E2301D01B00FAB518 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C5802301D01E00FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C5822301D02400FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C5842301D02A00FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C5862301D03000FAB518 /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C58A2301D03E00FAB518 /* InstantPageController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageController.swift; sourceTree = "<group>"; };
+		D0C9C58B2301D03E00FAB518 /* InstantPageFeedbackNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackNode.swift; sourceTree = "<group>"; };
+		D0C9C58C2301D03E00FAB518 /* InstantPageSettingsItemTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsItemTheme.swift; sourceTree = "<group>"; };
+		D0C9C58D2301D03E00FAB518 /* InstantPageAudioNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageAudioNode.swift; sourceTree = "<group>"; };
+		D0C9C58E2301D03E00FAB518 /* InstantPageArticleNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageArticleNode.swift; sourceTree = "<group>"; };
+		D0C9C58F2301D03E00FAB518 /* InstantPageAudioItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageAudioItem.swift; sourceTree = "<group>"; };
+		D0C9C5902301D03F00FAB518 /* InstantPageFeedbackItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageFeedbackItem.swift; sourceTree = "<group>"; };
+		D0C9C5912301D03F00FAB518 /* InstantPageGalleryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageGalleryController.swift; sourceTree = "<group>"; };
+		D0C9C5922301D03F00FAB518 /* InstantPageTableItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageTableItem.swift; sourceTree = "<group>"; };
+		D0C9C5932301D03F00FAB518 /* InstantPageTextStyleStack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageTextStyleStack.swift; sourceTree = "<group>"; };
+		D0C9C5942301D03F00FAB518 /* InstantPageMediaPlaylist.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageMediaPlaylist.swift; sourceTree = "<group>"; };
+		D0C9C5952301D03F00FAB518 /* InstantPageWebEmbedItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageWebEmbedItem.swift; sourceTree = "<group>"; };
+		D0C9C5962301D03F00FAB518 /* InstantPageSettingsItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsItemNode.swift; sourceTree = "<group>"; };
+		D0C9C5972301D03F00FAB518 /* InstantPageContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageContentNode.swift; sourceTree = "<group>"; };
+		D0C9C5982301D04000FAB518 /* InstantPageSettingsThemeItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsThemeItemNode.swift; sourceTree = "<group>"; };
+		D0C9C5992301D04000FAB518 /* InstantPageSettingsFontFamilyItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsFontFamilyItemNode.swift; sourceTree = "<group>"; };
+		D0C9C59A2301D04000FAB518 /* InstantImageGalleryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantImageGalleryItem.swift; sourceTree = "<group>"; };
+		D0C9C59B2301D04000FAB518 /* InstantPageScrollableNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageScrollableNode.swift; sourceTree = "<group>"; };
+		D0C9C59C2301D04000FAB518 /* InstantPageSettingsBacklightItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsBacklightItemNode.swift; sourceTree = "<group>"; };
+		D0C9C59D2301D04000FAB518 /* InstantPageLayoutSpacings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageLayoutSpacings.swift; sourceTree = "<group>"; };
+		D0C9C59E2301D04000FAB518 /* InstantPageArticleItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageArticleItem.swift; sourceTree = "<group>"; };
+		D0C9C59F2301D04000FAB518 /* InstantPageSettingsNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsNode.swift; sourceTree = "<group>"; };
+		D0C9C5A02301D04000FAB518 /* InstantPageAnchorItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageAnchorItem.swift; sourceTree = "<group>"; };
+		D0C9C5A12301D04100FAB518 /* InstantPageImageNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageImageNode.swift; sourceTree = "<group>"; };
+		D0C9C5A22301D04100FAB518 /* InstantPageSettingsButtonItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsButtonItemNode.swift; sourceTree = "<group>"; };
+		D0C9C5A32301D04100FAB518 /* InstantPageShapeItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageShapeItem.swift; sourceTree = "<group>"; };
+		D0C9C5A42301D04100FAB518 /* InstantPageImageItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageImageItem.swift; sourceTree = "<group>"; };
+		D0C9C5A52301D04100FAB518 /* InstantPageSlideshowItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSlideshowItemNode.swift; sourceTree = "<group>"; };
+		D0C9C5A62301D04100FAB518 /* InstantPageReferenceControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageReferenceControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C5A72301D04100FAB518 /* InstantPageLinkSelectionView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageLinkSelectionView.swift; sourceTree = "<group>"; };
+		D0C9C5A82301D04200FAB518 /* InstantPageGalleryFooterContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageGalleryFooterContentNode.swift; sourceTree = "<group>"; };
+		D0C9C5A92301D04200FAB518 /* InstantPagePlayableVideoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPagePlayableVideoItem.swift; sourceTree = "<group>"; };
+		D0C9C5AA2301D04200FAB518 /* InstantPageWebEmbedNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageWebEmbedNode.swift; sourceTree = "<group>"; };
+		D0C9C5AB2301D04200FAB518 /* InstantPagePeerReferenceItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPagePeerReferenceItem.swift; sourceTree = "<group>"; };
+		D0C9C5AC2301D04200FAB518 /* InstantPageTileNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageTileNode.swift; sourceTree = "<group>"; };
+		D0C9C5AD2301D04200FAB518 /* InstantPageSlideshowItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSlideshowItem.swift; sourceTree = "<group>"; };
+		D0C9C5AE2301D04200FAB518 /* InstantPageTile.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageTile.swift; sourceTree = "<group>"; };
+		D0C9C5AF2301D04300FAB518 /* InstantPageSettingsSwitchItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsSwitchItemNode.swift; sourceTree = "<group>"; };
+		D0C9C5B02301D04300FAB518 /* InstantPageStoredState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageStoredState.swift; sourceTree = "<group>"; };
+		D0C9C5B12301D04300FAB518 /* InstantPagePeerReferenceNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPagePeerReferenceNode.swift; sourceTree = "<group>"; };
+		D0C9C5B22301D04300FAB518 /* InstantPageDetailsNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageDetailsNode.swift; sourceTree = "<group>"; };
+		D0C9C5B32301D04300FAB518 /* InstantPageTheme.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageTheme.swift; sourceTree = "<group>"; };
+		D0C9C5B42301D04300FAB518 /* InstantPageSettingsFontSizeItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageSettingsFontSizeItemNode.swift; sourceTree = "<group>"; };
+		D0C9C5B52301D04300FAB518 /* InstantPageNavigationBar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageNavigationBar.swift; sourceTree = "<group>"; };
+		D0C9C5B62301D04400FAB518 /* InstantPageMedia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageMedia.swift; sourceTree = "<group>"; };
+		D0C9C5B72301D04500FAB518 /* InstantPageDetailsItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageDetailsItem.swift; sourceTree = "<group>"; };
+		D0C9C5B82301D04500FAB518 /* InstantPageTextItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageTextItem.swift; sourceTree = "<group>"; };
+		D0C9C5B92301D04500FAB518 /* InstantPageLayout.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageLayout.swift; sourceTree = "<group>"; };
+		D0C9C5BA2301D04500FAB518 /* InstantPageItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageItem.swift; sourceTree = "<group>"; };
+		D0C9C5BB2301D04500FAB518 /* InstantPageNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageNode.swift; sourceTree = "<group>"; };
+		D0C9C5BC2301D04600FAB518 /* InstantPageReferenceController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageReferenceController.swift; sourceTree = "<group>"; };
+		D0C9C5BD2301D04600FAB518 /* InstantPagePlayableVideoNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPagePlayableVideoNode.swift; sourceTree = "<group>"; };
+		D0C9C5BE2301D04600FAB518 /* InstantPageControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InstantPageControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C5F62301D04A00FAB518 /* GalleryUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GalleryUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C5F82301D04F00FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C5FA2301D05400FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C5FC2301D0A900FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9C6262301D21600FAB518 /* MusicAlbumArtResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MusicAlbumArtResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C6562301D30C00FAB518 /* LiveLocationPositionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LiveLocationPositionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C67C2301D45A00FAB518 /* MosaicLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MosaicLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C6BA2301D92000FAB518 /* LocationUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocationUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0C9C5672301CFA600FAB518 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C6BB2301D92000FAB518 /* LocationUI.framework in Frameworks */,
+				D0C9C67D2301D45A00FAB518 /* MosaicLayout.framework in Frameworks */,
+				D0C9C6572301D30C00FAB518 /* LiveLocationPositionNode.framework in Frameworks */,
+				D0C9C6272301D21600FAB518 /* MusicAlbumArtResources.framework in Frameworks */,
+				D0C9C5FB2301D05400FAB518 /* Display.framework in Frameworks */,
+				D0C9C5F92301D04F00FAB518 /* AsyncDisplayKit.framework in Frameworks */,
+				D0C9C5F72301D04A00FAB518 /* GalleryUI.framework in Frameworks */,
+				D0C9C5872301D03000FAB518 /* TelegramUIPreferences.framework in Frameworks */,
+				D0C9C5852301D02A00FAB518 /* TelegramPresentationData.framework in Frameworks */,
+				D0C9C5832301D02400FAB518 /* SwiftSignalKit.framework in Frameworks */,
+				D0C9C5812301D01E00FAB518 /* TelegramCore.framework in Frameworks */,
+				D0C9C57F2301D01B00FAB518 /* Postbox.framework in Frameworks */,
+				D0C9C57D2301D01600FAB518 /* UIKit.framework in Frameworks */,
+				D0C9C57B2301D01200FAB518 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0C9C5602301CFA600FAB518 = {
+			isa = PBXGroup;
+			children = (
+				D0C9C56E2301CFA600FAB518 /* Info.plist */,
+				D0C9C56C2301CFA600FAB518 /* Sources */,
+				D0C9C56B2301CFA600FAB518 /* Products */,
+				D0C9C5792301D01200FAB518 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D0C9C56B2301CFA600FAB518 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C56A2301CFA600FAB518 /* InstantPageUI.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0C9C56C2301CFA600FAB518 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C59A2301D04000FAB518 /* InstantImageGalleryItem.swift */,
+				D0C9C5A02301D04000FAB518 /* InstantPageAnchorItem.swift */,
+				D0C9C59E2301D04000FAB518 /* InstantPageArticleItem.swift */,
+				D0C9C58E2301D03E00FAB518 /* InstantPageArticleNode.swift */,
+				D0C9C58F2301D03E00FAB518 /* InstantPageAudioItem.swift */,
+				D0C9C58D2301D03E00FAB518 /* InstantPageAudioNode.swift */,
+				D0C9C5972301D03F00FAB518 /* InstantPageContentNode.swift */,
+				D0C9C58A2301D03E00FAB518 /* InstantPageController.swift */,
+				D0C9C5BE2301D04600FAB518 /* InstantPageControllerNode.swift */,
+				D0C9C5B72301D04500FAB518 /* InstantPageDetailsItem.swift */,
+				D0C9C5B22301D04300FAB518 /* InstantPageDetailsNode.swift */,
+				D0C9C5902301D03F00FAB518 /* InstantPageFeedbackItem.swift */,
+				D0C9C58B2301D03E00FAB518 /* InstantPageFeedbackNode.swift */,
+				D0C9C5912301D03F00FAB518 /* InstantPageGalleryController.swift */,
+				D0C9C5A82301D04200FAB518 /* InstantPageGalleryFooterContentNode.swift */,
+				D0C9C5A42301D04100FAB518 /* InstantPageImageItem.swift */,
+				D0C9C5A12301D04100FAB518 /* InstantPageImageNode.swift */,
+				D0C9C5BA2301D04500FAB518 /* InstantPageItem.swift */,
+				D0C9C5B92301D04500FAB518 /* InstantPageLayout.swift */,
+				D0C9C59D2301D04000FAB518 /* InstantPageLayoutSpacings.swift */,
+				D0C9C5A72301D04100FAB518 /* InstantPageLinkSelectionView.swift */,
+				D0C9C5B62301D04400FAB518 /* InstantPageMedia.swift */,
+				D0C9C5942301D03F00FAB518 /* InstantPageMediaPlaylist.swift */,
+				D0C9C5B52301D04300FAB518 /* InstantPageNavigationBar.swift */,
+				D0C9C5BB2301D04500FAB518 /* InstantPageNode.swift */,
+				D0C9C5AB2301D04200FAB518 /* InstantPagePeerReferenceItem.swift */,
+				D0C9C5B12301D04300FAB518 /* InstantPagePeerReferenceNode.swift */,
+				D0C9C5A92301D04200FAB518 /* InstantPagePlayableVideoItem.swift */,
+				D0C9C5BD2301D04600FAB518 /* InstantPagePlayableVideoNode.swift */,
+				D0C9C5BC2301D04600FAB518 /* InstantPageReferenceController.swift */,
+				D0C9C5A62301D04100FAB518 /* InstantPageReferenceControllerNode.swift */,
+				D0C9C59B2301D04000FAB518 /* InstantPageScrollableNode.swift */,
+				D0C9C59C2301D04000FAB518 /* InstantPageSettingsBacklightItemNode.swift */,
+				D0C9C5A22301D04100FAB518 /* InstantPageSettingsButtonItemNode.swift */,
+				D0C9C5992301D04000FAB518 /* InstantPageSettingsFontFamilyItemNode.swift */,
+				D0C9C5B42301D04300FAB518 /* InstantPageSettingsFontSizeItemNode.swift */,
+				D0C9C5962301D03F00FAB518 /* InstantPageSettingsItemNode.swift */,
+				D0C9C58C2301D03E00FAB518 /* InstantPageSettingsItemTheme.swift */,
+				D0C9C59F2301D04000FAB518 /* InstantPageSettingsNode.swift */,
+				D0C9C5AF2301D04300FAB518 /* InstantPageSettingsSwitchItemNode.swift */,
+				D0C9C5982301D04000FAB518 /* InstantPageSettingsThemeItemNode.swift */,
+				D0C9C5A32301D04100FAB518 /* InstantPageShapeItem.swift */,
+				D0C9C5AD2301D04200FAB518 /* InstantPageSlideshowItem.swift */,
+				D0C9C5A52301D04100FAB518 /* InstantPageSlideshowItemNode.swift */,
+				D0C9C5B02301D04300FAB518 /* InstantPageStoredState.swift */,
+				D0C9C5922301D03F00FAB518 /* InstantPageTableItem.swift */,
+				D0C9C5B82301D04500FAB518 /* InstantPageTextItem.swift */,
+				D0C9C5932301D03F00FAB518 /* InstantPageTextStyleStack.swift */,
+				D0C9C5B32301D04300FAB518 /* InstantPageTheme.swift */,
+				D0C9C5AE2301D04200FAB518 /* InstantPageTile.swift */,
+				D0C9C5AC2301D04200FAB518 /* InstantPageTileNode.swift */,
+				D0C9C5952301D03F00FAB518 /* InstantPageWebEmbedItem.swift */,
+				D0C9C5AA2301D04200FAB518 /* InstantPageWebEmbedNode.swift */,
+				D0C9C5FC2301D0A900FAB518 /* FrameworkBundle.swift */,
+				D0C9C56D2301CFA600FAB518 /* InstantPageUI.h */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D0C9C5792301D01200FAB518 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C6BA2301D92000FAB518 /* LocationUI.framework */,
+				D0C9C67C2301D45A00FAB518 /* MosaicLayout.framework */,
+				D0C9C6562301D30C00FAB518 /* LiveLocationPositionNode.framework */,
+				D0C9C6262301D21600FAB518 /* MusicAlbumArtResources.framework */,
+				D0C9C5FA2301D05400FAB518 /* Display.framework */,
+				D0C9C5F82301D04F00FAB518 /* AsyncDisplayKit.framework */,
+				D0C9C5F62301D04A00FAB518 /* GalleryUI.framework */,
+				D0C9C5862301D03000FAB518 /* TelegramUIPreferences.framework */,
+				D0C9C5842301D02A00FAB518 /* TelegramPresentationData.framework */,
+				D0C9C5822301D02400FAB518 /* SwiftSignalKit.framework */,
+				D0C9C5802301D01E00FAB518 /* TelegramCore.framework */,
+				D0C9C57E2301D01B00FAB518 /* Postbox.framework */,
+				D0C9C57C2301D01600FAB518 /* UIKit.framework */,
+				D0C9C57A2301D01200FAB518 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D0C9C5652301CFA600FAB518 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C56F2301CFA600FAB518 /* InstantPageUI.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D0C9C5692301CFA600FAB518 /* InstantPageUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0C9C5722301CFA600FAB518 /* Build configuration list for PBXNativeTarget "InstantPageUI" */;
+			buildPhases = (
+				D0C9C5652301CFA600FAB518 /* Headers */,
+				D0C9C5662301CFA600FAB518 /* Sources */,
+				D0C9C5672301CFA600FAB518 /* Frameworks */,
+				D0C9C5682301CFA600FAB518 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = InstantPageUI;
+			productName = InstantPageUI;
+			productReference = D0C9C56A2301CFA600FAB518 /* InstantPageUI.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0C9C5612301CFA600FAB518 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = "Telegram Messenger LLP";
+				TargetAttributes = {
+					D0C9C5692301CFA600FAB518 = {
+						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
+					};
+				};
+			};
+			buildConfigurationList = D0C9C5642301CFA600FAB518 /* Build configuration list for PBXProject "InstantPageUI_Xcode" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0C9C5602301CFA600FAB518;
+			productRefGroup = D0C9C56B2301CFA600FAB518 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0C9C5692301CFA600FAB518 /* InstantPageUI */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0C9C5682301CFA600FAB518 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0C9C5662301CFA600FAB518 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C5C92301D04700FAB518 /* InstantPageTextStyleStack.swift in Sources */,
+				D0C9C5D12301D04700FAB518 /* InstantPageScrollableNode.swift in Sources */,
+				D0C9C5D82301D04700FAB518 /* InstantPageSettingsButtonItemNode.swift in Sources */,
+				D0C9C5D32301D04700FAB518 /* InstantPageLayoutSpacings.swift in Sources */,
+				D0C9C5EB2301D04700FAB518 /* InstantPageNavigationBar.swift in Sources */,
+				D0C9C5E72301D04700FAB518 /* InstantPagePeerReferenceNode.swift in Sources */,
+				D0C9C5E52301D04700FAB518 /* InstantPageSettingsSwitchItemNode.swift in Sources */,
+				D0C9C5F42301D04700FAB518 /* InstantPageControllerNode.swift in Sources */,
+				D0C9C5CA2301D04700FAB518 /* InstantPageMediaPlaylist.swift in Sources */,
+				D0C9C5DA2301D04700FAB518 /* InstantPageImageItem.swift in Sources */,
+				D0C9C5C52301D04700FAB518 /* InstantPageAudioItem.swift in Sources */,
+				D0C9C5D22301D04700FAB518 /* InstantPageSettingsBacklightItemNode.swift in Sources */,
+				D0C9C5D92301D04700FAB518 /* InstantPageShapeItem.swift in Sources */,
+				D0C9C5D42301D04700FAB518 /* InstantPageArticleItem.swift in Sources */,
+				D0C9C5E42301D04700FAB518 /* InstantPageTile.swift in Sources */,
+				D0C9C5F22301D04700FAB518 /* InstantPageReferenceController.swift in Sources */,
+				D0C9C5EF2301D04700FAB518 /* InstantPageLayout.swift in Sources */,
+				D0C9C5F02301D04700FAB518 /* InstantPageItem.swift in Sources */,
+				D0C9C5DB2301D04700FAB518 /* InstantPageSlideshowItemNode.swift in Sources */,
+				D0C9C5FD2301D0A900FAB518 /* FrameworkBundle.swift in Sources */,
+				D0C9C5E92301D04700FAB518 /* InstantPageTheme.swift in Sources */,
+				D0C9C5D52301D04700FAB518 /* InstantPageSettingsNode.swift in Sources */,
+				D0C9C5CF2301D04700FAB518 /* InstantPageSettingsFontFamilyItemNode.swift in Sources */,
+				D0C9C5C42301D04700FAB518 /* InstantPageArticleNode.swift in Sources */,
+				D0C9C5EA2301D04700FAB518 /* InstantPageSettingsFontSizeItemNode.swift in Sources */,
+				D0C9C5EE2301D04700FAB518 /* InstantPageTextItem.swift in Sources */,
+				D0C9C5E02301D04700FAB518 /* InstantPageWebEmbedNode.swift in Sources */,
+				D0C9C5CB2301D04700FAB518 /* InstantPageWebEmbedItem.swift in Sources */,
+				D0C9C5CE2301D04700FAB518 /* InstantPageSettingsThemeItemNode.swift in Sources */,
+				D0C9C5D72301D04700FAB518 /* InstantPageImageNode.swift in Sources */,
+				D0C9C5D62301D04700FAB518 /* InstantPageAnchorItem.swift in Sources */,
+				D0C9C5C82301D04700FAB518 /* InstantPageTableItem.swift in Sources */,
+				D0C9C5DC2301D04700FAB518 /* InstantPageReferenceControllerNode.swift in Sources */,
+				D0C9C5C02301D04700FAB518 /* InstantPageController.swift in Sources */,
+				D0C9C5E62301D04700FAB518 /* InstantPageStoredState.swift in Sources */,
+				D0C9C5C72301D04700FAB518 /* InstantPageGalleryController.swift in Sources */,
+				D0C9C5F32301D04700FAB518 /* InstantPagePlayableVideoNode.swift in Sources */,
+				D0C9C5DE2301D04700FAB518 /* InstantPageGalleryFooterContentNode.swift in Sources */,
+				D0C9C5DF2301D04700FAB518 /* InstantPagePlayableVideoItem.swift in Sources */,
+				D0C9C5DD2301D04700FAB518 /* InstantPageLinkSelectionView.swift in Sources */,
+				D0C9C5C62301D04700FAB518 /* InstantPageFeedbackItem.swift in Sources */,
+				D0C9C5E12301D04700FAB518 /* InstantPagePeerReferenceItem.swift in Sources */,
+				D0C9C5F12301D04700FAB518 /* InstantPageNode.swift in Sources */,
+				D0C9C5EC2301D04700FAB518 /* InstantPageMedia.swift in Sources */,
+				D0C9C5E32301D04700FAB518 /* InstantPageSlideshowItem.swift in Sources */,
+				D0C9C5C12301D04700FAB518 /* InstantPageFeedbackNode.swift in Sources */,
+				D0C9C5E22301D04700FAB518 /* InstantPageTileNode.swift in Sources */,
+				D0C9C5CD2301D04700FAB518 /* InstantPageContentNode.swift in Sources */,
+				D0C9C5E82301D04700FAB518 /* InstantPageDetailsNode.swift in Sources */,
+				D0C9C5D02301D04700FAB518 /* InstantImageGalleryItem.swift in Sources */,
+				D0C9C5C22301D04700FAB518 /* InstantPageSettingsItemTheme.swift in Sources */,
+				D0C9C5C32301D04700FAB518 /* InstantPageAudioNode.swift in Sources */,
+				D0C9C5ED2301D04700FAB518 /* InstantPageDetailsItem.swift in Sources */,
+				D0C9C5CC2301D04700FAB518 /* InstantPageSettingsItemNode.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D0C9C5702301CFA600FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C5712301CFA600FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C5732301CFA600FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.InstantPageUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C5742301CFA600FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.InstantPageUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C5752301CFCB00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C5762301CFCB00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.InstantPageUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C5772301CFD600FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+		D0C9C5782301CFD600FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.InstantPageUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0C9C5642301CFA600FAB518 /* Build configuration list for PBXProject "InstantPageUI_Xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C5702301CFA600FAB518 /* DebugAppStoreLLC */,
+				D0C9C5752301CFCB00FAB518 /* DebugHockeyapp */,
+				D0C9C5712301CFA600FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C5772301CFD600FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+		D0C9C5722301CFA600FAB518 /* Build configuration list for PBXNativeTarget "InstantPageUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C5732301CFA600FAB518 /* DebugAppStoreLLC */,
+				D0C9C5762301CFCB00FAB518 /* DebugHockeyapp */,
+				D0C9C5742301CFA600FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C5782301CFD600FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0C9C5612301CFA600FAB518 /* Project object */;
+}

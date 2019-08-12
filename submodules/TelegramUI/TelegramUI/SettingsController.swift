@@ -671,8 +671,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 if case let .instantView(webPage, _) = resolvedUrl, let customAnchor = customAnchor {
                     resolvedUrl = .instantView(webPage, customAnchor)
                 }
-                openResolvedUrl(resolvedUrl, context: context, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
-                }, present: { controller, arguments in
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
+                }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {})
             })
@@ -815,7 +815,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
                     if let peerId = peerId {
-                        pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
+                        pushControllerImpl?(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                     }
                 }))
             })]), nil)
@@ -1299,7 +1299,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
             if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-                navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId)))
             }
         })
     }

@@ -130,7 +130,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
     var pushControllerImpl: ((ViewController) -> Void)?
     
     let arguments = GroupsInCommonControllerArguments(account: context.account, openPeer: { memberId in
-        pushControllerImpl?(ChatController(context: context, chatLocation: .peer(memberId)))
+        pushControllerImpl?(ChatControllerImpl(context: context, chatLocation: .peer(memberId)))
     })
     
     let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(groupsInCommon(account: context.account, peerId: peerId) |> mapToSignal { peerIds -> Signal<[Peer], NoError> in

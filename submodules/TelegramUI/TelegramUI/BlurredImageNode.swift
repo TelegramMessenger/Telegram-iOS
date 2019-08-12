@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import AsyncDisplayKit
 import Accelerate
+import ImageBlur
 
 private class BlurLayer: CALayer {
     private static let blurRadiusKey = "blurRadius"

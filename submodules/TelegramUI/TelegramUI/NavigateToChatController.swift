@@ -5,22 +5,19 @@ import TelegramCore
 import Postbox
 import AccountContext
 import GalleryUI
+import InstantPageUI
 
-public enum NavigateToChatKeepStack {
-    case `default`
-    case always
-    case never
-}
-
-public func navigateToChatController(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
+public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
     var isFirst = true
-    for controller in navigationController.viewControllers.reversed() {
-        if let controller = controller as? ChatController, controller.chatLocation == chatLocation && controller.subject != .scheduledMessages {
-            if let updateTextInputState = updateTextInputState {
+    for controller in params.navigationController.viewControllers.reversed() {
+        if let controller = controller as? ChatControllerImpl, controller.chatLocation == params.chatLocation && controller.subject != .scheduledMessages {
+            if let updateTextInputState = params.updateTextInputState {
                 controller.updateTextInputState(updateTextInputState)
             }
-            if let messageId = messageId {
+            if let messageId = params.messageId {
+                let navigationController = params.navigationController
+                let animated = params.animated
                 controller.navigateToMessage(messageLocation: .id(messageId), animated: isFirst, completion: { [weak navigationController, weak controller] in
                     if let navigationController = navigationController, let controller = controller {
                         let _ = navigationController.popToViewController(controller, animated: animated)
@@ -28,19 +25,19 @@ public func navigateToChatController(navigationController: NavigationController,
                 }, customPresentProgress: { [weak navigationController] c, a in
                     (navigationController?.viewControllers.last as? ViewController)?.present(c, in: .window(.root), with: a)
                 })
-            } else if scrollToEndIfExists && isFirst {
+            } else if params.scrollToEndIfExists && isFirst {
                 controller.scrollToEndOfHistory()
-                let _ = navigationController.popToViewController(controller, animated: animated)
-                completion()
+                let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                params.completion()
             } else {
-                let _ = navigationController.popToViewController(controller, animated: animated)
-                completion()
+                let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                params.completion()
             }
-            controller.purposefulAction = purposefulAction
-            if activateInput {
+            controller.purposefulAction = params.purposefulAction
+            if params.activateInput {
                 controller.activateInput()
             }
-            if let botStart = botStart {
+            if let botStart = params.botStart {
                 controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
                     return state.updatedBotStartPayload(botStart.payload)
                 }
@@ -52,33 +49,33 @@ public func navigateToChatController(navigationController: NavigationController,
     }
     
     if !found {
-        let controller: ChatController
-        if let chatController = chatController {
+        let controller: ChatControllerImpl
+        if let chatController = params.chatController as? ChatControllerImpl {
             controller = chatController
-            if let botStart = botStart {
+            if let botStart = params.botStart {
                 controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
                     return state.updatedBotStartPayload(botStart.payload)
                 }
             }
         } else {
-            controller = ChatController(context: context, chatLocation: chatLocation, subject: messageId.flatMap({ .message($0) }), botStart: botStart)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.messageId.flatMap({ .message($0) }), botStart: params.botStart)
         }
-        controller.purposefulAction = purposefulAction
+        controller.purposefulAction = params.purposefulAction
         let resolvedKeepStack: Bool
-        switch keepStack {
+        switch params.keepStack {
             case .default:
-                resolvedKeepStack = context.sharedContext.immediateExperimentalUISettings.keepChatNavigationStack
+                resolvedKeepStack = params.context.sharedContext.immediateExperimentalUISettings.keepChatNavigationStack
             case .always:
                 resolvedKeepStack = true
             case .never:
                 resolvedKeepStack = false
         }
         if resolvedKeepStack {
-            navigationController.pushViewController(controller, animated: animated, completion: completion)
+            params.navigationController.pushViewController(controller, animated: params.animated, completion: params.completion)
         } else {
-            let viewControllers = navigationController.viewControllers.filter({ controller in
+            let viewControllers = params.navigationController.viewControllers.filter({ controller in
                 if controller is ChatListController {
-                    if let parentGroupId = parentGroupId {
+                    if let parentGroupId = params.parentGroupId {
                         return parentGroupId != .root
                     } else {
                         return true
@@ -90,22 +87,22 @@ public func navigateToChatController(navigationController: NavigationController,
                 }
             })
             if viewControllers.isEmpty {
-                navigationController.replaceAllButRootController(controller, animated: animated, animationOptions: options, completion: completion)
+                params.navigationController.replaceAllButRootController(controller, animated: params.animated, animationOptions: params.options, completion: params.completion)
             } else {
-                navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: animated, options: options, completion: completion)
+                params.navigationController.replaceControllersAndPush(controllers: viewControllers, controller: controller, animated: params.animated, options: params.options, completion: params.completion)
             }
         }
-        if activateInput {
+        if params.activateInput {
             controller.activateInput()
         }
     }
     
-    navigationController.currentWindow?.forEachController { controller in
+    params.navigationController.currentWindow?.forEachController { controller in
         if let controller = controller as? NotificationContainerController {
             controller.removeItems { item in
                 if let item = item as? ChatMessageNotificationItem {
                     for message in item.messages {
-                        switch chatLocation {
+                        switch params.chatLocation {
                             case let .peer(peerId):
                                 if message.id.peerId == peerId {
                                     return true
