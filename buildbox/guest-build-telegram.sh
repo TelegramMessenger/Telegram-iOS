@@ -77,7 +77,7 @@ else
 	mkdir "$SOURCE_PATH"
 
 
-	SIZE_IN_BLOCKS=$((10*1024*1024*1024/512))
+	SIZE_IN_BLOCKS=$((12*1024*1024*1024/512))
 	DEV=`hdid -nomount ram://$SIZE_IN_BLOCKS`
 
 	if [ $? -eq 0 ]; then
@@ -100,6 +100,4 @@ else
 	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR"
 
 	cd "$BASE_DIR"
-	umount -f "$SOURCE_PATH"
-	hdiutil detach "$DEV"
 fi
