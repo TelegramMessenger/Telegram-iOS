@@ -1211,7 +1211,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                                     let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let strongSelf = self {
-                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
+                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                                 strongSelf.getNavigationController()?.pushViewController(controller)
                                             }
                                         }

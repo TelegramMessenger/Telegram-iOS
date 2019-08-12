@@ -6,55 +6,11 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import ContactsPeerItem
-
-public enum ContactListActionItemInlineIconPosition {
-    case left
-    case right
-}
+import AccountContext
 
 public enum ContactListActionItemHighlight {
     case cell
     case alpha
-}
-
-public enum ContactListActionItemIcon : Equatable {
-    case none
-    case generic(UIImage)
-    case inline(UIImage, ContactListActionItemInlineIconPosition)
-    
-    var image: UIImage? {
-        switch self {
-            case .none:
-                return nil
-            case let .generic(image):
-                return image
-            case let .inline(image, _):
-                return image
-        }
-    }
-    
-    public static func ==(lhs: ContactListActionItemIcon, rhs: ContactListActionItemIcon) -> Bool {
-        switch lhs {
-            case .none:
-                if case .none = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .generic(image):
-                if case .generic(image) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .inline(image, position):
-                if case .inline(image, position) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
 class ContactListActionItem: ListViewItem, ListViewItemWithHeader {

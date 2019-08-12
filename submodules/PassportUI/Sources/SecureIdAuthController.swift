@@ -327,7 +327,7 @@ public final class SecureIdAuthController: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
+                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                 }
             })

@@ -565,7 +565,7 @@ private func stringForBlockAction(strings: PresentationStrings, action: Destruct
     }
 }
 
-private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, cachedPeerData: CachedPeerData?, deviceContacts: [(DeviceContactStableId, DeviceContactBasicData)], mode: UserInfoControllerMode, state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
+private func userInfoEntries(account: Account, presentationData: PresentationData, view: PeerView, cachedPeerData: CachedPeerData?, deviceContacts: [(DeviceContactStableId, DeviceContactBasicData)], mode: PeerInfoControllerMode, state: UserInfoState, peerChatState: PostboxCoding?, globalNotificationSettings: GlobalNotificationSettings) -> [UserInfoEntry] {
     var entries: [UserInfoEntry] = []
     
     guard let peer = view.peers[view.peerId], let user = peerViewMainPeer(view) as? TelegramUser else {
@@ -762,12 +762,7 @@ private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<(Peer?, Cac
     }
 }
 
-public enum UserInfoControllerMode {
-    case generic
-    case calls(messages: [Message])
-}
-
-public func userInfoController(context: AccountContext, peerId: PeerId, mode: UserInfoControllerMode = .generic) -> ViewController {
+public func userInfoController(context: AccountContext, peerId: PeerId, mode: PeerInfoControllerMode = .generic) -> ViewController {
     let statePromise = ValuePromise(UserInfoState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UserInfoState())
     let updateState: ((UserInfoState) -> UserInfoState) -> Void = { f in

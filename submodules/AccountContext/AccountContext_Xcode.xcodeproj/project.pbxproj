@@ -35,6 +35,7 @@
 		D0C9C12322FE414700FAB518 /* PresentationSurfaceLevels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C12222FE414700FAB518 /* PresentationSurfaceLevels.swift */; };
 		D0C9C3D72300CC2500FAB518 /* FetchMediaUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3D62300CC2400FAB518 /* FetchMediaUtils.swift */; };
 		D0C9C3D92300CC6000FAB518 /* IsMediaStreamable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3D82300CC6000FAB518 /* IsMediaStreamable.swift */; };
+		D0C9CA8A2302314400FAB518 /* ContactSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA892302314400FAB518 /* ContactSelectionController.swift */; };
 		D0D3285422F329A900D07EE2 /* AccountContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D3285222F329A900D07EE2 /* AccountContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D3285F22F335B000D07EE2 /* AccountContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3285E22F335B000D07EE2 /* AccountContext.swift */; };
 		D0D3289D22F3461700D07EE2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D3289C22F3461700D07EE2 /* Foundation.framework */; };
@@ -73,6 +74,7 @@
 		D0C9C12222FE414700FAB518 /* PresentationSurfaceLevels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationSurfaceLevels.swift; sourceTree = "<group>"; };
 		D0C9C3D62300CC2400FAB518 /* FetchMediaUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchMediaUtils.swift; sourceTree = "<group>"; };
 		D0C9C3D82300CC6000FAB518 /* IsMediaStreamable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IsMediaStreamable.swift; sourceTree = "<group>"; };
+		D0C9CA892302314400FAB518 /* ContactSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactSelectionController.swift; sourceTree = "<group>"; };
 		D0D3284F22F329A900D07EE2 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D3285222F329A900D07EE2 /* AccountContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccountContext.h; sourceTree = "<group>"; };
 		D0D3285322F329A900D07EE2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -149,6 +151,7 @@
 				D0C9C12222FE414700FAB518 /* PresentationSurfaceLevels.swift */,
 				D0C9C3D62300CC2400FAB518 /* FetchMediaUtils.swift */,
 				D0C9C3D82300CC6000FAB518 /* IsMediaStreamable.swift */,
+				D0C9CA892302314400FAB518 /* ContactSelectionController.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -258,6 +261,7 @@
 				D0879B7122F8425B00C4D6B3 /* WallpaperUploadManager.swift in Sources */,
 				D0879B6722F7AE6400C4D6B3 /* PresentationCallManager.swift in Sources */,
 				D0879B2922F77C8300C4D6B3 /* FetchManager.swift in Sources */,
+				D0C9CA8A2302314400FAB518 /* ContactSelectionController.swift in Sources */,
 				D0C9C12322FE414700FAB518 /* PresentationSurfaceLevels.swift in Sources */,
 				D0879B6522F7AC8700C4D6B3 /* OverlayMediaManager.swift in Sources */,
 				D0879B7322F842FF00C4D6B3 /* WatchManager.swift in Sources */,

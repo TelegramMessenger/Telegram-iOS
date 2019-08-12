@@ -115,51 +115,6 @@ enum ContactListAnimation {
     case insertion
 }
 
-public enum ContactListPeerId: Hashable {
-    case peer(PeerId)
-    case deviceContact(DeviceContactStableId)
-}
-
-public enum ContactListPeer: Equatable {
-    case peer(peer: Peer, isGlobal: Bool, participantCount: Int32?)
-    case deviceContact(DeviceContactStableId, DeviceContactBasicData)
-    
-    public var id: ContactListPeerId {
-        switch self {
-            case let .peer(peer, _, _):
-                return .peer(peer.id)
-            case let .deviceContact(id, _):
-                return .deviceContact(id)
-        }
-    }
-    
-    public var indexName: PeerIndexNameRepresentation {
-        switch self {
-            case let .peer(peer, _, _):
-                return peer.indexName
-            case let .deviceContact(_, contact):
-                return .personName(first: contact.firstName, last: contact.lastName, addressName: "", phoneNumber: "")
-        }
-    }
-    
-    public static func ==(lhs: ContactListPeer, rhs: ContactListPeer) -> Bool {
-        switch lhs {
-            case let .peer(lhsPeer, lhsIsGlobal, lhsParticipantCount):
-                if case let .peer(rhsPeer, rhsIsGlobal, rhsParticipantCount) = rhs, lhsPeer.isEqual(rhsPeer), lhsIsGlobal == rhsIsGlobal, lhsParticipantCount == rhsParticipantCount {
-                    return true
-                } else {
-                    return false
-                }
-            case let .deviceContact(id, contact):
-                if case .deviceContact(id, contact) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
-
 private enum ContactListNodeEntry: Comparable, Identifiable {
     case search(PresentationTheme, PresentationStrings)
     case sort(PresentationTheme, PresentationStrings, ContactsSortOrder)
@@ -686,22 +641,6 @@ private struct ContactsListNodeTransition {
     let isEmpty: Bool
     let scrollToItem: ListViewScrollToItem?
     let animation: ContactListAnimation
-}
-
-public struct ContactListAdditionalOption: Equatable {
-    public let title: String
-    public let icon: ContactListActionItemIcon
-    public let action: () -> Void
-    
-    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void) {
-        self.title = title
-        self.icon = icon
-        self.action = action
-    }
-    
-    public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
-        return lhs.title == rhs.title && lhs.icon == rhs.icon
-    }
 }
 
 public enum ContactListPresentation {

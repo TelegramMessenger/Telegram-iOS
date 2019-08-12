@@ -238,6 +238,135 @@ public enum DeviceContactInfoSubject {
     }
 }
 
+public enum PeerInfoControllerMode {
+    case generic
+    case calls(messages: [Message])
+}
+
+public enum ContactListActionItemInlineIconPosition {
+    case left
+    case right
+}
+
+public enum ContactListActionItemIcon : Equatable {
+    case none
+    case generic(UIImage)
+    case inline(UIImage, ContactListActionItemInlineIconPosition)
+    
+    public var image: UIImage? {
+        switch self {
+        case .none:
+            return nil
+        case let .generic(image):
+            return image
+        case let .inline(image, _):
+            return image
+        }
+    }
+    
+    public static func ==(lhs: ContactListActionItemIcon, rhs: ContactListActionItemIcon) -> Bool {
+        switch lhs {
+        case .none:
+            if case .none = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .generic(image):
+            if case .generic(image) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .inline(image, position):
+            if case .inline(image, position) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+}
+
+public struct ContactListAdditionalOption: Equatable {
+    public let title: String
+    public let icon: ContactListActionItemIcon
+    public let action: () -> Void
+    
+    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void) {
+        self.title = title
+        self.icon = icon
+        self.action = action
+    }
+    
+    public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
+        return lhs.title == rhs.title && lhs.icon == rhs.icon
+    }
+}
+
+public enum ContactListPeerId: Hashable {
+    case peer(PeerId)
+    case deviceContact(DeviceContactStableId)
+}
+
+public enum ContactListPeer: Equatable {
+    case peer(peer: Peer, isGlobal: Bool, participantCount: Int32?)
+    case deviceContact(DeviceContactStableId, DeviceContactBasicData)
+    
+    public var id: ContactListPeerId {
+        switch self {
+        case let .peer(peer, _, _):
+            return .peer(peer.id)
+        case let .deviceContact(id, _):
+            return .deviceContact(id)
+        }
+    }
+    
+    public var indexName: PeerIndexNameRepresentation {
+        switch self {
+        case let .peer(peer, _, _):
+            return peer.indexName
+        case let .deviceContact(_, contact):
+            return .personName(first: contact.firstName, last: contact.lastName, addressName: "", phoneNumber: "")
+        }
+    }
+    
+    public static func ==(lhs: ContactListPeer, rhs: ContactListPeer) -> Bool {
+        switch lhs {
+        case let .peer(lhsPeer, lhsIsGlobal, lhsParticipantCount):
+            if case let .peer(rhsPeer, rhsIsGlobal, rhsParticipantCount) = rhs, lhsPeer.isEqual(rhsPeer), lhsIsGlobal == rhsIsGlobal, lhsParticipantCount == rhsParticipantCount {
+                return true
+            } else {
+                return false
+            }
+        case let .deviceContact(id, contact):
+            if case .deviceContact(id, contact) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+}
+
+public final class ContactSelectionControllerParams {
+    public let context: AccountContext
+    public let autoDismiss: Bool
+    public let title: (PresentationStrings) -> String
+    public let options: [ContactListAdditionalOption]
+    public let displayDeviceContacts: Bool
+    public let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
+    
+    public init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+        self.context = context
+        self.autoDismiss = autoDismiss
+        self.title = title
+        self.options = options
+        self.displayDeviceContacts = displayDeviceContacts
+        self.confirmation = confirmation
+    }
+}
+
 public protocol SharedAccountContext: class {
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -273,10 +402,11 @@ public protocol SharedAccountContext: class {
     func openChatMessage(_ params: OpenChatMessageParams) -> Bool
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
     func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
-    func makePeerInfoController(context: AccountContext, peer: Peer) -> ViewController?
+    func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController?
     func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController
     func makePeersNearbyController(context: AccountContext) -> ViewController
     func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController
+    func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController
     func navigateToChatController(_ params: NavigateToChatControllerParams)
     func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
     func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>

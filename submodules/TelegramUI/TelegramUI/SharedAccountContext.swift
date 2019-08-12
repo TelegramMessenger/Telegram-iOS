@@ -936,8 +936,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         handleTextLinkActionImpl(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
     }
     
-    public func makePeerInfoController(context: AccountContext, peer: Peer) -> ViewController? {
-        return peerInfoControllerImpl(context: context, peer: peer)
+    public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {
+        return peerInfoControllerImpl(context: context, peer: peer, mode: mode)
     }
     
     public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
@@ -974,5 +974,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
         presentContactsWarningSuppressionImpl(context: context, present: present)
+    }
+    
+    public func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController {
+        return ContactSelectionControllerImpl(params)
     }
 }

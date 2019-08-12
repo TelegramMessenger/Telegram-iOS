@@ -608,7 +608,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                 |> take(1)
                                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, peer.restrictionText == nil {
-                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
+                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                             (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                         }
                                     }

@@ -214,12 +214,6 @@
 		D0185E8C208A025A005E1A6C /* ProxySettingsServerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0185E8B208A025A005E1A6C /* ProxySettingsServerItem.swift */; };
 		D018BE58218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D018BE57218C7BD800C02DDC /* ChatMessageDeliveryFailedNode.swift */; };
 		D0192D44210A5AA50005FA10 /* DeviceContactDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0192D43210A5AA50005FA10 /* DeviceContactDataManager.swift */; };
-		D01BAA181ECC8E0000295217 /* CallListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA171ECC8E0000295217 /* CallListController.swift */; };
-		D01BAA1A1ECC8E0D00295217 /* CallListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA191ECC8E0D00295217 /* CallListControllerNode.swift */; };
-		D01BAA1C1ECC92F700295217 /* CallListViewTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA1B1ECC92F700295217 /* CallListViewTransition.swift */; };
-		D01BAA1E1ECC931D00295217 /* CallListNodeEntries.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA1D1ECC931D00295217 /* CallListNodeEntries.swift */; };
-		D01BAA201ECC9A2500295217 /* CallListNodeLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA1F1ECC9A2500295217 /* CallListNodeLocation.swift */; };
-		D01BAA221ECE076100295217 /* CallListCallItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01BAA211ECE076100295217 /* CallListCallItem.swift */; };
 		D01C06AF1FBB461E001561AB /* JoinLinkPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06AE1FBB461E001561AB /* JoinLinkPreviewController.swift */; };
 		D01C06B11FBB4643001561AB /* JoinLinkPreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06B01FBB4643001561AB /* JoinLinkPreviewControllerNode.swift */; };
 		D01C06B31FBB49A5001561AB /* JoinLinkPreviewPeerContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06B21FBB49A5001561AB /* JoinLinkPreviewPeerContentNode.swift */; };
@@ -510,6 +504,7 @@
 		D0C9C9BB2302168100FAB518 /* PeersNearbyIconNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C9BA2302168100FAB518 /* PeersNearbyIconNode.framework */; };
 		D0C9C9DE2302267200FAB518 /* SolidRoundedButtonNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C9DD2302267200FAB518 /* SolidRoundedButtonNode.framework */; };
 		D0C9CA192302297C00FAB518 /* PasscodeUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA182302297C00FAB518 /* PasscodeUI.framework */; };
+		D0C9CA8223022E3900FAB518 /* CallListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA8123022E3900FAB518 /* CallListUI.framework */; };
 		D0CAD90120AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */; };
 		D0CB27CF20C17A4A001ACF93 /* TermsOfServiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */; };
 		D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */; };
@@ -1112,12 +1107,6 @@
 		D01AC91E1DD5E09000E8160F /* EditAccessoryPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditAccessoryPanelNode.swift; sourceTree = "<group>"; };
 		D01B279A1E39386C0022A4C0 /* SettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsController.swift; sourceTree = "<group>"; };
 		D01B279C1E394A500022A4C0 /* NotificationsAndSounds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationsAndSounds.swift; sourceTree = "<group>"; };
-		D01BAA171ECC8E0000295217 /* CallListController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallListController.swift; sourceTree = "<group>"; };
-		D01BAA191ECC8E0D00295217 /* CallListControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallListControllerNode.swift; sourceTree = "<group>"; };
-		D01BAA1B1ECC92F700295217 /* CallListViewTransition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallListViewTransition.swift; sourceTree = "<group>"; };
-		D01BAA1D1ECC931D00295217 /* CallListNodeEntries.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallListNodeEntries.swift; sourceTree = "<group>"; };
-		D01BAA1F1ECC9A2500295217 /* CallListNodeLocation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallListNodeLocation.swift; sourceTree = "<group>"; };
-		D01BAA211ECE076100295217 /* CallListCallItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallListCallItem.swift; sourceTree = "<group>"; };
 		D01C06AE1FBB461E001561AB /* JoinLinkPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinLinkPreviewController.swift; sourceTree = "<group>"; };
 		D01C06B01FBB4643001561AB /* JoinLinkPreviewControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinLinkPreviewControllerNode.swift; sourceTree = "<group>"; };
 		D01C06B21FBB49A5001561AB /* JoinLinkPreviewPeerContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinLinkPreviewPeerContentNode.swift; sourceTree = "<group>"; };
@@ -1553,6 +1542,7 @@
 		D0C9C9BA2302168100FAB518 /* PeersNearbyIconNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeersNearbyIconNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C9DD2302267200FAB518 /* SolidRoundedButtonNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SolidRoundedButtonNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CA182302297C00FAB518 /* PasscodeUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PasscodeUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CA8123022E3900FAB518 /* CallListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CallListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CAD90020AEECAC00ACD96E /* ChatEditInterfaceMessageState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatEditInterfaceMessageState.swift; sourceTree = "<group>"; };
 		D0CB27CE20C17A4A001ACF93 /* TermsOfServiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceController.swift; sourceTree = "<group>"; };
 		D0CB27D120C17A7F001ACF93 /* TermsOfServiceControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceControllerNode.swift; sourceTree = "<group>"; };
@@ -1790,6 +1780,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9CA8223022E3900FAB518 /* CallListUI.framework in Frameworks */,
 				D0C9CA192302297C00FAB518 /* PasscodeUI.framework in Frameworks */,
 				D0C9C9DE2302267200FAB518 /* SolidRoundedButtonNode.framework in Frameworks */,
 				D0C9C9BB2302168100FAB518 /* PeersNearbyIconNode.framework in Frameworks */,
@@ -2243,19 +2234,6 @@
 			name = "Item List";
 			sourceTree = "<group>";
 		};
-		D01BAA161ECC8DED00295217 /* Call List */ = {
-			isa = PBXGroup;
-			children = (
-				D01BAA171ECC8E0000295217 /* CallListController.swift */,
-				D01BAA191ECC8E0D00295217 /* CallListControllerNode.swift */,
-				D01BAA1B1ECC92F700295217 /* CallListViewTransition.swift */,
-				D01BAA1D1ECC931D00295217 /* CallListNodeEntries.swift */,
-				D01BAA1F1ECC9A2500295217 /* CallListNodeLocation.swift */,
-				D01BAA211ECE076100295217 /* CallListCallItem.swift */,
-			);
-			name = "Call List";
-			sourceTree = "<group>";
-		};
 		D01C06AD1FBB45ED001561AB /* Join Link Preview */ = {
 			isa = PBXGroup;
 			children = (
@@ -2681,6 +2659,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9CA8123022E3900FAB518 /* CallListUI.framework */,
 				D0C9CA182302297C00FAB518 /* PasscodeUI.framework */,
 				D0C9C9DD2302267200FAB518 /* SolidRoundedButtonNode.framework */,
 				D0C9C9BA2302168100FAB518 /* PeersNearbyIconNode.framework */,
@@ -3493,7 +3472,6 @@
 				D0BC38681E3FB92B0044D6FE /* Compose */,
 				D0EE97131D88BB1A006C18E1 /* Peer Info */,
 				D0D2689B1D79D31500C422DA /* Peer Selection */,
-				D01BAA161ECC8DED00295217 /* Call List */,
 				D0F69E791D6B8C3B0046BCD6 /* Settings */,
 				D0C50E361E93CAF200F62E39 /* Notifications */,
 				090E778422A9B94700CD99F5 /* Peers Nearby */,
@@ -4189,7 +4167,6 @@
 				D025402922E1F7F500AC0195 /* ChatTextInputSlowmodePlaceholderNode.swift in Sources */,
 				D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */,
 				D0EC6CDC1EB9F58800EBF1C3 /* TelegramAccountAuxiliaryMethods.swift in Sources */,
-				D01BAA1A1ECC8E0D00295217 /* CallListControllerNode.swift in Sources */,
 				D0642EFC1F3E1E7B00792790 /* ChatHistoryNavigationButtons.swift in Sources */,
 				D03AA4E5202DF8840056C405 /* StickerPreviewPeekContent.swift in Sources */,
 				D025402322E1C92D00AC0195 /* ChatSlowmodeItem.swift in Sources */,
@@ -4199,7 +4176,6 @@
 				D02B198A21F1DA9E0094A764 /* SharedAccountContext.swift in Sources */,
 				D0F67FF21EE6B915000E5906 /* ChannelMembersSearchControllerNode.swift in Sources */,
 				D0E8B8BF20447A4600605593 /* SecretChatKeyControllerNode.swift in Sources */,
-				D01BAA1E1ECC931D00295217 /* CallListNodeEntries.swift in Sources */,
 				D02B2B9820810DA00062476B /* StickerPaneSearchStickerItem.swift in Sources */,
 				D020A9DC1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift in Sources */,
 				09D968A1221F7FF100B1458A /* ChatTypingActivityContentNode.swift in Sources */,
@@ -4271,7 +4247,6 @@
 				D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */,
 				D0F760DD222034980074F7E5 /* ChannelStatsControllerNode.swift in Sources */,
 				D01590A622BD460C0017C33E /* MetalAnimationRenderer.swift in Sources */,
-				D01BAA201ECC9A2500295217 /* CallListNodeLocation.swift in Sources */,
 				D0EC6D251EB9F58800EBF1C3 /* FetchCachedRepresentations.swift in Sources */,
 				D0EC6D261EB9F58800EBF1C3 /* TransformOutgoingMessageMedia.swift in Sources */,
 				D0EC6D271EB9F58800EBF1C3 /* FetchResource.swift in Sources */,
@@ -4308,7 +4283,6 @@
 				D0CE8CE51F6F354400AA2DB0 /* ChatTextInputAccessoryItem.swift in Sources */,
 				D097C26820DD0A1D007BB4B8 /* PeerReportController.swift in Sources */,
 				09F664C621EB400A00AB7E26 /* ThemeGridSearchContentNode.swift in Sources */,
-				D01BAA181ECC8E0000295217 /* CallListController.swift in Sources */,
 				D0EC6D4B1EB9F58800EBF1C3 /* ChatListNode.swift in Sources */,
 				D0EC6D4D1EB9F58800EBF1C3 /* ChatListHoleItem.swift in Sources */,
 				0962E67921B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift in Sources */,
@@ -4445,7 +4419,6 @@
 				D0EC6D9C1EB9F58900EBF1C3 /* ChatMessageInstantVideoItemNode.swift in Sources */,
 				D0750C8222B2E4EE00BE5F6E /* SharedWakeupManager.swift in Sources */,
 				D0EC6D9D1EB9F58900EBF1C3 /* ChatMessageTextBubbleContentNode.swift in Sources */,
-				D01BAA1C1ECC92F700295217 /* CallListViewTransition.swift in Sources */,
 				D00817DE22B47A14008A895F /* TGBridgeServer.m in Sources */,
 				D0FBE84F2273395C00B33B52 /* ChatListArchiveInfoItem.swift in Sources */,
 				09F664D021EBCFB900AB7E26 /* WallpaperCropNode.swift in Sources */,
@@ -4541,7 +4514,6 @@
 				D0EC6DD91EB9F58900EBF1C3 /* HorizontalListContextResultsChatInputContextPanelNode.swift in Sources */,
 				D0EC6DDA1EB9F58900EBF1C3 /* HorizontalListContextResultsChatInputPanelItem.swift in Sources */,
 				D0EC6DDB1EB9F58900EBF1C3 /* ChatInputPanelNode.swift in Sources */,
-				D01BAA221ECE076100295217 /* CallListCallItem.swift in Sources */,
 				D0EC6DDC1EB9F58900EBF1C3 /* ChatTextInputPanelNode.swift in Sources */,
 				D06350AE2229A7F800FA2B32 /* InChatPrefetchManager.swift in Sources */,
 				D0EB41F51F30D26A00838FE6 /* LegacySuggestionContext.swift in Sources */,

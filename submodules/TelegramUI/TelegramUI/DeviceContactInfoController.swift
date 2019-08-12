@@ -1289,7 +1289,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
 }
 
 private func addContactToExisting(context: AccountContext, parentController: ViewController, contactData: DeviceContactExtendedData, completion: @escaping (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void) {
-    let contactsController = ContactSelectionController(context: context, title: { $0.Contacts_Title }, displayDeviceContacts: true)
+    let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: context, title: { $0.Contacts_Title }, displayDeviceContacts: true))
     parentController.present(contactsController, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     let _ = (contactsController.result
     |> deliverOnMainQueue).start(next: { peer in

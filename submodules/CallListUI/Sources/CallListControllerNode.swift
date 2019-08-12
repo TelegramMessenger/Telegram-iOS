@@ -123,7 +123,7 @@ private func mappedInsertEntries(account: Account, showSettings: Bool, nodeInter
         case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
-                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
+                return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
     }
 }
@@ -140,7 +140,7 @@ private func mappedUpdateEntries(account: Account, showSettings: Bool, nodeInter
             case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
                 return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListCallItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
-                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListHoleItem(theme: theme), directionHint: entry.directionHint)
+                return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListHoleItem(theme: theme), directionHint: entry.directionHint)
         }
     }
 }

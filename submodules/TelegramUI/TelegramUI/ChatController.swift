@@ -4650,7 +4650,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { [weak self] peerView in
                                 if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
-                                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
+                                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                         (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                     }
                                 }
@@ -5101,7 +5101,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentContactPicker() {
-        let contactsController = ContactSelectionController(context: self.context, title: { $0.Contacts_Title }, displayDeviceContacts: true)
+        let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: self.context, title: { $0.Contacts_Title }, displayDeviceContacts: true))
         self.chatDisplayNode.dismissInput()
         self.present(contactsController, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         self.controllerNavigationDisposable.set((contactsController.result |> deliverOnMainQueue).start(next: { [weak self] peer in
@@ -6059,7 +6059,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, let peer = peer {
-                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
+                                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                             (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                         }
                                     }
@@ -6464,7 +6464,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> take(1)
                         |> deliverOnMainQueue).start(next: { [weak self] peer in
                             if let strongSelf = self, peer.restrictionText == nil {
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer) {
+                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                                     (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
                                 }
                             }

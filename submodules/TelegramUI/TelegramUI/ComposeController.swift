@@ -141,7 +141,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.openCreateNewSecretChat = { [weak self] in
             if let strongSelf = self {
-                let controller = ContactSelectionController(context: strongSelf.context, title: { $0.Compose_NewEncryptedChatTitle })
+                let controller = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, title: { $0.Compose_NewEncryptedChatTitle }))
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak controller] peer in

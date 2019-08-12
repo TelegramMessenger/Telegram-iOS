@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramUIPrivateModule
 import AccountContext
 import ContactListUI
+import CallListUI
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext

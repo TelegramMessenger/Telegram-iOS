@@ -569,7 +569,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                     }))
                 }
                 return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
-                    if let infoController = arguments.context.sharedContext.makePeerInfoController(context: arguments.context, peer: peer), selectable {
+                    if let infoController = arguments.context.sharedContext.makePeerInfoController(context: arguments.context, peer: peer, mode: .generic), selectable {
                         arguments.pushController(infoController)
                     }
                 }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
@@ -1596,13 +1596,13 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 
                 let contactsController: ViewController
                 if peerView.peerId.namespace == Namespaces.Peer.CloudGroup {
-                    contactsController = ContactSelectionController(context: context, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
+                    contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: context, autoDismiss: false, title: { $0.GroupInfo_AddParticipantTitle }, options: options, confirmation: { peer in
                         if let confirmationImpl = confirmationImpl, case let .peer(peer, _, _) = peer {
                             return confirmationImpl(peer.id)
                         } else {
                             return .single(false)
                         }
-                    })
+                    }))
                 } else {
                     contactsController = ContactMultiselectionController(context: context, mode: .peerSelection(searchChatList: false, searchGroups: false), options: options, filters: [.excludeSelf, .disable(recentIds)])
                 }
@@ -1803,7 +1803,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 }
 
                 presentControllerImpl?(contactsController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                if let contactsController = contactsController as? ContactSelectionController {
+                if let contactsController = contactsController as? ContactSelectionControllerImpl {
                     selectAddMemberDisposable.set((contactsController.result
                     |> deliverOnMainQueue).start(next: { [weak contactsController] memberPeer in
                         guard let memberPeer = memberPeer else {
@@ -2243,7 +2243,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     return state.withUpdatedSearchingMembers(false)
                 }
             }, openPeer: { peer, _ in
-                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer) {
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
                     arguments.pushController(infoController)
                 }
             }, present: { c, a in
