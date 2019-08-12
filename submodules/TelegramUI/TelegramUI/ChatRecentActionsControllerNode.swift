@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import SafariServices
 import AccountContext
 import TemporaryCachedPeerDataManager
+import AlertUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]

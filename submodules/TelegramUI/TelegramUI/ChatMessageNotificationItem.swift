@@ -11,6 +11,7 @@ import AvatarNode
 import AccountContext
 import LocalizedPeerData
 import StickerResources
+import PhotoResources
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext

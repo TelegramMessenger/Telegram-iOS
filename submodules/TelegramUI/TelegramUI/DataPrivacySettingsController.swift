@@ -9,6 +9,8 @@ import TelegramUIPreferences
 import ItemListUI
 import OverlayStatusController
 import AccountContext
+import AlertUI
+import TelegramNotices
 
 private final class DataPrivacyControllerArguments {
     let account: Account

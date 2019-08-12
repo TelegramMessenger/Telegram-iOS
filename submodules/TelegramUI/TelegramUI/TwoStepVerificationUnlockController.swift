@@ -9,6 +9,7 @@ import ItemListUI
 import TextFormat
 import OverlayStatusController
 import AccountContext
+import AlertUI
 
 private final class TwoStepVerificationUnlockSettingsControllerArguments {
     let updatePasswordText: (String) -> Void

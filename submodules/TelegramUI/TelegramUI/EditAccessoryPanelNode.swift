@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import ActivityIndicator
 import AccountContext
 import RadialStatusNode
+import PhotoResources
 
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let messageId: MessageId

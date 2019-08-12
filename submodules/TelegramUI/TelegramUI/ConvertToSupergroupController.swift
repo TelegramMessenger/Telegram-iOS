@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import ItemListUI
 import AccountContext
+import AlertUI
 
 private final class ConvertToSupergroupArguments {
     let convert: () -> Void

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import TextFormat
 import AccountContext
+import TelegramNotices
 
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?

@@ -12,6 +12,7 @@ import TextFormat
 import AccountContext
 import RadialStatusNode
 import StickerResources
+import PhotoResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

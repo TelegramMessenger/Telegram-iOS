@@ -7,6 +7,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import AlertUI
 
 private final class BotCheckoutInfoAddressItems {
     let address1: BotPaymentFieldItemNode

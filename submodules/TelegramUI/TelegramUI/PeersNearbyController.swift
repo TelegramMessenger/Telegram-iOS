@@ -11,6 +11,7 @@ import ItemListUI
 import OverlayStatusController
 import DeviceLocationManager
 import AccountContext
+import AlertUI
 
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)

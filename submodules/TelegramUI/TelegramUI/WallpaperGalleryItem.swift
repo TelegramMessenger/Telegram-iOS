@@ -12,6 +12,7 @@ import ProgressNavigationButtonNode
 import MediaResources
 import AccountContext
 import RadialStatusNode
+import PhotoResources
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool

@@ -10,6 +10,9 @@ import LegacyComponents
 import DeviceAccess
 import TelegramUpdateUI
 import AccountContext
+import AlertUI
+import TelegramPermissions
+import TelegramNotices
 
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {

@@ -15,6 +15,7 @@ import WebP
 import Lottie
 import TelegramUIPrivateModule
 import MediaResources
+import PhotoResources
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {

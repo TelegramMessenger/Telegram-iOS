@@ -8,6 +8,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
+import PhotoResources
+import MediaResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

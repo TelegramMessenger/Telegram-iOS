@@ -9,6 +9,7 @@ import UniversalMediaPlayer
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
+import PhotoResources
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize

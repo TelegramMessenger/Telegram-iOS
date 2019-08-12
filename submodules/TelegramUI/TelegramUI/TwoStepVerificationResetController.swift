@@ -8,6 +8,7 @@ import TelegramPresentationData
 import ItemListUI
 import TextFormat
 import AccountContext
+import AlertUI
 
 private final class TwoStepVerificationResetControllerArguments {
     let updateEntryText: (String) -> Void

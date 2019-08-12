@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
+import PhotoResources
 
 enum ChatMediaGalleryThumbnail: Equatable {
     case image(ImageMediaReference)

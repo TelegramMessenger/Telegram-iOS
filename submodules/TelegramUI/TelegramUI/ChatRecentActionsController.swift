@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramBaseController
 import AccountContext
+import AlertUI
 
 final class ChatRecentActionsController: TelegramBaseController {
     private var controllerNode: ChatRecentActionsControllerNode {

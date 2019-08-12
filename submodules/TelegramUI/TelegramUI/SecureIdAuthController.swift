@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TextFormat
 import ProgressNavigationButtonNode
 import AccountContext
+import AlertUI
 
 public enum SecureIdRequestResult: String {
     case success = "success"

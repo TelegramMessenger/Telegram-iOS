@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import Postbox
+import SwipeToDismissGesture
 
 class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     var statusBar: StatusBar?

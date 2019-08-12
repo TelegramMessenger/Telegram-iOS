@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import PhotoResources
 
 final class InstantPageArticleNode: ASDisplayNode, InstantPageNode {
     let item: InstantPageArticleItem

@@ -7,6 +7,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import CheckNode
+import PhotoResources
 
 final class WebSearchItem: GridItem {
     var section: GridSection?

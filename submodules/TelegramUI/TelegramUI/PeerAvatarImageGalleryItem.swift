@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
 import ShareController
+import PhotoResources
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account
