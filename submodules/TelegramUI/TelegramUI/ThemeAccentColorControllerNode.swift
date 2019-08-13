@@ -11,6 +11,7 @@ import AccountContext
 
 final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
+    private var theme: PresentationTheme
     private let currentTheme: PresentationThemeReference
     private var presentationData: PresentationData
     
@@ -27,27 +28,37 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private var colorPanelNode: WallpaperColorPanelNode
     private let toolbarNode: WallpaperGalleryToolbarNode
     
-    private var validLayout: (ContainerViewLayout, CGFloat)?
+    private var validLayout: (ContainerViewLayout, CGFloat, CGFloat)?
     
+    private var serviceColorDisposable: Disposable?
     private var colorDisposable: Disposable?
+    private let colorValue = ValuePromise<UIColor>(ignoreRepeated: true)
     
-    init(context: AccountContext, currentTheme: PresentationThemeReference, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
+    var themeUpdated: ((PresentationTheme) -> Void)?
+    var color: UInt32 {
+        return self.colorPanelNode.color.rgb
+    }
+    
+    init(context: AccountContext, currentTheme: PresentationThemeReference, color: UIColor, theme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
         self.context = context
         self.currentTheme = currentTheme
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.theme = theme
+        self.colorValue.set(color)
         
         self.scrollNode = ASScrollNode()
         self.pageControlBackgroundNode = ASDisplayNode()
         self.pageControlBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
         self.pageControlBackgroundNode.cornerRadius = 6.0
         
-        self.pageControlNode = PageControlNode(dotColor: self.presentationData.theme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: self.presentationData.theme.list.pageIndicatorInactiveColor)
+        self.pageControlNode = PageControlNode(dotColor: self.theme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: self.presentationData.theme.list.pageIndicatorInactiveColor)
         
         self.chatListBackgroundNode = ASDisplayNode()
         self.chatBackgroundNode = ASDisplayNode()
         
-        self.colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme, strings: presentationData.strings)
-        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
+        self.colorPanelNode = WallpaperColorPanelNode(theme: self.theme, strings: self.presentationData.strings)
+        self.colorPanelNode.color = color
+        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.theme, strings: self.presentationData.strings)
         
         super.init()
         
@@ -77,12 +88,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         
         self.colorPanelNode.colorChanged = { [weak self] color, ended in
             if let strongSelf = self {
-                //strongSelf.updateEntries(color: color, preview: !ended)
+                strongSelf.colorValue.set(color)
             }
         }
-        //if case let .customColor(colorValue) = self.source, let color = colorValue {
-        //    colorPanelNode.color = UIColor(rgb: UInt32(bitPattern: color))
-        //}
         
         self.toolbarNode.cancel = {
             dismiss()
@@ -91,7 +99,34 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             apply()
         }
         
-        self.colorDisposable = (chatServiceBackgroundColor(wallpaper: self.presentationData.theme.chat.defaultWallpaper, mediaBox: context.account.postbox.mediaBox)
+        self.colorDisposable = (self.colorValue.get()
+        |> map { color -> PresentationTheme in
+            return makePresentationTheme(themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true)
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] theme in
+            if let strongSelf = self {
+                strongSelf.theme = theme
+                strongSelf.themeUpdated?(theme)
+                
+                strongSelf.colorPanelNode.updateTheme(theme)
+                strongSelf.toolbarNode.updateThemeAndStrings(theme: theme, strings: strongSelf.presentationData.strings)
+                
+                if case let .color(value) = theme.chat.defaultWallpaper {
+                    strongSelf.backgroundColor  = UIColor(rgb: UInt32(bitPattern: value))
+                    strongSelf.chatListBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+                    strongSelf.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+                }
+        
+                if let (layout, navigationBarHeight, messagesBottomInset) = strongSelf.validLayout {
+                    strongSelf.pageControlNode.dotColor = theme.chatList.unreadBadgeActiveBackgroundColor
+                    strongSelf.pageControlNode.inactiveDotColor = theme.list.pageIndicatorInactiveColor
+                    strongSelf.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: .immediate)
+                    strongSelf.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: .immediate)
+                }
+            }
+        })
+        
+        self.serviceColorDisposable = (chatServiceBackgroundColor(wallpaper: self.presentationData.theme.chat.defaultWallpaper, mediaBox: context.account.postbox.mediaBox)
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
                 if strongSelf.presentationData.theme.chat.defaultWallpaper.hasWallpaper {
@@ -105,6 +140,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     
     deinit {
         self.colorDisposable?.dispose()
+        self.serviceColorDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -137,18 +173,21 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         var items: [ChatListItem] = []
         
         let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, togglePeerSelected: { _ in }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {})
-        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+        let chatListPresentationData = ChatListPresentationData(theme: self.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
         
         let peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
-        let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: 1)
-        let peer1 = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let peer1 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 1), accessHash: nil, firstName: "Alicia", lastName: "Torreaux", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let peer2 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 2), accessHash: nil, firstName: "Roberto", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let peer3 = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: 3), accessHash: nil, firstName: "Veronica", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         
-        let peer2 = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        let timestamp = Int32(Date(timeInterval: -600, since: Date()).timeIntervalSince1970)
         
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 1), namespace: 0, id: 0), timestamp: 66003)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer1), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
+        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 1), namespace: 0, id: 0), timestamp: timestamp)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer1.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Bob says hi.", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer1), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
         
-        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 2), namespace: 0, id: 0), timestamp: 66000)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer2), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
+        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 2), namespace: 0, id: 0), timestamp: timestamp - 60)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer2.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp - 60, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Say hello to Alice 👋", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer2), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
+        
+        items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: PeerId(namespace: 0, id: 2), namespace: 0, id: 0), timestamp: timestamp - 180)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer3.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp - 180, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer1, text: "Table for four, 2 PM. Be there.", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer3), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let chatNodes = self.chatNodes {
@@ -198,27 +237,27 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         var messages = SimpleDictionary<MessageId, Message>()
-        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
-        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_1_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_1_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
         
         let replyMessageId = MessageId(peerId: peerId, namespace: 0, id: 3)
-        messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+        messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_ReplyText, attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
         
         let controllerInteraction = ChatControllerInteraction.default
-        let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.theme.chat.defaultWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false)
+        let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.theme, wallpaper: self.theme.chat.defaultWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false)
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: "", attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66002, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66002, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_2_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
         let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 14, title: nil, performer: nil, waveform: MemoryBuffer())]
         let voiceMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: nil, attributes: voiceAttributes)
         
         items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, forcedResourceStatus: FileMediaResourceStatus(mediaStatus: .playbackStatus(.playing), fetchStatus: .Local)), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [voiceMedia], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
-        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: "", attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
+        items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_4_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
         let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
@@ -268,19 +307,32 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.scrollNode.frame = bounds
         
         let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
-        self.chatListBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
-        self.chatBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
+        self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
+        self.chatBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
         
         self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
+        var bottomInset = toolbarHeight
+        let metrics = DeviceMetrics.forScreenSize(layout.size)
+        let standardInputHeight = metrics?.standardInputHeight(inLandscape: false) ?? 216.0
+        let height = standardInputHeight - bottomInset + 47.0
+        let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset - height), size: CGSize(width: layout.size.width, height: height))
+        bottomInset += height
+        
+        transition.updateFrame(node: self.colorPanelNode, frame: colorPanelFrame)
+        self.colorPanelNode.updateLayout(size: colorPanelFrame.size, keyboardHeight: layout.inputHeight ?? 0.0, transition: transition)
+        
+        let messagesBottomInset = bottomInset + 36.0
         self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
-        self.updateMessagesLayout(layout: layout, bottomInset: toolbarHeight + 66.0, transition: transition)
+        self.updateMessagesLayout(layout: layout, bottomInset: messagesBottomInset, transition: transition)
+        
+        self.validLayout = (layout, navigationBarHeight, messagesBottomInset)
         
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
-        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 42.0), size: pageControlSize)
+        let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - bottomInset - 24.0), size: pageControlSize)
         self.pageControlNode.frame = pageControlFrame
         self.pageControlBackgroundNode.frame = CGRect(x: pageControlFrame.minX - 11.0, y: pageControlFrame.minY - 12.0, width: pageControlFrame.width + 22.0, height: 30.0)
     }

@@ -212,7 +212,7 @@ public final class PrincipalThemeEssentialGraphics {
         let outgoingKnockout = self.outgoingBubbleGradientImage != nil
         
         let emptyImage = UIImage()
-        if preview {
+        if false && preview {
             self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(incoming: true, fillColor: UIColor.black, strokeColor: UIColor.clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)

@@ -32,7 +32,7 @@ private func textInputBackgroundImage(backgroundColor: UIColor, fieldColor: UICo
 }
 
 final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
-    private let theme: PresentationTheme
+    private var theme: PresentationTheme
     
     private let backgroundNode: ASDisplayNode
     private let topSeparatorNode: ASDisplayNode
@@ -68,7 +68,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.bottomSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         
         self.textBackgroundNode = ASImageNode()
-        self.textBackgroundNode.image = textInputBackgroundImage(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, fieldColor: theme.chat.inputPanel.inputBackgroundColor,  strokeColor: theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
+        self.textBackgroundNode.image = textInputBackgroundImage(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, fieldColor: theme.chat.inputPanel.inputBackgroundColor, strokeColor: theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
         
         self.textFieldNode = TextFieldNode()
         self.prefixNode = ASTextNode()
@@ -114,6 +114,17 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.delegate = self
         self.textFieldNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
         self.textFieldNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.theme = theme
+        self.backgroundNode.backgroundColor = self.theme.chat.inputPanel.panelBackgroundColor
+        self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
+        self.bottomSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
+        self.textBackgroundNode.image = textInputBackgroundImage(backgroundColor: self.theme.chat.inputPanel.panelBackgroundColor, fieldColor: self.theme.chat.inputPanel.inputBackgroundColor, strokeColor: self.theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
+        
+        self.textFieldNode.textField.textColor = self.theme.chat.inputPanel.inputTextColor
+        self.textFieldNode.textField.keyboardAppearance = self.theme.chat.inputPanel.keyboardColor.keyboardAppearance
     }
     
     private func setColor(_ color: UIColor, updatePicker: Bool = true, ended: Bool = true) {

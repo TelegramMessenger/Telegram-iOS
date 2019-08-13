@@ -11,11 +11,13 @@ import ItemListUI
 private func generateSwatchImage(color: PresentationThemeAccentColor, selected: Bool) -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
-        
         context.clear(bounds)
         
         let fillColor = color.color
-        let strokeColor = color.baseColor.color
+        var strokeColor = color.baseColor.color
+        if strokeColor == .clear {
+            strokeColor = fillColor
+        }
         
         context.setFillColor(fillColor.cgColor)
         context.setStrokeColor(strokeColor.cgColor)
@@ -30,6 +32,36 @@ private func generateSwatchImage(color: PresentationThemeAccentColor, selected: 
     })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
 }
 
+private func generateCustomSwatchImage() -> UIImage? {
+    return generateImage(CGSize(width: 42.0, height: 42.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let dotSize = CGSize(width: 10.0, height: 10.0)
+        
+        context.setFillColor(UIColor(rgb: 0xd33213).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 14.0, y: 16.0), size: dotSize))
+        
+        context.setFillColor(UIColor(rgb: 0xf08200).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 14.0, y: 0.0), size: dotSize))
+        
+        context.setFillColor(UIColor(rgb: 0xedb400).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 28.0, y: 8.0), size: dotSize))
+        
+        context.setFillColor(UIColor(rgb: 0x70bb23).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 28.0, y: 24.0), size: dotSize))
+        
+        context.setFillColor(UIColor(rgb: 0x5396fa).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 14.0, y: 32.0), size: dotSize))
+        
+        context.setFillColor(UIColor(rgb: 0x9472ee).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 24.0), size: dotSize))
+        
+        context.setFillColor(UIColor(rgb: 0xeb6ca4).cgColor)
+        context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 8.0), size: dotSize))
+    })
+}
+
 class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
     
@@ -37,13 +69,15 @@ class ThemeSettingsAccentColorItem: ListViewItem, ItemListItem {
     let colors: [PresentationThemeBaseColor]
     let currentColor: PresentationThemeAccentColor
     let updated: (PresentationThemeAccentColor) -> Void
+    let openColorPicker: () -> Void
     let tag: ItemListItemTag?
     
-    init(theme: PresentationTheme, sectionId: ItemListSectionId, colors: [PresentationThemeBaseColor], currentColor: PresentationThemeAccentColor, updated: @escaping (PresentationThemeAccentColor) -> Void, tag: ItemListItemTag? = nil) {
+    init(theme: PresentationTheme, sectionId: ItemListSectionId, colors: [PresentationThemeBaseColor], currentColor: PresentationThemeAccentColor, updated: @escaping (PresentationThemeAccentColor) -> Void, openColorPicker: @escaping () -> Void, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.colors = colors
         self.currentColor = currentColor
         self.updated = updated
+        self.openColorPicker = openColorPicker
         self.tag = tag
         self.sectionId = sectionId
     }
@@ -118,7 +152,7 @@ private final class ThemeSettingsAccentColorNode : ASDisplayNode {
     override func layout() {
         super.layout()
 
-        self.iconNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 40.0, height: 40.0))
+        self.iconNode.frame = self.bounds
     }
 }
 
@@ -132,7 +166,8 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
     private let bottomStripeNode: ASDisplayNode
     
     private let scrollNode: ASScrollNode
-    private var nodes: [ThemeSettingsAccentColorNode] = []
+    private var colorNodes: [ThemeSettingsAccentColorNode] = []
+    private let customNode: HighlightableButtonNode
     
     private var item: ThemeSettingsAccentColorItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -153,15 +188,25 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         
         self.scrollNode = ASScrollNode()
         
+        self.customNode = HighlightableButtonNode()
+        
         super.init(layerBacked: false, dynamicBounce: false)
+
+        self.customNode.setImage(generateCustomSwatchImage(), for: .normal)
+        self.customNode.addTarget(self, action: #selector(customPressed), forControlEvents: .touchUpInside)
         
         self.addSubnode(self.scrollNode)
+        self.scrollNode.addSubnode(self.customNode)
     }
     
     override func didLoad() {
         super.didLoad()
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
+    }
+    
+    @objc func customPressed() {
+        self.item?.openColorPicker()
     }
     
     private func scrollToNode(_ node: ThemeSettingsAccentColorNode, animated: Bool) {
@@ -243,11 +288,11 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     var i = 0
                     for color in item.colors {
                         let imageNode: ThemeSettingsAccentColorNode
-                        if strongSelf.nodes.count > i {
-                            imageNode = strongSelf.nodes[i]
+                        if strongSelf.colorNodes.count > i {
+                            imageNode = strongSelf.colorNodes[i]
                         } else {
                             imageNode = ThemeSettingsAccentColorNode()
-                            strongSelf.nodes.append(imageNode)
+                            strongSelf.colorNodes.append(imageNode)
                             strongSelf.scrollNode.addSubnode(imageNode)
                             updated = true
                         }
@@ -258,10 +303,10 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             accentColor = item.currentColor
                             selectedNode = imageNode
                         } else {
-                            accentColor = PresentationThemeAccentColor(baseColor: color, value: 0.5)
+                            accentColor = PresentationThemeAccentColor(baseColor: color)
                         }
                         
-                        imageNode.setup(color: accentColor, selected: selected, action: { [weak self, weak imageNode, weak selectedNode] in
+                        imageNode.setup(color: accentColor, selected: selected, action: { [weak self, weak imageNode] in
                             item.updated(accentColor)
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)
@@ -274,17 +319,17 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         i += 1
                     }
                     
-                    for k in (i ..< strongSelf.nodes.count).reversed() {
-                        let node = strongSelf.nodes[k]
-                        strongSelf.nodes.remove(at: k)
+                    strongSelf.customNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 9.0), size: CGSize(width: 42.0, height: 42.0))
+                    
+                    for k in (i ..< strongSelf.colorNodes.count).reversed() {
+                        let node = strongSelf.colorNodes[k]
+                        strongSelf.colorNodes.remove(at: k)
                         node.removeFromSupernode()
                     }
-                    
-                    if let lastNode = strongSelf.nodes.last {
-                        let contentSize = CGSize(width: lastNode.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
-                        if strongSelf.scrollNode.view.contentSize != contentSize {
-                            strongSelf.scrollNode.view.contentSize = contentSize
-                        }
+                
+                    let contentSize = CGSize(width: strongSelf.customNode.frame.maxX + nodeInset, height: strongSelf.scrollNode.frame.height)
+                    if strongSelf.scrollNode.view.contentSize != contentSize {
+                        strongSelf.scrollNode.view.contentSize = contentSize
                     }
                     
                     if updated, let selectedNode = selectedNode {

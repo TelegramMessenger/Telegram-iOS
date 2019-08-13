@@ -15,17 +15,19 @@ private final class ThemeSettingsControllerArguments {
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
     let selectAccentColor: (PresentationThemeAccentColor) -> Void
+    let openAccentColorPicker: (PresentationThemeReference, PresentationThemeAccentColor?) -> Void
     let openAutoNightTheme: () -> Void
     let toggleLargeEmoji: (Bool) -> Void
     let disableAnimations: (Bool) -> Void
     let selectAppIcon: (String) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, PresentationThemeAccentColor?) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
         self.openWallpaperSettings = openWallpaperSettings
         self.selectAccentColor = selectAccentColor
+        self.openAccentColorPicker = openAccentColorPicker
         self.openAutoNightTheme = openAutoNightTheme
         self.toggleLargeEmoji = toggleLargeEmoji
         self.disableAnimations = disableAnimations
@@ -231,7 +233,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     arguments.openWallpaperSettings()
                 })
             case let .accentColor(theme, currentTheme, _, color):
-                var defaultColor = PresentationThemeAccentColor(baseColor: .blue, value: 0.5)
+                var defaultColor = PresentationThemeAccentColor(baseColor: .blue)
                 var colors = PresentationThemeBaseColor.allCases
                 if case let .builtin(name) = currentTheme {
                     if name == .night || name == .nightAccent {
@@ -239,13 +241,19 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                     }
                     if name == .night {
                         colors = colors.filter { $0 != .gray }
-                        defaultColor = PresentationThemeAccentColor(baseColor: .white, value: 0.5)
+                        defaultColor = PresentationThemeAccentColor(baseColor: .white)
                     } else {
                         colors = colors.filter { $0 != .white }
                     }
                 }
-                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: color ?? defaultColor, updated: { color in
+                let currentColor = color ?? defaultColor
+                if currentColor.baseColor != .custom {
+                    colors = colors.filter { $0 != .custom }
+                }
+                return ThemeSettingsAccentColorItem(theme: theme, sectionId: self.section, colors: colors, currentColor: currentColor, updated: { color in
                     arguments.selectAccentColor(color)
+                }, openColorPicker: {
+                    arguments.openAccentColorPicker(currentTheme, currentColor)
                 }, tag: ThemeSettingsEntryTag.accentColor)
             case let .autoNightTheme(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, icon: nil, title: text, label: value, labelStyle: .text, sectionId: self.section, style: .blocks, disclosureStyle: .arrow, action: {
@@ -339,6 +347,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }
     
     var pushControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
@@ -399,6 +408,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             
             return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: current.theme, themeSpecificAccentColors: themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
         }).start()
+    }, openAccentColorPicker: { themeReference, currentColor in
+        let controller = ThemeAccentColorController(context: context, currentTheme: themeReference, currentColor: currentColor?.color)
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openAutoNightTheme: {
         pushControllerImpl?(themeAutoNightSettingsController(context: context))
     }, toggleLargeEmoji: { largeEmoji in
@@ -444,6 +456,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     controller.alwaysSynchronous = true
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
+    }
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
     }
     return controller
 }
