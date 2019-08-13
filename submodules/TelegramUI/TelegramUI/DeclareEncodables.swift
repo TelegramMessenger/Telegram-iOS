@@ -3,6 +3,7 @@ import TemporaryCachedPeerDataManager
 import TelegramUIPreferences
 import TelegramNotices
 import InstantPageUI
+import AccountContext
 
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })

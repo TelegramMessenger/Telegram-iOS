@@ -7,6 +7,7 @@ import TelegramCore
 import AccountContext
 import LocalizedPeerData
 import ContextUI
+import ChatListUI
 
 struct ChatMessageItemWidthFill {
     let compactInset: CGFloat

@@ -5,6 +5,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import ChatListUI
 
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let toolbarBackgroundNode: ASDisplayNode

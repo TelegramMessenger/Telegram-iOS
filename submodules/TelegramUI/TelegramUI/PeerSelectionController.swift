@@ -8,6 +8,7 @@ import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
 import SearchUI
+import ChatListUI
 
 public final class PeerSelectionController: ViewController {
     private let context: AccountContext

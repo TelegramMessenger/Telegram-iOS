@@ -43,7 +43,7 @@ public enum ChatTitleActivityNodeState: Equatable {
         }
     }
     
-    var string: String? {
+    public var string: String? {
         if case let .info(text, _) = self {
             return text.string
         }
@@ -51,11 +51,15 @@ public enum ChatTitleActivityNodeState: Equatable {
     }
 }
 
-class ChatTitleActivityNode: ASDisplayNode {
-    private(set) var state: ChatTitleActivityNodeState = .none
+public class ChatTitleActivityNode: ASDisplayNode {
+    public private(set) var state: ChatTitleActivityNodeState = .none
     
     private var contentNode: ChatTitleActivityContentNode?
     private var nextContentNode: ChatTitleActivityContentNode?
+    
+    override public init() {
+        super.init()
+    }
     
     public func transitionToState(_ state: ChatTitleActivityNodeState, animation: ChatTitleActivityAnimationStyle = .crossfade, completion: @escaping () -> Void = {}) -> Bool {
         if self.state != state {

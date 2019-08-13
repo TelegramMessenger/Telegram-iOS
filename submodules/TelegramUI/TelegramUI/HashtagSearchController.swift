@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramBaseController
 import AccountContext
+import ChatListUI
 
 final class HashtagSearchController: TelegramBaseController {
     private let queue = Queue()

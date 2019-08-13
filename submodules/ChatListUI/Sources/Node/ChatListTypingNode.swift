@@ -6,6 +6,7 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import ChatTitleActivityNode
 
 private let textFont = Font.regular(15.0)
 

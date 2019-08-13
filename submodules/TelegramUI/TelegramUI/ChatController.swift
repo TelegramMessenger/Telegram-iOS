@@ -34,6 +34,7 @@ import LegacyUI
 import InstantPageUI
 import LocationUI
 import BotPaymentsUI
+import DeleteChatPeerActionSheetItem
 
 public enum ChatControllerPeekActions {
     case standard
@@ -1320,13 +1321,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }, addContact: { [weak self] phoneNumber in
             if let strongSelf = self {
-                openAddContact(context: strongSelf.context, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
+                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
                 }, pushController: { [weak self] controller in
                     if let strongSelf = self {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
-                })
+                }, completed: {})
             }
         }, rateCall: { [weak self] message, callId in
             if let strongSelf = self {

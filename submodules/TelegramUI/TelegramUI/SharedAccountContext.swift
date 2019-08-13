@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import AccountContext
 import DeviceLocationManager
 import LegacyUI
+import ChatListUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -978,5 +979,21 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController {
         return ContactSelectionControllerImpl(params)
+    }
+    
+    public func makeComposeController(context: AccountContext) -> ViewController {
+        return ComposeController(context: context)
+    }
+    
+    public func makeProxySettingsController(context: AccountContext) -> ViewController {
+        return proxySettingsController(context: context)
+    }
+    
+    public func makeLocalizationListController(context: AccountContext) -> ViewController {
+        return LocalizationListController(context: context)
+    }
+    
+    public func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void) {
+        openAddContactImpl(context: context, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, label: label, present: present, pushController: pushController, completed: completed)
     }
 }

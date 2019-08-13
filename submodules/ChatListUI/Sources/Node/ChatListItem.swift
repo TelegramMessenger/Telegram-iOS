@@ -16,11 +16,11 @@ import PeerPresenceStatusManager
 import PhotoResources
 import ChatListSearchItemNode
 
-enum ChatListItemContent {
+public enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
     case groupReference(groupId: PeerGroupId, peers: [ChatListGroupReferencePeer], message: Message?, unreadState: PeerGroupUnreadCountersCombinedSummary, hiddenByDefault: Bool)
     
-    var chatLocation: ChatLocation? {
+    public var chatLocation: ChatLocation? {
         switch self {
             case let .peer(_, peer, _, _, _, _, _, _, _, _):
                 return .peer(peer.peerId)
@@ -30,7 +30,7 @@ enum ChatListItemContent {
     }
 }
 
-class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
+public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let presentationData: ChatListPresentationData
     let context: AccountContext
     let peerGroupId: PeerGroupId
@@ -43,19 +43,19 @@ class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     let hiddenOffset: Bool
     let interaction: ChatListNodeInteraction
     
-    let selectable: Bool = true
+    public let selectable: Bool = true
     
-    var approximateHeight: CGFloat {
+    public var approximateHeight: CGFloat {
         return self.hiddenOffset ? 0.0 : 44.0
     }
     
     let header: ListViewItemHeader?
     
-    var isPinned: Bool {
+    public var isPinned: Bool {
         return self.index.pinningIndex != nil
     }
     
-    init(presentationData: ChatListPresentationData, context: AccountContext, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
+    public init(presentationData: ChatListPresentationData, context: AccountContext, peerGroupId: PeerGroupId, index: ChatListIndex, content: ChatListItemContent, editing: Bool, hasActiveRevealControls: Bool, selected: Bool, header: ListViewItemHeader?, enableContextActions: Bool, hiddenOffset: Bool, interaction: ChatListNodeInteraction) {
         self.presentationData = presentationData
         self.peerGroupId = peerGroupId
         self.context = context
@@ -70,7 +70,7 @@ class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         self.interaction = interaction
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ChatListItemNode()
             let (first, last, firstWithHeader, nextIsPinned) = ChatListItem.mergeType(item: self, previousItem: previousItem, nextItem: nextItem)
@@ -93,7 +93,7 @@ class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             assert(node() is ChatListItemNode)
             if let nodeValue = node() as? ChatListItemNode {
@@ -117,7 +117,7 @@ class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         }
     }
     
-    func selected(listView: ListView) {
+    public func selected(listView: ListView) {
         switch self.content {
             case let .peer(message, peer, _, _, _, _, _, _, isAd, _):
                 if let message = message, let peer = peer.peer {
@@ -295,7 +295,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private let highlightedBackgroundNode: ASDisplayNode
     
     let avatarNode: AvatarNode
-    var multipleAvatarsNode: MultipleAvatarsNode?
     let titleNode: TextNode
     let authorNode: TextNode
     let textNode: TextNode
@@ -1238,22 +1237,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     strongSelf.onlineNode.setImage(onlineIcon)
                     
-                    /*if let multipleAvatarsApply = multipleAvatarsApply {
-                        strongSelf.avatarNode.isHidden = true
-                        let multipleAvatarsNode = multipleAvatarsApply(animated && strongSelf.multipleAvatarsNode != nil)
-                        if strongSelf.multipleAvatarsNode != multipleAvatarsNode {
-                            strongSelf.multipleAvatarsNode?.removeFromSupernode()
-                            strongSelf.multipleAvatarsNode = multipleAvatarsNode
-                            strongSelf.addSubnode(multipleAvatarsNode)
-                            multipleAvatarsNode.frame = avatarFrame
-                        } else {
-                            transition.updateFrame(node: multipleAvatarsNode, frame: avatarFrame)
-                        }
-                    } else if let multipleAvatarsNode = strongSelf.multipleAvatarsNode {
-                        multipleAvatarsNode.removeFromSupernode()
-                        strongSelf.avatarNode.isHidden = false
-                    }*/
-                    
                     let _ = dateApply()
                     let _ = textApply()
                     let _ = authorApply()
@@ -1544,9 +1527,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var avatarFrame = self.avatarNode.frame
             avatarFrame.origin.x = leftInset - 78.0 + editingOffset + 10.0 + offset
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
-            if let multipleAvatarsNode = self.multipleAvatarsNode {
-                transition.updateFrame(node: multipleAvatarsNode, frame: avatarFrame)
-            }
             
             var onlineFrame = self.onlineNode.frame
             onlineFrame.origin.x = avatarFrame.maxX - onlineFrame.width - 2.0

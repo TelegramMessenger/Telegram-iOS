@@ -9,14 +9,14 @@ import Tuples
 import ImageBlur
 
 private func imageFromAJpeg(data: Data) -> (UIImage, UIImage)? {
-    if let (colorData, alphaData) = data.withUnsafeBytes({ (bytes: UnsafePointer<UInt8>) -> (Data, Data)? in
+    if let (colorData, alphaData) = data.withUnsafeBytes({ bytes -> (Data, Data)? in
         var colorSize: Int32 = 0
-        memcpy(&colorSize, bytes, 4)
+        memcpy(&colorSize, bytes.baseAddress, 4)
         if colorSize < 0 || Int(colorSize) > data.count - 8 {
             return nil
         }
         var alphaSize: Int32 = 0
-        memcpy(&alphaSize, bytes.advanced(by: 4 + Int(colorSize)), 4)
+        memcpy(&alphaSize, bytes.baseAddress?.advanced(by: 4 + Int(colorSize)), 4)
         if alphaSize < 0 || Int(alphaSize) > data.count - Int(colorSize) - 8 {
             return nil
         }
@@ -265,7 +265,6 @@ public func chatMessageAnimatedStickerBackingData(postbox: Postbox, fileReferenc
 public func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, small: Bool, fitSize: CGSize, fetched: Bool = false, onlyFullSize: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal = chatMessageStickerDatas(postbox: account.postbox, file: file, small: small, fetched: fetched, onlyFullSize: onlyFullSize, synchronousLoad: false)
     return signal |> map { value in
-        let thumbnailData = value._0
         let fullSizeData = value._1
         let fullSizeComplete = value._2
         return { preArguments in

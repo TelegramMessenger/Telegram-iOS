@@ -178,13 +178,13 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
     }
 }
 
-enum ChatListSearchEntryStableId: Hashable {
+public enum ChatListSearchEntryStableId: Hashable {
     case localPeerId(PeerId)
     case globalPeerId(PeerId)
     case messageId(MessageId)
     case addContact
     
-    static func ==(lhs: ChatListSearchEntryStableId, rhs: ChatListSearchEntryStableId) -> Bool {
+    public static func ==(lhs: ChatListSearchEntryStableId, rhs: ChatListSearchEntryStableId) -> Bool {
         switch lhs {
             case let .localPeerId(peerId):
                 if case .localPeerId(peerId) = rhs {
@@ -214,13 +214,13 @@ enum ChatListSearchEntryStableId: Hashable {
     }
 }
 
-enum ChatListSearchEntry: Comparable, Identifiable {
+public enum ChatListSearchEntry: Comparable, Identifiable {
     case localPeer(Peer, Peer?, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     case globalPeer(FoundPeer, (Int32, Bool)?, Int, PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder)
     case message(Message, RenderedPeer, CombinedPeerReadState?, ChatListPresentationData)
     case addContact(String, PresentationTheme, PresentationStrings)
     
-    var stableId: ChatListSearchEntryStableId {
+    public var stableId: ChatListSearchEntryStableId {
         switch self {
             case let .localPeer(peer, _, _, _, _, _, _, _):
                 return .localPeerId(peer.id)
@@ -233,7 +233,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
+    public static func ==(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
             case let .localPeer(lhsPeer, lhsAssociatedPeer, lhsUnreadBadge, lhsIndex, lhsTheme, lhsStrings, lhsSortOrder, lhsDisplayOrder):
                 if case let .localPeer(rhsPeer, rhsAssociatedPeer, rhsUnreadBadge, rhsIndex, rhsTheme, rhsStrings, rhsSortOrder, rhsDisplayOrder) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsSortOrder == rhsSortOrder && lhsDisplayOrder == rhsDisplayOrder && lhsUnreadBadge?.0 == rhsUnreadBadge?.0 && lhsUnreadBadge?.1 == rhsUnreadBadge?.1 {
@@ -286,7 +286,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
         
-    static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
+    public static func <(lhs: ChatListSearchEntry, rhs: ChatListSearchEntry) -> Bool {
         switch lhs {
             case let .localPeer(_, _, _, lhsIndex, _, _, _, _):
                 if case let .localPeer(_, _, _, rhsIndex, _, _, _, _) = rhs {
@@ -316,7 +316,7 @@ enum ChatListSearchEntry: Comparable, Identifiable {
         }
     }
     
-    func item(context: AccountContext, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ListViewItem {
+    public func item(context: AccountContext, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ListViewItem {
         switch self {
             case let .localPeer(peer, associatedPeer, unreadBadge, _, theme, strings, nameSortOrder, nameDisplayOrder):
                 let primaryPeer: Peer
@@ -433,11 +433,18 @@ private struct ChatListSearchContainerRecentTransition {
     let updates: [ListViewUpdateItem]
 }
 
-struct ChatListSearchContainerTransition {
-    let deletions: [ListViewDeleteItem]
-    let insertions: [ListViewInsertItem]
-    let updates: [ListViewUpdateItem]
-    let displayingResults: Bool
+public struct ChatListSearchContainerTransition {
+    public let deletions: [ListViewDeleteItem]
+    public let insertions: [ListViewInsertItem]
+    public let updates: [ListViewUpdateItem]
+    public let displayingResults: Bool
+    
+    public init(deletions: [ListViewDeleteItem], insertions: [ListViewInsertItem], updates: [ListViewUpdateItem], displayingResults: Bool) {
+        self.deletions = deletions
+        self.insertions = insertions
+        self.updates = updates
+        self.displayingResults = displayingResults
+    }
 }
 
 private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [ChatListRecentEntry], to toEntries: [ChatListRecentEntry], context: AccountContext, filter: ChatListNodePeersFilter, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, clearRecentlySearchedPeers: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, deletePeer: @escaping (PeerId) -> Void) -> ChatListSearchContainerRecentTransition {
@@ -450,7 +457,7 @@ private func chatListSearchContainerPreparedRecentTransition(from fromEntries: [
     return ChatListSearchContainerRecentTransition(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, context: AccountContext, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ChatListSearchContainerTransition {
+public func chatListSearchContainerPreparedTransition(from fromEntries: [ChatListSearchEntry], to toEntries: [ChatListSearchEntry], displayingResults: Bool, context: AccountContext, enableHeaders: Bool, filter: ChatListNodePeersFilter, interaction: ChatListNodeInteraction) -> ChatListSearchContainerTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -510,7 +517,7 @@ private struct ChatListSearchMessagesContext {
     let loadMoreIndex: MessageIndex?
 }
 
-final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
+public final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let context: AccountContext
     
     private let recentListNode: ListView
@@ -534,13 +541,13 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
     private let statePromise: ValuePromise<ChatListSearchContainerNodeState>
     
     private let _isSearching = ValuePromise<Bool>(false, ignoreRepeated: true)
-    override var isSearching: Signal<Bool, NoError> {
+    override public var isSearching: Signal<Bool, NoError> {
         return self._isSearching.get()
     }
     
     private let filter: ChatListNodePeersFilter
     
-    init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
+    public init(context: AccountContext, filter: ChatListNodePeersFilter, groupId: PeerGroupId, openPeer: @escaping (Peer, Bool) -> Void, openRecentPeerOptions: @escaping (Peer) -> Void, openMessage: @escaping (Peer, MessageId) -> Void, addContact: ((String) -> Void)?) {
         self.context = context
         self.filter = filter
         self.dimNode = ASDisplayNode()
@@ -974,12 +981,12 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
     }
     
-    @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+    @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.cancel?()
         }
@@ -1007,7 +1014,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    override func searchTextUpdated(text: String) {
+    override public func searchTextUpdated(text: String) {
         if text.isEmpty {
             self.searchQuery.set(.single(nil))
         } else {
@@ -1072,7 +1079,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         let hadValidLayout = self.validLayout != nil
@@ -1120,7 +1127,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         }
     }
     
-    override func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)? {
+    override public func previewViewAndActionAtLocation(_ location: CGPoint) -> (UIView, CGRect, Any)? {
         var selectedItemNode: ASDisplayNode?
         var bounds: CGRect
         if !self.recentListNode.isHidden {
@@ -1170,7 +1177,7 @@ final class ChatListSearchContainerNode: SearchDisplayControllerContentNode {
         |> deliverOnMainQueue).start()
     }
     
-    override func scrollToTop() {
+    override public func scrollToTop() {
         if !self.listNode.isHidden {
             self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         } else {

@@ -7,28 +7,28 @@ import LegacyComponents
 private let transitionDuration = 0.2
 private let animationKey = "animation"
 
-class ChatTitleActivityIndicatorNode: ASDisplayNode {
-    var duration: CFTimeInterval {
+public class ChatTitleActivityIndicatorNode: ASDisplayNode {
+    public var duration: CFTimeInterval {
         return 0.0
     }
     
-    var timingFunction: CAMediaTimingFunction {
+    public var timingFunction: CAMediaTimingFunction {
         return CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
     }
     
-    var color: UIColor? {
+    public var color: UIColor? {
         didSet {
             self.setNeedsDisplay()
         }
     }
     
-    var progress: CGFloat = 0.0 {
+    public var progress: CGFloat = 0.0 {
         didSet {
             self.setNeedsDisplay()
         }
     }
     
-    init(color: UIColor) {
+    public init(color: UIColor) {
         self.color = color
         
         super.init()
@@ -68,21 +68,21 @@ class ChatTitleActivityIndicatorNode: ASDisplayNode {
         self.pop_removeAnimation(forKey: animationKey)
     }
     
-    override func didEnterHierarchy() {
+    override public func didEnterHierarchy() {
         super.didEnterHierarchy()
         self.startAnimation()
     }
     
-    override func didExitHierarchy() {
+    override public func didExitHierarchy() {
         super.didExitHierarchy()
         self.stopAnimation()
     }
 }
 
-class ChatTitleActivityContentNode: ASDisplayNode {
-    let textNode: ImmediateTextNode
+public class ChatTitleActivityContentNode: ASDisplayNode {
+    public let textNode: ImmediateTextNode
     
-    init(text: NSAttributedString) {
+    public init(text: NSAttributedString) {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 1
@@ -95,7 +95,7 @@ class ChatTitleActivityContentNode: ASDisplayNode {
         self.textNode.attributedText = text
     }
     
-    func animateOut(to: ChatTitleActivityNodeState, style: ChatTitleActivityAnimationStyle, completion: @escaping () -> Void) {
+    public func animateOut(to: ChatTitleActivityNodeState, style: ChatTitleActivityAnimationStyle, completion: @escaping () -> Void) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration, removeOnCompletion: false, completion: { _ in
             completion()
         })
@@ -105,7 +105,7 @@ class ChatTitleActivityContentNode: ASDisplayNode {
         }
     }
         
-    func animateIn(from: ChatTitleActivityNodeState, style: ChatTitleActivityAnimationStyle) {
+    public func animateIn(from: ChatTitleActivityNodeState, style: ChatTitleActivityAnimationStyle) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: transitionDuration)
         
         if case .slide = style {
@@ -113,7 +113,7 @@ class ChatTitleActivityContentNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(_ constrainedSize: CGSize, alignment: NSTextAlignment) -> CGSize {
+    public func updateLayout(_ constrainedSize: CGSize, alignment: NSTextAlignment) -> CGSize {
         let size = self.textNode.updateLayout(constrainedSize)
         self.textNode.bounds = CGRect(origin: CGPoint(), size: size)
         if case .center = alignment {
