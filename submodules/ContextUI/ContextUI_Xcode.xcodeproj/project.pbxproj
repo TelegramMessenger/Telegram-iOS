@@ -18,6 +18,7 @@
 		D09E778322F8E67300B9CCA7 /* ContextActionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E778222F8E67300B9CCA7 /* ContextActionNode.swift */; };
 		D09E778522F8E83600B9CCA7 /* ContextContentContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E778422F8E83600B9CCA7 /* ContextContentContainerNode.swift */; };
 		D09E778D22FA055100B9CCA7 /* ContextContentSourceNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E778C22FA055100B9CCA7 /* ContextContentSourceNode.swift */; };
+		D0C9CBE42302D45F00FAB518 /* TextSelectionNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE32302D45F00FAB518 /* TextSelectionNode.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		D09E778222F8E67300B9CCA7 /* ContextActionNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextActionNode.swift; sourceTree = "<group>"; };
 		D09E778422F8E83600B9CCA7 /* ContextContentContainerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextContentContainerNode.swift; sourceTree = "<group>"; };
 		D09E778C22FA055100B9CCA7 /* ContextContentSourceNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextContentSourceNode.swift; sourceTree = "<group>"; };
+		D0C9CBE32302D45F00FAB518 /* TextSelectionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TextSelectionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9CBE42302D45F00FAB518 /* TextSelectionNode.framework in Frameworks */,
 				D09E777F22F8E47000B9CCA7 /* TelegramPresentationData.framework in Frameworks */,
 				D038AC7922F8A08A00320981 /* AsyncDisplayKit.framework in Frameworks */,
 				D038AC7522F8A06200320981 /* Display.framework in Frameworks */,
@@ -86,6 +89,7 @@
 		D038AC6F22F8A05A00320981 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9CBE32302D45F00FAB518 /* TextSelectionNode.framework */,
 				D09E777E22F8E47000B9CCA7 /* TelegramPresentationData.framework */,
 				D038AC7822F8A08A00320981 /* AsyncDisplayKit.framework */,
 				D038AC7422F8A06200320981 /* Display.framework */,

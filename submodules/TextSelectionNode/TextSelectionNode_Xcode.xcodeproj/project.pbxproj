@@ -8,12 +8,22 @@
 
 /* Begin PBXBuildFile section */
 		D0C9CBCC2302C00600FAB518 /* TextSelectionNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9CBCA2302C00600FAB518 /* TextSelectionNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9CBD92302C2E600FAB518 /* TextSelectionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CBD82302C2E600FAB518 /* TextSelectionNode.swift */; };
+		D0C9CBDC2302C31100FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBDB2302C31100FAB518 /* Foundation.framework */; };
+		D0C9CBDE2302C31500FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBDD2302C31500FAB518 /* UIKit.framework */; };
+		D0C9CBE02302C31800FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBDF2302C31800FAB518 /* AsyncDisplayKit.framework */; };
+		D0C9CBE22302C31D00FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE12302C31D00FAB518 /* Display.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		D0C9CBC72302C00600FAB518 /* TextSelectionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TextSelectionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBCA2302C00600FAB518 /* TextSelectionNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TextSelectionNode.h; sourceTree = "<group>"; };
 		D0C9CBCB2302C00600FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0C9CBD82302C2E600FAB518 /* TextSelectionNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextSelectionNode.swift; sourceTree = "<group>"; };
+		D0C9CBDB2302C31100FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0C9CBDD2302C31500FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D0C9CBDF2302C31800FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CBE12302C31D00FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -21,6 +31,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9CBE22302C31D00FAB518 /* Display.framework in Frameworks */,
+				D0C9CBE02302C31800FAB518 /* AsyncDisplayKit.framework in Frameworks */,
+				D0C9CBDE2302C31500FAB518 /* UIKit.framework in Frameworks */,
+				D0C9CBDC2302C31100FAB518 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -30,8 +44,10 @@
 		D0C9CBBD2302C00600FAB518 = {
 			isa = PBXGroup;
 			children = (
-				D0C9CBC92302C00600FAB518 /* TextSelectionNode */,
+				D0C9CBCB2302C00600FAB518 /* Info.plist */,
+				D0C9CBC92302C00600FAB518 /* Sources */,
 				D0C9CBC82302C00600FAB518 /* Products */,
+				D0C9CBDA2302C30E00FAB518 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -43,13 +59,24 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D0C9CBC92302C00600FAB518 /* TextSelectionNode */ = {
+		D0C9CBC92302C00600FAB518 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9CBD82302C2E600FAB518 /* TextSelectionNode.swift */,
 				D0C9CBCA2302C00600FAB518 /* TextSelectionNode.h */,
-				D0C9CBCB2302C00600FAB518 /* Info.plist */,
 			);
-			path = TextSelectionNode;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D0C9CBDA2302C30E00FAB518 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9CBE12302C31D00FAB518 /* Display.framework */,
+				D0C9CBDF2302C31800FAB518 /* AsyncDisplayKit.framework */,
+				D0C9CBDD2302C31500FAB518 /* UIKit.framework */,
+				D0C9CBDB2302C31100FAB518 /* Foundation.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -96,6 +123,7 @@
 				TargetAttributes = {
 					D0C9CBC62302C00600FAB518 = {
 						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
 					};
 				};
 			};
@@ -131,6 +159,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9CBD92302C2E600FAB518 /* TextSelectionNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -262,6 +291,7 @@
 		D0C9CBD02302C00600FAB518 /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
@@ -281,6 +311,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -289,6 +320,7 @@
 		D0C9CBD12302C00600FAB518 /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
@@ -380,6 +412,7 @@
 		D0C9CBD32302C06100FAB518 /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;
@@ -399,6 +432,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -465,6 +499,7 @@
 		D0C9CBD52302C06E00FAB518 /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "";
 				CODE_SIGN_STYLE = Manual;
 				DEFINES_MODULE = YES;

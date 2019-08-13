@@ -10,6 +10,9 @@ private enum CornerType {
 }
 
 private func drawFullCorner(context: CGContext, color: UIColor, at point: CGPoint, type: CornerType, radius: CGFloat) {
+    if radius.isZero {
+        return
+    }
     context.setFillColor(color.cgColor)
     switch type {
     case .topLeft:

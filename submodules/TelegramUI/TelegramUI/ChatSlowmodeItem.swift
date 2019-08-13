@@ -188,7 +188,7 @@ class ChatSlowmodeItemNode: ListViewItemNode {
                 
                 let valueString: String
                 if value == 0 {
-                    valueString = item.strings.Profile_MessageLifetimeForever
+                    valueString = item.strings.GroupInfo_Permissions_SlowmodeValue_Off
                 } else {
                     valueString = shortTimeIntervalString(strings: item.strings, value: value)
                 }

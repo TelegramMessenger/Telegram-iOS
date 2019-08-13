@@ -7,6 +7,7 @@ import Postbox
 import TextFormat
 import UrlEscaping
 import TelegramUniversalVideoContent
+import TextSelectionNode
 
 private final class CachedChatMessageText {
     let text: String
@@ -39,6 +40,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    private var textSelectionNode: TextSelectionNode?
     
     private var textHighlightingNodes: [LinkHighlightingNode] = []
     
@@ -502,6 +504,40 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         for i in (rectsSet.count ..< self.textHighlightingNodes.count).reversed() {
             self.textHighlightingNodes[i].removeFromSupernode()
             self.textHighlightingNodes.remove(at: i)
+        }
+    }
+    
+    override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        if !value {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    override func updateIsExtractedToContextPreview(_ value: Bool) {
+        if value {
+            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: item.presentationData.theme.theme.list.itemAccentColor.withAlphaComponent(0.5), knob: item.presentationData.theme.theme.list.itemAccentColor), textNode: self.textNode, present: { [weak self] c, a in
+                    self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
+                }, rootNode: rootNode, performAction: { [weak self] text, action in
+                    guard let strongSelf = self, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
+                })
+                self.textSelectionNode = textSelectionNode
+                self.addSubnode(textSelectionNode)
+                textSelectionNode.frame = self.textNode.frame
+            }
+        } else if let textSelectionNode = self.textSelectionNode {
+            self.textSelectionNode = nil
+            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.removeFromSupernode()
+            })
         }
     }
 }
