@@ -386,10 +386,10 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             }
         }
         
-        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(self.message) {
-            if let _ = self.associatedData.animatedEmojiStickers[self.message.text.basicEmoji.0] {
+        if viewClassName == ChatMessageBubbleItemNode.self && self.presentationData.largeEmoji {
+            if self.message.text.count == 1, let _ = self.associatedData.animatedEmojiStickers[self.message.text.basicEmoji.0] {
                 viewClassName = ChatMessageAnimatedStickerItemNode.self
-            } else {
+            } else if messageIsElligibleForLargeEmoji(self.message) {
                 viewClassName = ChatMessageStickerItemNode.self
             }
         }

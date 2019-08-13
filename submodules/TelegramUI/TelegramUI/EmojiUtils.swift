@@ -19,8 +19,6 @@ extension UnicodeScalar {
                 return true
             case 0x1f004:
                 return true
-            case 0x2764:
-                return true
             case 0x270b, 0x2728:
                 return true
             default:
