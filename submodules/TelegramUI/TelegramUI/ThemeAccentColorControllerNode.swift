@@ -9,9 +9,9 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 
-final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
+final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
-    private let previewTheme: PresentationTheme
+    private let currentTheme: PresentationThemeReference
     private var presentationData: PresentationData
     
     private let scrollNode: ASScrollNode
@@ -20,20 +20,20 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let chatListBackgroundNode: ASDisplayNode
     private var chatNodes: [ListViewItemNode]?
-
+    
     private let chatBackgroundNode: ASDisplayNode
     private var messageNodes: [ListViewItemNode]?
-
+    
+    private var colorPanelNode: WallpaperColorPanelNode
     private let toolbarNode: WallpaperGalleryToolbarNode
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private var colorDisposable: Disposable?
     
-    init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
+    init(context: AccountContext, currentTheme: PresentationThemeReference, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
         self.context = context
-        self.previewTheme = previewTheme
-        
+        self.currentTheme = currentTheme
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.scrollNode = ASScrollNode()
@@ -41,12 +41,13 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.pageControlBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
         self.pageControlBackgroundNode.cornerRadius = 6.0
         
-        self.pageControlNode = PageControlNode(dotColor: previewTheme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: previewTheme.list.pageIndicatorInactiveColor)
-    
+        self.pageControlNode = PageControlNode(dotColor: self.presentationData.theme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: self.presentationData.theme.list.pageIndicatorInactiveColor)
+        
         self.chatListBackgroundNode = ASDisplayNode()
         self.chatBackgroundNode = ASDisplayNode()
         
-        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
+        self.colorPanelNode = WallpaperColorPanelNode(theme: presentationData.theme, strings: presentationData.strings)
+        self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.presentationData.theme, strings: self.presentationData.strings)
         
         super.init()
         
@@ -54,11 +55,11 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return UITracingLayerView()
         })
         
-        self.backgroundColor = self.previewTheme.list.plainBackgroundColor
+        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
-        self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
+        self.chatListBackgroundNode.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
-        if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
+        if case let .color(value) = self.presentationData.theme.chat.defaultWallpaper {
             self.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
         }
         
@@ -68,10 +69,20 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.scrollNode)
         self.addSubnode(self.pageControlBackgroundNode)
         self.addSubnode(self.pageControlNode)
+        self.addSubnode(self.colorPanelNode)
         self.addSubnode(self.toolbarNode)
         
         self.scrollNode.addSubnode(self.chatListBackgroundNode)
         self.scrollNode.addSubnode(self.chatBackgroundNode)
+        
+        self.colorPanelNode.colorChanged = { [weak self] color, ended in
+            if let strongSelf = self {
+                //strongSelf.updateEntries(color: color, preview: !ended)
+            }
+        }
+        //if case let .customColor(colorValue) = self.source, let color = colorValue {
+        //    colorPanelNode.color = UIColor(rgb: UInt32(bitPattern: color))
+        //}
         
         self.toolbarNode.cancel = {
             dismiss()
@@ -80,10 +91,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             apply()
         }
         
-        self.colorDisposable = (chatServiceBackgroundColor(wallpaper: self.previewTheme.chat.defaultWallpaper, mediaBox: context.account.postbox.mediaBox)
+        self.colorDisposable = (chatServiceBackgroundColor(wallpaper: self.presentationData.theme.chat.defaultWallpaper, mediaBox: context.account.postbox.mediaBox)
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
-                if strongSelf.previewTheme.chat.defaultWallpaper.hasWallpaper {
+                if strongSelf.presentationData.theme.chat.defaultWallpaper.hasWallpaper {
                     strongSelf.pageControlBackgroundNode.backgroundColor = color
                 } else {
                     strongSelf.pageControlBackgroundNode.backgroundColor = .clear
@@ -126,7 +137,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var items: [ChatListItem] = []
         
         let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, togglePeerSelected: { _ in }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {})
-        let chatListPresentationData = ChatListPresentationData(theme: self.previewTheme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
+        let chatListPresentationData = ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
         
         let peers = SimpleDictionary<PeerId, Peer>()
         let messages = SimpleDictionary<MessageId, Message>()
@@ -194,7 +205,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         messages[replyMessageId] = Message(stableId: 3, stableVersion: 0, id: replyMessageId, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66000, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [])
         
         let controllerInteraction = ChatControllerInteraction.default
-        let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.previewTheme, wallpaper: self.previewTheme.chat.defaultWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false)
+        let chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: self.presentationData.theme, wallpaper: self.presentationData.theme.chat.defaultWallpaper), fontSize: self.presentationData.fontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: false, largeEmoji: false)
         
         items.append(ChatMessageItem(presentationData: chatPresentationData, context: self.context, chatLocation: .peer(peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false), controllerInteraction: controllerInteraction, content: .message(message: Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: "", attributes: [ReplyMessageAttribute(messageId: replyMessageId)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: false))
         
@@ -259,7 +270,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
         self.chatListBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
         self.chatBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
-    
+        
         self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))

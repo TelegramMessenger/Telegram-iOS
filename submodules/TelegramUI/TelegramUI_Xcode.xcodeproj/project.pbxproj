@@ -76,6 +76,8 @@
 		09A218D9229EE1B600DE6898 /* HorizontalStickerGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A218D7229EE1B500DE6898 /* HorizontalStickerGridItem.swift */; };
 		09A218DA229EE1B600DE6898 /* HorizontalStickersChatContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A218D8229EE1B500DE6898 /* HorizontalStickersChatContextPanelNode.swift */; };
 		09A218F522A15F1400DE6898 /* ThemeSettingsAppIconItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A218F422A15F1400DE6898 /* ThemeSettingsAppIconItem.swift */; };
+		09B4819323028A4200D5B32B /* ThemeAccentColorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4819223028A4200D5B32B /* ThemeAccentColorController.swift */; };
+		09B4819523028A8A00D5B32B /* ThemeAccentColorControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4819423028A8A00D5B32B /* ThemeAccentColorControllerNode.swift */; };
 		09B4EE4721A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */; };
 		09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */; };
 		09CE95002232729A00A7D2C3 /* StickerPaneSearchContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09CE94FF2232729A00A7D2C3 /* StickerPaneSearchContentNode.swift */; };
@@ -941,6 +943,8 @@
 		09A218D7229EE1B500DE6898 /* HorizontalStickerGridItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalStickerGridItem.swift; sourceTree = "<group>"; };
 		09A218D8229EE1B500DE6898 /* HorizontalStickersChatContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalStickersChatContextPanelNode.swift; sourceTree = "<group>"; };
 		09A218F422A15F1400DE6898 /* ThemeSettingsAppIconItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSettingsAppIconItem.swift; sourceTree = "<group>"; };
+		09B4819223028A4200D5B32B /* ThemeAccentColorController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAccentColorController.swift; sourceTree = "<group>"; };
+		09B4819423028A8A00D5B32B /* ThemeAccentColorControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAccentColorControllerNode.swift; sourceTree = "<group>"; };
 		09B4EE4621A6D33F00847FA6 /* RecentSessionsEmptyStateItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSessionsEmptyStateItem.swift; sourceTree = "<group>"; };
 		09C500232142BA6400EF253E /* ItemListWebsiteItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListWebsiteItem.swift; sourceTree = "<group>"; };
 		09CE94FF2232729A00A7D2C3 /* StickerPaneSearchContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickerPaneSearchContentNode.swift; sourceTree = "<group>"; };
@@ -2555,6 +2559,8 @@
 				09CE9512223825B700A7D2C3 /* CustomWallpaperPicker.swift */,
 				0957DE2222DE28FB001B4D57 /* ThemePreviewController.swift */,
 				0957DE2422DE2909001B4D57 /* ThemePreviewControllerNode.swift */,
+				09B4819223028A4200D5B32B /* ThemeAccentColorController.swift */,
+				09B4819423028A8A00D5B32B /* ThemeAccentColorControllerNode.swift */,
 			);
 			name = Themes;
 			sourceTree = "<group>";
@@ -4448,6 +4454,7 @@
 				09DE2F292269D5E30045E975 /* PrivacyIntroControllerNode.swift in Sources */,
 				D0F67FF01EE6B8A8000E5906 /* ChannelMembersSearchController.swift in Sources */,
 				D0EC6DAF1EB9F58900EBF1C3 /* ChatInterfaceInputContexts.swift in Sources */,
+				09B4819323028A4200D5B32B /* ThemeAccentColorController.swift in Sources */,
 				0921F60E228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift in Sources */,
 				D0EC6DB01EB9F58900EBF1C3 /* ChatInterfaceInputContextPanels.swift in Sources */,
 				D0EC6DB11EB9F58900EBF1C3 /* ChatInterfaceInputNodes.swift in Sources */,
@@ -4567,6 +4574,7 @@
 				D00817CA22B47A14008A895F /* WatchRequestHandlers.swift in Sources */,
 				D00817E222B47A14008A895F /* UIImage+ImageEffects.m in Sources */,
 				D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */,
+				09B4819523028A8A00D5B32B /* ThemeAccentColorControllerNode.swift in Sources */,
 				D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */,
 				D0208AD61FA33D14001F0D5F /* RaiseToListenActivator.m in Sources */,
 				D0AF798022C2E26500CECCB8 /* compress_block.cc in Sources */,

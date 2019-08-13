@@ -4618,3 +4618,5 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.SelectedMessages_any" = "%@ Messages Selected";
 "Conversation.SelectedMessages_many" = "%@ Messages Selected";
 "Conversation.SelectedMessages_0" = "%@ Messages Selected";
+
+"AccentColor.Title" = "Accent Color";
