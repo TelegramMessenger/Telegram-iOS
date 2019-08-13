@@ -60,6 +60,7 @@
 		D0C9CB802302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */; };
 		D0C9CBB42302B64C00FAB518 /* LanguageSuggestionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */; };
 		D0C9CBE62303387E00FAB518 /* ContactsPeerItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */; };
+		D0C9CBE82303407100FAB518 /* ContactListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE72303407100FAB518 /* ContactListUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -118,6 +119,7 @@
 		D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeleteChatPeerActionSheetItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LanguageSuggestionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContactsPeerItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CBE72303407100FAB518 /* ContactListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContactListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +127,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9CBE82303407100FAB518 /* ContactListUI.framework in Frameworks */,
 				D0C9CBE62303387E00FAB518 /* ContactsPeerItem.framework in Frameworks */,
 				D0C9CBB42302B64C00FAB518 /* LanguageSuggestionUI.framework in Frameworks */,
 				D0C9CB802302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework in Frameworks */,
@@ -201,6 +204,7 @@
 		D0C9CAB62302360600FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9CBE72303407100FAB518 /* ContactListUI.framework */,
 				D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */,
 				D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */,
 				D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */,
