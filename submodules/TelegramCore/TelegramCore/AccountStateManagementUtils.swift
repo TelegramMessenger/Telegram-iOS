@@ -1305,13 +1305,13 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
                 updatedState.updatePeersNearby(peersNearby)
             case let .updateNewScheduledMessage(apiMessage):
-                if let message = StoreMessage(apiMessage: apiMessage, namespace: Namespaces.Message.CloudScheduled) {
+                if let message = StoreMessage(apiMessage: apiMessage, namespace: Namespaces.Message.ScheduledCloud) {
                     updatedState.addMessages([message], location: .Random)
                 }
             case let .updateDeleteScheduledMessages(peer, messages):
                 var messageIds: [MessageId] = []
                 for message in messages {
-                    messageIds.append(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.CloudScheduled, id: message))
+                    messageIds.append(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.ScheduledCloud, id: message))
                 }
                 updatedState.deleteMessages(messageIds)
             default:

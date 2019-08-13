@@ -259,7 +259,7 @@ public final class ChatHistoryGridNode: GridNode, ChatHistoryNode {
         let historyViewUpdate = self.chatHistoryLocation
         |> distinctUntilChanged
         |> mapToSignal { location in
-            return chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), account: context.account, chatLocation: .peer(peerId), fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [], orderStatistics: [.locationWithinMonth])
+            return chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), account: context.account, chatLocation: .peer(peerId), scheduled: false, fixedCombinedReadStates: nil, tagMask: tagMask, additionalData: [], orderStatistics: [.locationWithinMonth])
         }
         
         let previousView = Atomic<ChatHistoryView?>(value: nil)

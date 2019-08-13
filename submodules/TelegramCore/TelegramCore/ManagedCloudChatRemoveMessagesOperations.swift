@@ -167,7 +167,7 @@ private func removeMessages(postbox: Postbox, network: Network, stateManager: Ac
     } else {
         var isScheduled = false
         for id in operation.messageIds {
-            if id.namespace == Namespaces.Message.CloudScheduled {
+            if id.namespace == Namespaces.Message.ScheduledCloud {
                 isScheduled = true
                 break
             }

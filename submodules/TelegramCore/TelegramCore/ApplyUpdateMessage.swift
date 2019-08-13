@@ -40,7 +40,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var apiMessage: Api.Message?
         
         for resultMessage in result.messages {
-            if let id = resultMessage.id(namespace: message.scheduleTime != nil ? Namespaces.Message.CloudScheduled : Namespaces.Message.Cloud) {
+            if let id = resultMessage.id(namespace: message.scheduleTime != nil ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
                 if id.peerId == message.id.peerId {
                     apiMessage = resultMessage
                     break
@@ -48,7 +48,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
         }
         
-        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil ? Namespaces.Message.CloudScheduled : Namespaces.Message.Cloud) {
+        if let apiMessage = apiMessage, let id = apiMessage.id(namespace: message.scheduleTime != nil ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
             messageId = id.id
         } else {
             messageId = result.rawMessageIds.first
@@ -85,7 +85,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
-                let namespace = message.scheduleTime != nil ? Namespaces.Message.CloudScheduled : Namespaces.Message.Cloud
+                let namespace = message.scheduleTime != nil ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud
                 updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: namespace, id: messageId)
             } else {
                 updatedId = currentMessage.id

@@ -26,7 +26,7 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
     var hasEditRights = false
     var unlimitedInterval = false
     
-    if message.id.namespace == Namespaces.Message.CloudScheduled {
+    if message.id.namespace == Namespaces.Message.ScheduledCloud {
         hasEditRights = true
     } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
@@ -283,7 +283,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         canDeleteMessage = context.account.peerId == message.author?.id
     }
     
-    if message.id.namespace == Namespaces.Message.CloudScheduled {
+    if [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal].contains(message.id.namespace) {
         canReply = false
         canPin = false
     }
@@ -721,7 +721,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
         var hadPersonalIncoming = false
         var hadBanPeerId = false
         for id in messageIds {
-            let isScheduled = id.namespace == Namespaces.Message.CloudScheduled
+            let isScheduled = id.namespace == Namespaces.Message.ScheduledCloud
             if optionsMap[id] == nil {
                 optionsMap[id] = []
             }
@@ -738,7 +738,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                         optionsMap[id]!.insert(.rateCall)
                     }
                 }
-                if id.namespace == Namespaces.Message.CloudScheduled {
+                if id.namespace == Namespaces.Message.ScheduledCloud {
                     optionsMap[id]!.insert(.sendScheduledNow)
                     optionsMap[id]!.insert(.editScheduledTime)
                     optionsMap[id]!.insert(.deleteLocally)

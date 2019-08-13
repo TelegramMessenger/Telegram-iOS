@@ -517,7 +517,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     var actions = actions
-                    if message.id.namespace != Namespaces.Message.CloudScheduled {
+                    if ![Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal].contains(message.id.namespace) {
                         actions.insert(.action(ContextMenuActionItem(text: "Reaction", icon: { _ in nil }, action: { _, f in
                             guard let strongSelf = self else {
                                 return
@@ -2768,7 +2768,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 var isScheduled = false
                                 for id in messageIds {
-                                    if id.namespace == Namespaces.Message.CloudScheduled {
+                                    if [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal].contains(id.namespace) {
                                         isScheduled = true
                                         break
                                     }

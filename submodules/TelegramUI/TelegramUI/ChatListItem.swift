@@ -643,7 +643,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     isPeerGroup = false
                     isAd = isAdValue
                 case let .groupReference(_, peers, messageValue, unreadState, hiddenByDefault):
-                    if let messageValue = messageValue, !peers.isEmpty {
+                    if let _ = messageValue, !peers.isEmpty {
                         contentPeer = .chat(peers[0].peer)
                     } else {
                         contentPeer = .group(peers)
