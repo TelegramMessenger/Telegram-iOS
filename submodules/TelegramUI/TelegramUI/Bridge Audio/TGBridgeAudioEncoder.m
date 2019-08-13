@@ -121,7 +121,7 @@ typedef enum {
     return queue;
 }
 
-static const int encoderPacketSizeInBytes = TGBridgeAudioEncoderSampleRate / 1000 * 60 * 2;
+static const int encoderPacketSizeInBytes = 16000 / 1000 * 60 * 2;
 
 - (void)startWithCompletion:(void (^)(NSString *, int32_t))completion
 {
