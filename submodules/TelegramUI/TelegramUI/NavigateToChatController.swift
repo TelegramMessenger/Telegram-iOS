@@ -6,6 +6,7 @@ import Postbox
 import AccountContext
 import GalleryUI
 import InstantPageUI
+import ChatListUI
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false

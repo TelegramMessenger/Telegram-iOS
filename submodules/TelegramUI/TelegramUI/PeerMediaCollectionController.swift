@@ -216,6 +216,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
             }, presentController: { _, _ in
             }, navigationController: {
                 return nil
+            }, chatControllerNode: {
+                return nil
             }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
             }, longTap: { [weak self] content, _ in
                 if let strongSelf = self {
@@ -280,6 +282,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, scheduleCurrentMessage: {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
+        }, performTextSelectionAction: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,

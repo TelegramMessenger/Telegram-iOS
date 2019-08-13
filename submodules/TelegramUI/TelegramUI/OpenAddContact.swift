@@ -6,7 +6,7 @@ import DeviceAccess
 import AccountContext
 import AlertUI
 
-func openAddContact(context: AccountContext, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
+func openAddContactImpl(context: AccountContext, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
     let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
     |> take(1)
     |> deliverOnMainQueue).start(next: { value in

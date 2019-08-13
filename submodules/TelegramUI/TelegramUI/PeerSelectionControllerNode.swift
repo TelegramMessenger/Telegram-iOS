@@ -10,6 +10,7 @@ import AccountContext
 import SearchBarNode
 import SearchUI
 import ContactListUI
+import ChatListUI
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext

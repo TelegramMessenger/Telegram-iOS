@@ -174,9 +174,13 @@ public final class PrincipalThemeEssentialGraphics {
                     
                     var outgoingGradientColors: (UIColor, UIColor)?
                     if let baseColor = presentationTheme.baseColor {
-                        let colors = baseColor.outgoingGradientColors
-                        if !colors.0.isEqual(colors.1) {
-                            outgoingGradientColors = colors
+                        if presentationTheme.baseColor == .custom {
+                            
+                        } else [
+                            let colors = baseColor.outgoingGradientColors
+                            if !colors.0.isEqual(colors.1) {
+                                outgoingGradientColors = colors
+                            }
                         }
                     }
                     if let outgoingGradientColors = outgoingGradientColors {

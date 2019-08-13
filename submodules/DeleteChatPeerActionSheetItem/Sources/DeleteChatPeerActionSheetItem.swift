@@ -7,19 +7,19 @@ import TelegramPresentationData
 import AvatarNode
 import AccountContext
 
-enum DeleteChatPeerAction {
+public enum DeleteChatPeerAction {
     case delete
     case clearHistory
 }
 
-final class DeleteChatPeerActionSheetItem: ActionSheetItem {
+public final class DeleteChatPeerActionSheetItem: ActionSheetItem {
     let context: AccountContext
     let peer: Peer
     let chatPeer: Peer
     let action: DeleteChatPeerAction
     let strings: PresentationStrings
     
-    init(context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings) {
+    public init(context: AccountContext, peer: Peer, chatPeer: Peer, action: DeleteChatPeerAction, strings: PresentationStrings) {
         self.context = context
         self.peer = peer
         self.chatPeer = chatPeer
@@ -27,11 +27,11 @@ final class DeleteChatPeerActionSheetItem: ActionSheetItem {
         self.strings = strings
     }
     
-    func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
+    public func node(theme: ActionSheetControllerTheme) -> ActionSheetItemNode {
         return DeleteChatPeerActionSheetItemNode(theme: theme, strings: self.strings, context: self.context, peer: self.peer, chatPeer: self.chatPeer, action: self.action)
     }
     
-    func updateNode(_ node: ActionSheetItemNode) {
+    public func updateNode(_ node: ActionSheetItemNode) {
     }
 }
 

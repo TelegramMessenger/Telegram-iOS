@@ -51,7 +51,7 @@
     
     __weak TGMenuSheetController *weakController = controller;
     __weak TGViewController *weakParentController = parentController;
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:intent == TGPassportAttachIntentMultiple allowEditing:true document:true selectionLimit: 10];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:intent == TGPassportAttachIntentMultiple allowEditing:true document:true selectionLimit:10];
     __weak TGAttachmentCarouselItemView *weakCarouselItem = carouselItem;
     carouselItem.onlyCrop = true;
     carouselItem.parentController = parentController;

@@ -23,7 +23,7 @@
 
 - (instancetype)init
 {
-    return [self initWithGroupingAllowed:false selectionLimit:30];
+    return [self initWithGroupingAllowed:false selectionLimit:100];
 }
 
 - (instancetype)initWithGroupingAllowed:(bool)allowGrouping selectionLimit:(int)selectionLimit

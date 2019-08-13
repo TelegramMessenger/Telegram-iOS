@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import TelegramPresentationData
 import TelegramCore
 
 public enum MessageBubbleImageNeighbors {

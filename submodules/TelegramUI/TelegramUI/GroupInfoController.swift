@@ -23,6 +23,7 @@ import LegacyUI
 import LocationUI
 import ItemListPeerItem
 import ContactListUI
+import ChatListUI
 
 private final class GroupInfoArguments {
     let context: AccountContext

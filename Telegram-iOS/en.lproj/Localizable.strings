@@ -4481,7 +4481,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
 "Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";
-"Chat.AttachmentLimitExceeded" = "Slowmode is enabled. You can't select more items.";
+"Chat.AttachmentLimitReached" = "You can't select more items.";
+"Chat.SlowmodeAttachmentLimitReached" = "Slowmode is enabled. You can't select more items.";
 "Chat.AttachmentMultipleFilesDisabled" = "Slowmode is enabled. You can't send multiple files at once.";
 "Chat.AttachmentMultipleForwardDisabled" = "Slowmode is enabled. You can't forward multiple messages at once.";
 "Chat.MultipleTextMessagesDisabled" = "Slowmode is enabled. You can't send multiple messages at once.";
@@ -4653,3 +4654,5 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemePreview.Chat.3.Text" = "Twenty years from now you will be more disappointed by the things that you didn't do than by the ones you did do, so throw off the bowlines, sail away from safe harboor, catch the trade winds in your sails.";
 
 "Appearance.ThemePreview.Chat.4.Text" = "Nearly missed the sunrise.";
+
+"GroupInfo.Permissions.SlowmodeValue.Off" = "Off";

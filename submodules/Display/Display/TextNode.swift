@@ -110,7 +110,7 @@ public final class TextNodeLayoutArguments {
 }
 
 public final class TextNodeLayout: NSObject {
-    fileprivate let attributedString: NSAttributedString?
+    public let attributedString: NSAttributedString?
     fileprivate let maximumNumberOfLines: Int
     fileprivate let truncationType: CTLineTruncationType
     fileprivate let backgroundColor: UIColor?
@@ -210,9 +210,82 @@ public final class TextNodeLayout: NSObject {
         }
     }
     
-    public func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedString.Key: Any])? {
+    public func attributesAtPoint(_ point: CGPoint, orNearest: Bool) -> (Int, [NSAttributedString.Key: Any])? {
         if let attributedString = self.attributedString {
             let transformedPoint = CGPoint(x: point.x - self.insets.left, y: point.y - self.insets.top)
+            if orNearest {
+                var lineIndex = -1
+                var closestLine: (Int, CGRect, CGFloat)?
+                for line in self.lines {
+                    lineIndex += 1
+                    var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                    switch self.alignment {
+                    case .center:
+                        lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
+                    case .natural:
+                        if line.isRTL {
+                            lineFrame.origin.x = self.size.width - lineFrame.size.width
+                        }
+                        lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                    default:
+                        break
+                    }
+                    
+                    let currentDistance = (lineFrame.center.y - point.y) * (lineFrame.center.y - point.y)
+                    if let current = closestLine {
+                        if current.2 > currentDistance {
+                            closestLine = (lineIndex, lineFrame, currentDistance)
+                        }
+                    } else {
+                        closestLine = (lineIndex, lineFrame, currentDistance)
+                    }
+                }
+                
+                if let (index, lineFrame, _) = closestLine {
+                    let line = self.lines[index]
+                    
+                    let lineRange = CTLineGetStringRange(line.line)
+                    var index: Int
+                    if transformedPoint.x <= lineFrame.minX {
+                        index = lineRange.location
+                    } else if transformedPoint.x >= lineFrame.maxX {
+                        index = lineRange.location + lineRange.length
+                    } else {
+                        index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: floor(lineFrame.height / 2.0)))
+                        if index != 0 {
+                            var glyphStart: CGFloat = 0.0
+                            CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
+                            if transformedPoint.x < glyphStart {
+                                var closestLowerIndex: Int?
+                                let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                                if glyphRuns.count != 0 {
+                                    for run in glyphRuns {
+                                        let run = run as! CTRun
+                                        let glyphCount = CTRunGetGlyphCount(run)
+                                        for i in 0 ..< glyphCount {
+                                            var glyphIndex: CFIndex = 0
+                                            CTRunGetStringIndices(run, CFRangeMake(i, 1), &glyphIndex)
+                                            if glyphIndex < index {
+                                                if let closestLowerIndexValue = closestLowerIndex {
+                                                    if closestLowerIndexValue < glyphIndex {
+                                                        closestLowerIndex = glyphIndex
+                                                    }
+                                                } else {
+                                                    closestLowerIndex = glyphIndex
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                if let closestLowerIndex = closestLowerIndex {
+                                    index = closestLowerIndex
+                                }
+                            }
+                        }
+                    }
+                    return (index, [:])
+                }
+            }
             var lineIndex = -1
             for line in self.lines {
                 lineIndex += 1
@@ -231,12 +304,58 @@ public final class TextNodeLayout: NSObject {
                 if lineFrame.contains(transformedPoint) {
                     var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
                     if index == attributedString.length {
-                        index -= 1
+                        var closestLowerIndex: Int?
+                        let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                        if glyphRuns.count != 0 {
+                            for run in glyphRuns {
+                                let run = run as! CTRun
+                                let glyphCount = CTRunGetGlyphCount(run)
+                                for i in 0 ..< glyphCount {
+                                    var glyphIndex: CFIndex = 0
+                                    CTRunGetStringIndices(run, CFRangeMake(i, 1), &glyphIndex)
+                                    if glyphIndex < index {
+                                        if let closestLowerIndexValue = closestLowerIndex {
+                                            if closestLowerIndexValue < glyphIndex {
+                                                closestLowerIndex = glyphIndex
+                                            }
+                                        } else {
+                                            closestLowerIndex = glyphIndex
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if let closestLowerIndex = closestLowerIndex {
+                            index = closestLowerIndex
+                        }
                     } else if index != 0 {
                         var glyphStart: CGFloat = 0.0
                         CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
                         if transformedPoint.x < glyphStart {
-                            index -= 1
+                            var closestLowerIndex: Int?
+                            let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                            if glyphRuns.count != 0 {
+                                for run in glyphRuns {
+                                    let run = run as! CTRun
+                                    let glyphCount = CTRunGetGlyphCount(run)
+                                    for i in 0 ..< glyphCount {
+                                        var glyphIndex: CFIndex = 0
+                                        CTRunGetStringIndices(run, CFRangeMake(i, 1), &glyphIndex)
+                                        if glyphIndex < index {
+                                            if let closestLowerIndexValue = closestLowerIndex {
+                                                if closestLowerIndexValue < glyphIndex {
+                                                    closestLowerIndex = glyphIndex
+                                                }
+                                            } else {
+                                                closestLowerIndex = glyphIndex
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if let closestLowerIndex = closestLowerIndex {
+                                index = closestLowerIndex
+                            }
                         }
                     }
                     if index >= 0 && index < attributedString.length {
@@ -263,12 +382,58 @@ public final class TextNodeLayout: NSObject {
                 if lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.size.height).insetBy(dx: -3.0, dy: -3.0).contains(transformedPoint) {
                     var index = CTLineGetStringIndexForPosition(line.line, CGPoint(x: transformedPoint.x - lineFrame.minX, y: transformedPoint.y - lineFrame.minY))
                     if index == attributedString.length {
-                        index -= 1
+                        var closestLowerIndex: Int?
+                        let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                        if glyphRuns.count != 0 {
+                            for run in glyphRuns {
+                                let run = run as! CTRun
+                                let glyphCount = CTRunGetGlyphCount(run)
+                                for i in 0 ..< glyphCount {
+                                    var glyphIndex: CFIndex = 0
+                                    CTRunGetStringIndices(run, CFRangeMake(i, 1), &glyphIndex)
+                                    if glyphIndex < index {
+                                        if let closestLowerIndexValue = closestLowerIndex {
+                                            if closestLowerIndexValue < glyphIndex {
+                                                closestLowerIndex = glyphIndex
+                                            }
+                                        } else {
+                                            closestLowerIndex = glyphIndex
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if let closestLowerIndex = closestLowerIndex {
+                            index = closestLowerIndex
+                        }
                     } else if index != 0 {
                         var glyphStart: CGFloat = 0.0
                         CTLineGetOffsetForStringIndex(line.line, index, &glyphStart)
                         if transformedPoint.x < glyphStart {
-                            index -= 1
+                            var closestLowerIndex: Int?
+                            let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                            if glyphRuns.count != 0 {
+                                for run in glyphRuns {
+                                    let run = run as! CTRun
+                                    let glyphCount = CTRunGetGlyphCount(run)
+                                    for i in 0 ..< glyphCount {
+                                        var glyphIndex: CFIndex = 0
+                                        CTRunGetStringIndices(run, CFRangeMake(i, 1), &glyphIndex)
+                                        if glyphIndex < index {
+                                            if let closestLowerIndexValue = closestLowerIndex {
+                                                if closestLowerIndexValue < glyphIndex {
+                                                    closestLowerIndex = glyphIndex
+                                                }
+                                            } else {
+                                                closestLowerIndex = glyphIndex
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if let closestLowerIndex = closestLowerIndex {
+                                index = closestLowerIndex
+                            }
                         }
                     }
                     if index >= 0 && index < attributedString.length {
@@ -430,6 +595,41 @@ public final class TextNodeLayout: NSObject {
         }
         return nil
     }
+    
+    public func rangeRects(in range: NSRange) -> [CGRect]? {
+        guard let _ = self.attributedString, range.length != 0 else {
+            return nil
+        }
+        var rects: [(CGRect, CGRect)] = []
+        for line in self.lines {
+            let lineRange = NSIntersectionRange(range, line.range)
+            if lineRange.length != 0 {
+                var leftOffset: CGFloat = 0.0
+                if lineRange.location != line.range.location || line.isRTL {
+                    leftOffset = floor(CTLineGetOffsetForStringIndex(line.line, lineRange.location, nil))
+                }
+                var rightOffset: CGFloat = line.frame.width
+                if lineRange.location + lineRange.length != line.range.upperBound || line.isRTL {
+                    var secondaryOffset: CGFloat = 0.0
+                    let rawOffset = CTLineGetOffsetForStringIndex(line.line, lineRange.location + lineRange.length, &secondaryOffset)
+                    rightOffset = ceil(rawOffset)
+                    if !rawOffset.isEqual(to: secondaryOffset) {
+                        rightOffset = ceil(secondaryOffset)
+                    }
+                }
+                var lineFrame = CGRect(origin: CGPoint(x: line.frame.origin.x, y: line.frame.origin.y - line.frame.size.height + self.firstLineOffset), size: line.frame.size)
+                
+                lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
+                
+                let width = max(0.0, abs(rightOffset - leftOffset))
+                rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + (leftOffset < rightOffset ? leftOffset : rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
+            }
+        }
+        if !rects.isEmpty {
+            return rects.map { $1 }
+        }
+        return nil
+    }
 }
 
 private final class TextAccessibilityOverlayElement: UIAccessibilityElement {
@@ -550,9 +750,9 @@ public class TextNode: ASDisplayNode {
         self.clipsToBounds = false
     }
     
-    public func attributesAtPoint(_ point: CGPoint) -> (Int, [NSAttributedString.Key: Any])? {
+    public func attributesAtPoint(_ point: CGPoint, orNearest: Bool = false) -> (Int, [NSAttributedString.Key: Any])? {
         if let cachedLayout = self.cachedLayout {
-            return cachedLayout.attributesAtPoint(point)
+            return cachedLayout.attributesAtPoint(point, orNearest: orNearest)
         } else {
             return nil
         }
@@ -569,6 +769,14 @@ public class TextNode: ASDisplayNode {
     public func attributeRects(name: String, at index: Int) -> [CGRect]? {
         if let cachedLayout = self.cachedLayout {
             return cachedLayout.lineAndAttributeRects(name: name, at: index)?.map { $0.1 }
+        } else {
+            return nil
+        }
+    }
+    
+    public func rangeRects(in range: NSRange) -> [CGRect]? {
+        if let cachedLayout = self.cachedLayout {
+            return cachedLayout.rangeRects(in: range)
         } else {
             return nil
         }
@@ -861,7 +1069,15 @@ public class TextNode: ASDisplayNode {
                     lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: bounds.size), cutout: layout.cutout)
                 }
                 context.textPosition = CGPoint(x: lineFrame.minX, y: lineFrame.minY)
-                CTLineDraw(line.line, context)
+                
+                let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+                if glyphRuns.count != 0 {
+                    for run in glyphRuns {
+                        let run = run as! CTRun
+                        let glyphCount = CTRunGetGlyphCount(run)
+                        CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                    }
+                }
                 
                 if !line.strikethroughs.isEmpty {
                     for strikethrough in line.strikethroughs {

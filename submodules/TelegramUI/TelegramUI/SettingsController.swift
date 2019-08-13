@@ -26,6 +26,7 @@ import PassportUI
 import SearchUI
 import ItemListPeerItem
 import CallListUI
+import ChatListUI
 
 private let maximumNumberOfAccounts = 3
 
@@ -1178,12 +1179,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         actionsDisposable.dispose()
     }
     
-    let icon: UIImage?
-    if (useSpecialTabBarIcons()) {
-        icon = UIImage(bundleImageName: "Chat List/Tabs/NY/IconSettings")
-    } else {
-        icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
-    }
+    let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     
     let notificationsFromAllAccounts = accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     |> map { sharedData -> Bool in
@@ -1388,7 +1384,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             })
             if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
                 let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
-                let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
+                let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
                 return chatListController
             }
         }

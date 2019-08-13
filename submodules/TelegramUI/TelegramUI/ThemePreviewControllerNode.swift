@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
+import ChatListUI
 
 final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext

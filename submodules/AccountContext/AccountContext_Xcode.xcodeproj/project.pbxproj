@@ -36,6 +36,7 @@
 		D0C9C3D72300CC2500FAB518 /* FetchMediaUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3D62300CC2400FAB518 /* FetchMediaUtils.swift */; };
 		D0C9C3D92300CC6000FAB518 /* IsMediaStreamable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3D82300CC6000FAB518 /* IsMediaStreamable.swift */; };
 		D0C9CA8A2302314400FAB518 /* ContactSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA892302314400FAB518 /* ContactSelectionController.swift */; };
+		D0C9CB842302B4B900FAB518 /* StoredMessageFromSearchPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CB832302B4B900FAB518 /* StoredMessageFromSearchPeer.swift */; };
 		D0D3285422F329A900D07EE2 /* AccountContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D3285222F329A900D07EE2 /* AccountContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D3285F22F335B000D07EE2 /* AccountContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3285E22F335B000D07EE2 /* AccountContext.swift */; };
 		D0D3289D22F3461700D07EE2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D3289C22F3461700D07EE2 /* Foundation.framework */; };
@@ -75,6 +76,7 @@
 		D0C9C3D62300CC2400FAB518 /* FetchMediaUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchMediaUtils.swift; sourceTree = "<group>"; };
 		D0C9C3D82300CC6000FAB518 /* IsMediaStreamable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IsMediaStreamable.swift; sourceTree = "<group>"; };
 		D0C9CA892302314400FAB518 /* ContactSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactSelectionController.swift; sourceTree = "<group>"; };
+		D0C9CB832302B4B900FAB518 /* StoredMessageFromSearchPeer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StoredMessageFromSearchPeer.swift; sourceTree = "<group>"; };
 		D0D3284F22F329A900D07EE2 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D3285222F329A900D07EE2 /* AccountContext.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AccountContext.h; sourceTree = "<group>"; };
 		D0D3285322F329A900D07EE2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -152,6 +154,7 @@
 				D0C9C3D62300CC2400FAB518 /* FetchMediaUtils.swift */,
 				D0C9C3D82300CC6000FAB518 /* IsMediaStreamable.swift */,
 				D0C9CA892302314400FAB518 /* ContactSelectionController.swift */,
+				D0C9CB832302B4B900FAB518 /* StoredMessageFromSearchPeer.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -255,6 +258,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9CB842302B4B900FAB518 /* StoredMessageFromSearchPeer.swift in Sources */,
 				D0879B6122F7A7A600C4D6B3 /* UniversalVideoNode.swift in Sources */,
 				D0879A4E22F65B2A00C4D6B3 /* MediaManager.swift in Sources */,
 				D0879A4A22F6584B00C4D6B3 /* SharedMediaPlayer.swift in Sources */,

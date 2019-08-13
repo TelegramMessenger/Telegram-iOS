@@ -166,4 +166,10 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     func updateHighlightedState(animated: Bool) -> Bool {
         return false
     }
+    
+    func willUpdateIsExtractedToContextPreview(_ value: Bool) {    
+    }
+    
+    func updateIsExtractedToContextPreview(_ value: Bool) {
+    }
 }

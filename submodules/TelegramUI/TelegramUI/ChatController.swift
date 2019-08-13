@@ -34,6 +34,7 @@ import LegacyUI
 import InstantPageUI
 import LocationUI
 import BotPaymentsUI
+import DeleteChatPeerActionSheetItem
 
 public enum ChatControllerPeekActions {
     case standard
@@ -255,6 +256,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var mediaRestrictedTooltipControllerMode = true
     
     private weak var slowmodeTooltipController: ChatSlowmodeHintController?
+    
+    private weak var currentContextController: ContextController?
     
     private weak var sendMessageActionsController: ChatSendMessageActionSheetController?
     
@@ -544,7 +547,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             f(.dismissWithoutContent)
                         })), at: 0)
                     }
-                    strongSelf.window?.presentInGlobalOverlay(ContextController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, recognizer: recognizer))
+                    let controller = ContextController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, recognizer: recognizer)
+                    strongSelf.currentContextController = controller
+                    strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
         }, navigateToMessage: { [weak self] fromId, id in
@@ -1003,6 +1008,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.present(controller, in: .window(.root), with: arguments)
         }, navigationController: { [weak self] in
             return self?.navigationController as? NavigationController
+        }, chatControllerNode: { [weak self] in
+            return self?.chatDisplayNode
         }, presentGlobalOverlayController: { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
         }, callPeer: { [weak self] peerId in
@@ -1320,13 +1327,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }, addContact: { [weak self] phoneNumber in
             if let strongSelf = self {
-                openAddContact(context: strongSelf.context, phoneNumber: phoneNumber, present: { [weak self] controller, arguments in
+                strongSelf.context.sharedContext.openAddContact(context: strongSelf.context, firstName: "", lastName: "", phoneNumber: phoneNumber, label: defaultContactLabel, present: { [weak self] controller, arguments in
                     self?.present(controller, in: .window(.root), with: arguments)
                 }, pushController: { [weak self] controller in
                     if let strongSelf = self {
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
-                })
+                }, completed: {})
             }
         }, rateCall: { [weak self] message, callId in
             if let strongSelf = self {
@@ -1483,6 +1490,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
                 strongSelf.chatDisplayNode.dismissInput()
                 strongSelf.present(controller, in: .window(.root))
+            }
+        }, performTextSelectionAction: { [weak self] _, text, action in
+            guard let strongSelf = self else {
+                return
+            }
+            switch action {
+            case .copy:
+                UIPasteboard.general.string = text
+            case .share:
+                let f = {
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let shareController = ShareController(context: strongSelf.context, subject: .text(text), externalShare: true, immediateExternalShare: false)
+                    strongSelf.chatDisplayNode.dismissInput()
+                    strongSelf.present(shareController, in: .window(.root))
+                }
+                if let currentContextController = strongSelf.currentContextController {
+                    currentContextController.dismiss(completion: {
+                        f()
+                    })
+                } else {
+                    f()
+                }
+            case .lookup:
+                let controller = UIReferenceLibraryViewController(term: text)
+                if let window = strongSelf.navigationController?.view.window {
+                    controller.popoverPresentationController?.sourceView = window
+                    controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                    window.rootViewController?.present(controller, animated: true)
+                }
             }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
@@ -4817,7 +4855,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitExceeded, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitReached, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
             }, presentCantSendMultipleFiles: {
                 guard let strongSelf = self else {
                     return
@@ -4949,7 +4987,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
-            var selectionLimit: Int = 30
+            var selectionLimit: Int = 100
             if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
                 selectionLimit = 10
             }
@@ -4987,7 +5025,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitExceeded, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitReached, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
                     controller.completionBlock = { [weak legacyController] signals, silentPosting in

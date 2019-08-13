@@ -36,7 +36,7 @@ func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions:
     
     var underlyingViews: [UIView] = []
     
-    var selectionLimit: Int32 = 30
+    var selectionLimit: Int32 = 100
     var slowModeEnabled = false
     if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
         slowModeEnabled = true

@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ChatListUI
 import AccountContext
 
 final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate {
