@@ -176,7 +176,7 @@ public final class PrincipalThemeEssentialGraphics {
                     if let baseColor = presentationTheme.baseColor {
                         if presentationTheme.baseColor == .custom {
                             
-                        } else [
+                        } else {
                             let colors = baseColor.outgoingGradientColors
                             if !colors.0.isEqual(colors.1) {
                                 outgoingGradientColors = colors
