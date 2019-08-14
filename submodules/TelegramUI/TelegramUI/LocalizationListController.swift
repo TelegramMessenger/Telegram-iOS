@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import SearchUI
 
 public class LocalizationListController: ViewController {
     private let context: AccountContext

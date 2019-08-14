@@ -10,6 +10,12 @@ import TelegramUIPreferences
 import ItemListUI
 import MergeLists
 import AccountContext
+import SearchBarNode
+import SearchUI
+import ItemListPeerItem
+import ContactsPeerItem
+import ChatListSearchItemHeader
+import ChatListUI
 
 private final class NotificationExceptionState : Equatable {
     let mode:NotificationExceptionMode

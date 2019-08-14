@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import AccountContext
+import ItemListPeerItem
 
 private final class SelectivePrivacyPeersControllerArguments {
     let account: Account
@@ -336,7 +337,7 @@ public func selectivePrivacyPeersController(context: AccountContext, title: Stri
             return transaction.getPeer(peerId)
         }
         |> deliverOnMainQueue).start(next: { peer in
-            guard let peer = peer, let controller = peerInfoController(context: context, peer: peer) else {
+            guard let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) else {
                 return
             }
             pushControllerImpl?(controller)

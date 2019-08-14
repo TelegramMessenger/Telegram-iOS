@@ -7,6 +7,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import StickerResources
+import AccountContext
 
 final class StickersChatInputContextPanelItem: ListViewItem {
     let account: Account

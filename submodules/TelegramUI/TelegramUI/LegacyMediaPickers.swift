@@ -10,6 +10,7 @@ import TelegramPresentationData
 import TelegramUIPrivateModule
 import DeviceAccess
 import AccountContext
+import ImageCompression
 
 func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"

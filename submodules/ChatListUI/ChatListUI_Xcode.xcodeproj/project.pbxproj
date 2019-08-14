@@ -1,0 +1,755 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0C9CA9A230234D400FAB518 /* ChatListUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9CA98230234D400FAB518 /* ChatListUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9CAAD230235E500FAB518 /* ChatListSearchContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAA4230235E300FAB518 /* ChatListSearchContainerNode.swift */; };
+		D0C9CAAE230235E500FAB518 /* ChatListRecentPeersListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAA5230235E300FAB518 /* ChatListRecentPeersListItem.swift */; };
+		D0C9CAAF230235E500FAB518 /* ChatListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAA6230235E300FAB518 /* ChatListController.swift */; };
+		D0C9CAB0230235E500FAB518 /* ChatListTitleProxyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAA7230235E300FAB518 /* ChatListTitleProxyNode.swift */; };
+		D0C9CAB1230235E500FAB518 /* ChatListTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAA8230235E400FAB518 /* ChatListTitleView.swift */; };
+		D0C9CAB2230235E500FAB518 /* ChatListTitleLockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAA9230235E400FAB518 /* ChatListTitleLockView.swift */; };
+		D0C9CAB3230235E500FAB518 /* ChatListSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAAA230235E400FAB518 /* ChatListSelection.swift */; };
+		D0C9CAB4230235E500FAB518 /* ChatListControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAAB230235E400FAB518 /* ChatListControllerNode.swift */; };
+		D0C9CAB5230235E500FAB518 /* ChatListEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAAC230235E500FAB518 /* ChatListEmptyNode.swift */; };
+		D0C9CAB82302360A00FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAB72302360A00FAB518 /* Foundation.framework */; };
+		D0C9CABA2302360F00FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAB92302360F00FAB518 /* UIKit.framework */; };
+		D0C9CABC2302361100FAB518 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CABB2302361100FAB518 /* Postbox.framework */; };
+		D0C9CABE2302361A00FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CABD2302361A00FAB518 /* SwiftSignalKit.framework */; };
+		D0C9CAC02302362000FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CABF2302362000FAB518 /* Display.framework */; };
+		D0C9CAC22302362700FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAC12302362700FAB518 /* TelegramCore.framework */; };
+		D0C9CAC42302363100FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAC32302363100FAB518 /* TelegramPresentationData.framework */; };
+		D0C9CAC62302363B00FAB518 /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAC52302363B00FAB518 /* TelegramUIPreferences.framework */; };
+		D0C9CAC82302364500FAB518 /* TelegramBaseController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAC72302364500FAB518 /* TelegramBaseController.framework */; };
+		D0C9CACA2302364B00FAB518 /* OverlayStatusController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAC92302364B00FAB518 /* OverlayStatusController.framework */; };
+		D0C9CACC2302365200FAB518 /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CACB2302365200FAB518 /* AccountContext.framework */; };
+		D0C9CACE2302365800FAB518 /* AlertUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CACD2302365800FAB518 /* AlertUI.framework */; };
+		D0C9CAD02302365D00FAB518 /* UndoUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CACF2302365D00FAB518 /* UndoUI.framework */; };
+		D0C9CAD22302366500FAB518 /* TelegramNotices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAD12302366500FAB518 /* TelegramNotices.framework */; };
+		D0C9CAD42302366C00FAB518 /* SearchUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAD32302366C00FAB518 /* SearchUI.framework */; };
+		D0C9CAD62302368600FAB518 /* MergeLists.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAD52302368600FAB518 /* MergeLists.framework */; };
+		D0C9CAD82302368E00FAB518 /* ActivityIndicator.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAD72302368E00FAB518 /* ActivityIndicator.framework */; };
+		D0C9CADA2302369800FAB518 /* SearchBarNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAD92302369800FAB518 /* SearchBarNode.framework */; };
+		D0C9CADC230236A200FAB518 /* ChatListSearchItemHeader.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CADB230236A200FAB518 /* ChatListSearchItemHeader.framework */; };
+		D0C9CADE230236A200FAB518 /* ChatListSearchItemNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CADD230236A200FAB518 /* ChatListSearchItemNode.framework */; };
+		D0C9CAE0230236A200FAB518 /* ChatListSearchRecentPeersNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CADF230236A200FAB518 /* ChatListSearchRecentPeersNode.framework */; };
+		D0C9CAE2230236B700FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAE1230236B700FAB518 /* AsyncDisplayKit.framework */; };
+		D0C9CAF0230236F700FAB518 /* ChatListHoleItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAE4230236F400FAB518 /* ChatListHoleItem.swift */; };
+		D0C9CAF1230236F700FAB518 /* ChatListBadgeNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAE5230236F400FAB518 /* ChatListBadgeNode.swift */; };
+		D0C9CAF2230236F700FAB518 /* ChatListNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAE6230236F500FAB518 /* ChatListNode.swift */; };
+		D0C9CAF3230236F700FAB518 /* ChatListNodeLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAE7230236F500FAB518 /* ChatListNodeLocation.swift */; };
+		D0C9CAF4230236F700FAB518 /* ChatListViewTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAE8230236F500FAB518 /* ChatListViewTransition.swift */; };
+		D0C9CAF5230236F700FAB518 /* ChatListNodeEntries.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAE9230236F500FAB518 /* ChatListNodeEntries.swift */; };
+		D0C9CAF6230236F700FAB518 /* ChatListTypingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAEA230236F500FAB518 /* ChatListTypingNode.swift */; };
+		D0C9CAF7230236F700FAB518 /* ChatListItemStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAEB230236F600FAB518 /* ChatListItemStrings.swift */; };
+		D0C9CAF8230236F700FAB518 /* ChatListItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAEC230236F600FAB518 /* ChatListItem.swift */; };
+		D0C9CAF9230236F700FAB518 /* ChatListStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAED230236F600FAB518 /* ChatListStatusNode.swift */; };
+		D0C9CAFA230236F700FAB518 /* ChatListPresentationData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAEE230236F600FAB518 /* ChatListPresentationData.swift */; };
+		D0C9CAFB230236F700FAB518 /* ChatListArchiveInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CAEF230236F600FAB518 /* ChatListArchiveInfoItem.swift */; };
+		D0C9CAFF2302373000FAB518 /* LocalizedPeerData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CAFE2302373000FAB518 /* LocalizedPeerData.framework */; };
+		D0C9CB012302373000FAB518 /* PeerOnlineMarkerNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB002302373000FAB518 /* PeerOnlineMarkerNode.framework */; };
+		D0C9CB032302373000FAB518 /* PeerPresenceStatusManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB022302373000FAB518 /* PeerPresenceStatusManager.framework */; };
+		D0C9CB052302373000FAB518 /* TemporaryCachedPeerDataManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB042302373000FAB518 /* TemporaryCachedPeerDataManager.framework */; };
+		D0C9CB07230237D000FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CB06230237D000FAB518 /* FrameworkBundle.swift */; };
+		D0C9CB442302B15D00FAB518 /* ChatTitleActivityNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB432302B15D00FAB518 /* ChatTitleActivityNode.framework */; };
+		D0C9CB802302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */; };
+		D0C9CBB42302B64C00FAB518 /* LanguageSuggestionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */; };
+		D0C9CBE62303387E00FAB518 /* ContactsPeerItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */; };
+		D0C9CBE82303407100FAB518 /* ContactListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE72303407100FAB518 /* ContactListUI.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D0C9CA95230234D400FAB518 /* ChatListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ChatListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CA98230234D400FAB518 /* ChatListUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ChatListUI.h; sourceTree = "<group>"; };
+		D0C9CA99230234D400FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0C9CAA4230235E300FAB518 /* ChatListSearchContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListSearchContainerNode.swift; sourceTree = "<group>"; };
+		D0C9CAA5230235E300FAB518 /* ChatListRecentPeersListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListRecentPeersListItem.swift; sourceTree = "<group>"; };
+		D0C9CAA6230235E300FAB518 /* ChatListController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListController.swift; sourceTree = "<group>"; };
+		D0C9CAA7230235E300FAB518 /* ChatListTitleProxyNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListTitleProxyNode.swift; sourceTree = "<group>"; };
+		D0C9CAA8230235E400FAB518 /* ChatListTitleView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListTitleView.swift; sourceTree = "<group>"; };
+		D0C9CAA9230235E400FAB518 /* ChatListTitleLockView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListTitleLockView.swift; sourceTree = "<group>"; };
+		D0C9CAAA230235E400FAB518 /* ChatListSelection.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListSelection.swift; sourceTree = "<group>"; };
+		D0C9CAAB230235E400FAB518 /* ChatListControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListControllerNode.swift; sourceTree = "<group>"; };
+		D0C9CAAC230235E500FAB518 /* ChatListEmptyNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListEmptyNode.swift; sourceTree = "<group>"; };
+		D0C9CAB72302360A00FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0C9CAB92302360F00FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D0C9CABB2302361100FAB518 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CABD2302361A00FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CABF2302362000FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAC12302362700FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAC32302363100FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAC52302363B00FAB518 /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAC72302364500FAB518 /* TelegramBaseController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramBaseController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAC92302364B00FAB518 /* OverlayStatusController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OverlayStatusController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CACB2302365200FAB518 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CACD2302365800FAB518 /* AlertUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AlertUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CACF2302365D00FAB518 /* UndoUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UndoUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAD12302366500FAB518 /* TelegramNotices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramNotices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAD32302366C00FAB518 /* SearchUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SearchUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAD52302368600FAB518 /* MergeLists.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MergeLists.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAD72302368E00FAB518 /* ActivityIndicator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ActivityIndicator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAD92302369800FAB518 /* SearchBarNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SearchBarNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CADB230236A200FAB518 /* ChatListSearchItemHeader.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListSearchItemHeader.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CADD230236A200FAB518 /* ChatListSearchItemNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListSearchItemNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CADF230236A200FAB518 /* ChatListSearchRecentPeersNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListSearchRecentPeersNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAE1230236B700FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CAE4230236F400FAB518 /* ChatListHoleItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListHoleItem.swift; sourceTree = "<group>"; };
+		D0C9CAE5230236F400FAB518 /* ChatListBadgeNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListBadgeNode.swift; sourceTree = "<group>"; };
+		D0C9CAE6230236F500FAB518 /* ChatListNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListNode.swift; sourceTree = "<group>"; };
+		D0C9CAE7230236F500FAB518 /* ChatListNodeLocation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListNodeLocation.swift; sourceTree = "<group>"; };
+		D0C9CAE8230236F500FAB518 /* ChatListViewTransition.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListViewTransition.swift; sourceTree = "<group>"; };
+		D0C9CAE9230236F500FAB518 /* ChatListNodeEntries.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListNodeEntries.swift; sourceTree = "<group>"; };
+		D0C9CAEA230236F500FAB518 /* ChatListTypingNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListTypingNode.swift; sourceTree = "<group>"; };
+		D0C9CAEB230236F600FAB518 /* ChatListItemStrings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListItemStrings.swift; sourceTree = "<group>"; };
+		D0C9CAEC230236F600FAB518 /* ChatListItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListItem.swift; sourceTree = "<group>"; };
+		D0C9CAED230236F600FAB518 /* ChatListStatusNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListStatusNode.swift; sourceTree = "<group>"; };
+		D0C9CAEE230236F600FAB518 /* ChatListPresentationData.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListPresentationData.swift; sourceTree = "<group>"; };
+		D0C9CAEF230236F600FAB518 /* ChatListArchiveInfoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatListArchiveInfoItem.swift; sourceTree = "<group>"; };
+		D0C9CAFE2302373000FAB518 /* LocalizedPeerData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalizedPeerData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CB002302373000FAB518 /* PeerOnlineMarkerNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerOnlineMarkerNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CB022302373000FAB518 /* PeerPresenceStatusManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerPresenceStatusManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CB042302373000FAB518 /* TemporaryCachedPeerDataManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TemporaryCachedPeerDataManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CB06230237D000FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9CB432302B15D00FAB518 /* ChatTitleActivityNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatTitleActivityNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeleteChatPeerActionSheetItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LanguageSuggestionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContactsPeerItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9CBE72303407100FAB518 /* ContactListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContactListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0C9CA92230234D400FAB518 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9CBE82303407100FAB518 /* ContactListUI.framework in Frameworks */,
+				D0C9CBE62303387E00FAB518 /* ContactsPeerItem.framework in Frameworks */,
+				D0C9CBB42302B64C00FAB518 /* LanguageSuggestionUI.framework in Frameworks */,
+				D0C9CB802302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework in Frameworks */,
+				D0C9CB442302B15D00FAB518 /* ChatTitleActivityNode.framework in Frameworks */,
+				D0C9CAFF2302373000FAB518 /* LocalizedPeerData.framework in Frameworks */,
+				D0C9CB012302373000FAB518 /* PeerOnlineMarkerNode.framework in Frameworks */,
+				D0C9CB032302373000FAB518 /* PeerPresenceStatusManager.framework in Frameworks */,
+				D0C9CB052302373000FAB518 /* TemporaryCachedPeerDataManager.framework in Frameworks */,
+				D0C9CAE2230236B700FAB518 /* AsyncDisplayKit.framework in Frameworks */,
+				D0C9CADC230236A200FAB518 /* ChatListSearchItemHeader.framework in Frameworks */,
+				D0C9CADE230236A200FAB518 /* ChatListSearchItemNode.framework in Frameworks */,
+				D0C9CAE0230236A200FAB518 /* ChatListSearchRecentPeersNode.framework in Frameworks */,
+				D0C9CADA2302369800FAB518 /* SearchBarNode.framework in Frameworks */,
+				D0C9CAD82302368E00FAB518 /* ActivityIndicator.framework in Frameworks */,
+				D0C9CAD62302368600FAB518 /* MergeLists.framework in Frameworks */,
+				D0C9CAD42302366C00FAB518 /* SearchUI.framework in Frameworks */,
+				D0C9CAD22302366500FAB518 /* TelegramNotices.framework in Frameworks */,
+				D0C9CAD02302365D00FAB518 /* UndoUI.framework in Frameworks */,
+				D0C9CACE2302365800FAB518 /* AlertUI.framework in Frameworks */,
+				D0C9CACC2302365200FAB518 /* AccountContext.framework in Frameworks */,
+				D0C9CACA2302364B00FAB518 /* OverlayStatusController.framework in Frameworks */,
+				D0C9CAC82302364500FAB518 /* TelegramBaseController.framework in Frameworks */,
+				D0C9CAC62302363B00FAB518 /* TelegramUIPreferences.framework in Frameworks */,
+				D0C9CAC42302363100FAB518 /* TelegramPresentationData.framework in Frameworks */,
+				D0C9CAC22302362700FAB518 /* TelegramCore.framework in Frameworks */,
+				D0C9CAC02302362000FAB518 /* Display.framework in Frameworks */,
+				D0C9CABE2302361A00FAB518 /* SwiftSignalKit.framework in Frameworks */,
+				D0C9CABC2302361100FAB518 /* Postbox.framework in Frameworks */,
+				D0C9CABA2302360F00FAB518 /* UIKit.framework in Frameworks */,
+				D0C9CAB82302360A00FAB518 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0C9CA8B230234D400FAB518 = {
+			isa = PBXGroup;
+			children = (
+				D0C9CA99230234D400FAB518 /* Info.plist */,
+				D0C9CA97230234D400FAB518 /* Sources */,
+				D0C9CA96230234D400FAB518 /* Products */,
+				D0C9CAB62302360600FAB518 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D0C9CA96230234D400FAB518 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9CA95230234D400FAB518 /* ChatListUI.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0C9CA97230234D400FAB518 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9CAE3230236BF00FAB518 /* Node */,
+				D0C9CAA6230235E300FAB518 /* ChatListController.swift */,
+				D0C9CAAB230235E400FAB518 /* ChatListControllerNode.swift */,
+				D0C9CAAC230235E500FAB518 /* ChatListEmptyNode.swift */,
+				D0C9CAA5230235E300FAB518 /* ChatListRecentPeersListItem.swift */,
+				D0C9CAA4230235E300FAB518 /* ChatListSearchContainerNode.swift */,
+				D0C9CAAA230235E400FAB518 /* ChatListSelection.swift */,
+				D0C9CAA9230235E400FAB518 /* ChatListTitleLockView.swift */,
+				D0C9CAA7230235E300FAB518 /* ChatListTitleProxyNode.swift */,
+				D0C9CAA8230235E400FAB518 /* ChatListTitleView.swift */,
+				D0C9CB06230237D000FAB518 /* FrameworkBundle.swift */,
+				D0C9CA98230234D400FAB518 /* ChatListUI.h */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D0C9CAB62302360600FAB518 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9CBE72303407100FAB518 /* ContactListUI.framework */,
+				D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */,
+				D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */,
+				D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */,
+				D0C9CB432302B15D00FAB518 /* ChatTitleActivityNode.framework */,
+				D0C9CAFE2302373000FAB518 /* LocalizedPeerData.framework */,
+				D0C9CB002302373000FAB518 /* PeerOnlineMarkerNode.framework */,
+				D0C9CB022302373000FAB518 /* PeerPresenceStatusManager.framework */,
+				D0C9CB042302373000FAB518 /* TemporaryCachedPeerDataManager.framework */,
+				D0C9CAE1230236B700FAB518 /* AsyncDisplayKit.framework */,
+				D0C9CADB230236A200FAB518 /* ChatListSearchItemHeader.framework */,
+				D0C9CADD230236A200FAB518 /* ChatListSearchItemNode.framework */,
+				D0C9CADF230236A200FAB518 /* ChatListSearchRecentPeersNode.framework */,
+				D0C9CAD92302369800FAB518 /* SearchBarNode.framework */,
+				D0C9CAD72302368E00FAB518 /* ActivityIndicator.framework */,
+				D0C9CAD52302368600FAB518 /* MergeLists.framework */,
+				D0C9CAD32302366C00FAB518 /* SearchUI.framework */,
+				D0C9CAD12302366500FAB518 /* TelegramNotices.framework */,
+				D0C9CACF2302365D00FAB518 /* UndoUI.framework */,
+				D0C9CACD2302365800FAB518 /* AlertUI.framework */,
+				D0C9CACB2302365200FAB518 /* AccountContext.framework */,
+				D0C9CAC92302364B00FAB518 /* OverlayStatusController.framework */,
+				D0C9CAC72302364500FAB518 /* TelegramBaseController.framework */,
+				D0C9CAC52302363B00FAB518 /* TelegramUIPreferences.framework */,
+				D0C9CAC32302363100FAB518 /* TelegramPresentationData.framework */,
+				D0C9CAC12302362700FAB518 /* TelegramCore.framework */,
+				D0C9CABF2302362000FAB518 /* Display.framework */,
+				D0C9CABD2302361A00FAB518 /* SwiftSignalKit.framework */,
+				D0C9CABB2302361100FAB518 /* Postbox.framework */,
+				D0C9CAB92302360F00FAB518 /* UIKit.framework */,
+				D0C9CAB72302360A00FAB518 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D0C9CAE3230236BF00FAB518 /* Node */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9CAEF230236F600FAB518 /* ChatListArchiveInfoItem.swift */,
+				D0C9CAE5230236F400FAB518 /* ChatListBadgeNode.swift */,
+				D0C9CAE4230236F400FAB518 /* ChatListHoleItem.swift */,
+				D0C9CAEC230236F600FAB518 /* ChatListItem.swift */,
+				D0C9CAEB230236F600FAB518 /* ChatListItemStrings.swift */,
+				D0C9CAE6230236F500FAB518 /* ChatListNode.swift */,
+				D0C9CAE9230236F500FAB518 /* ChatListNodeEntries.swift */,
+				D0C9CAE7230236F500FAB518 /* ChatListNodeLocation.swift */,
+				D0C9CAEE230236F600FAB518 /* ChatListPresentationData.swift */,
+				D0C9CAED230236F600FAB518 /* ChatListStatusNode.swift */,
+				D0C9CAEA230236F500FAB518 /* ChatListTypingNode.swift */,
+				D0C9CAE8230236F500FAB518 /* ChatListViewTransition.swift */,
+			);
+			path = Node;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D0C9CA90230234D400FAB518 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9CA9A230234D400FAB518 /* ChatListUI.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D0C9CA94230234D400FAB518 /* ChatListUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0C9CA9D230234D400FAB518 /* Build configuration list for PBXNativeTarget "ChatListUI" */;
+			buildPhases = (
+				D0C9CA90230234D400FAB518 /* Headers */,
+				D0C9CA91230234D400FAB518 /* Sources */,
+				D0C9CA92230234D400FAB518 /* Frameworks */,
+				D0C9CA93230234D400FAB518 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ChatListUI;
+			productName = ChatListUI;
+			productReference = D0C9CA95230234D400FAB518 /* ChatListUI.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0C9CA8C230234D400FAB518 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = "Telegram Messenger LLP";
+				TargetAttributes = {
+					D0C9CA94230234D400FAB518 = {
+						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
+					};
+				};
+			};
+			buildConfigurationList = D0C9CA8F230234D400FAB518 /* Build configuration list for PBXProject "ChatListUI_Xcode" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0C9CA8B230234D400FAB518;
+			productRefGroup = D0C9CA96230234D400FAB518 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0C9CA94230234D400FAB518 /* ChatListUI */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0C9CA93230234D400FAB518 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0C9CA91230234D400FAB518 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9CAF9230236F700FAB518 /* ChatListStatusNode.swift in Sources */,
+				D0C9CAF6230236F700FAB518 /* ChatListTypingNode.swift in Sources */,
+				D0C9CAF0230236F700FAB518 /* ChatListHoleItem.swift in Sources */,
+				D0C9CAF8230236F700FAB518 /* ChatListItem.swift in Sources */,
+				D0C9CAF7230236F700FAB518 /* ChatListItemStrings.swift in Sources */,
+				D0C9CAAD230235E500FAB518 /* ChatListSearchContainerNode.swift in Sources */,
+				D0C9CAB1230235E500FAB518 /* ChatListTitleView.swift in Sources */,
+				D0C9CAF4230236F700FAB518 /* ChatListViewTransition.swift in Sources */,
+				D0C9CB07230237D000FAB518 /* FrameworkBundle.swift in Sources */,
+				D0C9CAF5230236F700FAB518 /* ChatListNodeEntries.swift in Sources */,
+				D0C9CAF1230236F700FAB518 /* ChatListBadgeNode.swift in Sources */,
+				D0C9CAB5230235E500FAB518 /* ChatListEmptyNode.swift in Sources */,
+				D0C9CAFA230236F700FAB518 /* ChatListPresentationData.swift in Sources */,
+				D0C9CAB2230235E500FAB518 /* ChatListTitleLockView.swift in Sources */,
+				D0C9CAB0230235E500FAB518 /* ChatListTitleProxyNode.swift in Sources */,
+				D0C9CAFB230236F700FAB518 /* ChatListArchiveInfoItem.swift in Sources */,
+				D0C9CAAF230235E500FAB518 /* ChatListController.swift in Sources */,
+				D0C9CAB4230235E500FAB518 /* ChatListControllerNode.swift in Sources */,
+				D0C9CAB3230235E500FAB518 /* ChatListSelection.swift in Sources */,
+				D0C9CAAE230235E500FAB518 /* ChatListRecentPeersListItem.swift in Sources */,
+				D0C9CAF2230236F700FAB518 /* ChatListNode.swift in Sources */,
+				D0C9CAF3230236F700FAB518 /* ChatListNodeLocation.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D0C9CA9B230234D400FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9CA9C230234D400FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9CA9E230234D400FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ChatListUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9CA9F230234D400FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ChatListUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9CAA02302355B00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9CAA12302355B00FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ChatListUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9CAA22302356D00FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+		D0C9CAA32302356D00FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ChatListUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0C9CA8F230234D400FAB518 /* Build configuration list for PBXProject "ChatListUI_Xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9CA9B230234D400FAB518 /* DebugAppStoreLLC */,
+				D0C9CAA02302355B00FAB518 /* DebugHockeyapp */,
+				D0C9CA9C230234D400FAB518 /* ReleaseAppStoreLLC */,
+				D0C9CAA22302356D00FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+		D0C9CA9D230234D400FAB518 /* Build configuration list for PBXNativeTarget "ChatListUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9CA9E230234D400FAB518 /* DebugAppStoreLLC */,
+				D0C9CAA12302355B00FAB518 /* DebugHockeyapp */,
+				D0C9CA9F230234D400FAB518 /* ReleaseAppStoreLLC */,
+				D0C9CAA32302356D00FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0C9CA8C230234D400FAB518 /* Project object */;
+}

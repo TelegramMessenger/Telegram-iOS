@@ -60,7 +60,7 @@ const CGFloat TGClipboardPreviewEdgeInset = 8.0f;
         [_collectionView registerClass:[TGClipboardPreviewCell class] forCellWithReuseIdentifier:TGClipboardPreviewCellIdentifier];
         [self addSubview:_collectionView];
         
-        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:false selectionLimit:30];
+        _selectionContext = [[TGMediaSelectionContext alloc] initWithGroupingAllowed:false selectionLimit:100];
         
         for (UIImage *image in _images)
         {

@@ -489,7 +489,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
         if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
         }
     }
     dismissImpl = { [weak controller] in

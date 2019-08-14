@@ -10,6 +10,7 @@ import ItemListUI
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import ItemListPeerItem
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let account: Account
@@ -612,7 +613,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
         guard let navigationController = controller?.navigationController as? NavigationController else {
             return
         }
-        navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(groupId), keepStack: .always)
+        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(groupId), keepStack: .always))
     }
     return controller
 }

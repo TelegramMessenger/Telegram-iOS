@@ -10,6 +10,7 @@ import ItemListUI
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import ItemListPeerItem
 
 private final class ChannelBlacklistControllerArguments {
     let account: Account
@@ -360,7 +361,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
             }
             items.append(ActionSheetButtonItem(title: presentationData.strings.GroupRemoved_ViewUserInfo, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
-                if let infoController = peerInfoController(context: context, peer: participant.peer) {
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: participant.peer, mode: .generic) {
                     pushControllerImpl?(infoController)
                 }
             }))

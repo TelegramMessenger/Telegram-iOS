@@ -9,6 +9,9 @@ import Lottie
 import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
+import GalleryUI
+import InstantPageUI
+import LocationUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -329,7 +332,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                         } else {
                             contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
                         }
-                        let controller = deviceContactInfoController(context: params.context, subject: .vcard(peer, nil, contactData))
+                        let controller = deviceContactInfoController(context: params.context, subject: .vcard(peer, nil, contactData), completed: nil, cancelled: nil)
                         params.navigationController?.pushViewController(controller)
                     })
                     return true
@@ -411,7 +414,7 @@ func openChatInstantPage(context: AccountContext, message: Message, sourcePeerTy
 func openChatWallpaper(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-            let _ = (resolveUrl(account: context.account, url: content.url)
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
                 if case let .wallpaper(parameter) = resolvedUrl {
                     let source: WallpaperListSource

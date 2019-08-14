@@ -16,6 +16,15 @@
 		D0879ACA22F7063300C4D6B3 /* DateFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879AC922F7063300C4D6B3 /* DateFormat.swift */; };
 		D0879ACC22F7064000C4D6B3 /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879ACB22F7064000C4D6B3 /* TelegramUIPreferences.framework */; };
 		D0879ACE22F7069200C4D6B3 /* Locale.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879ACD22F7069200C4D6B3 /* Locale.swift */; };
+		D0C9C3542300AD7000FAB518 /* StringForDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3532300AD7000FAB518 /* StringForDuration.swift */; };
+		D0C9C3562300AD9900FAB518 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3552300AD9900FAB518 /* MessageContentKind.swift */; };
+		D0C9C3582300ADCF00FAB518 /* ServiceMessageStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3572300ADCF00FAB518 /* ServiceMessageStrings.swift */; };
+		D0C9C35A2300AE7200FAB518 /* TextFormat.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C3592300AE7200FAB518 /* TextFormat.framework */; };
+		D0C9C35C2300AEBA00FAB518 /* LocalizedPeerData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */; };
+		D0C9C35E2300AEF100FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C35D2300AEF100FAB518 /* Display.framework */; };
+		D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */; };
+		D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */; };
+		D0C9CA3823022A8300FAB518 /* NumberFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA3723022A8300FAB518 /* NumberFormat.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +39,15 @@
 		D0879AC922F7063300C4D6B3 /* DateFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateFormat.swift; sourceTree = "<group>"; };
 		D0879ACB22F7064000C4D6B3 /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879ACD22F7069200C4D6B3 /* Locale.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Locale.swift; sourceTree = "<group>"; };
+		D0C9C3532300AD7000FAB518 /* StringForDuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringForDuration.swift; sourceTree = "<group>"; };
+		D0C9C3552300AD9900FAB518 /* MessageContentKind.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageContentKind.swift; sourceTree = "<group>"; };
+		D0C9C3572300ADCF00FAB518 /* ServiceMessageStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceMessageStrings.swift; sourceTree = "<group>"; };
+		D0C9C3592300AE7200FAB518 /* TextFormat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TextFormat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalizedPeerData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C35D2300AEF100FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CurrencyFormat.swift; sourceTree = "<group>"; };
+		D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9CA3723022A8300FAB518 /* NumberFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumberFormat.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,6 +55,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C35E2300AEF100FAB518 /* Display.framework in Frameworks */,
+				D0C9C35C2300AEBA00FAB518 /* LocalizedPeerData.framework in Frameworks */,
+				D0C9C35A2300AE7200FAB518 /* TextFormat.framework in Frameworks */,
 				D0879ACC22F7064000C4D6B3 /* TelegramUIPreferences.framework in Frameworks */,
 				D0879AC622F705C300C4D6B3 /* TelegramPresentationData.framework in Frameworks */,
 				D0879AC422F705BE00C4D6B3 /* TelegramCore.framework in Frameworks */,
@@ -69,10 +90,16 @@
 		D0879AAF22F7021000C4D6B3 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9CA3723022A8300FAB518 /* NumberFormat.swift */,
+				D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */,
+				D0C9C3552300AD9900FAB518 /* MessageContentKind.swift */,
+				D0C9C3572300ADCF00FAB518 /* ServiceMessageStrings.swift */,
+				D0C9C3532300AD7000FAB518 /* StringForDuration.swift */,
 				D0879ACD22F7069200C4D6B3 /* Locale.swift */,
 				D0879AC922F7063300C4D6B3 /* DateFormat.swift */,
 				D0879ABC22F705AE00C4D6B3 /* PresenceStrings.swift */,
 				D0879AB022F7021000C4D6B3 /* TelegramStringFormatting.h */,
+				D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -80,6 +107,9 @@
 		D0879ABE22F705B700C4D6B3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C35D2300AEF100FAB518 /* Display.framework */,
+				D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */,
+				D0C9C3592300AE7200FAB518 /* TextFormat.framework */,
 				D0879ACB22F7064000C4D6B3 /* TelegramUIPreferences.framework */,
 				D0879AC522F705C300C4D6B3 /* TelegramPresentationData.framework */,
 				D0879AC322F705BE00C4D6B3 /* TelegramCore.framework */,
@@ -169,8 +199,14 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */,
+				D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */,
+				D0C9C3562300AD9900FAB518 /* MessageContentKind.swift in Sources */,
+				D0C9CA3823022A8300FAB518 /* NumberFormat.swift in Sources */,
 				D0879ACA22F7063300C4D6B3 /* DateFormat.swift in Sources */,
 				D0879ABD22F705AE00C4D6B3 /* PresenceStrings.swift in Sources */,
+				D0C9C3542300AD7000FAB518 /* StringForDuration.swift in Sources */,
+				D0C9C3582300ADCF00FAB518 /* ServiceMessageStrings.swift in Sources */,
 				D0879ACE22F7069200C4D6B3 /* Locale.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

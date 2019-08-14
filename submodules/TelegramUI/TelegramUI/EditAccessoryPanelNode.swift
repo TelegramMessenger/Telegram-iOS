@@ -11,6 +11,7 @@ import ActivityIndicator
 import AccountContext
 import RadialStatusNode
 import PhotoResources
+import TelegramStringFormatting
 
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let messageId: MessageId

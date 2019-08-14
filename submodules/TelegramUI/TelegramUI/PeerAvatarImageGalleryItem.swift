@@ -10,6 +10,7 @@ import AccountContext
 import RadialStatusNode
 import ShareController
 import PhotoResources
+import GalleryUI
 
 private struct PeerAvatarImageGalleryThumbnailItem: GalleryThumbnailItem {
     let account: Account

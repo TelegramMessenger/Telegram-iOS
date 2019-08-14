@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import AlertUI
+import SearchUI
+import TelegramPermissionsUI
 
 public class ComposeController: ViewController {
     private let context: AccountContext
@@ -139,7 +141,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.openCreateNewSecretChat = { [weak self] in
             if let strongSelf = self {
-                let controller = ContactSelectionController(context: strongSelf.context, title: { $0.Compose_NewEncryptedChatTitle })
+                let controller = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, title: { $0.Compose_NewEncryptedChatTitle }))
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak controller] peer in
@@ -149,7 +151,7 @@ public class ComposeController: ViewController {
                         strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.context.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
-                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
+                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
                             }
                         }, error: { _ in
                             if let strongSelf = self, let controller = controller {
@@ -189,7 +191,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
-                presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
+                strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                     strongSelf.present(c, in: .window(.root), with: a)
                 })
             }
@@ -252,6 +254,6 @@ public class ComposeController: ViewController {
     }
     
     private func openPeer(peerId: PeerId) {
-        (self.navigationController as? NavigationController)?.replaceTopController(ChatController(context: self.context, chatLocation: .peer(peerId)), animated: true)
+        (self.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId)), animated: true)
     }
 }

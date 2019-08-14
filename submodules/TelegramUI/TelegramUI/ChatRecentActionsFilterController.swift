@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import AccountContext
+import ItemListPeerItem
 
 private final class ChatRecentActionsFilterControllerArguments {
     let account: Account

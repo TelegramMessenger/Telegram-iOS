@@ -6,6 +6,7 @@ public final class ContextContentContainingNode: ASDisplayNode {
     public let contentNode: ContextContentNode
     public var contentRect: CGRect = CGRect()
     public var isExtractedToContextPreview: Bool = false
+    public var willUpdateIsExtractedToContextPreview: ((Bool) -> Void)?
     public var isExtractedToContextPreviewUpdated: ((Bool) -> Void)?
     public var updateAbsoluteRect: ((CGRect, CGSize) -> Void)?
     public var applyAbsoluteOffset: ((CGFloat, ContainedViewLayoutTransitionCurve, Double) -> Void)?

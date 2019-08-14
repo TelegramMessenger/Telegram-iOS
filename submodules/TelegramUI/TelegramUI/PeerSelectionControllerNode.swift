@@ -7,6 +7,10 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import SearchBarNode
+import SearchUI
+import ContactListUI
+import ChatListUI
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -342,7 +346,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     }
                     contactListNode.suppressPermissionWarning = { [weak self] in
                         if let strongSelf = self {
-                            presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
+                            strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                                 strongSelf.present(c, a)
                             })
                         }

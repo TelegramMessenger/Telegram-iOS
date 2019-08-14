@@ -3,6 +3,7 @@ import UIKit
 import Display
 import LegacyComponents
 import TelegramPresentationData
+import LegacyUI
 
 private final class LegacyImagePickerController: LegacyController, TGLegacyCameraControllerDelegate, TGImagePickerControllerDelegate {
     private let completion: (UIImage?) -> Void

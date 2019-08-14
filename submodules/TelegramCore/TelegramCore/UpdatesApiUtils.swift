@@ -116,7 +116,7 @@ extension Api.Message {
                 switch toId {
                     case let .peerUser(userId):
                         let id: PeerId.Id
-                        if namespace == Namespaces.Message.CloudScheduled {
+                        if namespace == Namespaces.Message.ScheduledCloud {
                             id = userId
                         } else {
                             id = (flags & Int32(2)) != 0 ? userId : (fromId ?? userId)

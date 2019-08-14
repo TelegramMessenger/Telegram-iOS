@@ -12,6 +12,7 @@ import TelegramStringFormatting
 import AccountContext
 import RadialStatusNode
 import PhotoResources
+import MusicAlbumArtResources
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 

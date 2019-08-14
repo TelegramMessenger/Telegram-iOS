@@ -13,6 +13,9 @@ import AccountContext
 import RadialStatusNode
 import StickerResources
 import PhotoResources
+import TelegramUniversalVideoContent
+import TelegramStringFormatting
+import GalleryUI
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -27,6 +30,15 @@ enum InteractiveMediaNodeSizeCalculation {
 enum InteractiveMediaNodeContentMode {
     case aspectFit
     case aspectFill
+    
+    var bubbleVideoDecorationContentMode: ChatBubbleVideoDecorationContentMode {
+        switch self {
+        case .aspectFit:
+            return .aspectFit
+        case .aspectFill:
+            return .aspectFill
+        }
+    }
 }
 
 enum InteractiveMediaNodeActivateContent {
@@ -46,7 +58,7 @@ enum InteractiveMediaNodePlayWithSoundMode {
     case loop
 }
 
-final class ChatMessageInteractiveMediaNode: ASDisplayNode {
+final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitionNode {
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
     private var videoNode: UniversalVideoNode?
@@ -54,6 +66,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
     private var animatedStickerNode: AnimatedStickerNode?
     private var statusNode: RadialStatusNode?
     var videoNodeDecoration: ChatBubbleVideoDecoration?
+    var decoration: UniversalVideoDecoration? {
+        return self.videoNodeDecoration
+    }
     private var badgeNode: ChatMessageInteractiveMediaBadge?
     private var tapRecognizer: UITapGestureRecognizer?
     
@@ -129,6 +144,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
         self.playerStatusDisposable.dispose()
         self.fetchDisposable.dispose()
         self.secretTimer?.invalidate()
+    }
+    
+    func isAvailableForGalleryTransition() -> Bool {
+        return self.automaticPlayback ?? false
     }
     
     override func didLoad() {
@@ -646,7 +665,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode {
                                 }
                                 
                                 if currentReplaceVideoNode, let updatedVideoFile = updateVideoFile {
-                                    let decoration = ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode, backgroundColor: arguments.emptyColor ?? .black)
+                                    let decoration = ChatBubbleVideoDecoration(corners: arguments.corners, nativeSize: nativeSize, contentMode: contentMode.bubbleVideoDecorationContentMode, backgroundColor: arguments.emptyColor ?? .black)
                                     strongSelf.videoNodeDecoration = decoration
                                     let mediaManager = context.sharedContext.mediaManager
                                     

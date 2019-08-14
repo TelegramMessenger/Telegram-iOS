@@ -31,6 +31,20 @@ private func parseAppSpecificContactReference(_ value: String) -> PeerId? {
     return nil
 }
 
+private func cleanPhoneNumber(_ text: String) -> String {
+    var result = ""
+    for c in text {
+        if c == "+" {
+            if result.isEmpty {
+                result += String(c)
+            }
+        } else if c >= "0" && c <= "9" {
+            result += String(c)
+        }
+    }
+    return result
+}
+
 func matchingDeviceContacts(stableIds: [String]) -> Signal<[MatchingDeviceContact], IntentContactsError> {
     guard CNContactStore.authorizationStatus(for: .contacts) == .authorized else {
         return .fail(.generic)
@@ -43,7 +57,7 @@ func matchingDeviceContacts(stableIds: [String]) -> Signal<[MatchingDeviceContac
     return .single(contacts.map({ contact in
         let phoneNumbers = contact.phoneNumbers.compactMap({ number -> String? in
             if !number.value.stringValue.isEmpty {
-                return number.value.stringValue
+                return cleanPhoneNumber(number.value.stringValue)
             } else {
                 return nil
             }
@@ -75,20 +89,16 @@ func matchingCloudContacts(postbox: Postbox, contacts: [MatchingDeviceContact]) 
         var result: [(String, TelegramUser)] = []
         outer: for peerId in transaction.getContactPeerIds() {
             if let peer = transaction.getPeer(peerId) as? TelegramUser {
-                if let peerPhoneNumber = peer.phone {
-                    for contact in contacts {
-                        for phoneNumber in contact.phoneNumbers {
-                            if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
+                for contact in contacts {
+                    if let contactPeerId = contact.peerId, contactPeerId == peerId {
+                        result.append((contact.stableId, peer))
+                        continue outer
+                    } else if let peerPhoneNumber = peer.phone {
+                        for contactPhoneNumber in contact.phoneNumbers {
+                            if matchPhoneNumbers(contactPhoneNumber, peerPhoneNumber) {
                                 result.append((contact.stableId, peer))
                                 continue outer
                             }
-                        }
-                    }
-                } else {
-                    for contact in contacts {
-                        if let contactPeerId = contact.peerId, contactPeerId == peerId {
-                            result.append((contact.stableId, peer))
-                            continue outer
                         }
                     }
                 }

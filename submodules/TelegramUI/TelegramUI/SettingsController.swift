@@ -20,6 +20,13 @@ import OverlayStatusController
 import AvatarNode
 import AlertUI
 import TelegramNotices
+import GalleryUI
+import LegacyUI
+import PassportUI
+import SearchUI
+import ItemListPeerItem
+import CallListUI
+import ChatListUI
 
 private let maximumNumberOfAccounts = 3
 
@@ -668,8 +675,8 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 if case let .instantView(webPage, _) = resolvedUrl, let customAnchor = customAnchor {
                     resolvedUrl = .instantView(webPage, customAnchor)
                 }
-                openResolvedUrl(resolvedUrl, context: context, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
-                }, present: { controller, arguments in
+                context.sharedContext.openResolvedUrl(resolvedUrl, context: context, urlContext: .generic, navigationController: getNavigationControllerImpl?(), openPeer: { peer, navigation in
+                }, sendFile: nil, sendSticker: nil, present: { controller, arguments in
                     pushControllerImpl?(controller)
                 }, dismissInput: {})
             })
@@ -812,7 +819,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                 supportPeerDisposable.set((supportPeer.get() |> take(1) |> deliverOnMainQueue).start(next: { peerId in
                     if let peerId = peerId {
-                        pushControllerImpl?(ChatController(context: context, chatLocation: .peer(peerId)))
+                        pushControllerImpl?(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                     }
                 }))
             })]), nil)
@@ -1172,12 +1179,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         actionsDisposable.dispose()
     }
     
-    let icon: UIImage?
-    if (useSpecialTabBarIcons()) {
-        icon = UIImage(bundleImageName: "Chat List/Tabs/NY/IconSettings")
-    } else {
-        icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
-    }
+    let icon = UIImage(bundleImageName: "Chat List/Tabs/IconSettings")
     
     let notificationsFromAllAccounts = accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
     |> map { sharedData -> Bool in
@@ -1296,7 +1298,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> take(1)
         |> deliverOnMainQueue).start(next: { context in
             if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-                navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId)))
             }
         })
     }
@@ -1382,7 +1384,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             })
             if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
                 let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
-                let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true)
+                let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
                 return chatListController
             }
         }

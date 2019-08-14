@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import TextSelectionNode
 
 public enum ContextMenuActionItemTextLayout {
     case singleLine
@@ -115,14 +116,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         super.init()
         
-        if #available(iOS 10.0, *) {
+        /*if #available(iOS 10.0, *) {
             let propertyAnimator = UIViewPropertyAnimator(duration: 0.4, curve: .linear)
             propertyAnimator.isInterruptible = true
             propertyAnimator.addAnimations {
                 self.effectView.effect = makeCustomZoomBlurEffect()
             }
             self.propertyAnimator = propertyAnimator
-        }
+        }*/
         
         self.scrollNode.view.delegate = self
         
@@ -250,7 +251,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         self.dimNode.alpha = 1.0
-        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         if let _ = self.propertyAnimator {
             if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                 self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.25, from: 0.0, to: 1.0, update: { [weak self] value in
@@ -261,50 +262,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 })
             }
         } else {
-            UIView.animate(withDuration: 0.25, animations: {
-                if #available(iOS 9.0, *) {
-                    if self.theme.chatList.searchBarKeyboardColor == .dark {
-                        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                            if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                                self.effectView.effect = UIBlurEffect(style: .dark)
-                            } else {
-                                self.effectView.effect = UIBlurEffect(style: .regular)
-                                if self.effectView.subviews.count == 2 {
-                                    self.effectView.subviews[1].isHidden = true
-                                }
-                            }
-                        } else {
-                            self.effectView.effect = UIBlurEffect(style: .dark)
-                        }
-                    } else {
-                        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                            self.effectView.effect = UIBlurEffect(style: .regular)
-                        } else {
-                            self.effectView.effect = UIBlurEffect(style: .light)
-                        }
-                    }
-                } else {
-                    self.effectView.alpha = 1.0
-                }
-            }, completion: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                if strongSelf.theme.chatList.searchBarKeyboardColor == .dark {
-                    if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-                    } else {
-                        if strongSelf.effectView.subviews.count == 2 {
-                            strongSelf.effectView.subviews[1].isHidden = true
-                        }
-                    }
-                }
+            UIView.animate(withDuration: 0.2, animations: {
+                self.effectView.effect = makeCustomZoomBlurEffect()
             })
         }
-        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
-        } else {
-            //self.effectView.subviews[1].layer.removeAnimation(forKey: "backgroundColor")
-        }
-        
         self.actionsContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
         let springDuration: Double = 0.42
@@ -332,11 +293,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let putBackInfo = putBackInfo, let contentParentNode = self.contentParentNode, let parentSupernode = contentParentNode.supernode {
             self.originalProjectedContentViewFrame = (parentSupernode.view.convert(contentParentNode.frame, to: self.view), contentParentNode.view.convert(contentParentNode.contentRect, to: self.view))
             
-            self.clippingNode.layer.animateFrame(from: self.clippingNode.frame, to: putBackInfo.contentAreaInScreenSpace, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
-            self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: putBackInfo.contentAreaInScreenSpace.minY, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
+            self.clippingNode.layer.animateFrame(from: self.clippingNode.frame, to: putBackInfo.contentAreaInScreenSpace, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
+            self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: putBackInfo.contentAreaInScreenSpace.minY, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
         }
         
         let contentParentNode = self.contentParentNode
+        
+        contentParentNode?.willUpdateIsExtractedToContextPreview?(false)
+        
         let intermediateCompletion: () -> Void = { [weak contentParentNode] in
             if completedEffect && completedContentNode && completedActionsNode {
                 switch result {
@@ -356,7 +320,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let propertyAnimator = self.propertyAnimator {
             if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.22, from: (propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete ?? 0.2, to: 0.0, update: { [weak self] value in
+                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.2, from: (propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete ?? 0.2, to: 0.0, update: { [weak self] value in
                     (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
                 }, completion: { [weak self] in
                     self?.effectView.isHidden = true
@@ -365,7 +329,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 })
             }
         } else {
-            UIView.animate(withDuration: 0.3, animations: {
+            UIView.animate(withDuration: 0.2, animations: {
                 if #available(iOS 9.0, *) {
                     self.effectView.effect = nil
                 } else {
@@ -377,22 +341,22 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             })
         }
         
-        self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-        self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+        self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
             completedActionsNode = true
             intermediateCompletion()
         })
-        self.actionsContainerNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false)
+        self.actionsContainerNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.2, removeOnCompletion: false)
         if case .default = result, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame, let contentParentNode = self.contentParentNode {
             let localSourceFrame = self.view.convert(originalProjectedContentViewFrame.1, to: self.scrollNode.view)
-            self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: 0.3, removeOnCompletion: false, additive: true)
+            self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: 0.2, removeOnCompletion: false, additive: true)
             let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
-            self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentContainerOffset, duration: 0.3, removeOnCompletion: false, additive: true, completion: { _ in
+            self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentContainerOffset, duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
                 completedContentNode = true
                 intermediateCompletion()
             })
             contentParentNode.updateAbsoluteRect?(self.contentContainerNode.frame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y + contentContainerOffset.y), self.bounds.size)
-            contentParentNode.applyAbsoluteOffset?(-contentContainerOffset.y, .easeInOut, 0.3)
+            contentParentNode.applyAbsoluteOffset?(-contentContainerOffset.y, .easeInOut, 0.2)
         } else if let contentParentNode = self.contentParentNode {
             if let snapshotView = contentParentNode.contentNode.view.snapshotContentTree() {
                 self.contentContainerNode.view.addSubview(snapshotView)
@@ -402,7 +366,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             contentParentNode.isExtractedToContextPreview = false
             contentParentNode.isExtractedToContextPreviewUpdated?(false)
             
-            self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+            self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                 completedContentNode = true
                 intermediateCompletion()
             })
@@ -520,11 +484,16 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return nil
         }
         let mappedPoint = self.view.convert(point, to: self.scrollNode.view)
-        if self.contentContainerNode.frame.contains(mappedPoint), let contentParentNode = self.contentParentNode, contentParentNode.contentRect.contains(mappedPoint) {
-            return self.contentContainerNode.hitTest(mappedPoint, with: event)
-        }
         if self.actionsContainerNode.frame.contains(mappedPoint) {
             return self.actionsContainerNode.hitTest(self.view.convert(point, to: self.actionsContainerNode.view), with: event)
+        }
+        if let contentParentNode = self.contentParentNode {
+            let contentPoint = self.view.convert(point, to: contentParentNode.contentNode.view)
+            if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
+                if result is TextSelectionNodeView {
+                    return result
+                }
+            }
         }
         
         return self.dimNode.view
@@ -587,7 +556,7 @@ public final class ContextController: ViewController {
     
     override public func loadDisplayNode() {
         self.displayNode = ContextControllerNode(controller: self, theme: self.theme, strings: self.strings, source: self.source, items: self.items, beginDismiss: { [weak self] result in
-            self?.dismiss(result: result)
+            self?.dismiss(result: result, completion: nil)
         }, recognizer: self.recognizer)
         
         self.displayNodeDidLoad()
@@ -618,16 +587,17 @@ public final class ContextController: ViewController {
         }
     }
     
-    private func dismiss(result: ContextMenuActionResult) {
+    private func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?) {
         if !self.wasDismissed {
             self.wasDismissed = true
             self.controllerNode.animateOut(result: result, completion: { [weak self] in
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                completion?()
             })
         }
     }
     
-    public func dismiss() {
-        self.dismiss(result: .default)
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.dismiss(result: .default, completion: completion)
     }
 }

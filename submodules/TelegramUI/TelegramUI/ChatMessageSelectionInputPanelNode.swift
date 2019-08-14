@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode
@@ -33,7 +34,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     }
                     self.canDeleteMessagesDisposable.set(nil)
                 } else if let context = self.context {
-                    self.canDeleteMessagesDisposable.set((chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: self.selectedMessages)
+                    self.canDeleteMessagesDisposable.set((context.sharedContext.chatAvailableMessageActions(postbox: context.account.postbox, accountPeerId: context.account.peerId, messageIds: self.selectedMessages)
                     |> deliverOnMainQueue).start(next: { [weak self] actions in
                         if let strongSelf = self {
                             strongSelf.actions = actions

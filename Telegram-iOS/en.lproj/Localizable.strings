@@ -4481,7 +4481,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
 "Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";
-"Chat.AttachmentLimitExceeded" = "Slowmode is enabled. You can't select more items.";
+"Chat.AttachmentLimitReached" = "You can't select more items.";
+"Chat.SlowmodeAttachmentLimitReached" = "Slowmode is enabled. You can't select more items.";
 "Chat.AttachmentMultipleFilesDisabled" = "Slowmode is enabled. You can't send multiple files at once.";
 "Chat.AttachmentMultipleForwardDisabled" = "Slowmode is enabled. You can't forward multiple messages at once.";
 "Chat.MultipleTextMessagesDisabled" = "Slowmode is enabled. You can't send multiple messages at once.";
@@ -4618,3 +4619,40 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.SelectedMessages_any" = "%@ Messages Selected";
 "Conversation.SelectedMessages_many" = "%@ Messages Selected";
 "Conversation.SelectedMessages_0" = "%@ Messages Selected";
+
+"AccentColor.Title" = "Accent Color";
+
+"Appearance.ThemePreview.ChatList.1.Name" = "Eva Summer";
+"Appearance.ThemePreview.ChatList.1.Text" = "Text";
+
+"Appearance.ThemePreview.ChatList.2.Name" = "Your inner Competition";
+"Appearance.ThemePreview.ChatList.2.Text" = "Hey";
+
+"Appearance.ThemePreview.ChatList.3.Name" = "Mike Apple";
+"Appearance.ThemePreview.ChatList.3.Text" = "Mike Apple";
+
+"Appearance.ThemePreview.ChatList.4.Name" = "Paul Newman";
+"Appearance.ThemePreview.ChatList.4.Text" = "Any ideas?";
+
+"Appearance.ThemePreview.ChatList.5.Name" = "Old Pirates";
+"Appearance.ThemePreview.ChatList.5.Text" = "Yo-ho-ho";
+
+"Appearance.ThemePreview.ChatList.6.Name" = "Kate Bright";
+"Appearance.ThemePreview.ChatList.6.Text" = "Hola!";
+
+"Appearance.ThemePreview.ChatList.7.Name" = "What";
+"Appearance.ThemePreview.ChatList.7.Text" = "Hola!";
+
+"Appearance.ThemePreview.ChatList.8.Name" = "What";
+"Appearance.ThemePreview.ChatList.8.Text" = "Hola!";
+
+"Appearance.ThemePreview.Chat.1.Text" = "Reminds me of a Chinese proverb: the best time to plant a tree was 20 years ago. The second best time is now.";
+"Appearance.ThemePreview.Chat.1.ReplyName" = "Alex Cassio";
+"Appearance.ThemePreview.Chat.1.ReplyText" = "Mark Twain said that ☝️";
+
+"Appearance.ThemePreview.Chat.2.Text" = "Mark Twain said that ☝️";
+"Appearance.ThemePreview.Chat.3.Text" = "Twenty years from now you will be more disappointed by the things that you didn't do than by the ones you did do, so throw off the bowlines, sail away from safe harboor, catch the trade winds in your sails.";
+
+"Appearance.ThemePreview.Chat.4.Text" = "Nearly missed the sunrise.";
+
+"GroupInfo.Permissions.SlowmodeValue.Off" = "Off";

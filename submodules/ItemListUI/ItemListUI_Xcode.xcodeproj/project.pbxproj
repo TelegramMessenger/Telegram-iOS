@@ -29,6 +29,8 @@
 		D0C9BFB322FE327700FAB518 /* ItemListSectionHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9BFAF22FE327700FAB518 /* ItemListSectionHeaderItem.swift */; };
 		D0C9BFB422FE327700FAB518 /* ItemListSingleLineInputItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9BFB022FE327700FAB518 /* ItemListSingleLineInputItem.swift */; };
 		D0C9BFB522FE327700FAB518 /* ItemListTextEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9BFB122FE327700FAB518 /* ItemListTextEmptyStateItem.swift */; };
+		D0C9C91923020F8000FAB518 /* ListItemWithHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C91823020F8000FAB518 /* ListItemWithHeader.swift */; };
+		D0C9C9BF2302173900FAB518 /* ItemListInfoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C9BE2302173900FAB518 /* ItemListInfoItem.swift */; };
 		D0D3282422F3205E00D07EE2 /* ItemListUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D3282222F3205E00D07EE2 /* ItemListUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0D3286522F3366600D07EE2 /* ItemListControllerEmptyStateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3286022F3366500D07EE2 /* ItemListControllerEmptyStateItem.swift */; };
 		D0D3286622F3366600D07EE2 /* ItemListControllerSegmentedTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D3286122F3366500D07EE2 /* ItemListControllerSegmentedTitleView.swift */; };
@@ -70,6 +72,8 @@
 		D0C9BFAF22FE327700FAB518 /* ItemListSectionHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSectionHeaderItem.swift; sourceTree = "<group>"; };
 		D0C9BFB022FE327700FAB518 /* ItemListSingleLineInputItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListSingleLineInputItem.swift; sourceTree = "<group>"; };
 		D0C9BFB122FE327700FAB518 /* ItemListTextEmptyStateItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextEmptyStateItem.swift; sourceTree = "<group>"; };
+		D0C9C91823020F8000FAB518 /* ListItemWithHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListItemWithHeader.swift; sourceTree = "<group>"; };
+		D0C9C9BE2302173900FAB518 /* ItemListInfoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListInfoItem.swift; sourceTree = "<group>"; };
 		D0D3281F22F3205E00D07EE2 /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D3282222F3205E00D07EE2 /* ItemListUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ItemListUI.h; sourceTree = "<group>"; };
 		D0D3282322F3205E00D07EE2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -116,6 +120,7 @@
 		D060185D22F35E2200796784 /* Items */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C9BE2302173900FAB518 /* ItemListInfoItem.swift */,
 				D0C9BFAE22FE327700FAB518 /* ItemListPlaceholderItem.swift */,
 				D0C9BFAF22FE327700FAB518 /* ItemListSectionHeaderItem.swift */,
 				D0C9BFB022FE327700FAB518 /* ItemListSingleLineInputItem.swift */,
@@ -168,6 +173,7 @@
 				D06018B822F3663800796784 /* ItemListEditableReorderControlNode.swift */,
 				D06018B922F3663800796784 /* ItemListSelectableControlNode.swift */,
 				D0D3282222F3205E00D07EE2 /* ItemListUI.h */,
+				D0C9C91823020F8000FAB518 /* ListItemWithHeader.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -276,8 +282,10 @@
 				D06018BB22F3663900796784 /* ItemListEditableReorderControlNode.swift in Sources */,
 				D060185522F35E1F00796784 /* ItemListActivityTextItem.swift in Sources */,
 				D060186122F35F6C00796784 /* ItemListRevealOptionsNode.swift in Sources */,
+				D0C9C91923020F8000FAB518 /* ListItemWithHeader.swift in Sources */,
 				D06018BC22F3663900796784 /* ItemListSelectableControlNode.swift in Sources */,
 				D060185822F35E1F00796784 /* ItemListLoadingIndicatorEmptyStateItem.swift in Sources */,
+				D0C9C9BF2302173900FAB518 /* ItemListInfoItem.swift in Sources */,
 				D0C9BFB322FE327700FAB518 /* ItemListSectionHeaderItem.swift in Sources */,
 				D0D3286522F3366600D07EE2 /* ItemListControllerEmptyStateItem.swift in Sources */,
 				D060185622F35E1F00796784 /* ItemListActionItem.swift in Sources */,

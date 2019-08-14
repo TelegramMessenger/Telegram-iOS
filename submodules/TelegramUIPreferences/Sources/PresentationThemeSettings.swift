@@ -177,6 +177,7 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
     case gray
     case black
     case white
+    case custom
     
     public var color: UIColor {
         let value: UInt32
@@ -203,6 +204,8 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
                 value = 0x000000
             case .white:
                 value = 0xffffff
+            case .custom:
+                return .clear
         }
         return UIColor(rgb: value)
     }
@@ -231,27 +234,41 @@ public enum PresentationThemeBaseColor: Int32, CaseIterable {
                 return (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
             case .white:
                 return (UIColor(rgb: 0xffffff), UIColor(rgb: 0xffffff))
+            case .custom:
+                return (UIColor(rgb: 0x000000), UIColor(rgb: 0x000000))
         }
     }
 }
 
 public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
     public var baseColor: PresentationThemeBaseColor
+    public var value: Int32?
     
-    public init(baseColor: PresentationThemeBaseColor, value: CGFloat) {
+    public init(baseColor: PresentationThemeBaseColor, value: Int32? = nil) {
         self.baseColor = baseColor
+        self.value = value
     }
     
     public init(decoder: PostboxDecoder) {
         self.baseColor = PresentationThemeBaseColor(rawValue: decoder.decodeInt32ForKey("b", orElse: 0)) ?? .blue
+        self.value = decoder.decodeOptionalInt32ForKey("c")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeInt32(self.baseColor.rawValue, forKey: "b")
+        if let value = self.value {
+            encoder.encodeInt32(value, forKey: "c")
+        } else {
+            encoder.encodeNil(forKey: "c")
+        }
     }
     
     public var color: UIColor {
-        return self.baseColor.color
+        if let value = self.value {
+            return UIColor(rgb: UInt32(bitPattern: value))
+        } else {
+            return self.baseColor.color
+        }
     }
 }
 
@@ -341,7 +358,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
                 default:
                     baseColor = .blue
             }
-            self.themeSpecificAccentColors[PresentationThemeReference.builtin(.day).index] = PresentationThemeAccentColor(baseColor: baseColor, value: 0.5)
+            self.themeSpecificAccentColors[PresentationThemeReference.builtin(.day).index] = PresentationThemeAccentColor(baseColor: baseColor)
         }
         
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular

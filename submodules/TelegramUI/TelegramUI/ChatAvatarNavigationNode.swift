@@ -16,7 +16,7 @@ final class ChatAvatarNavigationNodeView: UIView, PreviewingHostView {
         })
     }
     
-    weak var chatController: ChatController?
+    weak var chatController: ChatControllerImpl?
     weak var targetNode: ChatAvatarNavigationNode?
     
     override func layoutSubviews() {
@@ -28,7 +28,7 @@ final class ChatAvatarNavigationNodeView: UIView, PreviewingHostView {
 
 final class ChatAvatarNavigationNode: ASDisplayNode {
     let avatarNode: AvatarNode
-    weak var chatController: ChatController? {
+    weak var chatController: ChatControllerImpl? {
         didSet {
             if self.isNodeLoaded {
                 (self.view as? ChatAvatarNavigationNodeView)?.chatController = self.chatController

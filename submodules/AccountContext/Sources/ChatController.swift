@@ -1,6 +1,8 @@
 import Foundation
 import Postbox
 import TextFormat
+import Display
+import SwiftSignalKit
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
@@ -231,4 +233,50 @@ public struct ChatTextInputStateText: PostboxCoding, Equatable {
         }
         return result
     }
+}
+
+public enum ChatControllerSubject: Equatable {
+    case message(MessageId)
+    case scheduledMessages
+}
+
+public enum ChatControllerPresentationMode: Equatable {
+    case standard(previewing: Bool)
+    case overlay
+    case inline
+}
+
+public final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceState {
+    public let timestamp: Int32
+    public let text: NSAttributedString
+    
+    public init(timestamp: Int32, text: NSAttributedString) {
+        self.timestamp = timestamp
+        self.text = text
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.timestamp = decoder.decodeInt32ForKey("d", orElse: 0)
+        self.text = ((decoder.decodeObjectForKey("at", decoder: { ChatTextInputStateText(decoder: $0) }) as? ChatTextInputStateText) ?? ChatTextInputStateText()).attributedText()
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.timestamp, forKey: "d")
+        encoder.encodeObject(ChatTextInputStateText(attributedText: self.text), forKey: "at")
+    }
+    
+    public func isEqual(to: PeerChatListEmbeddedInterfaceState) -> Bool {
+        if let to = to as? ChatEmbeddedInterfaceState {
+            return self.timestamp == to.timestamp && self.text.isEqual(to: to.text)
+        } else {
+            return false
+        }
+    }
+}
+
+public protocol ChatController: ViewController {
+    var chatLocation: ChatLocation { get }
+    var canReadHistory: ValuePromise<Bool> { get }
+    
+    func updatePresentationMode(_ mode: ChatControllerPresentationMode)
 }

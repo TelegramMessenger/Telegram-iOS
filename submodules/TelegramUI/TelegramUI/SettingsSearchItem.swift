@@ -9,15 +9,18 @@ import TelegramPresentationData
 import MergeLists
 import ItemListUI
 import AccountContext
+import SearchBarNode
+import SearchUI
+import ChatListSearchItemHeader
 
 extension NavigationBarSearchContentNode: ItemListControllerSearchNavigationContentNode {
-    func activate() {
+    public func activate() {
     }
     
-    func deactivate() {
+    public func deactivate() {
     }
     
-    func setQueryUpdated(_ f: @escaping (String) -> Void) {
+    public func setQueryUpdated(_ f: @escaping (String) -> Void) {
     }
 }
 

@@ -8,6 +8,7 @@ import LegacyComponents
 import TelegramUIPreferences
 import MediaResources
 import AccountContext
+import LegacyUI
 
 func presentCustomWallpaperPicker(context: AccountContext, present: @escaping (ViewController) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

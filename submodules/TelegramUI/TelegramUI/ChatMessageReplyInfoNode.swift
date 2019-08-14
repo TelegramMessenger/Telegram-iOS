@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import LocalizedPeerData
 import PhotoResources
+import TelegramStringFormatting
 
 private let titleFont = Font.medium(14.0)
 private let textFont = Font.regular(14.0)

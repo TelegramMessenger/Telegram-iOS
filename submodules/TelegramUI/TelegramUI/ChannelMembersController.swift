@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import AccountContext
 import AlertUI
+import ItemListPeerItem
 
 private final class ChannelMembersControllerArguments {
     let account: Account
@@ -444,7 +445,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             }
         }))
     }, openPeer: { peer in
-        if let controller = peerInfoController(context: context, peer: peer) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
             pushControllerImpl?(controller)
         }
     }, inviteViaLink: {
@@ -496,9 +497,8 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
                     return state.withUpdatedSearchingMembers(false)
                 }
             }, openPeer: { peer, _ in
-                if let infoController = peerInfoController(context: context, peer: peer) {
+                if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
                     pushControllerImpl?(infoController)
-                   // arguments.pushController(infoController)
                 }
             }, present: { c, a in
                 presentControllerImpl?(c, a)

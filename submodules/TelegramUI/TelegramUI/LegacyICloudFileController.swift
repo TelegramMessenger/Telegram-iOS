@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import TelegramPresentationData
+import LegacyUI
 
 private final class LegacyICloudFileController: LegacyController, UIDocumentPickerDelegate {
     let completion: ([URL]) -> Void

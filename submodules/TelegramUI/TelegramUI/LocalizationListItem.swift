@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import ActivityIndicator
+import ChatListSearchItemNode
 
 struct LocalizationListItemEditing: Equatable {
     let editable: Bool

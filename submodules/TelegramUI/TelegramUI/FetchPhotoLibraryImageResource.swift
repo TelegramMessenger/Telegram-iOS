@@ -3,6 +3,7 @@ import UIKit
 import Photos
 import Postbox
 import SwiftSignalKit
+import ImageCompression
 
 private final class RequestId {
     var id: PHImageRequestID?

@@ -13,6 +13,7 @@ import MediaResources
 import AccountContext
 import RadialStatusNode
 import PhotoResources
+import GalleryUI
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool

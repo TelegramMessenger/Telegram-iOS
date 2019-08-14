@@ -15,6 +15,7 @@
 		D084FA1622F436DE004874CE /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D084FA1522F436DE004874CE /* SwiftSignalKit.framework */; };
 		D0C9C0D322FE3E7500FAB518 /* MapResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C0D222FE3E7500FAB518 /* MapResources.swift */; };
 		D0C9C0D522FE3E8200FAB518 /* MapKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0D422FE3E8200FAB518 /* MapKit.framework */; };
+		D0C9C5342301CC5100FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5332301CC5100FAB518 /* TelegramCore.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 		D084FA1522F436DE004874CE /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C0D222FE3E7500FAB518 /* MapResources.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MapResources.swift; sourceTree = "<group>"; };
 		D0C9C0D422FE3E8200FAB518 /* MapKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MapKit.framework; path = System/Library/Frameworks/MapKit.framework; sourceTree = SDKROOT; };
+		D0C9C5332301CC5100FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -35,6 +37,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0C9C5342301CC5100FAB518 /* TelegramCore.framework in Frameworks */,
 				D0C9C0D522FE3E8200FAB518 /* MapKit.framework in Frameworks */,
 				D084FA1622F436DE004874CE /* SwiftSignalKit.framework in Frameworks */,
 				D084FA1422F436DA004874CE /* Postbox.framework in Frameworks */,
@@ -77,6 +80,7 @@
 		D084FA0E22F436D2004874CE /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C5332301CC5100FAB518 /* TelegramCore.framework */,
 				D0C9C0D422FE3E8200FAB518 /* MapKit.framework */,
 				D084FA1522F436DE004874CE /* SwiftSignalKit.framework */,
 				D084FA1322F436DA004874CE /* Postbox.framework */,

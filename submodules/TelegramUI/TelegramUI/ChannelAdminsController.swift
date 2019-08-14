@@ -11,6 +11,7 @@ import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
 import UndoUI
+import ItemListPeerItem
 
 private final class ChannelAdminsControllerArguments {
     let account: Account
@@ -770,11 +771,11 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
         guard let controller = controller, let navigationController = controller.navigationController as? NavigationController else {
             return
         }
-        navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
+        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
             navigationController.pushViewController(channelAdminsController(context: context, peerId: upgradedPeerId, loadCompleted: {
                 f()
             }), animated: false)
-        })
+        }))
     }
     controller.visibleBottomContentOffsetChanged = { offset in
         if case let .known(value) = offset, value < 40.0 {

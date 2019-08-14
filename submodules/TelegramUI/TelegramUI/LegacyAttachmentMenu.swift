@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import DeviceAccess
 import AccountContext
+import LegacyUI
 
 func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
@@ -35,7 +36,7 @@ func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions:
     
     var underlyingViews: [UIView] = []
     
-    var selectionLimit: Int32 = 30
+    var selectionLimit: Int32 = 100
     var slowModeEnabled = false
     if let channel = peer as? TelegramChannel, channel.isRestrictedBySlowmode {
         slowModeEnabled = true

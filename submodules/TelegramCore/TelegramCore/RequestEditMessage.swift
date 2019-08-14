@@ -151,7 +151,7 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                 }
                 
                 var effectiveScheduleTime: Int32?
-                if messageId.namespace == Namespaces.Message.CloudScheduled {
+                if messageId.namespace == Namespaces.Message.ScheduledCloud {
                     if let scheduleTime = scheduleTime {
                         effectiveScheduleTime = scheduleTime
                     } else {

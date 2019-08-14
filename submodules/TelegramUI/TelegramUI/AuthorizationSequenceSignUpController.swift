@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
 import ProgressNavigationButtonNode
+import ImageCompression
 
 final class AuthorizationSequenceSignUpController: ViewController {
     private var controllerNode: AuthorizationSequenceSignUpControllerNode {

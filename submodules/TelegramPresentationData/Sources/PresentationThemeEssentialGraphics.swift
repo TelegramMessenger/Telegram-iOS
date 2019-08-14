@@ -174,9 +174,13 @@ public final class PrincipalThemeEssentialGraphics {
                     
                     var outgoingGradientColors: (UIColor, UIColor)?
                     if let baseColor = presentationTheme.baseColor {
-                        let colors = baseColor.outgoingGradientColors
-                        if !colors.0.isEqual(colors.1) {
-                            outgoingGradientColors = colors
+                        if presentationTheme.baseColor == .custom {
+                            
+                        } else {
+                            let colors = baseColor.outgoingGradientColors
+                            if !colors.0.isEqual(colors.1) {
+                                outgoingGradientColors = colors
+                            }
                         }
                     }
                     if let outgoingGradientColors = outgoingGradientColors {
@@ -212,7 +216,7 @@ public final class PrincipalThemeEssentialGraphics {
         let outgoingKnockout = self.outgoingBubbleGradientImage != nil
         
         let emptyImage = UIImage()
-        if preview {
+        if false && preview {
             self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(incoming: true, fillColor: UIColor.black, strokeColor: UIColor.clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)

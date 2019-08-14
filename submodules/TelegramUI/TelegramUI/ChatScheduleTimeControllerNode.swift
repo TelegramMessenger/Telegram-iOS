@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramStringFormatting
 import AccountContext
 import ShareController
+import SolidRoundedButtonNode
 
 class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: AccountContext
@@ -32,7 +33,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode) {
+    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32?) {
         self.context = context
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -122,11 +123,11 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
             }
         }
         
-        self.updateMinimumDate()
+        self.updateMinimumDate(currentTime: currentTime)
         self.updateButtonTitle()
     }
     
-    private func updateMinimumDate() {
+    private func updateMinimumDate(currentTime: Int32? = nil) {
         let timeZone = TimeZone(secondsFromGMT: 0)!
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
@@ -141,7 +142,11 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         if let date = calendar.date(byAdding: .minute, value: 5 - minute, to: calendar.date(from: components)!) {
             self.pickerView.minimumDate = date
-            self.pickerView.date = date
+            if let currentTime = currentTime {
+                self.pickerView.date = Date(timeIntervalSince1970: Double(currentTime))
+            } else {
+                self.pickerView.date = date
+            }
         }
     }
     

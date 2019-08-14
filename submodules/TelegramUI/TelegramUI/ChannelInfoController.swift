@@ -14,6 +14,9 @@ import OverlayStatusController
 import TelegramStringFormatting
 import ShareController
 import AlertUI
+import GalleryUI
+import LegacyUI
+import ChatListUI
 
 private final class ChannelInfoControllerArguments {
     let account: Account

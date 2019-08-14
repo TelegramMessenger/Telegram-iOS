@@ -1,12 +1,6 @@
 module TelegramUIPrivateModule {
     header "../../third-party/opusenc/opusenc.h"
     header "../TGDataItem.h"
-    header "../STPPaymentCardTextField.h"
-    header "../STPAPIClient.h"
-    header "../STPAPIClient+ApplePay.h"
-    header "../STPPaymentConfiguration.h"
-    header "../STPCard.h"
-    header "../STPToken.h"
     header "../SecretChatKeyVisualization.h"
     header "../DeviceProximityManager.h"
     header "../RaiseToListenActivator.h"

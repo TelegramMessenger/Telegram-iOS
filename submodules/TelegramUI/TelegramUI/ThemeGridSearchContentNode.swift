@@ -8,6 +8,8 @@ import TelegramCore
 import TelegramPresentationData
 import MergeLists
 import AccountContext
+import SearchUI
+import ChatListSearchItemHeader
 
 enum WallpaperSearchColor: CaseIterable {
     case blue

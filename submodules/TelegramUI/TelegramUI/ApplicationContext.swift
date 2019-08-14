@@ -13,6 +13,9 @@ import AccountContext
 import AlertUI
 import TelegramPermissions
 import TelegramNotices
+import LegacyUI
+import TelegramPermissionsUI
+import PasscodeUI
 
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
@@ -358,7 +361,7 @@ final class AuthorizedApplicationContext {
             if let strongSelf = self, let (messages, _, notify) = messageList.last, let firstMessage = messages.first {
                 if UIApplication.shared.applicationState == .active {
                     var chatIsVisible = false
-                    if let topController = strongSelf.rootController.topViewController as? ChatController, topController.traceVisibility() {
+                    if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.traceVisibility() {
                         if case .peer(firstMessage.id.peerId) = topController.chatLocation {
                             chatIsVisible = true
                         }/* else if case let .group(topGroupId) = topController.chatLocation, topGroupId == groupId {
@@ -372,7 +375,7 @@ final class AuthorizedApplicationContext {
                     
                     if !chatIsVisible {
                         strongSelf.mainWindow.forEachViewController({ controller in
-                            if let controller = controller as? ChatController, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
+                            if let controller = controller as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
                                 chatIsVisible = true
                                 return false
                             }
@@ -430,26 +433,26 @@ final class AuthorizedApplicationContext {
                                     return true
                                 }
                                 
-                                if let topController = strongSelf.rootController.topViewController as? ChatController, case .peer(firstMessage.id.peerId) = topController.chatLocation {
+                                if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = topController.chatLocation {
                                     strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
                                     
                                     return false
                                 }
                                 
                                 for controller in strongSelf.rootController.viewControllers {
-                                    if let controller = controller as? ChatController, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
+                                    if let controller = controller as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
                                         return true
                                     }
                                 }
                                 
                                 strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
                                 
-                                navigateToChatController(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId))
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId)))
                             }
                             return false
                         }, expandAction: { expandData in
                             if let strongSelf = self {
-                                let chatController = ChatController(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay)
+                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay)
                                 (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                             }
                         }))
@@ -490,7 +493,7 @@ final class AuthorizedApplicationContext {
                         if let strongSelf = self, let botName = botName {
                             strongSelf.termsOfServiceProceedToBotDisposable.set((resolvePeerByName(account: strongSelf.context.account, name: botName, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peerId in
                                 if let strongSelf = self, let peerId = peerId {
-                                    self?.rootController.pushViewController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)))
+                                    self?.rootController.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)))
                                 }
                             }))
                         }
@@ -777,12 +780,12 @@ final class AuthorizedApplicationContext {
                 if let strongSelf = self {
                     if applicationInForeground {
                         var chatIsVisible = false
-                        if let controller = strongSelf.rootController.viewControllers.last as? ChatController, case .peer(messageId.peerId) = controller.chatLocation  {
+                        if let controller = strongSelf.rootController.viewControllers.last as? ChatControllerImpl, case .peer(messageId.peerId) = controller.chatLocation  {
                             chatIsVisible = true
                         }
                         
                         let navigateToMessage = {
-                            navigateToChatController(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), messageId: messageId)
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), messageId: messageId))
                         }
                         
                         if chatIsVisible {
@@ -821,13 +824,13 @@ final class AuthorizedApplicationContext {
     
     func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
         var visiblePeerId: PeerId?
-        if let controller = self.rootController.topViewController as? ChatController, case let .peer(peerId) = controller.chatLocation {
+        if let controller = self.rootController.topViewController as? ChatControllerImpl, case let .peer(peerId) = controller.chatLocation {
             visiblePeerId = peerId
         }
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                navigateToChatController(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), messageId: messageId, activateInput: activateInput)
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), messageId: messageId, activateInput: activateInput))
             } else {
                 self.scheduledOperChatWithPeerId = (peerId, messageId, activateInput)
             }
@@ -837,7 +840,7 @@ final class AuthorizedApplicationContext {
     func openUrl(_ url: URL) {
         if self.rootController.rootTabController != nil {
             let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-            openExternalUrl(context: self.context, url: url.absoluteString, presentationData: presentationData, navigationController: self.rootController, dismissInput: { [weak self] in
+            self.context.sharedContext.openExternalUrl(context: self.context, urlContext: .generic, url: url.absoluteString, forceExternal: false, presentationData: presentationData, navigationController: self.rootController, dismissInput: { [weak self] in
                 self?.rootController.view.endEditing(true)
             })
         } else {

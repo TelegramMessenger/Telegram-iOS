@@ -107,6 +107,268 @@ public final class AccountWithInfo: Equatable {
     }
 }
 
+public enum OpenURLContext {
+    case generic
+    case chat
+}
+
+public struct ChatAvailableMessageActionOptions: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public init() {
+        self.rawValue = 0
+    }
+    
+    public static let deleteLocally = ChatAvailableMessageActionOptions(rawValue: 1 << 0)
+    public static let deleteGlobally = ChatAvailableMessageActionOptions(rawValue: 1 << 1)
+    public static let forward = ChatAvailableMessageActionOptions(rawValue: 1 << 2)
+    public static let report = ChatAvailableMessageActionOptions(rawValue: 1 << 3)
+    public static let viewStickerPack = ChatAvailableMessageActionOptions(rawValue: 1 << 4)
+    public static let rateCall = ChatAvailableMessageActionOptions(rawValue: 1 << 5)
+    public static let cancelSending = ChatAvailableMessageActionOptions(rawValue: 1 << 6)
+    public static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
+    public static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
+    public static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
+}
+
+public struct ChatAvailableMessageActions {
+    public var options: ChatAvailableMessageActionOptions
+    public var banAuthor: Peer?
+    
+    public init(options: ChatAvailableMessageActionOptions, banAuthor: Peer?) {
+        self.options = options
+        self.banAuthor = banAuthor
+    }
+}
+
+public enum WallpaperUrlParameter {
+    case slug(String, WallpaperPresentationOptions, UIColor?, Int32?)
+    case color(UIColor)
+}
+
+public enum ResolvedUrl {
+    case externalUrl(String)
+    case peer(PeerId?, ChatControllerInteractionNavigateToPeer)
+    case inaccessiblePeer
+    case botStart(peerId: PeerId, payload: String)
+    case groupBotStart(peerId: PeerId, payload: String)
+    case channelMessage(peerId: PeerId, messageId: MessageId)
+    case stickerPack(name: String)
+    case instantView(TelegramMediaWebpage, String?)
+    case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
+    case join(String)
+    case localization(String)
+    case confirmationCode(Int)
+    case cancelAccountReset(phone: String, hash: String)
+    case share(url: String?, text: String?, to: String?)
+    case wallpaper(WallpaperUrlParameter)
+}
+
+public enum NavigateToChatKeepStack {
+    case `default`
+    case always
+    case never
+}
+
+public final class NavigateToChatControllerParams {
+    public let navigationController: NavigationController
+    public let chatController: ChatController?
+    public let context: AccountContext
+    public let chatLocation: ChatLocation
+    public let messageId: MessageId?
+    public let botStart: ChatControllerInitialBotStart?
+    public let updateTextInputState: ChatTextInputState?
+    public let activateInput: Bool
+    public let keepStack: NavigateToChatKeepStack
+    public let purposefulAction: (() -> Void)?
+    public let scrollToEndIfExists: Bool
+    public let animated: Bool
+    public let options: NavigationAnimationOptions
+    public let parentGroupId: PeerGroupId?
+    public let completion: () -> Void
+    
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
+        self.navigationController = navigationController
+        self.chatController = chatController
+        self.context = context
+        self.chatLocation = chatLocation
+        self.messageId = messageId
+        self.botStart = botStart
+        self.updateTextInputState = updateTextInputState
+        self.activateInput = activateInput
+        self.keepStack = keepStack
+        self.purposefulAction = purposefulAction
+        self.scrollToEndIfExists = scrollToEndIfExists
+        self.animated = animated
+        self.options = options
+        self.parentGroupId = parentGroupId
+        self.completion = completion
+    }
+}
+
+public enum DeviceContactInfoSubject {
+    case vcard(Peer?, DeviceContactStableId?, DeviceContactExtendedData)
+    case filter(peer: Peer?, contactId: DeviceContactStableId?, contactData: DeviceContactExtendedData, completion: (Peer?, DeviceContactExtendedData) -> Void)
+    case create(peer: Peer?, contactData: DeviceContactExtendedData, isSharing: Bool, shareViaException: Bool, completion: (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void)
+    
+    public var peer: Peer? {
+        switch self {
+        case let .vcard(peer, _, _):
+            return peer
+        case let .filter(peer, _, _, _):
+            return peer
+        case .create:
+            return nil
+        }
+    }
+    
+    public var contactData: DeviceContactExtendedData {
+        switch self {
+        case let .vcard(_, _, data):
+            return data
+        case let .filter(_, _, data, _):
+            return data
+        case let .create(_, data, _, _, _):
+            return data
+        }
+    }
+}
+
+public enum PeerInfoControllerMode {
+    case generic
+    case calls(messages: [Message])
+}
+
+public enum ContactListActionItemInlineIconPosition {
+    case left
+    case right
+}
+
+public enum ContactListActionItemIcon : Equatable {
+    case none
+    case generic(UIImage)
+    case inline(UIImage, ContactListActionItemInlineIconPosition)
+    
+    public var image: UIImage? {
+        switch self {
+        case .none:
+            return nil
+        case let .generic(image):
+            return image
+        case let .inline(image, _):
+            return image
+        }
+    }
+    
+    public static func ==(lhs: ContactListActionItemIcon, rhs: ContactListActionItemIcon) -> Bool {
+        switch lhs {
+        case .none:
+            if case .none = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .generic(image):
+            if case .generic(image) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .inline(image, position):
+            if case .inline(image, position) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+}
+
+public struct ContactListAdditionalOption: Equatable {
+    public let title: String
+    public let icon: ContactListActionItemIcon
+    public let action: () -> Void
+    
+    public init(title: String, icon: ContactListActionItemIcon, action: @escaping () -> Void) {
+        self.title = title
+        self.icon = icon
+        self.action = action
+    }
+    
+    public static func ==(lhs: ContactListAdditionalOption, rhs: ContactListAdditionalOption) -> Bool {
+        return lhs.title == rhs.title && lhs.icon == rhs.icon
+    }
+}
+
+public enum ContactListPeerId: Hashable {
+    case peer(PeerId)
+    case deviceContact(DeviceContactStableId)
+}
+
+public enum ContactListPeer: Equatable {
+    case peer(peer: Peer, isGlobal: Bool, participantCount: Int32?)
+    case deviceContact(DeviceContactStableId, DeviceContactBasicData)
+    
+    public var id: ContactListPeerId {
+        switch self {
+        case let .peer(peer, _, _):
+            return .peer(peer.id)
+        case let .deviceContact(id, _):
+            return .deviceContact(id)
+        }
+    }
+    
+    public var indexName: PeerIndexNameRepresentation {
+        switch self {
+        case let .peer(peer, _, _):
+            return peer.indexName
+        case let .deviceContact(_, contact):
+            return .personName(first: contact.firstName, last: contact.lastName, addressName: "", phoneNumber: "")
+        }
+    }
+    
+    public static func ==(lhs: ContactListPeer, rhs: ContactListPeer) -> Bool {
+        switch lhs {
+        case let .peer(lhsPeer, lhsIsGlobal, lhsParticipantCount):
+            if case let .peer(rhsPeer, rhsIsGlobal, rhsParticipantCount) = rhs, lhsPeer.isEqual(rhsPeer), lhsIsGlobal == rhsIsGlobal, lhsParticipantCount == rhsParticipantCount {
+                return true
+            } else {
+                return false
+            }
+        case let .deviceContact(id, contact):
+            if case .deviceContact(id, contact) = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+}
+
+public final class ContactSelectionControllerParams {
+    public let context: AccountContext
+    public let autoDismiss: Bool
+    public let title: (PresentationStrings) -> String
+    public let options: [ContactListAdditionalOption]
+    public let displayDeviceContacts: Bool
+    public let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
+    
+    public init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
+        self.context = context
+        self.autoDismiss = autoDismiss
+        self.title = title
+        self.options = options
+        self.displayDeviceContacts = displayDeviceContacts
+        self.confirmation = confirmation
+    }
+}
+
+public let defaultContactLabel: String = "_$!<Mobile>!$_"
+
 public protocol SharedAccountContext: class {
     var basePath: String { get }
     var mainWindow: Window1? { get }
@@ -142,6 +404,21 @@ public protocol SharedAccountContext: class {
     func openChatMessage(_ params: OpenChatMessageParams) -> Bool
     func messageFromPreloadedChatHistoryViewForLocation(id: MessageId, location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, tagMask: MessageTags?) -> Signal<(MessageIndex?, Bool), NoError>
     func makeOverlayAudioPlayerController(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, parentNavigationController: NavigationController?) -> ViewController & OverlayAudioPlayerController
+    func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController?
+    func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController
+    func makePeersNearbyController(context: AccountContext) -> ViewController
+    func makeComposeController(context: AccountContext) -> ViewController
+    func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController
+    func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController
+    func makeProxySettingsController(context: AccountContext) -> ViewController
+    func makeLocalizationListController(context: AccountContext) -> ViewController
+    func navigateToChatController(_ params: NavigateToChatControllerParams)
+    func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void)
+    func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError>
+    func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError>
+    func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void)
+    func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
+    func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

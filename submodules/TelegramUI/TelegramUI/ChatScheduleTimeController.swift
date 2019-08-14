@@ -21,11 +21,13 @@ final class ChatScheduleTimeController: ViewController {
     
     private let context: AccountContext
     private let mode: ChatScheduleTimeControllerMode
+    private let currentTime: Int32?
     private let completion: (Int32) -> Void
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, completion: @escaping (Int32) -> Void) {
+    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.mode = mode
+        self.currentTime = currentTime
         self.completion = completion
         
         super.init(navigationBarPresentationData: nil)
@@ -38,7 +40,7 @@ final class ChatScheduleTimeController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode)
+        self.displayNode = ChatScheduleTimeControllerNode(context: self.context, mode: self.mode, currentTime: self.currentTime)
         self.controllerNode.completion = { [weak self] time in
             self?.completion(time + 5)
             self?.dismiss()

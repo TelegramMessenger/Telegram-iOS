@@ -11,6 +11,9 @@ import AccountContext
 import TemporaryCachedPeerDataManager
 import LocalizedPeerData
 import ContextUI
+import TelegramUniversalVideoContent
+import MosaicLayout
+import TextSelectionNode
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -37,8 +40,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
             } else if let action = media as? TelegramMediaAction {
                 if case .phoneCall = action.action {
                     result.append((message, ChatMessageCallBubbleContentNode.self))
-                } else if case .phoneNumberRequest = action.action {
-                    result.append((message, ChatMessagePhoneNumberRequestContentNode.self))
                 } else {
                     result.append((message, ChatMessageActionBubbleContentNode.self))
                 }
@@ -167,6 +168,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var appliedItem: ChatMessageItem?
     private var appliedForwardInfo: (Peer?, String?)?
     
+    private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
@@ -205,6 +208,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             self?.accessibilityElementDidBecomeFocused()
         }
         
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtractedToContextPreview in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            for contentNode in strongSelf.contentNodes {
+                contentNode.willUpdateIsExtractedToContextPreview(isExtractedToContextPreview)
+            }
+        }
         self.contextSourceNode.isExtractedToContextPreviewUpdated = { [weak self] isExtractedToContextPreview in
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
@@ -213,6 +224,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             strongSelf.backgroundNode.setMaskMode(isExtractedToContextPreview)
             if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
+            }
+            
+            for contentNode in strongSelf.contentNodes {
+                contentNode.updateIsExtractedToContextPreview(isExtractedToContextPreview)
             }
         }
         
@@ -338,6 +353,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             }
         }
+        self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
         
         let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
@@ -854,19 +870,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 let message = item.content.firstMessage
                 
                 var edited = false
-                var sentViaBot = false
                 var viewCount: Int?
                 for attribute in message.attributes {
-                    if let _ = attribute as? EditedMessageAttribute {
-                        edited = true
+                    if let attribute = attribute as? EditedMessageAttribute {
+                        edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let _ = attribute as? InlineBotMessageAttribute {
-                        sentViaBot = true
                     }
-                }
-                if let author = message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                    sentViaBot = true
                 }
                 
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
@@ -884,7 +894,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     }
                 }
                 
-                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
+                mosaicStatusSizeAndApply = mosaicStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude))
             }
         }
         
@@ -1575,6 +1585,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                     strongSelf.contextSourceNode.contentNode.addSubnode(contentNode)
                     
                     contentNode.visibility = strongSelf.visibility
+                    contentNode.updateIsExtractedToContextPreview(strongSelf.contextSourceNode.isExtractedToContextPreview)
                 }
             }
             
@@ -2188,6 +2199,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.bounds.contains(point) {
+            return nil
+        }
+        
+        if self.contextSourceNode.isExtractedToContextPreview {
+            if let result = super.hitTest(point, with: event) as? TextSelectionNodeView {
+                return result
+            }
             return nil
         }
         

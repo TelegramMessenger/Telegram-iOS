@@ -8,23 +8,8 @@ import TelegramCore
 import TelegramUIPreferences
 import TextFormat
 import AccountContext
-
-enum WebsiteType {
-    case generic
-    case twitter
-    case instagram
-}
-
-func websiteType(of webpage: TelegramMediaWebpageLoadedContent) -> WebsiteType {
-    if let websiteName = webpage.websiteName?.lowercased() {
-        if websiteName == "twitter" {
-            return .twitter
-        } else if websiteName == "instagram" {
-            return .instagram
-        }
-    }
-    return .generic
-}
+import WebsiteType
+import InstantPageUI
 
 enum InstantPageType {
     case generic
@@ -36,7 +21,7 @@ func instantPageType(of webpage: TelegramMediaWebpageLoadedContent) -> InstantPa
         return .album
     }
     
-    switch websiteType(of: webpage) {
+    switch websiteType(of: webpage.websiteName) {
         case .instagram, .twitter:
             return .album
         default:
@@ -206,7 +191,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var actionTitle: String?
             
             if let webpage = webPageContent {
-                let type = websiteType(of: webpage)
+                let type = websiteType(of: webpage.websiteName)
                 
                 if let websiteName = webpage.websiteName, !websiteName.isEmpty {
                     title = websiteName
@@ -390,7 +375,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if mention.hasPrefix("@") {
                             mention = String(mention[mention.index(after: mention.startIndex)...])
                         }
-                        switch websiteType(of: content) {
+                        switch websiteType(of: content.websiteName) {
                             case .twitter:
                                 return .url(url: "https://twitter.com/\(mention)", concealed: false)
                             case .instagram:
@@ -405,7 +390,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if hashtag.hasPrefix("#") {
                             hashtag = String(hashtag[hashtag.index(after: hashtag.startIndex)...])
                         }
-                        switch websiteType(of: content) {
+                        switch websiteType(of: content.websiteName) {
                             case .twitter:
                                 return .url(url: "https://twitter.com/hashtag/\(hashtag)", concealed: false)
                             case .instagram:
@@ -420,7 +405,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             
             if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
                 if content.instantPage != nil {
-                    switch websiteType(of: content) {
+                    switch websiteType(of: content.websiteName) {
                         case .instagram, .twitter:
                             return .none
                         default:

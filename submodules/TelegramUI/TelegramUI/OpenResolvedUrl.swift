@@ -8,6 +8,8 @@ import TelegramUIPreferences
 import AccountContext
 import OverlayStatusController
 import AlertUI
+import PassportUI
+import InstantPageUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -25,11 +27,11 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     }
 }
 
-func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext = .generic, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)? = nil, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? = nil, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     switch resolvedUrl {
         case let .externalUrl(url):
-            openExternalUrl(context: context, urlContext: urlContext, url: url, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: dismissInput)
+            context.sharedContext.openExternalUrl(context: context, urlContext: urlContext, url: url, forceExternal: false, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: navigationController, dismissInput: dismissInput)
         case let .peer(peerId, navigation):
             if let peerId = peerId {
                 openPeer(peerId, defaultNavigationForPeerId(peerId, navigation: navigation))
@@ -59,7 +61,7 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                     let _ = (requestStartBotInGroup(account: context.account, botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                     |> deliverOnMainQueue).start(next: { result in
                         if let navigationController = navigationController {
-                            navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(peerId))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                         }
                         switch result {
                             case let .channelParticipant(participant):
@@ -170,10 +172,10 @@ func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlCon
                         })
                     })
                     |> deliverOnMainQueue).start(completed: {
-                        navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId)))
+                        navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                     })
                 } else {
-                    navigationController?.pushViewController(ChatController(context: context, chatLocation: .peer(peerId)))
+                    navigationController?.pushViewController(ChatControllerImpl(context: context, chatLocation: .peer(peerId)))
                 }
             }
             

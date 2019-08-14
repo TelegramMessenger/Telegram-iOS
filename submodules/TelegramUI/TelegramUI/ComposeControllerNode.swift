@@ -6,6 +6,9 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import SearchBarNode
+import SearchUI
+import ContactListUI
 
 final class ComposeControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode

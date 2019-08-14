@@ -8,6 +8,8 @@ import TelegramCallsUI
 import TelegramUIPreferences
 import AccountContext
 import DeviceLocationManager
+import LegacyUI
+import ChatListUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -932,6 +934,66 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func handleTextLinkAction(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
-        handleTextLinkActionImpl(context: context as! AccountContext, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+        handleTextLinkActionImpl(context: context, peerId: peerId, navigateDisposable: navigateDisposable, controller: controller, action: action, itemLink: itemLink)
+    }
+    
+    public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {
+        return peerInfoControllerImpl(context: context, peer: peer, mode: mode)
+    }
+    
+    public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
+        openExternalUrlImpl(context: context, urlContext: urlContext, url: url, forceExternal: forceExternal, presentationData: presentationData, navigationController: navigationController, dismissInput: dismissInput)
+    }
+    
+    public func chatAvailableMessageActions(postbox: Postbox, accountPeerId: PeerId, messageIds: Set<MessageId>) -> Signal<ChatAvailableMessageActions, NoError> {
+        return chatAvailableMessageActionsImpl(postbox: postbox, accountPeerId: accountPeerId, messageIds: messageIds)
+    }
+    
+    public func navigateToChatController(_ params: NavigateToChatControllerParams) {
+        navigateToChatControllerImpl(params)
+    }
+    
+    public func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+        return resolveUrlImpl(account: account, url: url)
+    }
+    
+    public func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void) {
+        openResolvedUrlImpl(resolvedUrl, context: context, urlContext: urlContext, navigationController: navigationController, openPeer: openPeer, sendFile: sendFile, sendSticker: sendSticker, present: present, dismissInput: dismissInput)
+    }
+    
+    public func makeDeviceContactInfoController(context: AccountContext, subject: DeviceContactInfoSubject, completed: (() -> Void)?, cancelled: (() -> Void)?) -> ViewController {
+        return deviceContactInfoController(context: context, subject: subject, completed: completed, cancelled: cancelled)
+    }
+    
+    public func makePeersNearbyController(context: AccountContext) -> ViewController {
+        return peersNearbyController(context: context)
+    }
+    
+    public func makeChatController(context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject?, botStart: ChatControllerInitialBotStart?, mode: ChatControllerPresentationMode) -> ChatController {
+        return ChatControllerImpl(context: context, chatLocation: chatLocation, subject: subject, botStart: botStart, mode: mode)
+    }
+    
+    public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
+        presentContactsWarningSuppressionImpl(context: context, present: present)
+    }
+    
+    public func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController {
+        return ContactSelectionControllerImpl(params)
+    }
+    
+    public func makeComposeController(context: AccountContext) -> ViewController {
+        return ComposeController(context: context)
+    }
+    
+    public func makeProxySettingsController(context: AccountContext) -> ViewController {
+        return proxySettingsController(context: context)
+    }
+    
+    public func makeLocalizationListController(context: AccountContext) -> ViewController {
+        return LocalizationListController(context: context)
+    }
+    
+    public func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void) {
+        openAddContactImpl(context: context, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, label: label, present: present, pushController: pushController, completed: completed)
     }
 }

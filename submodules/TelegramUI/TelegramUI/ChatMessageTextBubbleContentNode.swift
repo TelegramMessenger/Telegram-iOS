@@ -6,6 +6,8 @@ import TelegramCore
 import Postbox
 import TextFormat
 import UrlEscaping
+import TelegramUniversalVideoContent
+import TextSelectionNode
 
 private final class CachedChatMessageText {
     let text: String
@@ -38,6 +40,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     private let textAccessibilityOverlayNode: TextAccessibilityOverlayNode
     private let statusNode: ChatMessageDateAndStatusNode
     private var linkHighlightingNode: LinkHighlightingNode?
+    private var textSelectionNode: TextSelectionNode?
     
     private var textHighlightingNodes: [LinkHighlightingNode] = []
     
@@ -94,19 +97,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 let textConstrainedSize = CGSize(width: min(maxTextWidth, constrainedSize.width - horizontalInset), height: constrainedSize.height)
                 
                 var edited = false
-                var sentViaBot = false
                 var viewCount: Int?
                 for attribute in item.message.attributes {
-                    if let _ = attribute as? EditedMessageAttribute {
-                        edited = true
+                    if let attribute = attribute as? EditedMessageAttribute {
+                        edited = !attribute.isHidden
                     } else if let attribute = attribute as? ViewCountMessageAttribute {
                         viewCount = attribute.count
-                    } else if let _ = attribute as? InlineBotMessageAttribute {
-                        sentViaBot = true
                     }
-                }
-                if let author = item.message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                    sentViaBot = true
                 }
                 
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
@@ -133,7 +130,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize)
                     statusSize = size
                     statusApply = apply
                 }
@@ -507,6 +504,40 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         for i in (rectsSet.count ..< self.textHighlightingNodes.count).reversed() {
             self.textHighlightingNodes[i].removeFromSupernode()
             self.textHighlightingNodes.remove(at: i)
+        }
+    }
+    
+    override func willUpdateIsExtractedToContextPreview(_ value: Bool) {
+        if !value {
+            if let textSelectionNode = self.textSelectionNode {
+                self.textSelectionNode = nil
+                textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.removeFromSupernode()
+                })
+            }
+        }
+    }
+    
+    override func updateIsExtractedToContextPreview(_ value: Bool) {
+        if value {
+            if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: item.presentationData.theme.theme.list.itemAccentColor.withAlphaComponent(0.5), knob: item.presentationData.theme.theme.list.itemAccentColor), textNode: self.textNode, present: { [weak self] c, a in
+                    self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
+                }, rootNode: rootNode, performAction: { [weak self] text, action in
+                    guard let strongSelf = self, let item = strongSelf.item else {
+                        return
+                    }
+                    item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
+                })
+                self.textSelectionNode = textSelectionNode
+                self.addSubnode(textSelectionNode)
+                textSelectionNode.frame = self.textNode.frame
+            }
+        } else if let textSelectionNode = self.textSelectionNode {
+            self.textSelectionNode = nil
+            textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.removeFromSupernode()
+            })
         }
     }
 }

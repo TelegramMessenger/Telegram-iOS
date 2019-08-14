@@ -6,6 +6,7 @@ import SwiftSignalKit
 import AsyncDisplayKit
 import Postbox
 import StickerResources
+import AccountContext
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?

@@ -9,6 +9,7 @@ import LegacyComponents
 import ItemListUI
 import AccountContext
 import AlertUI
+import LegacyUI
 
 private struct CreateChannelArguments {
     let account: Account

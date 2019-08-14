@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import LocalizedPeerData
 import PhotoResources
+import TelegramStringFormatting
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()

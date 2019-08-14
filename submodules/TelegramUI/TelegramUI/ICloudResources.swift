@@ -4,6 +4,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
+import Pdf
 
 public struct ICloudFileResourceId: MediaResourceId {
     public let urlData: String

@@ -10,6 +10,10 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import TemporaryCachedPeerDataManager
+import SearchUI
+import ItemListPeerItem
+import ContactsPeerItem
+import ChatListSearchItemHeader
 
 enum ChannelMembersSearchMode {
     case searchMembers

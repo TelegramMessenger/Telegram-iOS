@@ -11,6 +11,8 @@ import SafariServices
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import OpenInExternalAppUI
+import InstantPageUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -227,6 +229,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, presentController: { _, _ in
         }, navigationController: { [weak self] in
             return self?.getNavigationController()
+        }, chatControllerNode: { [weak self] in
+            return self
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action, message in
             if let strongSelf = self {
                 switch action {
@@ -398,6 +402,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, scheduleCurrentMessage: {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
+        }, performTextSelectionAction: { _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -654,9 +659,9 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {
                 if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
-                    navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true)
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), animated: true))
                 } else {
-                    if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                         strongSelf.pushController(infoController)
                     }
                 }
@@ -678,7 +683,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 if let peer = peer {
-                    if let infoController = peerInfoController(context: strongSelf.context, peer: peer) {
+                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
                         strongSelf.pushController(infoController)
                     }
                 }
@@ -755,12 +760,12 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openUrl(_ url: String) {
-        self.navigationActionDisposable.set((resolveUrl(account: self.context.account, url: url) |> deliverOnMainQueue).start(next: { [weak self] result in
+        self.navigationActionDisposable.set((self.context.sharedContext.resolveUrl(account: self.context.account, url: url) |> deliverOnMainQueue).start(next: { [weak self] result in
             if let strongSelf = self {
                 switch result {
                     case let .externalUrl(url):
                         if let navigationController = strongSelf.getNavigationController() {
-                            openExternalUrl(context: strongSelf.context, url: url, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
+                            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: false, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
                                 self?.view.endEditing(true)
                             })
                         }
@@ -777,7 +782,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            navigateToChatController(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId)
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId))
                         }
                     case let .stickerPack(name):
                         strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .name(name), parentNavigationController: strongSelf.getNavigationController()), nil)
@@ -792,11 +797,13 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     case let .localization(identifier):
                         strongSelf.presentController(LanguageLinkPreviewController(context: strongSelf.context, identifier: identifier), nil)
                     case .proxy, .confirmationCode, .cancelAccountReset, .share:
-                        openResolvedUrl(result, context: strongSelf.context, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), openPeer: { peerId, _ in
                             if let strongSelf = self {
                                 strongSelf.openPeer(peerId: peerId, peer: nil)
                             }
-                        }, present: { c, a in
+                        }, sendFile: nil,
+                        sendSticker: nil,
+                        present: { c, a in
                             self?.presentController(c, a)
                         }, dismissInput: {
                             self?.view.endEditing(true)

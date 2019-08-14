@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import StickerResources
 import PhotoResources
+import TelegramStringFormatting
 
 final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let context: AccountContext

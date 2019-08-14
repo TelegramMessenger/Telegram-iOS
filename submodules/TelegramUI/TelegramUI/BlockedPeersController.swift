@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import AccountContext
+import ItemListPeerItem
 
 private final class BlockedPeersControllerArguments {
     let account: Account
@@ -254,7 +255,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
             }
         }))
     }, openPeer: { peer in
-        if let controller = peerInfoController(context: context, peer: peer) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
             pushControllerImpl?(controller)
         }
     })

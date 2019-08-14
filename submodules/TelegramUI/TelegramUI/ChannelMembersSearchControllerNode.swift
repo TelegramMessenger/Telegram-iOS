@@ -10,6 +10,9 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import TemporaryCachedPeerDataManager
+import SearchBarNode
+import ContactsPeerItem
+import SearchUI
 
 private final class ChannelMembersSearchInteraction {
     let openPeer: (Peer, RenderedChannelParticipant?) -> Void

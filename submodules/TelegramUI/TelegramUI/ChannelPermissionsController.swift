@@ -11,6 +11,8 @@ import OverlayStatusController
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import ItemListPeerItem
+import TelegramPermissionsUI
 
 private final class ChannelPermissionsControllerArguments {
     let account: Account
@@ -652,7 +654,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }, openPeerInfo: { peer in
-        if let controller = peerInfoController(context: context, peer: peer) {
+        if let controller = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
             pushControllerImpl?(controller)
         }
     }, openKicked: {
@@ -826,9 +828,9 @@ public func channelPermissionsController(context: AccountContext, peerId origina
             return
         }
         sourcePeerId.set(.single((upgradedPeerId, true)))
-        navigateToChatController(navigationController: navigationController, context: context, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
+        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(upgradedPeerId), keepStack: .never, animated: false, completion: {
             navigationController.pushViewController(controller, animated: false)
-        })
+        }))
     }
     
     controller.visibleBottomContentOffsetChanged = { offset in

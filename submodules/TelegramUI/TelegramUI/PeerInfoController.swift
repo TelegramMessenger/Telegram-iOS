@@ -6,7 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 import AccountContext
 
-func peerInfoController(context: AccountContext, peer: Peer) -> ViewController? {
+func peerInfoControllerImpl(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {
     if let _ = peer as? TelegramGroup  {
         return groupInfoController(context: context, peerId: peer.id)
     } else if let channel = peer as? TelegramChannel {
@@ -16,7 +16,7 @@ func peerInfoController(context: AccountContext, peer: Peer) -> ViewController? 
             return channelInfoController(context: context, peerId: peer.id)
         }
     } else if peer is TelegramUser || peer is TelegramSecretChat {
-        return userInfoController(context: context, peerId: peer.id)
+        return userInfoController(context: context, peerId: peer.id, mode: mode)
     }
     return nil
 }

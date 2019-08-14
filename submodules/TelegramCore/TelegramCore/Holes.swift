@@ -151,7 +151,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                 var implicitelyFillHole = false
                 let minMaxRange: ClosedRange<MessageId.Id>
                 
-                if namespace == Namespaces.Message.CloudScheduled {
+                if namespace == Namespaces.Message.ScheduledCloud {
                     switch direction {
                         case .aroundId, .range:
                             implicitelyFillHole = true
