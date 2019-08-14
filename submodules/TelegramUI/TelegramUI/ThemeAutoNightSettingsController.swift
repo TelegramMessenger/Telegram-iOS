@@ -11,6 +11,7 @@ import ItemListUI
 import TelegramStringFormatting
 import AccountContext
 import DeviceLocationManager
+import Geocoding
 
 private enum TriggerMode {
     case none

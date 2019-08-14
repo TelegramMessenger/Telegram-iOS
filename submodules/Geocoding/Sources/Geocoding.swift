@@ -2,7 +2,7 @@ import Foundation
 import CoreLocation
 import SwiftSignalKit
 
-func geocodeLocation(dictionary: [String: String]) -> Signal<(Double, Double)?, NoError> {
+public func geocodeLocation(dictionary: [String: String]) -> Signal<(Double, Double)?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
         geocoder.geocodeAddressDictionary(dictionary, completionHandler: { placemarks, _ in
@@ -19,12 +19,12 @@ func geocodeLocation(dictionary: [String: String]) -> Signal<(Double, Double)?, 
     }
 }
 
-struct ReverseGeocodedPlacemark {
-    let street: String?
-    let city: String?
-    let country: String?
+public struct ReverseGeocodedPlacemark {
+    public let street: String?
+    public let city: String?
+    public let country: String?
     
-    var fullAddress: String {
+    public var fullAddress: String {
         var components: [String] = []
         if let street = self.street {
             components.append(street)
@@ -40,7 +40,7 @@ struct ReverseGeocodedPlacemark {
     }
 }
 
-func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signal<ReverseGeocodedPlacemark?, NoError> {
+public func reverseGeocodeLocation(latitude: Double, longitude: Double) -> Signal<ReverseGeocodedPlacemark?, NoError> {
     return Signal { subscriber in
         let geocoder = CLGeocoder()
         geocoder.reverseGeocodeLocation(CLLocation(latitude: latitude, longitude: longitude), completionHandler: { placemarks, _ in

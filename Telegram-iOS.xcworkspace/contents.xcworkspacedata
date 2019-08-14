@@ -89,6 +89,9 @@
       <FileRef
          location = "group:submodules/MimeTypes/MimeTypes_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/Geocoding/Geocoding_Xcode.xcodeproj">
+      </FileRef>
       <Group
          location = "container:"
          name = "Image Processing">
@@ -435,6 +438,9 @@
       </FileRef>
       <FileRef
          location = "group:submodules/LegacyMediaPickerUI/LegacyMediaPickerUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PeersNearbyUI/PeersNearbyUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

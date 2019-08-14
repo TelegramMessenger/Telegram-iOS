@@ -10,6 +10,7 @@ import AccountContext
 import DeviceLocationManager
 import LegacyUI
 import ChatListUI
+import PeersNearbyUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -995,5 +996,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void) {
         openAddContactImpl(context: context, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, label: label, present: present, pushController: pushController, completed: completed)
+    }
+    
+    public func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController {
+        return createGroupControllerImpl(context: context, peerIds: peerIds, initialTitle: initialTitle, mode: mode, completion: completion)
     }
 }

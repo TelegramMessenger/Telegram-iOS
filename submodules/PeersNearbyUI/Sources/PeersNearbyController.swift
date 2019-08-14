@@ -15,6 +15,7 @@ import AlertUI
 import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
+import Geocoding
 
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)
@@ -337,7 +338,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
                 let controller = PermissionController(context: context, splashScreen: true)
                 controller.setState(.custom(icon: PermissionControllerCustomIcon(light: UIImage(bundleImageName: "Location/LocalGroupLightIcon"), dark: UIImage(bundleImageName: "Location/LocalGroupDarkIcon")), title: presentationData.strings.LocalGroup_Title, subtitle: address, text: presentationData.strings.LocalGroup_Text, buttonTitle: presentationData.strings.LocalGroup_ButtonTitle, footerText: presentationData.strings.LocalGroup_IrrelevantWarning), animated: false)
                 controller.proceed = { result in
-                    replaceTopControllerImpl?(createGroupController(context: context, peerIds: [], mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address)))
+                    replaceTopControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: nil, mode: .locatedGroup(latitude: latitude, longitude: longitude, address: address), completion: nil))
                 }
                 pushControllerImpl?(controller)
             } else {
@@ -435,7 +436,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     navigateToChatImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController {
             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer.id), keepStack: .always, purposefulAction: { [weak navigationController] in
-                if let navigationController = navigationController, let chatController = navigationController.viewControllers.last as? ChatControllerImpl {
+                if let navigationController = navigationController, let chatController = navigationController.viewControllers.last as? ChatController {
                     replaceAllButRootControllerImpl?(chatController, false)
                 }
             }))
