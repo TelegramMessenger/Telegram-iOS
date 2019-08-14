@@ -121,6 +121,9 @@
       <FileRef
          location = "group:submodules/LiveLocationManager/LiveLocationManager_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"

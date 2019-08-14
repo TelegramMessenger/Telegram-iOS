@@ -7,118 +7,66 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D03E3D4F23045E510049C28B /* PlatformRestrictionMatching.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3D4E23045E510049C28B /* PlatformRestrictionMatching.framework */; };
-		D0879AB222F7021000C4D6B3 /* TelegramStringFormatting.h in Headers */ = {isa = PBXBuildFile; fileRef = D0879AB022F7021000C4D6B3 /* TelegramStringFormatting.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0879ABD22F705AE00C4D6B3 /* PresenceStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879ABC22F705AE00C4D6B3 /* PresenceStrings.swift */; };
-		D0879AC022F705B800C4D6B3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879ABF22F705B800C4D6B3 /* Foundation.framework */; };
-		D0879AC222F705BB00C4D6B3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879AC122F705BB00C4D6B3 /* Postbox.framework */; };
-		D0879AC422F705BE00C4D6B3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879AC322F705BE00C4D6B3 /* TelegramCore.framework */; };
-		D0879AC622F705C300C4D6B3 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879AC522F705C300C4D6B3 /* TelegramPresentationData.framework */; };
-		D0879ACA22F7063300C4D6B3 /* DateFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879AC922F7063300C4D6B3 /* DateFormat.swift */; };
-		D0879ACC22F7064000C4D6B3 /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879ACB22F7064000C4D6B3 /* TelegramUIPreferences.framework */; };
-		D0879ACE22F7069200C4D6B3 /* Locale.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879ACD22F7069200C4D6B3 /* Locale.swift */; };
-		D0C9C3542300AD7000FAB518 /* StringForDuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3532300AD7000FAB518 /* StringForDuration.swift */; };
-		D0C9C3562300AD9900FAB518 /* MessageContentKind.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3552300AD9900FAB518 /* MessageContentKind.swift */; };
-		D0C9C3582300ADCF00FAB518 /* ServiceMessageStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3572300ADCF00FAB518 /* ServiceMessageStrings.swift */; };
-		D0C9C35A2300AE7200FAB518 /* TextFormat.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C3592300AE7200FAB518 /* TextFormat.framework */; };
-		D0C9C35C2300AEBA00FAB518 /* LocalizedPeerData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */; };
-		D0C9C35E2300AEF100FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C35D2300AEF100FAB518 /* Display.framework */; };
-		D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */; };
-		D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */; };
-		D0C9CA3823022A8300FAB518 /* NumberFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA3723022A8300FAB518 /* NumberFormat.swift */; };
+		D03E3D3B23045BF60049C28B /* PlatformRestrictionMatching.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E3D3923045BF60049C28B /* PlatformRestrictionMatching.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D03E3D4223045C200049C28B /* PlatformRestrictionMatching.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3D4123045C200049C28B /* PlatformRestrictionMatching.swift */; };
+		D03E3D4523045C6A0049C28B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3D4423045C6A0049C28B /* Foundation.framework */; };
+		D03E3D4723045C720049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3D4623045C720049C28B /* TelegramCore.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D03E3D4E23045E510049C28B /* PlatformRestrictionMatching.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PlatformRestrictionMatching.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0879AAD22F7021000C4D6B3 /* TelegramStringFormatting.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramStringFormatting.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0879AB022F7021000C4D6B3 /* TelegramStringFormatting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramStringFormatting.h; sourceTree = "<group>"; };
-		D0879AB122F7021000C4D6B3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D0879ABC22F705AE00C4D6B3 /* PresenceStrings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresenceStrings.swift; sourceTree = "<group>"; };
-		D0879ABF22F705B800C4D6B3 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		D0879AC122F705BB00C4D6B3 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0879AC322F705BE00C4D6B3 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0879AC522F705C300C4D6B3 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0879AC922F7063300C4D6B3 /* DateFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateFormat.swift; sourceTree = "<group>"; };
-		D0879ACB22F7064000C4D6B3 /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0879ACD22F7069200C4D6B3 /* Locale.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Locale.swift; sourceTree = "<group>"; };
-		D0C9C3532300AD7000FAB518 /* StringForDuration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StringForDuration.swift; sourceTree = "<group>"; };
-		D0C9C3552300AD9900FAB518 /* MessageContentKind.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MessageContentKind.swift; sourceTree = "<group>"; };
-		D0C9C3572300ADCF00FAB518 /* ServiceMessageStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceMessageStrings.swift; sourceTree = "<group>"; };
-		D0C9C3592300AE7200FAB518 /* TextFormat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TextFormat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalizedPeerData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C35D2300AEF100FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CurrencyFormat.swift; sourceTree = "<group>"; };
-		D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
-		D0C9CA3723022A8300FAB518 /* NumberFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumberFormat.swift; sourceTree = "<group>"; };
+		D03E3D3623045BF60049C28B /* PlatformRestrictionMatching.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PlatformRestrictionMatching.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3D3923045BF60049C28B /* PlatformRestrictionMatching.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PlatformRestrictionMatching.h; sourceTree = "<group>"; };
+		D03E3D3A23045BF60049C28B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D03E3D4123045C200049C28B /* PlatformRestrictionMatching.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformRestrictionMatching.swift; sourceTree = "<group>"; };
+		D03E3D4423045C6A0049C28B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D03E3D4623045C720049C28B /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		D0879AAA22F7021000C4D6B3 /* Frameworks */ = {
+		D03E3D3323045BF60049C28B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E3D4F23045E510049C28B /* PlatformRestrictionMatching.framework in Frameworks */,
-				D0C9C35E2300AEF100FAB518 /* Display.framework in Frameworks */,
-				D0C9C35C2300AEBA00FAB518 /* LocalizedPeerData.framework in Frameworks */,
-				D0C9C35A2300AE7200FAB518 /* TextFormat.framework in Frameworks */,
-				D0879ACC22F7064000C4D6B3 /* TelegramUIPreferences.framework in Frameworks */,
-				D0879AC622F705C300C4D6B3 /* TelegramPresentationData.framework in Frameworks */,
-				D0879AC422F705BE00C4D6B3 /* TelegramCore.framework in Frameworks */,
-				D0879AC222F705BB00C4D6B3 /* Postbox.framework in Frameworks */,
-				D0879AC022F705B800C4D6B3 /* Foundation.framework in Frameworks */,
+				D03E3D4723045C720049C28B /* TelegramCore.framework in Frameworks */,
+				D03E3D4523045C6A0049C28B /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D0879AA322F7021000C4D6B3 = {
+		D03E3D2C23045BF60049C28B = {
 			isa = PBXGroup;
 			children = (
-				D0879AB122F7021000C4D6B3 /* Info.plist */,
-				D0879AAF22F7021000C4D6B3 /* Sources */,
-				D0879AAE22F7021000C4D6B3 /* Products */,
-				D0879ABE22F705B700C4D6B3 /* Frameworks */,
+				D03E3D3A23045BF60049C28B /* Info.plist */,
+				D03E3D3823045BF60049C28B /* Sources */,
+				D03E3D3723045BF60049C28B /* Products */,
+				D03E3D4323045C690049C28B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
-		D0879AAE22F7021000C4D6B3 /* Products */ = {
+		D03E3D3723045BF60049C28B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D0879AAD22F7021000C4D6B3 /* TelegramStringFormatting.framework */,
+				D03E3D3623045BF60049C28B /* PlatformRestrictionMatching.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D0879AAF22F7021000C4D6B3 /* Sources */ = {
+		D03E3D3823045BF60049C28B /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				D0C9CA3723022A8300FAB518 /* NumberFormat.swift */,
-				D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */,
-				D0C9C3552300AD9900FAB518 /* MessageContentKind.swift */,
-				D0C9C3572300ADCF00FAB518 /* ServiceMessageStrings.swift */,
-				D0C9C3532300AD7000FAB518 /* StringForDuration.swift */,
-				D0879ACD22F7069200C4D6B3 /* Locale.swift */,
-				D0879AC922F7063300C4D6B3 /* DateFormat.swift */,
-				D0879ABC22F705AE00C4D6B3 /* PresenceStrings.swift */,
-				D0879AB022F7021000C4D6B3 /* TelegramStringFormatting.h */,
-				D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */,
+				D03E3D4123045C200049C28B /* PlatformRestrictionMatching.swift */,
+				D03E3D3923045BF60049C28B /* PlatformRestrictionMatching.h */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
 		};
-		D0879ABE22F705B700C4D6B3 /* Frameworks */ = {
+		D03E3D4323045C690049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D03E3D4E23045E510049C28B /* PlatformRestrictionMatching.framework */,
-				D0C9C35D2300AEF100FAB518 /* Display.framework */,
-				D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */,
-				D0C9C3592300AE7200FAB518 /* TextFormat.framework */,
-				D0879ACB22F7064000C4D6B3 /* TelegramUIPreferences.framework */,
-				D0879AC522F705C300C4D6B3 /* TelegramPresentationData.framework */,
-				D0879AC322F705BE00C4D6B3 /* TelegramCore.framework */,
-				D0879AC122F705BB00C4D6B3 /* Postbox.framework */,
-				D0879ABF22F705B800C4D6B3 /* Foundation.framework */,
+				D03E3D4623045C720049C28B /* TelegramCore.framework */,
+				D03E3D4423045C6A0049C28B /* Foundation.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -126,70 +74,70 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		D0879AA822F7021000C4D6B3 /* Headers */ = {
+		D03E3D3123045BF60049C28B /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0879AB222F7021000C4D6B3 /* TelegramStringFormatting.h in Headers */,
+				D03E3D3B23045BF60049C28B /* PlatformRestrictionMatching.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		D0879AAC22F7021000C4D6B3 /* TelegramStringFormatting */ = {
+		D03E3D3523045BF60049C28B /* PlatformRestrictionMatching */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D0879AB522F7021000C4D6B3 /* Build configuration list for PBXNativeTarget "TelegramStringFormatting" */;
+			buildConfigurationList = D03E3D3E23045BF60049C28B /* Build configuration list for PBXNativeTarget "PlatformRestrictionMatching" */;
 			buildPhases = (
-				D0879AA822F7021000C4D6B3 /* Headers */,
-				D0879AA922F7021000C4D6B3 /* Sources */,
-				D0879AAA22F7021000C4D6B3 /* Frameworks */,
-				D0879AAB22F7021000C4D6B3 /* Resources */,
+				D03E3D3123045BF60049C28B /* Headers */,
+				D03E3D3223045BF60049C28B /* Sources */,
+				D03E3D3323045BF60049C28B /* Frameworks */,
+				D03E3D3423045BF60049C28B /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = TelegramStringFormatting;
-			productName = TelegramStringFormatting;
-			productReference = D0879AAD22F7021000C4D6B3 /* TelegramStringFormatting.framework */;
+			name = PlatformRestrictionMatching;
+			productName = PlatformRestrictionMatching;
+			productReference = D03E3D3623045BF60049C28B /* PlatformRestrictionMatching.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		D0879AA422F7021000C4D6B3 /* Project object */ = {
+		D03E3D2D23045BF60049C28B /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				DefaultBuildSystemTypeForWorkspace = Latest;
 				LastUpgradeCheck = 1030;
 				ORGANIZATIONNAME = "Telegram Messenger LLP";
 				TargetAttributes = {
-					D0879AAC22F7021000C4D6B3 = {
+					D03E3D3523045BF60049C28B = {
 						CreatedOnToolsVersion = 10.3;
 						LastSwiftMigration = 1030;
 					};
 				};
 			};
-			buildConfigurationList = D0879AA722F7021000C4D6B3 /* Build configuration list for PBXProject "TelegramStringFormatting_Xcode" */;
+			buildConfigurationList = D03E3D3023045BF60049C28B /* Build configuration list for PBXProject "PlatformRestrictionMatching_Xcode" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 			);
-			mainGroup = D0879AA322F7021000C4D6B3;
-			productRefGroup = D0879AAE22F7021000C4D6B3 /* Products */;
+			mainGroup = D03E3D2C23045BF60049C28B;
+			productRefGroup = D03E3D3723045BF60049C28B /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D0879AAC22F7021000C4D6B3 /* TelegramStringFormatting */,
+				D03E3D3523045BF60049C28B /* PlatformRestrictionMatching */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		D0879AAB22F7021000C4D6B3 /* Resources */ = {
+		D03E3D3423045BF60049C28B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -199,26 +147,18 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D0879AA922F7021000C4D6B3 /* Sources */ = {
+		D03E3D3223045BF60049C28B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */,
-				D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */,
-				D0C9C3562300AD9900FAB518 /* MessageContentKind.swift in Sources */,
-				D0C9CA3823022A8300FAB518 /* NumberFormat.swift in Sources */,
-				D0879ACA22F7063300C4D6B3 /* DateFormat.swift in Sources */,
-				D0879ABD22F705AE00C4D6B3 /* PresenceStrings.swift in Sources */,
-				D0C9C3542300AD7000FAB518 /* StringForDuration.swift in Sources */,
-				D0C9C3582300ADCF00FAB518 /* ServiceMessageStrings.swift in Sources */,
-				D0879ACE22F7069200C4D6B3 /* Locale.swift in Sources */,
+				D03E3D4223045C200049C28B /* PlatformRestrictionMatching.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D0879AB322F7021000C4D6B3 /* DebugAppStoreLLC */ = {
+		D03E3D3C23045BF60049C28B /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -282,7 +222,7 @@
 			};
 			name = DebugAppStoreLLC;
 		};
-		D0879AB422F7021000C4D6B3 /* ReleaseAppStoreLLC */ = {
+		D03E3D3D23045BF60049C28B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -340,7 +280,7 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D0879AB622F7021000C4D6B3 /* DebugAppStoreLLC */ = {
+		D03E3D3F23045BF60049C28B /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -359,7 +299,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramStringFormatting;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PlatformRestrictionMatching;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -369,7 +309,7 @@
 			};
 			name = DebugAppStoreLLC;
 		};
-		D0879AB722F7021000C4D6B3 /* ReleaseAppStoreLLC */ = {
+		D03E3D4023045BF60049C28B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -388,7 +328,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramStringFormatting;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PlatformRestrictionMatching;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -397,7 +337,7 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D0879AB822F7023200C4D6B3 /* DebugHockeyapp */ = {
+		D03E3D4823045E0E0049C28B /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -461,7 +401,7 @@
 			};
 			name = DebugHockeyapp;
 		};
-		D0879AB922F7023200C4D6B3 /* DebugHockeyapp */ = {
+		D03E3D4923045E0E0049C28B /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -480,7 +420,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramStringFormatting;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PlatformRestrictionMatching;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -490,7 +430,7 @@
 			};
 			name = DebugHockeyapp;
 		};
-		D0879ABA22F7023D00C4D6B3 /* ReleaseHockeyappInternal */ = {
+		D03E3D4A23045E170049C28B /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -548,7 +488,7 @@
 			};
 			name = ReleaseHockeyappInternal;
 		};
-		D0879ABB22F7023D00C4D6B3 /* ReleaseHockeyappInternal */ = {
+		D03E3D4B23045E170049C28B /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -567,7 +507,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.TelegramStringFormatting;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PlatformRestrictionMatching;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -579,29 +519,29 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D0879AA722F7021000C4D6B3 /* Build configuration list for PBXProject "TelegramStringFormatting_Xcode" */ = {
+		D03E3D3023045BF60049C28B /* Build configuration list for PBXProject "PlatformRestrictionMatching_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0879AB322F7021000C4D6B3 /* DebugAppStoreLLC */,
-				D0879AB822F7023200C4D6B3 /* DebugHockeyapp */,
-				D0879AB422F7021000C4D6B3 /* ReleaseAppStoreLLC */,
-				D0879ABA22F7023D00C4D6B3 /* ReleaseHockeyappInternal */,
+				D03E3D3C23045BF60049C28B /* DebugAppStoreLLC */,
+				D03E3D4823045E0E0049C28B /* DebugHockeyapp */,
+				D03E3D3D23045BF60049C28B /* ReleaseAppStoreLLC */,
+				D03E3D4A23045E170049C28B /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseAppStoreLLC;
 		};
-		D0879AB522F7021000C4D6B3 /* Build configuration list for PBXNativeTarget "TelegramStringFormatting" */ = {
+		D03E3D3E23045BF60049C28B /* Build configuration list for PBXNativeTarget "PlatformRestrictionMatching" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D0879AB622F7021000C4D6B3 /* DebugAppStoreLLC */,
-				D0879AB922F7023200C4D6B3 /* DebugHockeyapp */,
-				D0879AB722F7021000C4D6B3 /* ReleaseAppStoreLLC */,
-				D0879ABB22F7023D00C4D6B3 /* ReleaseHockeyappInternal */,
+				D03E3D3F23045BF60049C28B /* DebugAppStoreLLC */,
+				D03E3D4923045E0E0049C28B /* DebugHockeyapp */,
+				D03E3D4023045BF60049C28B /* ReleaseAppStoreLLC */,
+				D03E3D4B23045E170049C28B /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseAppStoreLLC;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = D0879AA422F7021000C4D6B3 /* Project object */;
+	rootObject = D03E3D2D23045BF60049C28B /* Project object */;
 }

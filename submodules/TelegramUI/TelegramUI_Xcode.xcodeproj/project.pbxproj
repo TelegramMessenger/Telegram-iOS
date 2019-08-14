@@ -241,6 +241,8 @@
 		D03AA4E5202DF8840056C405 /* StickerPreviewPeekContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4E4202DF8840056C405 /* StickerPreviewPeekContent.swift */; };
 		D03AE67322B9459C0078411C /* HockeySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03AE67222B9459C0078411C /* HockeySDK.framework */; };
 		D03AE67522B945D30078411C /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03AE67422B945D30078411C /* BuildConfig.framework */; };
+		D03E3D2B23045B120049C28B /* ChatMessageRestrictedBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3D2A23045B120049C28B /* ChatMessageRestrictedBubbleContentNode.swift */; };
+		D03E3D4D23045E410049C28B /* PlatformRestrictionMatching.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3D4C23045E410049C28B /* PlatformRestrictionMatching.framework */; };
 		D04203152037162700490EA5 /* MediaInputPaneTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */; };
 		D04281EF200E3D88009DDE36 /* GroupInfoSearchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281EE200E3D88009DDE36 /* GroupInfoSearchItem.swift */; };
 		D04281F1200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F0200E4084009DDE36 /* GroupInfoSearchNavigationContentNode.swift */; };
@@ -1140,6 +1142,8 @@
 		D03ADB4E1D70546B005A521C /* AccessoryPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccessoryPanelNode.swift; sourceTree = "<group>"; };
 		D03AE67222B9459C0078411C /* HockeySDK.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = HockeySDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03AE67422B945D30078411C /* BuildConfig.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = BuildConfig.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3D2A23045B120049C28B /* ChatMessageRestrictedBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageRestrictedBubbleContentNode.swift; sourceTree = "<group>"; };
+		D03E3D4C23045E410049C28B /* PlatformRestrictionMatching.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PlatformRestrictionMatching.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E5E081E55C49C0029569A /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
 		D03E5E0E1E55F8B90029569A /* ChannelVisibilityController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelVisibilityController.swift; sourceTree = "<group>"; };
 		D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputPaneTrendingItem.swift; sourceTree = "<group>"; };
@@ -1734,6 +1738,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E3D4D23045E410049C28B /* PlatformRestrictionMatching.framework in Frameworks */,
 				D0C9CBD72302C09000FAB518 /* TextSelectionNode.framework in Frameworks */,
 				D0C9CBB62302B65600FAB518 /* LanguageSuggestionUI.framework in Frameworks */,
 				D0C9CB822302B38A00FAB518 /* DeleteChatPeerActionSheetItem.framework in Frameworks */,
@@ -2586,6 +2591,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E3D4C23045E410049C28B /* PlatformRestrictionMatching.framework */,
 				D0C9CBD62302C09000FAB518 /* TextSelectionNode.framework */,
 				D0C9CBB52302B65600FAB518 /* LanguageSuggestionUI.framework */,
 				D0C9CB812302B38A00FAB518 /* DeleteChatPeerActionSheetItem.framework */,
@@ -3514,6 +3520,7 @@
 				D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */,
 				099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */,
 				D0FAB13D22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift */,
+				D03E3D2A23045B120049C28B /* ChatMessageRestrictedBubbleContentNode.swift */,
 			);
 			name = Items;
 			sourceTree = "<group>";
@@ -4004,6 +4011,7 @@
 			files = (
 				D0383EE6207D299600C45548 /* EmojisChatInputPanelItem.swift in Sources */,
 				D00817E322B47A14008A895F /* TGPresentationAutoNightPreferences.m in Sources */,
+				D03E3D2B23045B120049C28B /* ChatMessageRestrictedBubbleContentNode.swift in Sources */,
 				D0E1199E229809B6008CAE3A /* ChannelDiscussionGroupActionSheetItem.swift in Sources */,
 				09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */,
 				D0E1199A2297F9C6008CAE3A /* ChannelDiscussionGroupSetupController.swift in Sources */,
