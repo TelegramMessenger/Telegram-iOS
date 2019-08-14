@@ -11,6 +11,8 @@ import AlertUI
 import PassportUI
 import InstantPageUI
 import StickerPackPreviewUI
+import JoinLinkPreviewUI
+import LanguageLinkPreviewUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
