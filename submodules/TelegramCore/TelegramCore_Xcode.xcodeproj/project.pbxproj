@@ -294,6 +294,8 @@
 		D03DC9111F82E344001D584C /* AccountStateReset.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03DC90F1F82E344001D584C /* AccountStateReset.swift */; };
 		D03DC9131F82F89D001D584C /* RegularChatState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03DC9121F82F89D001D584C /* RegularChatState.swift */; };
 		D03DC9141F82F89D001D584C /* RegularChatState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03DC9121F82F89D001D584C /* RegularChatState.swift */; };
+		D03E3D28230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */; };
+		D03E3D29230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */; };
 		D03E5E0C1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */; };
 		D03E5E0D1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */; };
 		D041E3F51E535464008C24B4 /* AddPeerMember.swift in Sources */ = {isa = PBXBuildFile; fileRef = D041E3F41E535464008C24B4 /* AddPeerMember.swift */; };
@@ -1002,6 +1004,7 @@
 		D03C53761DAFF20F004C17B3 /* MultipartUpload.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultipartUpload.swift; sourceTree = "<group>"; };
 		D03DC90F1F82E344001D584C /* AccountStateReset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStateReset.swift; sourceTree = "<group>"; };
 		D03DC9121F82F89D001D584C /* RegularChatState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegularChatState.swift; sourceTree = "<group>"; };
+		D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestrictedContentMessageAttribute.swift; sourceTree = "<group>"; };
 		D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoggedOutAccountAttribute.swift; sourceTree = "<group>"; };
 		D041E3F41E535464008C24B4 /* AddPeerMember.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddPeerMember.swift; sourceTree = "<group>"; };
 		D041E3F71E535A88008C24B4 /* RemovePeerMember.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RemovePeerMember.swift; sourceTree = "<group>"; };
@@ -1514,6 +1517,7 @@
 				D0439B5F228EDE430067E026 /* ContentRequiresValidationMessageAttribute.swift */,
 				09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */,
 				D0329EA422FC5A9600F9F071 /* ReactionsMessageAttribute.swift */,
+				D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -2261,6 +2265,7 @@
 				D02D60AB206BA64100FEFE1E /* VerifySecureIdValue.swift in Sources */,
 				D00D343F1E6ED6E50057B307 /* ConsumableContentMessageAttribute.swift in Sources */,
 				090E778322A9862100CD99F5 /* ChannelOwnershipTransfer.swift in Sources */,
+				D03E3D28230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */,
 				D03B0CE01D62249100955575 /* StoreMessage_Telegram.swift in Sources */,
 				D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */,
 				D023E67821540624008C27D1 /* UpdateMessageMedia.swift in Sources */,
@@ -2867,6 +2872,7 @@
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,
 				D00580AF21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */,
+				D03E3D29230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */,
 				D05452081E7B5093006EEF19 /* LoadedStickerPack.swift in Sources */,
 				D0561DE41E5737FC00E6B9E9 /* UpdatePeerInfo.swift in Sources */,
 				D042C6841E8D9DF800C863B0 /* Unixtime.swift in Sources */,
