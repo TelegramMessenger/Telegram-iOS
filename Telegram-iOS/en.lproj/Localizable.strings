@@ -4610,6 +4610,7 @@ Any member of this group will be able to see messages in the channel.";
 "ScheduledMessages.EditTime" = "Reschedule";
 "ScheduledMessages.ClearAll" = "Clear All";
 "ScheduledMessages.Delete" = "Delete";
+"ScheduledMessages.EmptyPlaceholder" = "No scheduled messages here yet...";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 

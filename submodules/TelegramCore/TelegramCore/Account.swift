@@ -248,7 +248,8 @@ let telegramPostboxSeedConfiguration: SeedConfiguration = {
     var messageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]] = [:]
     for peerNamespace in peerIdNamespacesWithInitialCloudMessageHoles {
         messageHoles[peerNamespace] = [
-            Namespaces.Message.Cloud: Set(MessageTags.all)
+            Namespaces.Message.Cloud: Set(MessageTags.all),
+            Namespaces.Message.ScheduledCloud: Set(MessageTags.all)
         ]
     }
     

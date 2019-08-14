@@ -1624,7 +1624,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         self.reportIrrelvantGeoNoticePromise.set(.single(nil))
                     }
                     
-                    if !isScheduledMessages {
+                    if !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat {
                         hasScheduledMessages = context.account.viewTracker.aroundMessageHistoryViewForLocation(chatLocation, index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil, tagMask: nil, excludeNamespaces: [Namespaces.Message.Cloud, Namespaces.Message.Local], orderStatistics: [])
                         |> map { view, _, _ in
                             return !view.entries.isEmpty

@@ -105,7 +105,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentContainerNode.addSubnode(self.doneButton)
         
         self.pickerView.timeZone = TimeZone.current
-        self.pickerView.minuteInterval = 5
+        self.pickerView.minuteInterval = 1
         self.pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
         
         self.contentContainerNode.view.addSubview(self.pickerView)
