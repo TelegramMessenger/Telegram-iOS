@@ -27,6 +27,8 @@ import SearchUI
 import ItemListPeerItem
 import CallListUI
 import ChatListUI
+import ItemListAvatarAndNameInfoItem
+import ItemListPeerActionItem
 
 private let maximumNumberOfAccounts = 3
 

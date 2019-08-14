@@ -7,6 +7,7 @@ import AsyncDisplayKit
 import Postbox
 import StickerResources
 import AccountContext
+import AnimationUI
 
 final class HorizontalStickerGridItem: GridItem {
     let account: Account

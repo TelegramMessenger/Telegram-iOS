@@ -17,6 +17,7 @@ import AlertUI
 import GalleryUI
 import LegacyUI
 import ChatListUI
+import ItemListAvatarAndNameInfoItem
 
 private final class ChannelInfoControllerArguments {
     let account: Account

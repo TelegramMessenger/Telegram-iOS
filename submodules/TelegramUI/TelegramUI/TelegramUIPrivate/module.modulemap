@@ -15,6 +15,4 @@ module TelegramUIPrivateModule {
     header "../TGPresentationAutoNightPreferences.h"
     header "../TGProxyItem.h"
     header "../UIImage+ImageEffects.h"
-    header "../YUV.h"
-    header "../../third-party/bc1/TextureCompression.h"
 }

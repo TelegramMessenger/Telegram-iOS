@@ -24,6 +24,8 @@ import LocationUI
 import ItemListPeerItem
 import ContactListUI
 import ChatListUI
+import ItemListAvatarAndNameInfoItem
+import ItemListPeerActionItem
 
 private final class GroupInfoArguments {
     let context: AccountContext

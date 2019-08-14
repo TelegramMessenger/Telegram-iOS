@@ -14,6 +14,7 @@ import AccountContext
 import AlertUI
 import ItemListPeerItem
 import TelegramPermissionsUI
+import ItemListPeerActionItem
 
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)

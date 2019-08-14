@@ -90,6 +90,9 @@
          location = "container:"
          name = "Image Processing">
          <FileRef
+            location = "group:submodules/YuvConversion/YuvConversion.xcodeproj">
+         </FileRef>
+         <FileRef
             location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">
          </FileRef>
          <FileRef
@@ -278,6 +281,12 @@
          <FileRef
             location = "group:submodules/ChatListSearchItemHeader/ChatListSearchItemHeader_Xcode.xcodeproj">
          </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListAvatarAndNameInfoItem/ItemListAvatarAndNameInfoItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListPeerActionItem/ItemListPeerActionItem_Xcode.xcodeproj">
+         </FileRef>
       </Group>
       <Group
          location = "container:"
@@ -402,6 +411,12 @@
       </FileRef>
       <FileRef
          location = "group:submodules/LanguageSuggestionUI/LanguageSuggestionUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/HashtagSearchUI/HashtagSearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/StickerPackPreviewUI/StickerPackPreviewUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

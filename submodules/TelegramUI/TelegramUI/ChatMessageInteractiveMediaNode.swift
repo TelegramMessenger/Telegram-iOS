@@ -16,6 +16,7 @@ import PhotoResources
 import TelegramUniversalVideoContent
 import TelegramStringFormatting
 import GalleryUI
+import AnimationUI
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import ItemListUI
 import StickerResources
+import AnimationUI
 
 struct ItemListStickerPackItemEditing: Equatable {
     let editable: Bool

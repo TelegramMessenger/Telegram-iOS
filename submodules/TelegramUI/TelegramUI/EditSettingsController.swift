@@ -11,6 +11,7 @@ import ItemListUI
 import AccountContext
 import GalleryUI
 import LegacyUI
+import ItemListAvatarAndNameInfoItem
 
 private struct EditSettingsItemArguments {
     let context: AccountContext

@@ -35,6 +35,7 @@ import InstantPageUI
 import LocationUI
 import BotPaymentsUI
 import DeleteChatPeerActionSheetItem
+import HashtagSearchUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -120,7 +121,7 @@ let ChatControllerCount = Atomic<Int32>(value: 0)
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
-    weak var parentController: ViewController?
+    public weak var parentController: ViewController?
     
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false

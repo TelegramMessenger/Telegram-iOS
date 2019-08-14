@@ -17,6 +17,7 @@ import TelegramUIPrivateModule
 import MediaResources
 import PhotoResources
 import ImageBlur
+import AnimationUI
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {

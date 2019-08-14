@@ -11,6 +11,7 @@ import OverlayStatusController
 import AccountContext
 import AlertUI
 import ItemListPeerItem
+import ItemListPeerActionItem
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let account: Account

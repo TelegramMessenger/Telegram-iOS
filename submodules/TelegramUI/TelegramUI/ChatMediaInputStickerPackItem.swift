@@ -7,6 +7,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import StickerResources
+import AnimationUI
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account

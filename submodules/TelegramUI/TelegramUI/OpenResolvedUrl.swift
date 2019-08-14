@@ -10,6 +10,7 @@ import OverlayStatusController
 import AlertUI
 import PassportUI
 import InstantPageUI
+import StickerPackPreviewUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
