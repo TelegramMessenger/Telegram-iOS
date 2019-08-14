@@ -16,6 +16,7 @@ import LegacyUI
 import LocationUI
 import ItemListPeerItem
 import ItemListAvatarAndNameInfoItem
+import WebSearchUI
 
 public enum CreateGroupMode {
     case generic

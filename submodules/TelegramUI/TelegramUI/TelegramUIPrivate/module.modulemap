@@ -4,7 +4,6 @@ module TelegramUIPrivateModule {
     header "../SecretChatKeyVisualization.h"
     header "../DeviceProximityManager.h"
     header "../RaiseToListenActivator.h"
-    header "../TGMimeTypeMap.h"
     header "../Bridge Audio/TGBridgeAudioDecoder.h"
     header "../Bridge Audio/TGBridgeAudioEncoder.h"
     header "../TGContactModel.h"

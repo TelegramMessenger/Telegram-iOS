@@ -86,6 +86,9 @@
       <FileRef
          location = "group:submodules/LocalAuth/LocalAuth_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/MimeTypes/MimeTypes_Xcode.xcodeproj">
+      </FileRef>
       <Group
          location = "container:"
          name = "Image Processing">
@@ -158,6 +161,9 @@
          </FileRef>
          <FileRef
             location = "group:submodules/MusicAlbumArtResources/MusicAlbumArtResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LocalMediaResources/LocalMediaResources_Xcode.xcodeproj">
          </FileRef>
       </Group>
    </Group>
@@ -423,6 +429,12 @@
       </FileRef>
       <FileRef
          location = "group:submodules/LanguageLinkPreviewUI/LanguageLinkPreviewUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WebSearchUI/WebSearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LegacyMediaPickerUI/LegacyMediaPickerUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

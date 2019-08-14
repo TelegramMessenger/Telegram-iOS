@@ -12,6 +12,7 @@ import TelegramUIPrivateModule
 import AccountContext
 import LegacyComponents
 import Pdf
+import LocalMediaResources
 
 enum UnpreparedShareItemContent {
     case contact(DeviceContactExtendedData)

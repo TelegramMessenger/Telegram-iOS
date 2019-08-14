@@ -3,12 +3,10 @@ import UIKit
 import TelegramCore
 import Postbox
 import SwiftSignalKit
-
-import TelegramUIPrivateModule
 import LegacyComponents
 import LegacyUI
 
-func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionContext {
+public func legacySuggestionContext(account: Account, peerId: PeerId) -> TGSuggestionContext {
     let context = TGSuggestionContext()
     context.userListSignal = { query in
         return SSignal { subscriber in

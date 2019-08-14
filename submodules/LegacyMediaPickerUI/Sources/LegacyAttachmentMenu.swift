@@ -10,7 +10,17 @@ import DeviceAccess
 import AccountContext
 import LegacyUI
 
-func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: MessageMediaEditingOptions?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+public struct LegacyAttachmentMenuMediaEditing: OptionSet {
+    public var rawValue: Int32
+    
+    public init(rawValue: Int32) {
+        self.rawValue = rawValue
+    }
+    
+    public static let imageOrVideo = LegacyAttachmentMenuMediaEditing(rawValue: 1 << 0)
+}
+
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -168,12 +178,12 @@ func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions:
     return controller
 }
 
-func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuSheetPallete {
+public func legacyMenuPaletteFromTheme(_ theme: PresentationTheme) -> TGMenuSheetPallete {
     let sheetTheme = theme.actionSheet
     return TGMenuSheetPallete(dark: theme.overallDarkAppearance, backgroundColor: sheetTheme.opaqueItemBackgroundColor, selectionColor: sheetTheme.opaqueItemHighlightedBackgroundColor, separatorColor: sheetTheme.opaqueItemSeparatorColor, accentColor: sheetTheme.controlAccentColor, destructiveColor: sheetTheme.destructiveActionTextColor, textColor: sheetTheme.primaryTextColor, secondaryTextColor: sheetTheme.secondaryTextColor, spinnerColor: sheetTheme.secondaryTextColor, badgeTextColor: sheetTheme.controlAccentColor, badgeImage: nil, cornersImage: generateStretchableFilledCircleImage(diameter: 11.0, color: nil, strokeColor: nil, strokeWidth: nil, backgroundColor: sheetTheme.opaqueItemBackgroundColor))
 }
 
-func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
+public func presentLegacyPasteMenu(context: AccountContext, peer: Peer, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, images: [UIImage], sendMessagesWithSignals: @escaping ([Any]?) -> Void, present: (ViewController, Any?) -> Void, initialLayout: ContainerViewLayout? = nil) -> ViewController {
     let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: initialLayout)
     legacyController.statusBar.statusBarStyle = .Ignore
     legacyController.controllerLoaded = { [weak legacyController] in

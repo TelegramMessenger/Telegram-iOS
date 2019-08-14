@@ -7,16 +7,17 @@ import Postbox
 import SSignalKit
 import Display
 import TelegramPresentationData
-import TelegramUIPrivateModule
 import DeviceAccess
 import AccountContext
 import ImageCompression
+import MimeTypes
+import LocalMediaResources
 
-func guessMimeTypeByFileExtension(_ ext: String) -> String {
+public func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
+public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     controller.captionsEnabled = captionsEnabled
@@ -41,7 +42,7 @@ func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: 
     controller.editingContext.setInitialCaption(initialCaption, entities: [])
 }
 
-func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
+public func legacyAssetPicker(context: AccountContext, presentationData: PresentationData, editingMedia: Bool, fileMode: Bool, peer: Peer?, saveEditedPhotos: Bool, allowGrouping: Bool, selectionLimit: Int) -> Signal<(LegacyComponentsContext) -> TGMediaAssetsController, Void> {
     let isSecretChat = (peer?.id.namespace ?? 0) == Namespaces.Peer.SecretChat
     
     return Signal { subscriber in
@@ -113,7 +114,7 @@ private final class LegacyAssetItemWrapper: NSObject {
     }
 }
 
-func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [AnyHashable : Any]?) {
+public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [AnyHashable : Any]?) {
     return { anyDict, caption, entities, hash in
         let dict = anyDict as! NSDictionary
         if (dict["type"] as! NSString) == "editedPhoto" || (dict["type"] as! NSString) == "capturedPhoto" {
@@ -219,7 +220,7 @@ func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?) -> [A
     }
 }
 
-func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<EnqueueMessage, Void> {
+public func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<EnqueueMessage, Void> {
     return Signal { subscriber in
         if let previewImage = UIImage(data: data) {
             let dimensions = previewImage.size
@@ -261,7 +262,7 @@ func legacyEnqueueGifMessage(account: Account, data: Data) -> Signal<EnqueueMess
     } |> runOn(Queue.concurrentDefaultQueue())
 }
 
-func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signal<[EnqueueMessage], Void> {
+public func legacyAssetPickerEnqueueMessages(account: Account, signals: [Any]) -> Signal<[EnqueueMessage], Void> {
     return Signal { subscriber in
         let disposable = SSignal.combineSignals(signals).start(next: { anyValues in
             var messages: [EnqueueMessage] = []

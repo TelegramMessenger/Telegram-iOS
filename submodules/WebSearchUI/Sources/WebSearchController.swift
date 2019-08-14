@@ -9,7 +9,7 @@ import LegacyComponents
 import TelegramUIPreferences
 import AccountContext
 
-func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
+public func requestContextResults(account: Account, botId: PeerId, query: String, peerId: PeerId, offset: String = "", existingResults: ChatContextResultCollection? = nil, limit: Int = 60) -> Signal<ChatContextResultCollection?, NoError> {
     return requestChatContextResults(account: account, botId: botId, peerId: peerId, query: query, offset: offset)
     |> `catch` { error -> Signal<ChatContextResultCollection?, NoError> in
         return .single(nil)
@@ -50,12 +50,12 @@ func requestContextResults(account: Account, botId: PeerId, query: String, peerI
     }
 }
 
-enum WebSearchMode {
+public enum WebSearchMode {
     case media
     case avatar
 }
 
-enum WebSearchControllerMode {
+public enum WebSearchControllerMode {
     case media(completion: (ChatContextResultCollection, TGMediaSelectionContext, TGMediaEditingContext, Bool) -> Void)
     case avatar(initialQuery: String?, completion: (UIImage) -> Void)
     
@@ -103,7 +103,7 @@ private func selectionChangedSignal(selectionState: TGMediaSelectionContext) -> 
     }
 }
 
-final class WebSearchController: ViewController {
+public final class WebSearchController: ViewController {
     private var validLayout: ContainerViewLayout?
     
     private let context: AccountContext
@@ -132,7 +132,7 @@ final class WebSearchController: ViewController {
     
     private var navigationContentNode: WebSearchNavigationContentNode?
     
-    init(context: AccountContext, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
+    public init(context: AccountContext, peer: Peer?, configuration: SearchBotsConfiguration, mode: WebSearchControllerMode) {
         self.context = context
         self.mode = mode
         self.peer = peer
@@ -261,7 +261,7 @@ final class WebSearchController: ViewController {
         self.selectionDisposable?.dispose()
     }
     
-    public override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
@@ -272,7 +272,7 @@ final class WebSearchController: ViewController {
         }
     }
     
-    override func viewWillAppear(_ animated: Bool) {
+    override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
         var select = false
@@ -305,7 +305,7 @@ final class WebSearchController: ViewController {
         self.displayNodeDidLoad()
     }
     
-    func updateInterfaceState(animated: Bool = true, _ f: (WebSearchInterfaceState) -> WebSearchInterfaceState) {
+    private func updateInterfaceState(animated: Bool = true, _ f: (WebSearchInterfaceState) -> WebSearchInterfaceState) {
         let previousInterfaceState = self.interfaceState
         let previousTheme = self.interfaceState.presentationData.theme
         let previousStrings = self.interfaceState.presentationData.theme

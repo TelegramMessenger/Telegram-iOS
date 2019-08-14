@@ -4,6 +4,8 @@ import TelegramUIPreferences
 import TelegramNotices
 import InstantPageUI
 import AccountContext
+import LocalMediaResources
+import WebSearchUI
 
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })

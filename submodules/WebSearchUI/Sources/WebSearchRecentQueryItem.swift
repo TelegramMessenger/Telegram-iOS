@@ -12,7 +12,7 @@ private enum RevealOptionKey: Int32 {
     case delete
 }
 
-class WebSearchRecentQueryItem: ListViewItem {
+public class WebSearchRecentQueryItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let account: Account
@@ -22,7 +22,7 @@ class WebSearchRecentQueryItem: ListViewItem {
     
     let header: ListViewItemHeader?
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, query: String, tapped: @escaping (String) -> Void, deleted: @escaping (String) -> Void, header: ListViewItemHeader) {
+    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, query: String, tapped: @escaping (String) -> Void, deleted: @escaping (String) -> Void, header: ListViewItemHeader) {
         self.theme = theme
         self.strings = strings
         self.account = account
@@ -32,7 +32,7 @@ class WebSearchRecentQueryItem: ListViewItem {
         self.header = header
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+    public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = WebSearchRecentQueryItemNode()
             let makeLayout = node.asyncLayout()
@@ -44,7 +44,7 @@ class WebSearchRecentQueryItem: ListViewItem {
         }
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+    public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? WebSearchRecentQueryItemNode {
                 let layout = nodeValue.asyncLayout()
@@ -60,11 +60,11 @@ class WebSearchRecentQueryItem: ListViewItem {
         }
     }
     
-    var selectable: Bool {
+    public var selectable: Bool {
         return true
     }
     
-    func selected(listView: ListView) {
+    public func selected(listView: ListView) {
         listView.clearHighlightAnimated(true)
         self.tapped(self.query)
     }

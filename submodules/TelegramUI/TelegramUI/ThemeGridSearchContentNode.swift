@@ -10,6 +10,7 @@ import MergeLists
 import AccountContext
 import SearchUI
 import ChatListSearchItemHeader
+import WebSearchUI
 
 enum WallpaperSearchColor: CaseIterable {
     case blue

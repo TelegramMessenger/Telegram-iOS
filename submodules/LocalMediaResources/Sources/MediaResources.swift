@@ -232,8 +232,8 @@ public struct PhotoLibraryMediaResourceId: MediaResourceId {
 }
 
 public class PhotoLibraryMediaResource: TelegramMediaResource {
-    let localIdentifier: String
-    let uniqueId: Int64
+    public let localIdentifier: String
+    public let uniqueId: Int64
     
     public init(localIdentifier: String, uniqueId: Int64) {
         self.localIdentifier = localIdentifier

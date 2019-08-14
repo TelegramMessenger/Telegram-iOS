@@ -24,7 +24,7 @@ private struct WebSearchRecentQueryItemId {
     }
 }
 
-final class RecentWebSearchQueryItem: OrderedItemListEntryContents {
+public final class RecentWebSearchQueryItem: OrderedItemListEntryContents {
     init() {
     }
     

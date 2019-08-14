@@ -11,6 +11,7 @@ import TelegramPresentationData
 import AccountContext
 import PhotoResources
 import LegacyUI
+import LegacyMediaPickerUI
 
 class LegacyWebSearchItem: NSObject, TGMediaEditableItem, TGMediaSelectableItem {
     var isVideo: Bool {
@@ -392,7 +393,7 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, theme: 
     present(legacyController, nil)
 }
 
-func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionContext, _ editingState: TGMediaEditingContext, enqueueChatContextResult: (ChatContextResult) -> Void, enqueueMediaMessages: ([Any]) -> Void)
+public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionContext, _ editingState: TGMediaEditingContext, enqueueChatContextResult: (ChatContextResult) -> Void, enqueueMediaMessages: ([Any]) -> Void)
 {
     var results: [ChatContextResult] = []
     for item in selectionState.selectedItems() {

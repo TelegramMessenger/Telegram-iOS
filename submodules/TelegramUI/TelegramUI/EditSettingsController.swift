@@ -12,6 +12,7 @@ import AccountContext
 import GalleryUI
 import LegacyUI
 import ItemListAvatarAndNameInfoItem
+import WebSearchUI
 
 private struct EditSettingsItemArguments {
     let context: AccountContext
