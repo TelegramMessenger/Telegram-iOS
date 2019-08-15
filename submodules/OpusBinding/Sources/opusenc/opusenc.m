@@ -1,13 +1,8 @@
-#import "opusenc.h"
-
-#ifdef BUCK
 #include <opus/opus_types.h>
-#else
-#include "opus_types.h"
-#endif
 #include <ogg/ogg.h>
 
 #import "TGDataItem.h"
+#import "TGOggOpusWriter.h"
 
 #ifdef ENABLE_NLS
 #include <libintl.h>
@@ -52,13 +47,7 @@ typedef struct
     char *description;
 } input_format;
 
-#ifdef BUCK
 #include <opus/opus.h>
-#include <opus/opus_multistream.h>
-#else
-#include "opus.h"
-#include "opus_multistream.h"
-#endif
 
 #include <ogg/ogg.h>
 #include "opus_header.h"

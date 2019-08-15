@@ -40,11 +40,7 @@
 #endif
 
 #include <stdio.h>
-#ifdef BUCK
 #include <opus/opus.h>
-#else
-#include "opus.h"
-#endif
 #include "diag_range.h"
 
 /*This is some non-exported code copied wholesale from libopus.

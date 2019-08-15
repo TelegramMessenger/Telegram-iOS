@@ -1,17 +1,16 @@
-#ifndef __OPUSENC_H
-#define __OPUSENC_H
-
 #import <Foundation/Foundation.h>
+
+NS_ASSUME_NONNULL_BEGIN
 
 @class TGDataItem;
 
 @interface TGOggOpusWriter : NSObject
 
 - (bool)beginWithDataItem:(TGDataItem *)dataItem;
-- (bool)writeFrame:(uint8_t *)framePcmBytes frameByteCount:(NSUInteger)frameByteCount;
+- (bool)writeFrame:(uint8_t * _Nullable)framePcmBytes frameByteCount:(NSUInteger)frameByteCount;
 - (NSUInteger)encodedBytes;
 - (NSTimeInterval)encodedDuration;
 
 @end
 
-#endif /* __OPUSENC_H */
+NS_ASSUME_NONNULL_END

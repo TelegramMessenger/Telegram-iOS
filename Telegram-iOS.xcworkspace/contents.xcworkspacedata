@@ -19,6 +19,12 @@
       <FileRef
          location = "group:submodules/Stripe/Stripe_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/Opus/opus_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/OpusBinding/OpusBinding_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
@@ -93,10 +99,10 @@
             location = "group:submodules/LocalAuth/LocalAuth_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/DeviceProximity/DeviceProximity_Xcode.xcodeproj">
+            location = "group:submodules/DeviceProximity/DeviceProximity_Xcode.xcodeproj">
          </FileRef>
          <FileRef
-            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/RaiseToListen/RaiseToListen_Xcode.xcodeproj">
+            location = "group:submodules/RaiseToListen/RaiseToListen_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <Group

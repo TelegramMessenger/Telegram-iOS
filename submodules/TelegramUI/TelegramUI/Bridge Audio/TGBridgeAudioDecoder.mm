@@ -5,8 +5,7 @@
 
 #import <SSignalKit/SSignalKit.h>
 
-#import "opusfile.h"
-#import "opusenc.h"
+#import <OpusBinding/OpusBinding.h>
 
 const NSInteger TGBridgeAudioDecoderInputSampleRate = 48000;
 const NSInteger TGBridgeAudioDecoderResultSampleRate = 24000;
@@ -56,7 +55,7 @@ static inline bool _checkResultLite(OSStatus result, const char *operation, cons
     NSURL *_url;
     NSURL *_resultURL;
     
-    OggOpusFile *_opusFile;
+    OggOpusReader *_opusReader;
     
     bool _finished;
     bool _cancelled;
@@ -83,10 +82,8 @@ static inline bool _checkResultLite(OSStatus result, const char *operation, cons
 {
     [[TGBridgeAudioDecoder processingQueue] dispatch:^
     {
-        int error = OPUS_OK;
-        _opusFile = op_open_file(_url.path.UTF8String, &error);
-        if (_opusFile == NULL || error != OPUS_OK)
-        {
+        _opusReader = [[OggOpusReader alloc] initWithPath:_url.path];
+        if (_opusReader == NULL) {
             return;
         }
         
@@ -148,7 +145,7 @@ static inline bool _checkResultLite(OSStatus result, const char *operation, cons
             uint32_t writtenOutputBytes = 0;
             while (writtenOutputBytes < TGBridgeAudioDecoderBufferSize)
             {
-                int32_t readSamples = op_read(_opusFile, (opus_int16 *)(srcBuffer + writtenOutputBytes), (TGBridgeAudioDecoderBufferSize - writtenOutputBytes) / sourceFormat.mBytesPerFrame, NULL);
+                int32_t readSamples = [_opusReader read:(uint16_t *)(srcBuffer + writtenOutputBytes) bufSize:(TGBridgeAudioDecoderBufferSize - writtenOutputBytes) / sourceFormat.mBytesPerFrame];
                 
                 if (readSamples > 0)
                     writtenOutputBytes += readSamples * sourceFormat.mBytesPerFrame;

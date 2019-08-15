@@ -1,6 +1,4 @@
 module TelegramUIPrivateModule {
-    header "../../third-party/opusenc/opusenc.h"
-    header "../TGDataItem.h"
     header "../Bridge Audio/TGBridgeAudioDecoder.h"
     header "../Bridge Audio/TGBridgeAudioEncoder.h"
     header "../TGContactModel.h"
@@ -10,5 +8,4 @@ module TelegramUIPrivateModule {
     header "../TGAutoDownloadPreferences.h"
     header "../TGPresentationAutoNightPreferences.h"
     header "../TGProxyItem.h"
-    header "../UIImage+ImageEffects.h"
 }

@@ -146,8 +146,6 @@
 		D00817DD22B47A14008A895F /* LockedWindowCoveringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817C322B47A13008A895F /* LockedWindowCoveringView.swift */; };
 		D00817DE22B47A14008A895F /* TGBridgeServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D00817C422B47A13008A895F /* TGBridgeServer.m */; };
 		D00817DF22B47A14008A895F /* LegacyDataImportSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817C522B47A13008A895F /* LegacyDataImportSplash.swift */; };
-		D00817E022B47A14008A895F /* UIImage+ImageEffects.h in Headers */ = {isa = PBXBuildFile; fileRef = D00817C622B47A13008A895F /* UIImage+ImageEffects.h */; };
-		D00817E222B47A14008A895F /* UIImage+ImageEffects.m in Sources */ = {isa = PBXBuildFile; fileRef = D00817C822B47A14008A895F /* UIImage+ImageEffects.m */; };
 		D00817E322B47A14008A895F /* TGPresentationAutoNightPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = D00817C922B47A14008A895F /* TGPresentationAutoNightPreferences.m */; };
 		D008184A22B57225008A895F /* WatchCommon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008184922B57225008A895F /* WatchCommon.framework */; };
 		D00818CD22B595CB008A895F /* LightweightAccountData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818CC22B595CB008A895F /* LightweightAccountData.framework */; };
@@ -216,6 +214,9 @@
 		D03E42E6230572530049C28B /* ItemListAddressItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42E5230572530049C28B /* ItemListAddressItem.framework */; };
 		D03E430F2305775D0049C28B /* DeviceProximity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E430E2305775D0049C28B /* DeviceProximity.framework */; };
 		D03E4339230578550049C28B /* RaiseToListen.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4338230578550049C28B /* RaiseToListen.framework */; };
+		D03E439423057FDF0049C28B /* OpusBinding.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E439323057FDF0049C28B /* OpusBinding.framework */; };
+		D03E43EC2305954C0049C28B /* opus.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E43EB2305954C0049C28B /* opus.framework */; };
+		D03E43EE230595600049C28B /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E43ED230595600049C28B /* libopus.a */; };
 		D04203152037162700490EA5 /* MediaInputPaneTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */; };
 		D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */; };
 		D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */; };
@@ -478,7 +479,6 @@
 		D0EB5ADF1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EB5ADE1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift */; };
 		D0EC55A3210231D600D1992C /* SearchPeerMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC55A2210231D600D1992C /* SearchPeerMembers.swift */; };
 		D0EC6CC11EB9F58800EBF1C3 /* LegacyCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */; };
-		D0EC6CC51EB9F58800EBF1C3 /* TGDataItem.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D03B221DECB1AD00220C46 /* TGDataItem.m */; };
 		D0EC6CC91EB9F58800EBF1C3 /* ConvertToWebP.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E941D6B8C9B0046BCD6 /* ConvertToWebP.swift */; };
 		D0EC6CCC1EB9F58800EBF1C3 /* ServiceSoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE641DCBC26B007511FD /* ServiceSoundManager.swift */; };
 		D0EC6CCD1EB9F58800EBF1C3 /* DeclareEncodables.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073CE701DCBF23F007511FD /* DeclareEncodables.swift */; };
@@ -490,17 +490,6 @@
 		D0EC6CFD1EB9F58800EBF1C3 /* AudioWaveform.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D03B2B1DED9B8900220C46 /* AudioWaveform.swift */; };
 		D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC6B421EB92DF600EBF1C3 /* OverlayMediaController.swift */; };
 		D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC6B441EB92E5A00EBF1C3 /* OverlayMediaControllerNode.swift */; };
-		D0EC6D021EB9F58800EBF1C3 /* diag_range.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AE81DECB0FE00220C46 /* diag_range.c */; };
-		D0EC6D031EB9F58800EBF1C3 /* opus_header.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AEA1DECB0FE00220C46 /* opus_header.c */; };
-		D0EC6D041EB9F58800EBF1C3 /* opusenc.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AED1DECB0FE00220C46 /* opusenc.m */; };
-		D0EC6D051EB9F58800EBF1C3 /* picture.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AEE1DECB0FE00220C46 /* picture.c */; };
-		D0EC6D061EB9F58800EBF1C3 /* wav_io.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AF01DECB0FE00220C46 /* wav_io.c */; };
-		D0EC6D071EB9F58800EBF1C3 /* bitwise.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AF41DECB0FE00220C46 /* bitwise.c */; };
-		D0EC6D081EB9F58800EBF1C3 /* framing.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03AF51DECB0FE00220C46 /* framing.c */; };
-		D0EC6D091EB9F58800EBF1C3 /* info.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03B021DECB0FE00220C46 /* info.c */; };
-		D0EC6D0A1EB9F58800EBF1C3 /* internal.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03B031DECB0FE00220C46 /* internal.c */; };
-		D0EC6D0B1EB9F58800EBF1C3 /* opusfile.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03B051DECB0FE00220C46 /* opusfile.c */; };
-		D0EC6D0C1EB9F58800EBF1C3 /* stream.c in Sources */ = {isa = PBXBuildFile; fileRef = D0D03B071DECB0FE00220C46 /* stream.c */; };
 		D0EC6D251EB9F58800EBF1C3 /* FetchCachedRepresentations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06879561DB8F22200424BBD /* FetchCachedRepresentations.swift */; };
 		D0EC6D261EB9F58800EBF1C3 /* TransformOutgoingMessageMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04662801E68BA64006FAFC4 /* TransformOutgoingMessageMedia.swift */; };
 		D0EC6D271EB9F58800EBF1C3 /* FetchResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F3A8B51E83120A00B4C64C /* FetchResource.swift */; };
@@ -698,7 +687,6 @@
 		D0EC6E921EB9F5B200EBF1C3 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452C1D5E340300A7428A /* SwiftSignalKit.framework */; };
 		D0EC6E931EB9F5B200EBF1C3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452D1D5E340300A7428A /* TelegramCore.framework */; };
 		D0EC6E961EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EC6E941EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework */; };
-		D0EC6EA21EB9FAFA00EBF1C3 /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D03B251DECB26D00220C46 /* libopus.a */; };
 		D0EC6EA31EB9FB7A00EBF1C3 /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D075518E1DDA4F9E0073E051 /* SSignalKit.framework */; };
 		D0EC6EA41EB9FB8000EBF1C3 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AB0BB21D6718EB002C78E7 /* libz.tbd */; };
 		D0EC6EA51EB9FBD300EBF1C3 /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AB0BB01D6718DA002C78E7 /* libiconv.tbd */; };
@@ -861,8 +849,6 @@
 		D00817C322B47A13008A895F /* LockedWindowCoveringView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LockedWindowCoveringView.swift; sourceTree = "<group>"; };
 		D00817C422B47A13008A895F /* TGBridgeServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeServer.m; sourceTree = "<group>"; };
 		D00817C522B47A13008A895F /* LegacyDataImportSplash.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyDataImportSplash.swift; sourceTree = "<group>"; };
-		D00817C622B47A13008A895F /* UIImage+ImageEffects.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImage+ImageEffects.h"; sourceTree = "<group>"; };
-		D00817C822B47A14008A895F /* UIImage+ImageEffects.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImage+ImageEffects.m"; sourceTree = "<group>"; };
 		D00817C922B47A14008A895F /* TGPresentationAutoNightPreferences.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPresentationAutoNightPreferences.m; sourceTree = "<group>"; };
 		D008184922B57225008A895F /* WatchCommon.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchCommon.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00818CC22B595CB008A895F /* LightweightAccountData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LightweightAccountData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -974,6 +960,10 @@
 		D03E42E5230572530049C28B /* ItemListAddressItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListAddressItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E430E2305775D0049C28B /* DeviceProximity.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceProximity.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E4338230578550049C28B /* RaiseToListen.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RaiseToListen.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E439323057FDF0049C28B /* OpusBinding.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OpusBinding.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E43EB2305954C0049C28B /* opus.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = opus.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E43ED230595600049C28B /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = ../Opus/Sources/opus/lib/libopus.a; sourceTree = "<group>"; };
+		D03E44132305ACFC0049C28B /* ogg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ogg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E5E081E55C49C0029569A /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
 		D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputPaneTrendingItem.swift; sourceTree = "<group>"; };
 		D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsController.swift; sourceTree = "<group>"; };
@@ -1272,32 +1262,6 @@
 		D0CFBB901FD881A600B65C0D /* AudioRecordningToneData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecordningToneData.swift; sourceTree = "<group>"; };
 		D0CFBB941FD8B05000B65C0D /* OverlayInstantVideoDecoration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayInstantVideoDecoration.swift; sourceTree = "<group>"; };
 		D0D03AE41DECAE8900220C46 /* ManagedAudioRecorder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManagedAudioRecorder.swift; sourceTree = "<group>"; };
-		D0D03AE81DECB0FE00220C46 /* diag_range.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = diag_range.c; sourceTree = "<group>"; };
-		D0D03AE91DECB0FE00220C46 /* diag_range.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = diag_range.h; sourceTree = "<group>"; };
-		D0D03AEA1DECB0FE00220C46 /* opus_header.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = opus_header.c; sourceTree = "<group>"; };
-		D0D03AEB1DECB0FE00220C46 /* opus_header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = opus_header.h; sourceTree = "<group>"; };
-		D0D03AEC1DECB0FE00220C46 /* opusenc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = opusenc.h; sourceTree = "<group>"; };
-		D0D03AED1DECB0FE00220C46 /* opusenc.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = opusenc.m; sourceTree = "<group>"; };
-		D0D03AEE1DECB0FE00220C46 /* picture.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = picture.c; sourceTree = "<group>"; };
-		D0D03AEF1DECB0FE00220C46 /* picture.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = picture.h; sourceTree = "<group>"; };
-		D0D03AF01DECB0FE00220C46 /* wav_io.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = wav_io.c; sourceTree = "<group>"; };
-		D0D03AF11DECB0FE00220C46 /* wav_io.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = wav_io.h; sourceTree = "<group>"; };
-		D0D03AF41DECB0FE00220C46 /* bitwise.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bitwise.c; path = ogg/bitwise.c; sourceTree = "<group>"; };
-		D0D03AF51DECB0FE00220C46 /* framing.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = framing.c; path = ogg/framing.c; sourceTree = "<group>"; };
-		D0D03AF61DECB0FE00220C46 /* ogg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ogg.h; path = ogg/ogg.h; sourceTree = "<group>"; };
-		D0D03AF71DECB0FE00220C46 /* os_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = os_types.h; path = ogg/os_types.h; sourceTree = "<group>"; };
-		D0D03AFB1DECB0FE00220C46 /* opus.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = opus.h; path = include/opus/opus.h; sourceTree = "<group>"; };
-		D0D03AFC1DECB0FE00220C46 /* opus_defines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = opus_defines.h; path = include/opus/opus_defines.h; sourceTree = "<group>"; };
-		D0D03AFD1DECB0FE00220C46 /* opus_multistream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = opus_multistream.h; path = include/opus/opus_multistream.h; sourceTree = "<group>"; };
-		D0D03AFE1DECB0FE00220C46 /* opus_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = opus_types.h; path = include/opus/opus_types.h; sourceTree = "<group>"; };
-		D0D03B021DECB0FE00220C46 /* info.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = info.c; sourceTree = "<group>"; };
-		D0D03B031DECB0FE00220C46 /* internal.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = internal.c; sourceTree = "<group>"; };
-		D0D03B041DECB0FE00220C46 /* internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = internal.h; sourceTree = "<group>"; };
-		D0D03B051DECB0FE00220C46 /* opusfile.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = opusfile.c; sourceTree = "<group>"; };
-		D0D03B061DECB0FE00220C46 /* opusfile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = opusfile.h; sourceTree = "<group>"; };
-		D0D03B071DECB0FE00220C46 /* stream.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = stream.c; sourceTree = "<group>"; };
-		D0D03B211DECB1AD00220C46 /* TGDataItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGDataItem.h; sourceTree = "<group>"; };
-		D0D03B221DECB1AD00220C46 /* TGDataItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGDataItem.m; sourceTree = "<group>"; };
 		D0D03B251DECB26D00220C46 /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = "third-party/opus/lib/libopus.a"; sourceTree = "<group>"; };
 		D0D03B2B1DED9B8900220C46 /* AudioWaveform.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AudioWaveform.swift; sourceTree = "<group>"; };
 		D0D268661D78793B00C422DA /* ChatInterfaceStateNavigationButtons.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInterfaceStateNavigationButtons.swift; sourceTree = "<group>"; };
@@ -1467,6 +1431,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E43EE230595600049C28B /* libopus.a in Frameworks */,
+				D03E43EC2305954C0049C28B /* opus.framework in Frameworks */,
+				D03E439423057FDF0049C28B /* OpusBinding.framework in Frameworks */,
 				D03E4339230578550049C28B /* RaiseToListen.framework in Frameworks */,
 				D03E430F2305775D0049C28B /* DeviceProximity.framework in Frameworks */,
 				D03E42E6230572530049C28B /* ItemListAddressItem.framework in Frameworks */,
@@ -1609,7 +1576,6 @@
 				D0EC6EA51EB9FBD300EBF1C3 /* libiconv.tbd in Frameworks */,
 				D0EC6EA41EB9FB8000EBF1C3 /* libz.tbd in Frameworks */,
 				D0EC6EA31EB9FB7A00EBF1C3 /* SSignalKit.framework in Frameworks */,
-				D0EC6EA21EB9FAFA00EBF1C3 /* libopus.a in Frameworks */,
 				D0EC6E961EB9F5B300EBF1C3 /* MtProtoKitDynamic.framework in Frameworks */,
 				D0EC6E8F1EB9F5B200EBF1C3 /* AsyncDisplayKit.framework in Frameworks */,
 				D0EC6E901EB9F5B200EBF1C3 /* Display.framework in Frameworks */,
@@ -1777,8 +1743,6 @@
 				D00817C222B47A13008A895F /* ManageSharedAccountInfo.swift */,
 				D00817BD22B47A13008A895F /* TGBridgeServer.h */,
 				D00817C422B47A13008A895F /* TGBridgeServer.m */,
-				D00817C622B47A13008A895F /* UIImage+ImageEffects.h */,
-				D00817C822B47A14008A895F /* UIImage+ImageEffects.m */,
 				D00817B622B47A12008A895F /* WakeupManager.swift */,
 				D00817B122B47A12008A895F /* WatchBridge.swift */,
 				D00817B222B47A12008A895F /* WatchCommunicationManager.swift */,
@@ -2176,8 +2140,6 @@
 				D0AE2FDB22B1D3610058D3BC /* Bridge Audio */,
 				D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */,
 				D06BB8811F58994B0084FC30 /* LegacyInstantVideoController.swift */,
-				D0D03B211DECB1AD00220C46 /* TGDataItem.h */,
-				D0D03B221DECB1AD00220C46 /* TGDataItem.m */,
 				D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */,
 				D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */,
 				D0B21B1E22156D92003F741D /* LegacyCache.swift */,
@@ -2215,6 +2177,10 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E44132305ACFC0049C28B /* ogg.framework */,
+				D03E43ED230595600049C28B /* libopus.a */,
+				D03E43EB2305954C0049C28B /* opus.framework */,
+				D03E439323057FDF0049C28B /* OpusBinding.framework */,
 				D03E4338230578550049C28B /* RaiseToListen.framework */,
 				D03E430E2305775D0049C28B /* DeviceProximity.framework */,
 				D03E42E5230572530049C28B /* ItemListAddressItem.framework */,
@@ -2575,73 +2541,6 @@
 			name = "Terms of Service";
 			sourceTree = "<group>";
 		};
-		D0D03AE61DECB0D200220C46 /* Audio Recorder */ = {
-			isa = PBXGroup;
-			children = (
-				D0D03AE71DECB0FE00220C46 /* opusenc */,
-				D0D03AF21DECB0FE00220C46 /* ogg */,
-				D0D03AF81DECB0FE00220C46 /* opus */,
-				D0D03B011DECB0FE00220C46 /* opusfile */,
-			);
-			name = "Audio Recorder";
-			sourceTree = "<group>";
-		};
-		D0D03AE71DECB0FE00220C46 /* opusenc */ = {
-			isa = PBXGroup;
-			children = (
-				D0D03AE81DECB0FE00220C46 /* diag_range.c */,
-				D0D03AE91DECB0FE00220C46 /* diag_range.h */,
-				D0D03AEA1DECB0FE00220C46 /* opus_header.c */,
-				D0D03AEB1DECB0FE00220C46 /* opus_header.h */,
-				D0D03AEC1DECB0FE00220C46 /* opusenc.h */,
-				D0D03AED1DECB0FE00220C46 /* opusenc.m */,
-				D0D03AEE1DECB0FE00220C46 /* picture.c */,
-				D0D03AEF1DECB0FE00220C46 /* picture.h */,
-				D0D03AF01DECB0FE00220C46 /* wav_io.c */,
-				D0D03AF11DECB0FE00220C46 /* wav_io.h */,
-			);
-			name = opusenc;
-			path = "third-party/opusenc";
-			sourceTree = SOURCE_ROOT;
-		};
-		D0D03AF21DECB0FE00220C46 /* ogg */ = {
-			isa = PBXGroup;
-			children = (
-				D0D03AF41DECB0FE00220C46 /* bitwise.c */,
-				D0D03AF51DECB0FE00220C46 /* framing.c */,
-				D0D03AF61DECB0FE00220C46 /* ogg.h */,
-				D0D03AF71DECB0FE00220C46 /* os_types.h */,
-			);
-			name = ogg;
-			path = "third-party/ogg";
-			sourceTree = SOURCE_ROOT;
-		};
-		D0D03AF81DECB0FE00220C46 /* opus */ = {
-			isa = PBXGroup;
-			children = (
-				D0D03AFB1DECB0FE00220C46 /* opus.h */,
-				D0D03AFC1DECB0FE00220C46 /* opus_defines.h */,
-				D0D03AFD1DECB0FE00220C46 /* opus_multistream.h */,
-				D0D03AFE1DECB0FE00220C46 /* opus_types.h */,
-			);
-			name = opus;
-			path = "third-party/opus";
-			sourceTree = SOURCE_ROOT;
-		};
-		D0D03B011DECB0FE00220C46 /* opusfile */ = {
-			isa = PBXGroup;
-			children = (
-				D0D03B021DECB0FE00220C46 /* info.c */,
-				D0D03B031DECB0FE00220C46 /* internal.c */,
-				D0D03B041DECB0FE00220C46 /* internal.h */,
-				D0D03B051DECB0FE00220C46 /* opusfile.c */,
-				D0D03B061DECB0FE00220C46 /* opusfile.h */,
-				D0D03B071DECB0FE00220C46 /* stream.c */,
-			);
-			name = opusfile;
-			path = "third-party/opusfile";
-			sourceTree = SOURCE_ROOT;
-		};
 		D0D2686A1D788F6600C422DA /* Title Accessory Panels */ = {
 			isa = PBXGroup;
 			children = (
@@ -2842,7 +2741,6 @@
 				D0EC6B441EB92E5A00EBF1C3 /* OverlayMediaControllerNode.swift */,
 				D0FE4DE31F0AEBB900E8A0B3 /* SharedVideoContextManager.swift */,
 				D09E637D1F0E8C66003444CD /* Shared Media Player */,
-				D0D03AE61DECB0D200220C46 /* Audio Recorder */,
 				D0F69E9D1D6B8E240046BCD6 /* Resources */,
 				D0177B831DFB095000A5083A /* FileMediaResourceStatus.swift */,
 				D0ADF965212E05A300310BBC /* TonePlayer.swift */,
@@ -3235,7 +3133,6 @@
 			files = (
 				D0AE303622B1D3620058D3BC /* TGBridgeAudioDecoder.h in Headers */,
 				D00817DA22B47A14008A895F /* TGPresentationAutoNightPreferences.h in Headers */,
-				D00817E022B47A14008A895F /* UIImage+ImageEffects.h in Headers */,
 				D08803C51F6064CF00DD7951 /* TelegramUI.h in Headers */,
 				D008177B22B46B7E008A895F /* TGContactModel.h in Headers */,
 				D0AE303722B1D3620058D3BC /* TGBridgeAudioEncoder.h in Headers */,
@@ -3440,7 +3337,6 @@
 				D0EC6CC11EB9F58800EBF1C3 /* LegacyCamera.swift in Sources */,
 				D0754D1E1EEDDF6200884F6E /* ChatMessageAttachedContentNode.swift in Sources */,
 				D0CFBB911FD881A600B65C0D /* AudioRecordningToneData.swift in Sources */,
-				D0EC6CC51EB9F58800EBF1C3 /* TGDataItem.m in Sources */,
 				D00817D522B47A14008A895F /* ApplicationShortcutItem.swift in Sources */,
 				D077C5C122B59A800097D617 /* ApplicationContext.swift in Sources */,
 				D0EC6CC91EB9F58800EBF1C3 /* ConvertToWebP.swift in Sources */,
@@ -3476,28 +3372,17 @@
 				D0EC6CFF1EB9F58800EBF1C3 /* OverlayMediaController.swift in Sources */,
 				D0EC6D001EB9F58800EBF1C3 /* OverlayMediaControllerNode.swift in Sources */,
 				D02C81712177729000CD1006 /* NotificationExceptions.swift in Sources */,
-				D0EC6D021EB9F58800EBF1C3 /* diag_range.c in Sources */,
 				09CE95112237F3C100A7D2C3 /* SettingsSearchRecentQueries.swift in Sources */,
-				D0EC6D031EB9F58800EBF1C3 /* opus_header.c in Sources */,
 				0910B0EF21FA532D00F8F87D /* WallpaperResources.swift in Sources */,
 				09E4A807223D4B860038140F /* AccountUtils.swift in Sources */,
 				D069F5D0212700B90000565A /* StickerPanePeerSpecificSetupGridItem.swift in Sources */,
 				D06018B522F3659900796784 /* ChatTextFormat.swift in Sources */,
 				D0750C8322B2E4EE00BE5F6E /* SharedNotificationManager.swift in Sources */,
-				D0EC6D041EB9F58800EBF1C3 /* opusenc.m in Sources */,
 				D0A8998D217A294100759EE6 /* SaveIncomingMediaController.swift in Sources */,
 				D0185E8A208A01AF005E1A6C /* ProxySettingsActionItem.swift in Sources */,
-				D0EC6D051EB9F58800EBF1C3 /* picture.c in Sources */,
-				D0EC6D061EB9F58800EBF1C3 /* wav_io.c in Sources */,
 				09DE2F272269D5730045E975 /* PrivacyIntroController.swift in Sources */,
-				D0EC6D071EB9F58800EBF1C3 /* bitwise.c in Sources */,
-				D0EC6D081EB9F58800EBF1C3 /* framing.c in Sources */,
 				09E4A803223B833B0038140F /* ForwardPrivacyChatPreviewItem.swift in Sources */,
-				D0EC6D091EB9F58800EBF1C3 /* info.c in Sources */,
-				D0EC6D0A1EB9F58800EBF1C3 /* internal.c in Sources */,
-				D0EC6D0B1EB9F58800EBF1C3 /* opusfile.c in Sources */,
 				09C500242142BA6400EF253E /* ItemListWebsiteItem.swift in Sources */,
-				D0EC6D0C1EB9F58800EBF1C3 /* stream.c in Sources */,
 				09FFBCD72281BB2D00C33B4B /* ChatTextLinkEditController.swift in Sources */,
 				09CE95042236C6B300A7D2C3 /* CachedInstantPages.swift in Sources */,
 				D0B69C3920EBB397003632C7 /* ChatMessageInteractiveInstantVideoNode.swift in Sources */,
@@ -3777,7 +3662,6 @@
 				09F2158D225CF5BC00AEDF6D /* Pasteboard.swift in Sources */,
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
 				D00817CA22B47A14008A895F /* WatchRequestHandlers.swift in Sources */,
-				D00817E222B47A14008A895F /* UIImage+ImageEffects.m in Sources */,
 				D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */,
 				09B4819523028A8A00D5B32B /* ThemeAccentColorControllerNode.swift in Sources */,
 				D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */,
@@ -4016,6 +3900,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -4214,6 +4099,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -4331,6 +4217,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -4457,6 +4344,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -4573,6 +4461,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -4620,6 +4509,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -4665,6 +4555,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
@@ -4709,6 +4600,7 @@
 					"$(PROJECT_DIR)/third-party/libwebp/lib",
 					"$(PROJECT_DIR)/third-party/FFmpeg-iOS/lib",
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
+					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",

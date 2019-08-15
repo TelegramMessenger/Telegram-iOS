@@ -1,5 +1,5 @@
-/* Copyright (c) 2017 Google Inc.
-   Written by Andrew Allen */
+/* Copyright (c) 2011 Xiph.Org Foundation
+   Written by Jean-Marc Valin */
 /*
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
@@ -26,14 +26,14 @@
 */
 
 /**
- * @file opus_projection.h
- * @brief Opus projection reference API
+ * @file opus_multistream.h
+ * @brief Opus reference implementation multistream API
  */
 
-#ifndef OPUS_PROJECTION_H
-#define OPUS_PROJECTION_H
+#ifndef OPUS_MULTISTREAM_H
+#define OPUS_MULTISTREAM_H
 
-#include "opus_multistream.h"
+#include <opus/opus.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,143 +41,179 @@ extern "C" {
 
 /** @cond OPUS_INTERNAL_DOC */
 
-/** These are the actual encoder and decoder CTL ID numbers.
-  * They should not be used directly by applications.c
-  * In general, SETs should be even and GETs should be odd.*/
+/** Macros to trigger compilation errors when the wrong types are provided to a
+  * CTL. */
 /**@{*/
-#define OPUS_PROJECTION_GET_DEMIXING_MATRIX_GAIN_REQUEST    6001
-#define OPUS_PROJECTION_GET_DEMIXING_MATRIX_SIZE_REQUEST    6003
-#define OPUS_PROJECTION_GET_DEMIXING_MATRIX_REQUEST         6005
+#define __opus_check_encstate_ptr(ptr) ((ptr) + ((ptr) - (OpusEncoder**)(ptr)))
+#define __opus_check_decstate_ptr(ptr) ((ptr) + ((ptr) - (OpusDecoder**)(ptr)))
 /**@}*/
 
+/** These are the actual encoder and decoder CTL ID numbers.
+  * They should not be used directly by applications.
+  * In general, SETs should be even and GETs should be odd.*/
+/**@{*/
+#define OPUS_MULTISTREAM_GET_ENCODER_STATE_REQUEST 5120
+#define OPUS_MULTISTREAM_GET_DECODER_STATE_REQUEST 5122
+/**@}*/
 
 /** @endcond */
 
-/** @defgroup opus_projection_ctls Projection specific encoder and decoder CTLs
+/** @defgroup opus_multistream_ctls Multistream specific encoder and decoder CTLs
   *
   * These are convenience macros that are specific to the
-  * opus_projection_encoder_ctl() and opus_projection_decoder_ctl()
+  * opus_multistream_encoder_ctl() and opus_multistream_decoder_ctl()
   * interface.
-  * The CTLs from @ref opus_genericctls, @ref opus_encoderctls,
-  * @ref opus_decoderctls, and @ref opus_multistream_ctls may be applied to a
-  * projection encoder or decoder as well.
+  * The CTLs from @ref opus_genericctls, @ref opus_encoderctls, and
+  * @ref opus_decoderctls may be applied to a multistream encoder or decoder as
+  * well.
+  * In addition, you may retrieve the encoder or decoder state for an specific
+  * stream via #OPUS_MULTISTREAM_GET_ENCODER_STATE or
+  * #OPUS_MULTISTREAM_GET_DECODER_STATE and apply CTLs to it individually.
   */
 /**@{*/
 
-/** Gets the gain (in dB. S7.8-format) of the demixing matrix from the encoder.
-  * @param[out] x <tt>opus_int32 *</tt>: Returns the gain (in dB. S7.8-format)
-  *                                      of the demixing matrix.
+/** Gets the encoder state for an individual stream of a multistream encoder.
+  * @param[in] x <tt>opus_int32</tt>: The index of the stream whose encoder you
+  *                                   wish to retrieve.
+  *                                   This must be non-negative and less than
+  *                                   the <code>streams</code> parameter used
+  *                                   to initialize the encoder.
+  * @param[out] y <tt>OpusEncoder**</tt>: Returns a pointer to the given
+  *                                       encoder state.
+  * @retval OPUS_BAD_ARG The index of the requested stream was out of range.
   * @hideinitializer
   */
-#define OPUS_PROJECTION_GET_DEMIXING_MATRIX_GAIN(x) OPUS_PROJECTION_GET_DEMIXING_MATRIX_GAIN_REQUEST, __opus_check_int_ptr(x)
+#define OPUS_MULTISTREAM_GET_ENCODER_STATE(x,y) OPUS_MULTISTREAM_GET_ENCODER_STATE_REQUEST, __opus_check_int(x), __opus_check_encstate_ptr(y)
 
-
-/** Gets the size in bytes of the demixing matrix from the encoder.
-  * @param[out] x <tt>opus_int32 *</tt>: Returns the size in bytes of the
-  *                                      demixing matrix.
+/** Gets the decoder state for an individual stream of a multistream decoder.
+  * @param[in] x <tt>opus_int32</tt>: The index of the stream whose decoder you
+  *                                   wish to retrieve.
+  *                                   This must be non-negative and less than
+  *                                   the <code>streams</code> parameter used
+  *                                   to initialize the decoder.
+  * @param[out] y <tt>OpusDecoder**</tt>: Returns a pointer to the given
+  *                                       decoder state.
+  * @retval OPUS_BAD_ARG The index of the requested stream was out of range.
   * @hideinitializer
   */
-#define OPUS_PROJECTION_GET_DEMIXING_MATRIX_SIZE(x) OPUS_PROJECTION_GET_DEMIXING_MATRIX_SIZE_REQUEST, __opus_check_int_ptr(x)
-
-
-/** Copies the demixing matrix to the supplied pointer location.
-  * @param[out] x <tt>unsigned char *</tt>: Returns the demixing matrix to the
-  *                                         supplied pointer location.
-  * @param y <tt>opus_int32</tt>: The size in bytes of the reserved memory at the
-  *                              pointer location.
-  * @hideinitializer
-  */
-#define OPUS_PROJECTION_GET_DEMIXING_MATRIX(x,y) OPUS_PROJECTION_GET_DEMIXING_MATRIX_REQUEST, x, __opus_check_int(y)
-
+#define OPUS_MULTISTREAM_GET_DECODER_STATE(x,y) OPUS_MULTISTREAM_GET_DECODER_STATE_REQUEST, __opus_check_int(x), __opus_check_decstate_ptr(y)
 
 /**@}*/
 
-/** Opus projection encoder state.
- * This contains the complete state of a projection Opus encoder.
- * It is position independent and can be freely copied.
- * @see opus_projection_ambisonics_encoder_create
- */
-typedef struct OpusProjectionEncoder OpusProjectionEncoder;
-
-
-/** Opus projection decoder state.
-  * This contains the complete state of a projection Opus decoder.
-  * It is position independent and can be freely copied.
-  * @see opus_projection_decoder_create
-  * @see opus_projection_decoder_init
+/** @defgroup opus_multistream Opus Multistream API
+  * @{
+  *
+  * The multistream API allows individual Opus streams to be combined into a
+  * single packet, enabling support for up to 255 channels. Unlike an
+  * elementary Opus stream, the encoder and decoder must negotiate the channel
+  * configuration before the decoder can successfully interpret the data in the
+  * packets produced by the encoder. Some basic information, such as packet
+  * duration, can be computed without any special negotiation.
+  *
+  * The format for multistream Opus packets is defined in
+  * <a href="https://tools.ietf.org/html/rfc7845">RFC 7845</a>
+  * and is based on the self-delimited Opus framing described in Appendix B of
+  * <a href="https://tools.ietf.org/html/rfc6716">RFC 6716</a>.
+  * Normal Opus packets are just a degenerate case of multistream Opus packets,
+  * and can be encoded or decoded with the multistream API by setting
+  * <code>streams</code> to <code>1</code> when initializing the encoder or
+  * decoder.
+  *
+  * Multistream Opus streams can contain up to 255 elementary Opus streams.
+  * These may be either "uncoupled" or "coupled", indicating that the decoder
+  * is configured to decode them to either 1 or 2 channels, respectively.
+  * The streams are ordered so that all coupled streams appear at the
+  * beginning.
+  *
+  * A <code>mapping</code> table defines which decoded channel <code>i</code>
+  * should be used for each input/output (I/O) channel <code>j</code>. This table is
+  * typically provided as an unsigned char array.
+  * Let <code>i = mapping[j]</code> be the index for I/O channel <code>j</code>.
+  * If <code>i < 2*coupled_streams</code>, then I/O channel <code>j</code> is
+  * encoded as the left channel of stream <code>(i/2)</code> if <code>i</code>
+  * is even, or  as the right channel of stream <code>(i/2)</code> if
+  * <code>i</code> is odd. Otherwise, I/O channel <code>j</code> is encoded as
+  * mono in stream <code>(i - coupled_streams)</code>, unless it has the special
+  * value 255, in which case it is omitted from the encoding entirely (the
+  * decoder will reproduce it as silence). Each value <code>i</code> must either
+  * be the special value 255 or be less than <code>streams + coupled_streams</code>.
+  *
+  * The output channels specified by the encoder
+  * should use the
+  * <a href="https://www.xiph.org/vorbis/doc/Vorbis_I_spec.html#x1-810004.3.9">Vorbis
+  * channel ordering</a>. A decoder may wish to apply an additional permutation
+  * to the mapping the encoder used to achieve a different output channel
+  * order (e.g. for outputing in WAV order).
+  *
+  * Each multistream packet contains an Opus packet for each stream, and all of
+  * the Opus packets in a single multistream packet must have the same
+  * duration. Therefore the duration of a multistream packet can be extracted
+  * from the TOC sequence of the first stream, which is located at the
+  * beginning of the packet, just like an elementary Opus stream:
+  *
+  * @code
+  * int nb_samples;
+  * int nb_frames;
+  * nb_frames = opus_packet_get_nb_frames(data, len);
+  * if (nb_frames < 1)
+  *   return nb_frames;
+  * nb_samples = opus_packet_get_samples_per_frame(data, 48000) * nb_frames;
+  * @endcode
+  *
+  * The general encoding and decoding process proceeds exactly the same as in
+  * the normal @ref opus_encoder and @ref opus_decoder APIs.
+  * See their documentation for an overview of how to use the corresponding
+  * multistream functions.
   */
-typedef struct OpusProjectionDecoder OpusProjectionDecoder;
 
+/** Opus multistream encoder state.
+  * This contains the complete state of a multistream Opus encoder.
+  * It is position independent and can be freely copied.
+  * @see opus_multistream_encoder_create
+  * @see opus_multistream_encoder_init
+  */
+typedef struct OpusMSEncoder OpusMSEncoder;
 
-/**\name Projection encoder functions */
+/** Opus multistream decoder state.
+  * This contains the complete state of a multistream Opus decoder.
+  * It is position independent and can be freely copied.
+  * @see opus_multistream_decoder_create
+  * @see opus_multistream_decoder_init
+  */
+typedef struct OpusMSDecoder OpusMSDecoder;
+
+/**\name Multistream encoder functions */
 /**@{*/
 
-/** Gets the size of an OpusProjectionEncoder structure.
-  * @param channels <tt>int</tt>: The total number of input channels to encode.
-  *                               This must be no more than 255.
-  * @param mapping_family <tt>int</tt>: The mapping family to use for selecting
-  *                                     the appropriate projection.
+/** Gets the size of an OpusMSEncoder structure.
+  * @param streams <tt>int</tt>: The total number of streams to encode from the
+  *                              input.
+  *                              This must be no more than 255.
+  * @param coupled_streams <tt>int</tt>: Number of coupled (2 channel) streams
+  *                                      to encode.
+  *                                      This must be no larger than the total
+  *                                      number of streams.
+  *                                      Additionally, The total number of
+  *                                      encoded channels (<code>streams +
+  *                                      coupled_streams</code>) must be no
+  *                                      more than 255.
   * @returns The size in bytes on success, or a negative error code
   *          (see @ref opus_errorcodes) on error.
   */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT opus_int32 opus_projection_ambisonics_encoder_get_size(
-    int channels,
-    int mapping_family
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT opus_int32 opus_multistream_encoder_get_size(
+      int streams,
+      int coupled_streams
+);
+
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT opus_int32 opus_multistream_surround_encoder_get_size(
+      int channels,
+      int mapping_family
 );
 
 
-/** Allocates and initializes a projection encoder state.
-  * Call opus_projection_encoder_destroy() to release
+/** Allocates and initializes a multistream encoder state.
+  * Call opus_multistream_encoder_destroy() to release
   * this object when finished.
-  * @param Fs <tt>opus_int32</tt>: Sampling rate of the input signal (in Hz).
-  *                                This must be one of 8000, 12000, 16000,
-  *                                24000, or 48000.
-  * @param channels <tt>int</tt>: Number of channels in the input signal.
-  *                               This must be at most 255.
-  *                               It may be greater than the number of
-  *                               coded channels (<code>streams +
-  *                               coupled_streams</code>).
-  * @param mapping_family <tt>int</tt>: The mapping family to use for selecting
-  *                                     the appropriate projection.
-  * @param[out] streams <tt>int *</tt>: The total number of streams that will
-  *                                     be encoded from the input.
-  * @param[out] coupled_streams <tt>int *</tt>: Number of coupled (2 channel)
-  *                                 streams that will be encoded from the input.
-  * @param application <tt>int</tt>: The target encoder application.
-  *                                  This must be one of the following:
-  * <dl>
-  * <dt>#OPUS_APPLICATION_VOIP</dt>
-  * <dd>Process signal for improved speech intelligibility.</dd>
-  * <dt>#OPUS_APPLICATION_AUDIO</dt>
-  * <dd>Favor faithfulness to the original input.</dd>
-  * <dt>#OPUS_APPLICATION_RESTRICTED_LOWDELAY</dt>
-  * <dd>Configure the minimum possible coding delay by disabling certain modes
-  * of operation.</dd>
-  * </dl>
-  * @param[out] error <tt>int *</tt>: Returns #OPUS_OK on success, or an error
-  *                                   code (see @ref opus_errorcodes) on
-  *                                   failure.
-  */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusProjectionEncoder *opus_projection_ambisonics_encoder_create(
-    opus_int32 Fs,
-    int channels,
-    int mapping_family,
-    int *streams,
-    int *coupled_streams,
-    int application,
-    int *error
-) OPUS_ARG_NONNULL(4) OPUS_ARG_NONNULL(5);
-
-
-/** Initialize a previously allocated projection encoder state.
-  * The memory pointed to by \a st must be at least the size returned by
-  * opus_projection_ambisonics_encoder_get_size().
-  * This is intended for applications which use their own allocator instead of
-  * malloc.
-  * To reset a previously initialized state, use the #OPUS_RESET_STATE CTL.
-  * @see opus_projection_ambisonics_encoder_create
-  * @see opus_projection_ambisonics_encoder_get_size
-  * @param st <tt>OpusProjectionEncoder*</tt>: Projection encoder state to initialize.
   * @param Fs <tt>opus_int32</tt>: Sampling rate of the input signal (in Hz).
   *                                This must be one of 8000, 12000, 16000,
   *                                24000, or 48000.
@@ -197,6 +233,82 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusProjectionEncoder *opus_projection_ambis
   *                                      encoded channels (<code>streams +
   *                                      coupled_streams</code>) must be no
   *                                      more than the number of input channels.
+  * @param[in] mapping <code>const unsigned char[channels]</code>: Mapping from
+  *                    encoded channels to input channels, as described in
+  *                    @ref opus_multistream. As an extra constraint, the
+  *                    multistream encoder does not allow encoding coupled
+  *                    streams for which one channel is unused since this
+  *                    is never a good idea.
+  * @param application <tt>int</tt>: The target encoder application.
+  *                                  This must be one of the following:
+  * <dl>
+  * <dt>#OPUS_APPLICATION_VOIP</dt>
+  * <dd>Process signal for improved speech intelligibility.</dd>
+  * <dt>#OPUS_APPLICATION_AUDIO</dt>
+  * <dd>Favor faithfulness to the original input.</dd>
+  * <dt>#OPUS_APPLICATION_RESTRICTED_LOWDELAY</dt>
+  * <dd>Configure the minimum possible coding delay by disabling certain modes
+  * of operation.</dd>
+  * </dl>
+  * @param[out] error <tt>int *</tt>: Returns #OPUS_OK on success, or an error
+  *                                   code (see @ref opus_errorcodes) on
+  *                                   failure.
+  */
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusMSEncoder *opus_multistream_encoder_create(
+      opus_int32 Fs,
+      int channels,
+      int streams,
+      int coupled_streams,
+      const unsigned char *mapping,
+      int application,
+      int *error
+) OPUS_ARG_NONNULL(5);
+
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusMSEncoder *opus_multistream_surround_encoder_create(
+      opus_int32 Fs,
+      int channels,
+      int mapping_family,
+      int *streams,
+      int *coupled_streams,
+      unsigned char *mapping,
+      int application,
+      int *error
+) OPUS_ARG_NONNULL(4) OPUS_ARG_NONNULL(5) OPUS_ARG_NONNULL(6);
+
+/** Initialize a previously allocated multistream encoder state.
+  * The memory pointed to by \a st must be at least the size returned by
+  * opus_multistream_encoder_get_size().
+  * This is intended for applications which use their own allocator instead of
+  * malloc.
+  * To reset a previously initialized state, use the #OPUS_RESET_STATE CTL.
+  * @see opus_multistream_encoder_create
+  * @see opus_multistream_encoder_get_size
+  * @param st <tt>OpusMSEncoder*</tt>: Multistream encoder state to initialize.
+  * @param Fs <tt>opus_int32</tt>: Sampling rate of the input signal (in Hz).
+  *                                This must be one of 8000, 12000, 16000,
+  *                                24000, or 48000.
+  * @param channels <tt>int</tt>: Number of channels in the input signal.
+  *                               This must be at most 255.
+  *                               It may be greater than the number of
+  *                               coded channels (<code>streams +
+  *                               coupled_streams</code>).
+  * @param streams <tt>int</tt>: The total number of streams to encode from the
+  *                              input.
+  *                              This must be no more than the number of channels.
+  * @param coupled_streams <tt>int</tt>: Number of coupled (2 channel) streams
+  *                                      to encode.
+  *                                      This must be no larger than the total
+  *                                      number of streams.
+  *                                      Additionally, The total number of
+  *                                      encoded channels (<code>streams +
+  *                                      coupled_streams</code>) must be no
+  *                                      more than the number of input channels.
+  * @param[in] mapping <code>const unsigned char[channels]</code>: Mapping from
+  *                    encoded channels to input channels, as described in
+  *                    @ref opus_multistream. As an extra constraint, the
+  *                    multistream encoder does not allow encoding coupled
+  *                    streams for which one channel is unused since this
+  *                    is never a good idea.
   * @param application <tt>int</tt>: The target encoder application.
   *                                  This must be one of the following:
   * <dl>
@@ -211,19 +323,29 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusProjectionEncoder *opus_projection_ambis
   * @returns #OPUS_OK on success, or an error code (see @ref opus_errorcodes)
   *          on failure.
   */
-OPUS_EXPORT int opus_projection_ambisonics_encoder_init(
-    OpusProjectionEncoder *st,
-    opus_int32 Fs,
-    int channels,
-    int mapping_family,
-    int *streams,
-    int *coupled_streams,
-    int application
-) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(5) OPUS_ARG_NONNULL(6);
+OPUS_EXPORT int opus_multistream_encoder_init(
+      OpusMSEncoder *st,
+      opus_int32 Fs,
+      int channels,
+      int streams,
+      int coupled_streams,
+      const unsigned char *mapping,
+      int application
+) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(6);
 
+OPUS_EXPORT int opus_multistream_surround_encoder_init(
+      OpusMSEncoder *st,
+      opus_int32 Fs,
+      int channels,
+      int mapping_family,
+      int *streams,
+      int *coupled_streams,
+      unsigned char *mapping,
+      int application
+) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(5) OPUS_ARG_NONNULL(6) OPUS_ARG_NONNULL(7);
 
-/** Encodes a projection Opus frame.
-  * @param st <tt>OpusProjectionEncoder*</tt>: Projection encoder state.
+/** Encodes a multistream Opus frame.
+  * @param st <tt>OpusMSEncoder*</tt>: Multistream encoder state.
   * @param[in] pcm <tt>const opus_int16*</tt>: The input signal as interleaved
   *                                            samples.
   *                                            This must contain
@@ -252,17 +374,16 @@ OPUS_EXPORT int opus_projection_ambisonics_encoder_init(
   * @returns The length of the encoded packet (in bytes) on success or a
   *          negative error code (see @ref opus_errorcodes) on failure.
   */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_encode(
-    OpusProjectionEncoder *st,
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_multistream_encode(
+    OpusMSEncoder *st,
     const opus_int16 *pcm,
     int frame_size,
     unsigned char *data,
     opus_int32 max_data_bytes
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(2) OPUS_ARG_NONNULL(4);
 
-
-/** Encodes a projection Opus frame from floating point input.
-  * @param st <tt>OpusProjectionEncoder*</tt>: Projection encoder state.
+/** Encodes a multistream Opus frame from floating point input.
+  * @param st <tt>OpusMSEncoder*</tt>: Multistream encoder state.
   * @param[in] pcm <tt>const float*</tt>: The input signal as interleaved
   *                                       samples with a normal range of
   *                                       +/-1.0.
@@ -298,47 +419,40 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_encode(
   * @returns The length of the encoded packet (in bytes) on success or a
   *          negative error code (see @ref opus_errorcodes) on failure.
   */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_encode_float(
-    OpusProjectionEncoder *st,
-    const float *pcm,
-    int frame_size,
-    unsigned char *data,
-    opus_int32 max_data_bytes
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_multistream_encode_float(
+      OpusMSEncoder *st,
+      const float *pcm,
+      int frame_size,
+      unsigned char *data,
+      opus_int32 max_data_bytes
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(2) OPUS_ARG_NONNULL(4);
 
-
-/** Frees an <code>OpusProjectionEncoder</code> allocated by
-  * opus_projection_ambisonics_encoder_create().
-  * @param st <tt>OpusProjectionEncoder*</tt>: Projection encoder state to be freed.
+/** Frees an <code>OpusMSEncoder</code> allocated by
+  * opus_multistream_encoder_create().
+  * @param st <tt>OpusMSEncoder*</tt>: Multistream encoder state to be freed.
   */
-OPUS_EXPORT void opus_projection_encoder_destroy(OpusProjectionEncoder *st);
+OPUS_EXPORT void opus_multistream_encoder_destroy(OpusMSEncoder *st);
 
-
-/** Perform a CTL function on a projection Opus encoder.
+/** Perform a CTL function on a multistream Opus encoder.
   *
   * Generally the request and subsequent arguments are generated by a
   * convenience macro.
-  * @param st <tt>OpusProjectionEncoder*</tt>: Projection encoder state.
+  * @param st <tt>OpusMSEncoder*</tt>: Multistream encoder state.
   * @param request This and all remaining parameters should be replaced by one
   *                of the convenience macros in @ref opus_genericctls,
-  *                @ref opus_encoderctls, @ref opus_multistream_ctls, or
-  *                @ref opus_projection_ctls
+  *                @ref opus_encoderctls, or @ref opus_multistream_ctls.
   * @see opus_genericctls
   * @see opus_encoderctls
   * @see opus_multistream_ctls
-  * @see opus_projection_ctls
   */
-OPUS_EXPORT int opus_projection_encoder_ctl(OpusProjectionEncoder *st, int request, ...) OPUS_ARG_NONNULL(1);
-
+OPUS_EXPORT int opus_multistream_encoder_ctl(OpusMSEncoder *st, int request, ...) OPUS_ARG_NONNULL(1);
 
 /**@}*/
 
-/**\name Projection decoder functions */
+/**\name Multistream decoder functions */
 /**@{*/
 
-/** Gets the size of an <code>OpusProjectionDecoder</code> structure.
-  * @param channels <tt>int</tt>: The total number of output channels.
-  *                               This must be no more than 255.
+/** Gets the size of an <code>OpusMSDecoder</code> structure.
   * @param streams <tt>int</tt>: The total number of streams coded in the
   *                              input.
   *                              This must be no more than 255.
@@ -353,15 +467,13 @@ OPUS_EXPORT int opus_projection_encoder_ctl(OpusProjectionEncoder *st, int reque
   * @returns The size in bytes on success, or a negative error code
   *          (see @ref opus_errorcodes) on error.
   */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT opus_int32 opus_projection_decoder_get_size(
-    int channels,
-    int streams,
-    int coupled_streams
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT opus_int32 opus_multistream_decoder_get_size(
+      int streams,
+      int coupled_streams
 );
 
-
-/** Allocates and initializes a projection decoder state.
-  * Call opus_projection_decoder_destroy() to release
+/** Allocates and initializes a multistream decoder state.
+  * Call opus_multistream_decoder_destroy() to release
   * this object when finished.
   * @param Fs <tt>opus_int32</tt>: Sampling rate to decode at (in Hz).
   *                                This must be one of 8000, 12000, 16000,
@@ -382,38 +494,31 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT opus_int32 opus_projection_decoder_get_size(
   *                                      coded channels (<code>streams +
   *                                      coupled_streams</code>) must be no
   *                                      more than 255.
-  * @param[in] demixing_matrix <tt>const unsigned char[demixing_matrix_size]</tt>: Demixing matrix
-  *                         that mapping from coded channels to output channels,
-  *                         as described in @ref opus_projection and
-  *                         @ref opus_projection_ctls.
-  * @param demixing_matrix_size <tt>opus_int32</tt>: The size in bytes of the
-  *                                                  demixing matrix, as
-  *                                                  described in @ref
-  *                                                  opus_projection_ctls.
+  * @param[in] mapping <code>const unsigned char[channels]</code>: Mapping from
+  *                    coded channels to output channels, as described in
+  *                    @ref opus_multistream.
   * @param[out] error <tt>int *</tt>: Returns #OPUS_OK on success, or an error
   *                                   code (see @ref opus_errorcodes) on
   *                                   failure.
   */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusProjectionDecoder *opus_projection_decoder_create(
-    opus_int32 Fs,
-    int channels,
-    int streams,
-    int coupled_streams,
-    unsigned char *demixing_matrix,
-    opus_int32 demixing_matrix_size,
-    int *error
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusMSDecoder *opus_multistream_decoder_create(
+      opus_int32 Fs,
+      int channels,
+      int streams,
+      int coupled_streams,
+      const unsigned char *mapping,
+      int *error
 ) OPUS_ARG_NONNULL(5);
 
-
-/** Intialize a previously allocated projection decoder state object.
+/** Intialize a previously allocated decoder state object.
   * The memory pointed to by \a st must be at least the size returned by
-  * opus_projection_decoder_get_size().
+  * opus_multistream_encoder_get_size().
   * This is intended for applications which use their own allocator instead of
   * malloc.
   * To reset a previously initialized state, use the #OPUS_RESET_STATE CTL.
-  * @see opus_projection_decoder_create
-  * @see opus_projection_deocder_get_size
-  * @param st <tt>OpusProjectionDecoder*</tt>: Projection encoder state to initialize.
+  * @see opus_multistream_decoder_create
+  * @see opus_multistream_deocder_get_size
+  * @param st <tt>OpusMSEncoder*</tt>: Multistream encoder state to initialize.
   * @param Fs <tt>opus_int32</tt>: Sampling rate to decode at (in Hz).
   *                                This must be one of 8000, 12000, 16000,
   *                                24000, or 48000.
@@ -433,30 +538,23 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT OpusProjectionDecoder *opus_projection_decod
   *                                      coded channels (<code>streams +
   *                                      coupled_streams</code>) must be no
   *                                      more than 255.
-  * @param[in] demixing_matrix <tt>const unsigned char[demixing_matrix_size]</tt>: Demixing matrix
-  *                         that mapping from coded channels to output channels,
-  *                         as described in @ref opus_projection and
-  *                         @ref opus_projection_ctls.
-  * @param demixing_matrix_size <tt>opus_int32</tt>: The size in bytes of the
-  *                                                  demixing matrix, as
-  *                                                  described in @ref
-  *                                                  opus_projection_ctls.
+  * @param[in] mapping <code>const unsigned char[channels]</code>: Mapping from
+  *                    coded channels to output channels, as described in
+  *                    @ref opus_multistream.
   * @returns #OPUS_OK on success, or an error code (see @ref opus_errorcodes)
   *          on failure.
   */
-OPUS_EXPORT int opus_projection_decoder_init(
-    OpusProjectionDecoder *st,
-    opus_int32 Fs,
-    int channels,
-    int streams,
-    int coupled_streams,
-    unsigned char *demixing_matrix,
-    opus_int32 demixing_matrix_size
+OPUS_EXPORT int opus_multistream_decoder_init(
+      OpusMSDecoder *st,
+      opus_int32 Fs,
+      int channels,
+      int streams,
+      int coupled_streams,
+      const unsigned char *mapping
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(6);
 
-
-/** Decode a projection Opus packet.
-  * @param st <tt>OpusProjectionDecoder*</tt>: Projection decoder state.
+/** Decode a multistream Opus packet.
+  * @param st <tt>OpusMSDecoder*</tt>: Multistream decoder state.
   * @param[in] data <tt>const unsigned char*</tt>: Input payload.
   *                                                Use a <code>NULL</code>
   *                                                pointer to indicate packet
@@ -484,8 +582,8 @@ OPUS_EXPORT int opus_projection_decoder_init(
   * @returns Number of samples decoded on success or a negative error code
   *          (see @ref opus_errorcodes) on failure.
   */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_decode(
-    OpusProjectionDecoder *st,
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_multistream_decode(
+    OpusMSDecoder *st,
     const unsigned char *data,
     opus_int32 len,
     opus_int16 *pcm,
@@ -493,9 +591,8 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_decode(
     int decode_fec
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(4);
 
-
-/** Decode a projection Opus packet with floating point output.
-  * @param st <tt>OpusProjectionDecoder*</tt>: Projection decoder state.
+/** Decode a multistream Opus packet with floating point output.
+  * @param st <tt>OpusMSDecoder*</tt>: Multistream decoder state.
   * @param[in] data <tt>const unsigned char*</tt>: Input payload.
   *                                                Use a <code>NULL</code>
   *                                                pointer to indicate packet
@@ -523,8 +620,8 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_decode(
   * @returns Number of samples decoded on success or a negative error code
   *          (see @ref opus_errorcodes) on failure.
   */
-OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_decode_float(
-    OpusProjectionDecoder *st,
+OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_multistream_decode_float(
+    OpusMSDecoder *st,
     const unsigned char *data,
     opus_int32 len,
     float *pcm,
@@ -532,30 +629,25 @@ OPUS_EXPORT OPUS_WARN_UNUSED_RESULT int opus_projection_decode_float(
     int decode_fec
 ) OPUS_ARG_NONNULL(1) OPUS_ARG_NONNULL(4);
 
-
-/** Perform a CTL function on a projection Opus decoder.
+/** Perform a CTL function on a multistream Opus decoder.
   *
   * Generally the request and subsequent arguments are generated by a
   * convenience macro.
-  * @param st <tt>OpusProjectionDecoder*</tt>: Projection decoder state.
+  * @param st <tt>OpusMSDecoder*</tt>: Multistream decoder state.
   * @param request This and all remaining parameters should be replaced by one
   *                of the convenience macros in @ref opus_genericctls,
-  *                @ref opus_decoderctls, @ref opus_multistream_ctls, or
-  *                @ref opus_projection_ctls.
+  *                @ref opus_decoderctls, or @ref opus_multistream_ctls.
   * @see opus_genericctls
   * @see opus_decoderctls
   * @see opus_multistream_ctls
-  * @see opus_projection_ctls
   */
-OPUS_EXPORT int opus_projection_decoder_ctl(OpusProjectionDecoder *st, int request, ...) OPUS_ARG_NONNULL(1);
+OPUS_EXPORT int opus_multistream_decoder_ctl(OpusMSDecoder *st, int request, ...) OPUS_ARG_NONNULL(1);
 
-
-/** Frees an <code>OpusProjectionDecoder</code> allocated by
-  * opus_projection_decoder_create().
-  * @param st <tt>OpusProjectionDecoder</tt>: Projection decoder state to be freed.
+/** Frees an <code>OpusMSDecoder</code> allocated by
+  * opus_multistream_decoder_create().
+  * @param st <tt>OpusMSDecoder</tt>: Multistream decoder state to be freed.
   */
-OPUS_EXPORT void opus_projection_decoder_destroy(OpusProjectionDecoder *st);
-
+OPUS_EXPORT void opus_multistream_decoder_destroy(OpusMSDecoder *st);
 
 /**@}*/
 
@@ -565,4 +657,4 @@ OPUS_EXPORT void opus_projection_decoder_destroy(OpusProjectionDecoder *st);
 }
 #endif
 
-#endif /* OPUS_PROJECTION_H */
+#endif /* OPUS_MULTISTREAM_H */
