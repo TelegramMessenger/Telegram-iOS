@@ -5,7 +5,6 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
-import TelegramUIPrivateModule
 import AccountContext
 import ContactListUI
 import CallListUI

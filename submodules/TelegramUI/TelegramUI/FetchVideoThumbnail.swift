@@ -4,7 +4,6 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import CoreMedia
-import TelegramUIPrivateModule
 import Display
 import UIKit
 import VideoToolbox

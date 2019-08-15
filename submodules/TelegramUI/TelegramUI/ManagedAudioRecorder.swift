@@ -1,6 +1,5 @@
 import Foundation
 import SwiftSignalKit
-import TelegramUIPrivateModule
 import CoreMedia
 import AVFoundation
 import TelegramCore

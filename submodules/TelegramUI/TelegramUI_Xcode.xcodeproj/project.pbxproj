@@ -116,13 +116,6 @@
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
 		D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
-		D008177922B46B7E008A895F /* ShareItems.swift in Sources */ = {isa = PBXBuildFile; fileRef = D008177222B46B7D008A895F /* ShareItems.swift */; };
-		D008177A22B46B7E008A895F /* TGShareLocationSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D008177322B46B7E008A895F /* TGShareLocationSignals.h */; };
-		D008177B22B46B7E008A895F /* TGContactModel.h in Headers */ = {isa = PBXBuildFile; fileRef = D008177422B46B7E008A895F /* TGContactModel.h */; };
-		D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = D008177522B46B7E008A895F /* TGItemProviderSignals.h */; };
-		D008177D22B46B7E008A895F /* TGContactModel.m in Sources */ = {isa = PBXBuildFile; fileRef = D008177622B46B7E008A895F /* TGContactModel.m */; };
-		D008177E22B46B7E008A895F /* TGItemProviderSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D008177722B46B7E008A895F /* TGItemProviderSignals.m */; };
-		D008177F22B46B7E008A895F /* TGShareLocationSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D008177822B46B7E008A895F /* TGShareLocationSignals.m */; };
 		D008178222B47464008A895F /* NotificationContentContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D008178122B47464008A895F /* NotificationContentContext.swift */; };
 		D00817D022B47A14008A895F /* WakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B622B47A12008A895F /* WakeupManager.swift */; };
 		D00817D522B47A14008A895F /* ApplicationShortcutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817BB22B47A13008A895F /* ApplicationShortcutItem.swift */; };
@@ -201,6 +194,7 @@
 		D03E44582305B4B70049C28B /* WatchBridgeAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44572305B4B70049C28B /* WatchBridgeAudio.framework */; };
 		D03E449E2305B6A00049C28B /* WatchBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E449D2305B6A00049C28B /* WatchBridge.framework */; };
 		D03E44E22305BC900049C28B /* LegacyDataImport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44E12305BC900049C28B /* LegacyDataImport.framework */; };
+		D03E45252305C07A0049C28B /* ShareItems.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45242305C07A0049C28B /* ShareItems.framework */; };
 		D04203152037162700490EA5 /* MediaInputPaneTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */; };
 		D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */; };
 		D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */; };
@@ -798,13 +792,6 @@
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
 		D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
-		D008177222B46B7D008A895F /* ShareItems.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareItems.swift; sourceTree = "<group>"; };
-		D008177322B46B7E008A895F /* TGShareLocationSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGShareLocationSignals.h; sourceTree = "<group>"; };
-		D008177422B46B7E008A895F /* TGContactModel.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGContactModel.h; sourceTree = "<group>"; };
-		D008177522B46B7E008A895F /* TGItemProviderSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGItemProviderSignals.h; sourceTree = "<group>"; };
-		D008177622B46B7E008A895F /* TGContactModel.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGContactModel.m; sourceTree = "<group>"; };
-		D008177722B46B7E008A895F /* TGItemProviderSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGItemProviderSignals.m; sourceTree = "<group>"; };
-		D008177822B46B7E008A895F /* TGShareLocationSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGShareLocationSignals.m; sourceTree = "<group>"; };
 		D008178122B47464008A895F /* NotificationContentContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationContentContext.swift; sourceTree = "<group>"; };
 		D00817B622B47A12008A895F /* WakeupManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WakeupManager.swift; sourceTree = "<group>"; };
 		D00817BB22B47A13008A895F /* ApplicationShortcutItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationShortcutItem.swift; sourceTree = "<group>"; };
@@ -927,6 +914,7 @@
 		D03E44572305B4B70049C28B /* WatchBridgeAudio.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchBridgeAudio.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E449D2305B6A00049C28B /* WatchBridge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchBridge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E44E12305BC900049C28B /* LegacyDataImport.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyDataImport.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E45242305C07A0049C28B /* ShareItems.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ShareItems.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E5E081E55C49C0029569A /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
 		D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputPaneTrendingItem.swift; sourceTree = "<group>"; };
 		D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsController.swift; sourceTree = "<group>"; };
@@ -1389,6 +1377,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E45252305C07A0049C28B /* ShareItems.framework in Frameworks */,
 				D03E44E22305BC900049C28B /* LegacyDataImport.framework in Frameworks */,
 				D03E449E2305B6A00049C28B /* WatchBridge.framework in Frameworks */,
 				D03E44582305B4B70049C28B /* WatchBridgeAudio.framework in Frameworks */,
@@ -1710,13 +1699,6 @@
 			isa = PBXGroup;
 			children = (
 				D0750C8622B2E76300BE5F6E /* ShareExtensionContext.swift */,
-				D008177222B46B7D008A895F /* ShareItems.swift */,
-				D008177422B46B7E008A895F /* TGContactModel.h */,
-				D008177622B46B7E008A895F /* TGContactModel.m */,
-				D008177522B46B7E008A895F /* TGItemProviderSignals.h */,
-				D008177722B46B7E008A895F /* TGItemProviderSignals.m */,
-				D008177322B46B7E008A895F /* TGShareLocationSignals.h */,
-				D008177822B46B7E008A895F /* TGShareLocationSignals.m */,
 			);
 			name = Share;
 			sourceTree = "<group>";
@@ -1912,13 +1894,6 @@
 			name = "Chat Recent Actions";
 			sourceTree = "<group>";
 		};
-		D04614352005093B00EC0EF2 /* Location */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = Location;
-			sourceTree = "<group>";
-		};
 		D0471B521EFD8EBC0074D609 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -2110,6 +2085,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E45242305C07A0049C28B /* ShareItems.framework */,
 				D03E44E12305BC900049C28B /* LegacyDataImport.framework */,
 				D03E449D2305B6A00049C28B /* WatchBridge.framework */,
 				D03E44572305B4B70049C28B /* WatchBridgeAudio.framework */,
@@ -2932,7 +2908,6 @@
 				D01C7EFE1EF9D434008305F1 /* Device Contacts */,
 				D025A4241F79428300563950 /* Fetch Manager */,
 				09E4A7FC223ADF300038140F /* Images */,
-				D04614352005093B00EC0EF2 /* Location */,
 				09E4A7FD223ADF940038140F /* Routing */,
 				D01848F021A2323D00B6DEBD /* Strings */,
 				D073CE701DCBF23F007511FD /* DeclareEncodables.swift */,
@@ -3056,9 +3031,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D08803C51F6064CF00DD7951 /* TelegramUI.h in Headers */,
-				D008177B22B46B7E008A895F /* TGContactModel.h in Headers */,
-				D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */,
-				D008177A22B46B7E008A895F /* TGShareLocationSignals.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3323,17 +3295,14 @@
 				D09D88731F86D56B00BEB4C9 /* AuthorizationLayout.swift in Sources */,
 				D0EC6D291EB9F58800EBF1C3 /* FetchVideoMediaResource.swift in Sources */,
 				09EDAD2E221164440012A50B /* AutodownloadSizeLimitItem.swift in Sources */,
-				D008177E22B46B7E008A895F /* TGItemProviderSignals.m in Sources */,
 				099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */,
 				D0EC6D2A1EB9F58800EBF1C3 /* FetchPhotoLibraryImageResource.swift in Sources */,
 				D0EC6D2B1EB9F58800EBF1C3 /* FileMediaResourceStatus.swift in Sources */,
 				09510B0F22F9347E0078CAB7 /* BundleResource.swift in Sources */,
 				D025402522E1E00100AC0195 /* ChatSlowmodeHintController.swift in Sources */,
-				D008177D22B46B7E008A895F /* TGContactModel.m in Sources */,
 				D0EC6D301EB9F58800EBF1C3 /* RadialProgressNode.swift in Sources */,
 				D0EC6D311EB9F58800EBF1C3 /* RadialTimeoutNode.swift in Sources */,
 				09CE950A2237B93500A7D2C3 /* SettingsSearchResultItem.swift in Sources */,
-				D008177F22B46B7E008A895F /* TGShareLocationSignals.m in Sources */,
 				D0185E8C208A025A005E1A6C /* ProxySettingsServerItem.swift in Sources */,
 				090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */,
 				D06F1EA41F6C0A5D00FE8B74 /* ChatHistorySearchContainerNode.swift in Sources */,
@@ -3405,7 +3374,6 @@
 				D0EC6D871EB9F58800EBF1C3 /* ChatTitleView.swift in Sources */,
 				D0EC6D881EB9F58800EBF1C3 /* ChatControllerTitlePanelNodeContainer.swift in Sources */,
 				9F06830B21A404C4001D8EDB /* NotificationExceptionSettingsController.swift in Sources */,
-				D008177922B46B7E008A895F /* ShareItems.swift in Sources */,
 				D0EC6D891EB9F58800EBF1C3 /* ChatSecretAutoremoveTimerActionSheet.swift in Sources */,
 				D0EC6D8A1EB9F58800EBF1C3 /* ChatInfo.swift in Sources */,
 				D0EC6D8B1EB9F58800EBF1C3 /* ChatHistoryNavigationStack.swift in Sources */,
@@ -3802,6 +3770,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
@@ -4001,6 +3970,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
@@ -4119,6 +4089,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
@@ -4246,6 +4217,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
@@ -4363,6 +4335,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
@@ -4411,6 +4384,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
@@ -4457,6 +4431,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",
@@ -4502,6 +4477,7 @@
 					"$(PROJECT_DIR)/third-party/libjpeg-turbo",
 					"$(PROJECT_DIR)/../opus/Sources/opus/lib",
 				);
+				MODULEMAP_PRIVATE_FILE = "";
 				OTHER_CFLAGS = (
 					"-DTGVOIP_USE_CUSTOM_CRYPTO",
 					"-DWEBRTC_APM_DEBUG_DUMP=0",

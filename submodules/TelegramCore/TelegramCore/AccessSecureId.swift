@@ -13,8 +13,6 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-import TelegramCorePrivateModule
-
 private enum GenerateSecureSecretError {
     case generic
 }

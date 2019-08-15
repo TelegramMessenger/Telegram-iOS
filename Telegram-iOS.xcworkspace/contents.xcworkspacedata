@@ -25,10 +25,41 @@
       <FileRef
          location = "group:submodules/OpusBinding/OpusBinding_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/libphonenumber/libphonenumber_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Core">
+      <FileRef
+         location = "group:submodules/sqlcipher/sqlcipher_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Postbox/Postbox_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MtProtoKit/MtProtoKit_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramApi/TelegramApi_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/TelegramCore/TelegramCore_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LiveLocationManager/LiveLocationManager_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
       name = "Utils">
+      <FileRef
+         location = "group:submodules/libphonenumber/libphonenumber_Xcode.xcodeproj">
+      </FileRef>
       <FileRef
          location = "group:submodules/LegacyDataImport/LegacyDataImport_Xcode.xcodeproj">
       </FileRef>
@@ -75,6 +106,9 @@
          location = "group:submodules/GZip/GZip_Xcode.xcodeproj">
       </FileRef>
       <FileRef
+         location = "group:submodules/Crc32/Crc32_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
          location = "group:submodules/Pdf/Pdf_Xcode.xcodeproj">
       </FileRef>
       <FileRef
@@ -106,6 +140,9 @@
          </FileRef>
          <FileRef
             location = "group:submodules/RaiseToListen/RaiseToListen_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ShareItems/ShareItems_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <Group
@@ -143,28 +180,6 @@
             location = "group:submodules/EncryptionKeyVisualization/EncryptionKeyVisualization_Xcode.xcodeproj">
          </FileRef>
       </Group>
-   </Group>
-   <Group
-      location = "container:"
-      name = "Core">
-      <FileRef
-         location = "group:submodules/Postbox/Postbox_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/MtProtoKit/MtProtoKit_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/TelegramApi/TelegramApi_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/TelegramCore/TelegramCore_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/LiveLocationManager/LiveLocationManager_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching_Xcode.xcodeproj">
-      </FileRef>
    </Group>
    <Group
       location = "container:"

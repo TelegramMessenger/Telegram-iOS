@@ -4,7 +4,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
-import TelegramUIPrivateModule
 import UniversalMediaPlayer
 import TelegramAudio
 import AccountContext

@@ -1,8 +1,0 @@
-module sqlcipher {
-    header "sqlcipher/sqlite3.h"
-    header "sqlcipher/sqlite3ext.h"
-    header "sqlcipher/SQLite-Bridging.h"
-    header "sqlcipher/fts3_tokenizer.h"
-    header "../Crc32.h"
-    export *
-}

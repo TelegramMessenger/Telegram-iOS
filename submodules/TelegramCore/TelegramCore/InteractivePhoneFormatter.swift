@@ -1,5 +1,5 @@
 import Foundation
-import TelegramCorePrivateModule
+import libphonenumber
 
 public final class InteractivePhoneFormatter {
     private let formatter = NBAsYouTypeFormatter(regionCode: "US")!

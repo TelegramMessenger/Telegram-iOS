@@ -1,5 +1,0 @@
-module TelegramUIPrivateModule {
-    header "../TGContactModel.h"
-    header "../TGItemProviderSignals.h"
-    header "../TGShareLocationSignals.h"
-}

@@ -6,8 +6,6 @@ import SwiftSignalKit
 import CoreTelephony
 #endif
 
-import TelegramCorePrivateModule
-
 #if os(iOS)
 public enum CellularNetworkType {
     case unknown

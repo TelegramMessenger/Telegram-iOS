@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramCore
 import Postbox
 import TelegramUIPreferences
-import TelegramUIPrivateModule
 import LegacyComponents
 import TextFormat
 import AccountContext

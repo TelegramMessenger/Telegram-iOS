@@ -7,7 +7,6 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
-import TelegramUIPrivateModule
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI

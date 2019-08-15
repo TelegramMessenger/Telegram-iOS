@@ -14,7 +14,6 @@ import Foundation
         import MtProtoKitDynamic
     #endif
 #endif
-import TelegramCorePrivateModule
 
 public enum ConnectionStatus: Equatable {
     case waitingForNetwork

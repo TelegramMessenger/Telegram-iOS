@@ -13,7 +13,6 @@ import WebPImage
 import WebP
 #endif
 import Lottie
-import TelegramUIPrivateModule
 import MediaResources
 import PhotoResources
 import ImageBlur
