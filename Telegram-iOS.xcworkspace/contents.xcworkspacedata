@@ -36,9 +36,6 @@
          location = "group:submodules/DeviceAccess/DeviceAccess_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/TextFormat/TextFormat_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
          location = "group:submodules/MergeLists/MergeLists_Xcode.xcodeproj">
       </FileRef>
       <FileRef
@@ -46,6 +43,9 @@
       </FileRef>
       <FileRef
          location = "group:submodules/PeerPresenceStatusManager/PeerPresenceStatusManager_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/MapResourceToAvatarSizes/MapResourceToAvatarSizes_Xcode.xcodeproj">
       </FileRef>
       <FileRef
          location = "group:submodules/LocalizedPeerData/LocalizedPeerData_Xcode.xcodeproj">
@@ -64,9 +64,6 @@
       </FileRef>
       <FileRef
          location = "group:submodules/TelegramPermissions/TelegramPermissions_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/TelegramStringFormatting/TelegramStringFormatting_Xcode.xcodeproj">
       </FileRef>
       <FileRef
          location = "group:submodules/WebsiteType/WebsiteType_Xcode.xcodeproj">
@@ -94,6 +91,19 @@
       </FileRef>
       <Group
          location = "container:"
+         name = "Text Processing">
+         <FileRef
+            location = "group:submodules/TextFormat/TextFormat_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/TelegramStringFormatting/TelegramStringFormatting_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/Emoji/Emoji_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
          name = "Image Processing">
          <FileRef
             location = "group:submodules/YuvConversion/YuvConversion.xcodeproj">
@@ -109,6 +119,9 @@
          </FileRef>
          <FileRef
             location = "group:submodules/ImageCompression/ImageCompression_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/EncryptionKeyVisualization/EncryptionKeyVisualization_Xcode.xcodeproj">
          </FileRef>
       </Group>
    </Group>
@@ -238,6 +251,9 @@
          <FileRef
             location = "group:submodules/TextSelectionNode/TextSelectionNode_Xcode.xcodeproj">
          </FileRef>
+         <FileRef
+            location = "group:submodules/SinglePhoneInputNode/SinglePhoneInputNode_Xcode.xcodeproj">
+         </FileRef>
       </Group>
       <Group
          location = "container:"
@@ -295,6 +311,12 @@
          </FileRef>
          <FileRef
             location = "group:submodules/ItemListPeerActionItem/ItemListPeerActionItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListStickerPackItem/ItemListStickerPackItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListAddressItem/ItemListAddressItem_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <Group
@@ -392,6 +414,9 @@
          location = "group:submodules/GalleryUI/GalleryUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
+         location = "group:submodules/PeerAvatarGalleryUI/PeerAvatarGalleryUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
          location = "group:submodules/PasswordSetupUI/PasswordSetupUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
@@ -441,6 +466,15 @@
       </FileRef>
       <FileRef
          location = "group:submodules/PeersNearbyUI/PeersNearbyUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/NotificationMuteSettingsUI/NotificationMuteSettingsUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/NotificationSoundSelectionUI/NotificationSoundSelectionUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PeerInfoUI/PeerInfoUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

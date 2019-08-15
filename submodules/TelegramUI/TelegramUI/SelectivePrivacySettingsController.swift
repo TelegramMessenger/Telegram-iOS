@@ -689,7 +689,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
             return state
         }
         if peerIds.isEmpty {
-            let controller = ContactMultiselectionController(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true), options: [])
+            let controller = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: context, mode: .peerSelection(searchChatList: true, searchGroups: true), options: []))
             addPeerDisposable.set((controller.result
             |> take(1)
             |> deliverOnMainQueue).start(next: { [weak controller] peerIds in

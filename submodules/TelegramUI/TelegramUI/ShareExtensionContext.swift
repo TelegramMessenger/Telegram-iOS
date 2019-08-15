@@ -9,6 +9,7 @@ import TelegramUIPrivateModule
 import AccountContext
 import ShareController
 import LegacyUI
+import PeerInfoUI
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 

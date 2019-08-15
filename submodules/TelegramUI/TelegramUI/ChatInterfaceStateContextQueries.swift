@@ -8,6 +8,7 @@ import TelegramUIPrivateModule
 import LegacyComponents
 import TextFormat
 import AccountContext
+import Emoji
 
 enum ChatContextQueryError {
     case inlineBotLocationRequest(PeerId)

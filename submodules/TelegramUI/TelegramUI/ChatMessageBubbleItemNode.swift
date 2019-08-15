@@ -15,6 +15,7 @@ import TelegramUniversalVideoContent
 import MosaicLayout
 import TextSelectionNode
 import PlatformRestrictionMatching
+import Emoji
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []

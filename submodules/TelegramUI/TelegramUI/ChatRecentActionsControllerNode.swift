@@ -17,6 +17,7 @@ import HashtagSearchUI
 import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
+import PeerInfoUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]

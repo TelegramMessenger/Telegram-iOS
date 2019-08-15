@@ -38,6 +38,9 @@ import DeleteChatPeerActionSheetItem
 import HashtagSearchUI
 import LegacyMediaPickerUI
 import WebSearchUI
+import Emoji
+import PeerAvatarGalleryUI
+import PeerInfoUI
 
 public enum ChatControllerPeekActions {
     case standard

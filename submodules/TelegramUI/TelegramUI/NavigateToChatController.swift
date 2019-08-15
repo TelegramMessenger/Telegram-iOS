@@ -7,6 +7,7 @@ import AccountContext
 import GalleryUI
 import InstantPageUI
 import ChatListUI
+import PeerAvatarGalleryUI
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false

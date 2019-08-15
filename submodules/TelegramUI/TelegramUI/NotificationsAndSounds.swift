@@ -11,6 +11,8 @@ import ItemListUI
 import AccountContext
 import AlertUI
 import TelegramNotices
+import NotificationSoundSelectionUI
+import TelegramStringFormatting
 
 private final class NotificationsAndSoundsArguments {
     let context: AccountContext

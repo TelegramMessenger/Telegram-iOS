@@ -11,6 +11,7 @@ import TelegramUIPrivateModule
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import Emoji
 
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void

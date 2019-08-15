@@ -293,6 +293,7 @@
 		D03DC9141F82F89D001D584C /* RegularChatState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03DC9121F82F89D001D584C /* RegularChatState.swift */; };
 		D03E3D28230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */; };
 		D03E3D29230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */; };
+		D03E416C2304D5B30049C28B /* ValidateAddressNameInteractive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E416B2304D5B30049C28B /* ValidateAddressNameInteractive.swift */; };
 		D03E5E0C1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */; };
 		D03E5E0D1E55E02D0029569A /* LoggedOutAccountAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */; };
 		D041E3F51E535464008C24B4 /* AddPeerMember.swift in Sources */ = {isa = PBXBuildFile; fileRef = D041E3F41E535464008C24B4 /* AddPeerMember.swift */; };
@@ -1002,6 +1003,7 @@
 		D03DC90F1F82E344001D584C /* AccountStateReset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountStateReset.swift; sourceTree = "<group>"; };
 		D03DC9121F82F89D001D584C /* RegularChatState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegularChatState.swift; sourceTree = "<group>"; };
 		D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestrictedContentMessageAttribute.swift; sourceTree = "<group>"; };
+		D03E416B2304D5B30049C28B /* ValidateAddressNameInteractive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ValidateAddressNameInteractive.swift; sourceTree = "<group>"; };
 		D03E5E0B1E55E02D0029569A /* LoggedOutAccountAttribute.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LoggedOutAccountAttribute.swift; sourceTree = "<group>"; };
 		D041E3F41E535464008C24B4 /* AddPeerMember.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddPeerMember.swift; sourceTree = "<group>"; };
 		D041E3F71E535A88008C24B4 /* RemovePeerMember.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RemovePeerMember.swift; sourceTree = "<group>"; };
@@ -2028,6 +2030,7 @@
 				090E778222A9862100CD99F5 /* ChannelOwnershipTransfer.swift */,
 				090E778F22AAABC600CD99F5 /* PeersNearby.swift */,
 				D0D376E522DCCFD600FA7D7C /* SlowMode.swift */,
+				D03E416B2304D5B30049C28B /* ValidateAddressNameInteractive.swift */,
 			);
 			name = Peers;
 			sourceTree = "<group>";
@@ -2264,6 +2267,7 @@
 				090E778322A9862100CD99F5 /* ChannelOwnershipTransfer.swift in Sources */,
 				D03E3D28230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */,
 				D03B0CE01D62249100955575 /* StoreMessage_Telegram.swift in Sources */,
+				D03E416C2304D5B30049C28B /* ValidateAddressNameInteractive.swift in Sources */,
 				D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */,
 				D023E67821540624008C27D1 /* UpdateMessageMedia.swift in Sources */,
 				D0EE7FC420986C5300981319 /* SecureIdPassportRegistrationValue.swift in Sources */,

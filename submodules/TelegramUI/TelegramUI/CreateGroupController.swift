@@ -18,6 +18,9 @@ import ItemListPeerItem
 import ItemListAvatarAndNameInfoItem
 import WebSearchUI
 import Geocoding
+import PeerInfoUI
+import MapResourceToAvatarSizes
+import ItemListAddressItem
 
 private struct CreateGroupArguments {
     let account: Account

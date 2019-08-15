@@ -11,6 +11,7 @@ import DeviceLocationManager
 import LegacyUI
 import ChatListUI
 import PeersNearbyUI
+import PeerInfoUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -974,12 +975,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatControllerImpl(context: context, chatLocation: chatLocation, subject: subject, botStart: botStart, mode: mode)
     }
     
+    public func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
+        return peerSharedMediaControllerImpl(context: context, peerId: peerId)
+    }
+    
+    public func makeChatRecentActionsController(context: AccountContext, peer: Peer) -> ViewController {
+        return ChatRecentActionsController(context: context, peer: peer)
+    }
+    
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
         presentContactsWarningSuppressionImpl(context: context, present: present)
     }
     
     public func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController {
         return ContactSelectionControllerImpl(params)
+    }
+    
+    public func makeContactMultiselectionController(_ params: ContactMultiselectionControllerParams) -> ContactMultiselectionController {
+        return ContactMultiselectionControllerImpl(params)
     }
     
     public func makeComposeController(context: AccountContext) -> ViewController {
@@ -1000,5 +1013,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController {
         return createGroupControllerImpl(context: context, peerIds: peerIds, initialTitle: initialTitle, mode: mode, completion: completion)
+    }
+    
+    public func makeChatListController(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool, enableDebugActions: Bool) -> ChatListController {
+        return ChatListControllerImpl(context: context, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, hideNetworkActivityStatus: hideNetworkActivityStatus, enableDebugActions: enableDebugActions)
     }
 }
