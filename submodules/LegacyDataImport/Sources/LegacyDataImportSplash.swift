@@ -4,11 +4,11 @@ import AsyncDisplayKit
 import TelegramPresentationData
 import RadialStatusNode
 
-final class LegacyDataImportSplash: WindowCoveringView {
+public final class LegacyDataImportSplash: WindowCoveringView {
     private let theme: PresentationTheme?
     private let strings: PresentationStrings?
     
-    var progress: (AccountImportProgressType, Float) = (.generic, 0.0) {
+    public var progress: (AccountImportProgressType, Float) = (.generic, 0.0) {
         didSet {
             if self.progress.0 != oldValue.0 {
                 if let size = self.validSize {
@@ -27,14 +27,14 @@ final class LegacyDataImportSplash: WindowCoveringView {
         }
     }
     
-    var serviceAction: (() -> Void)?
+    public var serviceAction: (() -> Void)?
     
     private let progressNode: RadialStatusNode
     private let textNode: ImmediateTextNode
     
     private var validSize: CGSize?
     
-    init(theme: PresentationTheme?, strings: PresentationStrings?) {
+    public init(theme: PresentationTheme?, strings: PresentationStrings?) {
         self.theme = theme
         self.strings = strings
         
@@ -56,11 +56,11 @@ final class LegacyDataImportSplash: WindowCoveringView {
         self.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func updateLayout(_ size: CGSize) {
+    override public func updateLayout(_ size: CGSize) {
         self.validSize = size
         
         let progressSize = CGSize(width: 60.0, height: 60.0)

@@ -2,8 +2,6 @@ import Foundation
 import TelegramCore
 import SwiftSignalKit
 import Postbox
-import TelegramUI
-
 import LegacyComponents
 
 private let reportedLayer_hash: Int32 = -717538193
@@ -625,16 +623,7 @@ private func importChannelBroadcastPreferences(account: TemporaryAccount, basePa
             }
         }
         
-        return account.postbox.transaction { transaction -> Void in
-            for peerId in peerIdsWithMutedMessages {
-                let channelId = Int32(clamping: Int64(Int32.min) &* 2 &- peerId)
-                transaction.updatePeerChatInterfaceState(PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), update: { current in
-                    let state = (current as? ChatInterfaceState ?? ChatInterfaceState()).withUpdatedSilentPosting(true)
-                    return state
-                })
-            }
-        }
-        |> ignoreValues
+        return .complete()
     }
 }
 

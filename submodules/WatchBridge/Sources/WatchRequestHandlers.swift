@@ -10,6 +10,7 @@ import AvatarNode
 import StickerResources
 import PhotoResources
 import AccountContext
+import WatchBridgeAudio
 
 let allWatchRequestHandlers: [AnyClass] = [
     WatchChatListHandler.self,

@@ -2,7 +2,6 @@ import Foundation
 import TelegramCore
 import SwiftSignalKit
 import Postbox
-
 import LegacyComponents
 
 private func importMediaFromMessageData(_ data: Data, basePath: String, copyLocalFiles: inout [(MediaResource, String)], cache: TGCache) {

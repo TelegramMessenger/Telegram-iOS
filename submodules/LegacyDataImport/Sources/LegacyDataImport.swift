@@ -9,11 +9,11 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 
-enum AccountImportError: Error {
+public enum AccountImportError: Error {
     case generic
 }
 
-enum AccountImportProgressType {
+public enum AccountImportProgressType {
     case generic
     case messages
     case media
@@ -106,12 +106,12 @@ private func importDatabaseData(accountManager: AccountManager, account: Tempora
     }
 }
 
-enum ImportedLegacyAccountEvent {
+public enum ImportedLegacyAccountEvent {
     case progress(AccountImportProgressType, Float)
     case result(AccountRecordId?)
 }
 
-func importedLegacyAccount(basePath: String, accountManager: AccountManager, encryptionParameters: ValueBoxEncryptionParameters, present: @escaping (UIViewController) -> Void) -> Signal<ImportedLegacyAccountEvent, AccountImportError> {
+public func importedLegacyAccount(basePath: String, accountManager: AccountManager, encryptionParameters: ValueBoxEncryptionParameters, present: @escaping (UIViewController) -> Void) -> Signal<ImportedLegacyAccountEvent, AccountImportError> {
     let queue = Queue()
     return deferred { () -> Signal<ImportedLegacyAccountEvent, AccountImportError> in
         let documentsPath = basePath + "/Documents"

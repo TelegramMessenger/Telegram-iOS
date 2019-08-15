@@ -9,11 +9,6 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import TelegramUIPreferences
-
-#if BUCK
-import AppBinaryPrivate
-#endif
-import TelegramUIPrivateModule
 import LegacyComponents
 import TelegramNotices
 

@@ -124,29 +124,11 @@
 		D008177E22B46B7E008A895F /* TGItemProviderSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D008177722B46B7E008A895F /* TGItemProviderSignals.m */; };
 		D008177F22B46B7E008A895F /* TGShareLocationSignals.m in Sources */ = {isa = PBXBuildFile; fileRef = D008177822B46B7E008A895F /* TGShareLocationSignals.m */; };
 		D008178222B47464008A895F /* NotificationContentContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D008178122B47464008A895F /* NotificationContentContext.swift */; };
-		D00817CA22B47A14008A895F /* WatchRequestHandlers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B022B47A12008A895F /* WatchRequestHandlers.swift */; };
-		D00817CB22B47A14008A895F /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B122B47A12008A895F /* WatchBridge.swift */; };
-		D00817CC22B47A14008A895F /* WatchCommunicationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B222B47A12008A895F /* WatchCommunicationManager.swift */; };
-		D00817CD22B47A14008A895F /* TGAutoDownloadPreferences.h in Headers */ = {isa = PBXBuildFile; fileRef = D00817B322B47A12008A895F /* TGAutoDownloadPreferences.h */; };
-		D00817CE22B47A14008A895F /* TGProxyItem.h in Headers */ = {isa = PBXBuildFile; fileRef = D00817B422B47A12008A895F /* TGProxyItem.h */; };
-		D00817CF22B47A14008A895F /* LegacyFileImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B522B47A12008A895F /* LegacyFileImport.swift */; };
 		D00817D022B47A14008A895F /* WakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B622B47A12008A895F /* WakeupManager.swift */; };
-		D00817D122B47A14008A895F /* LegacyDataImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B722B47A12008A895F /* LegacyDataImport.swift */; };
-		D00817D222B47A14008A895F /* LegacyPreferencesImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B822B47A12008A895F /* LegacyPreferencesImport.swift */; };
-		D00817D322B47A14008A895F /* LegacyResourceImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B922B47A12008A895F /* LegacyResourceImport.swift */; };
-		D00817D422B47A14008A895F /* LegacyUserDataImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817BA22B47A12008A895F /* LegacyUserDataImport.swift */; };
 		D00817D522B47A14008A895F /* ApplicationShortcutItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817BB22B47A13008A895F /* ApplicationShortcutItem.swift */; };
-		D00817D622B47A14008A895F /* TGProxyItem.m in Sources */ = {isa = PBXBuildFile; fileRef = D00817BC22B47A13008A895F /* TGProxyItem.m */; };
-		D00817D722B47A14008A895F /* TGBridgeServer.h in Headers */ = {isa = PBXBuildFile; fileRef = D00817BD22B47A13008A895F /* TGBridgeServer.h */; };
-		D00817D822B47A14008A895F /* TGAutoDownloadPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = D00817BE22B47A13008A895F /* TGAutoDownloadPreferences.m */; };
 		D00817D922B47A14008A895F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817BF22B47A13008A895F /* AppDelegate.swift */; };
-		D00817DA22B47A14008A895F /* TGPresentationAutoNightPreferences.h in Headers */ = {isa = PBXBuildFile; fileRef = D00817C022B47A13008A895F /* TGPresentationAutoNightPreferences.h */; };
-		D00817DB22B47A14008A895F /* LegacyChatImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817C122B47A13008A895F /* LegacyChatImport.swift */; };
 		D00817DC22B47A14008A895F /* ManageSharedAccountInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817C222B47A13008A895F /* ManageSharedAccountInfo.swift */; };
 		D00817DD22B47A14008A895F /* LockedWindowCoveringView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817C322B47A13008A895F /* LockedWindowCoveringView.swift */; };
-		D00817DE22B47A14008A895F /* TGBridgeServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D00817C422B47A13008A895F /* TGBridgeServer.m */; };
-		D00817DF22B47A14008A895F /* LegacyDataImportSplash.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817C522B47A13008A895F /* LegacyDataImportSplash.swift */; };
-		D00817E322B47A14008A895F /* TGPresentationAutoNightPreferences.m in Sources */ = {isa = PBXBuildFile; fileRef = D00817C922B47A14008A895F /* TGPresentationAutoNightPreferences.m */; };
 		D008184A22B57225008A895F /* WatchCommon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008184922B57225008A895F /* WatchCommon.framework */; };
 		D00818CD22B595CB008A895F /* LightweightAccountData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818CC22B595CB008A895F /* LightweightAccountData.framework */; };
 		D00ACA4B20222C280045D427 /* libtgvoip.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00ACA4C20222C280045D427 /* libtgvoip.framework */; };
@@ -178,7 +160,6 @@
 		D02C81732177AC5900CD1006 /* NotificationSearchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02C81722177AC5900CD1006 /* NotificationSearchItem.swift */; };
 		D02D634A22B85B94006BE519 /* PushKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02D634922B85B94006BE519 /* PushKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */; };
-		D035734B22B5CCCA00F0920D /* LegacyBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D035734A22B5CCCA00F0920D /* LegacyBuffer.swift */; };
 		D0380DAD204ED434000414AB /* LegacyLiveUploadInterface.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */; };
 		D0380DB8204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */; };
 		D0383EE4207D292800C45548 /* EmojisChatInputContextPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */; };
@@ -217,6 +198,9 @@
 		D03E439423057FDF0049C28B /* OpusBinding.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E439323057FDF0049C28B /* OpusBinding.framework */; };
 		D03E43EC2305954C0049C28B /* opus.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E43EB2305954C0049C28B /* opus.framework */; };
 		D03E43EE230595600049C28B /* libopus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E43ED230595600049C28B /* libopus.a */; };
+		D03E44582305B4B70049C28B /* WatchBridgeAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44572305B4B70049C28B /* WatchBridgeAudio.framework */; };
+		D03E449E2305B6A00049C28B /* WatchBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E449D2305B6A00049C28B /* WatchBridge.framework */; };
+		D03E44E22305BC900049C28B /* LegacyDataImport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44E12305BC900049C28B /* LegacyDataImport.framework */; };
 		D04203152037162700490EA5 /* MediaInputPaneTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */; };
 		D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */; };
 		D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */; };
@@ -322,11 +306,6 @@
 		D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */; };
 		D0AD02EA1FFFEBEF00C1DCFF /* ChatMessageLiveLocationTextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD02E91FFFEBEF00C1DCFF /* ChatMessageLiveLocationTextNode.swift */; };
 		D0ADF966212E05A300310BBC /* TonePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ADF965212E05A300310BBC /* TonePlayer.swift */; };
-		D0AE303522B1D3620058D3BC /* TGBridgeAudioEncoder.m in Sources */ = {isa = PBXBuildFile; fileRef = D0AE2FDC22B1D3610058D3BC /* TGBridgeAudioEncoder.m */; };
-		D0AE303622B1D3620058D3BC /* TGBridgeAudioDecoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE2FDD22B1D3610058D3BC /* TGBridgeAudioDecoder.h */; };
-		D0AE303722B1D3620058D3BC /* TGBridgeAudioEncoder.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE2FDE22B1D3610058D3BC /* TGBridgeAudioEncoder.h */; };
-		D0AE303822B1D3620058D3BC /* TGBridgeAudioDecoder.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0AE2FDF22B1D3610058D3BC /* TGBridgeAudioDecoder.mm */; };
-		D0AE303922B1D3620058D3BC /* LegacyBridgeAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE2FE022B1D3610058D3BC /* LegacyBridgeAudio.swift */; };
 		D0AE30CF22B1D9980058D3BC /* RMIntro.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE30CE22B1D9980058D3BC /* RMIntro.framework */; };
 		D0AE30EB22B1DBD10058D3BC /* GZip.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE30EA22B1DBD10058D3BC /* GZip.framework */; };
 		D0AE311222B1DD4D0058D3BC /* TelegramCallsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE311122B1DD4D0058D3BC /* TelegramCallsUI.framework */; };
@@ -827,29 +806,11 @@
 		D008177722B46B7E008A895F /* TGItemProviderSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGItemProviderSignals.m; sourceTree = "<group>"; };
 		D008177822B46B7E008A895F /* TGShareLocationSignals.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGShareLocationSignals.m; sourceTree = "<group>"; };
 		D008178122B47464008A895F /* NotificationContentContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationContentContext.swift; sourceTree = "<group>"; };
-		D00817B022B47A12008A895F /* WatchRequestHandlers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchRequestHandlers.swift; sourceTree = "<group>"; };
-		D00817B122B47A12008A895F /* WatchBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
-		D00817B222B47A12008A895F /* WatchCommunicationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchCommunicationManager.swift; sourceTree = "<group>"; };
-		D00817B322B47A12008A895F /* TGAutoDownloadPreferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAutoDownloadPreferences.h; sourceTree = "<group>"; };
-		D00817B422B47A12008A895F /* TGProxyItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGProxyItem.h; sourceTree = "<group>"; };
-		D00817B522B47A12008A895F /* LegacyFileImport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyFileImport.swift; sourceTree = "<group>"; };
 		D00817B622B47A12008A895F /* WakeupManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WakeupManager.swift; sourceTree = "<group>"; };
-		D00817B722B47A12008A895F /* LegacyDataImport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyDataImport.swift; sourceTree = "<group>"; };
-		D00817B822B47A12008A895F /* LegacyPreferencesImport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyPreferencesImport.swift; sourceTree = "<group>"; };
-		D00817B922B47A12008A895F /* LegacyResourceImport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyResourceImport.swift; sourceTree = "<group>"; };
-		D00817BA22B47A12008A895F /* LegacyUserDataImport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyUserDataImport.swift; sourceTree = "<group>"; };
 		D00817BB22B47A13008A895F /* ApplicationShortcutItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplicationShortcutItem.swift; sourceTree = "<group>"; };
-		D00817BC22B47A13008A895F /* TGProxyItem.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGProxyItem.m; sourceTree = "<group>"; };
-		D00817BD22B47A13008A895F /* TGBridgeServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeServer.h; sourceTree = "<group>"; };
-		D00817BE22B47A13008A895F /* TGAutoDownloadPreferences.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAutoDownloadPreferences.m; sourceTree = "<group>"; };
 		D00817BF22B47A13008A895F /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		D00817C022B47A13008A895F /* TGPresentationAutoNightPreferences.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGPresentationAutoNightPreferences.h; sourceTree = "<group>"; };
-		D00817C122B47A13008A895F /* LegacyChatImport.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyChatImport.swift; sourceTree = "<group>"; };
 		D00817C222B47A13008A895F /* ManageSharedAccountInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ManageSharedAccountInfo.swift; sourceTree = "<group>"; };
 		D00817C322B47A13008A895F /* LockedWindowCoveringView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LockedWindowCoveringView.swift; sourceTree = "<group>"; };
-		D00817C422B47A13008A895F /* TGBridgeServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeServer.m; sourceTree = "<group>"; };
-		D00817C522B47A13008A895F /* LegacyDataImportSplash.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyDataImportSplash.swift; sourceTree = "<group>"; };
-		D00817C922B47A14008A895F /* TGPresentationAutoNightPreferences.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGPresentationAutoNightPreferences.m; sourceTree = "<group>"; };
 		D008184922B57225008A895F /* WatchCommon.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchCommon.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00818CC22B595CB008A895F /* LightweightAccountData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LightweightAccountData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00ACA4C20222C280045D427 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -916,7 +877,6 @@
 		D02D634922B85B94006BE519 /* PushKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PushKit.framework; path = System/Library/Frameworks/PushKit.framework; sourceTree = SDKROOT; };
 		D02DADBE2138D76F00116225 /* Vision.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Vision.framework; path = System/Library/Frameworks/Vision.framework; sourceTree = SDKROOT; };
 		D02F4AE81FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageInteractiveMediaBadge.swift; sourceTree = "<group>"; };
-		D035734A22B5CCCA00F0920D /* LegacyBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyBuffer.swift; sourceTree = "<group>"; };
 		D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyLiveUploadInterface.swift; sourceTree = "<group>"; };
 		D0380DB7204EE0A5000414AB /* ChatInstantVideoMessageDurationNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInstantVideoMessageDurationNode.swift; sourceTree = "<group>"; };
 		D0383EE3207D292800C45548 /* EmojisChatInputContextPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojisChatInputContextPanelNode.swift; sourceTree = "<group>"; };
@@ -964,6 +924,9 @@
 		D03E43EB2305954C0049C28B /* opus.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = opus.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E43ED230595600049C28B /* libopus.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopus.a; path = ../Opus/Sources/opus/lib/libopus.a; sourceTree = "<group>"; };
 		D03E44132305ACFC0049C28B /* ogg.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ogg.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E44572305B4B70049C28B /* WatchBridgeAudio.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchBridgeAudio.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E449D2305B6A00049C28B /* WatchBridge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchBridge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E44E12305BC900049C28B /* LegacyDataImport.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyDataImport.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E5E081E55C49C0029569A /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
 		D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputPaneTrendingItem.swift; sourceTree = "<group>"; };
 		D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsController.swift; sourceTree = "<group>"; };
@@ -1138,11 +1101,6 @@
 		D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageCallBubbleContentNode.swift; sourceTree = "<group>"; };
 		D0AD02E91FFFEBEF00C1DCFF /* ChatMessageLiveLocationTextNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageLiveLocationTextNode.swift; sourceTree = "<group>"; };
 		D0ADF965212E05A300310BBC /* TonePlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TonePlayer.swift; sourceTree = "<group>"; };
-		D0AE2FDC22B1D3610058D3BC /* TGBridgeAudioEncoder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeAudioEncoder.m; sourceTree = "<group>"; };
-		D0AE2FDD22B1D3610058D3BC /* TGBridgeAudioDecoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioDecoder.h; sourceTree = "<group>"; };
-		D0AE2FDE22B1D3610058D3BC /* TGBridgeAudioEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeAudioEncoder.h; sourceTree = "<group>"; };
-		D0AE2FDF22B1D3610058D3BC /* TGBridgeAudioDecoder.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = TGBridgeAudioDecoder.mm; sourceTree = "<group>"; };
-		D0AE2FE022B1D3610058D3BC /* LegacyBridgeAudio.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyBridgeAudio.swift; sourceTree = "<group>"; };
 		D0AE30CE22B1D9980058D3BC /* RMIntro.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RMIntro.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE30EA22B1DBD10058D3BC /* GZip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GZip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE311122B1DD4D0058D3BC /* TelegramCallsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCallsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1431,6 +1389,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E44E22305BC900049C28B /* LegacyDataImport.framework in Frameworks */,
+				D03E449E2305B6A00049C28B /* WatchBridge.framework in Frameworks */,
+				D03E44582305B4B70049C28B /* WatchBridgeAudio.framework in Frameworks */,
 				D03E43EE230595600049C28B /* libopus.a in Frameworks */,
 				D03E43EC2305954C0049C28B /* opus.framework in Frameworks */,
 				D03E439423057FDF0049C28B /* OpusBinding.framework in Frameworks */,
@@ -1736,40 +1697,13 @@
 			isa = PBXGroup;
 			children = (
 				D077C5C022B59A800097D617 /* ApplicationContext.swift */,
-				D00817E422B47A2E008A895F /* Legacy Data Import */,
 				D00817BF22B47A13008A895F /* AppDelegate.swift */,
 				D00817BB22B47A13008A895F /* ApplicationShortcutItem.swift */,
 				D00817C322B47A13008A895F /* LockedWindowCoveringView.swift */,
 				D00817C222B47A13008A895F /* ManageSharedAccountInfo.swift */,
-				D00817BD22B47A13008A895F /* TGBridgeServer.h */,
-				D00817C422B47A13008A895F /* TGBridgeServer.m */,
 				D00817B622B47A12008A895F /* WakeupManager.swift */,
-				D00817B122B47A12008A895F /* WatchBridge.swift */,
-				D00817B222B47A12008A895F /* WatchCommunicationManager.swift */,
-				D00817B022B47A12008A895F /* WatchRequestHandlers.swift */,
 			);
 			name = App;
-			sourceTree = "<group>";
-		};
-		D00817E422B47A2E008A895F /* Legacy Data Import */ = {
-			isa = PBXGroup;
-			children = (
-				D00817C122B47A13008A895F /* LegacyChatImport.swift */,
-				D00817B722B47A12008A895F /* LegacyDataImport.swift */,
-				D00817C522B47A13008A895F /* LegacyDataImportSplash.swift */,
-				D00817B522B47A12008A895F /* LegacyFileImport.swift */,
-				D00817B822B47A12008A895F /* LegacyPreferencesImport.swift */,
-				D00817B922B47A12008A895F /* LegacyResourceImport.swift */,
-				D00817BA22B47A12008A895F /* LegacyUserDataImport.swift */,
-				D00817B322B47A12008A895F /* TGAutoDownloadPreferences.h */,
-				D00817BE22B47A13008A895F /* TGAutoDownloadPreferences.m */,
-				D00817C022B47A13008A895F /* TGPresentationAutoNightPreferences.h */,
-				D00817C922B47A14008A895F /* TGPresentationAutoNightPreferences.m */,
-				D00817B422B47A12008A895F /* TGProxyItem.h */,
-				D00817BC22B47A13008A895F /* TGProxyItem.m */,
-				D035734A22B5CCCA00F0920D /* LegacyBuffer.swift */,
-			);
-			name = "Legacy Data Import";
 			sourceTree = "<group>";
 		};
 		D00DE6961E8E8E21003F0D76 /* Share */ = {
@@ -2137,7 +2071,6 @@
 		D07551891DDA4C7C0073E051 /* Legacy Components */ = {
 			isa = PBXGroup;
 			children = (
-				D0AE2FDB22B1D3610058D3BC /* Bridge Audio */,
 				D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */,
 				D06BB8811F58994B0084FC30 /* LegacyInstantVideoController.swift */,
 				D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */,
@@ -2177,6 +2110,9 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E44E12305BC900049C28B /* LegacyDataImport.framework */,
+				D03E449D2305B6A00049C28B /* WatchBridge.framework */,
+				D03E44572305B4B70049C28B /* WatchBridgeAudio.framework */,
 				D03E44132305ACFC0049C28B /* ogg.framework */,
 				D03E43ED230595600049C28B /* libopus.a */,
 				D03E43EB2305954C0049C28B /* opus.framework */,
@@ -2367,18 +2303,6 @@
 				D09E637E1F0E8C9F003444CD /* PeerMessagesMediaPlaylist.swift */,
 			);
 			name = "Shared Media Player";
-			sourceTree = "<group>";
-		};
-		D0AE2FDB22B1D3610058D3BC /* Bridge Audio */ = {
-			isa = PBXGroup;
-			children = (
-				D0AE2FDC22B1D3610058D3BC /* TGBridgeAudioEncoder.m */,
-				D0AE2FDD22B1D3610058D3BC /* TGBridgeAudioDecoder.h */,
-				D0AE2FDE22B1D3610058D3BC /* TGBridgeAudioEncoder.h */,
-				D0AE2FDF22B1D3610058D3BC /* TGBridgeAudioDecoder.mm */,
-				D0AE2FE022B1D3610058D3BC /* LegacyBridgeAudio.swift */,
-			);
-			path = "Bridge Audio";
 			sourceTree = "<group>";
 		};
 		D0AF7C441ED84BB000CD8E0F /* Language Selection */ = {
@@ -3131,15 +3055,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0AE303622B1D3620058D3BC /* TGBridgeAudioDecoder.h in Headers */,
-				D00817DA22B47A14008A895F /* TGPresentationAutoNightPreferences.h in Headers */,
 				D08803C51F6064CF00DD7951 /* TelegramUI.h in Headers */,
 				D008177B22B46B7E008A895F /* TGContactModel.h in Headers */,
-				D0AE303722B1D3620058D3BC /* TGBridgeAudioEncoder.h in Headers */,
-				D00817CD22B47A14008A895F /* TGAutoDownloadPreferences.h in Headers */,
 				D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */,
-				D00817D722B47A14008A895F /* TGBridgeServer.h in Headers */,
-				D00817CE22B47A14008A895F /* TGProxyItem.h in Headers */,
 				D008177A22B46B7E008A895F /* TGShareLocationSignals.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3323,7 +3241,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0383EE6207D299600C45548 /* EmojisChatInputPanelItem.swift in Sources */,
-				D00817E322B47A14008A895F /* TGPresentationAutoNightPreferences.m in Sources */,
 				D03E3D2B23045B120049C28B /* ChatMessageRestrictedBubbleContentNode.swift in Sources */,
 				09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */,
 				D06E4C352134AE3C00088087 /* ThemeAutoNightSettingsController.swift in Sources */,
@@ -3389,7 +3306,6 @@
 				D056CD701FF147B000880D28 /* IconButtonNode.swift in Sources */,
 				D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */,
 				09CE95002232729A00A7D2C3 /* StickerPaneSearchContentNode.swift in Sources */,
-				D00817D122B47A14008A895F /* LegacyDataImport.swift in Sources */,
 				D053DADC201AAAB100993D32 /* ChatTextInputMenu.swift in Sources */,
 				D0C0B59B1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift in Sources */,
 				09F664CC21EB552C00AB7E26 /* WallpaperSearchRecentQueries.swift in Sources */,
@@ -3417,7 +3333,6 @@
 				D0EC6D301EB9F58800EBF1C3 /* RadialProgressNode.swift in Sources */,
 				D0EC6D311EB9F58800EBF1C3 /* RadialTimeoutNode.swift in Sources */,
 				09CE950A2237B93500A7D2C3 /* SettingsSearchResultItem.swift in Sources */,
-				D0AE303922B1D3620058D3BC /* LegacyBridgeAudio.swift in Sources */,
 				D008177F22B46B7E008A895F /* TGShareLocationSignals.m in Sources */,
 				D0185E8C208A025A005E1A6C /* ProxySettingsServerItem.swift in Sources */,
 				090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */,
@@ -3450,7 +3365,6 @@
 				D0EC6D5D1EB9F58800EBF1C3 /* ListMessageSnippetItemNode.swift in Sources */,
 				D0EC6D5E1EB9F58800EBF1C3 /* ListMessageHoleItem.swift in Sources */,
 				D0EC6D5F1EB9F58800EBF1C3 /* GridMessageItem.swift in Sources */,
-				D00817CB22B47A14008A895F /* WatchBridge.swift in Sources */,
 				D0EC6D601EB9F58800EBF1C3 /* GridHoleItem.swift in Sources */,
 				D0EC6D611EB9F58800EBF1C3 /* GridMessageSelectionNode.swift in Sources */,
 				D0754D201EEDEBA000884F6E /* ChatMessageGameBubbleContentNode.swift in Sources */,
@@ -3479,7 +3393,6 @@
 				D0EC6D741EB9F58800EBF1C3 /* AuthorizationSequenceSignUpControllerNode.swift in Sources */,
 				D0EC6D751EB9F58800EBF1C3 /* TelegramRootController.swift in Sources */,
 				D03AA4DF202DBF6F0056C405 /* ChatContextResultPeekContentNode.swift in Sources */,
-				D00817D622B47A14008A895F /* TGProxyItem.m in Sources */,
 				0910B0ED21FA178C00F8F87D /* WallpaperPreviewMedia.swift in Sources */,
 				D0EC6D811EB9F58800EBF1C3 /* ChatController.swift in Sources */,
 				D0B37C5E1F8D26A8004252DF /* ThemeSettingsChatPreviewItem.swift in Sources */,
@@ -3524,7 +3437,6 @@
 				D0EC6D981EB9F58900EBF1C3 /* ChatMessageItemView.swift in Sources */,
 				09D304152173C0E900C00567 /* WatchManager.swift in Sources */,
 				9F06830921A404AB001D8EDB /* NotificationExceptionControllerNode.swift in Sources */,
-				D035734B22B5CCCA00F0920D /* LegacyBuffer.swift in Sources */,
 				D0EC6D991EB9F58900EBF1C3 /* ChatMessageMediaBubbleContentNode.swift in Sources */,
 				D0EC6D9A1EB9F58900EBF1C3 /* ChatMessageReplyInfoNode.swift in Sources */,
 				D0FE4DE41F0AEBB900E8A0B3 /* SharedVideoContextManager.swift in Sources */,
@@ -3533,7 +3445,6 @@
 				D0EC6D9C1EB9F58900EBF1C3 /* ChatMessageInstantVideoItemNode.swift in Sources */,
 				D0750C8222B2E4EE00BE5F6E /* SharedWakeupManager.swift in Sources */,
 				D0EC6D9D1EB9F58900EBF1C3 /* ChatMessageTextBubbleContentNode.swift in Sources */,
-				D00817DE22B47A14008A895F /* TGBridgeServer.m in Sources */,
 				09F664D021EBCFB900AB7E26 /* WallpaperCropNode.swift in Sources */,
 				D0EC6D9E1EB9F58900EBF1C3 /* ChatMessageWebpageBubbleContentNode.swift in Sources */,
 				D0750C8722B2E76300BE5F6E /* ShareExtensionContext.swift in Sources */,
@@ -3655,13 +3566,11 @@
 				09A218D9229EE1B600DE6898 /* HorizontalStickerGridItem.swift in Sources */,
 				09EC0DED22CB583C00E7185B /* TextLinkHandling.swift in Sources */,
 				D08984F02114AE0C00918162 /* DataPrivacySettingsController.swift in Sources */,
-				D00817DB22B47A14008A895F /* LegacyChatImport.swift in Sources */,
 				09EDAD2C2211552F0012A50B /* AutodownloadMediaCategoryController.swift in Sources */,
 				090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */,
 				D06F31E62135A41C001A0F12 /* ThemeSettingsBrightnessItem.swift in Sources */,
 				09F2158D225CF5BC00AEDF6D /* Pasteboard.swift in Sources */,
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
-				D00817CA22B47A14008A895F /* WatchRequestHandlers.swift in Sources */,
 				D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */,
 				09B4819523028A8A00D5B32B /* ThemeAccentColorControllerNode.swift in Sources */,
 				D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */,
@@ -3672,12 +3581,9 @@
 				D0AD02EA1FFFEBEF00C1DCFF /* ChatMessageLiveLocationTextNode.swift in Sources */,
 				D01C06B51FBB7720001561AB /* ChatMediaInputSettingsItem.swift in Sources */,
 				D091C7A61F8ECEA300D7DE13 /* SettingsThemeWallpaperNode.swift in Sources */,
-				D00817CC22B47A14008A895F /* WatchCommunicationManager.swift in Sources */,
-				D0AE303522B1D3620058D3BC /* TGBridgeAudioEncoder.m in Sources */,
 				D00817D922B47A14008A895F /* AppDelegate.swift in Sources */,
 				091417F221EF4E5D00C8325A /* WallpaperGalleryController.swift in Sources */,
 				D0FC194D201F82A000FEDBB2 /* OpenResolvedUrl.swift in Sources */,
-				D00817D422B47A14008A895F /* LegacyUserDataImport.swift in Sources */,
 				09CE95062236D47F00A7D2C3 /* SettingsSearchItem.swift in Sources */,
 				D0AF323A1FB1D8D60097362B /* ChatOverlayNavigationBar.swift in Sources */,
 				D0EC6E2B1EB9F58900EBF1C3 /* ComposeController.swift in Sources */,
@@ -3705,15 +3611,10 @@
 				09A218DA229EE1B600DE6898 /* HorizontalStickersChatContextPanelNode.swift in Sources */,
 				091417F421EF4F5F00C8325A /* WallpaperGalleryItem.swift in Sources */,
 				D02F4AE91FCF370B004DFBAE /* ChatMessageInteractiveMediaBadge.swift in Sources */,
-				D00817CF22B47A14008A895F /* LegacyFileImport.swift in Sources */,
 				09510B1322F96E5B0078CAB7 /* ChatScheduleTimeController.swift in Sources */,
-				D00817DF22B47A14008A895F /* LegacyDataImportSplash.swift in Sources */,
 				D0B37C5C1F8D22AE004252DF /* ThemeSettingsController.swift in Sources */,
 				D05D8B412192FC8A0064586F /* LocalizationListItem.swift in Sources */,
-				D0AE303822B1D3620058D3BC /* TGBridgeAudioDecoder.mm in Sources */,
-				D00817D322B47A14008A895F /* LegacyResourceImport.swift in Sources */,
 				D0380DAD204ED434000414AB /* LegacyLiveUploadInterface.swift in Sources */,
-				D00817D222B47A14008A895F /* LegacyPreferencesImport.swift in Sources */,
 				D0185E882089ED5F005E1A6C /* ProxyListSettingsController.swift in Sources */,
 				D09250061FE5371D003F693F /* GlobalExperimentalSettings.swift in Sources */,
 				D025A4231F79344500563950 /* FetchManager.swift in Sources */,
@@ -3772,7 +3673,6 @@
 				D0CB27D220C17A7F001ACF93 /* TermsOfServiceControllerNode.swift in Sources */,
 				D0EC6E841EB9F58900EBF1C3 /* NotificationItem.swift in Sources */,
 				D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */,
-				D00817D822B47A14008A895F /* TGAutoDownloadPreferences.m in Sources */,
 				D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */,
 				D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */,
 				D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */,

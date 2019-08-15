@@ -20,6 +20,8 @@ import OverlayStatusController
 import UndoUI
 import LegacyUI
 import PassportUI
+import WatchBridge
+import LegacyDataImport
 
 private let handleVoipNotifications = false
 
@@ -1069,7 +1071,7 @@ final class SharedApplicationContext {
             }
         }))
         
-        self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context, allowBackgroundTimeExtension: { timeout in
+        self.watchCommunicationManagerPromise.set(watchCommunicationManager(context: self.context.get() |> flatMap { WatchCommunicationManagerContext(context: $0.context) }, allowBackgroundTimeExtension: { timeout in
             let _ = (self.sharedContextPromise.get()
             |> take(1)).start(next: { sharedContext in
                 sharedContext.wakeupManager.allowBackgroundTimeExtension(timeout: timeout)

@@ -2,7 +2,6 @@ import Foundation
 import TelegramCore
 import SwiftSignalKit
 import Postbox
-
 import LegacyComponents
 
 func resourceFromLegacyImageUrl(_ fileRef: String) -> TelegramMediaResource? {

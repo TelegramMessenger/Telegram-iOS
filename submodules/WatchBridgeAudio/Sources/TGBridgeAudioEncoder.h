@@ -1,8 +1,5 @@
 #import <Foundation/Foundation.h>
 
-@class TGDataItem;
-@class TGLiveUploadActorData;
-
 @interface TGBridgeAudioEncoder : NSObject
 
 - (instancetype)initWithURL:(NSURL *)url;

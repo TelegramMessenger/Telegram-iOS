@@ -1,7 +1,6 @@
 #import "TGBridgeAudioEncoder.h"
 #import <AVFoundation/AVFoundation.h>
 
-#import <opus/opus.h>
 #import <OpusBinding/OpusBinding.h>
 
 static const char *AMQueueSpecific = "AMQueueSpecific";

@@ -30,6 +30,9 @@
       location = "container:"
       name = "Utils">
       <FileRef
+         location = "group:submodules/LegacyDataImport/LegacyDataImport_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
          location = "group:submodules/SSignalKit/SSignalKit_Xcode.xcodeproj">
       </FileRef>
       <FileRef
@@ -491,6 +494,16 @@
       </FileRef>
       <FileRef
          location = "group:submodules/PeerInfoUI/PeerInfoUI_Xcode.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "container:"
+      name = "Watch Bridge">
+      <FileRef
+         location = "group:submodules/WatchBridgeAudio/WatchBridgeAudio_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WatchBridge/WatchBridge_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

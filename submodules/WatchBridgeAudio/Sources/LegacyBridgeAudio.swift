@@ -1,8 +1,6 @@
 import Foundation
 import SwiftSignalKit
 
-import TelegramUIPrivateModule
-
 public func legacyDecodeOpusAudio(path: String, outputPath: String) -> Signal<String, NoError> {
     return Signal { subscriber in
         let decoder = TGBridgeAudioDecoder(url: URL(fileURLWithPath: path), outputUrl: URL(fileURLWithPath: outputPath))

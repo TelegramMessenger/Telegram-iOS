@@ -3,12 +3,31 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import WatchCommon
-import TelegramUIPrivateModule
 import SSignalKit
 import TelegramUIPreferences
 import AccountContext
 
-final class WatchCommunicationManager {
+public final class WatchCommunicationManagerContext {
+    public let context: AccountContext
+    
+    public init(context: AccountContext) {
+        self.context = context
+    }
+}
+
+public final class WatchManagerArguments {
+    public let appInstalled: Signal<Bool, NoError>
+    public let navigateToMessageRequested: Signal<MessageId, NoError>
+    public let runningTasks: Signal<WatchRunningTasks?, NoError>
+    
+    public init(appInstalled: Signal<Bool, NoError>, navigateToMessageRequested: Signal<MessageId, NoError>, runningTasks: Signal<WatchRunningTasks?, NoError>) {
+        self.appInstalled = appInstalled
+        self.navigateToMessageRequested = navigateToMessageRequested
+        self.runningTasks = runningTasks
+    }
+}
+
+public final class WatchCommunicationManager {
     private let queue: Queue
     private let allowBackgroundTimeExtension: (Double) -> Void
     
@@ -21,7 +40,7 @@ final class WatchCommunicationManager {
     private let presets = Promise<WatchPresetSettings?>(nil)
     private let navigateToMessagePipe = ValuePipe<MessageId>()
     
-    init(queue: Queue, context: Promise<AuthorizedApplicationContext?>, allowBackgroundTimeExtension: @escaping (Double) -> Void) {
+    public init(queue: Queue, context: Signal<WatchCommunicationManagerContext?, NoError>, allowBackgroundTimeExtension: @escaping (Double) -> Void) {
         self.queue = queue
         self.allowBackgroundTimeExtension = allowBackgroundTimeExtension
         
@@ -62,7 +81,7 @@ final class WatchCommunicationManager {
         })
         self.server.startRunning()
         
-        self.contextDisposable.set((combineLatest(self.watchAppInstalled, context.get() |> deliverOn(self.queue))).start(next: { [weak self] appInstalled, appContext in
+        self.contextDisposable.set((combineLatest(self.watchAppInstalled, context |> deliverOn(self.queue))).start(next: { [weak self] appInstalled, appContext in
             guard let strongSelf = self, appInstalled else {
                 return
             }
@@ -87,7 +106,7 @@ final class WatchCommunicationManager {
             }
         }))
         
-        self.presetsDisposable.set((combineLatest(self.watchAppInstalled, self.presets.get() |> distinctUntilChanged |> deliverOn(self.queue), context.get() |> deliverOn(self.queue))).start(next: { [weak self] appInstalled, presets, appContext in
+        self.presetsDisposable.set((combineLatest(self.watchAppInstalled, self.presets.get() |> distinctUntilChanged |> deliverOn(self.queue), context |> deliverOn(self.queue))).start(next: { [weak self] appInstalled, presets, appContext in
             guard let strongSelf = self, let presets = presets, let context = appContext, appInstalled, let tempPath = strongSelf.watchTemporaryStorePath else {
                 return
             }
@@ -126,11 +145,11 @@ final class WatchCommunicationManager {
         self.presetsDisposable.dispose()
     }
     
-    var arguments: WatchManagerArguments {
+    public var arguments: WatchManagerArguments {
         return WatchManagerArguments(appInstalled: self.watchAppInstalled, navigateToMessageRequested: self.navigateToMessagePipe.signal(), runningTasks: self.runningTasks)
     }
     
-    func requestNavigateToMessage(messageId: MessageId) {
+    public func requestNavigateToMessage(messageId: MessageId) {
         self.navigateToMessagePipe.putNext(messageId)
     }
     
@@ -162,18 +181,19 @@ final class WatchCommunicationManager {
         } |> deliverOn(self.queue)
     }
     
-    var watchTemporaryStorePath: String? {
+    public var watchTemporaryStorePath: String? {
         return self.server.temporaryFilesURL?.path
     }
         
-    func sendFile(url: URL, metadata: Dictionary<AnyHashable, Any>, asMessageData: Bool = false) -> Signal<Void, NoError> {
+    public func sendFile(url: URL, metadata: Dictionary<AnyHashable, Any>, asMessageData: Bool = false) -> Signal<Void, NoError> {
         return Signal { subscriber in
             self.server.sendFile(with: url, metadata: metadata, asMessageData: asMessageData)
             subscriber.putCompletion()
             return EmptyDisposable
         } |> runOn(self.queue)
     }
-    func sendFile(data: Data, metadata: Dictionary<AnyHashable, Any>) -> Signal<Void, NoError> {
+    
+    public func sendFile(data: Data, metadata: Dictionary<AnyHashable, Any>) -> Signal<Void, NoError> {
         return Signal { subscriber in
             self.server.sendFile(with: data, metadata: metadata, errorHandler: {})
             subscriber.putCompletion()
@@ -182,7 +202,7 @@ final class WatchCommunicationManager {
     }
 }
 
-func watchCommunicationManager(context: Promise<AuthorizedApplicationContext?>, allowBackgroundTimeExtension: @escaping (Double) -> Void) -> Signal<WatchCommunicationManager?, NoError> {
+public func watchCommunicationManager(context: Signal<WatchCommunicationManagerContext?, NoError>, allowBackgroundTimeExtension: @escaping (Double) -> Void) -> Signal<WatchCommunicationManager?, NoError> {
     return Signal { subscriber in
         let queue = Queue()
         queue.async {
