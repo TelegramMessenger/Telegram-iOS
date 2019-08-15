@@ -149,7 +149,7 @@ public final class TelegramRootController: NavigationController {
             self.popToRoot(animated: false)
         }
         
-        if let index = rootTabController.controllers.index(where: { $0 is ChatListController}) {
+        if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
             rootTabController.selectedIndex = index
         }
         

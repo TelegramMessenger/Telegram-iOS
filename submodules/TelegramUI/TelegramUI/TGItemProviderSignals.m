@@ -7,7 +7,7 @@
 #import <PassKit/PassKit.h>
 
 #import <LegacyComponents/TGPhoneUtils.h>
-#import "TGMimeTypeMap.h"
+#import <MimeTypes/MimeTypes.h>
 
 #import "TGContactModel.h"
 

@@ -8,6 +8,7 @@ import TelegramPresentationData
 import ItemListUI
 import AccountContext
 import AlertUI
+import ItemListAvatarAndNameInfoItem
 
 private let rankMaxLength: Int32 = 16
 

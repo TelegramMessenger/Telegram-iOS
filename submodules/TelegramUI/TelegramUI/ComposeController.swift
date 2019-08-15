@@ -126,13 +126,13 @@ public class ComposeController: ViewController {
                 strongSelf.createActionDisposable.set((controller.result
                 |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
                     if let strongSelf = self, let controller = controller {
-                        let createGroup = createGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
+                        let createGroup = strongSelf.context.sharedContext.makeCreateGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
                             if case let .peer(peerId) = peerId {
                                 return peerId
                             } else {
                                 return nil
                             }
-                        }))
+                        }), initialTitle: nil, mode: .generic, completion: nil)
                         (controller.navigationController as? NavigationController)?.pushViewController(createGroup)
                     }
                 }))

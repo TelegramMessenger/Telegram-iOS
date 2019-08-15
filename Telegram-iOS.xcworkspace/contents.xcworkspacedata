@@ -86,9 +86,18 @@
       <FileRef
          location = "group:submodules/LocalAuth/LocalAuth_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/MimeTypes/MimeTypes_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/Geocoding/Geocoding_Xcode.xcodeproj">
+      </FileRef>
       <Group
          location = "container:"
          name = "Image Processing">
+         <FileRef
+            location = "group:submodules/YuvConversion/YuvConversion.xcodeproj">
+         </FileRef>
          <FileRef
             location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">
          </FileRef>
@@ -121,6 +130,9 @@
       <FileRef
          location = "group:submodules/LiveLocationManager/LiveLocationManager_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
@@ -152,6 +164,9 @@
          </FileRef>
          <FileRef
             location = "group:submodules/MusicAlbumArtResources/MusicAlbumArtResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/LocalMediaResources/LocalMediaResources_Xcode.xcodeproj">
          </FileRef>
       </Group>
    </Group>
@@ -274,6 +289,12 @@
          </FileRef>
          <FileRef
             location = "group:submodules/ChatListSearchItemHeader/ChatListSearchItemHeader_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListAvatarAndNameInfoItem/ItemListAvatarAndNameInfoItem_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/ItemListPeerActionItem/ItemListPeerActionItem_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <Group
@@ -399,6 +420,27 @@
       </FileRef>
       <FileRef
          location = "group:submodules/LanguageSuggestionUI/LanguageSuggestionUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/HashtagSearchUI/HashtagSearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/StickerPackPreviewUI/StickerPackPreviewUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/JoinLinkPreviewUI/JoinLinkPreviewUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LanguageLinkPreviewUI/LanguageLinkPreviewUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/WebSearchUI/WebSearchUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/LegacyMediaPickerUI/LegacyMediaPickerUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PeersNearbyUI/PeersNearbyUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <FileRef

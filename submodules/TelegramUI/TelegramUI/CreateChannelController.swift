@@ -10,6 +10,8 @@ import ItemListUI
 import AccountContext
 import AlertUI
 import LegacyUI
+import ItemListAvatarAndNameInfoItem
+import WebSearchUI
 
 private struct CreateChannelArguments {
     let account: Account

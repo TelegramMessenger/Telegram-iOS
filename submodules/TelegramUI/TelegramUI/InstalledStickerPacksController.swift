@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import TextFormat
 import AccountContext
+import StickerPackPreviewUI
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account

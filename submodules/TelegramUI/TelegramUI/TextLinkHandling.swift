@@ -10,6 +10,9 @@ import AccountContext
 import SafariServices
 import OpenInExternalAppUI
 import InstantPageUI
+import HashtagSearchUI
+import StickerPackPreviewUI
+import JoinLinkPreviewUI
 
 func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigateDisposable: MetaDisposable, controller: ViewController, action: TextLinkItemActionType, itemLink: TextLinkItem) {
     let presentImpl: (ViewController, Any?) -> Void = { controllerToPresent, _ in

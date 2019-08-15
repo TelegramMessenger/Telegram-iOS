@@ -12,6 +12,8 @@ import AccountContext
 import AlertUI
 import PhotoResources
 import MediaResources
+import ItemListAvatarAndNameInfoItem
+import Geocoding
 
 private enum DeviceContactInfoAction {
     case sendMessage

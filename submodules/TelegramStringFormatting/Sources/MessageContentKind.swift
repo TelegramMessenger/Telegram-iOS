@@ -3,6 +3,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import PlatformRestrictionMatching
 
 public enum MessageContentKindKey {
     case text
@@ -20,6 +21,7 @@ public enum MessageContentKindKey {
     case expiredImage
     case expiredVideo
     case poll
+    case restricted
 }
 
 public enum MessageContentKind: Equatable {
@@ -38,6 +40,7 @@ public enum MessageContentKind: Equatable {
     case expiredImage
     case expiredVideo
     case poll(String)
+    case restricted(String)
     
     public var key: MessageContentKindKey {
         switch self {
@@ -71,11 +74,21 @@ public enum MessageContentKind: Equatable {
             return .expiredVideo
         case .poll:
             return .poll
+        case .restricted:
+            return .restricted
         }
     }
 }
 
 public func messageContentKind(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> MessageContentKind {
+    for attribute in message.attributes {
+        if let attribute = attribute as? RestrictedContentMessageAttribute {
+            if attribute.matchesPlatform() {
+                return .restricted(attribute.text)
+            }
+            break
+        }
+    }
     for media in message.media {
         if let kind = mediaContentKind(media, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, accountPeerId: accountPeerId) {
             return kind
@@ -196,6 +209,8 @@ public func stringForMediaKind(_ kind: MessageContentKind, strings: Presentation
         return (strings.Message_VideoExpired, true)
     case let .poll(text):
         return ("📊 \(text)", false)
+    case let .restricted(text):
+        return (text, false)
     }
 }
 

@@ -11,6 +11,7 @@ import OverlayStatusController
 import AccountContext
 import AlertUI
 import ItemListPeerItem
+import ItemListPeerActionItem
 
 private final class ChannelDiscussionGroupSetupControllerArguments {
     let account: Account
@@ -240,7 +241,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             guard let peer = peer else {
                 return
             }
-            pushControllerImpl?(createGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle + " Chat", mode: .supergroup, completion: { groupId, dismiss in
+            pushControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle + " Chat", mode: .supergroup, completion: { groupId, dismiss in
                 var applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in

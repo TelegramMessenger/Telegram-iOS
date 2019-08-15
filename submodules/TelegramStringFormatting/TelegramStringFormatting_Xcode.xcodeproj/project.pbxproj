@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D03E3D4F23045E510049C28B /* PlatformRestrictionMatching.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3D4E23045E510049C28B /* PlatformRestrictionMatching.framework */; };
 		D0879AB222F7021000C4D6B3 /* TelegramStringFormatting.h in Headers */ = {isa = PBXBuildFile; fileRef = D0879AB022F7021000C4D6B3 /* TelegramStringFormatting.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0879ABD22F705AE00C4D6B3 /* PresenceStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879ABC22F705AE00C4D6B3 /* PresenceStrings.swift */; };
 		D0879AC022F705B800C4D6B3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879ABF22F705B800C4D6B3 /* Foundation.framework */; };
@@ -28,6 +29,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D03E3D4E23045E510049C28B /* PlatformRestrictionMatching.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PlatformRestrictionMatching.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879AAD22F7021000C4D6B3 /* TelegramStringFormatting.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramStringFormatting.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879AB022F7021000C4D6B3 /* TelegramStringFormatting.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramStringFormatting.h; sourceTree = "<group>"; };
 		D0879AB122F7021000C4D6B3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -55,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E3D4F23045E510049C28B /* PlatformRestrictionMatching.framework in Frameworks */,
 				D0C9C35E2300AEF100FAB518 /* Display.framework in Frameworks */,
 				D0C9C35C2300AEBA00FAB518 /* LocalizedPeerData.framework in Frameworks */,
 				D0C9C35A2300AE7200FAB518 /* TextFormat.framework in Frameworks */,
@@ -107,6 +110,7 @@
 		D0879ABE22F705B700C4D6B3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E3D4E23045E510049C28B /* PlatformRestrictionMatching.framework */,
 				D0C9C35D2300AEF100FAB518 /* Display.framework */,
 				D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */,
 				D0C9C3592300AE7200FAB518 /* TextFormat.framework */,

@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import StickerResources
 import AccountContext
+import AnimationUI
 
 final class StickerPaneSearchStickerSection: GridSection {
     let code: String

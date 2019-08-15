@@ -12,6 +12,7 @@ import AccountContext
 import Tuples
 import StickerResources
 import PhotoResources
+import AnimationUI
 
 private enum NotificationContentAuthorizationError {
     case unauthorized

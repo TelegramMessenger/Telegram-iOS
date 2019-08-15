@@ -12,6 +12,7 @@ import AccountContext
 import GalleryUI
 import InstantPageUI
 import LocationUI
+import StickerPackPreviewUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)

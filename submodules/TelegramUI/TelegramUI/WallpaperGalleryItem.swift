@@ -14,6 +14,7 @@ import AccountContext
 import RadialStatusNode
 import PhotoResources
 import GalleryUI
+import LocalMediaResources
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool

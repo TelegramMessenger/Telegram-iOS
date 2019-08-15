@@ -13,6 +13,10 @@ import TemporaryCachedPeerDataManager
 import AlertUI
 import OpenInExternalAppUI
 import InstantPageUI
+import HashtagSearchUI
+import StickerPackPreviewUI
+import JoinLinkPreviewUI
+import LanguageLinkPreviewUI
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]

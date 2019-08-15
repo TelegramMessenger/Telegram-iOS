@@ -13,6 +13,7 @@ import TemporaryCachedPeerDataManager
 import AlertUI
 import ItemListPeerItem
 import TelegramPermissionsUI
+import ItemListPeerActionItem
 
 private final class ChannelPermissionsControllerArguments {
     let account: Account

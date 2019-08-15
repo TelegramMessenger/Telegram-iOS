@@ -10,6 +10,7 @@ import TelegramStringFormatting
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import ItemListAvatarAndNameInfoItem
 
 private final class ChannelBannedMemberControllerArguments {
     let account: Account

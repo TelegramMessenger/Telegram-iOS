@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import StickerResources
 import AccountContext
+import AnimationUI
 
 class MediaInputPaneTrendingItem: ListViewItem {
     let account: Account
