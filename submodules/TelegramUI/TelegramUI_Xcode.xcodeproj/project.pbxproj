@@ -166,11 +166,6 @@
 		D01C06B51FBB7720001561AB /* ChatMediaInputSettingsItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06B41FBB7720001561AB /* ChatMediaInputSettingsItem.swift */; };
 		D01DBA9B209CC6AD00C64E64 /* ChatLinkPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01DBA9A209CC6AD00C64E64 /* ChatLinkPreview.swift */; };
 		D01FB437217CEC62009C6134 /* FetchVideoThumbnail.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01FB436217CEC62009C6134 /* FetchVideoThumbnail.swift */; };
-		D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */ = {isa = PBXBuildFile; fileRef = D0208AD31FA33D14001F0D5F /* RaiseToListenActivator.h */; };
-		D0208AD61FA33D14001F0D5F /* RaiseToListenActivator.m in Sources */ = {isa = PBXBuildFile; fileRef = D0208AD41FA33D14001F0D5F /* RaiseToListenActivator.m */; };
-		D0208AD91FA34017001F0D5F /* DeviceProximityManager.h in Headers */ = {isa = PBXBuildFile; fileRef = D0208AD71FA34017001F0D5F /* DeviceProximityManager.h */; };
-		D0208ADA1FA34017001F0D5F /* DeviceProximityManager.m in Sources */ = {isa = PBXBuildFile; fileRef = D0208AD81FA34017001F0D5F /* DeviceProximityManager.m */; };
-		D0208ADC1FA346A4001F0D5F /* RaiseToListen.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0208ADB1FA346A4001F0D5F /* RaiseToListen.swift */; };
 		D020A9DA1FEAE675008C66F7 /* OverlayAudioPlayerController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D020A9D91FEAE675008C66F7 /* OverlayAudioPlayerController.swift */; };
 		D020A9DC1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D020A9DB1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift */; };
 		D025402522E1E00100AC0195 /* ChatSlowmodeHintController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D025402422E1E00100AC0195 /* ChatSlowmodeHintController.swift */; };
@@ -219,6 +214,8 @@
 		D03E428A23056B610049C28B /* NotificationSoundSelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E428923056B610049C28B /* NotificationSoundSelectionUI.framework */; };
 		D03E42B423056C730049C28B /* EncryptionKeyVisualization.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42B323056C730049C28B /* EncryptionKeyVisualization.framework */; };
 		D03E42E6230572530049C28B /* ItemListAddressItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42E5230572530049C28B /* ItemListAddressItem.framework */; };
+		D03E430F2305775D0049C28B /* DeviceProximity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E430E2305775D0049C28B /* DeviceProximity.framework */; };
+		D03E4339230578550049C28B /* RaiseToListen.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4338230578550049C28B /* RaiseToListen.framework */; };
 		D04203152037162700490EA5 /* MediaInputPaneTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */; };
 		D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */; };
 		D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */; };
@@ -902,11 +899,6 @@
 		D01DBA9A209CC6AD00C64E64 /* ChatLinkPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLinkPreview.swift; sourceTree = "<group>"; };
 		D01F66121DE8903300345CBE /* ChatTextInputMediaRecordingButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputMediaRecordingButton.swift; sourceTree = "<group>"; };
 		D01FB436217CEC62009C6134 /* FetchVideoThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FetchVideoThumbnail.swift; sourceTree = "<group>"; };
-		D0208AD31FA33D14001F0D5F /* RaiseToListenActivator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RaiseToListenActivator.h; sourceTree = "<group>"; };
-		D0208AD41FA33D14001F0D5F /* RaiseToListenActivator.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RaiseToListenActivator.m; sourceTree = "<group>"; };
-		D0208AD71FA34017001F0D5F /* DeviceProximityManager.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DeviceProximityManager.h; sourceTree = "<group>"; };
-		D0208AD81FA34017001F0D5F /* DeviceProximityManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = DeviceProximityManager.m; sourceTree = "<group>"; };
-		D0208ADB1FA346A4001F0D5F /* RaiseToListen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaiseToListen.swift; sourceTree = "<group>"; };
 		D020A9D91FEAE675008C66F7 /* OverlayAudioPlayerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayAudioPlayerController.swift; sourceTree = "<group>"; };
 		D020A9DB1FEAE6E7008C66F7 /* OverlayPlayerControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPlayerControllerNode.swift; sourceTree = "<group>"; };
 		D021E0CD1DB4135500C6B04F /* ChatMediaInputNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputNode.swift; sourceTree = "<group>"; };
@@ -980,6 +972,8 @@
 		D03E428923056B610049C28B /* NotificationSoundSelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = NotificationSoundSelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E42B323056C730049C28B /* EncryptionKeyVisualization.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = EncryptionKeyVisualization.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E42E5230572530049C28B /* ItemListAddressItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListAddressItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E430E2305775D0049C28B /* DeviceProximity.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceProximity.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4338230578550049C28B /* RaiseToListen.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RaiseToListen.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E5E081E55C49C0029569A /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
 		D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputPaneTrendingItem.swift; sourceTree = "<group>"; };
 		D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsController.swift; sourceTree = "<group>"; };
@@ -1473,6 +1467,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E4339230578550049C28B /* RaiseToListen.framework in Frameworks */,
+				D03E430F2305775D0049C28B /* DeviceProximity.framework in Frameworks */,
 				D03E42E6230572530049C28B /* ItemListAddressItem.framework in Frameworks */,
 				D03E42B423056C730049C28B /* EncryptionKeyVisualization.framework in Frameworks */,
 				D03E428A23056B610049C28B /* NotificationSoundSelectionUI.framework in Frameworks */,
@@ -2219,6 +2215,8 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E4338230578550049C28B /* RaiseToListen.framework */,
+				D03E430E2305775D0049C28B /* DeviceProximity.framework */,
 				D03E42E5230572530049C28B /* ItemListAddressItem.framework */,
 				D03E42B323056C730049C28B /* EncryptionKeyVisualization.framework */,
 				D03E428923056B610049C28B /* NotificationSoundSelectionUI.framework */,
@@ -2432,7 +2430,6 @@
 			children = (
 				09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */,
 				099529B321D3E5D800805E13 /* CheckDiskSpace.swift */,
-				D0208ADB1FA346A4001F0D5F /* RaiseToListen.swift */,
 				09D304142173C0E900C00567 /* WatchManager.swift */,
 				09EDAD29220DA6A40012A50B /* VolumeButtons.swift */,
 			);
@@ -3100,10 +3097,6 @@
 			isa = PBXGroup;
 			children = (
 				D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */,
-				D0208AD31FA33D14001F0D5F /* RaiseToListenActivator.h */,
-				D0208AD41FA33D14001F0D5F /* RaiseToListenActivator.m */,
-				D0208AD71FA34017001F0D5F /* DeviceProximityManager.h */,
-				D0208AD81FA34017001F0D5F /* DeviceProximityManager.m */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -3241,12 +3234,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0AE303622B1D3620058D3BC /* TGBridgeAudioDecoder.h in Headers */,
-				D0208AD51FA33D14001F0D5F /* RaiseToListenActivator.h in Headers */,
 				D00817DA22B47A14008A895F /* TGPresentationAutoNightPreferences.h in Headers */,
 				D00817E022B47A14008A895F /* UIImage+ImageEffects.h in Headers */,
 				D08803C51F6064CF00DD7951 /* TelegramUI.h in Headers */,
 				D008177B22B46B7E008A895F /* TGContactModel.h in Headers */,
-				D0208AD91FA34017001F0D5F /* DeviceProximityManager.h in Headers */,
 				D0AE303722B1D3620058D3BC /* TGBridgeAudioEncoder.h in Headers */,
 				D00817CD22B47A14008A895F /* TGAutoDownloadPreferences.h in Headers */,
 				D008177C22B46B7E008A895F /* TGItemProviderSignals.h in Headers */,
@@ -3442,7 +3433,6 @@
 				D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */,
 				09DD5D5221ED175300D7007A /* WallpaperColorPickerNode.swift in Sources */,
 				D01848E821A03BDA00B6DEBD /* ChatSearchState.swift in Sources */,
-				D0208ADC1FA346A4001F0D5F /* RaiseToListen.swift in Sources */,
 				09D304182173C15700C00567 /* WatchSettingsController.swift in Sources */,
 				D0C0B5B71EE1DEF1000F4D2C /* ThemeGridControllerItem.swift in Sources */,
 				D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */,
@@ -3559,7 +3549,6 @@
 				D0EC6D541EB9F58800EBF1C3 /* ChatHistoryEntriesForView.swift in Sources */,
 				D0943B051FDDFDA0001522CC /* OverlayInstantVideoNode.swift in Sources */,
 				D0EC6D551EB9F58800EBF1C3 /* PreparedChatHistoryViewTransition.swift in Sources */,
-				D0208ADA1FA34017001F0D5F /* DeviceProximityManager.m in Sources */,
 				D04281FC200E61BC009DDE36 /* ChatRecentActionsInteraction.swift in Sources */,
 				D0EC6D561EB9F58800EBF1C3 /* ChatHistoryNode.swift in Sources */,
 				D0EC6D571EB9F58800EBF1C3 /* ChatHistoryListNode.swift in Sources */,
@@ -3792,7 +3781,6 @@
 				D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */,
 				09B4819523028A8A00D5B32B /* ThemeAccentColorControllerNode.swift in Sources */,
 				D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */,
-				D0208AD61FA33D14001F0D5F /* RaiseToListenActivator.m in Sources */,
 				D04554A421B42982007A6DD9 /* ConfirmPhoneNumberController.swift in Sources */,
 				D0D4345C1F97CEAA00CC1806 /* ProxyServerSettingsController.swift in Sources */,
 				D08BDF641FA37BEA009D08E1 /* ChatRecordingPreviewInputPanelNode.swift in Sources */,

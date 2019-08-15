@@ -2,11 +2,10 @@
 
 #import <UIKit/UIKit.h>
 
-#import <SSignalKit/SAtomic.h>
-#import <SSignalKit/SBag.h>
+#import "DeviceProximityBag.h"
 
 @interface DeviceProximityManager () {
-    SBag *_subscribers;
+    DeviceProximityBag *_subscribers;
     bool _proximityState;
     bool _globallyEnabled;
 }
@@ -31,7 +30,7 @@
 - (instancetype)init {
     self = [super init];
     if (self != nil) {
-        _subscribers = [[SBag alloc] init];
+        _subscribers = [[DeviceProximityBag alloc] init];
         
         __weak DeviceProximityManager *weakSelf = self;
         [[NSNotificationCenter defaultCenter] addObserverForName:UIDeviceProximityStateDidChangeNotification object:[UIDevice currentDevice] queue:[NSOperationQueue mainQueue] usingBlock:^(__unused NSNotification *notification)

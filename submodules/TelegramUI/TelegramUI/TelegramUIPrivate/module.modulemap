@@ -1,8 +1,6 @@
 module TelegramUIPrivateModule {
     header "../../third-party/opusenc/opusenc.h"
     header "../TGDataItem.h"
-    header "../DeviceProximityManager.h"
-    header "../RaiseToListenActivator.h"
     header "../Bridge Audio/TGBridgeAudioDecoder.h"
     header "../Bridge Audio/TGBridgeAudioEncoder.h"
     header "../TGContactModel.h"

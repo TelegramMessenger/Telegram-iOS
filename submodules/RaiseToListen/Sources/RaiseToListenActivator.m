@@ -1,16 +1,12 @@
 #import "RaiseToListenActivator.h"
 
 #import <UIKit/UIKit.h>
-#import <SSignalKit/SSignalKit.h>
+#import <DeviceProximity/DeviceProximity.h>
 
-#import "DeviceProximityManager.h"
-
-static NSString *TGEncodeText(NSString *string, int key)
-{
+static NSString *TGEncodeText(NSString *string, int key) {
     NSMutableString *result = [[NSMutableString alloc] init];
     
-    for (int i = 0; i < (int)[string length]; i++)
-    {
+    for (int i = 0; i < (int)[string length]; i++) {
         unichar c = [string characterAtIndex:i];
         c += key;
         [result appendString:[NSString stringWithCharacters:&c length:1]];
@@ -19,13 +15,37 @@ static NSString *TGEncodeText(NSString *string, int key)
     return result;
 }
 
-static void TGDispatchOnMainThread(dispatch_block_t block)
-{
-    if ([NSThread isMainThread])
+static void TGDispatchOnMainThread(dispatch_block_t block) {
+    if ([NSThread isMainThread]) {
         block();
-    else
+    } else {
         dispatch_async(dispatch_get_main_queue(), block);
+    }
 }
+
+@interface RaiseToListenTimerTarget : NSObject
+
+@property (nonatomic, copy) void (^block)(void);
+
+@end
+
+@implementation RaiseToListenTimerTarget
+
+- (instancetype)initWithBlock:(void (^)(void))block {
+    self = [super init];
+    if (self != nil) {
+        _block = [block copy];
+    }
+    return self;
+}
+
+- (void)timerEvent {
+    if (_block) {
+        _block();
+    }
+}
+
+@end
 
 @protocol RaiseManager <NSObject>
 
@@ -42,7 +62,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
     void (^_deactivate)(void);
     
     bool _proximityState;
-    STimer *_timer;
+    NSTimer *_timer;
     
     id _manager;
     CFTimeInterval _activationTimestamp;
@@ -143,40 +163,40 @@ static void TGDispatchOnMainThread(dispatch_block_t block)
             _timer = nil;
         } else if (_timer == nil) {
             __weak RaiseToListenActivator *weakSelf = self;
-            _timer = [[STimer alloc] initWithTimeout:1.0 repeat:false completion:^{
+            _timer = [[NSTimer alloc] initWithFireDate:[NSDate dateWithTimeIntervalSinceNow:1.0] interval:1.0 target:[[RaiseToListenTimerTarget alloc] initWithBlock:^{
                 __strong RaiseToListenActivator *strongSelf = weakSelf;
                 if (strongSelf != nil) {
                     strongSelf->_timer = nil;
                     [strongSelf stopCheckingProximity];
                 }
-            } queue:[SQueue mainQueue]];
-            [_timer start];
+            }] selector:@selector(timerEvent) userInfo:nil repeats:false];
+            [[NSRunLoop mainRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
         }
     }
 }
 
 - (void)proximityChanged:(bool)proximityState {
     TGDispatchOnMainThread(^{
-        if (_proximityState != proximityState) {
-            _proximityState = proximityState;
+        if (self->_proximityState != proximityState) {
+            self->_proximityState = proximityState;
             
-            if (proximityState && _timer != nil) {
-                [_timer invalidate];
-                _timer = nil;
-                _activated = true;
-                _activationTimestamp = CACurrentMediaTime();
+            if (proximityState && self->_timer != nil) {
+                [self->_timer invalidate];
+                self->_timer = nil;
+                self->_activated = true;
+                self->_activationTimestamp = CACurrentMediaTime();
                 
-                if (_activate) {
-                    _activate();
+                if (self->_activate) {
+                    self->_activate();
                 }
             } else if (!proximityState) {
-                [_timer invalidate];
-                _timer = nil;
+                [self->_timer invalidate];
+                self->_timer = nil;
                 [self stopCheckingProximity];
                 
-                _activated = false;
-                if (_deactivate) {
-                    _deactivate();
+                self->_activated = false;
+                if (self->_deactivate) {
+                    self->_deactivate();
                 }
             }
         }

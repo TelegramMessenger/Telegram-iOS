@@ -1,17 +1,15 @@
 import Foundation
 
-import TelegramUIPrivateModule
-
-final class RaiseToListenManager {
+public final class RaiseToListenManager {
     private let activator: RaiseToListenActivator
     
-    var enabled: Bool = false {
+    public var enabled: Bool = false {
         didSet {
             self.activator.enabled = self.enabled
         }
     }
     
-    init(shouldActivate: @escaping () -> Bool, activate: @escaping () -> Void, deactivate: @escaping () -> Void) {
+    public init(shouldActivate: @escaping () -> Bool, activate: @escaping () -> Void, deactivate: @escaping () -> Void) {
         self.activator = RaiseToListenActivator(shouldActivate: {
             return shouldActivate()
         }, activate: {
@@ -21,11 +19,11 @@ final class RaiseToListenManager {
         })
     }
     
-    func activateBasedOnProximity(delay: Double) {
+    public func activateBasedOnProximity(delay: Double) {
         self.activator.activateBasedOnProximity(withDelay: delay)
     }
     
-    func applicationResignedActive() {
+    public func applicationResignedActive() {
         self.activator.applicationResignedActive()
     }
 }
