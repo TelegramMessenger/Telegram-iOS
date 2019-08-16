@@ -77,9 +77,10 @@
 		D039FB1C21714D9800BD1BAD /* PeerPresencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D039FB1A21714D9800BD1BAD /* PeerPresencesView.swift */; };
 		D03BCCF81C73561C0097A291 /* Table.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03BCCF71C73561C0097A291 /* Table.swift */; };
 		D03E45572305C7C90049C28B /* sqlcipher.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45562305C7C90049C28B /* sqlcipher.framework */; };
-		D03E457B2305CD000049C28B /* Crc32.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E457A2305CD000049C28B /* Crc32.framework */; };
 		D03E457D2305CD090049C28B /* Crc32.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E457C2305CD090049C28B /* Crc32.framework */; };
 		D03E457F2305CD130049C28B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E457E2305CD130049C28B /* Foundation.framework */; };
+		D03E462C2306E01C0049C28B /* sqlciphermac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E462B2306E01C0049C28B /* sqlciphermac.framework */; };
+		D03E463D2306E0F60049C28B /* crc32mac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E463C2306E0F60049C28B /* crc32mac.framework */; };
 		D040CA6422665370007123CE /* PostboxUpgrade_23to24.swift in Sources */ = {isa = PBXBuildFile; fileRef = D040CA6322665370007123CE /* PostboxUpgrade_23to24.swift */; };
 		D040CA6522665370007123CE /* PostboxUpgrade_23to24.swift in Sources */ = {isa = PBXBuildFile; fileRef = D040CA6322665370007123CE /* PostboxUpgrade_23to24.swift */; };
 		D0439B3F2289F6300067E026 /* AccountManagerAtomicState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0439B3E2289F6300067E026 /* AccountManagerAtomicState.swift */; };
@@ -444,6 +445,8 @@
 		D03E457A2305CD000049C28B /* Crc32.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Crc32.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E457C2305CD090049C28B /* Crc32.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Crc32.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E457E2305CD130049C28B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D03E462B2306E01C0049C28B /* sqlciphermac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = sqlciphermac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E463C2306E0F60049C28B /* crc32mac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = crc32mac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D040CA6322665370007123CE /* PostboxUpgrade_23to24.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostboxUpgrade_23to24.swift; sourceTree = "<group>"; };
 		D0439B3E2289F6300067E026 /* AccountManagerAtomicState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountManagerAtomicState.swift; sourceTree = "<group>"; };
 		D044CA291C617D39002160FF /* SeedConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SeedConfiguration.swift; sourceTree = "<group>"; };
@@ -613,7 +616,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E457B2305CD000049C28B /* Crc32.framework in Frameworks */,
+				D03E463D2306E0F60049C28B /* crc32mac.framework in Frameworks */,
+				D03E462C2306E01C0049C28B /* sqlciphermac.framework in Frameworks */,
 				D0B418611D7DFE95004562A4 /* SwiftSignalKitMac.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -692,6 +696,8 @@
 		D0B4185F1D7DFE95004562A4 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E463C2306E0F60049C28B /* crc32mac.framework */,
+				D03E462B2306E01C0049C28B /* sqlciphermac.framework */,
 				D03E457E2305CD130049C28B /* Foundation.framework */,
 				D03E457C2305CD090049C28B /* Crc32.framework */,
 				D03E457A2305CD000049C28B /* Crc32.framework */,
