@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramCore
 import TextFormat
 import Display
 import SwiftSignalKit
@@ -274,9 +275,95 @@ public final class ChatEmbeddedInterfaceState: PeerChatListEmbeddedInterfaceStat
     }
 }
 
+public enum ChatPresentationInputQueryResult: Equatable {
+    case stickers([FoundStickerItem])
+    case hashtags([String])
+    case mentions([Peer])
+    case commands([PeerCommand])
+    case emojis([(String, String)], NSRange)
+    case contextRequestResult(Peer?, ChatContextResultCollection?)
+    
+    public static func ==(lhs: ChatPresentationInputQueryResult, rhs: ChatPresentationInputQueryResult) -> Bool {
+        switch lhs {
+        case let .stickers(lhsItems):
+            if case let .stickers(rhsItems) = rhs, lhsItems == rhsItems {
+                return true
+            } else {
+                return false
+            }
+        case let .hashtags(lhsResults):
+            if case let .hashtags(rhsResults) = rhs {
+                return lhsResults == rhsResults
+            } else {
+                return false
+            }
+        case let .mentions(lhsPeers):
+            if case let .mentions(rhsPeers) = rhs {
+                if lhsPeers.count != rhsPeers.count {
+                    return false
+                } else {
+                    for i in 0 ..< lhsPeers.count {
+                        if !lhsPeers[i].isEqual(rhsPeers[i]) {
+                            return false
+                        }
+                    }
+                    return true
+                }
+            } else {
+                return false
+            }
+        case let .commands(lhsCommands):
+            if case let .commands(rhsCommands) = rhs {
+                if lhsCommands != rhsCommands {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .emojis(lhsValue, lhsRange):
+            if case let .emojis(rhsValue, rhsRange) = rhs {
+                if lhsRange != rhsRange {
+                    return false
+                }
+                if lhsValue.count != rhsValue.count {
+                    return false
+                }
+                for i in 0 ..< lhsValue.count {
+                    if lhsValue[i] != rhsValue[i] {
+                        return false
+                    }
+                }
+                return true
+            } else {
+                return false
+            }
+        case let .contextRequestResult(lhsPeer, lhsCollection):
+            if case let .contextRequestResult(rhsPeer, rhsCollection) = rhs {
+                if let lhsPeer = lhsPeer, let rhsPeer = rhsPeer {
+                    if !lhsPeer.isEqual(rhsPeer) {
+                        return false
+                    }
+                } else if (lhsPeer != nil) != (rhsPeer != nil) {
+                    return false
+                }
+                
+                if lhsCollection != rhsCollection {
+                    return false
+                }
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+}
+
 public protocol ChatController: ViewController {
     var chatLocation: ChatLocation { get }
     var canReadHistory: ValuePromise<Bool> { get }
+    var parentController: ViewController? { get set }
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
+    func beginMessageSearch(_ query: String)
 }

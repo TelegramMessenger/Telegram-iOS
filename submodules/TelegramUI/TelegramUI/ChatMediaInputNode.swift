@@ -8,6 +8,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import MergeLists
 import AccountContext
+import StickerPackPreviewUI
+import PeerInfoUI
 
 private struct PeerSpecificPackData {
     let peer: Peer

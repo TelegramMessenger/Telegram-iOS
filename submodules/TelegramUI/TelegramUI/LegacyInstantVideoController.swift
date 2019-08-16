@@ -10,6 +10,7 @@ import LegacyComponents
 import AccountContext
 import LegacyUI
 import ImageCompression
+import LocalMediaResources
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>

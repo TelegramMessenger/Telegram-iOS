@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import AccountContext
 import ItemListPeerItem
+import ItemListPeerActionItem
 
 private final class BlockedPeersControllerArguments {
     let account: Account

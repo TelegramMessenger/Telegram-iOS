@@ -16,6 +16,8 @@ import TelegramNotices
 import LegacyUI
 import TelegramPermissionsUI
 import PasscodeUI
+import ImageBlur
+import WatchBridge
 
 func isAccessLocked(data: PostboxAccessChallengeData, at timestamp: Int32) -> Bool {
     if data.isLockable, let autolockDeadline = data.autolockDeadline, autolockDeadline <= timestamp {
@@ -870,7 +872,7 @@ final class AuthorizedApplicationContext {
                 UIGraphicsPushContext(context)
                 self.mainWindow.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
                 UIGraphicsPopContext()
-            })?.applyScreenshotEffect()
+            }).flatMap(applyScreenshotEffectToImage)
             self.lockedCoveringView.updateSnapshot(image)
         } else {
             self.lockedCoveringView.updateSnapshot(nil)

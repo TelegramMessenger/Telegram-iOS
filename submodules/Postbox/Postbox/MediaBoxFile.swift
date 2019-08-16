@@ -5,7 +5,7 @@ import SwiftSignalKit
 import SwiftSignalKitMac
 #endif
 
-import sqlcipher
+import Crc32
 
 private final class MediaBoxFileMap {
     fileprivate(set) var sum: Int32

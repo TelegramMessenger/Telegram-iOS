@@ -16,6 +16,8 @@ import ItemListPeerItem
 import ContactsPeerItem
 import ChatListSearchItemHeader
 import ChatListUI
+import ItemListPeerActionItem
+import TelegramStringFormatting
 
 private final class NotificationExceptionState : Equatable {
     let mode:NotificationExceptionMode

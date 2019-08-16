@@ -7,6 +7,22 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D03E3E4A2304B4CC0049C28B /* RLottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E492304B4CC0049C28B /* RLottie.framework */; };
+		D03E3E4F2304B50A0049C28B /* AnimatedStickerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3E4D2304B50A0049C28B /* AnimatedStickerNode.swift */; };
+		D03E3E502304B50A0049C28B /* AnimatedStickerUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3E4E2304B50A0049C28B /* AnimatedStickerUtils.swift */; };
+		D03E3E522304B51A0049C28B /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E512304B51A0049C28B /* Postbox.framework */; };
+		D03E3E542304B51E0049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E532304B51E0049C28B /* TelegramCore.framework */; };
+		D03E3E562304B52F0049C28B /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E552304B52F0049C28B /* libcompression.tbd */; };
+		D03E3E582304B53B0049C28B /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E572304B53B0049C28B /* Display.framework */; };
+		D03E3E5A2304B5400049C28B /* GZip.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E592304B5400049C28B /* GZip.framework */; };
+		D03E3E5C2304B5450049C28B /* Tuples.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E5B2304B5450049C28B /* Tuples.framework */; };
+		D03E3E5E2304B5490049C28B /* MediaResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E5D2304B5490049C28B /* MediaResources.framework */; };
+		D03E3E602304B54E0049C28B /* StickerResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E5F2304B54E0049C28B /* StickerResources.framework */; };
+		D03E3E622304B55F0049C28B /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E612304B55F0049C28B /* SwiftSignalKit.framework */; };
+		D03E3E642304B5640049C28B /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E632304B5640049C28B /* MobileCoreServices.framework */; };
+		D03E3E672304B61A0049C28B /* AnimationRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3E652304B61A0049C28B /* AnimationRenderer.swift */; };
+		D03E3E682304B61A0049C28B /* SoftwareAnimationRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3E662304B61A0049C28B /* SoftwareAnimationRenderer.swift */; };
+		D03E3E8E2304B6EC0049C28B /* YuvConversion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E8D2304B6EC0049C28B /* YuvConversion.framework */; };
 		D060187122F35FCD00796784 /* AnimationUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D060186F22F35FCD00796784 /* AnimationUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D06018A422F361E800796784 /* AnimationNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06018A322F361E800796784 /* AnimationNode.swift */; };
 		D06018A722F361F400796784 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018A622F361F400796784 /* Foundation.framework */; };
@@ -17,6 +33,22 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D03E3E492304B4CC0049C28B /* RLottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RLottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E4D2304B50A0049C28B /* AnimatedStickerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimatedStickerNode.swift; sourceTree = "<group>"; };
+		D03E3E4E2304B50A0049C28B /* AnimatedStickerUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimatedStickerUtils.swift; sourceTree = "<group>"; };
+		D03E3E512304B51A0049C28B /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E532304B51E0049C28B /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E552304B52F0049C28B /* libcompression.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcompression.tbd; path = usr/lib/libcompression.tbd; sourceTree = SDKROOT; };
+		D03E3E572304B53B0049C28B /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E592304B5400049C28B /* GZip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GZip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E5B2304B5450049C28B /* Tuples.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Tuples.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E5D2304B5490049C28B /* MediaResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MediaResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E5F2304B54E0049C28B /* StickerResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E612304B55F0049C28B /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E3E632304B5640049C28B /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
+		D03E3E652304B61A0049C28B /* AnimationRenderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimationRenderer.swift; sourceTree = "<group>"; };
+		D03E3E662304B61A0049C28B /* SoftwareAnimationRenderer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareAnimationRenderer.swift; sourceTree = "<group>"; };
+		D03E3E8D2304B6EC0049C28B /* YuvConversion.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = YuvConversion.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D060186C22F35FCD00796784 /* AnimationUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = AnimationUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D060186F22F35FCD00796784 /* AnimationUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AnimationUI.h; sourceTree = "<group>"; };
 		D060187022F35FCD00796784 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -33,6 +65,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E3E8E2304B6EC0049C28B /* YuvConversion.framework in Frameworks */,
+				D03E3E642304B5640049C28B /* MobileCoreServices.framework in Frameworks */,
+				D03E3E622304B55F0049C28B /* SwiftSignalKit.framework in Frameworks */,
+				D03E3E602304B54E0049C28B /* StickerResources.framework in Frameworks */,
+				D03E3E5E2304B5490049C28B /* MediaResources.framework in Frameworks */,
+				D03E3E5C2304B5450049C28B /* Tuples.framework in Frameworks */,
+				D03E3E5A2304B5400049C28B /* GZip.framework in Frameworks */,
+				D03E3E582304B53B0049C28B /* Display.framework in Frameworks */,
+				D03E3E562304B52F0049C28B /* libcompression.tbd in Frameworks */,
+				D03E3E542304B51E0049C28B /* TelegramCore.framework in Frameworks */,
+				D03E3E522304B51A0049C28B /* Postbox.framework in Frameworks */,
+				D03E3E4A2304B4CC0049C28B /* RLottie.framework in Frameworks */,
 				D06018AD22F361FF00796784 /* Lottie.framework in Frameworks */,
 				D06018AB22F361FC00796784 /* AsyncDisplayKit.framework in Frameworks */,
 				D06018A922F361F900796784 /* UIKit.framework in Frameworks */,
@@ -64,6 +108,10 @@
 		D060186E22F35FCD00796784 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D03E3E652304B61A0049C28B /* AnimationRenderer.swift */,
+				D03E3E662304B61A0049C28B /* SoftwareAnimationRenderer.swift */,
+				D03E3E4D2304B50A0049C28B /* AnimatedStickerNode.swift */,
+				D03E3E4E2304B50A0049C28B /* AnimatedStickerUtils.swift */,
 				D06018A322F361E800796784 /* AnimationNode.swift */,
 				D060186F22F35FCD00796784 /* AnimationUI.h */,
 				D06018AE22F3641F00796784 /* FrameworkBundle.swift */,
@@ -74,6 +122,18 @@
 		D06018A522F361F400796784 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E3E8D2304B6EC0049C28B /* YuvConversion.framework */,
+				D03E3E632304B5640049C28B /* MobileCoreServices.framework */,
+				D03E3E612304B55F0049C28B /* SwiftSignalKit.framework */,
+				D03E3E5F2304B54E0049C28B /* StickerResources.framework */,
+				D03E3E5D2304B5490049C28B /* MediaResources.framework */,
+				D03E3E5B2304B5450049C28B /* Tuples.framework */,
+				D03E3E592304B5400049C28B /* GZip.framework */,
+				D03E3E572304B53B0049C28B /* Display.framework */,
+				D03E3E552304B52F0049C28B /* libcompression.tbd */,
+				D03E3E532304B51E0049C28B /* TelegramCore.framework */,
+				D03E3E512304B51A0049C28B /* Postbox.framework */,
+				D03E3E492304B4CC0049C28B /* RLottie.framework */,
 				D06018AC22F361FF00796784 /* Lottie.framework */,
 				D06018AA22F361FC00796784 /* AsyncDisplayKit.framework */,
 				D06018A822F361F800796784 /* UIKit.framework */,
@@ -162,7 +222,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E3E672304B61A0049C28B /* AnimationRenderer.swift in Sources */,
+				D03E3E4F2304B50A0049C28B /* AnimatedStickerNode.swift in Sources */,
 				D06018AF22F3641F00796784 /* FrameworkBundle.swift in Sources */,
+				D03E3E502304B50A0049C28B /* AnimatedStickerUtils.swift in Sources */,
+				D03E3E682304B61A0049C28B /* SoftwareAnimationRenderer.swift in Sources */,
 				D06018A422F361E800796784 /* AnimationNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

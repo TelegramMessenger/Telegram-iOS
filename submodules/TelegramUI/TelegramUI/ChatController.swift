@@ -35,6 +35,13 @@ import InstantPageUI
 import LocationUI
 import BotPaymentsUI
 import DeleteChatPeerActionSheetItem
+import HashtagSearchUI
+import LegacyMediaPickerUI
+import WebSearchUI
+import Emoji
+import PeerAvatarGalleryUI
+import PeerInfoUI
+import RaiseToListen
 
 public enum ChatControllerPeekActions {
     case standard
@@ -120,7 +127,7 @@ let ChatControllerCount = Atomic<Int32>(value: 0)
 public final class ChatControllerImpl: TelegramBaseController, ChatController, GalleryHiddenMediaTarget, UIDropInteractionDelegate {
     private var validLayout: ContainerViewLayout?
     
-    weak var parentController: ViewController?
+    public weak var parentController: ViewController?
     
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false
@@ -4805,7 +4812,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             legacyController.enableSizeClassSignal = true
             
             let inputText = strongSelf.presentationInterfaceState.interfaceState.effectiveInputState.inputText
-            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: editMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
+            let menuEditMediaOptions = editMediaOptions.flatMap { options -> LegacyAttachmentMenuMediaEditing in
+                var result: LegacyAttachmentMenuMediaEditing = []
+                if options.contains(.imageOrVideo) {
+                    result.insert(.imageOrVideo)
+                }
+                return result
+            }
+            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
                 self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting in
                     if !inputText.string.isEmpty {
                         //strongSelf.clearInputText()

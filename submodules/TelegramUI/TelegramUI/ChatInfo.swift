@@ -4,6 +4,6 @@ import TelegramCore
 import Display
 import AccountContext
 
-func peerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
+func peerSharedMediaControllerImpl(context: AccountContext, peerId: PeerId) -> ViewController? {
     return PeerMediaCollectionController(context: context, peerId: peerId)
 }

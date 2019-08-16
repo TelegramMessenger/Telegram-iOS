@@ -13,6 +13,8 @@ import AccountContext
 import MediaResources
 import StickerResources
 import ContextUI
+import AnimationUI
+import Emoji
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)

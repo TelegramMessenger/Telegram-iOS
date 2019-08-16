@@ -11,6 +11,10 @@ import ItemListUI
 import AccountContext
 import GalleryUI
 import LegacyUI
+import ItemListAvatarAndNameInfoItem
+import WebSearchUI
+import PeerAvatarGalleryUI
+import MapResourceToAvatarSizes
 
 private struct EditSettingsItemArguments {
     let context: AccountContext

@@ -1,12 +1,12 @@
 import Foundation
 import SwiftSignalKit
-import TelegramUIPrivateModule
 import CoreMedia
 import AVFoundation
 import TelegramCore
 import TelegramAudio
 import UniversalMediaPlayer
 import AccountContext
+import OpusBinding
 
 private let kOutputBus: UInt32 = 0
 private let kInputBus: UInt32 = 1

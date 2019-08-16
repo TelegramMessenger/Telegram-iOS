@@ -15,12 +15,12 @@ import PhotoResources
 import LegacyUI
 import LocationUI
 import ItemListPeerItem
-
-public enum CreateGroupMode {
-    case generic
-    case supergroup
-    case locatedGroup(latitude: Double, longitude: Double, address: String?)
-}
+import ItemListAvatarAndNameInfoItem
+import WebSearchUI
+import Geocoding
+import PeerInfoUI
+import MapResourceToAvatarSizes
+import ItemListAddressItem
 
 private struct CreateGroupArguments {
     let account: Account
@@ -295,7 +295,7 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     return entries
 }
 
-public func createGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, mode: CreateGroupMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
+public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId], initialTitle: String? = nil, mode: CreateGroupMode = .generic, completion: ((PeerId, @escaping () -> Void) -> Void)? = nil) -> ViewController {
     var location: PeerGeoLocation?
     if case let .locatedGroup(latitude, longitude, address) = mode {
         location = PeerGeoLocation(latitude: latitude, longitude: longitude, address: address ?? "")

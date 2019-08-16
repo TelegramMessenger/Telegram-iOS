@@ -3,18 +3,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import AccountContext
-
-public final class WatchManagerArguments {
-    public let appInstalled: Signal<Bool, NoError>
-    public let navigateToMessageRequested: Signal<MessageId, NoError>
-    public let runningTasks: Signal<WatchRunningTasks?, NoError>
-    
-    public init(appInstalled: Signal<Bool, NoError>, navigateToMessageRequested: Signal<MessageId, NoError>, runningTasks: Signal<WatchRunningTasks?, NoError>) {
-        self.appInstalled = appInstalled
-        self.navigateToMessageRequested = navigateToMessageRequested
-        self.runningTasks = runningTasks
-    }
-}
+import WatchBridge
 
 public final class WatchManagerImpl: WatchManager {
     private let arguments: WatchManagerArguments?

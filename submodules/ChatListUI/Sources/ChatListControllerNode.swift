@@ -21,7 +21,7 @@ private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHo
         })
     }
     
-    weak var controller: ChatListController?
+    weak var controller: ChatListControllerImpl?
 }
 
 private struct TestItem: Comparable, Identifiable {
@@ -49,7 +49,7 @@ final class ChatListControllerNode: ASDisplayNode {
     private var chatListEmptyIndicator: ActivityIndicator?
     let chatListNode: ChatListNode
     var navigationBar: NavigationBar?
-    weak var controller: ChatListController?
+    weak var controller: ChatListControllerImpl?
     
     var toolbar: Toolbar?
     private var toolbarNode: ToolbarNode?
@@ -69,7 +69,7 @@ final class ChatListControllerNode: ASDisplayNode {
 
     let debugListView = ListView()
     
-    init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListController) {
+    init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, presentationData: PresentationData, controller: ChatListControllerImpl) {
         self.context = context
         self.groupId = groupId
         self.presentationData = presentationData

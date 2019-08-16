@@ -7,11 +7,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
-import TelegramUIPrivateModule
 import AccountContext
 import Tuples
 import StickerResources
 import PhotoResources
+import AnimationUI
 
 private enum NotificationContentAuthorizationError {
     case unauthorized

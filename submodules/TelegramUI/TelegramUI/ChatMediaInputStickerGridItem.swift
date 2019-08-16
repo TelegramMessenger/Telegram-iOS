@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import StickerResources
 import AccountContext
+import AnimationUI
 
 enum ChatMediaInputStickerGridSectionAccessory {
     case none

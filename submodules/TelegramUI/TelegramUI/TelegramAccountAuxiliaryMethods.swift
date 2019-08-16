@@ -5,6 +5,7 @@ import MediaResources
 import PassportUI
 import OpenInExternalAppUI
 import MusicAlbumArtResources
+import LocalMediaResources
 
 public let telegramAccountAuxiliaryMethods = AccountAuxiliaryMethods(updatePeerChatInputState: { interfaceState, inputState -> PeerChatInterfaceState? in
     if interfaceState == nil {

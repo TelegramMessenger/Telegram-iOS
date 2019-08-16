@@ -9,6 +9,7 @@ import TelegramPresentationData
 import MergeLists
 import OverlayStatusController
 import AccountContext
+import StickerPackPreviewUI
 
 final class TrendingPaneInteraction {
     let installPack: (ItemCollectionInfo) -> Void

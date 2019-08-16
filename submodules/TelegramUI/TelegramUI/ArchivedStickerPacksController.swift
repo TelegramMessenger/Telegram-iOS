@@ -9,6 +9,8 @@ import TelegramUIPreferences
 import ItemListUI
 import OverlayStatusController
 import AccountContext
+import StickerPackPreviewUI
+import ItemListStickerPackItem
 
 public enum ArchivedStickerPacksControllerMode {
     case stickers

@@ -7,6 +7,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import StickerResources
+import AnimationUI
+import ItemListStickerPackItem
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account
@@ -67,28 +69,6 @@ private let boundingSize = CGSize(width: 41.0, height: 41.0)
 private let boundingImageSize = CGSize(width: 28.0, height: 28.0)
 private let highlightSize = CGSize(width: 35.0, height: 35.0)
 private let verticalOffset: CGFloat = 3.0
-
-enum StickerPackThumbnailItem: Equatable {
-    case still(TelegramMediaImageRepresentation)
-    case animated(MediaResource)
-    
-    static func ==(lhs: StickerPackThumbnailItem, rhs: StickerPackThumbnailItem) -> Bool {
-        switch lhs {
-        case let .still(representation):
-            if case .still(representation) = rhs {
-                return true
-            } else {
-                return false
-            }
-        case let .animated(lhsResource):
-            if case let .animated(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
-                return true
-            } else {
-                return false
-            }
-        }
-    }
-}
 
 final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
     private let imageNode: TransformImageNode

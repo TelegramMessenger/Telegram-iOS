@@ -15,7 +15,6 @@ import Foundation
     #endif
     import UIKit
 #endif
-import TelegramCorePrivateModule
 
 
 public protocol AccountState: PostboxCoding {

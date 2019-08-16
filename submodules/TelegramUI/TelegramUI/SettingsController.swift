@@ -27,6 +27,11 @@ import SearchUI
 import ItemListPeerItem
 import CallListUI
 import ChatListUI
+import ItemListAvatarAndNameInfoItem
+import ItemListPeerActionItem
+import WebSearchUI
+import PeerAvatarGalleryUI
+import MapResourceToAvatarSizes
 
 private let maximumNumberOfAccounts = 3
 
@@ -1384,7 +1389,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             })
             if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
                 let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
-                let chatListController = ChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
+                let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
                 return chatListController
             }
         }

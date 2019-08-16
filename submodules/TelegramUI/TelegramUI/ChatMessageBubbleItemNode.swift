@@ -14,6 +14,8 @@ import ContextUI
 import TelegramUniversalVideoContent
 import MosaicLayout
 import TextSelectionNode
+import PlatformRestrictionMatching
+import Emoji
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -22,6 +24,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(
     var isUnsupportedMedia = false
     
     outer: for message in item.content {
+        for attribute in message.attributes {
+            if let attribute = attribute as? RestrictedContentMessageAttribute, attribute.matchesPlatform() {
+                result.append((message, ChatMessageRestrictedBubbleContentNode.self))
+                break outer
+            }
+        }
+        
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
                 result.append((message, ChatMessageMediaBubbleContentNode.self))

@@ -64,7 +64,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
     return false
 }
 
-public class ChatListController: TelegramBaseController, UIViewControllerPreviewingDelegate {
+public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate {
     private var validLayout: ContainerViewLayout?
     
     public let context: AccountContext
@@ -711,7 +711,7 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
         self.chatListDisplayNode.chatListNode.groupSelected = { [weak self] groupId in
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
-                    let chatListController = ChatListController(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                    let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
                     navigationController.pushViewController(chatListController)
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
@@ -1183,7 +1183,11 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
         }
     }
     
-    @objc public func composePressed() {
+    public func activateCompose() {
+        self.composePressed()
+    }
+    
+    @objc private func composePressed() {
         (self.navigationController as? NavigationController)?.replaceAllButRootController(self.context.sharedContext.makeComposeController(context: self.context), animated: true)
     }
     
@@ -1260,7 +1264,7 @@ public class ChatListController: TelegramBaseController, UIViewControllerPreview
                         return nil
                     }
                 case let .groupReference(groupId, _, _, _, _):
-                    let chatListController = ChatListController(context: self.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                    let chatListController = ChatListControllerImpl(context: self.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatListController, sourceRect)
             }

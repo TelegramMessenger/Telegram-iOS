@@ -11,6 +11,7 @@ import MediaResources
 import AccountContext
 import TemporaryCachedPeerDataManager
 import ChatListSearchItemNode
+import Emoji
 
 private let historyMessageCount: Int = 100
 

@@ -9,6 +9,7 @@ import AVFoundation
 import RadialStatusNode
 import StickerResources
 import PhotoResources
+import AnimationUI
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account

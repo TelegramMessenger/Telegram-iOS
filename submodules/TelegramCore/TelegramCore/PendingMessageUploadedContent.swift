@@ -9,8 +9,6 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-import TelegramCorePrivateModule
-
 enum PendingMessageUploadedContent {
     case text(String)
     case media(Api.InputMedia, String)

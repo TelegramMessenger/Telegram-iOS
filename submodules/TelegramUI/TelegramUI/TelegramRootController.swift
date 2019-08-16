@@ -5,7 +5,6 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
-import TelegramUIPrivateModule
 import AccountContext
 import ContactListUI
 import CallListUI
@@ -84,7 +83,7 @@ public final class TelegramRootController: NavigationController {
     
     public func addRootControllers(showCallsTab: Bool) {
         let tabBarController = TabBarController(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme))
-        let chatListController = ChatListController(context: self.context, groupId: .root, controlsHistoryPreload: true, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
+        let chatListController = self.context.sharedContext.makeChatListController(context: self.context, groupId: .root, controlsHistoryPreload: true, hideNetworkActivityStatus: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
             chatListController.tabBarItem.badgeValue = sharedContext.switchingData.chatListBadge
         }
@@ -149,7 +148,7 @@ public final class TelegramRootController: NavigationController {
             self.popToRoot(animated: false)
         }
         
-        if let index = rootTabController.controllers.index(where: { $0 is ChatListController}) {
+        if let index = rootTabController.controllers.firstIndex(where: { $0 is ChatListController}) {
             rootTabController.selectedIndex = index
         }
         
@@ -159,7 +158,7 @@ public final class TelegramRootController: NavigationController {
     }
     
     public func openRootCompose() {
-        self.chatListController?.composePressed()
+        self.chatListController?.activateCompose()
     }
     
     public func openRootCamera() {

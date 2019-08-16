@@ -8,6 +8,7 @@ import TelegramPresentationData
 import LegacyComponents
 import ProgressNavigationButtonNode
 import ImageCompression
+import LegacyMediaPickerUI
 
 final class AuthorizationSequenceSignUpController: ViewController {
     private var controllerNode: AuthorizationSequenceSignUpControllerNode {
