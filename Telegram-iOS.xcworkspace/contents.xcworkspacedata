@@ -376,7 +376,7 @@
          location = "container:"
          name = "Chat">
          <FileRef
-            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/ReactionSelectionNode/ReactionSelectionNode_Xcode.xcodeproj">
+            location = "group:submodules/ReactionSelectionNode/ReactionSelectionNode_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <FileRef
