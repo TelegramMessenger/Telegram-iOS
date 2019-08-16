@@ -284,6 +284,26 @@ final class HistoryViewStateValidationContexts {
     }
 }
 
+private func hashForScheduledMessages(_ messages: [Message]) -> Int32 {
+    var acc: UInt32 = 0
+    
+    let sorted = messages.sorted(by: { $0.timestamp > $1.timestamp })
+    
+    for message in sorted {
+        acc = (acc &* 20261) &+ UInt32(message.id.id)
+        var editTimestamp: Int32 = 0
+        inner: for attribute in message.attributes {
+            if let attribute = attribute as? EditedMessageAttribute {
+                editTimestamp = attribute.date
+                break inner
+            }
+        }
+        acc = (acc &* 20261) &+ UInt32(editTimestamp)
+        acc = (acc &* 20261) &+ UInt32(message.timestamp)
+    }
+    return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+}
+
 private func hashForMessages(_ messages: [Message], withChannelIds: Bool) -> Int32 {
     var acc: UInt32 = 0
     
@@ -406,7 +426,8 @@ private func validateScheduledMessagesBatch(postbox: Postbox, network: Network, 
         switch historyState {
             case let .scheduledMessages(peerId):
                 if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                    signal = network.request(Api.functions.messages.getScheduledHistory(peer: inputPeer, hash: 0))
+                    let hash = hashForScheduledMessages(messages)
+                    signal = network.request(Api.functions.messages.getScheduledHistory(peer: inputPeer, hash: hash))
                     |> map { result -> ValidatedMessages in
                         let messages: [Api.Message]
                         let chats: [Api.Chat]
