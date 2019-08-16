@@ -11,7 +11,7 @@ enum MessageTimestampStatusFormat {
     case minimal
 }
 
-func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular) -> String {
+func stringForMessageTimestampStatus(accountPeerId: PeerId, message: Message, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, strings: PresentationStrings, format: MessageTimestampStatusFormat = .regular, reactionCount: Int) -> String {
     let timestamp: Int32
     if let scheduleTime = message.scheduleTime {
         timestamp = scheduleTime

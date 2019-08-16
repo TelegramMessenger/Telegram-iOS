@@ -1017,6 +1017,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return self?.navigationController as? NavigationController
         }, chatControllerNode: { [weak self] in
             return self?.chatDisplayNode
+        }, reactionContainerNode: { [weak self] in
+            return self?.chatDisplayNode.reactionContainerNode
         }, presentGlobalOverlayController: { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
         }, callPeer: { [weak self] peerId in
@@ -1523,6 +1525,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     window.rootViewController?.present(controller, animated: true)
                 }
             }
+        }, updateMessageReaction: { [weak self] messageId, reaction in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reactions: [reaction]).start()
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

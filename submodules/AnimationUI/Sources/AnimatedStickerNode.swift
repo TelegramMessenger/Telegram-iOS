@@ -309,6 +309,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private let fetchDisposable = MetaDisposable()
     private let eventsNode: AnimatedStickerNodeDisplayEvents
     
+    public var automaticallyLoadFirstFrame: Bool = false
+    public var playToCompletionOnStop: Bool = false
+    
     public var started: () -> Void = {}
     private var reportedStarted = false
     
@@ -320,6 +323,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     private var renderer: (AnimationRenderer & ASDisplayNode)?
     
     private var isPlaying: Bool = false
+    private var canDisplayFirstFrame: Bool = false
     private var playbackMode: AnimatedStickerPlaybackMode = .loop
     
     private let playbackStatus = Promise<AnimatedStickerStatus>()
@@ -394,6 +398,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     }
                     if strongSelf.isPlaying {
                         strongSelf.play()
+                    } else if strongSelf.canDisplayFirstFrame {
+                        strongSelf.play(firstFrame: true)
                     }
                 }))
             case .cached:
@@ -403,6 +409,8 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
                         if strongSelf.isPlaying {
                             strongSelf.play()
+                        } else if strongSelf.canDisplayFirstFrame {
+                            strongSelf.play(firstFrame: true)
                         }
                     }
                 }))
@@ -424,9 +432,16 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 self.stop()
             }
         }
+        let canDisplayFirstFrame = self.automaticallyLoadFirstFrame && self.isDisplaying
+        if self.canDisplayFirstFrame != canDisplayFirstFrame {
+            self.canDisplayFirstFrame = canDisplayFirstFrame
+            if canDisplayFirstFrame {
+                self.play(firstFrame: true)
+            }
+        }
     }
     
-    public func play() {
+    public func play(firstFrame: Bool = false) {
         let directData = self.directData
         let cachedData = self.cachedData
         let queue = self.queue
@@ -451,7 +466,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
             let duration: Double = frameSource.frameRate > 0 ? Double(frameSource.frameCount) / Double(frameSource.frameRate) : 0
             let frameRate = frameSource.frameRate
             
-            let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: true, completion: {
+            let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: !firstFrame, completion: {
                 let maybeFrame = frameQueue.syncWith { frameQueue in
                     return frameQueue.take()
                 }
@@ -492,6 +507,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
     public func stop() {
         self.reportedStarted = false
         self.timer.swap(nil)?.invalidate()
+        if self.playToCompletionOnStop {
+            self.seekToStart()
+        }
     }
     
     public func seekToStart() {

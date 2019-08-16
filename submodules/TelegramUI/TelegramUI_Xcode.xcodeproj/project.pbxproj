@@ -195,6 +195,7 @@
 		D03E449E2305B6A00049C28B /* WatchBridge.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E449D2305B6A00049C28B /* WatchBridge.framework */; };
 		D03E44E22305BC900049C28B /* LegacyDataImport.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44E12305BC900049C28B /* LegacyDataImport.framework */; };
 		D03E45252305C07A0049C28B /* ShareItems.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45242305C07A0049C28B /* ShareItems.framework */; };
+		D03E46102305FD360049C28B /* ReactionSelectionNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E460F2305FD360049C28B /* ReactionSelectionNode.framework */; };
 		D04203152037162700490EA5 /* MediaInputPaneTrendingItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */; };
 		D04281F4200E5AB0009DDE36 /* ChatRecentActionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */; };
 		D04281F6200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281F5200E5AC2009DDE36 /* ChatRecentActionsControllerNode.swift */; };
@@ -915,6 +916,7 @@
 		D03E449D2305B6A00049C28B /* WatchBridge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchBridge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E44E12305BC900049C28B /* LegacyDataImport.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyDataImport.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E45242305C07A0049C28B /* ShareItems.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ShareItems.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E460F2305FD360049C28B /* ReactionSelectionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ReactionSelectionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E5E081E55C49C0029569A /* DebugAccountsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DebugAccountsController.swift; sourceTree = "<group>"; };
 		D04203142037162700490EA5 /* MediaInputPaneTrendingItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaInputPaneTrendingItem.swift; sourceTree = "<group>"; };
 		D04281F3200E5AB0009DDE36 /* ChatRecentActionsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsController.swift; sourceTree = "<group>"; };
@@ -1377,6 +1379,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E46102305FD360049C28B /* ReactionSelectionNode.framework in Frameworks */,
 				D03E45252305C07A0049C28B /* ShareItems.framework in Frameworks */,
 				D03E44E22305BC900049C28B /* LegacyDataImport.framework in Frameworks */,
 				D03E449E2305B6A00049C28B /* WatchBridge.framework in Frameworks */,
@@ -2085,6 +2088,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E460F2305FD360049C28B /* ReactionSelectionNode.framework */,
 				D03E45242305C07A0049C28B /* ShareItems.framework */,
 				D03E44E12305BC900049C28B /* LegacyDataImport.framework */,
 				D03E449D2305B6A00049C28B /* WatchBridge.framework */,

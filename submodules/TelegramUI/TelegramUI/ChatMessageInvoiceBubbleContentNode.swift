@@ -135,4 +135,8 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
         }
         return self.contentNode.transitionNode(media: media)
     }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        return self.contentNode.reactionTargetNode(value: value)
+    }
 }

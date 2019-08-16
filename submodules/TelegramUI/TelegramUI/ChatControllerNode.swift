@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import TextFormat
 import AccountContext
 import TelegramNotices
+import ReactionSelectionNode
 
 private final class ChatControllerNodeView: UITracingLayerView, WindowInputAccessoryHeightProvider, PreviewingHostView {
     var inputAccessoryHeight: (() -> CGFloat)?
@@ -76,6 +77,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     let backgroundNode: WallpaperbackgroundNode
     let historyNode: ChatHistoryListNode
+    let reactionContainerNode: ReactionSelectionParentNode
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
     private var emptyNode: ChatEmptyNode?
@@ -209,6 +211,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.rotated = true
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
+        
+        self.reactionContainerNode = ReactionSelectionParentNode(account: context.account)
+        self.historyNodeContainer.addSubnode(self.reactionContainerNode)
+        
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper)
         
         self.inputPanelBackgroundNode = ASDisplayNode()
@@ -838,6 +844,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
             transition.updateFrame(node: emptyNode, frame: contentBounds)
         }
+        
+        transition.updateFrame(node: self.reactionContainerNode, frame: contentBounds)
+        self.reactionContainerNode.updateLayout(size: contentBounds.size, insets: UIEdgeInsets(), transition: transition)
         
         var contentBottomInset: CGFloat = inputPanelsHeight + 4.0
         

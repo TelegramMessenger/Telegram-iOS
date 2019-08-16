@@ -7,138 +7,95 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D03E44682305B5910049C28B /* WatchBridge.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E44662305B5910049C28B /* WatchBridge.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D03E44772305B60E0049C28B /* WatchCommunicationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E44722305B60E0049C28B /* WatchCommunicationManager.swift */; };
-		D03E44782305B60E0049C28B /* TGBridgeServer.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E44732305B60E0049C28B /* TGBridgeServer.m */; };
-		D03E44792305B60E0049C28B /* TGBridgeServer.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E44742305B60E0049C28B /* TGBridgeServer.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D03E447A2305B60E0049C28B /* WatchRequestHandlers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E44752305B60E0049C28B /* WatchRequestHandlers.swift */; };
-		D03E447B2305B60E0049C28B /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E44762305B60E0049C28B /* WatchBridge.swift */; };
-		D03E447E2305B6170049C28B /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E447D2305B6170049C28B /* SSignalKit.framework */; };
-		D03E44802305B61C0049C28B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E447F2305B61C0049C28B /* Foundation.framework */; };
-		D03E44822305B6240049C28B /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44812305B6240049C28B /* UIKit.framework */; };
-		D03E44842305B6300049C28B /* WatchConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44832305B6300049C28B /* WatchConnectivity.framework */; };
-		D03E44862305B6340049C28B /* WatchBridgeAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44852305B6340049C28B /* WatchBridgeAudio.framework */; };
-		D03E44882305B6340049C28B /* WatchCommon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44872305B6340049C28B /* WatchCommon.framework */; };
-		D03E448A2305B6490049C28B /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44892305B6490049C28B /* Postbox.framework */; };
-		D03E448C2305B64D0049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E448B2305B64D0049C28B /* TelegramCore.framework */; };
-		D03E448E2305B6540049C28B /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E448D2305B6540049C28B /* TelegramPresentationData.framework */; };
-		D03E44902305B65A0049C28B /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E448F2305B65A0049C28B /* SwiftSignalKit.framework */; };
-		D03E44922305B66A0049C28B /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44912305B66A0049C28B /* TelegramUIPreferences.framework */; };
-		D03E44942305B66F0049C28B /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44932305B66F0049C28B /* AccountContext.framework */; };
-		D03E44962305B67D0049C28B /* AvatarNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44952305B67D0049C28B /* AvatarNode.framework */; };
-		D03E44982305B6810049C28B /* StickerResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44972305B6810049C28B /* StickerResources.framework */; };
-		D03E449A2305B6850049C28B /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44992305B6850049C28B /* PhotoResources.framework */; };
-		D03E449C2305B6910049C28B /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E449B2305B6910049C28B /* LegacyComponents.framework */; };
-		D03E4641230750150049C28B /* LegacyUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4640230750150049C28B /* LegacyUI.framework */; };
+		D03E45EA2305E3F30049C28B /* ReactionSelectionNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E45E82305E3F30049C28B /* ReactionSelectionNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D03E45F52305EB7C0049C28B /* ReactionSelectionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E45F42305EB7C0049C28B /* ReactionSelectionNode.swift */; };
+		D03E45F82305EB880049C28B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45F72305EB880049C28B /* Foundation.framework */; };
+		D03E45FA2305EB8B0049C28B /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45F92305EB8B0049C28B /* AsyncDisplayKit.framework */; };
+		D03E45FC2305EB8E0049C28B /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45FB2305EB8E0049C28B /* UIKit.framework */; };
+		D03E45FE2305EB910049C28B /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45FD2305EB910049C28B /* Display.framework */; };
+		D03E46002305EE710049C28B /* AnimationUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45FF2305EE710049C28B /* AnimationUI.framework */; };
+		D03E46022305EE750049C28B /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E46012305EE750049C28B /* Postbox.framework */; };
+		D03E46042305EE790049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E46032305EE790049C28B /* TelegramCore.framework */; };
+		D03E46082305EEDD0049C28B /* ReactionSelectionParentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46072305EEDD0049C28B /* ReactionSelectionParentNode.swift */; };
+		D03E460A2305EF900049C28B /* ReactionSwipeGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46092305EF900049C28B /* ReactionSwipeGestureRecognizer.swift */; };
+		D03E460C2305EFD80049C28B /* ReactionGestureItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E460B2305EFD80049C28B /* ReactionGestureItem.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D03E44632305B5910049C28B /* WatchBridge.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = WatchBridge.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44662305B5910049C28B /* WatchBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WatchBridge.h; sourceTree = "<group>"; };
-		D03E44672305B5910049C28B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D03E44722305B60E0049C28B /* WatchCommunicationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchCommunicationManager.swift; sourceTree = "<group>"; };
-		D03E44732305B60E0049C28B /* TGBridgeServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeServer.m; sourceTree = "<group>"; };
-		D03E44742305B60E0049C28B /* TGBridgeServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeServer.h; sourceTree = "<group>"; };
-		D03E44752305B60E0049C28B /* WatchRequestHandlers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchRequestHandlers.swift; sourceTree = "<group>"; };
-		D03E44762305B60E0049C28B /* WatchBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
-		D03E447D2305B6170049C28B /* SSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E447F2305B61C0049C28B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		D03E44812305B6240049C28B /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		D03E44832305B6300049C28B /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
-		D03E44852305B6340049C28B /* WatchBridgeAudio.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchBridgeAudio.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44872305B6340049C28B /* WatchCommon.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WatchCommon.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44892305B6490049C28B /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E448B2305B64D0049C28B /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E448D2305B6540049C28B /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E448F2305B65A0049C28B /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44912305B66A0049C28B /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44932305B66F0049C28B /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44952305B67D0049C28B /* AvatarNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AvatarNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44972305B6810049C28B /* StickerResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E44992305B6850049C28B /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E449B2305B6910049C28B /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E4640230750150049C28B /* LegacyUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E45E52305E3F30049C28B /* ReactionSelectionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ReactionSelectionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E45E82305E3F30049C28B /* ReactionSelectionNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ReactionSelectionNode.h; sourceTree = "<group>"; };
+		D03E45E92305E3F30049C28B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D03E45F42305EB7C0049C28B /* ReactionSelectionNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionSelectionNode.swift; sourceTree = "<group>"; };
+		D03E45F72305EB880049C28B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D03E45F92305EB8B0049C28B /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E45FB2305EB8E0049C28B /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D03E45FD2305EB910049C28B /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E45FF2305EE710049C28B /* AnimationUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AnimationUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E46012305EE750049C28B /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E46032305EE790049C28B /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E46072305EEDD0049C28B /* ReactionSelectionParentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionSelectionParentNode.swift; sourceTree = "<group>"; };
+		D03E46092305EF900049C28B /* ReactionSwipeGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionSwipeGestureRecognizer.swift; sourceTree = "<group>"; };
+		D03E460B2305EFD80049C28B /* ReactionGestureItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionGestureItem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		D03E44602305B5910049C28B /* Frameworks */ = {
+		D03E45E22305E3F30049C28B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E4641230750150049C28B /* LegacyUI.framework in Frameworks */,
-				D03E449C2305B6910049C28B /* LegacyComponents.framework in Frameworks */,
-				D03E449A2305B6850049C28B /* PhotoResources.framework in Frameworks */,
-				D03E44982305B6810049C28B /* StickerResources.framework in Frameworks */,
-				D03E44962305B67D0049C28B /* AvatarNode.framework in Frameworks */,
-				D03E44942305B66F0049C28B /* AccountContext.framework in Frameworks */,
-				D03E44922305B66A0049C28B /* TelegramUIPreferences.framework in Frameworks */,
-				D03E44902305B65A0049C28B /* SwiftSignalKit.framework in Frameworks */,
-				D03E448E2305B6540049C28B /* TelegramPresentationData.framework in Frameworks */,
-				D03E448C2305B64D0049C28B /* TelegramCore.framework in Frameworks */,
-				D03E448A2305B6490049C28B /* Postbox.framework in Frameworks */,
-				D03E44862305B6340049C28B /* WatchBridgeAudio.framework in Frameworks */,
-				D03E44882305B6340049C28B /* WatchCommon.framework in Frameworks */,
-				D03E44842305B6300049C28B /* WatchConnectivity.framework in Frameworks */,
-				D03E44822305B6240049C28B /* UIKit.framework in Frameworks */,
-				D03E44802305B61C0049C28B /* Foundation.framework in Frameworks */,
-				D03E447E2305B6170049C28B /* SSignalKit.framework in Frameworks */,
+				D03E46042305EE790049C28B /* TelegramCore.framework in Frameworks */,
+				D03E46022305EE750049C28B /* Postbox.framework in Frameworks */,
+				D03E46002305EE710049C28B /* AnimationUI.framework in Frameworks */,
+				D03E45FE2305EB910049C28B /* Display.framework in Frameworks */,
+				D03E45FC2305EB8E0049C28B /* UIKit.framework in Frameworks */,
+				D03E45FA2305EB8B0049C28B /* AsyncDisplayKit.framework in Frameworks */,
+				D03E45F82305EB880049C28B /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		D03E44592305B5910049C28B = {
+		D03E45DB2305E3F30049C28B = {
 			isa = PBXGroup;
 			children = (
-				D03E44672305B5910049C28B /* Info.plist */,
-				D03E44652305B5910049C28B /* Sources */,
-				D03E44642305B5910049C28B /* Products */,
-				D03E447C2305B6170049C28B /* Frameworks */,
+				D03E45E92305E3F30049C28B /* Info.plist */,
+				D03E45E72305E3F30049C28B /* Sources */,
+				D03E45E62305E3F30049C28B /* Products */,
+				D03E45F62305EB870049C28B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
-		D03E44642305B5910049C28B /* Products */ = {
+		D03E45E62305E3F30049C28B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D03E44632305B5910049C28B /* WatchBridge.framework */,
+				D03E45E52305E3F30049C28B /* ReactionSelectionNode.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		D03E44652305B5910049C28B /* Sources */ = {
+		D03E45E72305E3F30049C28B /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				D03E44742305B60E0049C28B /* TGBridgeServer.h */,
-				D03E44732305B60E0049C28B /* TGBridgeServer.m */,
-				D03E44762305B60E0049C28B /* WatchBridge.swift */,
-				D03E44722305B60E0049C28B /* WatchCommunicationManager.swift */,
-				D03E44752305B60E0049C28B /* WatchRequestHandlers.swift */,
-				D03E44662305B5910049C28B /* WatchBridge.h */,
+				D03E45F42305EB7C0049C28B /* ReactionSelectionNode.swift */,
+				D03E45E82305E3F30049C28B /* ReactionSelectionNode.h */,
+				D03E46072305EEDD0049C28B /* ReactionSelectionParentNode.swift */,
+				D03E46092305EF900049C28B /* ReactionSwipeGestureRecognizer.swift */,
+				D03E460B2305EFD80049C28B /* ReactionGestureItem.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
 		};
-		D03E447C2305B6170049C28B /* Frameworks */ = {
+		D03E45F62305EB870049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D03E4640230750150049C28B /* LegacyUI.framework */,
-				D03E449B2305B6910049C28B /* LegacyComponents.framework */,
-				D03E44992305B6850049C28B /* PhotoResources.framework */,
-				D03E44972305B6810049C28B /* StickerResources.framework */,
-				D03E44952305B67D0049C28B /* AvatarNode.framework */,
-				D03E44932305B66F0049C28B /* AccountContext.framework */,
-				D03E44912305B66A0049C28B /* TelegramUIPreferences.framework */,
-				D03E448F2305B65A0049C28B /* SwiftSignalKit.framework */,
-				D03E448D2305B6540049C28B /* TelegramPresentationData.framework */,
-				D03E448B2305B64D0049C28B /* TelegramCore.framework */,
-				D03E44892305B6490049C28B /* Postbox.framework */,
-				D03E44852305B6340049C28B /* WatchBridgeAudio.framework */,
-				D03E44872305B6340049C28B /* WatchCommon.framework */,
-				D03E44832305B6300049C28B /* WatchConnectivity.framework */,
-				D03E44812305B6240049C28B /* UIKit.framework */,
-				D03E447F2305B61C0049C28B /* Foundation.framework */,
-				D03E447D2305B6170049C28B /* SSignalKit.framework */,
+				D03E46032305EE790049C28B /* TelegramCore.framework */,
+				D03E46012305EE750049C28B /* Postbox.framework */,
+				D03E45FF2305EE710049C28B /* AnimationUI.framework */,
+				D03E45FD2305EB910049C28B /* Display.framework */,
+				D03E45FB2305EB8E0049C28B /* UIKit.framework */,
+				D03E45F92305EB8B0049C28B /* AsyncDisplayKit.framework */,
+				D03E45F72305EB880049C28B /* Foundation.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -146,71 +103,70 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		D03E445E2305B5910049C28B /* Headers */ = {
+		D03E45E02305E3F30049C28B /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E44682305B5910049C28B /* WatchBridge.h in Headers */,
-				D03E44792305B60E0049C28B /* TGBridgeServer.h in Headers */,
+				D03E45EA2305E3F30049C28B /* ReactionSelectionNode.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		D03E44622305B5910049C28B /* WatchBridge */ = {
+		D03E45E42305E3F30049C28B /* ReactionSelectionNode */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D03E446B2305B5910049C28B /* Build configuration list for PBXNativeTarget "WatchBridge" */;
+			buildConfigurationList = D03E45ED2305E3F30049C28B /* Build configuration list for PBXNativeTarget "ReactionSelectionNode" */;
 			buildPhases = (
-				D03E445E2305B5910049C28B /* Headers */,
-				D03E445F2305B5910049C28B /* Sources */,
-				D03E44602305B5910049C28B /* Frameworks */,
-				D03E44612305B5910049C28B /* Resources */,
+				D03E45E02305E3F30049C28B /* Headers */,
+				D03E45E12305E3F30049C28B /* Sources */,
+				D03E45E22305E3F30049C28B /* Frameworks */,
+				D03E45E32305E3F30049C28B /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = WatchBridge;
-			productName = WatchBridge;
-			productReference = D03E44632305B5910049C28B /* WatchBridge.framework */;
+			name = ReactionSelectionNode;
+			productName = ReactionSelectionNode;
+			productReference = D03E45E52305E3F30049C28B /* ReactionSelectionNode.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		D03E445A2305B5910049C28B /* Project object */ = {
+		D03E45DC2305E3F30049C28B /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				DefaultBuildSystemTypeForWorkspace = Latest;
 				LastUpgradeCheck = 1030;
 				ORGANIZATIONNAME = "Telegram Messenger LLP";
 				TargetAttributes = {
-					D03E44622305B5910049C28B = {
+					D03E45E42305E3F30049C28B = {
 						CreatedOnToolsVersion = 10.3;
 						LastSwiftMigration = 1030;
 					};
 				};
 			};
-			buildConfigurationList = D03E445D2305B5910049C28B /* Build configuration list for PBXProject "WatchBridge_Xcode" */;
+			buildConfigurationList = D03E45DF2305E3F30049C28B /* Build configuration list for PBXProject "ReactionSelectionNode_Xcode" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 			);
-			mainGroup = D03E44592305B5910049C28B;
-			productRefGroup = D03E44642305B5910049C28B /* Products */;
+			mainGroup = D03E45DB2305E3F30049C28B;
+			productRefGroup = D03E45E62305E3F30049C28B /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D03E44622305B5910049C28B /* WatchBridge */,
+				D03E45E42305E3F30049C28B /* ReactionSelectionNode */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		D03E44612305B5910049C28B /* Resources */ = {
+		D03E45E32305E3F30049C28B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -220,21 +176,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		D03E445F2305B5910049C28B /* Sources */ = {
+		D03E45E12305E3F30049C28B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E447B2305B60E0049C28B /* WatchBridge.swift in Sources */,
-				D03E44782305B60E0049C28B /* TGBridgeServer.m in Sources */,
-				D03E447A2305B60E0049C28B /* WatchRequestHandlers.swift in Sources */,
-				D03E44772305B60E0049C28B /* WatchCommunicationManager.swift in Sources */,
+				D03E460A2305EF900049C28B /* ReactionSwipeGestureRecognizer.swift in Sources */,
+				D03E46082305EEDD0049C28B /* ReactionSelectionParentNode.swift in Sources */,
+				D03E460C2305EFD80049C28B /* ReactionGestureItem.swift in Sources */,
+				D03E45F52305EB7C0049C28B /* ReactionSelectionNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D03E44692305B5910049C28B /* DebugAppStoreLLC */ = {
+		D03E45EB2305E3F30049C28B /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -298,7 +254,7 @@
 			};
 			name = DebugAppStoreLLC;
 		};
-		D03E446A2305B5910049C28B /* ReleaseAppStoreLLC */ = {
+		D03E45EC2305E3F30049C28B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -356,7 +312,7 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D03E446C2305B5910049C28B /* DebugAppStoreLLC */ = {
+		D03E45EE2305E3F30049C28B /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -375,7 +331,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.WatchBridge;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ReactionSelectionNode;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -385,7 +341,7 @@
 			};
 			name = DebugAppStoreLLC;
 		};
-		D03E446D2305B5910049C28B /* ReleaseAppStoreLLC */ = {
+		D03E45EF2305E3F30049C28B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -404,7 +360,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.WatchBridge;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ReactionSelectionNode;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -413,7 +369,7 @@
 			};
 			name = ReleaseAppStoreLLC;
 		};
-		D03E446E2305B5A90049C28B /* DebugHockeyapp */ = {
+		D03E45F02305E4200049C28B /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -477,7 +433,7 @@
 			};
 			name = DebugHockeyapp;
 		};
-		D03E446F2305B5A90049C28B /* DebugHockeyapp */ = {
+		D03E45F12305E4200049C28B /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -496,7 +452,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.WatchBridge;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ReactionSelectionNode;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -506,7 +462,7 @@
 			};
 			name = DebugHockeyapp;
 		};
-		D03E44702305B5B20049C28B /* ReleaseHockeyappInternal */ = {
+		D03E45F22305E4290049C28B /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -564,7 +520,7 @@
 			};
 			name = ReleaseHockeyappInternal;
 		};
-		D03E44712305B5B20049C28B /* ReleaseHockeyappInternal */ = {
+		D03E45F32305E4290049C28B /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_ENABLE_MODULES = YES;
@@ -583,7 +539,7 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.WatchBridge;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.ReactionSelectionNode;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
@@ -595,29 +551,29 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D03E445D2305B5910049C28B /* Build configuration list for PBXProject "WatchBridge_Xcode" */ = {
+		D03E45DF2305E3F30049C28B /* Build configuration list for PBXProject "ReactionSelectionNode_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D03E44692305B5910049C28B /* DebugAppStoreLLC */,
-				D03E446E2305B5A90049C28B /* DebugHockeyapp */,
-				D03E446A2305B5910049C28B /* ReleaseAppStoreLLC */,
-				D03E44702305B5B20049C28B /* ReleaseHockeyappInternal */,
+				D03E45EB2305E3F30049C28B /* DebugAppStoreLLC */,
+				D03E45F02305E4200049C28B /* DebugHockeyapp */,
+				D03E45EC2305E3F30049C28B /* ReleaseAppStoreLLC */,
+				D03E45F22305E4290049C28B /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseAppStoreLLC;
 		};
-		D03E446B2305B5910049C28B /* Build configuration list for PBXNativeTarget "WatchBridge" */ = {
+		D03E45ED2305E3F30049C28B /* Build configuration list for PBXNativeTarget "ReactionSelectionNode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D03E446C2305B5910049C28B /* DebugAppStoreLLC */,
-				D03E446F2305B5A90049C28B /* DebugHockeyapp */,
-				D03E446D2305B5910049C28B /* ReleaseAppStoreLLC */,
-				D03E44712305B5B20049C28B /* ReleaseHockeyappInternal */,
+				D03E45EE2305E3F30049C28B /* DebugAppStoreLLC */,
+				D03E45F12305E4200049C28B /* DebugHockeyapp */,
+				D03E45EF2305E3F30049C28B /* ReleaseAppStoreLLC */,
+				D03E45F32305E4290049C28B /* ReleaseHockeyappInternal */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = ReleaseAppStoreLLC;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = D03E445A2305B5910049C28B /* Project object */;
+	rootObject = D03E45DC2305E3F30049C28B /* Project object */;
 }

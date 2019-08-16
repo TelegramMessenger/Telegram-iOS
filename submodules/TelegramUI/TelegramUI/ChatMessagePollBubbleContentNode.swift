@@ -596,7 +596,20 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
+                var dateReactions: [MessageReaction] = []
+                var dateReactionCount = 0
+                if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                    for reaction in reactionsAttribute.reactions {
+                        if reaction.isSelected {
+                            dateReactions.insert(reaction, at: 0)
+                        } else {
+                            dateReactions.append(reaction)
+                        }
+                        dateReactionCount += Int(reaction.count)
+                    }
+                }
+                
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
                 
                 let statusType: ChatMessageDateAndStatusType?
                 switch position {
@@ -620,7 +633,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 var statusApply: ((Bool) -> Void)?
                 
                 if let statusType = statusType {
-                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize)
+                    let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
                     statusSize = size
                     statusApply = apply
                 }
@@ -941,5 +954,12 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
             }
             return .none
         }
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

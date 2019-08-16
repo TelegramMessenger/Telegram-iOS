@@ -236,6 +236,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return self?.getNavigationController()
         }, chatControllerNode: { [weak self] in
             return self
+        }, reactionContainerNode: {
+            return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action, message in
             if let strongSelf = self {
                 switch action {
@@ -408,6 +410,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
+        }, updateMessageReaction: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
