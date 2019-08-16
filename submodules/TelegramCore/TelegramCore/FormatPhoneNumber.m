@@ -1,6 +1,10 @@
 #import "FormatPhoneNumber.h"
 
+#if TARGET_OS_IOS
 #import <libphonenumber/libphonenumber.h>
+#else
+#import <libphonenumbermac/libphonenumber.h>
+#endif
 
 static NBPhoneNumberUtil *getNBPhoneNumberUtil() {
     static NBPhoneNumberUtil *value;
