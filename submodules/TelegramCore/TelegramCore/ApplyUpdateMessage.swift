@@ -176,7 +176,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                                 transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, current in
                                     var cachedData = current as? CachedChannelData ?? CachedChannelData()
                                     if let slowModeTimeout = cachedData.slowModeTimeout {
-                                        cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: currentMessage.timestamp + slowModeTimeout)
+                                        cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(currentMessage.timestamp + slowModeTimeout)
                                         return cachedData
                                     } else {
                                         return current
