@@ -97,7 +97,7 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             for entry in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers) {
                 if let item = entry.contents as? SavedStickerItem {
                     for representation in item.stringRepresentations {
-                        if representation == query {
+                        if representation.hasPrefix(query) {
                             result.append(FoundStickerItem(file: item.file, stringRepresentations: item.stringRepresentations))
                             break
                         }
@@ -115,7 +115,7 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
                 if let item = entry.contents as? RecentMediaItem, let file = item.media as? TelegramMediaFile {
                     if !currentItems.contains(file.fileId) {
                         for case let .Sticker(sticker) in file.attributes {
-                            if sticker.displayText == query {
+                            if sticker.displayText.hasPrefix(query) {
                                 matchingRecentItemsIds.insert(file.fileId)
                             }
                             recentItemsIds.insert(file.fileId)
@@ -130,9 +130,14 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
                 }
             }
             
+            var searchQuery: ItemCollectionSearchQuery = .exact(ValueBoxKey(query))
+            if query == "\u{2764}" {
+                searchQuery = .matching([ValueBoxKey("\u{2764}"), ValueBoxKey("\u{2764}\u{fe0f}")])
+            }
+            
             var installedItems: [FoundStickerItem] = []
             var installedAnimatedItems: [FoundStickerItem] = []
-            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, query: .exact(ValueBoxKey(query))) {
+            for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, query: searchQuery) {
                 if let item = item as? StickerPackItem {
                     if !currentItems.contains(item.file.fileId) {
                         var stringRepresentations: [String] = []

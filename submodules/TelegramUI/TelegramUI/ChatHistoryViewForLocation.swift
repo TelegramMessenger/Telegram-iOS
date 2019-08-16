@@ -30,7 +30,6 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
     if scheduled {
         var preloaded = false
         var fadeIn = false
-        let count = 100
         return account.viewTracker.scheduledMessagesViewForLocation(chatLocation)
         |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
             let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)

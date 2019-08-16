@@ -10,6 +10,15 @@ import MusicAlbumArtResources
 private enum PeerMessagesMediaPlaylistLoadAnchor {
     case messageId(MessageId)
     case index(MessageIndex)
+    
+    var id: MessageId {
+        switch self {
+            case let .messageId(id):
+                return id
+            case let .index(index):
+                return index.id
+        }
+    }
 }
 
 private enum PeerMessagesMediaPlaylistNavigation {
@@ -477,6 +486,14 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
     private func loadItem(anchor: PeerMessagesMediaPlaylistLoadAnchor, navigation: PeerMessagesMediaPlaylistNavigation) {
         self.loadingItem = true
         self.updateState()
+        
+        let namespaces: HistoryViewNamespaces
+        if Namespaces.Message.allScheduled.contains(anchor.id.namespace) {
+            namespaces = .just(Namespaces.Message.allScheduled)
+        } else {
+            namespaces = .not(Namespaces.Message.allScheduled)
+        }
+        
         switch anchor {
             case let .messageId(messageId):
                 if case let .messages(peerId, tagMask, _) = self.messagesLocation {
@@ -486,7 +503,8 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         guard let message = message else {
                             return .single(nil)
                         }
-                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, excludeNamespaces: [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal], orderStatistics: [])
+                        
+                        return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(message.index), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                         |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                             if let (message, aroundMessages, _) = navigatedMessageFromView(view.0, anchorIndex: message.index, position: .exact) {
                                 return .single((message, aroundMessages))
@@ -560,7 +578,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                         }
                         let historySignal = inputIndex
                         |> mapToSignal { inputIndex -> Signal<(Message, [Message])?, NoError> in
-                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, excludeNamespaces: [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal], orderStatistics: [])
+                            return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: .index(inputIndex), count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                             |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                 let position: NavigatedMessageFromViewPosition
                                 switch navigation {
@@ -590,7 +608,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
                                     } else {
                                         viewIndex = .lowerBound
                                     }
-                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, excludeNamespaces: [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal], orderStatistics: [])
+                                    return self.postbox.aroundMessageHistoryViewForLocation(.peer(peerId), anchor: viewIndex, count: 10, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tagMask, namespaces: namespaces, orderStatistics: [])
                                     |> mapToSignal { view -> Signal<(Message, [Message])?, NoError> in
                                         let position: NavigatedMessageFromViewPosition
                                         switch navigation {

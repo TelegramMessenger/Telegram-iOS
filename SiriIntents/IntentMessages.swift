@@ -1,10 +1,32 @@
 import Foundation
-import Display
 import SwiftSignalKit
 import Postbox
 import TelegramCore
 import Contacts
 import Intents
+
+extension MessageId {
+    init?(string: String) {
+        let components = string.components(separatedBy: "_")
+        if components.count == 3, let peerIdValue = Int64(components[0]), let namespaceValue = Int32(components[1]), let idValue = Int32(components[2]) {
+            self.init(peerId: PeerId(peerIdValue), namespace: namespaceValue, id: idValue)
+        } else {
+            return nil
+        }
+    }
+}
+
+func getMessages(account: Account, ids: [MessageId]) -> Signal<[INMessage], NoError> {
+    return account.postbox.transaction { transaction -> [INMessage] in
+        var messages: [INMessage] = []
+        for id in ids {
+            if let message = transaction.getMessage(id).flatMap(messageWithTelegramMessage) {
+                messages.append(message)
+            }
+        }
+        return messages.sorted { $0.dateSent!.compare($1.dateSent!) == .orderedDescending }
+    }
+}
 
 func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
     return account.postbox.tailChatListView(groupId: .root, count: 20, summaryComponents: ChatListEntrySummaryComponents())
@@ -31,7 +53,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                 }
                 
                 if !isMuted && hasUnread {
-                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(index.messageIndex.id.peerId), anchor: .upperBound, count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tagMask: nil, excludeNamespaces: [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal], orderStatistics: .combinedLocation)
+                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(index.messageIndex.id.peerId), anchor: .upperBound, count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tagMask: nil, namespaces: .not([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal]), orderStatistics: .combinedLocation)
                     |> take(1)
                     |> map { view -> [INMessage] in
                         var messages: [INMessage] = []
@@ -42,7 +64,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                             }
                             
                             if !isRead {
-                                if let message = messageWithTelegramMessage(entry.message, account: account) {
+                                if let message = messageWithTelegramMessage(entry.message) {
                                     messages.append(message)
                                 }
                             }
@@ -58,7 +80,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
         } else {
             return combineLatest(signals)
             |> map { results -> [INMessage] in
-                return results.flatMap { $0 }.sorted(by: { $0.dateSent!.compare($1.dateSent!) == ComparisonResult.orderedDescending })
+                return results.flatMap { $0 }.sorted { $0.dateSent!.compare($1.dateSent!) == .orderedDescending }
             }
         }
     }
@@ -94,7 +116,7 @@ func missedCalls(account: Account) -> Signal<[CallRecord], NoError> {
                     break
             }
         }
-        return calls.sorted(by: { $0.date.compare($1.date) == ComparisonResult.orderedDescending })
+        return calls.sorted { $0.date.compare($1.date) == .orderedDescending }
     }
 }
 
@@ -136,7 +158,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
     return CallRecord(identifier: identifier, date: date, caller: caller, duration: duration, unseen: true)
 }
 
-private func messageWithTelegramMessage(_ telegramMessage: Message, account: Account) -> INMessage? {
+private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage? {
     guard let author = telegramMessage.author, let user = telegramMessage.peers[author.id] as? TelegramUser, user.id.id != 777000 else {
         return nil
     }
@@ -181,13 +203,16 @@ private func messageWithTelegramMessage(_ telegramMessage: Message, account: Acc
                     messageType = .mediaAudio
                     break loop
                 } else if file.isVoice {
-                    messageType = .audio
+                    messageType = .mediaAudio
                     break loop
                 } else if file.isSticker || file.isAnimatedSticker {
                     messageType = .sticker
                     break loop
                 } else if file.isAnimated {
                     messageType = .mediaVideo
+                    break loop
+                } else if #available(iOSApplicationExtension 12.0, *) {
+                    messageType = .file
                     break loop
                 }
             } else if media is TelegramMediaMap {
