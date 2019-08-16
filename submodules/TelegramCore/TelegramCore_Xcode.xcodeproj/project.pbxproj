@@ -114,6 +114,7 @@
 		D00BDA1A1EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00BDA181EE593D600C64C5E /* TelegramChannelAdminRights.swift */; };
 		D00BDA1C1EE5952A00C64C5E /* TelegramChannelBannedRights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00BDA1B1EE5952A00C64C5E /* TelegramChannelBannedRights.swift */; };
 		D00BDA1D1EE5952A00C64C5E /* TelegramChannelBannedRights.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00BDA1B1EE5952A00C64C5E /* TelegramChannelBannedRights.swift */; };
+		D00C73BB23055AA8004B1E2B /* MacInternalUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C73BA23055AA8004B1E2B /* MacInternalUpdater.swift */; };
 		D00C7CCC1E3620C30080C3D5 /* CachedChannelParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CCB1E3620C30080C3D5 /* CachedChannelParticipants.swift */; };
 		D00C7CCD1E3620C30080C3D5 /* CachedChannelParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CCB1E3620C30080C3D5 /* CachedChannelParticipants.swift */; };
 		D00C7CE01E3785710080C3D5 /* MarkMessageContentAsConsumedInteractively.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00C7CDF1E3785700080C3D5 /* MarkMessageContentAsConsumedInteractively.swift */; };
@@ -885,6 +886,7 @@
 		D00580AD21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountEnvironmentAttribute.swift; sourceTree = "<group>"; };
 		D00BDA181EE593D600C64C5E /* TelegramChannelAdminRights.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramChannelAdminRights.swift; sourceTree = "<group>"; };
 		D00BDA1B1EE5952A00C64C5E /* TelegramChannelBannedRights.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramChannelBannedRights.swift; sourceTree = "<group>"; };
+		D00C73BA23055AA8004B1E2B /* MacInternalUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacInternalUpdater.swift; sourceTree = "<group>"; };
 		D00C7CCB1E3620C30080C3D5 /* CachedChannelParticipants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CachedChannelParticipants.swift; sourceTree = "<group>"; };
 		D00C7CDF1E3785700080C3D5 /* MarkMessageContentAsConsumedInteractively.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MarkMessageContentAsConsumedInteractively.swift; sourceTree = "<group>"; };
 		D00C7CEA1E37A8540080C3D5 /* SetSecretChatMessageAutoremoveTimeoutInteractively.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SetSecretChatMessageAutoremoveTimeoutInteractively.swift; sourceTree = "<group>"; };
@@ -1314,6 +1316,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D00C73B923055A60004B1E2B /* Mac Internal Updates */ = {
+			isa = PBXGroup;
+			children = (
+				D00C73BA23055AA8004B1E2B /* MacInternalUpdater.swift */,
+			);
+			name = "Mac Internal Updates";
+			sourceTree = "<group>";
+		};
 		D01B27A01E394D7B0022A4C0 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -1879,6 +1889,7 @@
 		D09D8C031D4FAB1D0081DBEC /* TelegramCore */ = {
 			isa = PBXGroup;
 			children = (
+				D00C73B923055A60004B1E2B /* Mac Internal Updates */,
 				D03B0C791D62153400955575 /* third-party */,
 				D03B0CB71D62232000955575 /* Utils */,
 				D03B0CCF1D62242200955575 /* Objects */,
@@ -3014,6 +3025,7 @@
 				D0FA8BA21E1F99E1001E855B /* SecretChatFileReference.swift in Sources */,
 				D0B844301DAB91E0005F29E1 /* NBNumberFormat.m in Sources */,
 				D001F3F71E128A1C007A8C60 /* ApplyUpdateMessage.swift in Sources */,
+				D00C73BB23055AA8004B1E2B /* MacInternalUpdater.swift in Sources */,
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
 				D01843A92190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift in Sources */,
 				D041E3F91E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
