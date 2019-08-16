@@ -296,7 +296,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let buttonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - buttonHeight - insets.bottom - 10.0, width: contentFrame.width, height: buttonHeight))
         
-        self.pickerView.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: contentHeight))
+        self.pickerView.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))

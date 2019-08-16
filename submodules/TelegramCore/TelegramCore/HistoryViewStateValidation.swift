@@ -145,7 +145,7 @@ final class HistoryViewStateValidationContexts {
         self.accountPeerId = accountPeerId
     }
     
-    func updateView(id: Int32, view: MessageHistoryView?) {
+    func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocation? = nil) {
         assert(self.queue.isCurrent())
         guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage else {
             if self.contexts[id] != nil {
@@ -262,32 +262,24 @@ final class HistoryViewStateValidationContexts {
                 }
             }
         } else if view.namespaces.contains(Namespaces.Message.ScheduledCloud) {
-            let context: HistoryStateValidationContext
-            if let current = self.contexts[id] {
-                context = current
-            } else {
-                context = HistoryStateValidationContext()
+            if let _ = self.contexts[id] {
+            } else if let location = location, case let .peer(peerId) = location {
+                let context = HistoryStateValidationContext()
                 self.contexts[id] = context
-            }
-
-            let disposable = MetaDisposable()
-            let batch = HistoryStateValidationBatch(disposable: disposable)
-            context.batch = batch
+        
+                let disposable = MetaDisposable()
+                let batch = HistoryStateValidationBatch(disposable: disposable)
+                context.batch = batch
+                
+                let messages: [Message] = view.entries.map { $0.message }
             
-            disposable.set((validateScheduledMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: self.accountPeerId, tag: nil, messages: [], historyState: .scheduledMessages(self.accountPeerId))
-            |> deliverOn(self.queue)).start(completed: { [weak self, weak batch] in
-                if let strongSelf = self, let context = strongSelf.contexts[id], let batch = batch {
-                    var completedMessageIds: [MessageId] = []
-                    for (messageId, messageBatch) in context.batchReferences {
-                        if messageBatch === batch {
-                            completedMessageIds.append(messageId)
-                        }
+                disposable.set((validateScheduledMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: peerId, tag: nil, messages: messages, historyState: .scheduledMessages(peerId))
+                |> deliverOn(self.queue)).start(completed: { [weak self] in
+                    if let strongSelf = self, let context = strongSelf.contexts[id] {
+                        context.batch = nil
                     }
-                    for messageId in completedMessageIds {
-                        context.batchReferences.removeValue(forKey: messageId)
-                    }
-                }
-            }))
+                }))
+            }
         }
     }
 }
@@ -404,7 +396,7 @@ private func validateChannelMessagesBatch(postbox: Postbox, network: Network, ac
                 signal = .complete()
         }
         
-        return validateBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, tag: tag, historyState: historyState, signal: signal, previous: previous)
+        return validateBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, tag: tag, historyState: historyState, signal: signal, previous: previous, messageNamespace: Namespaces.Message.Cloud)
     } |> switchToLatest
 }
 
@@ -429,7 +421,7 @@ private func validateScheduledMessagesBatch(postbox: Postbox, network: Network, 
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
-                            case let .channelMessages(_, pts, _, apiMessages, apiChats, apiUsers):
+                            case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
@@ -444,11 +436,15 @@ private func validateScheduledMessagesBatch(postbox: Postbox, network: Network, 
             default:
                 signal = .complete()
         }
-        return validateBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, tag: tag, historyState: historyState, signal: signal, previous: [:])
+        var previous: [MessageId: Message] = [:]
+        for message in messages {
+            previous[message.id] = message
+        }
+        return validateBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, tag: tag, historyState: historyState, signal: signal, previous: previous, messageNamespace: Namespaces.Message.ScheduledCloud)
     } |> switchToLatest
 }
 
-private func validateBatch(postbox: Postbox, network: Network, transaction: Transaction, accountPeerId: PeerId, tag: MessageTags?, historyState: HistoryState, signal: Signal<ValidatedMessages, MTRpcError>, previous: [MessageId: Message]) -> Signal<Void, NoError> {
+private func validateBatch(postbox: Postbox, network: Network, transaction: Transaction, accountPeerId: PeerId, tag: MessageTags?, historyState: HistoryState, signal: Signal<ValidatedMessages, MTRpcError>, previous: [MessageId: Message], messageNamespace: MessageId.Namespace) -> Signal<Void, NoError> {
     return signal
     |> map(Optional.init)
     |> `catch` { _ -> Signal<ValidatedMessages?, NoError> in
@@ -463,7 +459,7 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                 var storeMessages: [StoreMessage] = []
                 
                 for message in messages {
-                    if let storeMessage = StoreMessage(apiMessage: message) {
+                    if let storeMessage = StoreMessage(apiMessage: message, namespace: messageNamespace) {
                         var attributes = storeMessage.attributes
                         if let channelPts = channelPts {
                             attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
@@ -658,13 +654,8 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                                         return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: updatedTags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
                                     })
                                 } else {
-                                    switch historyState {
-                                        case .channel:
-                                            deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
-                                            Logger.shared.log("HistoryValidation", "deleting message \(id) in \(id.peerId)")
-                                        default:
-                                            break
-                                    }
+                                    deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [id])
+                                    Logger.shared.log("HistoryValidation", "deleting message \(id) in \(id.peerId)")
                                 }
                             }
                         }

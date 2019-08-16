@@ -924,7 +924,7 @@ public final class AccountViewTracker {
                     strongSelf.queue.async {
                         let (messageIds, localWebpages) = pendingWebpages(entries: next.0.entries)
                         strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds, localWebpages: localWebpages)
-                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     }
                 }
             }, disposed: { [weak self] viewId in
