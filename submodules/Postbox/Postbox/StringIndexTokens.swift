@@ -1,5 +1,9 @@
 import Foundation
+#if os(macOS)
+import sqlciphermac
+#else
 import sqlcipher
+#endif
 
 public enum StringIndexTokenTransliteration {
     case none

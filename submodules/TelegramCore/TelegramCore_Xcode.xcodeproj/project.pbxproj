@@ -180,6 +180,7 @@
 		D01C7F051EFC1C49008305F1 /* DeviceContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7F031EFC1C49008305F1 /* DeviceContact.swift */; };
 		D01D6BF91E42A713006151C6 /* SearchStickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D6BF81E42A713006151C6 /* SearchStickers.swift */; };
 		D01D6BFA1E42A718006151C6 /* SearchStickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D6BF81E42A713006151C6 /* SearchStickers.swift */; };
+		D0208AF42306E92B00A23503 /* libphonenumbermac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0208AF32306E92B00A23503 /* libphonenumbermac.framework */; };
 		D020F00722F19C8F00BE699A /* ManagedAnimatedEmojiUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0925903622F0D02D003D6283 /* ManagedAnimatedEmojiUpdates.swift */; };
 		D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
 		D021E0E21DB5401A00C6B04F /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
@@ -868,6 +869,7 @@
 		D01C7ED51EF5E468008305F1 /* ProxySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxySettings.swift; sourceTree = "<group>"; };
 		D01C7F031EFC1C49008305F1 /* DeviceContact.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceContact.swift; sourceTree = "<group>"; };
 		D01D6BF81E42A713006151C6 /* SearchStickers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchStickers.swift; sourceTree = "<group>"; };
+		D0208AF32306E92B00A23503 /* libphonenumbermac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = libphonenumbermac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D021E0DE1DB539FC00C6B04F /* StickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPack.swift; sourceTree = "<group>"; };
 		D021E0E11DB5401A00C6B04F /* StickerManagement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerManagement.swift; sourceTree = "<group>"; };
 		D0223A971EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceNetworkStatsTag.swift; sourceTree = "<group>"; };
@@ -1227,6 +1229,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0208AF42306E92B00A23503 /* libphonenumbermac.framework in Frameworks */,
 				D0CC4ADC22BA47280088F36D /* TelegramApiMac.framework in Frameworks */,
 				D0B4187F1D7E054E004562A4 /* MtProtoKitMac.framework in Frameworks */,
 				D0B418721D7E0409004562A4 /* PostboxMac.framework in Frameworks */,
@@ -1653,6 +1656,7 @@
 		D06706631D512ADA00DED3E3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0208AF32306E92B00A23503 /* libphonenumbermac.framework */,
 				D03E45D32305D44A0049C28B /* libphonenumber.framework */,
 				D03E45D02305D34C0049C28B /* libphonenumber_iOS.framework */,
 				D0CC4ADB22BA47280088F36D /* TelegramApiMac.framework */,

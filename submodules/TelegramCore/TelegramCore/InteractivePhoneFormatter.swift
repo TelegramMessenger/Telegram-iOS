@@ -1,5 +1,10 @@
 import Foundation
+
+#if os(macOS)
+import libphonenumbermac
+#else
 import libphonenumber
+#endif
 
 public final class InteractivePhoneFormatter {
     private let formatter = NBAsYouTypeFormatter(regionCode: "US")!

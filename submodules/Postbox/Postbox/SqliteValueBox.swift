@@ -1,5 +1,9 @@
 import Foundation
+#if os(macOS)
+import sqlciphermac
+#else
 import sqlcipher
+#endif
 #if os(macOS)
     import SwiftSignalKitMac
 #else
