@@ -1017,6 +1017,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return self?.navigationController as? NavigationController
         }, chatControllerNode: { [weak self] in
             return self?.chatDisplayNode
+        }, reactionContainerNode: { [weak self] in
+            return self?.chatDisplayNode.reactionContainerNode
         }, presentGlobalOverlayController: { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
         }, callPeer: { [weak self] peerId in

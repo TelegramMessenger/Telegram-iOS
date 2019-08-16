@@ -16,6 +16,7 @@ import MosaicLayout
 import TextSelectionNode
 import PlatformRestrictionMatching
 import Emoji
+import ReactionSelectionNode
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -365,7 +366,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
         self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
         
-        let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
+        /*let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
         replyRecognizer.shouldBegin = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if strongSelf.selectionNode != nil {
@@ -387,7 +388,74 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
             }
             return false
         }
-        self.view.addGestureRecognizer(replyRecognizer)
+        self.view.addGestureRecognizer(replyRecognizer)*/
+        
+        let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
+        reactionRecognizer.availableReactions = { [weak self] in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return []
+            }
+            if strongSelf.selectionNode != nil {
+                return []
+            }
+            for media in item.content.firstMessage.media {
+                if let _ = media as? TelegramMediaExpiredContent {
+                    return []
+                }
+                else if let media = media as? TelegramMediaAction {
+                    if case .phoneCall = media.action {
+                    } else {
+                        return []
+                    }
+                }
+            }
+            if !item.controllerInteraction.canSetupReply(item.message) {
+                return []
+            }
+            
+            let reactions: [(String, String)] = [
+                ("😒", "Sad"),
+                ("😳", "Surprised"),
+                //("🥳", "Fun"),
+                ("👍", "Like"),
+                ("❤", "Love"),
+            ]
+            
+            var result: [ReactionGestureItem] = []
+            for (value, text) in reactions {
+                if let file = item.associatedData.animatedEmojiStickers[value]?.file {
+                    result.append(ReactionGestureItem(value: ReactionGestureItemValue(value: value, text: text, file: file)))
+                }
+            }
+            return result
+        }
+        reactionRecognizer.getReactionContainer = { [weak self] in
+            return self?.item?.controllerInteraction.reactionContainerNode()
+        }
+        reactionRecognizer.updateOffset = { [weak self] offset, animated in
+            guard let strongSelf = self else {
+                return
+            }
+            var bounds = strongSelf.bounds
+            bounds.origin.x = offset
+            strongSelf.bounds = bounds
+            if animated {
+                strongSelf.layer.animateBoundsOriginXAdditive(from: -offset, to: 0.0, duration: 0.1, mediaTimingFunction: CAMediaTimingFunction(name: .easeOut))
+            }
+        }
+        reactionRecognizer.completed = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var bounds = strongSelf.bounds
+            let offset = bounds.origin.x
+            bounds.origin.x = 0.0
+            strongSelf.bounds = bounds
+            if !offset.isZero {
+                strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+        }
+        self.view.addGestureRecognizer(reactionRecognizer)
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
@@ -2504,7 +2572,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     }
     
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
-        switch recognizer.state {
+        /*switch recognizer.state {
             case .began:
                 self.currentSwipeToReplyTranslation = 0.0
                 if self.swipeToReplyFeedback == nil {
@@ -2563,7 +2631,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
                 }
             default:
                 break
-        }
+        }*/
     }
     
     private var absoluteRect: (CGRect, CGSize)?

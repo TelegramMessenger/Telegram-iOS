@@ -372,6 +372,13 @@
             location = "group:submodules/AvatarNode/AvatarNode_Xcode.xcodeproj">
          </FileRef>
       </Group>
+      <Group
+         location = "container:"
+         name = "Chat">
+         <FileRef
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/ReactionSelectionNode/ReactionSelectionNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
       <FileRef
          location = "group:submodules/LegacyComponents/LegacyComponents_Xcode.xcodeproj">
       </FileRef>

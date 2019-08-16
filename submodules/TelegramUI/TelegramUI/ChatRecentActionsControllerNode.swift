@@ -236,6 +236,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             return self?.getNavigationController()
         }, chatControllerNode: { [weak self] in
             return self
+        }, reactionContainerNode: {
+            return nil
         }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in }, longTap: { [weak self] action, message in
             if let strongSelf = self {
                 switch action {

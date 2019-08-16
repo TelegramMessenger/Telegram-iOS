@@ -90,6 +90,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             return nil
         }, chatControllerNode: {
             return nil
+        }, reactionContainerNode: {
+            return nil
         }, presentGlobalOverlayController: { _, _ in
         }, callPeer: { _ in
         }, longTap: { _, _ in
