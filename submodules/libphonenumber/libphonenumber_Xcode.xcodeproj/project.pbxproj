@@ -604,7 +604,7 @@
 			};
 			name = DebugAppStore;
 		};
-		D0208AEA2306E87100A23503 /* HockeyappAlphaMac */ = {
+		D0208AEA2306E87100A23503 /* HockeyappMacAlpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -665,9 +665,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = HockeyappAlphaMac;
+			name = HockeyappMacAlpha;
 		};
-		D0208AEB2306E87100A23503 /* HockeyappAlphaMac */ = {
+		D0208AEB2306E87100A23503 /* HockeyappMacAlpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -692,9 +692,9 @@
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = HockeyappAlphaMac;
+			name = HockeyappMacAlpha;
 		};
-		D0208AEC2306E87100A23503 /* HockeyappAlphaMac */ = {
+		D0208AEC2306E87100A23503 /* HockeyappMacAlpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
@@ -720,7 +720,7 @@
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = HockeyappAlphaMac;
+			name = HockeyappMacAlpha;
 		};
 		D0208AED2306E87700A23503 /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
@@ -1302,7 +1302,7 @@
 			buildConfigurations = (
 				D0208AE12306E85800A23503 /* DebugAppStoreLLC */,
 				D0208AE22306E85800A23503 /* DebugHockeyapp */,
-				D0208AEC2306E87100A23503 /* HockeyappAlphaMac */,
+				D0208AEC2306E87100A23503 /* HockeyappMacAlpha */,
 				D0208AE92306E86800A23503 /* DebugAppStore */,
 				D0208AE32306E85800A23503 /* ReleaseAppStoreLLC */,
 				D0208AEF2306E87700A23503 /* ReleaseAppStore */,
@@ -1317,7 +1317,7 @@
 			buildConfigurations = (
 				D03E45902305CE840049C28B /* DebugAppStoreLLC */,
 				D03E45952305CE9A0049C28B /* DebugHockeyapp */,
-				D0208AEA2306E87100A23503 /* HockeyappAlphaMac */,
+				D0208AEA2306E87100A23503 /* HockeyappMacAlpha */,
 				D0208AE72306E86800A23503 /* DebugAppStore */,
 				D03E45912305CE840049C28B /* ReleaseAppStoreLLC */,
 				D0208AED2306E87700A23503 /* ReleaseAppStore */,
@@ -1332,7 +1332,7 @@
 			buildConfigurations = (
 				D03E45932305CE840049C28B /* DebugAppStoreLLC */,
 				D03E45962305CE9A0049C28B /* DebugHockeyapp */,
-				D0208AEB2306E87100A23503 /* HockeyappAlphaMac */,
+				D0208AEB2306E87100A23503 /* HockeyappMacAlpha */,
 				D0208AE82306E86800A23503 /* DebugAppStore */,
 				D03E45942305CE840049C28B /* ReleaseAppStoreLLC */,
 				D0208AEE2306E87700A23503 /* ReleaseAppStore */,

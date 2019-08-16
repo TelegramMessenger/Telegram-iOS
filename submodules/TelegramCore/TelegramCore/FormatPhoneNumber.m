@@ -3,7 +3,7 @@
 #if TARGET_OS_IOS
 #import <libphonenumber/libphonenumber.h>
 #else
-#import <libphonenumbermac/libphonenumber.h>
+#import <libphonenumbermac/libphonenumbermac.h>
 #endif
 
 static NBPhoneNumberUtil *getNBPhoneNumberUtil() {

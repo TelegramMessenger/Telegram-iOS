@@ -225,7 +225,7 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		D0208AAC2306E7EB00A23503 /* HockeyappAlphaMac */ = {
+		D0208AAC2306E7EB00A23503 /* HockeyappMacAlpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -286,9 +286,9 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = HockeyappAlphaMac;
+			name = HockeyappMacAlpha;
 		};
-		D0208AAD2306E7EB00A23503 /* HockeyappAlphaMac */ = {
+		D0208AAD2306E7EB00A23503 /* HockeyappMacAlpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
@@ -312,9 +312,9 @@
 				SKIP_INSTALL = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
-			name = HockeyappAlphaMac;
+			name = HockeyappMacAlpha;
 		};
-		D0208AAE2306E7EB00A23503 /* HockeyappAlphaMac */ = {
+		D0208AAE2306E7EB00A23503 /* HockeyappMacAlpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -381,6 +381,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -393,7 +394,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
 			};
-			name = HockeyappAlphaMac;
+			name = HockeyappMacAlpha;
 		};
 		D0208AAF2306E7F700A23503 /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
@@ -551,6 +552,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -709,6 +711,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -866,6 +869,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -1290,6 +1294,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -1371,6 +1376,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -1446,6 +1452,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -1520,6 +1527,7 @@
 					"@executable_path/../Frameworks",
 					"@loader_path/Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -1542,7 +1550,7 @@
 				D03E456A2305CC310049C28B /* DebugAppStoreLLC */,
 				D03E456F2305CC4E0049C28B /* DebugHockeyapp */,
 				D0208AAF2306E7F700A23503 /* DebugAppStore */,
-				D0208AAC2306E7EB00A23503 /* HockeyappAlphaMac */,
+				D0208AAC2306E7EB00A23503 /* HockeyappMacAlpha */,
 				D03E456B2305CC310049C28B /* ReleaseAppStoreLLC */,
 				D0208AB22306E7FD00A23503 /* ReleaseAppStore */,
 				D0208AB52306E80300A23503 /* ReleaseHockeyapp */,
@@ -1557,7 +1565,7 @@
 				D03E456D2305CC310049C28B /* DebugAppStoreLLC */,
 				D03E45702305CC4E0049C28B /* DebugHockeyapp */,
 				D0208AB02306E7F700A23503 /* DebugAppStore */,
-				D0208AAD2306E7EB00A23503 /* HockeyappAlphaMac */,
+				D0208AAD2306E7EB00A23503 /* HockeyappMacAlpha */,
 				D03E456E2305CC310049C28B /* ReleaseAppStoreLLC */,
 				D0208AB32306E7FD00A23503 /* ReleaseAppStore */,
 				D0208AB62306E80300A23503 /* ReleaseHockeyapp */,
@@ -1572,7 +1580,7 @@
 				D03E46372306E0BB0049C28B /* DebugAppStoreLLC */,
 				D03E46382306E0BB0049C28B /* DebugHockeyapp */,
 				D0208AB12306E7F700A23503 /* DebugAppStore */,
-				D0208AAE2306E7EB00A23503 /* HockeyappAlphaMac */,
+				D0208AAE2306E7EB00A23503 /* HockeyappMacAlpha */,
 				D03E46392306E0BB0049C28B /* ReleaseAppStoreLLC */,
 				D0208AB42306E7FD00A23503 /* ReleaseAppStore */,
 				D0208AB72306E80300A23503 /* ReleaseHockeyapp */,
