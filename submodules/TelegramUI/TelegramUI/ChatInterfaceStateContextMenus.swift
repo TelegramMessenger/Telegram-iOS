@@ -382,14 +382,18 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         
         if data.messageActions.options.contains(.sendScheduledNow) {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { _ in return nil }, action: { _, f in
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
                 controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
                 f(.dismissWithoutContent)
             })))
         }
         
         if data.messageActions.options.contains(.editScheduledTime) {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { _ in return nil }, action: { _, f in
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
                 controllerInteraction.editScheduledMessagesTime(selectAll ? messages.map { $0.id } : [message.id])
                 f(.dismissWithoutContent)
             })))

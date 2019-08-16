@@ -12,6 +12,8 @@ public struct Namespaces {
         public static let SecretIncoming: Int32 = 2
         public static let ScheduledCloud: Int32 = 3
         public static let ScheduledLocal: Int32 = 4
+        
+        public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
     }
     
     public struct Media {
@@ -110,6 +112,7 @@ public extension LocalMessageTags {
 public extension PendingMessageActionType {
     static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
     static let updateReaction = PendingMessageActionType(rawValue: 1)
+    static let sendScheduledMessageImmediately = PendingMessageActionType(rawValue: 2)
 }
 
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]

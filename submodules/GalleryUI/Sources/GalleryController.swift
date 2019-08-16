@@ -368,16 +368,13 @@ public class GalleryController: ViewController {
             switch source {
                 case .peerMessagesAtId:
                     if let tags = tagsForMessage(message!) {
-                        var excludeNamespaces: [MessageId.Namespace]
-                        if message!.id.namespace == Namespaces.Message.ScheduledCloud {
-                            excludeNamespaces = [Namespaces.Message.Cloud, Namespaces.Message.Local, Namespaces.Message.SecretIncoming]
+                        let namespaces: HistoryViewNamespaces
+                        if Namespaces.Message.allScheduled.contains(message!.id.namespace) {
+                            namespaces = .just(Namespaces.Message.allScheduled)
                         } else {
-                            excludeNamespaces = [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal]
+                            namespaces = .not(Namespaces.Message.allScheduled)
                         }
-                        
-                        let view = context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), anchor: .index(message!.index), count: 50, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, excludeNamespaces: excludeNamespaces, orderStatistics: [.combinedLocation])
-                        
-                        return view
+                        return context.account.postbox.aroundMessageHistoryViewForLocation(.peer(message!.id.peerId), anchor: .index(message!.index), count: 50, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: tags, namespaces: namespaces, orderStatistics: [.combinedLocation])
                         |> mapToSignal { (view, _, _) -> Signal<GalleryMessageHistoryView?, NoError> in
                             let mapped = GalleryMessageHistoryView.view(view)
                             return .single(mapped)

@@ -105,7 +105,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentContainerNode.addSubnode(self.doneButton)
         
         self.pickerView.timeZone = TimeZone.current
-        self.pickerView.minuteInterval = 5
+        self.pickerView.minuteInterval = 1
         self.pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
         
         self.contentContainerNode.view.addSubview(self.pickerView)
@@ -265,8 +265,11 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         insets.top = max(10.0, insets.top)
         
         let bottomInset: CGFloat = 10.0 + cleanInsets.bottom
-        let titleAreaHeight: CGFloat = 54.0
-        let contentHeight = titleAreaHeight + bottomInset + 285.0
+        let titleHeight: CGFloat = 54.0
+        var contentHeight = titleHeight + bottomInset + 52.0 + 17.0
+        let pickerHeight: CGFloat = min(216.0, layout.size.height - contentHeight)
+        contentHeight = titleHeight + bottomInset + 52.0 + 17.0 + pickerHeight
+        
         let width = horizontalContainerFillingSizeForLayout(layout: layout, sideInset: layout.safeInsets.left)
         
         let sideInset = floor((layout.size.width - width) / 2.0)
@@ -281,11 +284,11 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         transition.updateFrame(node: self.wrappingScrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let titleSize = self.titleNode.measure(CGSize(width: width, height: titleAreaHeight))
+        let titleSize = self.titleNode.measure(CGSize(width: width, height: titleHeight))
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentFrame.width - titleSize.width) / 2.0), y: 16.0), size: titleSize)
         transition.updateFrame(node: self.titleNode, frame: titleFrame)
         
-        let cancelSize = self.cancelButton.measure(CGSize(width: width, height: titleAreaHeight))
+        let cancelSize = self.cancelButton.measure(CGSize(width: width, height: titleHeight))
         let cancelFrame = CGRect(origin: CGPoint(x: 16.0, y: 16.0), size: cancelSize)
         transition.updateFrame(node: self.cancelButton, frame: cancelFrame)
         
@@ -293,9 +296,9 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let buttonHeight = self.doneButton.updateLayout(width: contentFrame.width - buttonInset * 2.0, transition: transition)
         transition.updateFrame(node: self.doneButton, frame: CGRect(x: buttonInset, y: contentHeight - buttonHeight - insets.bottom - 10.0, width: contentFrame.width, height: buttonHeight))
         
-        self.pickerView.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: 216.0))
+        self.pickerView.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleAreaHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
+        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
     }
 }
