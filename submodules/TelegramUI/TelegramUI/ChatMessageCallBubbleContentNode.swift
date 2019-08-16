@@ -128,7 +128,7 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
                     buttonImage = PresentationResourcesChat.chatBubbleOutgoingCallButtonImage(item.presentationData.theme.theme)
                 }
                 
-                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
+                let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: 0)
                 
                 let statusText: String
                 if let callDuration = callDuration, callDuration > 1 {
@@ -213,5 +213,9 @@ class ChatMessageCallBubbleContentNode: ChatMessageBubbleContentNode {
         } else {
             return .none
         }
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        return nil
     }
 }

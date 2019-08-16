@@ -32,7 +32,7 @@ private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat) -> UI
 }
 
 private final class ReactionNode: ASDisplayNode {
-    private let reaction: ReactionGestureItem
+    let reaction: ReactionGestureItem
     private let animationNode: AnimatedStickerNode
     var isMaximized: Bool?
     private let intrinsicSize: CGSize
@@ -91,6 +91,9 @@ final class ReactionSelectionNode: ASDisplayNode {
     private let backgroundShadowNode: ASImageNode
     private let bubbleNodes: [(ASImageNode, ASImageNode)]
     private let reactionNodes: [ReactionNode]
+    private var hasSelectedNode = false
+    
+    private let hapticFeedback = HapticFeedback()
     
     public init(account: Account, reactions: [ReactionGestureItem]) {
         self.backgroundNode = ASImageNode()
@@ -142,7 +145,7 @@ final class ReactionSelectionNode: ASDisplayNode {
         let contentWidth: CGFloat = CGFloat(self.reactionNodes.count - 1) * (minimizedReactionSize) + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * reactionSpacing
         
         var backgroundFrame = CGRect(origin: CGPoint(x: -shadowBlur, y: -shadowBlur), size: CGSize(width: contentWidth + shadowBlur * 2.0, height: backgroundHeight + shadowBlur * 2.0))
-        backgroundFrame = backgroundFrame.offsetBy(dx: startingPoint.x - contentWidth + backgroundHeight / 2.0, dy: startingPoint.y - backgroundHeight - 16.0)
+        backgroundFrame = backgroundFrame.offsetBy(dx: startingPoint.x - contentWidth + backgroundHeight / 2.0 - 52.0, dy: startingPoint.y - backgroundHeight - 16.0)
         
         self.backgroundNode.frame = backgroundFrame
         self.backgroundShadowNode.frame = backgroundFrame
@@ -152,8 +155,15 @@ final class ReactionSelectionNode: ASDisplayNode {
         let anchorX = max(anchorMinX, min(anchorMaxX, offsetFromStart))
         
         var reactionX: CGFloat = backgroundFrame.minX + shadowBlur + reactionSpacing
+        if offsetFromStart > backgroundFrame.maxX - shadowBlur {
+            self.hasSelectedNode = false
+        } else {
+            self.hasSelectedNode = true
+        }
+            
         var maximizedIndex = Int(((anchorX - anchorMinX) / (anchorMaxX - anchorMinX)) * CGFloat(self.reactionNodes.count))
         maximizedIndex = max(0, min(self.reactionNodes.count - 1, maximizedIndex))
+        
         for i in 0 ..< self.reactionNodes.count {
             let isMaximized = i == maximizedIndex
             
@@ -174,6 +184,9 @@ final class ReactionSelectionNode: ASDisplayNode {
             if self.reactionNodes[i].isMaximized != isMaximized {
                 self.reactionNodes[i].isMaximized = isMaximized
                 self.reactionNodes[i].updateIsAnimating(isMaximized, animated: !isInitial)
+                if isMaximized {
+                    self.hapticFeedback.tap()
+                }
             }
             
             var reactionFrame = CGRect(origin: CGPoint(x: reactionX, y: backgroundFrame.maxY - shadowBlur - minimizedReactionVerticalInset - reactionSize), size: CGSize(width: reactionSize, height: reactionSize))
@@ -209,8 +222,10 @@ final class ReactionSelectionNode: ASDisplayNode {
         
         for i in 0 ..< self.reactionNodes.count {
             let animationOffset: Double = 1.0 - Double(i) / Double(self.reactionNodes.count - 1)
-            let nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.maxX - shadowBlur) / 2.0 - 42.0, y: self.reactionNodes[i].frame.minY - self.backgroundNode.frame.maxY - shadowBlur)
-            self.reactionNodes[i].layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5 + animationOffset * 0.05, initialVelocity: 0.0, damping: damping)
+            var nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.maxX - shadowBlur) / 2.0 - 42.0, y: self.reactionNodes[i].frame.minY - self.backgroundNode.frame.maxY - shadowBlur)
+            nodeOffset.x = -nodeOffset.x
+            nodeOffset.y = 30.0
+            self.reactionNodes[i].layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5 + animationOffset * 0.08, initialVelocity: 0.0, damping: damping)
             self.reactionNodes[i].layer.animateSpring(from: NSValue(cgPoint: nodeOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, initialVelocity: 0.0, damping: damping, additive: true)
         }
         
@@ -220,7 +235,110 @@ final class ReactionSelectionNode: ASDisplayNode {
         self.backgroundShadowNode.layer.animateSpring(from: NSValue(cgPoint: backgroundOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, initialVelocity: 0.0, damping: damping, additive: true)
     }
     
-    func animateOut(completion: @escaping () -> Void) {
-        completion()
+    func animateOut(into targetNode: ASImageNode?, hideTarget: Bool, completion: @escaping () -> Void) {
+        self.hapticFeedback.prepareTap()
+        
+        var completedContainer = false
+        var completedTarget = true
+        
+        let intermediateCompletion: () -> Void = {
+            if completedContainer && completedTarget {
+                completion()
+            }
+        }
+        
+        if let targetNode = targetNode {
+            for i in 0 ..< self.reactionNodes.count {
+                if let isMaximized = self.reactionNodes[i].isMaximized, isMaximized {
+                    if let snapshotView = self.reactionNodes[i].view.snapshotContentTree() {
+                        let targetSnapshotView = UIImageView()
+                        targetSnapshotView.image = targetNode.image
+                        targetSnapshotView.frame = self.view.convert(targetNode.bounds, from: targetNode.view)
+                        self.reactionNodes[i].isHidden = true
+                        self.view.addSubview(targetSnapshotView)
+                        self.view.addSubview(snapshotView)
+                        completedTarget = false
+                        let targetPosition = self.view.convert(targetNode.bounds.center, from: targetNode.view)
+                        let duration: Double = 0.3
+                        if hideTarget {
+                            targetNode.isHidden = true
+                        }
+                        
+                        snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+                        targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        targetSnapshotView.layer.animateScale(from: snapshotView.bounds.width / targetSnapshotView.bounds.width, to: 0.5, duration: 0.3, removeOnCompletion: false)
+                        
+                        
+                        let sourcePoint = snapshotView.center
+                        let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - 30.0)
+                        
+                        let x1 = sourcePoint.x
+                        let y1 = sourcePoint.y
+                        let x2 = midPoint.x
+                        let y2 = midPoint.y
+                        let x3 = targetPosition.x
+                        let y3 = targetPosition.y
+                        
+                        let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                        let b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                        let c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+                        
+                        var keyframes: [AnyObject] = []
+                        for i in 0 ..< 10 {
+                            let k = CGFloat(i) / CGFloat(10 - 1)
+                            let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
+                            let y = a * x * x + b * x + c
+                            keyframes.append(NSValue(cgPoint: CGPoint(x: x, y: y)))
+                        }
+                        
+                        snapshotView.layer.animateKeyframes(values: keyframes, duration: 0.3, keyPath: "position", removeOnCompletion: false, completion: { [weak self] _ in
+                            if let strongSelf = self {
+                                strongSelf.hapticFeedback.tap()
+                            }
+                            completedTarget = true
+                            if hideTarget {
+                                targetNode.isHidden = false
+                                targetNode.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: duration, initialVelocity: 0.0, damping: 90.0)
+                            }
+                            intermediateCompletion()
+                        })
+                        targetSnapshotView.layer.animateKeyframes(values: keyframes, duration: 0.3, keyPath: "position", removeOnCompletion: false)
+                        
+                        snapshotView.layer.animateScale(from: 1.0, to: (targetSnapshotView.bounds.width * 0.5) / snapshotView.bounds.width, duration: 0.3, removeOnCompletion: false)
+                    }
+                    break
+                }
+            }
+        }
+        
+        self.backgroundNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+        self.backgroundShadowNode.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+        self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.backgroundShadowNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+            completedContainer = true
+            intermediateCompletion()
+        })
+        for (node, shadow) in self.bubbleNodes {
+            node.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            shadow.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            shadow.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
+        for i in 0 ..< self.reactionNodes.count {
+            self.reactionNodes[i].layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+            self.reactionNodes[i].layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        }
+    }
+    
+    func selectedReaction() -> ReactionGestureItem? {
+        if !self.hasSelectedNode {
+            return nil
+        }
+        for i in 0 ..< self.reactionNodes.count {
+            if let isMaximized = self.reactionNodes[i].isMaximized, isMaximized {
+                return self.reactionNodes[i].reaction
+            }
+        }
+        return nil
     }
 }

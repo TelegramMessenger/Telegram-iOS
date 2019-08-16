@@ -314,7 +314,20 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
+            var dateReactions: [MessageReaction] = []
+            var dateReactionCount = 0
+            if let reactionsAttribute = mergedMessageReactions(attributes: message.attributes), !reactionsAttribute.reactions.isEmpty {
+                for reaction in reactionsAttribute.reactions {
+                    if reaction.isSelected {
+                        dateReactions.insert(reaction, at: 0)
+                    } else {
+                        dateReactions.append(reaction)
+                    }
+                    dateReactionCount += Int(reaction.count)
+                }
+            }
+            
+            let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
             
             var webpageGalleryMediaCount: Int?
             for media in message.media {
@@ -534,7 +547,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                             }
                         
-                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize)
+                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
                         }
                     default:
                         break
@@ -1022,5 +1035,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     
     func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.contentImageNode?.playMediaWithSound()
+    }
+    
+    func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

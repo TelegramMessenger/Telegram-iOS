@@ -8,12 +8,15 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
     private var firstLocation: CGPoint = CGPoint()
     private var currentReactions: [ReactionGestureItem] = []
     private var isActivated = false
+    private var isAwaitingCompletion = false
     private weak var currentContainer: ReactionSelectionParentNode?
     
     public var availableReactions: (() -> [ReactionGestureItem])?
     public var getReactionContainer: (() -> ReactionSelectionParentNode?)?
     public var updateOffset: ((CGFloat, Bool) -> Void)?
-    public var completed: (() -> Void)?
+    public var completed: ((ReactionGestureItem?) -> Void)?
+    public var displayReply: ((CGFloat) -> Void)?
+    public var activateReply: (() -> Void)?
     
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
@@ -27,6 +30,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
         self.validatedGesture = false
         self.currentReactions = []
         self.isActivated = false
+        self.isAwaitingCompletion = false
     }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -42,6 +46,9 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
     }
     
     override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        if self.isAwaitingCompletion {
+            return
+        }
         guard let _ = self.view else {
             return
         }
@@ -49,7 +56,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
             return
         }
         
-        let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
+        var translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
         
         let absTranslationX: CGFloat = abs(translation.x)
         let absTranslationY: CGFloat = abs(translation.y)
@@ -63,7 +70,9 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                 self.state = .failed
             } else if absTranslationX > 2.0 && absTranslationY * 2.0 < absTranslationX {
                 self.validatedGesture = true
-                self.updateOffset?(translation.x, true)
+                self.firstLocation = location
+                translation = CGPoint()
+                self.updateOffset?(0.0, false)
                 updatedOffset = true
             }
         }
@@ -75,6 +84,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
             if !self.isActivated {
                 if absTranslationX > 40.0 {
                     self.isActivated = true
+                    self.displayReply?(-min(0.0, translation.x))
                     if !self.currentReactions.isEmpty, let reactionContainer = self.getReactionContainer?() {
                         self.currentContainer = reactionContainer
                         let reactionContainerLocation = reactionContainer.view.convert(location, from: nil)
@@ -92,12 +102,40 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
     }
     
     override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
-        if self.validatedGesture {
-            self.completed?()
+        if self.isAwaitingCompletion {
+            return
         }
-        self.currentContainer?.dismissReactions()
-        self.state = .ended
-        
-        super.touchesEnded(touches, with: event)
+        guard let location = touches.first?.location(in: nil) else {
+            return
+        }
+        if self.validatedGesture {
+            let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
+            if let reaction = self.currentContainer?.selectedReaction() {
+                self.completed?(reaction)
+                self.isAwaitingCompletion = true
+            } else {
+                if translation.x < -40.0 {
+                    self.currentContainer?.dismissReactions(into: nil, hideTarget: false)
+                    self.activateReply?()
+                    self.state = .ended
+                } else {
+                    self.currentContainer?.dismissReactions(into: nil, hideTarget: false)
+                    self.completed?(nil)
+                    self.state = .cancelled
+                    super.touchesEnded(touches, with: event)
+                }
+            }
+        } else {
+            self.currentContainer?.dismissReactions(into: nil, hideTarget: false)
+            self.state = .cancelled
+            super.touchesEnded(touches, with: event)
+        }
+    }
+    
+    public func complete(into targetNode: ASImageNode?, hideTarget: Bool) {
+        if self.isAwaitingCompletion {
+            self.currentContainer?.dismissReactions(into: targetNode, hideTarget: hideTarget)
+            self.state = .ended
+        }
     }
 }

@@ -36,9 +36,16 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
         }
     }
     
-    func dismissReactions() {
+    func selectedReaction() -> ReactionGestureItem? {
         if let currentNode = self.currentNode {
-            currentNode.animateOut(completion: { [weak currentNode] in
+            return currentNode.selectedReaction()
+        }
+        return nil
+    }
+    
+    func dismissReactions(into targetNode: ASImageNode?, hideTarget: Bool) {
+        if let currentNode = self.currentNode {
+            currentNode.animateOut(into: targetNode, hideTarget: hideTarget, completion: { [weak currentNode] in
                 currentNode?.removeFromSupernode()
             })
             self.currentNode = nil
