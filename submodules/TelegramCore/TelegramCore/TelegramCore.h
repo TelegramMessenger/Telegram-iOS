@@ -14,4 +14,7 @@ FOUNDATION_EXPORT double TelegramCoreVersionNumber;
 //! Project version string for TelegramCore.
 FOUNDATION_EXPORT const unsigned char TelegramCoreVersionString[];
 
-// In this header, you should import all the public headers of your framework using statements like #import <TelegramCore/PublicHeader.h>
+#import <TelegramCore/FormatPhoneNumber.h>
+#import <TelegramCore/Crypto.h>
+#import <TelegramCore/NetworkLogging.h>
+#import <TelegramCore/Reachability.h>

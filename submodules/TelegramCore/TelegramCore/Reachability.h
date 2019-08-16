@@ -8,8 +8,8 @@
 
 #import <Foundation/Foundation.h>
 #import <SystemConfiguration/SystemConfiguration.h>
-#import <netinet/in.h>
 
+struct sockaddr;
 
 typedef enum : NSInteger {
 	NotReachable = 0,

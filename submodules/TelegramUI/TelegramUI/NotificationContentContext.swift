@@ -7,7 +7,6 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
-import TelegramUIPrivateModule
 import AccountContext
 import Tuples
 import StickerResources

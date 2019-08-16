@@ -4,11 +4,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
-import TelegramUIPrivateModule
 import UniversalMediaPlayer
 import TelegramAudio
 import AccountContext
 import TelegramUniversalVideoContent
+import DeviceProximity
 
 private enum SharedMediaPlaybackItem: Equatable {
     case audio(MediaPlayer)

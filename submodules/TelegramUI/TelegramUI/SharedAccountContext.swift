@@ -11,6 +11,7 @@ import DeviceLocationManager
 import LegacyUI
 import ChatListUI
 import PeersNearbyUI
+import PeerInfoUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -24,20 +25,6 @@ private final class AccountUserInterfaceInUseContext {
     var isEmpty: Bool {
         return self.tokens.isEmpty && self.subscribers.isEmpty
     }
-}
-
-private func preFetchedLegacyResourcePath(basePath: String, resource: MediaResource, cache: LegacyCache) -> String? {
-    if let resource = resource as? CloudDocumentMediaResource {
-        let videoPath = "\(basePath)/Documents/video/remote\(String(resource.fileId, radix: 16)).mov"
-        if FileManager.default.fileExists(atPath: videoPath) {
-            return videoPath
-        }
-        let fileName = resource.fileName?.replacingOccurrences(of: "/", with: "_") ?? "file"
-        return pathFromLegacyFile(basePath: basePath, fileId: resource.fileId, isLocal: false, fileName: fileName)
-    } else if let resource = resource as? CloudFileMediaResource {
-        return cache.path(forCachedData: "\(resource.datacenterId)_\(resource.volumeId)_\(resource.localId)_\(resource.secret)")
-    }
-    return nil
 }
 
 private struct AccountAttributes: Equatable {
@@ -336,11 +323,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                         switch result {
                             case let .authorized(account):
                                 setupAccount(account, fetchCachedResourceRepresentation: fetchCachedResourceRepresentation, transformOutgoingMessageMedia: transformOutgoingMessageMedia, preFetchedResourcePath: { resource in
-                                    if let legacyBasePath = legacyBasePath, let legacyCache = legacyCache {
-                                        return preFetchedLegacyResourcePath(basePath: legacyBasePath, resource: resource, cache: legacyCache)
-                                    } else {
-                                        return nil
-                                    }
+                                    return nil
                                 })
                                 return .ready(id, account, attributes.sortIndex)
                             case let .upgrading(progress):
@@ -974,12 +957,24 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatControllerImpl(context: context, chatLocation: chatLocation, subject: subject, botStart: botStart, mode: mode)
     }
     
+    public func makePeerSharedMediaController(context: AccountContext, peerId: PeerId) -> ViewController? {
+        return peerSharedMediaControllerImpl(context: context, peerId: peerId)
+    }
+    
+    public func makeChatRecentActionsController(context: AccountContext, peer: Peer) -> ViewController {
+        return ChatRecentActionsController(context: context, peer: peer)
+    }
+    
     public func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void) {
         presentContactsWarningSuppressionImpl(context: context, present: present)
     }
     
     public func makeContactSelectionController(_ params: ContactSelectionControllerParams) -> ContactSelectionController {
         return ContactSelectionControllerImpl(params)
+    }
+    
+    public func makeContactMultiselectionController(_ params: ContactMultiselectionControllerParams) -> ContactMultiselectionController {
+        return ContactMultiselectionControllerImpl(params)
     }
     
     public func makeComposeController(context: AccountContext) -> ViewController {
@@ -1000,5 +995,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController {
         return createGroupControllerImpl(context: context, peerIds: peerIds, initialTitle: initialTitle, mode: mode, completion: completion)
+    }
+    
+    public func makeChatListController(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool, enableDebugActions: Bool) -> ChatListController {
+        return ChatListControllerImpl(context: context, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, hideNetworkActivityStatus: hideNetworkActivityStatus, enableDebugActions: enableDebugActions)
     }
 }

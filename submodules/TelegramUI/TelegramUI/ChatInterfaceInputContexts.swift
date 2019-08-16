@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import Display
 import AccountContext
+import Emoji
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32

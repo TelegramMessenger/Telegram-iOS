@@ -5,6 +5,7 @@ import TelegramCore
 import TelegramUIPreferences
 import AccountContext
 import PhotoResources
+import Emoji
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()

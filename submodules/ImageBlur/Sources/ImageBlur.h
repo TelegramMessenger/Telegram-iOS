@@ -7,5 +7,6 @@ FOUNDATION_EXPORT double ImageBlurVersionNumber;
 FOUNDATION_EXPORT const unsigned char ImageBlurVersionString[];
 
 #import <ImageBlur/FastBlur.h>
+#import <ImageBlur/ApplyScreenshotEffect.h>
 
 

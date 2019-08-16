@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		D038AC1722F8864000320981 /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D038AC1622F8864000320981 /* Accelerate.framework */; };
+		D03E433C23057CE60049C28B /* ApplyScreenshotEffect.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E433A23057CE50049C28B /* ApplyScreenshotEffect.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D03E433D23057CE60049C28B /* ApplyScreenshotEffect.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E433B23057CE60049C28B /* ApplyScreenshotEffect.m */; };
 		D0879E1722F8858600C4D6B3 /* ImageBlur.h in Headers */ = {isa = PBXBuildFile; fileRef = D0879E1522F8858600C4D6B3 /* ImageBlur.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0879E1F22F885E500C4D6B3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879E1E22F885E500C4D6B3 /* Foundation.framework */; };
 		D0879E2122F885E800C4D6B3 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879E2022F885E800C4D6B3 /* UIKit.framework */; };
@@ -18,6 +20,8 @@
 
 /* Begin PBXFileReference section */
 		D038AC1622F8864000320981 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
+		D03E433A23057CE50049C28B /* ApplyScreenshotEffect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ApplyScreenshotEffect.h; sourceTree = "<group>"; };
+		D03E433B23057CE60049C28B /* ApplyScreenshotEffect.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ApplyScreenshotEffect.m; sourceTree = "<group>"; };
 		D0879E1222F8858600C4D6B3 /* ImageBlur.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ImageBlur.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879E1522F8858600C4D6B3 /* ImageBlur.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImageBlur.h; sourceTree = "<group>"; };
 		D0879E1622F8858600C4D6B3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -63,6 +67,8 @@
 		D0879E1422F8858600C4D6B3 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D03E433A23057CE50049C28B /* ApplyScreenshotEffect.h */,
+				D03E433B23057CE60049C28B /* ApplyScreenshotEffect.m */,
 				D0C9C5392301CE4D00FAB518 /* ImageBlur.swift */,
 				D0879E2322F8860300C4D6B3 /* FastBlur.h */,
 				D0879E2222F8860300C4D6B3 /* FastBlur.m */,
@@ -89,6 +95,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0879E1722F8858600C4D6B3 /* ImageBlur.h in Headers */,
+				D03E433C23057CE60049C28B /* ApplyScreenshotEffect.h in Headers */,
 				D0879E2522F8860300C4D6B3 /* FastBlur.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -164,6 +171,7 @@
 			files = (
 				D0C9C53A2301CE4E00FAB518 /* ImageBlur.swift in Sources */,
 				D0879E2422F8860300C4D6B3 /* FastBlur.m in Sources */,
+				D03E433D23057CE60049C28B /* ApplyScreenshotEffect.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

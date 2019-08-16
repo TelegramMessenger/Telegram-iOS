@@ -4,7 +4,6 @@ import SwiftSignalKit
 import Display
 import Postbox
 import TelegramCore
-import TelegramUIPrivateModule
 import MediaResources
 import ImageBlur
 import TinyThumbnail

@@ -686,12 +686,6 @@ public struct ContactListNodeGroupSelectionState: Equatable {
     }
 }
 
-public enum ContactListFilter {
-    case excludeSelf
-    case exclude([PeerId])
-    case disable([PeerId])
-}
-
 public final class ContactListNode: ASDisplayNode {
     private let context: AccountContext
     private var presentation: ContactListPresentation?

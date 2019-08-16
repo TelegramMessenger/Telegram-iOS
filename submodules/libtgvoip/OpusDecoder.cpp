@@ -10,11 +10,7 @@
 #include <assert.h>
 #include <math.h>
 #include <algorithm>
-#if defined(HAVE_CONFIG_H) || defined(BUCK)
 #include <opus/opus.h>
-#else
-#include "opus.h"
-#endif
 
 #include "VoIPController.h"
 

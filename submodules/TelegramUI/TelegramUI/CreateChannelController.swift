@@ -12,6 +12,8 @@ import AlertUI
 import LegacyUI
 import ItemListAvatarAndNameInfoItem
 import WebSearchUI
+import PeerInfoUI
+import MapResourceToAvatarSizes
 
 private struct CreateChannelArguments {
     let account: Account

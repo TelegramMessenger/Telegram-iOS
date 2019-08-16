@@ -13,6 +13,7 @@ import OverlayStatusController
 import AccountContext
 import ShareController
 import OpenInExternalAppUI
+import PeerInfoUI
 
 public class PeerMediaCollectionController: TelegramBaseController {
     private var validLayout: ContainerViewLayout?

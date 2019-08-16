@@ -1,5 +1,4 @@
 import Foundation
-import TelegramCorePrivateModule
 #if os(macOS)
     import PostboxMac
 #else

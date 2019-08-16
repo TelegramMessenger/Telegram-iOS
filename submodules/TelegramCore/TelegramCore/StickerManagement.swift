@@ -8,7 +8,6 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
-import TelegramCorePrivateModule
 
 private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0

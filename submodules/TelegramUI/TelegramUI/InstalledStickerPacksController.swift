@@ -10,6 +10,7 @@ import ItemListUI
 import TextFormat
 import AccountContext
 import StickerPackPreviewUI
+import ItemListStickerPackItem
 
 private final class InstalledStickerPacksControllerArguments {
     let account: Account
