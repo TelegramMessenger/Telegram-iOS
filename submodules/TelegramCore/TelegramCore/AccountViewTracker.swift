@@ -189,7 +189,7 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocation, additi
     switch chatLocation {
         case let .peer(peerId):
             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                if result.index(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
+                if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
                     result.append(.peerChatState(peerId))
                 }
             }
@@ -872,9 +872,7 @@ public final class AccountViewTracker {
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
-                    }/* else if case .group = chatLocation {
-                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
-                    }*/
+                    }
                 }
             }
         }, disposed: { [weak self] viewId in
@@ -887,8 +885,6 @@ public final class AccountViewTracker {
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
                             }
-                        /*case .group:
-                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)*/
                     }
                 }
             }
@@ -915,53 +911,54 @@ public final class AccountViewTracker {
     }
     
     public func scheduledMessagesViewForLocation(_ chatLocation: ChatLocation) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
-        let signal = self.aroundMessageHistoryViewForLocation(chatLocation, index: .upperBound, anchorIndex: .upperBound, count: 200, fixedCombinedReadStates: nil, tagMask: nil, excludeNamespaces: [Namespaces.Message.Cloud, Namespaces.Message.Local], orderStatistics: [])
-        return withState(signal, { [weak self] () -> Int32 in
-            if let strongSelf = self {
-                return OSAtomicIncrement32(&strongSelf.nextViewId)
-            } else {
-                return -1
-            }
-        }, next: { [weak self] next, viewId in
-            if let strongSelf = self {
-                strongSelf.queue.async {
-                    let (messageIds, localWebpages) = pendingWebpages(entries: next.0.entries)
-                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds, localWebpages: localWebpages)
-                    let (pollMessageIds, pollMessageDict) = pollMessages(entries: next.0.entries)
-                    strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
-                    strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+        if let account = self.account {
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: nil, namespaces: .just(Namespaces.Message.allScheduled), orderStatistics: [], additionalData: [])
+            return withState(signal, { [weak self] () -> Int32 in
+                if let strongSelf = self {
+                    return OSAtomicIncrement32(&strongSelf.nextViewId)
+                } else {
+                    return -1
                 }
-            }
-        }, disposed: { [weak self] viewId in
-            if let strongSelf = self {
-                strongSelf.queue.async {
-                    strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [], localWebpages: [:])
-                    strongSelf.updatePolls(viewId: viewId, messageIds: [], messages: [:])
-                    strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+            }, next: { [weak self] next, viewId in
+                if let strongSelf = self {
+                    strongSelf.queue.async {
+                        let (messageIds, localWebpages) = pendingWebpages(entries: next.0.entries)
+                        strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds, localWebpages: localWebpages)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+                    }
                 }
-            }
-        })
+            }, disposed: { [weak self] viewId in
+                if let strongSelf = self {
+                    strongSelf.queue.async {
+                        strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [], localWebpages: [:])
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                    }
+                }
+            })
+        } else {
+            return .never()
+        }
     }
     
-    public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, tagMask: MessageTags? = nil, excludeNamespaces: [MessageId.Namespace] = [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal], orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, excludeNamespaces: excludeNamespaces, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
         }
     }
     
-    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, messageId: MessageId, tagMask: MessageTags? = nil, excludeNamespaces: [MessageId.Namespace] = [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal], orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, excludeNamespaces: excludeNamespaces, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
         }
     }
     
-    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags? = nil, excludeNamespaces: [MessageId.Namespace] = [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal], orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func aroundMessageHistoryViewForLocation(_ chatLocation: ChatLocation, index: MessageHistoryAnchorIndex, anchorIndex: MessageHistoryAnchorIndex, count: Int, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
             let inputAnchor: HistoryViewInputAnchor
             switch index {
@@ -972,7 +969,7 @@ public final class AccountViewTracker {
                 case let .message(index):
                     inputAnchor = .index(index)
             }
-            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, excludeNamespaces: excludeNamespaces, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
@@ -1188,18 +1185,18 @@ public final class AccountViewTracker {
             let pendingKey: PostboxViewKey = .pendingMessageActionsSummary(type: .consumeUnseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
             let summaryKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
             return account.postbox.combinedView(keys: [pendingKey, summaryKey])
-                |> map { views -> Int32 in
-                    var count: Int32 = 0
-                    if let view = views.views[pendingKey] as? PendingMessageActionsSummaryView {
-                        count -= view.count
+            |> map { views -> Int32 in
+                var count: Int32 = 0
+                if let view = views.views[pendingKey] as? PendingMessageActionsSummaryView {
+                    count -= view.count
+                }
+                if let view = views.views[summaryKey] as? MessageHistoryTagSummaryView {
+                    if let unseenCount = view.count {
+                        count += unseenCount
                     }
-                    if let view = views.views[summaryKey] as? MessageHistoryTagSummaryView {
-                        if let unseenCount = view.count {
-                            count += unseenCount
-                        }
-                    }
-                    return max(0, count)
-                } |> distinctUntilChanged
+                }
+                return max(0, count)
+            } |> distinctUntilChanged
         } else {
             return .never()
         }

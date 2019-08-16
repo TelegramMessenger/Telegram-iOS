@@ -224,10 +224,27 @@ public enum HistoryViewInputAnchor: Equatable {
     case unread
 }
 
+public enum HistoryViewNamespaces {
+    case all
+    case just(Set<MessageId.Namespace>)
+    case not(Set<MessageId.Namespace>)
+    
+    public func contains(_ namespace: MessageId.Namespace) -> Bool {
+        switch self {
+            case .all:
+                return true
+            case let .just(namespaces):
+                return namespaces.contains(namespace)
+            case let .not(namespaces):
+                return !namespaces.contains(namespace)
+        }
+    }
+}
+
 final class MutableMessageHistoryView {
     private(set) var peerIds: MessageHistoryViewPeerIds
     let tag: MessageTags?
-    let excludeNamespaces: [MessageId.Namespace]
+    let namespaces: HistoryViewNamespaces
     private let orderStatistics: MessageHistoryViewOrderStatistics
     private let anchor: HistoryViewInputAnchor
     
@@ -242,7 +259,7 @@ final class MutableMessageHistoryView {
     
     fileprivate(set) var sampledState: HistoryViewSample
     
-    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, excludeNamespaces: [MessageId.Namespace], count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: HistoryViewNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics
@@ -250,17 +267,17 @@ final class MutableMessageHistoryView {
         self.combinedReadStates = combinedReadStates
         self.transientReadStates = transientReadStates
         self.tag = tag
-        self.excludeNamespaces = excludeNamespaces
+        self.namespaces = namespaces
         self.fillCount = count
         self.topTaggedMessages = topTaggedMessages
         self.additionalDatas = additionalDatas
         
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, excludeNamespaces: excludeNamespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: inputAnchor, tag: tag, namespaces: namespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, excludeNamespaces: excludeNamespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: tag, namespaces: namespaces, statistics: self.orderStatistics, halfLimit: count + 1, locations: peerIds, postbox: postbox, holes: holes))
                     self.sampledState = self.state.sample(postbox: postbox)
                 case .loadHole:
                     break
@@ -272,12 +289,12 @@ final class MutableMessageHistoryView {
     }
     
     private func reset(postbox: Postbox) {
-        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds)
+        self.state = HistoryViewState(postbox: postbox, inputAnchor: self.anchor, tag: self.tag, namespaces: self.namespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds)
         if case let .loading(loadingState) = self.state {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, namespaces: self.namespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -286,7 +303,7 @@ final class MutableMessageHistoryView {
             let sampledState = loadingState.checkAndSample(postbox: postbox)
             switch sampledState {
                 case let .ready(anchor, holes):
-                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
+                    self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, namespaces: self.namespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                 case .loadHole:
                     break
             }
@@ -472,7 +489,7 @@ final class MutableMessageHistoryView {
                 let sampledState = loadingState.checkAndSample(postbox: postbox)
                 switch sampledState {
                     case let .ready(anchor, holes):
-                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, excludeNamespaces: self.excludeNamespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
+                        self.state = .loaded(HistoryViewLoadedState(anchor: anchor, tag: self.tag, namespaces: self.namespaces, statistics: self.orderStatistics, halfLimit: self.fillCount + 1, locations: self.peerIds, postbox: postbox, holes: holes))
                     case .loadHole:
                         break
                 }
@@ -672,6 +689,7 @@ final class MutableMessageHistoryView {
 
 public final class MessageHistoryView {
     public let tagMask: MessageTags?
+    public let namespaces: HistoryViewNamespaces
     public let anchorIndex: MessageHistoryAnchorIndex
     public let earlierId: MessageIndex?
     public let laterId: MessageIndex?
@@ -686,6 +704,7 @@ public final class MessageHistoryView {
     
     init(_ mutableView: MutableMessageHistoryView) {
         self.tagMask = mutableView.tag
+        self.namespaces = mutableView.namespaces
         var entries: [MessageHistoryEntry]
         switch mutableView.sampledState {
             case .loading:
@@ -714,7 +733,7 @@ public final class MessageHistoryView {
                 entries = []
                 if let transientReadStates = mutableView.transientReadStates, case let .peer(states) = transientReadStates {
                     for entry in state.entries {
-                        if !mutableView.excludeNamespaces.contains(entry.message.id.namespace) {
+                        if mutableView.namespaces.contains(entry.message.id.namespace) {
                             let read: Bool
                             if entry.message.flags.contains(.Incoming) {
                                 read = false
@@ -728,7 +747,7 @@ public final class MessageHistoryView {
                     }
                 } else {
                     for entry in state.entries {
-                        if !mutableView.excludeNamespaces.contains(entry.message.id.namespace) {
+                        if mutableView.namespaces.contains(entry.message.id.namespace) {
                             entries.append(MessageHistoryEntry(message: entry.message, isRead: false, location: entry.location, monthLocation: entry.monthLocation, attributes: entry.attributes))
                         }
                     }

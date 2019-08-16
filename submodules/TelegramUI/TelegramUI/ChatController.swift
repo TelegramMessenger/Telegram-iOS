@@ -1452,44 +1452,38 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.sendScheduledMessagesNow(messageIds)
             }
         }, editScheduledMessagesTime: { [weak self] messageIds in
-            if let strongSelf = self {
+            if let strongSelf = self, let messageId = messageIds.first {
                 let mode: ChatScheduleTimeControllerMode
                 if case let .peer(peerId) = strongSelf.presentationInterfaceState.chatLocation, peerId == strongSelf.context.account.peerId {
                     mode = .reminders
                 } else {
                     mode = .scheduledMessages
                 }
-                let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, completion: { [weak self] scheduleTime in
-                    if let strongSelf = self, let messageId = messageIds.first {
-                        let signal = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
-                            return transaction.getMessage(messageId)
-                        }
-                        |> introduceError(RequestEditMessageError.self)
-                        |> mapToSignal({ message -> Signal<RequestEditMessageResult, RequestEditMessageError> in
-                            if let message = message {
-                                var entities: TextEntitiesMessageAttribute?
-                                for attribute in message.attributes {
-                                    if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                        entities = attribute
-                                        break
-                                    }
-                                }
-                                return requestEditMessage(account: strongSelf.context.account, messageId: messageId, text: message.text, media: .keep
-                                    , entities: entities, disableUrlPreview: false, scheduleTime: scheduleTime)
-                            } else {
-                                return .complete()
-                            }
-                        }))
-                        
-                        strongSelf.editMessageDisposable.set((signal |> deliverOnMainQueue).start(next: { result in
-                             
-                        }, error: { error in
-                              
-                        }))
+                
+                let _ = (strongSelf.context.account.postbox.transaction { transaction -> Message? in
+                    return transaction.getMessage(messageId)
+                } |> deliverOnMainQueue).start(next: { [weak self] message in
+                    guard let strongSelf = self, let message = message else {
+                        return
                     }
+                    let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, currentTime: message.timestamp, completion: { [weak self] scheduleTime in
+                        if let strongSelf = self {
+                            var entities: TextEntitiesMessageAttribute?
+                            for attribute in message.attributes {
+                                if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                    entities = attribute
+                                    break
+                                }
+                            }
+                            let signal = requestEditMessage(account: strongSelf.context.account, messageId: messageId, text: message.text, media: .keep, entities: entities, disableUrlPreview: false, scheduleTime: scheduleTime)
+                            strongSelf.editMessageDisposable.set((signal |> deliverOnMainQueue).start(next: { result in
+                            }, error: { error in
+                            }))
+                        }
+                    })
+                    strongSelf.chatDisplayNode.dismissInput()
+                    strongSelf.present(controller, in: .window(.root))
                 })
-                strongSelf.chatDisplayNode.dismissInput()
-                strongSelf.present(controller, in: .window(.root))
             }
         }, performTextSelectionAction: { [weak self] _, text, action in
             guard let strongSelf = self else {
@@ -1625,7 +1619,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat {
-                        hasScheduledMessages = context.account.viewTracker.aroundMessageHistoryViewForLocation(chatLocation, index: .upperBound, anchorIndex: .upperBound, count: 100, fixedCombinedReadStates: nil, tagMask: nil, excludeNamespaces: [Namespaces.Message.Cloud, Namespaces.Message.Local], orderStatistics: [])
+                        hasScheduledMessages = context.account.viewTracker.scheduledMessagesViewForLocation(chatLocation)
                         |> map { view, _, _ in
                             return !view.entries.isEmpty
                         }
@@ -5278,7 +5272,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func sendScheduledMessagesNow(_ messageId: [MessageId]) {
-        let _ = sendScheduledMessageNow(account: self.context.account, messageId: messageId.first!).start()
+        let _ = sendScheduledMessageNowInteractively(postbox: self.context.account.postbox, messageId: messageId.first!).start()
     }
     
     private func sendMessages(_ messages: [EnqueueMessage], commit: Bool = false) {

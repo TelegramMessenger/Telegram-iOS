@@ -328,13 +328,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         self.effectiveAuthorId = effectiveAuthor?.id
         
-        let timestamp: Int32
-        if let scheduleTime = content.firstMessage.scheduleTime {
-            timestamp = scheduleTime
-        } else {
-            timestamp =  content.index.timestamp
-        }
-        self.header = ChatMessageDateHeader(timestamp: timestamp, scheduled: associatedData.isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
+        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: associatedData.isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
