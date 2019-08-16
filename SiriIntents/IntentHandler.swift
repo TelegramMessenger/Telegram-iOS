@@ -100,22 +100,21 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             |> mapToSignal { account -> Signal<Account?, NoError> in
                 if let account = account {
                     switch account {
-                    case .upgrading:
-                        return .complete()
-                    case let .authorized(account):
-                        account.shouldKeepOnlinePresence.set(.single(false))
-                        return applicationSettings(accountManager: accountManager)
-                        |> deliverOnMainQueue
-                        |> map { settings -> Account in
-                            accountCache = account
-                            Logger.shared.logToFile = settings.logging.logToFile
-                            Logger.shared.logToConsole = settings.logging.logToConsole
-                            
-                            Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
-                            return account
-                        }
-                    case .unauthorized:
-                        return .complete()
+                        case .upgrading:
+                            return .complete()
+                        case let .authorized(account):
+                            return applicationSettings(accountManager: accountManager)
+                            |> deliverOnMainQueue
+                            |> map { settings -> Account in
+                                accountCache = account
+                                Logger.shared.logToFile = settings.logging.logToFile
+                                Logger.shared.logToConsole = settings.logging.logToConsole
+                                
+                                Logger.shared.redactSensitiveData = settings.logging.redactSensitiveData
+                                return account
+                            }
+                        case .unauthorized:
+                            return .complete()
                     }
                 } else {
                     return .single(nil)
@@ -275,7 +274,9 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     @available(iOSApplicationExtension 11.0, *)
     func resolveRecipients(for intent: INSendMessageIntent, with completion: @escaping ([INSendMessageRecipientResolutionResult]) -> Void) {
         if let peerId = intent.conversationIdentifier.flatMap(Int64.init) {
-            let signal = self.accountPromise.get()
+            let account = self.accountPromise.get()
+            
+            let signal = account
             |> introduceError(IntentHandlingError.self)
             |> mapToSignal { account -> Signal<INPerson?, IntentHandlingError> in
                 if let account = account {
@@ -402,8 +403,8 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             account.resetStateManagement()
             
             let completion: Signal<Void, NoError> = account.stateManager.pollStateUpdateCompletion()
-                |> map { _ in
-                    return Void()
+            |> map { _ in
+                return Void()
             }
             
             return (completion |> timeout(4.0, queue: Queue.mainQueue(), alternate: .single(Void())))
@@ -482,7 +483,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             
             for (_, messageId) in maxMessageIdsToApply {
                 signals.append(applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0))
-                    |> introduceError(IntentHandlingError.self))
+                |> introduceError(IntentHandlingError.self))
             }
             
             if signals.isEmpty {
@@ -490,11 +491,11 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             } else {
                 account.shouldBeServiceTaskMaster.set(.single(.now))
                 return combineLatest(signals)
-                    |> mapToSignal { _ -> Signal<Void, IntentHandlingError> in
-                        return .complete()
-                    }
-                    |> afterDisposed {
-                        account.shouldBeServiceTaskMaster.set(.single(.never))
+                |> mapToSignal { _ -> Signal<Void, IntentHandlingError> in
+                    return .complete()
+                }
+                |> afterDisposed {
+                    account.shouldBeServiceTaskMaster.set(.single(.never))
                 }
             }
         }
@@ -573,34 +574,34 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     
     func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
-            |> take(1)
-            |> introduceError(IntentHandlingError.self)
-            |> mapToSignal { account -> Signal<[CallRecord], IntentHandlingError> in
-                guard let account = account else {
-                    return .fail(.generic)
-                }
-                
-                account.shouldBeServiceTaskMaster.set(.single(.now))
-                return missedCalls(account: account)
-                    |> introduceError(IntentHandlingError.self)
-                    |> afterDisposed {
-                        account.shouldBeServiceTaskMaster.set(.single(.never))
-                }
+        |> take(1)
+        |> introduceError(IntentHandlingError.self)
+        |> mapToSignal { account -> Signal<[CallRecord], IntentHandlingError> in
+            guard let account = account else {
+                return .fail(.generic)
             }
-            |> deliverOnMainQueue).start(next: { calls in
-                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
-                let response: INSearchCallHistoryIntentResponse
-                if #available(iOSApplicationExtension 11.0, *) {
-                    response = INSearchCallHistoryIntentResponse(code: .success, userActivity: userActivity)
-                    response.callRecords = calls.map { $0.intentCall }
-                } else {
-                    response = INSearchCallHistoryIntentResponse(code: .continueInApp, userActivity: userActivity)
-                }
-                completion(response)
-            }, error: { _ in
-                let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
-                let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
-                completion(response)
-            }))
+            
+            account.shouldBeServiceTaskMaster.set(.single(.now))
+            return missedCalls(account: account)
+            |> introduceError(IntentHandlingError.self)
+            |> afterDisposed {
+                account.shouldBeServiceTaskMaster.set(.single(.never))
+            }
+        }
+        |> deliverOnMainQueue).start(next: { calls in
+            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
+            let response: INSearchCallHistoryIntentResponse
+            if #available(iOSApplicationExtension 11.0, *) {
+                response = INSearchCallHistoryIntentResponse(code: .success, userActivity: userActivity)
+                response.callRecords = calls.map { $0.intentCall }
+            } else {
+                response = INSearchCallHistoryIntentResponse(code: .continueInApp, userActivity: userActivity)
+            }
+            completion(response)
+        }, error: { _ in
+            let userActivity = NSUserActivity(activityType: NSStringFromClass(INSearchCallHistoryIntent.self))
+            let response = INSearchCallHistoryIntentResponse(code: .failureRequiringAppLaunch, userActivity: userActivity)
+            completion(response)
+        }))
     }
 }
