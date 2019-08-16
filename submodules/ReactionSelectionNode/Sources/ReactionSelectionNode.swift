@@ -184,7 +184,7 @@ final class ReactionSelectionNode: ASDisplayNode {
             if self.reactionNodes[i].isMaximized != isMaximized {
                 self.reactionNodes[i].isMaximized = isMaximized
                 self.reactionNodes[i].updateIsAnimating(isMaximized, animated: !isInitial)
-                if isMaximized {
+                if isMaximized && !isInitial {
                     self.hapticFeedback.tap()
                 }
             }
