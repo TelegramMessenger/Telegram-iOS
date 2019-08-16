@@ -63,7 +63,7 @@ private func withTakenOperation(postbox: Postbox, peerId: PeerId, tagLocalIndex:
     return postbox.transaction { transaction -> Signal<Void, NoError> in
         var result: PeerMergedOperationLogEntry?
         transaction.operationLogUpdateEntry(peerId: peerId, tag: OperationLogTags.SynchronizeEmojiKeywords, tagLocalIndex: tagLocalIndex, { entry in
-            if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeEmojiKeywordsOperation  {
+            if let entry = entry, let _ = entry.mergedIndex, entry.contents is SynchronizeEmojiKeywordsOperation {
                 result = entry.mergedEntry!
                 return PeerOperationLogEntryUpdate(mergedIndex: .none, contents: .none)
             } else {

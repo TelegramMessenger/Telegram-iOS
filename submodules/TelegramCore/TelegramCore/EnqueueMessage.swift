@@ -387,14 +387,17 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     var messageNamespace = Namespaces.Message.Local
+                    var effectiveTimestamp = timestamp
                     for attribute in attributes {
-                        if attribute is OutgoingScheduleInfoMessageAttribute {
+                        if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
                             messageNamespace = Namespaces.Message.ScheduledLocal
+                            effectiveTimestamp = attribute.scheduleTime
                             break
                         }
                     }
                     
-                    storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
+                    
+                    storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source, grouping, requestedAttributes):
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
@@ -506,12 +509,14 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         
                         var messageNamespace = Namespaces.Message.Local
                         var entitiesAttribute: TextEntitiesMessageAttribute?
+                        var effectiveTimestamp = timestamp
                         for attribute in attributes {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
                                 entitiesAttribute = attribute
                             }
-                            if attribute is OutgoingScheduleInfoMessageAttribute {
+                            if let attribute = attribute as? OutgoingScheduleInfoMessageAttribute {
                                 messageNamespace = Namespaces.Message.ScheduledLocal
+                                effectiveTimestamp = attribute.scheduleTime
                             }
                         }
                         
@@ -543,7 +548,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             augmentedMediaList = augmentedMediaList.map(convertForwardedMediaForSecretChat)
                         }
                                                 
-                        storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: timestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: augmentedMediaList))
+                        storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: sourceMessage.text, attributes: attributes, media: augmentedMediaList))
                     }
             }
         }
