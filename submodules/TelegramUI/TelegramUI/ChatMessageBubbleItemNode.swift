@@ -17,6 +17,8 @@ import TextSelectionNode
 import PlatformRestrictionMatching
 import Emoji
 import ReactionSelectionNode
+import PersistentStringHash
+import GridMessageSelectionNode
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -143,7 +145,7 @@ private enum ContentNodeOperation {
     case insert(index: Int, node: ChatMessageBubbleContentNode)
 }
 
-class ChatMessageBubbleItemNode: ChatMessageItemView {
+class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode {
     private let contextSourceNode: ContextContentContainingNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
@@ -157,7 +159,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView {
     private var nameNode: TextNode?
     private var adminBadgeNode: TextNode?
     private var credibilityIconNode: ASImageNode?
-    var forwardInfoNode: ChatMessageForwardInfoNode?
+    private var forwardInfoNode: ChatMessageForwardInfoNode?
+    var forwardInfoReferenceNode: ASDisplayNode? {
+        return self.forwardInfoNode
+    }
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
     private var contentNodes: [ChatMessageBubbleContentNode] = []

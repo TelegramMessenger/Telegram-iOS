@@ -42,6 +42,7 @@ import Emoji
 import PeerAvatarGalleryUI
 import PeerInfoUI
 import RaiseToListen
+import UrlHandling
 
 public enum ChatControllerPeekActions {
     case standard
@@ -5995,7 +5996,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
-        let controller = PeerSelectionController(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages])
+        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages]))
         controller.peerSelected = { [weak self, weak controller] peerId in
             guard let strongSelf = self, let strongController = controller else {
                 return
@@ -6150,7 +6151,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     case let .chat(textInputState, _):
                         if let textInputState = textInputState {
-                            let controller = PeerSelectionController(context: self.context)
+                            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context))
                             controller.peerSelected = { [weak self, weak controller] peerId in
                                 if let strongSelf = self, let strongController = controller {
                                     if case let .peer(currentPeerId) = strongSelf.chatLocation, peerId == currentPeerId {

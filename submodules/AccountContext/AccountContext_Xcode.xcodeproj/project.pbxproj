@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D03E4228230565790049C28B /* ChatListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4227230565790049C28B /* ChatListController.swift */; };
 		D03E422A230567900049C28B /* ContactMultiselectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4229230567900049C28B /* ContactMultiselectionController.swift */; };
+		D03E487C230770000049C28B /* PeerSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E487B230770000049C28B /* PeerSelectionController.swift */; };
 		D06018E722F36A3F00796784 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018E622F36A3F00796784 /* TelegramPresentationData.framework */; };
 		D0879A4622F651D400C4D6B3 /* LiveLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4522F651D400C4D6B3 /* LiveLocationManager.swift */; };
 		D0879A4A22F6584B00C4D6B3 /* SharedMediaPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879A4922F6584B00C4D6B3 /* SharedMediaPlayer.swift */; };
@@ -50,6 +51,7 @@
 /* Begin PBXFileReference section */
 		D03E4227230565790049C28B /* ChatListController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListController.swift; sourceTree = "<group>"; };
 		D03E4229230567900049C28B /* ContactMultiselectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactMultiselectionController.swift; sourceTree = "<group>"; };
+		D03E487B230770000049C28B /* PeerSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerSelectionController.swift; sourceTree = "<group>"; };
 		D06018E422F36A3900796784 /* DeviceAccess.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceAccess.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06018E622F36A3F00796784 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879A4522F651D400C4D6B3 /* LiveLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveLocationManager.swift; sourceTree = "<group>"; };
@@ -161,6 +163,7 @@
 				D03E4229230567900049C28B /* ContactMultiselectionController.swift */,
 				D0C9CB832302B4B900FAB518 /* StoredMessageFromSearchPeer.swift */,
 				D03E4227230565790049C28B /* ChatListController.swift */,
+				D03E487B230770000049C28B /* PeerSelectionController.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -270,6 +273,7 @@
 				D0879A4A22F6584B00C4D6B3 /* SharedMediaPlayer.swift in Sources */,
 				D0879B7122F8425B00C4D6B3 /* WallpaperUploadManager.swift in Sources */,
 				D03E422A230567900049C28B /* ContactMultiselectionController.swift in Sources */,
+				D03E487C230770000049C28B /* PeerSelectionController.swift in Sources */,
 				D0879B6722F7AE6400C4D6B3 /* PresentationCallManager.swift in Sources */,
 				D0879B2922F77C8300C4D6B3 /* FetchManager.swift in Sources */,
 				D0C9CA8A2302314400FAB518 /* ContactSelectionController.swift in Sources */,

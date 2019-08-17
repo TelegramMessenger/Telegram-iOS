@@ -17,6 +17,7 @@ import MediaResources
 import PhotoResources
 import ImageBlur
 import AnimationUI
+import WallpaperResources
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {

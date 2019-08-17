@@ -6,21 +6,6 @@ import SwiftSignalKit
 import UniversalMediaPlayer
 import AccountContext
 
-enum FileMediaResourcePlaybackStatus: Equatable {
-    case playing
-    case paused
-}
-
-struct FileMediaResourceStatus: Equatable {
-    let mediaStatus: FileMediaResourceMediaStatus
-    let fetchStatus: MediaResourceStatus
-}
-
-enum FileMediaResourceMediaStatus: Equatable {
-    case fetchStatus(MediaResourceStatus)
-    case playbackStatus(FileMediaResourcePlaybackStatus)
-}
-
 private func internalMessageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus?, NoError> {
     guard let playerType = peerMessageMediaPlayerType(message) else {
         return .single(nil)
