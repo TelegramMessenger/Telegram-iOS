@@ -5839,7 +5839,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || self.presentationInterfaceState.isScheduledMessages {
+            if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (self.presentationInterfaceState.isScheduledMessages && messageId.id != 0) {
                 if let navigationController = self.navigationController as? NavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), messageId: messageId, keepStack: .always))
                 }

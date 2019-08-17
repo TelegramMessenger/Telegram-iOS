@@ -109,6 +109,19 @@ public extension UIColor {
         }
     }
     
+    var lightness: CGFloat {
+        var red: CGFloat = 0.0
+        var green: CGFloat = 0.0
+        var blue: CGFloat = 0.0
+        if self.getRed(&red, green: &green, blue: &blue, alpha: nil) {
+            return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+        } else if self.getWhite(&red, alpha: nil) {
+            return red
+        } else {
+            return 0.0
+        }
+    }
+    
     func withMultipliedBrightnessBy(_ factor: CGFloat) -> UIColor {
         var hue: CGFloat = 0.0
         var saturation: CGFloat = 0.0

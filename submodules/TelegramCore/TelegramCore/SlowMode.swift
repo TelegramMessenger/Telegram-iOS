@@ -31,7 +31,7 @@ public func updateChannelSlowModeInteractively(postbox: Postbox, network: Networ
             return postbox.transaction { transaction -> Void in
                 transaction.updatePeerCachedData(peerIds: [peerId], update: { peerId, currentData in
                     let currentData = currentData as? CachedChannelData ?? CachedChannelData()
-                    return currentData.withUpdatedSlowModeTimeout(slowModeTimeout: timeout)
+                    return currentData.withUpdatedSlowModeTimeout(timeout)
                 })
             }
             |> introduceError(UpdateChannelSlowModeError.self)
