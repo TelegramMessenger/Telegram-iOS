@@ -542,7 +542,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: updatedMessages[0].id, reactions: [emoji]).start()
+                                    let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: updatedMessages[0].id, reaction: emoji).start()
                                 }))
                             }
                             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
@@ -1530,7 +1530,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reactions: [reaction]).start()
+            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reaction: reaction).start()
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)

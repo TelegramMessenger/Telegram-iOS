@@ -34,7 +34,7 @@ final class UpdateMessageReactionsAction: PendingMessageActionData {
     }
 }
 
-public func updateMessageReactionsInteractively(postbox: Postbox, messageId: MessageId, reactions: [String]) -> Signal<Never, NoError> {
+public func updateMessageReactionsInteractively(postbox: Postbox, messageId: MessageId, reaction: String?) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Void in
         transaction.setPendingMessageAction(type: .updateReaction, id: messageId, action: UpdateMessageReactionsAction())
         transaction.updateMessage(messageId, update: { currentMessage in
@@ -49,7 +49,7 @@ public func updateMessageReactionsInteractively(postbox: Postbox, messageId: Mes
                     break loop
                 }
             }
-            attributes.append(PendingReactionsMessageAttribute(values: reactions))
+            attributes.append(PendingReactionsMessageAttribute(value: reaction))
             return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
         })
     }
@@ -61,25 +61,25 @@ private enum RequestUpdateMessageReactionError {
 }
 
 private func requestUpdateMessageReaction(postbox: Postbox, network: Network, stateManager: AccountStateManager, messageId: MessageId) -> Signal<Never, RequestUpdateMessageReactionError> {
-    return postbox.transaction { transaction -> (Peer, [String])? in
+    return postbox.transaction { transaction -> (Peer, String?)? in
         guard let peer = transaction.getPeer(messageId.peerId) else {
             return nil
         }
         guard let message = transaction.getMessage(messageId) else {
             return nil
         }
-        var values: [String] = []
+        var value: String?
         for attribute in message.attributes {
             if let attribute = attribute as? PendingReactionsMessageAttribute {
-                values = attribute.values
+                value = attribute.value
                 break
             }
         }
-        return (peer, values)
+        return (peer, value)
     }
     |> introduceError(RequestUpdateMessageReactionError.self)
-    |> mapToSignal { peerAndValues in
-        guard let (peer, values) = peerAndValues else {
+    |> mapToSignal { peerAndValue in
+        guard let (peer, value) = peerAndValue else {
             return .fail(.generic)
         }
         guard let inputPeer = apiInputPeer(peer) else {
@@ -88,7 +88,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
         if messageId.namespace != Namespaces.Message.Cloud {
             return .fail(.generic)
         }
-        return network.request(Api.functions.messages.sendReaction(peer: inputPeer, msgId: messageId.id, reaction: values))
+        return network.request(Api.functions.messages.sendReaction(flags: value == nil ? 0 : 1, peer: inputPeer, msgId: messageId.id, reaction: value))
         |> mapError { _ -> RequestUpdateMessageReactionError in
             return .generic
         }
