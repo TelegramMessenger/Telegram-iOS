@@ -1,10 +1,5 @@
 OTHER_LINKER_FLAGS_KEY = 'OTHER_LDFLAGS'
 
-# Either appends or assigns `other_linker_flags` to `config` under `config_key`.
-# Params:
-# - config: A dictionary of config names and their values
-# - additional_linker_flags: A string-representable value of additional linker flags
-# - config_key: The key to which to append or assign the additional linker flags
 def config_with_updated_linker_flags(config, other_linker_flags, config_key=OTHER_LINKER_FLAGS_KEY):
     new_config = { }
     config_key_found = False
@@ -21,8 +16,8 @@ def config_with_updated_linker_flags(config, other_linker_flags, config_key=OTHE
 
     return new_config
 
-# Creates a dictionary where the top level keys are the supported build configurations and the value of each key is `config`.
-def configs_with_config(config):
+
+def xcode_configs(config):
     return {
         "Debug": config,
         "Profile": config,
@@ -42,18 +37,10 @@ def merge_maps(dicts):
         result.update(d)
     return result
 
+
 def basename(p):
-    """Returns the basename (i.e., the file portion) of a path.
-    Note that if `p` ends with a slash, this function returns an empty string.
-    This matches the behavior of Python's `os.path.basename`, but differs from
-    the Unix `basename` command (which would return the path segment preceding
-    the final slash).
-    Args:
-    p: The path whose basename should be returned.
-    Returns:
-    The basename of the path, which includes the extension.
-    """
     return p.rpartition("/")[-1]
+
 
 def glob_map(glob_results):
     result = dict()
@@ -63,6 +50,7 @@ def glob_map(glob_results):
             fail('\"%s\" maps to both \"%s\" and \"%s\"' % (file_name, result[file_name], path))
         result[file_name] = path
     return result
+
 
 def glob_sub_map(prefix, glob_specs):
     result = dict()
@@ -74,6 +62,7 @@ def glob_sub_map(prefix, glob_specs):
             fail('\"%s\" maps to both \"%s\" and \"%s\"' % (file_key, result[file_key], path))
         result[file_key] = path
     return result
+
 
 def gen_header_targets(header_paths, prefix, flavor, source_rule, source_path):
     result = dict()
@@ -87,6 +76,7 @@ def gen_header_targets(header_paths, prefix, flavor, source_rule, source_path):
         result[header_path] = ':' + name + flavor
     return result
 
+
 def lib_basename(name):
     result = name
     if result.startswith('lib'):
@@ -95,11 +85,13 @@ def lib_basename(name):
         result = result[:-2]
     return result
 
+
 def combined_config(dicts):
     result = dict()
     for d in dicts:
         result.update(d)
     return result
+
 
 valid_build_variants = ['project', 'release']
 

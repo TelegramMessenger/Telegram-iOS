@@ -1,4 +1,54 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'combined_config')
+load('//tools:targets.bzl', 'app_target')
+
+BUILD_NUMBER = '2000'
+info_plist_substitutions = {
+    'DEVELOPMENT_LANGUAGE': 'en-us',
+    'APP_NAME': 'Telegram',
+    'EXECUTABLE_NAME': 'Telegram',
+    'PRODUCT_BUNDLE_IDENTIFIER': 'org.telegram.Telegram-iOS',
+    'PRODUCT_NAME': 'Telegram',
+    'APP_SPECIFIC_URL_SCHEME': 'tgapp',
+    'VERSION': '5.11',
+    'BUILD_NUMBER': BUILD_NUMBER,
+}
+
+app_target(
+    name = 'App',
+    srcs = ['TempMain.m', 'Temp.swift'],
+    deps = [
+        '//submodules/MtProtoKit:MtProtoKit',
+        #'//submodules/Emoji:Emoji',
+        #'//submodules/MtProtoKit:MtProtoKitFramework',
+        #'//submodules/Emoji:EmojiFramework',
+    ],
+)
+
+apple_bundle(
+    name = 'AppBundle',
+    visibility = [
+        'PUBLIC',
+    ],
+    extension = 'app',
+    binary = ':AppBinary',
+    product_name = 'Telegram',
+    info_plist = 'Info.plist',
+    #info_plist_substitutions = info_plist_substitutions,
+    deps = [
+    ]
+)
+
+apple_package(
+    name = 'AppPackage',
+    bundle = ':AppBundle',
+)
+
+xcode_workspace_config(
+    name = "workspace",
+    workspace_name = "App",
+    src_target = ":AppBundle",
+)
+
+'''load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'combined_config')
 load('//tools:buck_defs.bzl', 'SHARED_CONFIGS')
 
 # Adding `-all_load` to our binaries works around https://bugs.swift.org/browse/SR-6004. See the
@@ -180,3 +230,5 @@ apple_package(
     name = 'AppPackage',
     bundle = ':AppBundle',
 )
+'''
+

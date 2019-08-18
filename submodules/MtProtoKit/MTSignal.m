@@ -1,14 +1,10 @@
 #import "MTSignal.h"
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTProtoKitDynamic.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTProtoKitMac.h>
-#else
-#   import <MtProtoKit/MTProtoKit.h>
-#endif
-
 #import <libkern/OSAtomic.h>
+#import "MTTimer.h"
+#import "MTQueue.h"
+#import "MTAtomic.h"
+#import "MTBag.h"
 
 @interface MTSubscriberDisposable : NSObject <MTDisposable>
 {

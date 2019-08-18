@@ -1,14 +1,14 @@
 [cxx]
-  default_platform = iphoneos-armv7
-  cflags = -fmodules -fobjc-arc -D BUCK -D DEBUG -w -fno-optimize-sibling-calls $(config custom.other_cflags)
-  cxxflags = -fobjc-arc -std=c++14 -D BUCK -D DEBUG -w -fno-optimize-sibling-calls $(config custom.other_cxxflags)
+  default_platform = iphonesimulator-x86_64
+  cflags = -g -fmodules -fobjc-arc -D BUCK -w $(config custom.other_cflags)
+  cxxflags = -fobjc-arc -std=c++14 -D DEBUG -g $(config custom.other_cxxflags)
   combined_preprocess_and_compile = true
   pch_enabled = false
-  ldflags = -Xlinker -objc_abi_version -Xlinker 2 -fobjc-arc -fobjc-link-runtime -dead_strip -Xlinker -no_deduplicate $(config custom.other_cxxflags)
+  ldflags = -Xlinker -objc_abi_version -Xlinker 2 -fobjc-arc -fobjc-link-runtime $(config custom.other_cxxflags)
 
 [swift]
   version = 5
-  compiler_flags = -DBUCK -enable-testing -O -whole-module-optimization -suppress-warnings -Xcc -fno-optimize-sibling-calls $(config custom.other_swift_compiler_flags)
+  compiler_flags = -DBUCK $(config custom.optimization) $(config custom.config_swift_compiler_flags) $(config custom.other_swift_compiler_flags)
   use_filelist = true
 
 [apple]
@@ -19,8 +19,7 @@
   iphoneos_target_sdk_version = 8.0
   provisioning_profile_read_command = security cms -Di
   xctool_default_destination_specifier = platform=iOS Simulator,OS=latest
-  ;provisioning_profile_search_path = ./
-  ;xctool_path = tools/xctool/bin/xctool
+  xctool_path = tools/xctool/bin/xctool
 
 [parser]
   polyglot_parsing_enabled = true
@@ -35,4 +34,14 @@
            .git, \
 
 [build]
-  thread_core_ratio = 2.0
+  threads = 12
+
+[custom]
+  config = debug
+  optimization = -Onone
+  config_swift_compiler_flags = -DDEBUG -enable-testing -g
+  code_coverage_cflags = -fprofile-instr-generate -fcoverage-mapping
+  code_coverage_cxxflags = -fprofile-instr-generate -fcoverage-mapping
+  code_coverage_ldflags = -fprofile-instr-generate
+  code_coverage_swift_compiler_flags = -profile-generate -profile-coverage-mapping
+  

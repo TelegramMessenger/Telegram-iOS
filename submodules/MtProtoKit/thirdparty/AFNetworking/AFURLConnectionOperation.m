@@ -187,8 +187,6 @@ static inline BOOL AFStateTransitionIsValid(AFOperationState fromState, AFOperat
     if (_outputStream) {
         [_outputStream close];
     }
-    
-    [super dealloc];
 }
 
 

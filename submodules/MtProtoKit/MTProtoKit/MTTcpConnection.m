@@ -20,17 +20,8 @@
 
 #import "MTAes.h"
 #import "MTEncryption.h"
-
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTSignal.h>
-#   import <MTProtoKitDynamic/MTDNS.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTSignal.h>
-#   import <MTProtoKitMac/MTDNS.h>
-#else
-#   import <MtProtoKit/MTSignal.h>
-#   import <MtProtoKit/MTDNS.h>
-#endif
+#import "MTSignal.h"
+#import "MTDNS.h"
 
 @interface MTTcpConnectionData : NSObject
 

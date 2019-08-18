@@ -1,0 +1,91 @@
+load("//Config:configs.bzl", "app_binary_configs", "library_configs", "pretty", "info_plist_substitutions", "bundle_identifier", "DEVELOPMENT_LANGUAGE")
+load("//Config:buck_rule_macros.bzl", "apple_lib", "framework_binary_dependencies", "framework_bundle_dependencies")
+
+'''apple_asset_catalog(
+    name = "ExampleAppAssets",
+    visibility = ["//App:"],
+    app_icon = "AppIcon",
+    dirs = ["Assets.xcassets"],
+)
+
+app_tests = [
+    ":UnitTests",
+    ":UnitTestsWithHostApp",
+]
+
+ui_tests = [
+    ":XCUITests",
+]'''
+
+static_library_dependencies = [
+]
+framework_dependencies = [
+    '//submodules/MtProtoKit:MtProtoKit',
+    '//submodules/Emoji:Emoji',
+]
+
+# Build Phase scripts need to be added as dependencies.
+# These only get executed when building with Xcode, not Buck.
+build_phase_scripts = [
+]
+
+apple_library(
+    name = "AppLibrary",
+    visibility = [
+        "//App:",
+        "//App/...",
+    ],
+    configs = library_configs(),
+    swift_version = native.read_config('swift', 'version'),
+    srcs = [
+        "Sources/TempMain.m",
+        "Sources/Temp.swift"
+    ],
+    deps = [
+    ]
+    + static_library_dependencies
+    + framework_binary_dependencies(framework_dependencies),
+)
+
+apple_binary(
+    name = "AppBinary",
+    visibility = [
+        "//App:",
+        "//App/...",
+    ],
+    configs = app_binary_configs("App"),
+    swift_version = native.read_config('swift', 'version'),
+    srcs = [
+        "SupportFiles/Empty.swift",
+    ],
+    deps = [
+        ":AppLibrary",
+    ],
+)
+
+xcode_workspace_config(
+    name = "workspace",
+    workspace_name = "App",
+    src_target = ":App",
+)
+
+apple_bundle(
+    name = "App",
+    visibility = [
+        "//App:",
+    ],
+    extension = "app",
+    binary = ":AppBinary",
+    product_name = "App",
+    info_plist = "Info.plist",
+    info_plist_substitutions = info_plist_substitutions("App"),
+    deps = [
+    ]
+    + framework_bundle_dependencies(framework_dependencies),
+)
+
+apple_package(
+    name = "AppPackage",
+    bundle = ":App",
+)
+
