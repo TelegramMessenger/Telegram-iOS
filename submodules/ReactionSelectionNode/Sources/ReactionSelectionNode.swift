@@ -5,11 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 
-private let shadowBlur: CGFloat = 8.0
-private let minimizedReactionSize: CGFloat = 30.0
-private let maximizedReactionSize: CGFloat = 60.0
-
-private func generateBubbleImage(foreground: UIColor, diameter: CGFloat) -> UIImage? {
+private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(foreground.cgColor)
@@ -17,7 +13,7 @@ private func generateBubbleImage(foreground: UIColor, diameter: CGFloat) -> UIIm
     })?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0 + shadowBlur / 2.0), topCapHeight: Int(diameter / 2.0 + shadowBlur / 2.0))
 }
 
-private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat) -> UIImage? {
+private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
         context.setFillColor(UIColor.white.cgColor)
@@ -34,11 +30,12 @@ private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat) -> UI
 private final class ReactionNode: ASDisplayNode {
     let reaction: ReactionGestureItem
     private let animationNode: AnimatedStickerNode
+    private let imageNode: ASImageNode
     var isMaximized: Bool?
     private let intrinsicSize: CGSize
     private let intrinsicOffset: CGPoint
     
-    init(account: Account, reaction: ReactionGestureItem) {
+    init(account: Account, reaction: ReactionGestureItem, maximizedReactionSize: CGFloat) {
         self.reaction = reaction
         
         self.animationNode = AnimatedStickerNode()
@@ -47,18 +44,29 @@ private final class ReactionNode: ASDisplayNode {
         //self.animationNode.backgroundColor = .lightGray
         
         var intrinsicSize = CGSize(width: maximizedReactionSize + 18.0, height: maximizedReactionSize + 18.0)
-        switch reaction.value.value {
-        case "😳":
-            intrinsicSize.width += 8.0
-            intrinsicSize.height += 8.0
-            self.intrinsicOffset = CGPoint(x: 0.0, y: -4.0)
-        case "👍":
-            intrinsicSize.width += 20.0
-            intrinsicSize.height += 20.0
-            self.intrinsicOffset = CGPoint(x: 0.0, y: 4.0)
-        default:
+        
+        self.imageNode = ASImageNode()
+        switch reaction {
+        case let .reaction(value, _, file):
+            switch value {
+            case "😳":
+                intrinsicSize.width += 8.0
+                intrinsicSize.height += 8.0
+                self.intrinsicOffset = CGPoint(x: 0.0, y: -4.0)
+            case "👍":
+                intrinsicSize.width += 20.0
+                intrinsicSize.height += 20.0
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 4.0)
+            default:
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
+            }
+            self.animationNode.visibility = true
+            self.animationNode.setup(account: account, resource: file.resource, width: Int(intrinsicSize.width) * 2, height: Int(intrinsicSize.height) * 2, mode: .direct)
+        case .reply:
             self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
+            self.imageNode.image = UIImage(named: "Chat/Context Menu/ReactionReply", in: Bundle(for: ReactionNode.self), compatibleWith: nil)
         }
+        
         self.intrinsicSize = intrinsicSize
         
         super.init()
@@ -66,15 +74,17 @@ private final class ReactionNode: ASDisplayNode {
         //self.backgroundColor = .green
         
         self.addSubnode(self.animationNode)
-        self.animationNode.visibility = true
-        self.animationNode.setup(account: account, resource: reaction.value.file.resource, width: Int(self.intrinsicSize.width) * 2, height: Int(self.intrinsicSize.height) * 2, mode: .direct)
+        self.addSubnode(self.imageNode)
         self.animationNode.updateLayout(size: self.intrinsicSize)
         self.animationNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
     }
     
     func updateLayout(size: CGSize, scale: CGFloat, transition: ContainedViewLayoutTransition) {
         transition.updatePosition(node: self.animationNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
         transition.updateTransformScale(node: self.animationNode, scale: scale, beginWithCurrentState: true)
+        transition.updatePosition(node: self.imageNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
+        transition.updateTransformScale(node: self.imageNode, scale: scale, beginWithCurrentState: true)
     }
     
     func updateIsAnimating(_ isAnimating: Bool, animated: Bool) {
@@ -87,41 +97,44 @@ private final class ReactionNode: ASDisplayNode {
 }
 
 final class ReactionSelectionNode: ASDisplayNode {
+    private let account: Account
+    private let reactions: [ReactionGestureItem]
+    
     private let backgroundNode: ASImageNode
     private let backgroundShadowNode: ASImageNode
     private let bubbleNodes: [(ASImageNode, ASImageNode)]
-    private let reactionNodes: [ReactionNode]
+    private var reactionNodes: [ReactionNode] = []
     private var hasSelectedNode = false
     
     private let hapticFeedback = HapticFeedback()
     
+    private var shadowBlur: CGFloat = 8.0
+    private var minimizedReactionSize: CGFloat = 30.0
+    private var maximizedReactionSize: CGFloat = 60.0
+    private var smallCircleSize: CGFloat = 8.0
+    
     public init(account: Account, reactions: [ReactionGestureItem]) {
+        self.account = account
+        self.reactions = reactions
+        
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateBubbleImage(foreground: .white, diameter: 42.0)
         
         self.backgroundShadowNode = ASImageNode()
         self.backgroundShadowNode.displaysAsynchronously = false
         self.backgroundShadowNode.displayWithoutProcessing = true
-        self.backgroundShadowNode.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: 42.0)
         
         self.bubbleNodes = (0 ..< 2).map { i -> (ASImageNode, ASImageNode) in
             let imageNode = ASImageNode()
-            imageNode.image = generateBubbleImage(foreground: .white, diameter: CGFloat(i + 1) * 8.0)
             imageNode.displaysAsynchronously = false
             imageNode.displayWithoutProcessing = true
             
             let shadowNode = ASImageNode()
-            shadowNode.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: CGFloat(i + 1) * 8.0)
             shadowNode.displaysAsynchronously = false
             shadowNode.displayWithoutProcessing = true
             
             return (imageNode, shadowNode)
-        }
-        
-        self.reactionNodes = reactions.map { reaction -> ReactionNode in
-            return ReactionNode(account: account, reaction: reaction)
         }
         
         super.init()
@@ -134,18 +147,50 @@ final class ReactionSelectionNode: ASDisplayNode {
             self.addSubnode(foreground)
         }
         self.addSubnode(self.backgroundNode)
-        self.reactionNodes.forEach(self.addSubnode(_:))
     }
     
     func updateLayout(constrainedSize: CGSize, startingPoint: CGPoint, offsetFromStart: CGFloat, isInitial: Bool) {
-        let backgroundHeight: CGFloat = 42.0
-        let reactionSpacing: CGFloat = 6.0
+        let initialAnchorX = startingPoint.x
+        
+        if isInitial && self.reactionNodes.isEmpty {
+            //let contentWidth: CGFloat = CGFloat(self.reactionNodes.count - 1) * (minimizedReactionSize) + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * reactionSpacing
+            
+            //contentWidth = CGFloat(self.reactionNodes.count - 1) * X + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * 0.2 * X
+            // contentWidth - maximizedReactionSize = CGFloat(self.reactionNodes.count - 1) * X + CGFloat(self.reactionNodes.count + 1) * 0.2 * X
+            // (contentWidth - maximizedReactionSize) / (CGFloat(self.reactionNodes.count - 1) + CGFloat(self.reactionNodes.count + 1) * 0.2) = X
+            let availableContentWidth = max(100.0, initialAnchorX)
+            var minimizedReactionSize = (availableContentWidth - self.maximizedReactionSize) / (CGFloat(self.reactions.count - 1) + CGFloat(self.reactions.count + 1) * 0.2)
+            minimizedReactionSize = max(16.0, floor(minimizedReactionSize))
+            minimizedReactionSize = min(30.0, minimizedReactionSize)
+            
+            self.minimizedReactionSize = minimizedReactionSize
+            self.shadowBlur = floor(minimizedReactionSize * 0.26)
+            self.smallCircleSize = 8.0
+            
+            let backgroundHeight = floor(minimizedReactionSize * 1.4)
+            
+            self.backgroundNode.image = generateBubbleImage(foreground: .white, diameter: backgroundHeight, shadowBlur: self.shadowBlur)
+            self.backgroundShadowNode.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: backgroundHeight, shadowBlur: self.shadowBlur)
+            for i in 0 ..< self.bubbleNodes.count {
+                self.bubbleNodes[i].0.image = generateBubbleImage(foreground: .white, diameter: CGFloat(i + 1) * self.smallCircleSize, shadowBlur: self.shadowBlur)
+                self.bubbleNodes[i].1.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: CGFloat(i + 1) * self.smallCircleSize, shadowBlur: self.shadowBlur)
+            }
+            
+            self.reactionNodes = self.reactions.map { reaction -> ReactionNode in
+                return ReactionNode(account: self.account, reaction: reaction, maximizedReactionSize: self.maximizedReactionSize)
+            }
+            self.reactionNodes.forEach(self.addSubnode(_:))
+        }
+        
+        let backgroundHeight: CGFloat = floor(self.minimizedReactionSize * 1.4)
+        
+        let reactionSpacing: CGFloat = floor(self.minimizedReactionSize * 0.2)
         let minimizedReactionVerticalInset: CGFloat = floor((backgroundHeight - minimizedReactionSize) / 2.0)
         
         let contentWidth: CGFloat = CGFloat(self.reactionNodes.count - 1) * (minimizedReactionSize) + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * reactionSpacing
         
         var backgroundFrame = CGRect(origin: CGPoint(x: -shadowBlur, y: -shadowBlur), size: CGSize(width: contentWidth + shadowBlur * 2.0, height: backgroundHeight + shadowBlur * 2.0))
-        backgroundFrame = backgroundFrame.offsetBy(dx: startingPoint.x - contentWidth + backgroundHeight / 2.0 - 52.0, dy: startingPoint.y - backgroundHeight - 16.0)
+        backgroundFrame = backgroundFrame.offsetBy(dx: initialAnchorX - contentWidth + backgroundHeight / 2.0, dy: startingPoint.y - backgroundHeight - 16.0)
         
         self.backgroundNode.frame = backgroundFrame
         self.backgroundShadowNode.frame = backgroundFrame
@@ -201,11 +246,11 @@ final class ReactionSelectionNode: ASDisplayNode {
             reactionX += reactionSize + reactionSpacing
         }
         
-        let mainBubbleFrame = CGRect(origin: CGPoint(x: anchorX - 8.0 - shadowBlur, y: backgroundFrame.maxY - shadowBlur - 8.0 - shadowBlur), size: CGSize(width: 16.0 + shadowBlur * 2.0, height: 16.0 + shadowBlur * 2.0))
+        let mainBubbleFrame = CGRect(origin: CGPoint(x: anchorX - self.smallCircleSize - shadowBlur, y: backgroundFrame.maxY - shadowBlur - self.smallCircleSize - shadowBlur), size: CGSize(width: self.smallCircleSize * 2.0 + shadowBlur * 2.0, height: self.smallCircleSize * 2.0 + shadowBlur * 2.0))
         self.bubbleNodes[1].0.frame = mainBubbleFrame
         self.bubbleNodes[1].1.frame = mainBubbleFrame
         
-        let secondaryBubbleFrame = CGRect(origin: CGPoint(x: mainBubbleFrame.midX - 9.0 - (8.0 + shadowBlur * 2.0) / 2.0, y: mainBubbleFrame.midY + 12.0 - (8.0 + shadowBlur * 2.0) / 2.0), size: CGSize(width: 8.0 + shadowBlur * 2.0, height: 8.0 + shadowBlur * 2.0))
+        let secondaryBubbleFrame = CGRect(origin: CGPoint(x: mainBubbleFrame.midX - floor(self.smallCircleSize * 0.88) - (self.smallCircleSize + shadowBlur * 2.0) / 2.0, y: mainBubbleFrame.midY + floor(self.smallCircleSize * 4.0 / 3.0) - (self.smallCircleSize + shadowBlur * 2.0) / 2.0), size: CGSize(width: self.smallCircleSize + shadowBlur * 2.0, height: self.smallCircleSize + shadowBlur * 2.0))
         self.bubbleNodes[0].0.frame = secondaryBubbleFrame
         self.bubbleNodes[0].1.frame = secondaryBubbleFrame
     }

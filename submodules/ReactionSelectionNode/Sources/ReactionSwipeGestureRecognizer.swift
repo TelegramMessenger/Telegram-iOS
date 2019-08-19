@@ -6,13 +6,16 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
     private var validatedGesture = false
     
     private var firstLocation: CGPoint = CGPoint()
+    private var currentLocation: CGPoint = CGPoint()
     private var currentReactions: [ReactionGestureItem] = []
     private var isActivated = false
     private var isAwaitingCompletion = false
     private weak var currentContainer: ReactionSelectionParentNode?
+    private var activationTimer: Timer?
     
     public var availableReactions: (() -> [ReactionGestureItem])?
     public var getReactionContainer: (() -> ReactionSelectionParentNode?)?
+    public var began: (() -> Void)?
     public var updateOffset: ((CGFloat, Bool) -> Void)?
     public var completed: ((ReactionGestureItem?) -> Void)?
     public var displayReply: ((CGFloat) -> Void)?
@@ -31,6 +34,8 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
         self.currentReactions = []
         self.isActivated = false
         self.isAwaitingCompletion = false
+        self.activationTimer?.invalidate()
+        self.activationTimer = nil
     }
     
     override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
@@ -40,6 +45,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
             self.currentReactions = availableReactions
             let touch = touches.first!
             self.firstLocation = touch.location(in: nil)
+            self.currentLocation = self.firstLocation
         } else {
             self.state = .failed
         }
@@ -55,6 +61,7 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
         guard let location = touches.first?.location(in: nil) else {
             return
         }
+        self.currentLocation = location
         
         var translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
         
@@ -72,8 +79,38 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                 self.validatedGesture = true
                 self.firstLocation = location
                 translation = CGPoint()
+                self.began?()
                 self.updateOffset?(0.0, false)
                 updatedOffset = true
+                
+                self.activationTimer?.invalidate()
+                final class TimerTarget: NSObject {
+                    let f: () -> Void
+                    
+                    init(_ f: @escaping () -> Void) {
+                        self.f = f
+                    }
+                    
+                    @objc func event() {
+                        self.f()
+                    }
+                }
+                let activationTimer = Timer(timeInterval: 0.3, target: TimerTarget { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.activationTimer = nil
+                    if strongSelf.validatedGesture {
+                        let location = strongSelf.currentLocation
+                        if !strongSelf.currentReactions.isEmpty, let reactionContainer = strongSelf.getReactionContainer?() {
+                            strongSelf.currentContainer = reactionContainer
+                            let reactionContainerLocation = reactionContainer.view.convert(location, from: nil)
+                            reactionContainer.displayReactions(strongSelf.currentReactions, at: reactionContainerLocation)
+                        }
+                    }
+                }, selector: #selector(TimerTarget.event), userInfo: nil, repeats: false)
+                self.activationTimer = activationTimer
+                RunLoop.main.add(activationTimer, forMode: .common)
             }
         }
         
@@ -85,11 +122,6 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                 if absTranslationX > 40.0 {
                     self.isActivated = true
                     self.displayReply?(-min(0.0, translation.x))
-                    if !self.currentReactions.isEmpty, let reactionContainer = self.getReactionContainer?() {
-                        self.currentContainer = reactionContainer
-                        let reactionContainerLocation = reactionContainer.view.convert(location, from: nil)
-                        reactionContainer.displayReactions(self.currentReactions, at: reactionContainerLocation)
-                    }
                 }
             } else {
                 if let reactionContainer = self.currentContainer {
@@ -111,8 +143,8 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
         if self.validatedGesture {
             let translation = CGPoint(x: location.x - self.firstLocation.x, y: location.y - self.firstLocation.y)
             if let reaction = self.currentContainer?.selectedReaction() {
-                self.completed?(reaction)
                 self.isAwaitingCompletion = true
+                self.completed?(reaction)
             } else {
                 if translation.x < -40.0 {
                     self.currentContainer?.dismissReactions(into: nil, hideTarget: false)
