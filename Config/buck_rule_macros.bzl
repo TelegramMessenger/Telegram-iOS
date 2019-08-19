@@ -56,16 +56,16 @@ def apple_lib(
                 swift_compiler_flags = swift_compiler_flags,
                 preferred_linkage = "shared",
                 link_style = "static",
-                linker_flags = ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)],
+                linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
             )
-            '''native.apple_bundle(
+            native.apple_bundle(
                 name = name + "Framework",
                 visibility = visibility,
                 binary = ":" + name + "#shared",
                 extension = "framework",
                 info_plist = "Info.plist",
                 info_plist_substitutions = info_plist_substitutions(name),
-            )'''
+            )
         else:
             native.apple_library(
                 name = name,
@@ -82,9 +82,9 @@ def apple_lib(
                 modular = modular,
                 compiler_flags = compiler_flags,
                 swift_compiler_flags = swift_compiler_flags,
-                #preferred_linkage = "shared",
-                #link_style = "static",
-                #linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
+                preferred_linkage = "shared",
+                link_style = "static",
+                linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
             )
             native.apple_bundle(
                 name = name + "Framework",
@@ -213,20 +213,20 @@ def framework_binary_dependencies(names):
     result = []
     if native.read_config("custom", "mode") == "project":
         for name in names:
-            result.append(name + "#shared")
+            result.append(name + "Framework")
     else:
         for name in names:
-            result.append(name + "")
+            result.append(name + "#shared")
     return result
 
 def framework_bundle_dependencies(names):
     result = []
     if native.read_config("custom", "mode") == "project":
         for name in names:
-            #result.append(name + "Framework")
+            result.append(name + "Framework")
             pass
     else:
         for name in names:
-            #result.append(name + "Framework")
+            result.append(name + "Framework")
             pass
     return result

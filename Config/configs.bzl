@@ -41,7 +41,7 @@ def optimization_config():
 ALL_LOAD_LINKER_FLAG = "-all_load"
 
 def bundle_identifier(name):
-    return "org.Telegram.%s" % name
+    return "org.telegram.%s" % name
 
 def library_configs():
     lib_specific_config = {
@@ -86,7 +86,10 @@ def app_binary_configs(name):
     binary_specific_config = {
         "ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES": "YES",
         "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
-        "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier(name),
+        "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
+        "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
+        "DEVELOPMENT_TEAM": "X834Q8SBVP",
+        "PROVISIONING_PROFILE_SPECIFIER": "match Development org.telegram.Telegram-iOS",
     }
     binary_config = merge_dict(SHARED_CONFIGS, binary_specific_config)
     binary_config = merge_dict(binary_config, optimization_config())
@@ -100,5 +103,16 @@ def info_plist_substitutions(name):
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier(name),
         "PRODUCT_NAME": name,
         "CURRENT_PROJECT_VERSION": "1",
+    }
+    return substitutions
+
+def app_info_plist_substitutions(name):
+    substitutions = {
+        "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
+        "EXECUTABLE_NAME": name,
+        "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
+        "PRODUCT_NAME": name,
+        "CURRENT_PROJECT_VERSION": "1",
+        "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
     }
     return substitutions

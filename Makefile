@@ -1,8 +1,6 @@
-
 .PHONY : install_buck build targets audit project clean
 
-# Use local version of Buck
-BUCK=tools/buck
+BUCK=/Users/peter/build/buck/buck-out/gen/programs/buck.pex
 
 log:
 	echo "Make"
@@ -10,6 +8,9 @@ log:
 install_buck:
 	curl https://jitpack.io/com/github/airbnb/buck/457ebb73fcd8f86be0112dc74948d022b6969dbd/buck-457ebb73fcd8f86be0112dc74948d022b6969dbd.pex --output tools/buck
 	chmod u+x tools/buck
+
+build_buck:
+	sh build_buck.sh
 
 build:
 	$(BUCK) build //App:AppPackage

@@ -10,5 +10,6 @@ framework(
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/CoreText.framework",
+        "$SDKROOT/System/Library/Frameworks/AVFoundation.framework",
     ],
 )

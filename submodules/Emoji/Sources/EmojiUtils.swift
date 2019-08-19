@@ -1,5 +1,6 @@
 import Foundation
 import CoreText
+import AVFoundation
 
 public extension UnicodeScalar {
     var isEmoji: Bool {
@@ -52,6 +53,7 @@ public extension String {
     }
     
     var isSingleEmoji: Bool {
+        let _ = try? AVFoundation.AVAudioFile(forReading: URL(string: "")!)
         return self.emojis.count == 1 && self.containsEmoji
     }
     

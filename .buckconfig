@@ -40,8 +40,4 @@
   config = debug
   optimization = -Onone
   config_swift_compiler_flags = -DDEBUG -enable-testing -g
-  code_coverage_cflags = -fprofile-instr-generate -fcoverage-mapping
-  code_coverage_cxxflags = -fprofile-instr-generate -fcoverage-mapping
-  code_coverage_ldflags = -fprofile-instr-generate
-  code_coverage_swift_compiler_flags = -profile-generate -profile-coverage-mapping
   
