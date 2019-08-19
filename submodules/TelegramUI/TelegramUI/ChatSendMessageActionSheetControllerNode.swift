@@ -117,6 +117,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
     }
     
     @objc private func buttonPressed() {
+        self.buttonNode.isUserInteractionEnabled = false
         self.action()
     }
 }
@@ -613,6 +614,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     }
     
     @objc private func sendButtonPressed() {
+        self.sendButtonNode.isUserInteractionEnabled = false
         self.send?()
     }
 }

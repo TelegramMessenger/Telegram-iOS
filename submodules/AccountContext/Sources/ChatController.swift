@@ -4,6 +4,8 @@ import TelegramCore
 import TextFormat
 import Display
 import SwiftSignalKit
+import TelegramPresentationData
+import TelegramUIPreferences
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
@@ -366,4 +368,28 @@ public protocol ChatController: ViewController {
     
     func updatePresentationMode(_ mode: ChatControllerPresentationMode)
     func beginMessageSearch(_ query: String)
+}
+
+public protocol ChatMessagePrevewItemNode: class {
+    var forwardInfoReferenceNode: ASDisplayNode? { get }
+}
+
+public enum FileMediaResourcePlaybackStatus: Equatable {
+    case playing
+    case paused
+}
+
+public struct FileMediaResourceStatus: Equatable {
+    public var mediaStatus: FileMediaResourceMediaStatus
+    public var fetchStatus: MediaResourceStatus
+    
+    public init(mediaStatus: FileMediaResourceMediaStatus, fetchStatus: MediaResourceStatus) {
+        self.mediaStatus = mediaStatus
+        self.fetchStatus = fetchStatus
+    }
+}
+
+public enum FileMediaResourceMediaStatus: Equatable {
+    case fetchStatus(MediaResourceStatus)
+    case playbackStatus(FileMediaResourcePlaybackStatus)
 }

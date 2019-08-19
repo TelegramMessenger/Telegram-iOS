@@ -8,9 +8,10 @@ public final class PageControlNode: ASDisplayNode {
     public var dotColor: UIColor {
         didSet {
             if !oldValue.isEqual(self.dotColor) {
+                let oldImage = self.normalDotImage
                 self.normalDotImage = generateFilledCircleImage(diameter: dotSize, color: self.dotColor)!
                 for dotNode in self.dotNodes {
-                    if dotNode === oldValue {
+                    if dotNode.image === oldImage {
                         dotNode.image = self.normalDotImage
                     }
                 }
@@ -20,9 +21,10 @@ public final class PageControlNode: ASDisplayNode {
     public var inactiveDotColor: UIColor {
         didSet {
             if !oldValue.isEqual(self.inactiveDotColor) {
+                let oldImage = self.inactiveDotImage
                 self.inactiveDotImage = generateFilledCircleImage(diameter: dotSize, color: self.inactiveDotColor)!
                 for dotNode in self.dotNodes {
-                    if dotNode === oldValue {
+                    if dotNode.image === oldImage {
                         dotNode.image = self.inactiveDotImage
                     }
                 }

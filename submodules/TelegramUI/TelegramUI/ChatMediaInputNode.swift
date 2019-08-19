@@ -10,6 +10,7 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import PeerInfoUI
+import SettingsUI
 
 private struct PeerSpecificPackData {
     let peer: Peer

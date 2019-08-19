@@ -10,6 +10,7 @@ import TelegramStringFormatting
 import AccountContext
 import RadialStatusNode
 import PhotoResources
+import GridMessageSelectionNode
 
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {

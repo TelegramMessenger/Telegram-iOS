@@ -18,6 +18,7 @@ import TelegramStringFormatting
 import GalleryUI
 import AnimationUI
 import LocalMediaResources
+import WallpaperResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

@@ -10,6 +10,7 @@ import TextFormat
 import AccountContext
 import WebsiteType
 import InstantPageUI
+import UrlHandling
 
 enum InstantPageType {
     case generic
@@ -486,5 +487,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateTouchesAtPoint(_ point: CGPoint?) {
         let contentNodeFrame = self.contentNode.frame
         self.contentNode.updateTouchesAtPoint(point.flatMap { $0.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY) })
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        return self.contentNode.reactionTargetNode(value: value)
     }
 }

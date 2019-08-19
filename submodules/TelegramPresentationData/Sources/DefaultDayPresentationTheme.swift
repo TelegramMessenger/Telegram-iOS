@@ -8,13 +8,11 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     let constructiveColor: UIColor = UIColor(rgb: 0x00c900)
     let secretColor: UIColor = UIColor(rgb: 0x00b12c)
     
-    let accentColorHSV = accentColor.hsv
-    
     let outgoingPrimaryTextColor: UIColor
     let outgoingSecondaryTextColor: UIColor
     let outgoingLinkTextColor: UIColor
     let outgoingCheckColor: UIColor
-    if accentColorHSV.2 > 0.83 {
+    if accentColor.lightness > 0.72 {
         outgoingPrimaryTextColor = .black
         outgoingSecondaryTextColor = UIColor(rgb: 0x000000, alpha: 0.6)
         outgoingLinkTextColor = .black

@@ -90,6 +90,8 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
             return nil
         }, chatControllerNode: {
             return nil
+        }, reactionContainerNode: {
+            return nil
         }, presentGlobalOverlayController: { _, _ in
         }, callPeer: { _ in
         }, longTap: { _, _ in
@@ -110,6 +112,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
+        }, updateMessageReaction: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))

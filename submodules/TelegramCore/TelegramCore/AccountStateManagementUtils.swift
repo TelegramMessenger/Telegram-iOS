@@ -2765,7 +2765,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         if info.flags.contains(.slowModeEnabled), peer.adminRights == nil && !peer.flags.contains(.isCreator)  {
                             var cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData ?? CachedChannelData()
                             if let slowModeTimeout = cachedData.slowModeTimeout {
-                                cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: timeout + slowModeTimeout)
+                                cachedData = cachedData.withUpdatedSlowModeValidUntilTimestamp(timeout + slowModeTimeout)
                                 peerIds.insert(peerId)
                                 cachedDatas[peerId] = cachedData
                             }

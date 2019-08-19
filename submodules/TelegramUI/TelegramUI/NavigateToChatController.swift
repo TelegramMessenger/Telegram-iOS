@@ -8,6 +8,7 @@ import GalleryUI
 import InstantPageUI
 import ChatListUI
 import PeerAvatarGalleryUI
+import SettingsUI
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false

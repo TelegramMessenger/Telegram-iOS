@@ -219,6 +219,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
                 return nil
             }, chatControllerNode: {
                 return nil
+            }, reactionContainerNode: {
+                return nil
             }, presentGlobalOverlayController: { _, _ in }, callPeer: { _ in
             }, longTap: { [weak self] content, _ in
                 if let strongSelf = self {
@@ -284,6 +286,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, sendScheduledMessagesNow: { _ in
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
+        }, updateMessageReaction: { _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
@@ -653,7 +656,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
             }
             let forwardMessageIds = Array(messageIds).sorted()
             
-            let controller = PeerSelectionController(context: strongSelf.context, filter: [.onlyWriteable, .excludeDisabled])
+            let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.onlyWriteable, .excludeDisabled]))
             controller.peerSelected = { [weak controller] peerId in
                 if let strongSelf = self, let _ = controller {
                     let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in

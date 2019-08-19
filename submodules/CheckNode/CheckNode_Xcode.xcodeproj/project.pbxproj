@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D03E48B8230777AA0049C28B /* ModernCheckNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E48B7230777A80049C28B /* ModernCheckNode.swift */; };
+		D03E48BA230777B70049C28B /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E48B9230777B70049C28B /* Display.framework */; };
 		D06018CD22F3665900796784 /* CheckNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D06018CB22F3665900796784 /* CheckNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D06018D822F366B000796784 /* CheckNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06018D722F366B000796784 /* CheckNode.swift */; };
 		D06018DB22F366BB00796784 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018DA22F366BB00796784 /* UIKit.framework */; };
@@ -16,6 +18,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D03E48B7230777A80049C28B /* ModernCheckNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ModernCheckNode.swift; sourceTree = "<group>"; };
+		D03E48B9230777B70049C28B /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06018C822F3665900796784 /* CheckNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = CheckNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06018CB22F3665900796784 /* CheckNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CheckNode.h; sourceTree = "<group>"; };
 		D06018CC22F3665900796784 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -31,6 +35,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E48BA230777B70049C28B /* Display.framework in Frameworks */,
 				D06018E122F366C500796784 /* LegacyComponents.framework in Frameworks */,
 				D06018DF22F366C200796784 /* AsyncDisplayKit.framework in Frameworks */,
 				D06018DD22F366BE00796784 /* Foundation.framework in Frameworks */,
@@ -62,6 +67,7 @@
 		D06018CA22F3665900796784 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D03E48B7230777A80049C28B /* ModernCheckNode.swift */,
 				D06018D722F366B000796784 /* CheckNode.swift */,
 				D06018CB22F3665900796784 /* CheckNode.h */,
 			);
@@ -71,6 +77,7 @@
 		D06018D922F366BA00796784 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E48B9230777B70049C28B /* Display.framework */,
 				D06018E022F366C500796784 /* LegacyComponents.framework */,
 				D06018DE22F366C200796784 /* AsyncDisplayKit.framework */,
 				D06018DC22F366BE00796784 /* Foundation.framework */,
@@ -160,6 +167,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D06018D822F366B000796784 /* CheckNode.swift in Sources */,
+				D03E48B8230777AA0049C28B /* ModernCheckNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

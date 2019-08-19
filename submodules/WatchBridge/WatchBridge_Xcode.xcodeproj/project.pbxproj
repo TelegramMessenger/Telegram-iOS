@@ -29,6 +29,7 @@
 		D03E44982305B6810049C28B /* StickerResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44972305B6810049C28B /* StickerResources.framework */; };
 		D03E449A2305B6850049C28B /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E44992305B6850049C28B /* PhotoResources.framework */; };
 		D03E449C2305B6910049C28B /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E449B2305B6910049C28B /* LegacyComponents.framework */; };
+		D03E4641230750150049C28B /* LegacyUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E4640230750150049C28B /* LegacyUI.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +57,7 @@
 		D03E44972305B6810049C28B /* StickerResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E44992305B6850049C28B /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E449B2305B6910049C28B /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E4640230750150049C28B /* LegacyUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E4641230750150049C28B /* LegacyUI.framework in Frameworks */,
 				D03E449C2305B6910049C28B /* LegacyComponents.framework in Frameworks */,
 				D03E449A2305B6850049C28B /* PhotoResources.framework in Frameworks */,
 				D03E44982305B6810049C28B /* StickerResources.framework in Frameworks */,
@@ -119,6 +122,7 @@
 		D03E447C2305B6170049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E4640230750150049C28B /* LegacyUI.framework */,
 				D03E449B2305B6910049C28B /* LegacyComponents.framework */,
 				D03E44992305B6850049C28B /* PhotoResources.framework */,
 				D03E44972305B6810049C28B /* StickerResources.framework */,

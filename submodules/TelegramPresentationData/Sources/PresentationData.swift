@@ -150,14 +150,15 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
                 break
             }
         }
-    }
-    
-    if dateString.contains("M\(dateSeparator)d") {
-        dateFormat = .monthFirst
+        if dateString.contains("M\(dateSeparator)d") {
+            dateFormat = .monthFirst
+        } else {
+            dateFormat = .dayFirst
+        }
     } else {
         dateFormat = .dayFirst
     }
-    
+
     let decimalSeparator = locale.decimalSeparator ?? "."
     let groupingSeparator = locale.groupingSeparator ?? ""
     return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, decimalSeparator: decimalSeparator, groupingSeparator: groupingSeparator)

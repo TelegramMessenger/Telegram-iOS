@@ -42,6 +42,7 @@ import Emoji
 import PeerAvatarGalleryUI
 import PeerInfoUI
 import RaiseToListen
+import UrlHandling
 
 public enum ChatControllerPeekActions {
     case standard
@@ -541,7 +542,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     guard let strongSelf = self else {
                                         return
                                     }
-                                    let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: updatedMessages[0].id, reactions: [emoji]).start()
+                                    let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: updatedMessages[0].id, reaction: emoji).start()
                                 }))
                             }
                             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
@@ -1017,6 +1018,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             return self?.navigationController as? NavigationController
         }, chatControllerNode: { [weak self] in
             return self?.chatDisplayNode
+        }, reactionContainerNode: { [weak self] in
+            return self?.chatDisplayNode.reactionContainerNode
         }, presentGlobalOverlayController: { [weak self] controller, arguments in
             self?.presentInGlobalOverlay(controller, with: arguments)
         }, callPeer: { [weak self] peerId in
@@ -1523,6 +1526,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     window.rootViewController?.present(controller, animated: true)
                 }
             }
+        }, updateMessageReaction: { [weak self] messageId, reaction in
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: messageId, reaction: reaction).start()
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -5831,7 +5839,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || self.presentationInterfaceState.isScheduledMessages {
+            if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (self.presentationInterfaceState.isScheduledMessages && messageId.id != 0) {
                 if let navigationController = self.navigationController as? NavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), messageId: messageId, keepStack: .always))
                 }
@@ -5988,7 +5996,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func forwardMessages(messageIds: [MessageId], resetCurrent: Bool = false) {
-        let controller = PeerSelectionController(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages])
+        let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, filter: [.onlyWriteable, .excludeDisabled, .includeSavedMessages]))
         controller.peerSelected = { [weak self, weak controller] peerId in
             guard let strongSelf = self, let strongController = controller else {
                 return
@@ -6143,7 +6151,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     case let .chat(textInputState, _):
                         if let textInputState = textInputState {
-                            let controller = PeerSelectionController(context: self.context)
+                            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context))
                             controller.peerSelected = { [weak self, weak controller] peerId in
                                 if let strongSelf = self, let strongController = controller {
                                     if case let .peer(currentPeerId) = strongSelf.chatLocation, peerId == currentPeerId {

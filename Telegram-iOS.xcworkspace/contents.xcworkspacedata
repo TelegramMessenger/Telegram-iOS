@@ -53,10 +53,16 @@
       <FileRef
          location = "group:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/InstantPageCache/InstantPageCache_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
       name = "Utils">
+      <FileRef
+         location = "group:submodules/AccountContext/AccountContext_Xcode.xcodeproj">
+      </FileRef>
       <FileRef
          location = "group:submodules/libphonenumber/libphonenumber_Xcode.xcodeproj">
       </FileRef>
@@ -71,9 +77,6 @@
       </FileRef>
       <FileRef
          location = "group:submodules/MergeLists/MergeLists_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/AccountContext/AccountContext_Xcode.xcodeproj">
       </FileRef>
       <FileRef
          location = "group:submodules/PeerPresenceStatusManager/PeerPresenceStatusManager_Xcode.xcodeproj">
@@ -119,6 +122,18 @@
       </FileRef>
       <FileRef
          location = "group:submodules/Geocoding/Geocoding_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/UrlHandling/UrlHandling_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/HexColor/HexColor_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/QrCode/QrCode_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/PersistentStringHash/PersistentStringHash_Xcode.xcodeproj">
       </FileRef>
       <Group
          location = "container:"
@@ -210,6 +225,9 @@
             location = "group:submodules/StickerResources/StickerResources_Xcode.xcodeproj">
          </FileRef>
          <FileRef
+            location = "group:submodules/WallpaperResources/WallpaperResources_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
             location = "group:submodules/MusicAlbumArtResources/MusicAlbumArtResources_Xcode.xcodeproj">
          </FileRef>
          <FileRef
@@ -233,6 +251,13 @@
    <Group
       location = "container:"
       name = "UI Components">
+      <Group
+         location = "container:"
+         name = "Authorization">
+         <FileRef
+            location = "group:submodules/AuthorizationUI/AuthorizationUI_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
       <Group
          location = "container:"
          name = "Video Content">
@@ -287,6 +312,12 @@
          </FileRef>
          <FileRef
             location = "group:submodules/SinglePhoneInputNode/SinglePhoneInputNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/CounterContollerTitleView/CounterContollerTitleView_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
+            location = "group:submodules/GridMessageSelectionNode/GridMessageSelectionNode_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <Group
@@ -370,6 +401,13 @@
          </FileRef>
          <FileRef
             location = "group:submodules/AvatarNode/AvatarNode_Xcode.xcodeproj">
+         </FileRef>
+      </Group>
+      <Group
+         location = "container:"
+         name = "Chat">
+         <FileRef
+            location = "group:submodules/ReactionSelectionNode/ReactionSelectionNode_Xcode.xcodeproj">
          </FileRef>
       </Group>
       <FileRef
@@ -509,6 +547,9 @@
       </FileRef>
       <FileRef
          location = "group:submodules/PeerInfoUI/PeerInfoUI_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:submodules/SettingsUI/SettingsUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <Group

@@ -13,6 +13,7 @@ import InstantPageUI
 import StickerPackPreviewUI
 import JoinLinkPreviewUI
 import LanguageLinkPreviewUI
+import SettingsUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -46,7 +47,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .botStart(peerId, payload):
             openPeer(peerId, .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload):
-            let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup)
+            let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .onlyGroups, .onlyManageable], title: presentationData.strings.UserInfo_InviteBotToGroup))
             controller.peerSelected = { [weak controller] peerId in
                 if payload.isEmpty {
                     if peerId.namespace == Namespaces.Peer.CloudGroup {
@@ -194,7 +195,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     }
                 })
             } else {
-                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
+                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                 controller.peerSelected = { [weak controller] peerId in
                     if let strongController = controller {
                         strongController.dismiss()

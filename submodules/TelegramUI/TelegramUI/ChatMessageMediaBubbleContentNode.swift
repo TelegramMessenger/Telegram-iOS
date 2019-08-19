@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
+import GridMessageSelectionNode
 
 class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override var supportsMosaic: Bool {
@@ -164,7 +165,20 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings)
+                    var dateReactions: [MessageReaction] = []
+                    var dateReactionCount = 0
+                    if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                        for reaction in reactionsAttribute.reactions {
+                            if reaction.isSelected {
+                                dateReactions.insert(reaction, at: 0)
+                            } else {
+                                dateReactions.append(reaction)
+                            }
+                            dateReactionCount += Int(reaction.count)
+                        }
+                    }
+                    
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, reactionCount: dateReactionCount)
                     
                     let statusType: ChatMessageDateAndStatusType?
                     switch position {
@@ -192,7 +206,7 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                     var statusApply: ((Bool) -> Void)?
                     
                     if let statusType = statusType {
-                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude))
+                        let (size, apply) = statusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: imageSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude), dateReactions)
                         statusSize = size
                         statusApply = apply
                     }
@@ -358,5 +372,12 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
         }
         
         return false
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        if !self.dateAndStatusNode.isHidden {
+            return self.dateAndStatusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }
