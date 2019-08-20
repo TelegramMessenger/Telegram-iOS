@@ -101,6 +101,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
                 return true
             case _ as NotificationInfoMessageAttribute:
                 return true
+            case _ as OutgoingScheduleInfoMessageAttribute:
+                return true
             default:
                 return false
         }

@@ -748,7 +748,7 @@ struct HistoryViewLoadedSample {
 final class HistoryViewLoadedState {
     let anchor: HistoryViewAnchor
     let tag: MessageTags?
-    let namespaces: HistoryViewNamespaces
+    let namespaces: MessageIdNamespaces
     let statistics: MessageHistoryViewOrderStatistics
     let halfLimit: Int
     let seedConfiguration: SeedConfiguration
@@ -756,7 +756,7 @@ final class HistoryViewLoadedState {
     var holes: HistoryViewHoles
     var spacesWithRemovals = Set<PeerIdAndNamespace>()
     
-    init(anchor: HistoryViewAnchor, tag: MessageTags?, namespaces: HistoryViewNamespaces, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewPeerIds, postbox: Postbox, holes: HistoryViewHoles) {
+    init(anchor: HistoryViewAnchor, tag: MessageTags?, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewPeerIds, postbox: Postbox, holes: HistoryViewHoles) {
         precondition(halfLimit >= 3)
         self.anchor = anchor
         self.tag = tag
@@ -1178,7 +1178,7 @@ final class HistoryViewLoadedState {
     }
 }
 
-private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewPeerIds, tag: MessageTags?, namespaces: HistoryViewNamespaces) -> [PeerIdAndNamespace: IndexSet] {
+private func fetchHoles(postbox: Postbox, locations: MessageHistoryViewPeerIds, tag: MessageTags?, namespaces: MessageIdNamespaces) -> [PeerIdAndNamespace: IndexSet] {
     var holesBySpace: [PeerIdAndNamespace: IndexSet] = [:]
     var peerIds: [PeerId] = []
     switch locations {
@@ -1217,7 +1217,7 @@ final class HistoryViewLoadingState {
     let halfLimit: Int
     var holes: HistoryViewHoles
     
-    init(postbox: Postbox, locations: MessageHistoryViewPeerIds, tag: MessageTags?, namespaces: HistoryViewNamespaces, messageId: MessageId, halfLimit: Int) {
+    init(postbox: Postbox, locations: MessageHistoryViewPeerIds, tag: MessageTags?, namespaces: MessageIdNamespaces, messageId: MessageId, halfLimit: Int) {
         self.messageId = messageId
         self.tag = tag
         self.halfLimit = halfLimit
@@ -1261,7 +1261,7 @@ enum HistoryViewState {
     case loaded(HistoryViewLoadedState)
     case loading(HistoryViewLoadingState)
     
-    init(postbox: Postbox, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, namespaces: HistoryViewNamespaces, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewPeerIds) {
+    init(postbox: Postbox, inputAnchor: HistoryViewInputAnchor, tag: MessageTags?, namespaces: MessageIdNamespaces, statistics: MessageHistoryViewOrderStatistics, halfLimit: Int, locations: MessageHistoryViewPeerIds) {
         switch inputAnchor {
             case let .index(index):
                 self = .loaded(HistoryViewLoadedState(anchor: .index(index), tag: tag, namespaces: namespaces, statistics: statistics, halfLimit: halfLimit, locations: locations, postbox: postbox, holes: HistoryViewHoles(holesBySpace: fetchHoles(postbox: postbox, locations: locations, tag: tag, namespaces: namespaces))))

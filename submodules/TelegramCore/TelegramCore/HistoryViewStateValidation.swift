@@ -271,7 +271,7 @@ final class HistoryViewStateValidationContexts {
                 let batch = HistoryStateValidationBatch(disposable: disposable)
                 context.batch = batch
                 
-                let messages: [Message] = view.entries.map { $0.message }
+                let messages: [Message] = view.entries.map { $0.message }.filter { $0.id.namespace == Namespaces.Message.ScheduledCloud }
             
                 disposable.set((validateScheduledMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: peerId, tag: nil, messages: messages, historyState: .scheduledMessages(peerId))
                 |> deliverOn(self.queue)).start(completed: { [weak self] in
@@ -476,7 +476,7 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
             return .complete()
         }
         switch result {
-            case let .messages(messages, _, users, channelPts):
+            case let .messages(messages, _, _, channelPts):
                 var storeMessages: [StoreMessage] = []
                 
                 for message in messages {
@@ -526,7 +526,7 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                                         }
                                         var ids = Set<MessageId>()
                                         for message in apiMessages {
-                                            if let parsedMessage = StoreMessage(apiMessage: message), case let .Id(id) = parsedMessage.id {
+                                            if let parsedMessage = StoreMessage(apiMessage: message, namespace: messageNamespace), case let .Id(id) = parsedMessage.id {
                                                 if let tag = tag {
                                                     if parsedMessage.tags.contains(tag) {
                                                         ids.insert(id)

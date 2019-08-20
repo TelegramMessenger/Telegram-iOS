@@ -189,4 +189,14 @@ public extension Message {
             return false
         }
     }
+    
+    func effectivelyFailed(timestamp: Int32) -> Bool {
+        if self.flags.contains(.Failed) {
+            return true
+        } else if self.id.namespace == Namespaces.Message.ScheduledCloud {
+            return timestamp > self.timestamp
+        } else {
+            return false
+        }
+    }
 }

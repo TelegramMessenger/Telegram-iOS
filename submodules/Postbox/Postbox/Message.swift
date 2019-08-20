@@ -726,3 +726,20 @@ final class InternalStoreMessage {
         self.media = media
     }
 }
+
+public enum MessageIdNamespaces {
+    case all
+    case just(Set<MessageId.Namespace>)
+    case not(Set<MessageId.Namespace>)
+    
+    public func contains(_ namespace: MessageId.Namespace) -> Bool {
+        switch self {
+        case .all:
+            return true
+        case let .just(namespaces):
+            return namespaces.contains(namespace)
+        case let .not(namespaces):
+            return !namespaces.contains(namespace)
+        }
+    }
+}

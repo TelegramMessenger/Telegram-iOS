@@ -66,6 +66,7 @@ enum AccountStateGlobalNotificationSettingsSubject {
 
 enum AccountStateMutationOperation {
     case AddMessages([StoreMessage], AddMessagesLocation)
+    case AddScheduledMessages([StoreMessage])
     case DeleteMessagesWithGlobalIds([Int32])
     case DeleteMessages([MessageId])
     case EditMessage(MessageId, StoreMessage)
@@ -198,6 +199,10 @@ struct AccountMutableState {
     
     mutating func addMessages(_ messages: [StoreMessage], location: AddMessagesLocation) {
         self.addOperation(.AddMessages(messages, location))
+    }
+    
+    mutating func addScheduledMessages(_ messages: [StoreMessage]) {
+        self.addOperation(.AddScheduledMessages(messages))
     }
     
     mutating func addDisplayAlert(_ text: String, isDropAuth: Bool) {
@@ -427,7 +432,18 @@ struct AccountMutableState {
                             break inner
                         }
                     }
-                    
+                }
+            case let .AddScheduledMessages(messages):
+                for message in messages {
+                    if case let .Id(id) = message.id {
+                        self.storedMessages.insert(id)
+                    }
+                    inner: for attribute in message.attributes {
+                        if let attribute = attribute as? ReplyMessageAttribute {
+                            self.referencedMessageIds.insert(attribute.messageId)
+                            break inner
+                        }
+                    }
                 }
             case let .UpdateState(state):
                 self.state = state

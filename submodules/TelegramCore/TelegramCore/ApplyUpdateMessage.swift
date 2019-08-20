@@ -40,7 +40,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var apiMessage: Api.Message?
         
         for resultMessage in result.messages {
-            if let id = resultMessage.id(namespace: message.scheduleTime != nil ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+            if let id = resultMessage.id(namespace: Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
                 if id.peerId == message.id.peerId {
                     apiMessage = resultMessage
                     break
@@ -85,7 +85,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
-                let namespace = message.scheduleTime != nil ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud
+                let namespace = Namespaces.Message.allScheduled.contains(message.id.namespace) ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud
                 updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: namespace, id: messageId)
             } else {
                 updatedId = currentMessage.id
@@ -213,9 +213,14 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
     return postbox.transaction { transaction -> Void in
         let updatedRawMessageIds = result.updatedRawMessageIds
         
+        var namespace = Namespaces.Message.Cloud
+        if let message = messages.first, Namespaces.Message.allScheduled.contains(message.id.namespace) {
+            namespace = Namespaces.Message.ScheduledCloud
+        }
+        
         var resultMessages: [MessageId: StoreMessage] = [:]
         for apiMessage in result.messages {
-            if let resultMessage = StoreMessage(apiMessage: apiMessage), case let .Id(id) = resultMessage.id {
+            if let resultMessage = StoreMessage(apiMessage: apiMessage, namespace: namespace), case let .Id(id) = resultMessage.id {
                 resultMessages[id] = resultMessage
             }
         }
@@ -232,7 +237,7 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
             }
             if let uniqueId = uniqueId {
                 if let updatedId = updatedRawMessageIds[uniqueId] {
-                    if let storeMessage = resultMessages[MessageId(peerId: message.id.peerId, namespace: Namespaces.Message.Cloud, id: updatedId)], case let .Id(id) = storeMessage.id {
+                    if let storeMessage = resultMessages[MessageId(peerId: message.id.peerId, namespace: namespace, id: updatedId)], case let .Id(id) = storeMessage.id {
                         mapping.append((message, MessageIndex(id: id, timestamp: storeMessage.timestamp), storeMessage))
                     }
                 } else {

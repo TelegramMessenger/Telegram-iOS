@@ -368,7 +368,7 @@ public class GalleryController: ViewController {
             switch source {
                 case .peerMessagesAtId:
                     if let tags = tagsForMessage(message!) {
-                        let namespaces: HistoryViewNamespaces
+                        let namespaces: MessageIdNamespaces
                         if Namespaces.Message.allScheduled.contains(message!.id.namespace) {
                             namespaces = .just(Namespaces.Message.allScheduled)
                         } else {

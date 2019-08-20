@@ -1306,7 +1306,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updatePeersNearby(peersNearby)
             case let .updateNewScheduledMessage(apiMessage):
                 if let message = StoreMessage(apiMessage: apiMessage, namespace: Namespaces.Message.ScheduledCloud) {
-                    updatedState.addMessages([message], location: .Random)
+                    updatedState.addScheduledMessages([message])
                 }
             case let .updateDeleteScheduledMessages(peer, messages):
                 var messageIds: [MessageId] = []
@@ -2025,11 +2025,15 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var updatedChannelStates: [PeerId: ChannelState] = [:]
     
     var currentAddMessages: OptimizeAddMessagesState?
+    var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
             case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
+                }
+                if let currentAddScheduledMessages = currentAddScheduledMessages, !currentAddScheduledMessages.messages.isEmpty {
+                    result.append(.AddScheduledMessages(currentAddScheduledMessages.messages))
                 }
                 currentAddMessages = nil
                 result.append(operation)
@@ -2046,10 +2050,20 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
                     }
                     currentAddMessages = OptimizeAddMessagesState(messages: messages, location: location)
                 }
+            case let .AddScheduledMessages(messages):
+                if let currentAddScheduledMessages = currentAddScheduledMessages {
+                    currentAddScheduledMessages.messages.append(contentsOf: messages)
+                } else {
+                    currentAddScheduledMessages = OptimizeAddMessagesState(messages: messages, location: .Random)
+                }
         }
     }
     if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
         result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
+    }
+    
+    if let currentAddScheduledMessages = currentAddScheduledMessages, !currentAddScheduledMessages.messages.isEmpty {
+        result.append(.AddScheduledMessages(currentAddScheduledMessages.messages))
     }
     
     if let updatedState = updatedState {
@@ -2236,6 +2250,16 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                 }
                             }
                         }
+                    }
+                }
+            case let .AddScheduledMessages(messages):
+                for message in messages {
+                    if case let .Id(id) = message.id, let _ = transaction.getMessage(id) {
+                        transaction.updateMessage(id) { _ -> PostboxUpdateMessage in
+                            return .update(message)
+                        }
+                    } else {
+                        let _ = transaction.addMessages(messages, location: .Random)
                     }
                 }
             case let .DeleteMessagesWithGlobalIds(ids):
