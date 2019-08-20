@@ -170,4 +170,8 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
             self.state = .ended
         }
     }
+    
+    public func cancel() {
+        self.state = .cancelled
+    }
 }

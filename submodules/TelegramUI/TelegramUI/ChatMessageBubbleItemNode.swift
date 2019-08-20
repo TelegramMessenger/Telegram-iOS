@@ -354,6 +354,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             guard let strongSelf = self else {
                 return
             }
+            strongSelf.reactionRecognizer?.cancel()
             if strongSelf.gestureRecognized(gesture: .longTap, location: point, recognizer: recognizer) {
                 recognizer.cancel()
             }
