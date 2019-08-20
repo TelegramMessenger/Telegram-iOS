@@ -418,9 +418,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     }
                 }
             }
-            if !item.controllerInteraction.canSetupReply(item.message) {
-                //return []
-            }
             
             let reactions: [(String, String)] = [
                 ("😒", "Sad"),
@@ -433,13 +430,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             var result: [ReactionGestureItem] = []
             for (value, text) in reactions {
                 if let file = item.associatedData.animatedEmojiStickers[value]?.file {
-                    result.append(ReactionGestureItem(value: ReactionGestureItemValue(value: value, text: text, file: file)))
+                    result.append(.reaction(value: value, text: text, file: file))
                 }
+            }
+            if item.controllerInteraction.canSetupReply(item.message) {
+                result.append(.reply)
             }
             return result
         }
         reactionRecognizer.getReactionContainer = { [weak self] in
             return self?.item?.controllerInteraction.reactionContainerNode()
+        }
+        reactionRecognizer.began = { [weak self] in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.cancelInteractiveKeyboardGestures()
         }
         reactionRecognizer.updateOffset = { [weak self] offset, animated in
             guard let strongSelf = self else {
@@ -479,11 +485,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            if strongSelf.swipeToReplyNode == nil {
-                if strongSelf.swipeToReplyFeedback == nil {
-                    strongSelf.swipeToReplyFeedback = HapticFeedback()
-                }
-                strongSelf.swipeToReplyFeedback?.tap()
+            if strongSelf.swipeToReplyFeedback == nil {
+                strongSelf.swipeToReplyFeedback = HapticFeedback()
+            }
+            strongSelf.swipeToReplyFeedback?.tap()
+            if strongSelf.swipeToReplyNode == nil, false {
                 let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                 strongSelf.swipeToReplyNode = swipeToReplyNode
                 strongSelf.insertSubnode(swipeToReplyNode, belowSubnode: strongSelf.messageAccessibilityArea)
@@ -497,8 +503,28 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 return
             }
             if let item = strongSelf.item, let reaction = reaction {
-                strongSelf.awaitingAppliedReaction = reaction.value.value
-                item.controllerInteraction.updateMessageReaction(item.message.id, reaction.value.value)
+                switch reaction {
+                case let .reaction(value, _, _):
+                    strongSelf.awaitingAppliedReaction = value
+                    item.controllerInteraction.updateMessageReaction(item.message.id, value)
+                case .reply:
+                    strongSelf.reactionRecognizer?.complete(into: nil, hideTarget: false)
+                    var bounds = strongSelf.bounds
+                    let offset = bounds.origin.x
+                    bounds.origin.x = 0.0
+                    strongSelf.bounds = bounds
+                    if !offset.isZero {
+                        strongSelf.layer.animateBoundsOriginXAdditive(from: offset, to: 0.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
+                    }
+                    if let swipeToReplyNode = strongSelf.swipeToReplyNode {
+                        strongSelf.swipeToReplyNode = nil
+                        swipeToReplyNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak swipeToReplyNode] _ in
+                            swipeToReplyNode?.removeFromSupernode()
+                        })
+                        swipeToReplyNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    }
+                    item.controllerInteraction.setupReply(item.message.id)
+                }
             } else {
                 strongSelf.reactionRecognizer?.complete(into: nil, hideTarget: false)
                 var bounds = strongSelf.bounds
