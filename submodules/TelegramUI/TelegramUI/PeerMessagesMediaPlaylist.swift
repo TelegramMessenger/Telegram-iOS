@@ -487,7 +487,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         self.loadingItem = true
         self.updateState()
         
-        let namespaces: HistoryViewNamespaces
+        let namespaces: MessageIdNamespaces
         if Namespaces.Message.allScheduled.contains(anchor.id.namespace) {
             namespaces = .just(Namespaces.Message.allScheduled)
         } else {

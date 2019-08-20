@@ -181,8 +181,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
+            let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+            
             var needShareButton = false
-            if item.message.flags.contains(.Failed) {
+            if isFailed {
                 needShareButton = false
             } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
@@ -228,7 +230,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var deliveryFailedInset: CGFloat = 0.0
-            if item.content.firstMessage.flags.contains(.Failed) {
+            if isFailed {
                 deliveryFailedInset += 24.0
             }
             
@@ -246,7 +248,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             if item.message.effectivelyIncoming(item.context.account.peerId) {
                 statusType = .FreeIncoming
             } else {
-                if item.message.flags.contains(.Failed) {
+                if isFailed {
                     statusType = .FreeOutgoing(.Failed)
                 } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                     statusType = .FreeOutgoing(.Sending)
@@ -503,7 +505,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if item.content.firstMessage.flags.contains(.Failed) {
+                    
+                    if isFailed {
                         let deliveryFailedNode: ChatMessageDeliveryFailedNode
                         var isAppearing = false
                         if let current = strongSelf.deliveryFailedNode {
@@ -584,7 +587,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     var navigate: ChatControllerInteractionNavigateToPeer
                                     
                                     if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                        navigate = .chat(textInputState: nil, messageId: nil)
+                                        navigate = .chat(textInputState: nil, subject: nil)
                                     } else {
                                         navigate = .info
                                     }
@@ -592,7 +595,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     for attribute in item.content.firstMessage.attributes {
                                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                                             openPeerId = attribute.messageId.peerId
-                                            navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                         }
                                     }
                                     

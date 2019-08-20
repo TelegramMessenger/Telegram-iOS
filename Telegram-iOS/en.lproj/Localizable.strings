@@ -4609,8 +4609,11 @@ Any member of this group will be able to see messages in the channel.";
 "ScheduledMessages.SendNow" = "Send Now";
 "ScheduledMessages.EditTime" = "Reschedule";
 "ScheduledMessages.ClearAll" = "Clear All";
-"ScheduledMessages.Delete" = "Delete";
+"ScheduledMessages.ClearAllConfirmation" = "Clear Scheduled Messages";
+"ScheduledMessages.Delete" = "Delete Scheduled Message";
+"ScheduledMessages.DeleteMany" = "Delete Scheduled Messages";
 "ScheduledMessages.EmptyPlaceholder" = "No scheduled messages here yet...";
+"ScheduledMessages.BotActionUnavailable" = "This action will become available after the message is published.";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 
@@ -4657,3 +4660,5 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemePreview.Chat.4.Text" = "Nearly missed the sunrise.";
 
 "GroupInfo.Permissions.SlowmodeValue.Off" = "Off";
+
+"Undo.ScheduledMessagesCleared" = "Scheduled messages cleared";

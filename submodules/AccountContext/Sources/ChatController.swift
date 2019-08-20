@@ -7,7 +7,7 @@ import SwiftSignalKit
 
 public enum ChatControllerInitialBotStartBehavior {
     case interactive
-    case automatic(returnToPeerId: PeerId)
+    case automatic(returnToPeerId: PeerId, scheduled: Bool)
 }
 
 public struct ChatControllerInitialBotStart {
@@ -22,7 +22,7 @@ public struct ChatControllerInitialBotStart {
 
 public enum ChatControllerInteractionNavigateToPeer {
     case `default`
-    case chat(textInputState: ChatTextInputState?, messageId: MessageId?)
+    case chat(textInputState: ChatTextInputState?, subject: ChatControllerSubject?)
     case info
     case withBotStartPayload(ChatControllerInitialBotStart)
 }

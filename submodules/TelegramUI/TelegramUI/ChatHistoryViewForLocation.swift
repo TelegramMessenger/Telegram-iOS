@@ -26,36 +26,36 @@ func preloadedChatHistoryViewForLocation(_ location: ChatHistoryLocationInput, a
 }
 
 func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: Account, chatLocation: ChatLocation, scheduled: Bool, fixedCombinedReadStates: MessageHistoryViewReadState?, tagMask: MessageTags?, additionalData: [AdditionalMessageHistoryViewData], orderStatistics: MessageHistoryViewOrderStatistics = []) -> Signal<ChatHistoryViewUpdate, NoError> {
-    
     if scheduled {
-        var preloaded = false
-        var fadeIn = false
+        var first = true
+        var chatScrollPosition: ChatHistoryViewScrollPosition?
+        if case let .Scroll(index, _, sourceIndex, position, animated) = location.content {
+            let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
+            chatScrollPosition = .index(index: index, position: position, directionHint: directionHint, animated: animated)
+        }
         return account.viewTracker.scheduledMessagesViewForLocation(chatLocation)
         |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
             let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
             
             let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
             
-            if preloaded {
-                return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
-            } else {
-                if view.isLoading {
-                    return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
-                }
-                var scrollPosition: ChatHistoryViewScrollPosition?
-                
-//                if let historyScrollState = (initialData?.chatInterfaceState as? ChatInterfaceState)?.historyScrollState, tagMask == nil {
-//                    scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
-//                } else {
-//                    if view.entries.isEmpty && (view.holeEarlier || view.holeLater) {
-//                        fadeIn = true
-//                        return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
-//                    }
-//                }
-                
-                preloaded = true
-                return .HistoryView(view: view, type: .Initial(fadeIn: fadeIn), scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: nil, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
+            if view.isLoading {
+                return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
             }
+
+            let type: ChatHistoryViewUpdateType
+            let scrollPosition: ChatHistoryViewScrollPosition? = first ? chatScrollPosition : nil
+            if first {
+                first = false
+                if chatScrollPosition == nil {
+                    type = .Initial(fadeIn: false)
+                } else {
+                    type = .Generic(type: .UpdateVisible)
+                }
+            } else {
+                type = .Generic(type: updateType)
+            }
+            return .HistoryView(view: view, type: type, scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: chatScrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
         }
     } else {
         switch location.content {
