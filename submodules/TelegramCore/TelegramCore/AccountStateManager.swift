@@ -681,6 +681,15 @@ public final class AccountStateManager {
                             messageList.append((messages, .root, notify))
                         }
                     }
+                    var wasScheduledMessages: [Message] = []
+                    for id in events.wasScheduledMessageIds {
+                        if let message = transaction.getMessage(id) {
+                             wasScheduledMessages.append(message)
+                        }
+                    }
+                    if !wasScheduledMessages.isEmpty {
+                        messageList.append((wasScheduledMessages, .root, true))
+                    }
                     return messageList
                 }
                 

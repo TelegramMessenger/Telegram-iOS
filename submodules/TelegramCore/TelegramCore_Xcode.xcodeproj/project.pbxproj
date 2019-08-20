@@ -349,6 +349,8 @@
 		D04CAA5B1E83310D0047E51F /* MD5.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04CAA591E83310D0047E51F /* MD5.swift */; };
 		D04D21372306EC9A00609388 /* MacInternalUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D21362306EC9A00609388 /* MacInternalUpdater.swift */; };
 		D04D21382306ECF600609388 /* FormatPhoneNumber.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E452D2305C15A0049C28B /* FormatPhoneNumber.m */; };
+		D04D213C230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */; };
+		D04D213D230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */; };
 		D04D8FF4209A4B0700865719 /* NetworkSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D8FF3209A4B0700865719 /* NetworkSettings.swift */; };
 		D04D8FF5209A4B0700865719 /* NetworkSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D8FF3209A4B0700865719 /* NetworkSettings.swift */; };
 		D050F2101E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F20F1E48AB0600988324 /* InteractivePhoneFormatter.swift */; };
@@ -986,6 +988,7 @@
 		D049EAF41E44DF3300A2CD3A /* AccountState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountState.swift; sourceTree = "<group>"; };
 		D04CAA591E83310D0047E51F /* MD5.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MD5.swift; sourceTree = "<group>"; };
 		D04D21362306EC9A00609388 /* MacInternalUpdater.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacInternalUpdater.swift; sourceTree = "<group>"; };
+		D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WasScheduledMessageAttribute.swift; sourceTree = "<group>"; };
 		D04D8FF3209A4B0700865719 /* NetworkSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkSettings.swift; sourceTree = "<group>"; };
 		D050F20F1E48AB0600988324 /* InteractivePhoneFormatter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractivePhoneFormatter.swift; sourceTree = "<group>"; };
 		D050F2501E4A59C200988324 /* JoinLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JoinLink.swift; sourceTree = "<group>"; };
@@ -1409,6 +1412,7 @@
 				09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */,
 				D0329EA422FC5A9600F9F071 /* ReactionsMessageAttribute.swift */,
 				D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */,
+				D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -2273,6 +2277,7 @@
 				D049EAD81E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */,
 				D0BE303A20619EE800FBE6D8 /* SecureIdForm.swift in Sources */,
 				D03DC9131F82F89D001D584C /* RegularChatState.swift in Sources */,
+				D04D213C230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */,
 				0962E66721B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift in Sources */,
 				D0613FCF1E60520700202CDB /* ChannelMembers.swift in Sources */,
 				D0B2F7742052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift in Sources */,
@@ -2725,6 +2730,7 @@
 				9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */,
 				D0AB262C21C3CE80008F6685 /* Polls.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
+				D04D213D230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,
 				D00580AF21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */,
 				D03E3D29230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */,
