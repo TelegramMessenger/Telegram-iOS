@@ -13,11 +13,14 @@ private func aspectFitSize(_ size: CGSize, to: CGSize) -> CGSize {
     return CGSize(width: floor(size.width * scale), height: floor(size.height * scale))
 }
 
-public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, hideVia: Bool = false) -> EnqueueMessage? {
+public func outgoingMessageWithChatContextResult(to peerId: PeerId, results: ChatContextResultCollection, result: ChatContextResult, hideVia: Bool = false, scheduleTime: Int32? = nil) -> EnqueueMessage? {
     var attributes: [MessageAttribute] = []
     attributes.append(OutgoingChatContextResultMessageAttribute(queryId: result.queryId, id: result.id, hideVia: hideVia))
     if !hideVia {
         attributes.append(InlineBotMessageAttribute(peerId: results.botId, title: nil))
+    }
+    if let scheduleTime = scheduleTime {
+        attributes.append(OutgoingScheduleInfoMessageAttribute(scheduleTime: scheduleTime))
     }
     switch result.message {
         case let .auto(caption, entities, replyMarkup):

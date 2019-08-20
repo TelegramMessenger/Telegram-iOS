@@ -537,6 +537,8 @@ extension StoreMessage {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
+                
+                
                 if let reactions = reactions {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
                 }
@@ -563,6 +565,10 @@ extension StoreMessage {
                 
                 if (flags & (1 << 1)) == 0 {
                     storeFlags.insert(.Incoming)
+                }
+                
+                if (flags & (1 << 18)) != 0 {
+                    storeFlags.insert(.WasScheduled)
                 }
                 
                 if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {
@@ -621,6 +627,7 @@ extension StoreMessage {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
+                
                 var storeFlags = StoreMessageFlags()
                 if (flags & 2) == 0 {
                     let _ = storeFlags.insert(.Incoming)
@@ -645,6 +652,10 @@ extension StoreMessage {
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
+                
+                if (flags & (1 << 18)) != 0 {
+                    storeFlags.insert(.WasScheduled)
+                }
                 
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }

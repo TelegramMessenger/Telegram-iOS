@@ -370,6 +370,9 @@ public struct MessageFlags: OptionSet {
         if flags.contains(StoreMessageFlags.CanBeGroupedIntoFeed) {
             rawValue |= MessageFlags.CanBeGroupedIntoFeed.rawValue
         }
+        if flags.contains(StoreMessageFlags.WasScheduled) {
+            rawValue |= MessageFlags.WasScheduled.rawValue
+        }
         
         self.rawValue = rawValue
     }
@@ -380,6 +383,7 @@ public struct MessageFlags: OptionSet {
     public static let TopIndexable = MessageFlags(rawValue: 16)
     public static let Sending = MessageFlags(rawValue: 32)
     public static let CanBeGroupedIntoFeed = MessageFlags(rawValue: 64)
+    public static let WasScheduled = MessageFlags(rawValue: 128)
     
 }
 
@@ -564,6 +568,9 @@ public struct StoreMessageFlags: OptionSet {
         if flags.contains(.CanBeGroupedIntoFeed) {
             rawValue |= StoreMessageFlags.CanBeGroupedIntoFeed.rawValue
         }
+        if flags.contains(.WasScheduled) {
+            rawValue |= StoreMessageFlags.WasScheduled.rawValue
+        }
         
         self.rawValue = rawValue
     }
@@ -574,6 +581,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let TopIndexable = StoreMessageFlags(rawValue: 16)
     public static let Sending = StoreMessageFlags(rawValue: 32)
     public static let CanBeGroupedIntoFeed = StoreMessageFlags(rawValue: 64)
+    public static let WasScheduled = StoreMessageFlags(rawValue: 128)
 }
 
 public enum StoreMessageId {
