@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		D0208ABB2306E84F00A23503 /* libphonenumbermac.h in Headers */ = {isa = PBXBuildFile; fileRef = D0208AB92306E84F00A23503 /* libphonenumbermac.h */; };
-		D0208ABC2306E84F00A23503 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D0208ABA2306E84F00A23503 /* Info.plist */; };
 		D0208ABF2306E85800A23503 /* NBMetadataCoreTest.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E459B2305D1EF0049C28B /* NBMetadataCoreTest.h */; };
 		D0208AC02306E85800A23503 /* NBPhoneMetaDataGenerator.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E45A22305D1EF0049C28B /* NBPhoneMetaDataGenerator.h */; };
 		D0208AC12306E85800A23503 /* NBNumberFormat.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E45992305D1EF0049C28B /* NBNumberFormat.h */; };
@@ -324,7 +323,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0208ABC2306E84F00A23503 /* Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
