@@ -427,6 +427,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                     }
                     
+                    strongSelf.dateNode.displaysAsynchronously = !presentationData.isPreview
                     let _ = dateApply()
                     
                     if let currentImpressionIcon = currentImpressionIcon {

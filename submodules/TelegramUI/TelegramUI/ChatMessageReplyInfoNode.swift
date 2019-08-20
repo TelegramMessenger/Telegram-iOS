@@ -164,6 +164,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 
                 node.previousMediaReference = updatedMediaReference
                 
+                node.titleNode?.displaysAsynchronously = !presentationData.isPreview
+                node.textNode?.displaysAsynchronously = !presentationData.isPreview
+                
                 let titleNode = titleApply()
                 let textNode = textApply()
                 

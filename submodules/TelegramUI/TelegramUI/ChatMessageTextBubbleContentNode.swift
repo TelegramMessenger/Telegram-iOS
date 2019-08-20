@@ -333,6 +333,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
+                            strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview
                             let _ = textApply()
                             
                             if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {

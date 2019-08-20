@@ -18,6 +18,8 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     let outgoingLinkTextColor: UIColor
     let outgoingCheckColor: UIColor
     
+    var accentColor = accentColor
+    
     if accentColor.rgb == UIColor.white.rgb {
         badgeFillColor = .white
         badgeTextColor = .black
@@ -35,8 +37,8 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         outgoingBubbleFillColor = accentColor
         outgoingBubbleHighlightedFillColor = accentColor.withMultipliedBrightnessBy(1.421)
         
-        
-        if accentColor.lightness > 0.72 {
+        let lightness = accentColor.lightness
+        if lightness > 0.7 {
             outgoingScamColor = .black
             
             outgoingPrimaryTextColor = .black
@@ -50,6 +52,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
             outgoingSecondaryTextColor = UIColor(rgb: 0xffffff, alpha: 0.5)
             outgoingLinkTextColor = .white
             outgoingCheckColor = UIColor(rgb: 0xffffff, alpha: 0.5)
+            
+            let hsv = accentColor.hsv
+            accentColor = UIColor(hue: hsv.0, saturation: hsv.1, brightness: max(hsv.2, 0.55), alpha: 1.0)
         }
     }
 

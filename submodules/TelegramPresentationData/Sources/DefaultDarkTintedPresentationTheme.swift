@@ -7,6 +7,10 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
     let secretColor: UIColor = UIColor(rgb: 0x89df9e)
     
+    var accentColor = accentColor
+    let hsv = accentColor.hsv
+    accentColor = UIColor(hue: hsv.0, saturation: hsv.1, brightness: max(hsv.2, 0.18), alpha: 1.0)
+    
     let mainBackgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
     let mainSelectionColor = accentColor.withMultiplied(hue: 1.03, saturation: 0.585, brightness: 0.12)
     let additionalBackgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)

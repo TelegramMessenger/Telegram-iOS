@@ -437,8 +437,8 @@ extension PresentationThemeContextMenu: Codable {
         case background
         case itemSeparator
         case sectionSeparator
-        case itemBackground
-        case itemHighlightedBackground
+        case itemBg
+        case itemHighlightedBg
         case primary
         case secondary
         case destructive
@@ -446,16 +446,15 @@ extension PresentationThemeContextMenu: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(
-            dimColor: try decodeColor(values, .dim),
-            backgroundColor: try decodeColor(values, .background),
-            itemSeparatorColor: try decodeColor(values, .itemSeparator),
-            sectionSeparatorColor: try decodeColor(values, .sectionSeparator),
-            itemBackgroundColor: try decodeColor(values, .itemBackground),
-            itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBackground),
-            primaryColor: try decodeColor(values, .primary),
-            secondaryColor: try decodeColor(values, .secondary),
-            destructiveColor: try decodeColor(values, .destructive)
+        self.init(dimColor: try decodeColor(values, .dim),
+                  backgroundColor: try decodeColor(values, .background),
+                  itemSeparatorColor: try decodeColor(values, .itemSeparator),
+                  sectionSeparatorColor: try decodeColor(values, .sectionSeparator),
+                  itemBackgroundColor: try decodeColor(values, .itemBg),
+                  itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
+                  primaryColor: try decodeColor(values, .primary),
+                  secondaryColor: try decodeColor(values, .secondary),
+                  destructiveColor: try decodeColor(values, .destructive)
         )
     }
     
@@ -465,8 +464,8 @@ extension PresentationThemeContextMenu: Codable {
         try encodeColor(&values, self.backgroundColor, .background)
         try encodeColor(&values, self.itemSeparatorColor, .itemSeparator)
         try encodeColor(&values, self.sectionSeparatorColor, .sectionSeparator)
-        try encodeColor(&values, self.itemBackgroundColor, .itemBackground)
-        try encodeColor(&values, self.itemHighlightedBackgroundColor, .itemHighlightedBackground)
+        try encodeColor(&values, self.itemBackgroundColor, .itemBg)
+        try encodeColor(&values, self.itemHighlightedBackgroundColor, .itemHighlightedBg)
         try encodeColor(&values, self.primaryColor, .primary)
         try encodeColor(&values, self.secondaryColor, .secondary)
         try encodeColor(&values, self.destructiveColor, .destructive)
@@ -1500,6 +1499,7 @@ extension PresentationTheme: Codable {
         try container.encode(self.chatList, forKey: .chatList)
         try container.encode(self.chat, forKey: .chat)
         try container.encode(self.actionSheet, forKey: .actionSheet)
+        try container.encode(self.contextMenu, forKey: .contextMenu)
         try container.encode(self.inAppNotification, forKey: .notification)
     }
 }
