@@ -76,7 +76,8 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
             }
             carouselItem.hasSilentPosting = !isSecretChat
         }
-        carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles, silentPosting in
+        carouselItem.hasSchedule = !isSecretChat
+        carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles, mode in
             if let controller = controller, let carouselItem = carouselItem {
                 let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
                 let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
@@ -84,7 +85,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
                     presentCantSendMultipleFiles()
                 } else {
                     controller.dismiss(animated: true)
-                    sendMessagesWithSignals(signals, silentPosting)
+                    sendMessagesWithSignals(signals, false)
                 }
             }
         };

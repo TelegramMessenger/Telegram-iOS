@@ -28,6 +28,7 @@
 @property (nonatomic, assign) bool inhibitMute;
 @property (nonatomic, strong) NSString *recipientName;
 @property (nonatomic, assign) bool hasSilentPosting;
+@property (nonatomic, assign) bool hasSchedule;
 
 @property (nonatomic, strong) TGMediaAssetsPallete *pallete;
 

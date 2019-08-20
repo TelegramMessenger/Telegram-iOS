@@ -13,7 +13,7 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
 }
 
-public func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
+public func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, hasLiveLocation: Bool = true, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
     let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: theme)
     legacyController.presentationCompleted = {
         presentationCompleted()
@@ -27,7 +27,7 @@ public func legacyLocationPickerController(context: AccountContext, selfPeer: Pe
         Namespaces.Peer.CloudGroup,
         Namespaces.Peer.CloudUser
     ])
-    if namespacesWithEnabledLiveLocation.contains(peer.id.namespace) && !customLocationPicker {
+    if namespacesWithEnabledLiveLocation.contains(peer.id.namespace) && !customLocationPicker && hasLiveLocation {
         controller.allowLiveLocationSharing = true
     }
     let navigationController = TGNavigationController(controllers: [controller])!

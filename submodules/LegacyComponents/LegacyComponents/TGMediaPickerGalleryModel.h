@@ -5,6 +5,7 @@
 
 #import <LegacyComponents/TGPhotoEditorController.h>
 
+#import <LegacyComponents/TGMediaAssetsUtils.h>
 #import <LegacyComponents/LegacyComponentsContext.h>
 
 @class TGModernGalleryController;

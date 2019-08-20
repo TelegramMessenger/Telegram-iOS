@@ -29,6 +29,7 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
         }
         controller.hasSilentPosting = !isSecretChat
     }
+    controller.hasSchedule = !isSecretChat
     controller.dismissalBlock = {
     }
     controller.selectionLimitExceeded = {
