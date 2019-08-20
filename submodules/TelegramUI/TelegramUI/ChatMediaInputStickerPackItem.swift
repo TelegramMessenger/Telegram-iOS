@@ -177,7 +177,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                             self.animatedStickerNode = animatedStickerNode
                             animatedStickerNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
                             self.addSubnode(animatedStickerNode)
-                            animatedStickerNode.setup(account: account, resource: resource, width: 80, height: 80, mode: .cached)
+                            animatedStickerNode.setup(account: account, resource: .resource(resource), width: 80, height: 80, mode: .cached)
                         }
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                         if let animatedStickerNode = self.animatedStickerNode {

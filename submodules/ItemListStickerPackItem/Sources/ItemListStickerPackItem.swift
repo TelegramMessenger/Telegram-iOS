@@ -582,7 +582,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     animationNode = AnimatedStickerNode()
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
-                                    animationNode.setup(account: item.account, resource: resource, width: 80, height: 80, mode: .cached)
+                                    animationNode.setup(account: item.account, resource: .resource(resource), width: 80, height: 80, mode: .cached)
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers

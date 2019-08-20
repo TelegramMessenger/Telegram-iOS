@@ -521,7 +521,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
             if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: item.presentationData.theme.theme.list.itemAccentColor.withAlphaComponent(0.5), knob: item.presentationData.theme.theme.list.itemAccentColor), textNode: self.textNode, present: { [weak self] c, a in
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: item.presentationData.theme.theme.list.itemAccentColor.withAlphaComponent(0.5), knob: item.presentationData.theme.theme.list.itemAccentColor), textNode: self.textNode, updateIsActive: { [weak self] value in
+                    self?.updateIsTextSelectionActive?(value)
+                }, present: { [weak self] c, a in
                     self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
                 }, rootNode: rootNode, performAction: { [weak self] text, action in
                     guard let strongSelf = self, let item = strongSelf.item else {
@@ -535,6 +537,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
             }
         } else if let textSelectionNode = self.textSelectionNode {
             self.textSelectionNode = nil
+            self.updateIsTextSelectionActive?(false)
             textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
                 textSelectionNode?.removeFromSupernode()
             })

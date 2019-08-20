@@ -611,6 +611,8 @@ public class ChatMessageItemView: ListViewItemNode {
     var item: ChatMessageItem?
     var accessibilityData: ChatMessageAccessibilityData?
     
+    var awaitingAppliedReaction: (String, () -> Void)?
+    
     public required convenience init() {
         self.init(layerBacked: false)
     }
@@ -787,5 +789,9 @@ public class ChatMessageItemView: ListViewItemNode {
                     break
             }
         }
+    }
+    
+    func targetReactionNode(value: String) -> (ASImageNode, Int)? {
+        return nil
     }
 }

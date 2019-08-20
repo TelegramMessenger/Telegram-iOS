@@ -186,8 +186,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     private var tapRecognizer: TapLongTapOrDoubleTapGestureRecognizer?
     private var reactionRecognizer: ReactionSwipeGestureRecognizer?
     
-    private var awaitingAppliedReaction: String?
-    
     override var visibility: ListViewItemNodeVisibility {
         didSet {
             if self.visibility != oldValue {
@@ -419,24 +417,24 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             }
             
-            let reactions: [(String, String)] = [
-                ("😒", "Sad"),
-                ("😳", "Surprised"),
-                //("🥳", "Fun"),
-                ("👍", "Like"),
-                ("❤", "Love"),
+            let reactions: [(String, String, String)] = [
+                ("😒", "Sad", "sad"),
+                ("😳", "Surprised", "surprised"),
+                ("😂", "Fun", "lol"),
+                ("👍", "Like", "thumbsup"),
+                ("❤", "Love", "heart"),
             ]
             
-            var result: [ReactionGestureItem] = []
-            for (value, text) in reactions {
-                if let file = item.associatedData.animatedEmojiStickers[value]?.file {
-                    result.append(.reaction(value: value, text: text, file: file))
+            var reactionItems: [ReactionGestureItem] = []
+            for (value, text, name) in reactions {
+                if let path = frameworkBundle.path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
+                    reactionItems.append(.reaction(value: value, text: text, path: path))
                 }
             }
             if item.controllerInteraction.canSetupReply(item.message) {
-                result.append(.reply)
+                reactionItems.append(.reply)
             }
-            return result
+            return reactionItems
         }
         reactionRecognizer.getReactionContainer = { [weak self] in
             return self?.item?.controllerInteraction.reactionContainerNode()
@@ -505,7 +503,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if let item = strongSelf.item, let reaction = reaction {
                 switch reaction {
                 case let .reaction(value, _, _):
-                    strongSelf.awaitingAppliedReaction = value
+                    strongSelf.awaitingAppliedReaction = (value, {})
                     item.controllerInteraction.updateMessageReaction(item.message.id, value)
                 case .reply:
                     strongSelf.reactionRecognizer?.complete(into: nil, hideTarget: false)
@@ -1763,6 +1761,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     strongSelf.contextSourceNode.contentNode.addSubnode(contentNode)
                     
                     contentNode.visibility = strongSelf.visibility
+                    contentNode.updateIsTextSelectionActive = { [weak strongSelf] value in
+                        strongSelf?.contextSourceNode.updateDistractionFreeMode?(value)
+                    }
                     contentNode.updateIsExtractedToContextPreview(strongSelf.contextSourceNode.isExtractedToContextPreview)
                 }
             }
@@ -1945,7 +1946,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         strongSelf.updateSearchTextHighlightState()
         
-        if let awaitingAppliedReaction = strongSelf.awaitingAppliedReaction {
+        if let (awaitingAppliedReaction, f) = strongSelf.awaitingAppliedReaction {
             var bounds = strongSelf.bounds
             let offset = bounds.origin.x
             bounds.origin.x = 0.0
@@ -1972,6 +1973,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             }
             strongSelf.reactionRecognizer?.complete(into: targetNode, hideTarget: hideTarget)
+            f()
         }
     }
     
@@ -2800,5 +2802,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     
     override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
         self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
+    }
+    
+    override func targetReactionNode(value: String) -> (ASImageNode, Int)? {
+        for contentNode in self.contentNodes {
+            if let (reactionNode, count) = contentNode.reactionTargetNode(value: value) {
+                return (reactionNode, count)
+            }
+        }
+        return nil
     }
 }

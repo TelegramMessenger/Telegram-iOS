@@ -386,7 +386,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             }
                             let dimensions = animatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
                             let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                            animationNode.setup(account: item.account, resource: .resource(animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
                     

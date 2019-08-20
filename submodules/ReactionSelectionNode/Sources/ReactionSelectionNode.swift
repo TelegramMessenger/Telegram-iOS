@@ -4,6 +4,7 @@ import AnimationUI
 import Display
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
@@ -27,41 +28,85 @@ private func generateBubbleShadowImage(shadow: UIColor, diameter: CGFloat, shado
     })?.stretchableImage(withLeftCapWidth: Int(diameter / 2.0 + shadowBlur / 2.0), topCapHeight: Int(diameter / 2.0 + shadowBlur / 2.0))
 }
 
-private final class ReactionNode: ASDisplayNode {
+private let font = Font.medium(13.0)
+
+final class ReactionNode: ASDisplayNode {
     let reaction: ReactionGestureItem
+    private let textBackgroundNode: ASImageNode
+    private let textNode: ImmediateTextNode
     private let animationNode: AnimatedStickerNode
     private let imageNode: ASImageNode
     var isMaximized: Bool?
     private let intrinsicSize: CGSize
     private let intrinsicOffset: CGPoint
     
-    init(account: Account, reaction: ReactionGestureItem, maximizedReactionSize: CGFloat) {
+    init(account: Account, theme: PresentationTheme, reaction: ReactionGestureItem, maximizedReactionSize: CGFloat, loadFirstFrame: Bool) {
         self.reaction = reaction
         
+        self.textBackgroundNode = ASImageNode()
+        self.textBackgroundNode.displaysAsynchronously = false
+        self.textBackgroundNode.displayWithoutProcessing = true
+        self.textBackgroundNode.image = generateStretchableFilledCircleImage(diameter: 20.0, color: theme.chat.serviceMessage.components.withDefaultWallpaper.dateFillFloating.withAlphaComponent(0.8))
+        self.textBackgroundNode.alpha = 0.0
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.displaysAsynchronously = false
+        self.textNode.isUserInteractionEnabled = false
+        
+        let reactionText: String
+        switch reaction {
+        case let .reaction(_, text, _):
+            reactionText = text
+        case .reply:
+            reactionText = "Reply"
+        }
+        
+        self.textNode.attributedText = NSAttributedString(string: reactionText, font: font, textColor: theme.chat.serviceMessage.dateTextColor.withWallpaper)
+        let textSize = self.textNode.updateLayout(CGSize(width: 200.0, height: 100.0))
+        let textBackgroundSize = CGSize(width: textSize.width + 12.0, height: 20.0)
+        let textBackgroundFrame = CGRect(origin: CGPoint(), size: textBackgroundSize)
+        let textFrame = CGRect(origin: CGPoint(x: floor((textBackgroundFrame.width - textSize.width) / 2.0), y: floor((textBackgroundFrame.height - textSize.height) / 2.0)), size: textSize)
+        self.textBackgroundNode.frame = textBackgroundFrame
+        self.textNode.frame = textFrame
+        self.textNode.alpha = 0.0
+        
         self.animationNode = AnimatedStickerNode()
-        self.animationNode.automaticallyLoadFirstFrame = true
+        self.animationNode.automaticallyLoadFirstFrame = loadFirstFrame
         self.animationNode.playToCompletionOnStop = true
-        //self.animationNode.backgroundColor = .lightGray
         
         var intrinsicSize = CGSize(width: maximizedReactionSize + 18.0, height: maximizedReactionSize + 18.0)
         
         self.imageNode = ASImageNode()
         switch reaction {
-        case let .reaction(value, _, file):
+        case let .reaction(value, _, path):
             switch value {
+            case "😒":
+                intrinsicSize.width *= 1.7
+                intrinsicSize.height *= 1.7
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
             case "😳":
-                intrinsicSize.width += 8.0
-                intrinsicSize.height += 8.0
-                self.intrinsicOffset = CGPoint(x: 0.0, y: -4.0)
+                intrinsicSize.width *= 1.15
+                intrinsicSize.height *= 1.15
+                self.intrinsicOffset = CGPoint(x: 0.0, y: -0.05 * intrinsicSize.width)
+            case "😂":
+                intrinsicSize.width *= 1.2
+                intrinsicSize.height *= 1.2
+                self.intrinsicOffset = CGPoint(x: 0.0 * intrinsicSize.width, y: 0.0 * intrinsicSize.width)
             case "👍":
-                intrinsicSize.width += 20.0
-                intrinsicSize.height += 20.0
-                self.intrinsicOffset = CGPoint(x: 0.0, y: 4.0)
+                intrinsicSize.width *= 1.256
+                intrinsicSize.height *= 1.256
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.05 * intrinsicSize.width)
             default:
                 self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
             }
-            self.animationNode.visibility = true
-            self.animationNode.setup(account: account, resource: file.resource, width: Int(intrinsicSize.width) * 2, height: Int(intrinsicSize.height) * 2, mode: .direct)
+            
+            var renderSize: CGSize = CGSize(width: intrinsicSize.width * 2.0, height: intrinsicSize.height * 2.0)
+            if UIScreen.main.scale.isEqual(to: 3.0) {
+                if maximizedReactionSize < 40.0 {
+                    renderSize = CGSize(width: intrinsicSize.width * 2.5, height: intrinsicSize.height * 2.5)
+                }
+            }
+            self.animationNode.setup(account: account, resource: .localFile(path), width: Int(renderSize.width), height: Int(renderSize.height), mode: .direct)
         case .reply:
             self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
             self.imageNode.image = UIImage(named: "Chat/Context Menu/ReactionReply", in: Bundle(for: ReactionNode.self), compatibleWith: nil)
@@ -71,7 +116,8 @@ private final class ReactionNode: ASDisplayNode {
         
         super.init()
         
-        //self.backgroundColor = .green
+        self.textBackgroundNode.addSubnode(self.textNode)
+        self.addSubnode(self.textBackgroundNode)
         
         self.addSubnode(self.animationNode)
         self.addSubnode(self.imageNode)
@@ -80,11 +126,17 @@ private final class ReactionNode: ASDisplayNode {
         self.imageNode.frame = CGRect(origin: CGPoint(), size: self.intrinsicSize)
     }
     
-    func updateLayout(size: CGSize, scale: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, scale: CGFloat, transition: ContainedViewLayoutTransition, displayText: Bool) {
         transition.updatePosition(node: self.animationNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
         transition.updateTransformScale(node: self.animationNode, scale: scale, beginWithCurrentState: true)
         transition.updatePosition(node: self.imageNode, position: CGPoint(x: size.width / 2.0 + self.intrinsicOffset.x * scale, y: size.height / 2.0 + self.intrinsicOffset.y * scale), beginWithCurrentState: true)
         transition.updateTransformScale(node: self.imageNode, scale: scale, beginWithCurrentState: true)
+        
+        transition.updatePosition(node: self.textBackgroundNode, position: CGPoint(x: size.width / 2.0, y: displayText ? -24.0 : (size.height / 2.0)), beginWithCurrentState: true)
+        transition.updateTransformScale(node: self.textBackgroundNode, scale: displayText ? 1.0 : 0.1, beginWithCurrentState: true)
+        
+        transition.updateAlpha(node: self.textBackgroundNode, alpha: displayText ? 1.0 : 0.0, beginWithCurrentState: true)
+        transition.updateAlpha(node: self.textNode, alpha: displayText ? 1.0 : 0.0, beginWithCurrentState: true)
     }
     
     func updateIsAnimating(_ isAnimating: Bool, animated: Bool) {
@@ -98,6 +150,7 @@ private final class ReactionNode: ASDisplayNode {
 
 final class ReactionSelectionNode: ASDisplayNode {
     private let account: Account
+    private let theme: PresentationTheme
     private let reactions: [ReactionGestureItem]
     
     private let backgroundNode: ASImageNode
@@ -113,8 +166,11 @@ final class ReactionSelectionNode: ASDisplayNode {
     private var maximizedReactionSize: CGFloat = 60.0
     private var smallCircleSize: CGFloat = 8.0
     
-    public init(account: Account, reactions: [ReactionGestureItem]) {
+    private var isRightAligned: Bool = false
+    
+    public init(account: Account, theme: PresentationTheme, reactions: [ReactionGestureItem]) {
         self.account = account
+        self.theme = theme
         self.reactions = reactions
         
         self.backgroundNode = ASImageNode()
@@ -153,12 +209,7 @@ final class ReactionSelectionNode: ASDisplayNode {
         let initialAnchorX = startingPoint.x
         
         if isInitial && self.reactionNodes.isEmpty {
-            //let contentWidth: CGFloat = CGFloat(self.reactionNodes.count - 1) * (minimizedReactionSize) + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * reactionSpacing
-            
-            //contentWidth = CGFloat(self.reactionNodes.count - 1) * X + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * 0.2 * X
-            // contentWidth - maximizedReactionSize = CGFloat(self.reactionNodes.count - 1) * X + CGFloat(self.reactionNodes.count + 1) * 0.2 * X
-            // (contentWidth - maximizedReactionSize) / (CGFloat(self.reactionNodes.count - 1) + CGFloat(self.reactionNodes.count + 1) * 0.2) = X
-            let availableContentWidth = max(100.0, initialAnchorX)
+            let availableContentWidth = constrainedSize.width //max(100.0, initialAnchorX)
             var minimizedReactionSize = (availableContentWidth - self.maximizedReactionSize) / (CGFloat(self.reactions.count - 1) + CGFloat(self.reactions.count + 1) * 0.2)
             minimizedReactionSize = max(16.0, floor(minimizedReactionSize))
             minimizedReactionSize = min(30.0, minimizedReactionSize)
@@ -177,7 +228,7 @@ final class ReactionSelectionNode: ASDisplayNode {
             }
             
             self.reactionNodes = self.reactions.map { reaction -> ReactionNode in
-                return ReactionNode(account: self.account, reaction: reaction, maximizedReactionSize: self.maximizedReactionSize)
+                return ReactionNode(account: self.account, theme: self.theme, reaction: reaction, maximizedReactionSize: self.maximizedReactionSize, loadFirstFrame: true)
             }
             self.reactionNodes.forEach(self.addSubnode(_:))
         }
@@ -190,8 +241,15 @@ final class ReactionSelectionNode: ASDisplayNode {
         let contentWidth: CGFloat = CGFloat(self.reactionNodes.count - 1) * (minimizedReactionSize) + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * reactionSpacing
         
         var backgroundFrame = CGRect(origin: CGPoint(x: -shadowBlur, y: -shadowBlur), size: CGSize(width: contentWidth + shadowBlur * 2.0, height: backgroundHeight + shadowBlur * 2.0))
-        backgroundFrame = backgroundFrame.offsetBy(dx: initialAnchorX - contentWidth + backgroundHeight / 2.0, dy: startingPoint.y - backgroundHeight - 16.0)
+        var isRightAligned = false
+        if initialAnchorX > constrainedSize.width / 2.0 {
+            isRightAligned = true
+            backgroundFrame = backgroundFrame.offsetBy(dx: initialAnchorX - contentWidth + backgroundHeight / 2.0, dy: startingPoint.y - backgroundHeight - 16.0)
+        } else {
+            backgroundFrame = backgroundFrame.offsetBy(dx: initialAnchorX - backgroundHeight / 2.0, dy: startingPoint.y - backgroundHeight - 16.0)
+        }
         
+        self.isRightAligned = isRightAligned
         self.backgroundNode.frame = backgroundFrame
         self.backgroundShadowNode.frame = backgroundFrame
         
@@ -200,7 +258,7 @@ final class ReactionSelectionNode: ASDisplayNode {
         let anchorX = max(anchorMinX, min(anchorMaxX, offsetFromStart))
         
         var reactionX: CGFloat = backgroundFrame.minX + shadowBlur + reactionSpacing
-        if offsetFromStart > backgroundFrame.maxX - shadowBlur {
+        if offsetFromStart > backgroundFrame.maxX - shadowBlur || offsetFromStart < backgroundFrame.minX {
             self.hasSelectedNode = false
         } else {
             self.hasSelectedNode = true
@@ -209,8 +267,12 @@ final class ReactionSelectionNode: ASDisplayNode {
         var maximizedIndex = Int(((anchorX - anchorMinX) / (anchorMaxX - anchorMinX)) * CGFloat(self.reactionNodes.count))
         maximizedIndex = max(0, min(self.reactionNodes.count - 1, maximizedIndex))
         
-        for i in 0 ..< self.reactionNodes.count {
+        for iterationIndex in 0 ..< self.reactionNodes.count {
+            var i = iterationIndex
             let isMaximized = i == maximizedIndex
+            if !isRightAligned {
+                i = self.reactionNodes.count - 1 - i
+            }
             
             let reactionSize: CGFloat
             if isMaximized {
@@ -239,7 +301,7 @@ final class ReactionSelectionNode: ASDisplayNode {
                 reactionFrame.origin.x -= 9.0
                 reactionFrame.size.width += 18.0
             }
-            self.reactionNodes[i].updateLayout(size: reactionFrame.size, scale: reactionFrame.size.width / (maximizedReactionSize + 18.0), transition: transition)
+            self.reactionNodes[i].updateLayout(size: reactionFrame.size, scale: reactionFrame.size.width / (maximizedReactionSize + 18.0), transition: transition, displayText: isMaximized)
             
             transition.updateFrame(node: self.reactionNodes[i], frame: reactionFrame, beginWithCurrentState: true)
             
@@ -250,7 +312,7 @@ final class ReactionSelectionNode: ASDisplayNode {
         self.bubbleNodes[1].0.frame = mainBubbleFrame
         self.bubbleNodes[1].1.frame = mainBubbleFrame
         
-        let secondaryBubbleFrame = CGRect(origin: CGPoint(x: mainBubbleFrame.midX - floor(self.smallCircleSize * 0.88) - (self.smallCircleSize + shadowBlur * 2.0) / 2.0, y: mainBubbleFrame.midY + floor(self.smallCircleSize * 4.0 / 3.0) - (self.smallCircleSize + shadowBlur * 2.0) / 2.0), size: CGSize(width: self.smallCircleSize + shadowBlur * 2.0, height: self.smallCircleSize + shadowBlur * 2.0))
+        let secondaryBubbleFrame = CGRect(origin: CGPoint(x: mainBubbleFrame.midX - 10.0 - (self.smallCircleSize + shadowBlur * 2.0) / 2.0, y: mainBubbleFrame.midY + 10.0 - (self.smallCircleSize + shadowBlur * 2.0) / 2.0), size: CGSize(width: self.smallCircleSize + shadowBlur * 2.0, height: self.smallCircleSize + shadowBlur * 2.0))
         self.bubbleNodes[0].0.frame = secondaryBubbleFrame
         self.bubbleNodes[0].1.frame = secondaryBubbleFrame
     }
@@ -262,15 +324,25 @@ final class ReactionSelectionNode: ASDisplayNode {
         self.bubbleNodes[0].0.layer.animateScale(from: 0.01, to: 1.0, duration: 0.11, delay: 0.05, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
         self.bubbleNodes[0].1.layer.animateScale(from: 0.01, to: 1.0, duration: 0.11, delay: 0.05, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
         
-        let backgroundOffset = CGPoint(x: (self.backgroundNode.frame.width - shadowBlur) / 2.0 - 42.0, y: (self.backgroundNode.frame.height - shadowBlur) / 2.0)
+        let backgroundOffset: CGPoint
+        if self.isRightAligned {
+            backgroundOffset = CGPoint(x: (self.backgroundNode.frame.width - shadowBlur) / 2.0 - 42.0, y: (self.backgroundNode.frame.height - shadowBlur) / 2.0)
+        } else {
+            backgroundOffset = CGPoint(x: -(self.backgroundNode.frame.width - shadowBlur) / 2.0 + 42.0, y: (self.backgroundNode.frame.height - shadowBlur) / 2.0)
+        }
         let damping: CGFloat = 100.0
         
         for i in 0 ..< self.reactionNodes.count {
             let animationOffset: Double = 1.0 - Double(i) / Double(self.reactionNodes.count - 1)
-            var nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.maxX - shadowBlur) / 2.0 - 42.0, y: self.reactionNodes[i].frame.minY - self.backgroundNode.frame.maxY - shadowBlur)
+            var nodeOffset: CGPoint
+            if self.isRightAligned {
+                nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.maxX - shadowBlur) / 2.0 - 42.0, y: self.reactionNodes[i].frame.minY - self.backgroundNode.frame.maxY - shadowBlur)
+            } else {
+                nodeOffset = CGPoint(x: self.reactionNodes[i].frame.minX - (self.backgroundNode.frame.minX + shadowBlur) / 2.0 - 42.0, y: self.reactionNodes[i].frame.minY - self.backgroundNode.frame.maxY - shadowBlur)
+            }
             nodeOffset.x = -nodeOffset.x
             nodeOffset.y = 30.0
-            self.reactionNodes[i].layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5 + animationOffset * 0.08, initialVelocity: 0.0, damping: damping)
+            self.reactionNodes[i].layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5 + animationOffset * 0.28, initialVelocity: 0.0, damping: damping)
             self.reactionNodes[i].layer.animateSpring(from: NSValue(cgPoint: nodeOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: 0.5, initialVelocity: 0.0, damping: damping, additive: true)
         }
         

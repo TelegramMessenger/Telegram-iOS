@@ -43,6 +43,7 @@ import PeerAvatarGalleryUI
 import PeerInfoUI
 import RaiseToListen
 import UrlHandling
+import ReactionSelectionNode
 
 public enum ChatControllerPeekActions {
     case standard
@@ -523,40 +524,49 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         break
                     }
                 }
-                let _ = contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction).start(next: { actions in
+                let _ = combineLatest(queue: .mainQueue(), contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction), loadedStickerPack(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, reference: .animatedEmoji, forceActualized: false)).start(next: { actions, animatedEmojiStickers in
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
-                    var actions = actions
-                    if ![Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal].contains(message.id.namespace) {
-                        actions.insert(.action(ContextMenuActionItem(text: "Reaction", icon: { _ in nil }, action: { _, f in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                            var items: [ActionSheetItem] = []
-                            let emojis = ["👍", "😊", "🤔", "😔", "❤️"]
-                            for emoji in emojis {
-                                items.append(ActionSheetButtonItem(title: "\(emoji)", color: .accent, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: updatedMessages[0].id, reaction: emoji).start()
-                                }))
-                            }
-                            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                    actionSheet?.dismissAnimated()
-                                })
-                            ])])
-                            strongSelf.chatDisplayNode.dismissInput()
-                            strongSelf.present(actionSheet, in: .window(.root))
-                            f(.dismissWithoutContent)
-                        })), at: 0)
+                    let reactions: [(String, String, String)] = [
+                        ("😒", "Sad", "sad"),
+                        ("😳", "Surprised", "surprised"),
+                        ("😂", "Fun", "lol"),
+                        ("👍", "Like", "thumbsup"),
+                        ("❤", "Love", "heart"),
+                    ]
+                    
+                    var reactionItems: [ReactionContextItem] = []
+                    for (value, text, name) in reactions {
+                        if let path = frameworkBundle.path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
+                            reactionItems.append(ReactionContextItem(value: value, text: text, path: path))
+                        }
                     }
-                    let controller = ContextController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, recognizer: recognizer)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: reactionItems, recognizer: recognizer)
                     strongSelf.currentContextController = controller
+                    controller.reactionSelected = { [weak controller] value in
+                        guard let strongSelf = self, let message = updatedMessages.first else {
+                            return
+                        }
+                        strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                            if let itemNode = itemNode as? ChatMessageItemView, let item = itemNode.item {
+                                if item.message.id == message.id {
+                                    itemNode.awaitingAppliedReaction = (value, { [weak itemNode] in
+                                        guard let controller = controller else {
+                                            return
+                                        }
+                                        if let itemNode = itemNode, let (targetNode, count) = itemNode.targetReactionNode(value: value) {
+                                            controller.dismissWithReaction(value: value, into: targetNode, hideNode: count == 1, completion: {
+                                            })
+                                        } else {
+                                            controller.dismiss()
+                                        }
+                                    })
+                                }
+                            }
+                        }
+                        let _ = updateMessageReactionsInteractively(postbox: strongSelf.context.account.postbox, messageId: message.id, reaction: value).start()
+                    }
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
