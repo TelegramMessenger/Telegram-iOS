@@ -6,6 +6,7 @@ import TelegramCore
 import TelegramPresentationData
 import PhoneInputNode
 import CountrySelectionUI
+import AuthorizationUI
 
 private func emojiFlagForISOCountryCode(_ countryCode: NSString) -> String {
     if countryCode.length != 2 {

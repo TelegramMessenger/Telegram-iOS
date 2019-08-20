@@ -2124,16 +2124,24 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         }
     }
     
+    var wasOpearationScheduledMessegeIds: [MessageId] = []
+
+    
     var addedOperationIncomingMessageIds: [MessageId] = []
     for operation in finalState.state.operations {
         switch operation {
             case let .AddMessages(messages, location):
                 if case .UpperHistoryBlock = location {
                     for message in messages {
-                        if case let .Id(id) = message.id, message.flags.contains(.Incoming) {
-                            addedOperationIncomingMessageIds.append(id)
-                            if let authorId = message.authorId {
-                                recordPeerActivityTimestamp(peerId: authorId, timestamp: message.timestamp, into: &peerActivityTimestamps)
+                        if case let .Id(id) = message.id {
+                            if message.flags.contains(.Incoming) {
+                                addedOperationIncomingMessageIds.append(id)
+                                if let authorId = message.authorId {
+                                    recordPeerActivityTimestamp(peerId: authorId, timestamp: message.timestamp, into: &peerActivityTimestamps)
+                                }
+                            }
+                            if message.flags.contains(.WasScheduled) {
+                                wasOpearationScheduledMessegeIds.append(id)
                             }
                         }
                     }
@@ -2142,7 +2150,17 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 break
         }
     }
+    var wasScheduledMessageIds:[MessageId] = []
     var addedIncomingMessageIds: [MessageId] = []
+    
+    if !wasOpearationScheduledMessegeIds.isEmpty {
+        let existingIds = transaction.filterStoredMessageIds(Set(wasOpearationScheduledMessegeIds))
+        for id in wasOpearationScheduledMessegeIds {
+            if !existingIds.contains(id) {
+                wasScheduledMessageIds.append(id)
+            }
+        }
+    }
     if !addedOperationIncomingMessageIds.isEmpty {
         let existingIds = transaction.filterStoredMessageIds(Set(addedOperationIncomingMessageIds))
         for id in addedOperationIncomingMessageIds {
@@ -2912,5 +2930,5 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil)
 }

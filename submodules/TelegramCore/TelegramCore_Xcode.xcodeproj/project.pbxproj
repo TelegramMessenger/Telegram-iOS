@@ -180,9 +180,13 @@
 		D01C7F051EFC1C49008305F1 /* DeviceContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C7F031EFC1C49008305F1 /* DeviceContact.swift */; };
 		D01D6BF91E42A713006151C6 /* SearchStickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D6BF81E42A713006151C6 /* SearchStickers.swift */; };
 		D01D6BFA1E42A718006151C6 /* SearchStickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01D6BF81E42A713006151C6 /* SearchStickers.swift */; };
+		D0208AF42306E92B00A23503 /* libphonenumbermac.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0208AF32306E92B00A23503 /* libphonenumbermac.framework */; };
 		D020F00722F19C8F00BE699A /* ManagedAnimatedEmojiUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0925903622F0D02D003D6283 /* ManagedAnimatedEmojiUpdates.swift */; };
 		D021E0DF1DB539FC00C6B04F /* StickerPack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0DE1DB539FC00C6B04F /* StickerPack.swift */; };
 		D021E0E21DB5401A00C6B04F /* StickerManagement.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021E0E11DB5401A00C6B04F /* StickerManagement.swift */; };
+		D021E7E82306EC03002F8BD1 /* OutgoingScheduleInfoMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */; };
+		D021E7E92306EC03002F8BD1 /* ScheduledMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FC986C22FD99D400915E37 /* ScheduledMessages.swift */; };
+		D021E7EA2306EC03002F8BD1 /* ValidateAddressNameInteractive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E416B2304D5B30049C28B /* ValidateAddressNameInteractive.swift */; };
 		D0223A981EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A971EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift */; };
 		D0223A991EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A971EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift */; };
 		D0223A9B1EA5654D00211D94 /* TelegramMediaResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0223A9A1EA5654D00211D94 /* TelegramMediaResource.swift */; };
@@ -295,7 +299,7 @@
 		D03E416C2304D5B30049C28B /* ValidateAddressNameInteractive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E416B2304D5B30049C28B /* ValidateAddressNameInteractive.swift */; };
 		D03E452E2305C15A0049C28B /* FormatPhoneNumber.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E452C2305C15A0049C28B /* FormatPhoneNumber.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E452F2305C15A0049C28B /* FormatPhoneNumber.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E452D2305C15A0049C28B /* FormatPhoneNumber.m */; };
-		D03E45302305C1630049C28B /* FormatPhoneNumber.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E452C2305C15A0049C28B /* FormatPhoneNumber.h */; };
+		D03E45302305C1630049C28B /* FormatPhoneNumber.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E452C2305C15A0049C28B /* FormatPhoneNumber.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E45D42305D44A0049C28B /* libphonenumber.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E45D32305D44A0049C28B /* libphonenumber.framework */; };
 		D03E45D82305D66D0049C28B /* Crypto.h in Headers */ = {isa = PBXBuildFile; fileRef = D02609BB20C6EB97006C34AC /* Crypto.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E45D92305D66E0049C28B /* Crypto.h in Headers */ = {isa = PBXBuildFile; fileRef = D02609BB20C6EB97006C34AC /* Crypto.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -343,6 +347,10 @@
 		D049EAF61E44DF3300A2CD3A /* AccountState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D049EAF41E44DF3300A2CD3A /* AccountState.swift */; };
 		D04CAA5A1E83310D0047E51F /* MD5.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04CAA591E83310D0047E51F /* MD5.swift */; };
 		D04CAA5B1E83310D0047E51F /* MD5.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04CAA591E83310D0047E51F /* MD5.swift */; };
+		D04D21372306EC9A00609388 /* MacInternalUpdater.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D21362306EC9A00609388 /* MacInternalUpdater.swift */; };
+		D04D21382306ECF600609388 /* FormatPhoneNumber.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E452D2305C15A0049C28B /* FormatPhoneNumber.m */; };
+		D04D213C230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */; };
+		D04D213D230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */; };
 		D04D8FF4209A4B0700865719 /* NetworkSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D8FF3209A4B0700865719 /* NetworkSettings.swift */; };
 		D04D8FF5209A4B0700865719 /* NetworkSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04D8FF3209A4B0700865719 /* NetworkSettings.swift */; };
 		D050F2101E48AB0600988324 /* InteractivePhoneFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = D050F20F1E48AB0600988324 /* InteractivePhoneFormatter.swift */; };
@@ -868,6 +876,7 @@
 		D01C7ED51EF5E468008305F1 /* ProxySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProxySettings.swift; sourceTree = "<group>"; };
 		D01C7F031EFC1C49008305F1 /* DeviceContact.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceContact.swift; sourceTree = "<group>"; };
 		D01D6BF81E42A713006151C6 /* SearchStickers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SearchStickers.swift; sourceTree = "<group>"; };
+		D0208AF32306E92B00A23503 /* libphonenumbermac.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = libphonenumbermac.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D021E0DE1DB539FC00C6B04F /* StickerPack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerPack.swift; sourceTree = "<group>"; };
 		D021E0E11DB5401A00C6B04F /* StickerManagement.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickerManagement.swift; sourceTree = "<group>"; };
 		D0223A971EA564BD00211D94 /* MediaResourceNetworkStatsTag.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaResourceNetworkStatsTag.swift; sourceTree = "<group>"; };
@@ -978,6 +987,8 @@
 		D049EAEA1E44B71B00A2CD3A /* RecentlySearchedPeerIds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RecentlySearchedPeerIds.swift; sourceTree = "<group>"; };
 		D049EAF41E44DF3300A2CD3A /* AccountState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountState.swift; sourceTree = "<group>"; };
 		D04CAA591E83310D0047E51F /* MD5.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MD5.swift; sourceTree = "<group>"; };
+		D04D21362306EC9A00609388 /* MacInternalUpdater.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MacInternalUpdater.swift; sourceTree = "<group>"; };
+		D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WasScheduledMessageAttribute.swift; sourceTree = "<group>"; };
 		D04D8FF3209A4B0700865719 /* NetworkSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkSettings.swift; sourceTree = "<group>"; };
 		D050F20F1E48AB0600988324 /* InteractivePhoneFormatter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractivePhoneFormatter.swift; sourceTree = "<group>"; };
 		D050F2501E4A59C200988324 /* JoinLink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = JoinLink.swift; sourceTree = "<group>"; };
@@ -1227,6 +1238,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0208AF42306E92B00A23503 /* libphonenumbermac.framework in Frameworks */,
 				D0CC4ADC22BA47280088F36D /* TelegramApiMac.framework in Frameworks */,
 				D0B4187F1D7E054E004562A4 /* MtProtoKitMac.framework in Frameworks */,
 				D0B418721D7E0409004562A4 /* PostboxMac.framework in Frameworks */,
@@ -1400,6 +1412,7 @@
 				09FC986A22FD882200915E37 /* OutgoingScheduleInfoMessageAttribute.swift */,
 				D0329EA422FC5A9600F9F071 /* ReactionsMessageAttribute.swift */,
 				D03E3D27230447960049C28B /* RestrictedContentMessageAttribute.swift */,
+				D04D213B230AC35A00609388 /* WasScheduledMessageAttribute.swift */,
 			);
 			name = Attributes;
 			sourceTree = "<group>";
@@ -1630,6 +1643,14 @@
 			name = Accounts;
 			sourceTree = "<group>";
 		};
+		D04D21352306EC8700609388 /* Mac Internal Updater */ = {
+			isa = PBXGroup;
+			children = (
+				D04D21362306EC9A00609388 /* MacInternalUpdater.swift */,
+			);
+			name = "Mac Internal Updater";
+			sourceTree = "<group>";
+		};
 		D05A32DF1E6F096B002760B4 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -1653,6 +1674,7 @@
 		D06706631D512ADA00DED3E3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0208AF32306E92B00A23503 /* libphonenumbermac.framework */,
 				D03E45D32305D44A0049C28B /* libphonenumber.framework */,
 				D03E45D02305D34C0049C28B /* libphonenumber_iOS.framework */,
 				D0CC4ADB22BA47280088F36D /* TelegramApiMac.framework */,
@@ -1760,6 +1782,7 @@
 		D09D8C031D4FAB1D0081DBEC /* TelegramCore */ = {
 			isa = PBXGroup;
 			children = (
+				D04D21352306EC8700609388 /* Mac Internal Updater */,
 				D03B0CB71D62232000955575 /* Utils */,
 				D03B0CCF1D62242200955575 /* Objects */,
 				D03B0CFE1D62252200955575 /* State */,
@@ -2254,6 +2277,7 @@
 				D049EAD81E43DAD200A2CD3A /* ManagedRecentStickers.swift in Sources */,
 				D0BE303A20619EE800FBE6D8 /* SecureIdForm.swift in Sources */,
 				D03DC9131F82F89D001D584C /* RegularChatState.swift in Sources */,
+				D04D213C230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */,
 				0962E66721B59BAA00245FD9 /* ManagedAppConfigurationUpdates.swift in Sources */,
 				D0613FCF1E60520700202CDB /* ChannelMembers.swift in Sources */,
 				D0B2F7742052DEF700D3BFB9 /* TelegramDeviceContactImportInfo.swift in Sources */,
@@ -2488,6 +2512,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D04D21382306ECF600609388 /* FormatPhoneNumber.m in Sources */,
+				D021E7E82306EC03002F8BD1 /* OutgoingScheduleInfoMessageAttribute.swift in Sources */,
+				D021E7E92306EC03002F8BD1 /* ScheduledMessages.swift in Sources */,
+				D021E7EA2306EC03002F8BD1 /* ValidateAddressNameInteractive.swift in Sources */,
 				D020F00722F19C8F00BE699A /* ManagedAnimatedEmojiUpdates.swift in Sources */,
 				D05FDC3922CA45070060BFE3 /* AppUpdate.swift in Sources */,
 				D014193922AE6B85008667CB /* ChannelOwnershipTransfer.swift in Sources */,
@@ -2702,6 +2730,7 @@
 				9F06831121A40DEC001D8EDB /* NotificationExceptionsList.swift in Sources */,
 				D0AB262C21C3CE80008F6685 /* Polls.swift in Sources */,
 				D073CE6C1DCBCF17007511FD /* TextEntitiesMessageAttribute.swift in Sources */,
+				D04D213D230AC35A00609388 /* WasScheduledMessageAttribute.swift in Sources */,
 				D03C53751DAD5CA9004C17B3 /* TelegramUserPresence.swift in Sources */,
 				D00580AF21E2A08900CB7CD3 /* AccountEnvironmentAttribute.swift in Sources */,
 				D03E3D29230447960049C28B /* RestrictedContentMessageAttribute.swift in Sources */,
@@ -2815,6 +2844,7 @@
 				D054648F20738626002ECC1E /* SecureIdDriversLicenseValue.swift in Sources */,
 				D0529D2821A4141800D7C3C4 /* ManagedSynchronizeRecentlyUsedMediaOperations.swift in Sources */,
 				D050F2641E4A5AEB00988324 /* ManagedSynchronizePinnedChatsOperations.swift in Sources */,
+				D04D21372306EC9A00609388 /* MacInternalUpdater.swift in Sources */,
 				D0575AF21E9FFA5D006F2541 /* SynchronizeSavedGifsOperation.swift in Sources */,
 				D0528E661E65C82400E2FEF5 /* UpdateContactName.swift in Sources */,
 				D0EE7FC82098853100981319 /* SecureIdTemporaryRegistrationValue.swift in Sources */,

@@ -18,6 +18,7 @@ import TelegramStringFormatting
 import GalleryUI
 import AnimationUI
 import LocalMediaResources
+import WallpaperResources
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -714,7 +715,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     strongSelf.animatedStickerNode = animatedStickerNode
                                     let dimensions = updatedAnimatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
                                     let fittedDimensions = dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                                    animatedStickerNode.setup(account: context.account, resource: updatedAnimatedStickerFile.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                                    animatedStickerNode.setup(account: context.account, resource: .resource(updatedAnimatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                                     strongSelf.insertSubnode(animatedStickerNode, aboveSubnode: strongSelf.imageNode)
                                     animatedStickerNode.visibility = strongSelf.visibility
                                 }

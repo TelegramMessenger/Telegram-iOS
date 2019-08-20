@@ -10,6 +10,7 @@ import TextFormat
 import AccountContext
 import WebsiteType
 import InstantPageUI
+import UrlHandling
 
 enum InstantPageType {
     case generic

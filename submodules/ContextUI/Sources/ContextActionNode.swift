@@ -103,7 +103,7 @@ final class ContextActionNode: ASDisplayNode {
     
     func updateLayout(constrainedWidth: CGFloat, previous: ContextActionSibling, next: ContextActionSibling) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
-        let iconSideInset: CGFloat = 8.0
+        let iconSideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 12.0
         
         let iconSize = self.iconNode.image.flatMap({ $0.size }) ?? CGSize()

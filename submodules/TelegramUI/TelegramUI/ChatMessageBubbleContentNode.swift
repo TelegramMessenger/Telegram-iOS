@@ -108,6 +108,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     
     var item: ChatMessageBubbleContentItem?
     
+    var updateIsTextSelectionActive: ((Bool) -> Void)?
+    
     required override init() {
         super.init()
     }

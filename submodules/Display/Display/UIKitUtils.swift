@@ -329,6 +329,7 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
         for sublayer in sublayers {
             let subtree = makeLayerSubtreeSnapshot(layer: sublayer)
             if let subtree = subtree {
+                subtree.transform = sublayer.transform
                 subtree.frame = sublayer.frame
                 subtree.bounds = sublayer.bounds
                 layer.addSublayer(subtree)

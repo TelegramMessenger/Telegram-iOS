@@ -12,6 +12,8 @@ import LegacyUI
 import ChatListUI
 import PeersNearbyUI
 import PeerInfoUI
+import SettingsUI
+import UrlHandling
 
 private enum CallStatusText: Equatable {
     case none
@@ -1000,4 +1002,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makeChatListController(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool, enableDebugActions: Bool) -> ChatListController {
         return ChatListControllerImpl(context: context, groupId: groupId, controlsHistoryPreload: controlsHistoryPreload, hideNetworkActivityStatus: hideNetworkActivityStatus, enableDebugActions: enableDebugActions)
     }
+    
+    public func makePeerSelectionController(_ params: PeerSelectionControllerParams) -> PeerSelectionController {
+        return PeerSelectionControllerImpl(params)
+    }
+    
+    public func makeChatMessagePreviewItem(context: AccountContext, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?) -> ListViewItem {
+        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: .peer(message.id.peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, isScheduledMessages: false, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus), controllerInteraction: defaultChatControllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: true, additionalContent: nil)
+    }
 }
+
+private let defaultChatControllerInteraction = ChatControllerInteraction.default

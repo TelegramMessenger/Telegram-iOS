@@ -10,6 +10,7 @@ import ShareController
 import LegacyUI
 import PeerInfoUI
 import ShareItems
+import SettingsUI
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 

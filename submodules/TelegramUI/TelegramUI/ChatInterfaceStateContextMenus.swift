@@ -592,7 +592,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         }
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && isAction {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete, textColor: .destructive, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.primaryTextColor)
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { controller, f in
                 interfaceInteraction.deleteMessages(messages, controller, f)
             })))
@@ -654,7 +654,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         if !data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty && !isAction {
             let title = message.flags.isSending ? chatPresentationInterfaceState.strings.Conversation_ContextMenuCancelSending : chatPresentationInterfaceState.strings.Conversation_ContextMenuDelete
             actions.append(.action(ContextMenuActionItem(text: title, textColor: .destructive, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.primaryTextColor)
+                return generateTintedImage(image: UIImage(bundleImageName: message.flags.isSending ? "Chat/Context Menu/Clear" : "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
             }, action: { controller, f in
                 interfaceInteraction.deleteMessages(selectAll ? messages : [message], controller, f)
             })))

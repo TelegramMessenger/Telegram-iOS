@@ -656,7 +656,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
             }
             let forwardMessageIds = Array(messageIds).sorted()
             
-            let controller = PeerSelectionController(context: strongSelf.context, filter: [.onlyWriteable, .excludeDisabled])
+            let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.onlyWriteable, .excludeDisabled]))
             controller.peerSelected = { [weak controller] peerId in
                 if let strongSelf = self, let _ = controller {
                     let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in

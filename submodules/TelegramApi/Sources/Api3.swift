@@ -3034,17 +3034,14 @@ public extension Api {
                     })
                 }
             
-                public static func sendReaction(peer: Api.InputPeer, msgId: Int32, reaction: [String]) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                public static func sendReaction(flags: Int32, peer: Api.InputPeer, msgId: Int32, reaction: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(666939980)
+                    buffer.appendInt32(627641572)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(reaction.count))
-                    for item in reaction {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }
-                    return (FunctionDescription(name: "messages.sendReaction", parameters: [("peer", peer), ("msgId", msgId), ("reaction", reaction)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(reaction!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.sendReaction", parameters: [("flags", flags), ("peer", peer), ("msgId", msgId), ("reaction", reaction)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

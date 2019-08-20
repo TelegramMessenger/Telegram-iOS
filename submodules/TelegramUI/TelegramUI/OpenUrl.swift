@@ -13,6 +13,7 @@ import TelegramPresentationData
 import AccountContext
 import UrlEscaping
 import PassportUI
+import UrlHandling
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId

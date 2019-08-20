@@ -10,6 +10,7 @@ import ProgressNavigationButtonNode
 import AccountContext
 import AlertUI
 import ContactListUI
+import CounterContollerTitleView
 
 class ContactMultiselectionControllerImpl: ViewController, ContactMultiselectionController {
     private let context: AccountContext

@@ -212,7 +212,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNodeContainer = ASDisplayNode()
         self.historyNodeContainer.addSubnode(self.historyNode)
         
-        self.reactionContainerNode = ReactionSelectionParentNode(account: context.account)
+        self.reactionContainerNode = ReactionSelectionParentNode(account: context.account, theme: chatPresentationInterfaceState.theme)
         self.historyNodeContainer.addSubnode(self.reactionContainerNode)
         
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper)

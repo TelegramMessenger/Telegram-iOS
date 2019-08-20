@@ -186,6 +186,7 @@ public enum TextSelectionAction {
 public final class TextSelectionNode: ASDisplayNode {
     private let theme: TextSelectionTheme
     private let textNode: TextNode
+    private let updateIsActive: (Bool) -> Void
     private let present: (ViewController, Any?) -> Void
     private weak var rootNode: ASDisplayNode?
     private let performAction: (String, TextSelectionAction) -> Void
@@ -196,9 +197,10 @@ public final class TextSelectionNode: ASDisplayNode {
     private var currentRange: (Int, Int)?
     private var currentRects: [CGRect]?
     
-    public init(theme: TextSelectionTheme, textNode: TextNode, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (String, TextSelectionAction) -> Void) {
+    public init(theme: TextSelectionTheme, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (String, TextSelectionAction) -> Void) {
         self.theme = theme
         self.textNode = textNode
+        self.updateIsActive = updateIsActive
         self.present = present
         self.rootNode = rootNode
         self.performAction = performAction
@@ -311,9 +313,11 @@ public final class TextSelectionNode: ASDisplayNode {
             }
             strongSelf.updateSelection(range: resultRange)
             strongSelf.displayMenu()
+            strongSelf.updateIsActive(true)
         }
         recognizer.clearSelection = { [weak self] in
             self?.dismissSelection()
+            self?.updateIsActive(false)
         }
         self.view.addGestureRecognizer(recognizer)
     }

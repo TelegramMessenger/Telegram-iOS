@@ -15,6 +15,7 @@ import LocationUI
 import StickerPackPreviewUI
 import PeerAvatarGalleryUI
 import PeerInfoUI
+import SettingsUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)

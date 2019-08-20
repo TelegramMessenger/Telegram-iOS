@@ -13,6 +13,10 @@
 		D03E3FE82304C7DD0049C28B /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3FE72304C7DD0049C28B /* UIKit.framework */; };
 		D03E3FEA2304C7DF0049C28B /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3FE92304C7DF0049C28B /* Postbox.framework */; };
 		D03E3FEC2304C7E50049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3FEB2304C7E50049C28B /* TelegramCore.framework */; };
+		D03E487423076D350049C28B /* FetchPhotoLibraryImageResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E487323076D350049C28B /* FetchPhotoLibraryImageResource.swift */; };
+		D03E487623076D430049C28B /* Photos.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E487523076D420049C28B /* Photos.framework */; };
+		D03E487823076D470049C28B /* ImageCompression.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E487723076D470049C28B /* ImageCompression.framework */; };
+		D03E487A23076D550049C28B /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E487923076D550049C28B /* SwiftSignalKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +28,10 @@
 		D03E3FE72304C7DD0049C28B /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D03E3FE92304C7DF0049C28B /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E3FEB2304C7E50049C28B /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E487323076D350049C28B /* FetchPhotoLibraryImageResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FetchPhotoLibraryImageResource.swift; sourceTree = "<group>"; };
+		D03E487523076D420049C28B /* Photos.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Photos.framework; path = System/Library/Frameworks/Photos.framework; sourceTree = SDKROOT; };
+		D03E487723076D470049C28B /* ImageCompression.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageCompression.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D03E487923076D550049C28B /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -31,6 +39,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03E487A23076D550049C28B /* SwiftSignalKit.framework in Frameworks */,
+				D03E487823076D470049C28B /* ImageCompression.framework in Frameworks */,
+				D03E487623076D430049C28B /* Photos.framework in Frameworks */,
 				D03E3FEC2304C7E50049C28B /* TelegramCore.framework in Frameworks */,
 				D03E3FEA2304C7DF0049C28B /* Postbox.framework in Frameworks */,
 				D03E3FE82304C7DD0049C28B /* UIKit.framework in Frameworks */,
@@ -62,6 +73,7 @@
 		D03E3FD52304C76E0049C28B /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D03E487323076D350049C28B /* FetchPhotoLibraryImageResource.swift */,
 				D03E3FE22304C7CA0049C28B /* MediaResources.swift */,
 				D03E3FD62304C76E0049C28B /* LocalMediaResources.h */,
 			);
@@ -71,6 +83,9 @@
 		D03E3FE42304C7D90049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03E487923076D550049C28B /* SwiftSignalKit.framework */,
+				D03E487723076D470049C28B /* ImageCompression.framework */,
+				D03E487523076D420049C28B /* Photos.framework */,
 				D03E3FEB2304C7E50049C28B /* TelegramCore.framework */,
 				D03E3FE92304C7DF0049C28B /* Postbox.framework */,
 				D03E3FE72304C7DD0049C28B /* UIKit.framework */,
@@ -160,6 +175,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D03E3FE32304C7CA0049C28B /* MediaResources.swift in Sources */,
+				D03E487423076D350049C28B /* FetchPhotoLibraryImageResource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

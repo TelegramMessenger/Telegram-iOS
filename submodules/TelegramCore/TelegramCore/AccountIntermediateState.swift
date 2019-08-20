@@ -514,6 +514,7 @@ struct AccountFinalState {
 struct AccountReplayedFinalState {
     let state: AccountFinalState
     let addedIncomingMessageIds: [MessageId]
+    let wasScheduledMessageIds: [MessageId]
     let addedSecretMessageIds: [MessageId]
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
@@ -525,6 +526,7 @@ struct AccountReplayedFinalState {
 
 struct AccountFinalStateEvents {
     let addedIncomingMessageIds: [MessageId]
+    let wasScheduledMessageIds:[MessageId]
     let updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]]
     let updatedWebpages: [MediaId: TelegramMediaWebpage]
     let updatedCalls: [Api.PhoneCall]
@@ -537,11 +539,12 @@ struct AccountFinalStateEvents {
     let externallyUpdatedPeerId: Set<PeerId>
     
     var isEmpty: Bool {
-        return self.addedIncomingMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.updatedPeersNearby?.isEmpty ?? true && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty
+        return self.addedIncomingMessageIds.isEmpty && self.wasScheduledMessageIds.isEmpty && self.updatedTypingActivities.isEmpty && self.updatedWebpages.isEmpty && self.updatedCalls.isEmpty && self.updatedPeersNearby?.isEmpty ?? true && self.isContactUpdates.isEmpty && self.displayAlerts.isEmpty && delayNotificatonsUntil == nil && self.updatedMaxMessageId == nil && self.updatedQts == nil && self.externallyUpdatedPeerId.isEmpty
     }
     
-    init(addedIncomingMessageIds: [MessageId] = [], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set()) {
+    init(addedIncomingMessageIds: [MessageId] = [], wasScheduledMessageIds: [MessageId] = [], updatedTypingActivities: [PeerId: [PeerId: PeerInputActivity?]] = [:], updatedWebpages: [MediaId: TelegramMediaWebpage] = [:], updatedCalls: [Api.PhoneCall] = [], updatedPeersNearby: [PeerNearby]? = nil, isContactUpdates: [(PeerId, Bool)] = [], displayAlerts: [(text: String, isDropAuth: Bool)] = [], delayNotificatonsUntil: Int32? = nil, updatedMaxMessageId: Int32? = nil, updatedQts: Int32? = nil, externallyUpdatedPeerId: Set<PeerId> = Set()) {
         self.addedIncomingMessageIds = addedIncomingMessageIds
+        self.wasScheduledMessageIds = wasScheduledMessageIds
         self.updatedTypingActivities = updatedTypingActivities
         self.updatedWebpages = updatedWebpages
         self.updatedCalls = updatedCalls
@@ -556,6 +559,7 @@ struct AccountFinalStateEvents {
     
     init(state: AccountReplayedFinalState) {
         self.addedIncomingMessageIds = state.addedIncomingMessageIds
+        self.wasScheduledMessageIds = state.wasScheduledMessageIds
         self.updatedTypingActivities = state.updatedTypingActivities
         self.updatedWebpages = state.updatedWebpages
         self.updatedCalls = state.updatedCalls
@@ -590,6 +594,6 @@ struct AccountFinalStateEvents {
         
         let externallyUpdatedPeerId = self.externallyUpdatedPeerId.union(other.externallyUpdatedPeerId)
         
-        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil, updatedMaxMessageId: updatedMaxMessageId, updatedQts: updatedQts, externallyUpdatedPeerId: externallyUpdatedPeerId)
+        return AccountFinalStateEvents(addedIncomingMessageIds: self.addedIncomingMessageIds + other.addedIncomingMessageIds, wasScheduledMessageIds: self.wasScheduledMessageIds + other.wasScheduledMessageIds, updatedTypingActivities: self.updatedTypingActivities, updatedWebpages: self.updatedWebpages, updatedCalls: self.updatedCalls + other.updatedCalls, isContactUpdates: self.isContactUpdates + other.isContactUpdates, displayAlerts: self.displayAlerts + other.displayAlerts, delayNotificatonsUntil: delayNotificatonsUntil, updatedMaxMessageId: updatedMaxMessageId, updatedQts: updatedQts, externallyUpdatedPeerId: externallyUpdatedPeerId)
     }
 }

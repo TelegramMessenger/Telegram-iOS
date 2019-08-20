@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramUIPreferences
 import AccountContext
+import GridMessageSelectionNode
 
 class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     override var supportsMosaic: Bool {

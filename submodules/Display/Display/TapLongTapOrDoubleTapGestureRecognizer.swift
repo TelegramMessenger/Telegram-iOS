@@ -120,9 +120,9 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
             self.lastRecognizedGestureAndLocation = (.longTap, location)
             if let longTap = self.longTap {
                 self.recognizedLongTap = true
+                self.state = .began
                 longTap(location, self)
                 cancelScrollViewGestures(view: self.view?.superview)
-                self.state = .began
                 return
             }
         } else {
