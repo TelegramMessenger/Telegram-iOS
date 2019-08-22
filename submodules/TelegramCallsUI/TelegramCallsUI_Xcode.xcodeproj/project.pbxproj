@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D021289F230EF3B2006B8456 /* ItemListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D021289E230EF3B2006B8456 /* ItemListUI.framework */; };
 		D0750C6A22B28A8000BE5F6E /* UniversalMediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0750C6922B28A8000BE5F6E /* UniversalMediaPlayer.framework */; };
 		D0AE30FB22B1DC3F0058D3BC /* TelegramCallsUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE30F922B1DC3F0058D3BC /* TelegramCallsUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AE310D22B1DD160058D3BC /* PresentationCallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE310922B1DD160058D3BC /* PresentationCallManager.swift */; };
@@ -37,6 +38,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D021289E230EF3B2006B8456 /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0750C6922B28A8000BE5F6E /* UniversalMediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UniversalMediaPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE30F622B1DC3F0058D3BC /* TelegramCallsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramCallsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE30F922B1DC3F0058D3BC /* TelegramCallsUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramCallsUI.h; sourceTree = "<group>"; };
@@ -73,6 +75,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D021289F230EF3B2006B8456 /* ItemListUI.framework in Frameworks */,
 				D0C9C14B22FE439300FAB518 /* TelegramNotices.framework in Frameworks */,
 				D0C9C0CF22FE3E2400FAB518 /* PhotoResources.framework in Frameworks */,
 				D0750C6A22B28A8000BE5F6E /* UniversalMediaPlayer.framework in Frameworks */,
@@ -134,6 +137,7 @@
 		D0AE315522B1DEF10058D3BC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D021289E230EF3B2006B8456 /* ItemListUI.framework */,
 				D0C9C14A22FE439300FAB518 /* TelegramNotices.framework */,
 				D0C9C0CE22FE3E2400FAB518 /* PhotoResources.framework */,
 				D0750C6922B28A8000BE5F6E /* UniversalMediaPlayer.framework */,
