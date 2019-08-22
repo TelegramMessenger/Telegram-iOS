@@ -580,7 +580,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 var navigate: ChatControllerInteractionNavigateToPeer
                                 
                                 if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                    navigate = .chat(textInputState: nil, messageId: nil)
+                                    navigate = .chat(textInputState: nil, subject: nil)
                                 } else {
                                     navigate = .info
                                 }
@@ -588,7 +588,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 for attribute in item.content.firstMessage.attributes {
                                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                                         openPeerId = attribute.messageId.peerId
-                                        navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                        navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                     }
                                 }
                                 
@@ -631,7 +631,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     }
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                 } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)
+                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, subject: nil), nil)
                                 } else if let _ = forwardInfo.authorSignature {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                                 }

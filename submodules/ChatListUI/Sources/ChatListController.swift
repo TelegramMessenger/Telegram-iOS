@@ -570,7 +570,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 return
                             }
                             
-                            let beginClear: (InteractiveMessagesDeletionType) -> Void = { type in
+                            let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -748,7 +748,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                             }
                             
                             
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(messageId), purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)

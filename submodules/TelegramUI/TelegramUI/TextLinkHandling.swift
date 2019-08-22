@@ -22,9 +22,9 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     let openResolvedPeerImpl: (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void = { [weak controller] peerId, navigation in
         context.sharedContext.openResolvedUrl(.peer(peerId, navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), openPeer: { (peerId, navigation) in
             switch navigation {
-                case let .chat(_, messageId):
+                case let .chat(_, subject):
                     if let navigationController = controller?.navigationController as? NavigationController {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), messageId: messageId, keepStack: .always))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject, keepStack: .always))
                     }
                 case .info:
                     let peerSignal: Signal<Peer?, NoError>
@@ -54,7 +54,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         openResolvedPeerImpl(peerId, .default)
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = controller.navigationController as? NavigationController {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), messageId: messageId))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
                         controller.present(StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
@@ -62,7 +62,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .group, anchor: anchor))
                     case let .join(link):
                         controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
-                            openResolvedPeerImpl(peerId, .chat(textInputState: nil, messageId: nil))
+                            openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil))
                         }), in: .window(.root))
                     default:
                         break

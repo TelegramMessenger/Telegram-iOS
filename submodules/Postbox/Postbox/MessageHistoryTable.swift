@@ -2422,9 +2422,18 @@ final class MessageHistoryTable: Table {
         return messageIds
     }
     
-    func allMessageIndices(peerId: PeerId) -> [MessageIndex] {
+    func allMessageIndices(peerId: PeerId, namespace: MessageId.Namespace? = nil) -> [MessageIndex] {
         var messages: [MessageIndex] = []
-        self.valueBox.range(self.table, start: self.key(MessageIndex.lowerBound(peerId: peerId)).predecessor, end: self.key(MessageIndex.upperBound(peerId: peerId)).successor, keys: { key in
+        let start: ValueBoxKey
+        let end: ValueBoxKey
+        if let namespace = namespace {
+            start = self.lowerBound(peerId: peerId, namespace: namespace)
+            end = self.upperBound(peerId: peerId, namespace: namespace)
+        } else {
+            start = self.key(MessageIndex.lowerBound(peerId: peerId)).predecessor
+            end = self.key(MessageIndex.upperBound(peerId: peerId)).successor
+        }
+        self.valueBox.range(self.table, start: start, end: end, keys: { key in
             messages.append(extractKey(key))
             return true
         }, limit: 0)

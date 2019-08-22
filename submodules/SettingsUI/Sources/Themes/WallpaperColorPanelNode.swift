@@ -6,17 +6,16 @@ import Display
 import TelegramPresentationData
 import HexColor
 
-private var currentTextInputBackgroundImage: (UIColor, UIColor, UIColor, CGFloat, UIImage)?
-private func textInputBackgroundImage(backgroundColor: UIColor, fieldColor: UIColor, strokeColor: UIColor, diameter: CGFloat) -> UIImage? {
+private var currentTextInputBackgroundImage: (UIColor, UIColor, CGFloat, UIImage)?
+private func textInputBackgroundImage(fieldColor: UIColor, strokeColor: UIColor, diameter: CGFloat) -> UIImage? {
     if let current = currentTextInputBackgroundImage {
-        if current.0.isEqual(backgroundColor) && current.1.isEqual(fieldColor) && current.2.isEqual(strokeColor) && current.3.isEqual(to: diameter) {
-            return current.4
+        if current.0.isEqual(fieldColor) && current.1.isEqual(strokeColor) && current.2.isEqual(to: diameter) {
+            return current.3
         }
     }
     
     let image = generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
-        context.setFillColor(backgroundColor.cgColor)
-        context.fill(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
+        context.clear(CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
         context.setFillColor(fieldColor.cgColor)
         context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: diameter, height: diameter))
         context.setStrokeColor(strokeColor.cgColor)
@@ -25,7 +24,7 @@ private func textInputBackgroundImage(backgroundColor: UIColor, fieldColor: UICo
         context.strokeEllipse(in: CGRect(x: strokeWidth / 2.0, y: strokeWidth / 2.0, width: diameter - strokeWidth, height: diameter - strokeWidth))
     })?.stretchableImage(withLeftCapWidth: Int(diameter) / 2, topCapHeight: Int(diameter) / 2)
     if let image = image {
-        currentTextInputBackgroundImage = (backgroundColor, fieldColor, strokeColor, diameter, image)
+        currentTextInputBackgroundImage = (fieldColor, strokeColor, diameter, image)
         return image
     } else {
         return nil
@@ -41,7 +40,6 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
     private let textBackgroundNode: ASImageNode
     private let textFieldNode: TextFieldNode
     private let prefixNode: ASTextNode
-    private let palleteButton: HighlightableButtonNode
     private let doneButton: HighlightableButtonNode
     private let colorPickerNode: WallpaperColorPickerNode
     
@@ -69,15 +67,14 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.bottomSeparatorNode.backgroundColor = theme.chat.inputPanel.panelSeparatorColor
         
         self.textBackgroundNode = ASImageNode()
-        self.textBackgroundNode.image = textInputBackgroundImage(backgroundColor: theme.chat.inputPanel.panelBackgroundColor, fieldColor: theme.chat.inputPanel.inputBackgroundColor, strokeColor: theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
+        self.textBackgroundNode.image = textInputBackgroundImage(fieldColor: theme.chat.inputPanel.inputBackgroundColor, strokeColor: theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
+        self.textBackgroundNode.displayWithoutProcessing = true
+        self.textBackgroundNode.displaysAsynchronously = false
         
         self.textFieldNode = TextFieldNode()
         self.prefixNode = ASTextNode()
         self.prefixNode.attributedText = NSAttributedString(string: "#", font: Font.regular(17.0), textColor: self.theme.chat.inputPanel.inputTextColor)
-        
-        self.palleteButton = HighlightableButtonNode()
-        self.palleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Settings/WallpaperColorIcon"), color: theme.chat.inputPanel.panelControlColor), for: .normal)
-       
+    
         self.doneButton = HighlightableButtonNode()
         self.doneButton.setImage(PresentationResourcesChat.chatInputPanelApplyButtonImage(theme), for: .normal)
         
@@ -122,7 +119,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.backgroundNode.backgroundColor = self.theme.chat.inputPanel.panelBackgroundColor
         self.topSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
         self.bottomSeparatorNode.backgroundColor = self.theme.chat.inputPanel.panelSeparatorColor
-        self.textBackgroundNode.image = textInputBackgroundImage(backgroundColor: self.theme.chat.inputPanel.panelBackgroundColor, fieldColor: self.theme.chat.inputPanel.inputBackgroundColor, strokeColor: self.theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
+        self.textBackgroundNode.image = textInputBackgroundImage(fieldColor: self.theme.chat.inputPanel.inputBackgroundColor, strokeColor: self.theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
         
         self.textFieldNode.textField.textColor = self.theme.chat.inputPanel.inputTextColor
         self.textFieldNode.textField.keyboardAppearance = self.theme.chat.inputPanel.keyboardColor.keyboardAppearance
@@ -148,7 +145,6 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         let leftInset: CGFloat = 5.0
         let rightInset: CGFloat = 5.0
         
-        transition.updateFrame(node: self.palleteButton, frame: CGRect(x: 0.0, y: 0.0, width: topPanelHeight, height: topPanelHeight))
         transition.updateFrame(node: self.textBackgroundNode, frame: CGRect(x: leftInset, y: (topPanelHeight - fieldHeight) / 2.0, width: size.width - leftInset - rightInset, height: fieldHeight))
         transition.updateFrame(node: self.textFieldNode, frame: CGRect(x: leftInset + 24.0, y: (topPanelHeight - fieldHeight) / 2.0 + 1.0, width: size.width - leftInset - rightInset - 36.0, height: fieldHeight - 2.0))
         

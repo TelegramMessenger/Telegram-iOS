@@ -118,6 +118,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
                     strongSelf.updateMinimumDate()
                     strongSelf.pickerView.layer.addShakeAnimation()
                 } else {
+                    strongSelf.doneButton.isUserInteractionEnabled = false
                     strongSelf.completion?(Int32(strongSelf.pickerView.date.timeIntervalSince1970))
                 }
             }

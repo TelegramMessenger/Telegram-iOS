@@ -23,7 +23,7 @@ private enum ChatSendMessageActionIcon {
             case .schedule:
                 imageName = "Chat/Input/Menu/ScheduleIcon"
         }
-        return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.actionSheet.primaryTextColor)
+        return generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.contextMenu.primaryColor)
     }
 }
 
@@ -33,6 +33,7 @@ private final class ActionSheetItemNode: ASDisplayNode {
     private let action: () -> Void
     
     private let separatorNode: ASDisplayNode
+    private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let buttonNode: HighlightTrackingButtonNode
     private let iconNode: ASImageNode
@@ -46,21 +47,35 @@ private final class ActionSheetItemNode: ASDisplayNode {
         self.action = action
         
         self.separatorNode = ASDisplayNode()
-        self.separatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
+        self.separatorNode.backgroundColor = theme.contextMenu.itemSeparatorColor
+        
+        self.backgroundNode = ASDisplayNode()
+        self.backgroundNode.isAccessibilityElement = false
+        self.backgroundNode.backgroundColor = theme.contextMenu.itemBackgroundColor
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
+        self.highlightedBackgroundNode.isAccessibilityElement = false
+        self.highlightedBackgroundNode.backgroundColor = theme.contextMenu.itemHighlightedBackgroundColor
         self.highlightedBackgroundNode.alpha = 0.0
         
         self.buttonNode = HighlightTrackingButtonNode()
+        self.buttonNode.isAccessibilityElement = true
+        self.buttonNode.accessibilityLabel = title
         
         self.titleNode = ImmediateTextNode()
+        self.titleNode.isAccessibilityElement = false
         self.titleNode.maximumNumberOfLines = 1
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.regular(17.0), textColor: theme.contextMenu.primaryColor)
+        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.displaysAsynchronously = false
         
         self.iconNode = ASImageNode()
         self.iconNode.image = icon.image(theme: theme)
         self.iconNode.contentMode = .center
+        self.iconNode.isAccessibilityElement = false
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        self.iconNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -87,9 +102,10 @@ private final class ActionSheetItemNode: ASDisplayNode {
     }
     
     func updateTheme(_ theme: PresentationTheme) {
-        self.separatorNode.backgroundColor = theme.actionSheet.opaqueItemSeparatorColor
-        self.highlightedBackgroundNode.backgroundColor = theme.actionSheet.opaqueItemHighlightedBackgroundColor
-        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.regular(17.0), textColor: theme.actionSheet.primaryTextColor)
+        self.separatorNode.backgroundColor = theme.contextMenu.itemSeparatorColor
+        self.backgroundNode.backgroundColor = theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode.backgroundColor = theme.contextMenu.itemHighlightedBackgroundColor
+        self.titleNode.attributedText = NSAttributedString(string: self.title, font: Font.regular(17.0), textColor: theme.contextMenu.primaryColor)
         self.iconNode.image = self.icon.image(theme: theme)
         
         if let maxWidth = self.maxWidth {
@@ -180,11 +196,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         self.dimNode = ASDisplayNode()
         self.dimNode.alpha = 1.0
-        if self.presentationData.theme.chatList.searchBarKeyboardColor == .light {
-            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.04)
-        } else {
-            self.dimNode.backgroundColor = presentationData.theme.chatList.backgroundColor.withAlphaComponent(0.2)
-        }
+        self.dimNode.backgroundColor = self.presentationData.theme.contextMenu.dimColor
         
         self.sendButtonNode = HighlightableButtonNode()
         self.sendButtonNode.imageNode.displayWithoutProcessing = false
@@ -205,8 +217,8 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.scrollNode.transform = CATransform3DMakeScale(1.0, -1.0, 1.0)
         
         self.contentContainerNode = ASDisplayNode()
-        self.contentContainerNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
-        self.contentContainerNode.cornerRadius = 12.0
+        self.contentContainerNode.backgroundColor = self.presentationData.theme.contextMenu.backgroundColor
+        self.contentContainerNode.cornerRadius = 14.0
         self.contentContainerNode.clipsToBounds = true
         
         var contentNodes: [ActionSheetItemNode] = []
@@ -296,19 +308,18 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         }
         self.presentationData = presentationData
         
-        if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
-            self.effectView.effect = UIBlurEffect(style: .dark)
+        if #available(iOS 9.0, *) {
         } else {
-            self.effectView.effect = UIBlurEffect(style: .light)
+            if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+                self.effectView.effect = UIBlurEffect(style: .dark)
+            } else {
+                self.effectView.effect = UIBlurEffect(style: .light)
+            }
         }
         
-        if self.presentationData.theme.chatList.searchBarKeyboardColor == .light {
-            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.04)
-        } else {
-            self.dimNode.backgroundColor = presentationData.theme.chatList.backgroundColor.withAlphaComponent(0.2)
-        }
+        self.dimNode.backgroundColor = presentationData.theme.contextMenu.dimColor
         
-        self.contentContainerNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
+        self.contentContainerNode.backgroundColor = self.presentationData.theme.contextMenu.backgroundColor
         self.textCoverNode.backgroundColor = self.presentationData.theme.chat.inputPanel.inputBackgroundColor
         self.buttonCoverNode.backgroundColor = self.presentationData.theme.chat.inputPanel.panelBackgroundColor
         self.sendButtonNode.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(self.presentationData.theme), for: [])
@@ -329,39 +340,14 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
     func animateIn() {
         self.textInputNode.textView.setContentOffset(self.textInputNode.textView.contentOffset, animated: false)
         
-        UIView.animate(withDuration: 0.4, animations: {
+        UIView.animate(withDuration: 0.2, animations: {
             if #available(iOS 9.0, *) {
-                if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
-                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                        self.effectView.effect = UIBlurEffect(style: .regular)
-                        if self.effectView.subviews.count == 2 {
-                            self.effectView.subviews[1].isHidden = true
-                        }
-                    } else {
-                        self.effectView.effect = UIBlurEffect(style: .dark)
-                    }
-                } else {
-                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                        self.effectView.effect = UIBlurEffect(style: .regular)
-                    } else {
-                        self.effectView.effect = UIBlurEffect(style: .light)
-                    }
-                }
+                self.effectView.effect = makeCustomZoomBlurEffect()
             } else {
                 self.effectView.alpha = 1.0
             }
-        }, completion: { [weak self] _ in
-            guard let strongSelf = self else {
-                return
-            }
-            if strongSelf.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
-                if strongSelf.effectView.subviews.count == 2 {
-                    strongSelf.effectView.subviews[1].isHidden = true
-                }
-            }
-        })
-        self.effectView.subviews[1].layer.removeAnimation(forKey: "backgroundColor")
-        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+        }, completion: { _ in })
+        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.messageBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
@@ -401,9 +387,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             let textOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
             self.fromMessageTextNode.layer.animatePosition(from: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             self.toMessageTextNode.layer.animatePosition(from: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            
-            self.contentContainerNode.layer.animatePosition(from: CGPoint(x: 160.0, y: 0.0), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            self.contentContainerNode.layer.animateScale(from: 0.45, to: 1.0, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
+        
+            let springDuration: Double = 0.42
+            let springDamping: CGFloat = 104.0
+            self.contentContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+            self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 160.0, y: 0.0)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
         }
     }
     
@@ -436,7 +424,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             intermediateCompletion()
         })
         
-        self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+        self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in })
         
         if cancel {
@@ -522,7 +510,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let sideInset: CGFloat = 43.0
         
         var contentSize = CGSize()
-        contentSize.width = min(layout.size.width - 40.0, 240.0)
+        contentSize.width = min(layout.size.width - 40.0, 250.0)
         var applyNodes: [(ASDisplayNode, CGFloat, (CGFloat) -> Void)] = []
         for itemNode in self.contentNodes {
             let (width, height, apply) = itemNode.updateLayout(maxWidth: layout.size.width - sideInset * 2.0)

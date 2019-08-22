@@ -57,7 +57,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetData(PresentationTheme)
     case resetDatabase(PresentationTheme)
     case resetHoles(PresentationTheme)
-    case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
@@ -74,7 +73,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .exportTheme:
+            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .exportTheme:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -117,18 +116,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 15
             case .resetHoles:
                 return 16
-            case .resetBiometricsData:
-                return 17
             case .optimizeDatabase:
-                return 18
+                return 17
             case .photoPreview:
-                return 19
+                return 18
             case .knockoutWallpaper:
-                return 21
+                return 19
             case .exportTheme:
-                return 22
+                return 20
             case .versionInfo:
-                return 23
+                return 21
         }
     }
     
@@ -442,12 +439,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     |> deliverOnMainQueue).start(completed: {
                         controller.dismiss()
                     })
-                })
-            case let .resetBiometricsData(theme):
-                return ItemListActionItem(theme: theme, title: "Reset Biometrics Data", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    let _ = updatePresentationPasscodeSettingsInteractively(accountManager: arguments.sharedContext.accountManager, { settings in
-                        return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
-                    }).start()
                 })
             case let .optimizeDatabase(theme):
                 return ItemListActionItem(theme: theme, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {

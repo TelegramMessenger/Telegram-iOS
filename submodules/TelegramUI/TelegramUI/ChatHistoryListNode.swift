@@ -1113,10 +1113,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .message(toIndex), anchorIndex: .message(toIndex), sourceIndex: .message(fromIndex), scrollPosition: scrollPosition, animated: animated), id: self.takeNextHistoryLocationId())
     }
     
-    func scrollWithDeltaOffset(_ offset: CGFloat) {
-
-    }
-    
     public func anchorMessageInCurrentHistoryView() -> Message? {
         if let historyView = self.historyView {
             if let visibleRange = self.displayedItemRange.visibleRange {

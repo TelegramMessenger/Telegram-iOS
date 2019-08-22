@@ -63,8 +63,9 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
         if peer is TelegramUser {
             controller.hasTimer = true
         }
-        controller.hasSilentPosting = true
+        controller.hasSilentPosting = !isSecretChat
     }
+    controller.hasSchedule = !isSecretChat
     
     let screenSize = parentController.view.bounds.size
     var startFrame = CGRect(x: 0, y: screenSize.height, width: screenSize.width, height: screenSize.height)

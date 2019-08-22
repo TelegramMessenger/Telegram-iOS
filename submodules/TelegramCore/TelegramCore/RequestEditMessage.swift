@@ -161,46 +161,46 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                 }
                 
                 return account.network.request(Api.functions.messages.editMessage(flags: flags, peer: inputPeer, id: messageId.id, message: text, media: inputMedia, replyMarkup: nil, entities: apiEntities, scheduleDate: effectiveScheduleTime))
-                    |> map { result -> Api.Updates? in
-                        return result
+                |> map { result -> Api.Updates? in
+                    return result
+                }
+                |> `catch` { error -> Signal<Api.Updates?, MTRpcError> in
+                    if error.errorDescription == "MESSAGE_NOT_MODIFIED" {
+                        return .single(nil)
+                    } else {
+                        return .fail(error)
                     }
-                    |> `catch` { error -> Signal<Api.Updates?, MTRpcError> in
-                        if error.errorDescription == "MESSAGE_NOT_MODIFIED" {
-                            return .single(nil)
-                        } else {
-                            return .fail(error)
-                        }
+                }
+                |> mapError { error -> RequestEditMessageInternalError in
+                    if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
+                        return .invalidReference
+                    } else if error.errorDescription.hasPrefix("CHAT_SEND_") && error.errorDescription.hasSuffix("_FORBIDDEN") {
+                        return .error(.restricted)
                     }
-                    |> mapError { error -> RequestEditMessageInternalError in
-                        if error.errorDescription.hasPrefix("FILEREF_INVALID") || error.errorDescription.hasPrefix("FILE_REFERENCE_") {
-                            return .invalidReference
-                        } else if error.errorDescription.hasPrefix("CHAT_SEND_") && error.errorDescription.hasSuffix("_FORBIDDEN") {
-                            return .error(.restricted)
-                        }
-                        return .error(.generic)
-                    }
-                    |> mapToSignal { result -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
-                        if let result = result {
-                            return account.postbox.transaction { transaction -> RequestEditMessageResult in
-                                var toMedia: Media?
-                                if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0) }) {
-                                    toMedia = message.media.first
-                                }
-                                
-                                if case let .update(fromMedia) = media, let toMedia = toMedia {
-                                    applyMediaResourceChanges(from: fromMedia.media, to: toMedia, postbox: account.postbox)
-                                }
-                                account.stateManager.addUpdates(result)
-                                
-                                return .done(true)
+                    return .error(.generic)
+                }
+                |> mapToSignal { result -> Signal<RequestEditMessageResult, RequestEditMessageInternalError> in
+                    if let result = result {
+                        return account.postbox.transaction { transaction -> RequestEditMessageResult in
+                            var toMedia: Media?
+                            if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0) }) {
+                                toMedia = message.media.first
                             }
-                            |> mapError { _ -> RequestEditMessageInternalError in
-                                return .error(.generic)
+                            
+                            if case let .update(fromMedia) = media, let toMedia = toMedia {
+                                applyMediaResourceChanges(from: fromMedia.media, to: toMedia, postbox: account.postbox)
                             }
-                        } else {
-                            return .single(.done(false))
+                            account.stateManager.addUpdates(result)
+                            
+                            return .done(true)
                         }
+                        |> mapError { _ -> RequestEditMessageInternalError in
+                            return .error(.generic)
+                        }
+                    } else {
+                        return .single(.done(false))
                     }
+                }
             } else {
                 return .single(.done(false))
             }

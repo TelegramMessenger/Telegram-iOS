@@ -696,8 +696,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             avatarInset = 0.0
         }
         
+        let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+        
         var needShareButton = false
-        if item.message.flags.contains(.Failed) {
+        if isFailed {
             needShareButton = false
         } else if item.message.id.peerId == item.context.account.peerId {
             if let _ = sourceReference {
@@ -761,7 +763,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         }
         
         var deliveryFailedInset: CGFloat = 0.0
-        if item.content.firstMessage.flags.contains(.Failed) {
+        if isFailed {
             deliveryFailedInset += 24.0
         }
         
@@ -1062,7 +1064,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 if message.effectivelyIncoming(item.context.account.peerId) {
                     statusType = .ImageIncoming
                 } else {
-                    if message.flags.contains(.Failed) {
+                    if isFailed {
                         statusType = .ImageOutgoing(.Failed)
                     } else if message.flags.isSending && !message.isSentOrAcknowledged {
                         statusType = .ImageOutgoing(.Sending)
@@ -1617,7 +1619,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         strongSelf.backgroundType = backgroundType
         
-        if item.content.firstMessage.flags.contains(.Failed) {
+        let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+        if isFailed {
             let deliveryFailedNode: ChatMessageDeliveryFailedNode
             var isAppearing = false
             if let current = strongSelf.deliveryFailedNode {
@@ -2167,7 +2170,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         var navigate: ChatControllerInteractionNavigateToPeer
                         
                         if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                            navigate = .chat(textInputState: nil, messageId: nil)
+                            navigate = .chat(textInputState: nil, subject: nil)
                         } else {
                             navigate = .info
                         }
@@ -2175,7 +2178,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                         for attribute in item.content.firstMessage.attributes {
                             if let attribute = attribute as? SourceReferenceMessageAttribute {
                                 openPeerId = attribute.messageId.peerId
-                                navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                             }
                         }
                         
@@ -2259,7 +2262,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             break loop
                         case let .peerMention(peerId, _):
                             foundTapAction = true
-                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, messageId: nil), nil)
+                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil), nil)
                             break loop
                         case let .textMention(name):
                             foundTapAction = true

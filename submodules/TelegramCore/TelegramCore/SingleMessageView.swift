@@ -41,7 +41,11 @@ public func singleMessageView(account: Account, messageId: MessageId, loadIfNotE
 private func fetchMessage(transaction: Transaction, account: Account, messageId: MessageId) -> Signal<Void, NoError> {
     if let peer = transaction.getPeer(messageId.peerId) {
         var signal: Signal<Api.messages.Messages, MTRpcError>?
-        if messageId.peerId.namespace == Namespaces.Peer.CloudUser || messageId.peerId.namespace == Namespaces.Peer.CloudGroup {
+        if messageId.namespace == Namespaces.Message.ScheduledCloud {
+            if let inputPeer = apiInputPeer(peer) {
+                signal = account.network.request(Api.functions.messages.getScheduledMessages(peer: inputPeer, id: [messageId.id]))
+            }
+        } else if messageId.peerId.namespace == Namespaces.Peer.CloudUser || messageId.peerId.namespace == Namespaces.Peer.CloudGroup {
             signal = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
         } else if messageId.peerId.namespace == Namespaces.Peer.CloudChannel {
             if let inputChannel = apiInputChannel(peer) {
@@ -96,7 +100,7 @@ private func fetchMessage(transaction: Transaction, account: Account, messageId:
                         })
                         
                         for message in apiMessages {
-                            if let message = StoreMessage(apiMessage: message) {
+                            if let message = StoreMessage(apiMessage: message, namespace: messageId.namespace) {
                                 let _ = transaction.addMessages([message], location: .Random)
                             }
                         }

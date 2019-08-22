@@ -78,7 +78,6 @@
 		D03E470723075FE40049C28B /* ThemeSettingsThemeItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E423075FD40049C28B /* ThemeSettingsThemeItem.swift */; };
 		D03E470823075FE40049C28B /* WallpaperGalleryToolbarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E523075FD40049C28B /* WallpaperGalleryToolbarNode.swift */; };
 		D03E470923075FE40049C28B /* CustomWallpaperPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E623075FD50049C28B /* CustomWallpaperPicker.swift */; };
-		D03E470A23075FE40049C28B /* ThemeAccentColorActionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E723075FD50049C28B /* ThemeAccentColorActionSheet.swift */; };
 		D03E470B23075FE40049C28B /* ThemePreviewControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E823075FD50049C28B /* ThemePreviewControllerNode.swift */; };
 		D03E470C23075FE40049C28B /* WallpaperGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46E923075FD50049C28B /* WallpaperGalleryController.swift */; };
 		D03E470D23075FE40049C28B /* ThemeSettingsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46EA23075FD50049C28B /* ThemeSettingsController.swift */; };
@@ -265,7 +264,6 @@
 		D03E46E423075FD40049C28B /* ThemeSettingsThemeItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsThemeItem.swift; sourceTree = "<group>"; };
 		D03E46E523075FD40049C28B /* WallpaperGalleryToolbarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryToolbarNode.swift; sourceTree = "<group>"; };
 		D03E46E623075FD50049C28B /* CustomWallpaperPicker.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CustomWallpaperPicker.swift; sourceTree = "<group>"; };
-		D03E46E723075FD50049C28B /* ThemeAccentColorActionSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeAccentColorActionSheet.swift; sourceTree = "<group>"; };
 		D03E46E823075FD50049C28B /* ThemePreviewControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemePreviewControllerNode.swift; sourceTree = "<group>"; };
 		D03E46E923075FD50049C28B /* WallpaperGalleryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WallpaperGalleryController.swift; sourceTree = "<group>"; };
 		D03E46EA23075FD50049C28B /* ThemeSettingsController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThemeSettingsController.swift; sourceTree = "<group>"; };
@@ -628,7 +626,6 @@
 			children = (
 				D03E46E623075FD50049C28B /* CustomWallpaperPicker.swift */,
 				D03E46ED23075FD60049C28B /* SettingsThemeWallpaperNode.swift */,
-				D03E46E723075FD50049C28B /* ThemeAccentColorActionSheet.swift */,
 				D03E46EC23075FD60049C28B /* ThemeAccentColorController.swift */,
 				D03E46F623075FD90049C28B /* ThemeAccentColorControllerNode.swift */,
 				D03E46FF23075FE20049C28B /* ThemeAutoNightSettingsController.swift */,
@@ -907,7 +904,6 @@
 				D03E472123075FE40049C28B /* ThemeSettingsAccentColorItem.swift in Sources */,
 				D03E469E23075F2C0049C28B /* ConfirmPhoneNumberController.swift in Sources */,
 				D03E46C723075F810049C28B /* ProxyServerActionSheetController.swift in Sources */,
-				D03E470A23075FE40049C28B /* ThemeAccentColorActionSheet.swift in Sources */,
 				D03E468123075EE90049C28B /* NotificationExceptionControllerNode.swift in Sources */,
 				D03E46C623075F810049C28B /* SaveIncomingMediaController.swift in Sources */,
 				D03E471223075FE40049C28B /* ThemeGridSearchContentNode.swift in Sources */,

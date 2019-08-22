@@ -101,8 +101,14 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         }
         
         self.colorDisposable = (self.colorValue.get()
+        |> deliverOn(Queue.concurrentDefaultQueue())
         |> map { color -> PresentationTheme in
-            return makePresentationTheme(themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true)
+            let theme = makePresentationTheme(themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true)
+            
+            let wallpaper = context.sharedContext.currentPresentationData.with { $0 }.chatWallpaper
+            let _ = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: theme, wallpaper: wallpaper)
+            
+            return theme
         }
         |> deliverOnMainQueue).start(next: { [weak self] theme in
             if let strongSelf = self {

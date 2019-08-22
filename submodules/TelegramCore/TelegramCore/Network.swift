@@ -780,7 +780,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
     }
     
     public var globalTime: TimeInterval {
-        return context.globalTime()
+        return self.context.globalTime()
     }
     
     public var currentGlobalTime: Signal<Double, NoError> {
