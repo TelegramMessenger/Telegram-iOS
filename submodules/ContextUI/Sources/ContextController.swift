@@ -579,7 +579,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             contentParentNode.updateAbsoluteRect?(absoluteContentRect, layout.size)
             
             if let reactionContextNode = self.reactionContextNode {
-                reactionContextNode.updateLayout(size: layout.size, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX + contentParentNode.contentRect.minX, y: absoluteContentRect.minY + contentParentNode.contentRect.minY), size: contentParentNode.contentRect.size), transition: transition)
+                let insets = layout.insets(options: [.statusBar])
+                transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+                reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX + contentParentNode.contentRect.minX, y: absoluteContentRect.minY + contentParentNode.contentRect.minY), size: contentParentNode.contentRect.size), transition: transition)
             }
         }
         
