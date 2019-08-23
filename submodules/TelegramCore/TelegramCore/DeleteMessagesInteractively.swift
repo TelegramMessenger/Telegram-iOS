@@ -165,7 +165,9 @@ public func clearAuthorHistory(account: Account, peerId: PeerId, memberId: PeerI
             |> `catch` { success -> Signal<Void, NoError> in
                 if success {
                     return account.postbox.transaction { transaction -> Void in
-                        transaction.removeAllMessagesWithAuthor(peerId, authorId: memberId, namespace: Namespaces.Message.Cloud)
+                        transaction.removeAllMessagesWithAuthor(peerId, authorId: memberId, namespace: Namespaces.Message.Cloud, forEachMedia: { media in
+                            processRemovedMedia(account.postbox.mediaBox, media)
+                        })
                     }
                 } else {
                     return .complete()

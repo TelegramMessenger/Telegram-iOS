@@ -2281,14 +2281,18 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                     }
                 }
             case let .DeleteMessagesWithGlobalIds(ids):
-                transaction.deleteMessagesWithGlobalIds(ids)
+                transaction.deleteMessagesWithGlobalIds(ids, forEachMedia: { media in
+                    processRemovedMedia(mediaBox, media)
+                })
             case let .DeleteMessages(ids):
                 deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: ids)
             case let .UpdateMinAvailableMessage(id):
                 if let message = transaction.getMessage(id) {
                     updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: id.peerId, minTimestamp: message.timestamp, forceRootGroupIfNotExists: false)
                 }
-                transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id)
+                transaction.deleteMessagesInRange(peerId: id.peerId, namespace: id.namespace, minId: 1, maxId: id.id, forEachMedia: { media in
+                    processRemovedMedia(mediaBox, media)
+                })
             case let .UpdatePeerChatInclusion(peerId, groupId, changedGroup):
                 let currentInclusion = transaction.getPeerChatListInclusion(peerId)
                 var currentPinningIndex: UInt16?

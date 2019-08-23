@@ -80,7 +80,7 @@ final class ReactionNode: ASDisplayNode {
         switch reaction {
         case let .reaction(value, _, path):
             switch value {
-            case "😒":
+            case "😔":
                 intrinsicSize.width *= 1.7
                 intrinsicSize.height *= 1.7
                 self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
@@ -96,6 +96,34 @@ final class ReactionNode: ASDisplayNode {
                 intrinsicSize.width *= 1.256
                 intrinsicSize.height *= 1.256
                 self.intrinsicOffset = CGPoint(x: 0.0, y: 0.05 * intrinsicSize.width)
+            case "🥳":
+                intrinsicSize.width *= 1.39
+                intrinsicSize.height *= 1.39
+                self.intrinsicOffset = CGPoint(x: 0.1 * intrinsicSize.width, y: -0.05 * intrinsicSize.width)
+            case "😭":
+                intrinsicSize.width *= 1.15
+                intrinsicSize.height *= 1.15
+                self.intrinsicOffset = CGPoint(x: 0.1 * intrinsicSize.width, y: 0.03 * intrinsicSize.width)
+            case "😒":
+                intrinsicSize.width *= 1.05
+                intrinsicSize.height *= 1.05
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
+            case "👌":
+                intrinsicSize.width *= 1.08
+                intrinsicSize.height *= 1.08
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
+            case "😐":
+                intrinsicSize.width *= 1.75
+                intrinsicSize.height *= 1.75
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.01 * intrinsicSize.width)
+            case "💩":
+                intrinsicSize.width *= 1.1
+                intrinsicSize.height *= 1.1
+                self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
+            case "😊":
+                intrinsicSize.width *= 1.2
+                intrinsicSize.height *= 1.2
+                self.intrinsicOffset = CGPoint(x: 0.0, y: -0.01 * intrinsicSize.width)
             default:
                 self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
             }
@@ -115,6 +143,8 @@ final class ReactionNode: ASDisplayNode {
         self.intrinsicSize = intrinsicSize
         
         super.init()
+        
+        //self.backgroundColor = .gray
         
         self.textBackgroundNode.addSubnode(self.textNode)
         self.addSubnode(self.textBackgroundNode)

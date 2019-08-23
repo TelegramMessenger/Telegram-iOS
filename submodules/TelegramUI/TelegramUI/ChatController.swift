@@ -530,11 +530,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     let reactions: [(String, String, String)] = [
-                        ("😒", "Sad", "sad"),
+                        ("😔", "Sad", "sad"),
                         ("😳", "Surprised", "surprised"),
                         ("😂", "Fun", "lol"),
                         ("👍", "Like", "thumbsup"),
                         ("❤", "Love", "heart"),
+                        ("🥳", "Celebrate", "celebrate"),
+                        ("😭", "Cry", "cry"),
+                        ("😒", "Meh", "meh"),
+                        ("👌", "OK", "ok"),
+                        ("😐", "Poker", "poker"),
+                        ("💩", "Poop", "poop"),
+                        ("😊", "Smile", "smile")
                     ]
                     
                     var reactionItems: [ReactionContextItem] = []
@@ -6971,8 +6978,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState { $0.withoutSelectionState() } })
                             if actions.contains(3) {
+                                let mediaBox = strongSelf.context.account.postbox.mediaBox
                                 let _ = strongSelf.context.account.postbox.transaction({ transaction -> Void in
-                                    transaction.removeAllMessagesWithAuthor(peerId, authorId: author.id, namespace: Namespaces.Message.Cloud)
+                                    deleteAllMessagesWithAuthor(transaction: transaction, mediaBox: mediaBox, peerId: peerId, authorId: author.id, namespace: Namespaces.Message.Cloud)
                                 }).start()
                                 let _ = clearAuthorHistory(account: strongSelf.context.account, peerId: peerId, memberId: author.id).start()
                             } else if actions.contains(0) {

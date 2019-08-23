@@ -477,7 +477,7 @@ public final class ShareController: ViewController {
                         if let error = error {
                             Queue.mainQueue().async {
                                 let _ = (account.postbox.transaction { transaction -> Peer? in
-                                    transaction.deleteMessages([id])
+                                    deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: [id])
                                     return transaction.getPeer(id.peerId)
                                 }
                                 |> deliverOnMainQueue).start(next: { peer in

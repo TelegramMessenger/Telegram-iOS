@@ -1,6 +1,11 @@
 import Foundation
 
 public func doesUrlMatchText(url: String, text: String) -> Bool {
+    for c in url {
+        if !c.isASCII {
+            return false
+        }
+    }
     if url == text {
         return true
     }
@@ -32,7 +37,6 @@ public extension CharacterSet {
 }
 
 public func isValidUrl(_ url: String) -> Bool {
-    
     if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: escapedUrl), ["http", "https"].contains(url.scheme), let host = url.host, host.contains(".") && url.user == nil {
         let components = host.components(separatedBy: ".")
         let domain = (components.first ?? "")
