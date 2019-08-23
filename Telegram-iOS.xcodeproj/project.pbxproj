@@ -226,13 +226,10 @@
 		D008185622B579A1008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185522B579A1008A895F /* BuildConfig.framework */; };
 		D008185822B579AD008A895F /* BuildConfig.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D008185722B579AD008A895F /* BuildConfig.framework */; };
 		D00818A522B58CCB008A895F /* WatchCommonWatch.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818A422B58CCB008A895F /* WatchCommonWatch.framework */; };
-		D00818CF22B595DB008A895F /* LightweightAccountData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818CE22B595DB008A895F /* LightweightAccountData.framework */; };
 		D00859A91B28189D00EAF753 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D00859A81B28189D00EAF753 /* Images.xcassets */; };
 		D00859AC1B28189D00EAF753 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = D00859AA1B28189D00EAF753 /* LaunchScreen.xib */; };
 		D00ED75A1FE94630001F38BD /* AppIntentVocabulary.plist in Resources */ = {isa = PBXBuildFile; fileRef = D00ED7581FE94630001F38BD /* AppIntentVocabulary.plist */; };
 		D00ED75D1FE95287001F38BD /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = D00ED75B1FE95287001F38BD /* InfoPlist.strings */; };
-		D015E011225CCEB300CB9E8A /* ReadBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E010225CCEB300CB9E8A /* ReadBuffer.swift */; };
-		D015E01F225CDF5100CB9E8A /* Api0.swift in Sources */ = {isa = PBXBuildFile; fileRef = D015E01E225CDF5000CB9E8A /* Api0.swift */; };
 		D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D015E050225D303F00CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; };
 		D015E051225D303F00CB9E8A /* WebP.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04C225D2D8F00CB9E8A /* WebP.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -302,7 +299,6 @@
 		D06706611D51185400DED3E3 /* TelegramCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D06706621D5118F500DED3E3 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06706601D51185400DED3E3 /* TelegramCore.framework */; };
 		D073E52021FF7CE900742DDD /* Crypto.m in Sources */ = {isa = PBXBuildFile; fileRef = D073E51F21FF7CE900742DDD /* Crypto.m */; };
-		D073E52222003E1E00742DDD /* Data.swift in Sources */ = {isa = PBXBuildFile; fileRef = D073E52122003E1E00742DDD /* Data.swift */; };
 		D08410501FABDD54008FFE92 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08410511FABDD54008FFE92 /* MtProtoKitDynamic.framework */; };
 		D08611B21F5711080047111E /* HockeySDK.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D01A47541F4DBED700383CC1 /* HockeySDK.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D08984FE2118B3F100918162 /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08984FD2118B3F100918162 /* MtProtoKitDynamic.framework */; };
@@ -354,6 +350,12 @@
 		D0B4AF8F1EC122A700D51FF6 /* TelegramUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; };
 		D0B4AF901EC122A700D51FF6 /* TelegramUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0400ED81D5B8F97007931CE /* TelegramUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		D0B844601DACF561005F29E1 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B8445F1DACF561005F29E1 /* libc++.tbd */; };
+		D0BAAA1823100B7A00AFC473 /* Api.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA1623100B7A00AFC473 /* Api.m */; };
+		D0BAAA1B23100C2700AFC473 /* NotificationService.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA1A23100C2700AFC473 /* NotificationService.m */; };
+		D0BAAA1E2310117200AFC473 /* StoredAccountInfos.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA1D2310117200AFC473 /* StoredAccountInfos.m */; };
+		D0BAAA21231026BC00AFC473 /* Attachments.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA20231026BC00AFC473 /* Attachments.m */; };
+		D0BAAA242310302300AFC473 /* FetchImage.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA232310302300AFC473 /* FetchImage.m */; };
+		D0BAAA272310326200AFC473 /* Serialization.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA262310326200AFC473 /* Serialization.m */; };
 		D0C2DFF81CC4D1BA0044FF83 /* MobileCoreServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */; };
 		D0CAD6A421C03BEB001E3055 /* FFMpeg.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; };
 		D0CAD6A521C03BEB001E3055 /* FFMpeg.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = D0CAD6A321C03BEB001E3055 /* FFMpeg.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -389,7 +391,6 @@
 		D0D17E8A1CAAD66600C4750B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D17E891CAAD66600C4750B /* Accelerate.framework */; };
 		D0D268791D79A70A00C422DA /* IntentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D268781D79A70A00C422DA /* IntentHandler.swift */; };
 		D0D2688E1D79A70B00C422DA /* SiriIntents.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = D0D268761D79A70A00C422DA /* SiriIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E2CE632227F0680084E3DD /* ManagedFile.swift */; };
 		D0E8B8AD2044496C00605593 /* voip_connecting.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8A82044496B00605593 /* voip_connecting.mp3 */; };
 		D0E8B8AE2044496C00605593 /* voip_end.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8A92044496C00605593 /* voip_end.caf */; };
 		D0E8B8AF2044496C00605593 /* voip_fail.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0E8B8AA2044496C00605593 /* voip_fail.caf */; };
@@ -399,10 +400,6 @@
 		D0E8C2E02285EA6A009F26E8 /* BlackIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E8C2DF2285EA6A009F26E8 /* BlackIcon@3x.png */; };
 		D0ECCB7F1FE9C38500609802 /* Telegram_iOS_UITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */; };
 		D0ECCB8A1FE9C4AC00609802 /* SnapshotHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */; };
-		D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633921FF3EDF001D4648 /* AccountData.swift */; };
-		D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0400EE41D5B912E007931CE /* NotificationService.swift */; };
-		D0ED633F21FF46E4001D4648 /* ImageData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED633E21FF46E4001D4648 /* ImageData.swift */; };
-		D0ED634121FF4786001D4648 /* Serialization.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ED634021FF4786001D4648 /* Serialization.swift */; };
 		D0F575132083B96B00F1C1E1 /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F575122083B96B00F1C1E1 /* CloudKit.framework */; };
 		D0FC1948201D2DA800FEDBB2 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */; };
 /* End PBXBuildFile section */
@@ -1060,6 +1057,18 @@
 		D0B844591DACF507005F29E1 /* HockeySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HockeySDK.framework; path = "third-party/HockeySDK.framework"; sourceTree = "<group>"; };
 		D0B8445A1DACF507005F29E1 /* HockeySDKResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = HockeySDKResources.bundle; path = "third-party/HockeySDKResources.bundle"; sourceTree = "<group>"; };
 		D0B8445F1DACF561005F29E1 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		D0BAAA1623100B7A00AFC473 /* Api.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Api.m; sourceTree = "<group>"; };
+		D0BAAA1723100B7A00AFC473 /* Api.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Api.h; sourceTree = "<group>"; };
+		D0BAAA1923100C2700AFC473 /* NotificationService.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NotificationService.h; sourceTree = "<group>"; };
+		D0BAAA1A23100C2700AFC473 /* NotificationService.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NotificationService.m; sourceTree = "<group>"; };
+		D0BAAA1C2310117200AFC473 /* StoredAccountInfos.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StoredAccountInfos.h; sourceTree = "<group>"; };
+		D0BAAA1D2310117200AFC473 /* StoredAccountInfos.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = StoredAccountInfos.m; sourceTree = "<group>"; };
+		D0BAAA1F231026BC00AFC473 /* Attachments.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Attachments.h; sourceTree = "<group>"; };
+		D0BAAA20231026BC00AFC473 /* Attachments.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Attachments.m; sourceTree = "<group>"; };
+		D0BAAA222310302300AFC473 /* FetchImage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FetchImage.h; sourceTree = "<group>"; };
+		D0BAAA232310302300AFC473 /* FetchImage.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FetchImage.m; sourceTree = "<group>"; };
+		D0BAAA252310326200AFC473 /* Serialization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Serialization.h; sourceTree = "<group>"; };
+		D0BAAA262310326200AFC473 /* Serialization.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Serialization.m; sourceTree = "<group>"; };
 		D0C2DFF51CC4D1B20044FF83 /* AssetsLibrary.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AssetsLibrary.framework; path = System/Library/Frameworks/AssetsLibrary.framework; sourceTree = SDKROOT; };
 		D0C2DFF71CC4D1BA0044FF83 /* MobileCoreServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MobileCoreServices.framework; path = System/Library/Frameworks/MobileCoreServices.framework; sourceTree = SDKROOT; };
 		D0C2DFF91CC4D1C90044FF83 /* QuickLook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLook.framework; path = System/Library/Frameworks/QuickLook.framework; sourceTree = SDKROOT; };
@@ -1148,7 +1157,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D00818CF22B595DB008A895F /* LightweightAccountData.framework in Frameworks */,
 				D008185822B579AD008A895F /* BuildConfig.framework in Frameworks */,
 				D015E04D225D2D8F00CB9E8A /* WebP.framework in Frameworks */,
 				D0CCD61D222EFFB000EE1E08 /* MtProtoKitDynamic.framework in Frameworks */,
@@ -2157,6 +2165,18 @@
 		D0400EE31D5B912E007931CE /* NotificationService */ = {
 			isa = PBXGroup;
 			children = (
+				D0BAAA1723100B7A00AFC473 /* Api.h */,
+				D0BAAA1623100B7A00AFC473 /* Api.m */,
+				D0BAAA1923100C2700AFC473 /* NotificationService.h */,
+				D0BAAA1A23100C2700AFC473 /* NotificationService.m */,
+				D0BAAA1C2310117200AFC473 /* StoredAccountInfos.h */,
+				D0BAAA1D2310117200AFC473 /* StoredAccountInfos.m */,
+				D0BAAA1F231026BC00AFC473 /* Attachments.h */,
+				D0BAAA20231026BC00AFC473 /* Attachments.m */,
+				D0BAAA222310302300AFC473 /* FetchImage.h */,
+				D0BAAA232310302300AFC473 /* FetchImage.m */,
+				D0BAAA252310326200AFC473 /* Serialization.h */,
+				D0BAAA262310326200AFC473 /* Serialization.m */,
 				D015E01E225CDF5000CB9E8A /* Api0.swift */,
 				D000CAC221FB6E170011B15D /* NotificationService-AppStore.entitlements */,
 				D000CAC321FB6E170011B15D /* NotificationService-AppStoreLLC.entitlements */,
@@ -3175,15 +3195,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D073E52222003E1E00742DDD /* Data.swift in Sources */,
-				D0E2CE642227F0680084E3DD /* ManagedFile.swift in Sources */,
-				D0ED633D21FF4580001D4648 /* NotificationService.swift in Sources */,
-				D015E01F225CDF5100CB9E8A /* Api0.swift in Sources */,
-				D0ED633A21FF3EDF001D4648 /* AccountData.swift in Sources */,
-				D0ED634121FF4786001D4648 /* Serialization.swift in Sources */,
+				D0BAAA242310302300AFC473 /* FetchImage.m in Sources */,
+				D0BAAA1E2310117200AFC473 /* StoredAccountInfos.m in Sources */,
+				D0BAAA1823100B7A00AFC473 /* Api.m in Sources */,
 				D073E52021FF7CE900742DDD /* Crypto.m in Sources */,
-				D0ED633F21FF46E4001D4648 /* ImageData.swift in Sources */,
-				D015E011225CCEB300CB9E8A /* ReadBuffer.swift in Sources */,
+				D0BAAA1B23100C2700AFC473 /* NotificationService.m in Sources */,
+				D0BAAA21231026BC00AFC473 /* Attachments.m in Sources */,
+				D0BAAA272310326200AFC473 /* Serialization.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

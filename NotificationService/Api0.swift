@@ -29,8 +29,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     return dict
 }()
 
-struct Api {
-    static func parse(_ buffer: Buffer) -> Any? {
+public struct Api {
+    public static func parse(_ buffer: Buffer) -> Any? {
         let reader = BufferReader(buffer)
         if let signature = reader.readInt32() {
             return parse(reader, signature: signature)
@@ -38,17 +38,17 @@ struct Api {
         return nil
     }
     
-        static func parse(_ reader: BufferReader, signature: Int32) -> Any? {
+        public static func parse(_ reader: BufferReader, signature: Int32) -> Any? {
             if let parser = parsers[signature] {
                 return parser(reader)
             }
             else {
-                //Logger.shared.log("TL", "Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
+                telegramApiLog("Type constructor \(String(signature, radix: 16, uppercase: false)) not found")
                 return nil
             }
         }
         
-        static func parseVector<T>(_ reader: BufferReader, elementSignature: Int32, elementType: T.Type) -> [T]? {
+        public static func parseVector<T>(_ reader: BufferReader, elementSignature: Int32, elementType: T.Type) -> [T]? {
         if let count = reader.readInt32() {
             var array = [T]()
             var i: Int32 = 0
@@ -83,7 +83,7 @@ struct Api {
         return nil
     }
     
-    static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
+    public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
         switch object {
             case let _1 as Api.Photo:
                 _1.serialize(buffer, boxed)
@@ -107,12 +107,12 @@ struct Api {
     }
 
 }
-extension Api {
-    enum Photo: TypeConstructorDescription {
+public extension Api {
+    public enum Photo: TypeConstructorDescription {
         case photoEmpty(id: Int64)
         case photo(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, sizes: [Api.PhotoSize], dcId: Int32)
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .photoEmpty(let id):
                     if boxed {
@@ -139,7 +139,7 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .photoEmpty(let id):
                 return ("photoEmpty", [("id", id)])
@@ -148,7 +148,7 @@ extension Api {
     }
     }
     
-        static func parse_photoEmpty(_ reader: BufferReader) -> Photo? {
+        public static func parse_photoEmpty(_ reader: BufferReader) -> Photo? {
             var _1: Int64?
             _1 = reader.readInt64()
             let _c1 = _1 != nil
@@ -159,7 +159,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_photo(_ reader: BufferReader) -> Photo? {
+        public static func parse_photo(_ reader: BufferReader) -> Photo? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -192,13 +192,13 @@ extension Api {
         }
     
     }
-    enum PhotoSize: TypeConstructorDescription {
+    public enum PhotoSize: TypeConstructorDescription {
         case photoSizeEmpty(type: String)
         case photoSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, size: Int32)
         case photoCachedSize(type: String, location: Api.FileLocation, w: Int32, h: Int32, bytes: Buffer)
         case photoStrippedSize(type: String, bytes: Buffer)
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .photoSizeEmpty(let type):
                     if boxed {
@@ -236,7 +236,7 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .photoSizeEmpty(let type):
                 return ("photoSizeEmpty", [("type", type)])
@@ -249,7 +249,7 @@ extension Api {
     }
     }
     
-        static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
+        public static func parse_photoSizeEmpty(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -260,7 +260,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_photoSize(_ reader: BufferReader) -> PhotoSize? {
+        public static func parse_photoSize(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Api.FileLocation?
@@ -285,7 +285,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_photoCachedSize(_ reader: BufferReader) -> PhotoSize? {
+        public static func parse_photoCachedSize(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Api.FileLocation?
@@ -310,7 +310,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_photoStrippedSize(_ reader: BufferReader) -> PhotoSize? {
+        public static func parse_photoStrippedSize(_ reader: BufferReader) -> PhotoSize? {
             var _1: String?
             _1 = parseString(reader)
             var _2: Buffer?
@@ -326,10 +326,10 @@ extension Api {
         }
     
     }
-    enum FileLocation: TypeConstructorDescription {
+    public enum FileLocation: TypeConstructorDescription {
         case fileLocationToBeDeprecated(volumeId: Int64, localId: Int32)
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .fileLocationToBeDeprecated(let volumeId, let localId):
                     if boxed {
@@ -341,14 +341,14 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .fileLocationToBeDeprecated(let volumeId, let localId):
                 return ("fileLocationToBeDeprecated", [("volumeId", volumeId), ("localId", localId)])
     }
     }
     
-        static func parse_fileLocationToBeDeprecated(_ reader: BufferReader) -> FileLocation? {
+        public static func parse_fileLocationToBeDeprecated(_ reader: BufferReader) -> FileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int32?
@@ -364,7 +364,7 @@ extension Api {
         }
     
     }
-    enum DocumentAttribute: TypeConstructorDescription {
+    public enum DocumentAttribute: TypeConstructorDescription {
         case documentAttributeImageSize(w: Int32, h: Int32)
         case documentAttributeAnimated
         case documentAttributeSticker(flags: Int32, alt: String, stickerset: Api.InputStickerSet, maskCoords: Api.MaskCoords?)
@@ -373,7 +373,7 @@ extension Api {
         case documentAttributeFilename(fileName: String)
         case documentAttributeHasStickers
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .documentAttributeImageSize(let w, let h):
                     if boxed {
@@ -431,7 +431,7 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .documentAttributeImageSize(let w, let h):
                 return ("documentAttributeImageSize", [("w", w), ("h", h)])
@@ -450,7 +450,7 @@ extension Api {
     }
     }
     
-        static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
+        public static func parse_documentAttributeImageSize(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -464,10 +464,10 @@ extension Api {
                 return nil
             }
         }
-        static func parse_documentAttributeAnimated(_ reader: BufferReader) -> DocumentAttribute? {
+        public static func parse_documentAttributeAnimated(_ reader: BufferReader) -> DocumentAttribute? {
             return Api.DocumentAttribute.documentAttributeAnimated
         }
-        static func parse_documentAttributeSticker(_ reader: BufferReader) -> DocumentAttribute? {
+        public static func parse_documentAttributeSticker(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: String?
@@ -491,7 +491,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
+        public static func parse_documentAttributeVideo(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -511,7 +511,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_documentAttributeAudio(_ reader: BufferReader) -> DocumentAttribute? {
+        public static func parse_documentAttributeAudio(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int32?
@@ -534,7 +534,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_documentAttributeFilename(_ reader: BufferReader) -> DocumentAttribute? {
+        public static func parse_documentAttributeFilename(_ reader: BufferReader) -> DocumentAttribute? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -545,17 +545,17 @@ extension Api {
                 return nil
             }
         }
-        static func parse_documentAttributeHasStickers(_ reader: BufferReader) -> DocumentAttribute? {
+        public static func parse_documentAttributeHasStickers(_ reader: BufferReader) -> DocumentAttribute? {
             return Api.DocumentAttribute.documentAttributeHasStickers
         }
     
     }
-    enum InputStickerSet: TypeConstructorDescription {
+    public enum InputStickerSet: TypeConstructorDescription {
         case inputStickerSetEmpty
         case inputStickerSetID(id: Int64, accessHash: Int64)
         case inputStickerSetShortName(shortName: String)
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputStickerSetEmpty:
                     if boxed {
@@ -579,7 +579,7 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputStickerSetEmpty:
                 return ("inputStickerSetEmpty", [])
@@ -590,10 +590,10 @@ extension Api {
     }
     }
     
-        static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
+        public static func parse_inputStickerSetEmpty(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetEmpty
         }
-        static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
+        public static func parse_inputStickerSetID(_ reader: BufferReader) -> InputStickerSet? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -607,7 +607,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
+        public static func parse_inputStickerSetShortName(_ reader: BufferReader) -> InputStickerSet? {
             var _1: String?
             _1 = parseString(reader)
             let _c1 = _1 != nil
@@ -620,11 +620,11 @@ extension Api {
         }
     
     }
-    enum InputFileLocation: TypeConstructorDescription {
+    public enum InputFileLocation: TypeConstructorDescription {
         case inputPhotoFileLocation(id: Int64, accessHash: Int64, fileReference: Buffer, thumbSize: String)
         case inputDocumentFileLocation(id: Int64, accessHash: Int64, fileReference: Buffer, thumbSize: String)
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .inputPhotoFileLocation(let id, let accessHash, let fileReference, let thumbSize):
                     if boxed {
@@ -647,7 +647,7 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputPhotoFileLocation(let id, let accessHash, let fileReference, let thumbSize):
                 return ("inputPhotoFileLocation", [("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("thumbSize", thumbSize)])
@@ -656,7 +656,7 @@ extension Api {
     }
     }
     
-        static func parse_inputPhotoFileLocation(_ reader: BufferReader) -> InputFileLocation? {
+        public static func parse_inputPhotoFileLocation(_ reader: BufferReader) -> InputFileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -676,7 +676,7 @@ extension Api {
                 return nil
             }
         }
-        static func parse_inputDocumentFileLocation(_ reader: BufferReader) -> InputFileLocation? {
+        public static func parse_inputDocumentFileLocation(_ reader: BufferReader) -> InputFileLocation? {
             var _1: Int64?
             _1 = reader.readInt64()
             var _2: Int64?
@@ -698,10 +698,10 @@ extension Api {
         }
     
     }
-    enum MaskCoords: TypeConstructorDescription {
+    public enum MaskCoords: TypeConstructorDescription {
         case maskCoords(n: Int32, x: Double, y: Double, zoom: Double)
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .maskCoords(let n, let x, let y, let zoom):
                     if boxed {
@@ -715,14 +715,14 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .maskCoords(let n, let x, let y, let zoom):
                 return ("maskCoords", [("n", n), ("x", x), ("y", y), ("zoom", zoom)])
     }
     }
     
-        static func parse_maskCoords(_ reader: BufferReader) -> MaskCoords? {
+        public static func parse_maskCoords(_ reader: BufferReader) -> MaskCoords? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Double?
@@ -744,10 +744,10 @@ extension Api {
         }
     
     }
-    enum Document: TypeConstructorDescription {
+    public enum Document: TypeConstructorDescription {
         case document(flags: Int32, id: Int64, accessHash: Int64, fileReference: Buffer, date: Int32, mimeType: String, size: Int32, thumbs: [Api.PhotoSize]?, dcId: Int32, attributes: [Api.DocumentAttribute])
     
-    func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let dcId, let attributes):
                     if boxed {
@@ -775,14 +775,14 @@ extension Api {
     }
     }
     
-    func descriptionFields() -> (String, [(String, Any)]) {
+    public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .document(let flags, let id, let accessHash, let fileReference, let date, let mimeType, let size, let thumbs, let dcId, let attributes):
                 return ("document", [("flags", flags), ("id", id), ("accessHash", accessHash), ("fileReference", fileReference), ("date", date), ("mimeType", mimeType), ("size", size), ("thumbs", thumbs), ("dcId", dcId), ("attributes", attributes)])
     }
     }
     
-        static func parse_document(_ reader: BufferReader) -> Document? {
+        public static func parse_document(_ reader: BufferReader) -> Document? {
             var _1: Int32?
             _1 = reader.readInt32()
             var _2: Int64?
@@ -827,8 +827,8 @@ extension Api {
     
     }
 }
-extension Api {
-    struct functions {
+public extension Api {
+    public struct functions {
         
     }
 }
