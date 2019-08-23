@@ -29,12 +29,12 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
     transaction.deleteMessages(ids)
 }
 
-public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId) {
+public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
     if peerId.namespace == Namespaces.Peer.SecretChat {
         transaction.withAllMessages(peerId: peerId, { message in
             removeMessageMedia(message: message, mediaBox: mediaBox)
             return true
         })
     }
-    transaction.clearHistory(peerId)
+    transaction.clearHistory(peerId, namespaces: namespaces)
 }

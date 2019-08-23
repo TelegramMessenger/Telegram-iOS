@@ -81,7 +81,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
     }
     
     deinit {
-        stickerFetchedDisposable.dispose()
+        self.stickerFetchedDisposable.dispose()
     }
     
     override func didLoad() {

@@ -106,7 +106,11 @@ private func requestEditMessageInternal(account: Account, messageId: MessageId, 
                         case _ as TelegramMediaImage, _ as TelegramMediaFile:
                             break
                         default:
-                            return (nil, nil, SimpleDictionary())
+                            if let _ = scheduleTime {
+                                break
+                            } else {
+                                return (nil, nil, SimpleDictionary())
+                            }
                     }
                 }
             }

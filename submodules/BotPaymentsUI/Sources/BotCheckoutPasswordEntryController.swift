@@ -154,6 +154,7 @@ private final class BotCheckoutPasswordAlertContentNode: AlertContentNode {
         self.textFieldNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(12.0)]
         self.textFieldNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
         self.textFieldNode.textField.isSecureTextEntry = true
+        self.textFieldNode.textField.tintColor = theme.list.itemAccentColor
         
         super.init()
         

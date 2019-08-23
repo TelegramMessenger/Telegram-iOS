@@ -223,6 +223,8 @@ public final class DeviceAccess {
                             subscriber.putNext(.denied)
                         case .notDetermined:
                             subscriber.putNext(.notDetermined)
+                        @unknown default:
+                            fatalError()
                     }
                     subscriber.putCompletion()
                     return EmptyDisposable
@@ -333,6 +335,8 @@ public final class DeviceAccess {
                                     value = false
                                 case .authorized:
                                     value = true
+                                @unknown default:
+                                    fatalError()
                             }
                             let _ = cachedMediaLibraryAccessStatus.swap(value)
                             continueWithValue(value)
@@ -376,7 +380,9 @@ public final class DeviceAccess {
                             }
                         case .notDetermined:
                             completion(true)
-                    }
+                        @unknown default:
+                            fatalError()
+                }
                 case .contacts:
                     let _ = (self.contactsPromise.get()
                     |> take(1)

@@ -144,6 +144,7 @@ final class FormControllerTextInputItemNode: FormBlockItemNode<FormControllerTex
             }
             
             self.textField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.textField.textField.tintColor = theme.list.itemAccentColor
             
             let attributedPlaceholder = NSAttributedString(string: item.placeholder, font: textFont, textColor: theme.list.itemPlaceholderTextColor)
             if !(self.textField.textField.attributedPlaceholder?.isEqual(to: attributedPlaceholder) ?? false) {

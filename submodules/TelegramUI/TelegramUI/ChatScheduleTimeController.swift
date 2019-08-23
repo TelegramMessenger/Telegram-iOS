@@ -24,6 +24,8 @@ final class ChatScheduleTimeController: ViewController {
     private let currentTime: Int32?
     private let completion: (Int32) -> Void
     
+    private var presentationDataDisposable: Disposable?
+    
     init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32? = nil, completion: @escaping (Int32) -> Void) {
         self.context = context
         self.mode = mode
@@ -32,11 +34,22 @@ final class ChatScheduleTimeController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.presentationDataDisposable = (context.sharedContext.presentationData
+        |> deliverOnMainQueue).start(next: { [weak self] presentationData in
+            if let strongSelf = self {
+                strongSelf.controllerNode.updatePresentationData(presentationData)
+            }
+        })
+        
         self.statusBar.statusBarStyle = .Ignore
     }
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.presentationDataDisposable?.dispose()
     }
     
     override public func loadDisplayNode() {

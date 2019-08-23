@@ -208,6 +208,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         
                         if strongSelf.isNodeLoaded {
                             strongSelf.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
+                            strongSelf.textNode.tintColor = item.theme.list.itemAccentColor
                         }
                     }
                     

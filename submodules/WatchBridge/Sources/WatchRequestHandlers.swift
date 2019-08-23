@@ -379,6 +379,8 @@ final class WatchMediaHandler: WatchRequestHandler {
                     round = true
                 case .large:
                     targetSize = CGSize(width: 150, height: 150);
+                @unknown default:
+                    fatalError()
             }
             
             return SSignal { subscriber in

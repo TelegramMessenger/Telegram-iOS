@@ -503,21 +503,10 @@ open class LegacyController: ViewController, PresentableController {
         switch self.presentation {
             case .modal:
                 self.controllerNode.animateModalOut { [weak self] in
-                    if let controller = self?.legacyController as? TGViewController {
-                        //controller.didDismiss()
-                    } else if let controller = self?.legacyController as? TGNavigationController {
-                        //controller.didDismiss()
-                    }
                     self?.presentingViewController?.dismiss(animated: false, completion: completion)
                 }
             case .custom:
-                if let controller = self.legacyController as? TGViewController {
-                    //controller.didDismiss()
-                } else if let controller = self.legacyController as? TGNavigationController {
-                    //controller.didDismiss()
-                }
                 self.presentingViewController?.dismiss(animated: false, completion: completion)
-            
             case .navigation:
                 break
         }

@@ -340,7 +340,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             if current.activeServer != server {
-                if let _ = current.servers.index(of: server) {
+                if let _ = current.servers.firstIndex(of: server) {
                     current.activeServer = server
                     current.enabled = true
                 }
@@ -352,7 +352,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
     }, removeServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
-            if let index = current.servers.index(of: server) {
+            if let index = current.servers.firstIndex(of: server) {
                 current.servers.remove(at: index)
                 if current.activeServer == server {
                     current.activeServer = nil
@@ -462,7 +462,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
 
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
-            if let index = current.servers.index(of: fromServer) {
+            if let index = current.servers.firstIndex(of: fromServer) {
                 current.servers.remove(at: index)
             }
             if let referenceServer = referenceServer {

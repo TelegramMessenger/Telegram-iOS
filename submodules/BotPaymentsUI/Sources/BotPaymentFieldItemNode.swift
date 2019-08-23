@@ -80,6 +80,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
             self.textField.textField.textColor = theme.list.itemPrimaryTextColor
             self.textField.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: titleFont, textColor: theme.list.itemPlaceholderTextColor)
             self.textField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.textField.textField.tintColor = theme.list.itemAccentColor
         }
         
         let leftInset: CGFloat = 16.0
@@ -97,6 +98,7 @@ final class BotPaymentFieldItemNode: BotPaymentItemNode, UITextFieldDelegate {
             self.theme = theme
             self.titleNode.attributedText = NSAttributedString(string: self.title, font: titleFont, textColor: theme.list.itemPrimaryTextColor)
             self.textField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.textField.textField.tintColor = theme.list.itemAccentColor
         }
         
         let leftInset: CGFloat = 16.0

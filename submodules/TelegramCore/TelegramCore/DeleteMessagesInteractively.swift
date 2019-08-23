@@ -90,16 +90,18 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: In
     return postbox.transaction { transaction -> Void in
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
             cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil, type: CloudChatClearHistoryType(type))
-            if type != .scheduledMessages {
+            if type == .scheduledMessages {
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .just(Namespaces.Message.allScheduled))
+            } else {
                 var topIndex: MessageIndex?
                 if let topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud), let topMessage = transaction.getMessage(topMessageId) {
                     topIndex = topMessage.index
                 }
             
-                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .not(Namespaces.Message.allScheduled))
                 if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference {
                     cloudChatAddClearHistoryOperation(transaction: transaction, peerId: migrationReference.maxMessageId.peerId, explicitTopMessageId: MessageId(peerId: migrationReference.maxMessageId.peerId, namespace: migrationReference.maxMessageId.namespace, id: migrationReference.maxMessageId.id + 1), type: CloudChatClearHistoryType(type))
-                    clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: migrationReference.maxMessageId.peerId)
+                    clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: migrationReference.maxMessageId.peerId, namespaces: .all)
                 }
                 if let topIndex = topIndex {
                     if peerId.namespace == Namespaces.Peer.CloudUser {
@@ -110,7 +112,7 @@ public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: In
                 }
             }
         } else if peerId.namespace == Namespaces.Peer.SecretChat {
-            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
+            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .all)
             
             if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                 var layer: SecretChatLayer?

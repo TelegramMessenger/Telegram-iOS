@@ -543,6 +543,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             reactionItems.append(ReactionContextItem(value: value, text: text, path: path))
                         }
                     }
+                    if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                        reactionItems = []
+                    }
                     let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: reactionItems, recognizer: recognizer)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
@@ -1393,6 +1396,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, requestSelectMessagePollOption: { [weak self] id, opaqueIdentifier in
             guard let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction else {
+                return
+            }
+            guard !strongSelf.presentationInterfaceState.isScheduledMessages else {
+                strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.ScheduledMessages_PollUnavailable, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 return
             }
             if controllerInteraction.pollActionState.pollMessageIdsInProgress[id] == nil {
@@ -2804,7 +2811,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         text = "\(count) messages selected"
                     }
-                        UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: text)
+                    UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: text)
                 }
             }
         }, deleteSelectedMessages: { [weak self] in
@@ -4547,6 +4554,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, transition: transition, interactive: interactive)
         }
         
+        if let selectionState = self.presentationInterfaceState.interfaceState.selectionState, !selectionState.selectedIds.isEmpty {
+            self.chatTitleView?.titleContent = .custom(self.presentationData.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)))
+        } else {
+            
+        }
+        
         if let button = leftNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction))  {
             if self.leftNavigationButton != button {
                 var animated = transition.isAnimated
@@ -4586,7 +4599,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         switch updatedChatPresentationInterfaceState.mode {
             case .standard:
                 self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
-                    self.deferScreenEdgeGestures = []
+                self.deferScreenEdgeGestures = []
             case .overlay:
                 self.statusBar.statusBarStyle = .Hide
                 self.deferScreenEdgeGestures = [.top]
@@ -7383,9 +7396,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if let peer = peer as? TelegramUser {
                     let recipientHandle = INPersonHandle(value: "tg\(peerId.id)", type: .unknown)
                     let recipient = INPerson(personHandle: recipientHandle, nameComponents: nil, displayName: peer.displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peerId.id)")
-                    
                     let intent = INSendMessageIntent(recipients: [recipient], content: nil, groupName: nil, serviceName: nil, sender: nil)
-                    
                     let interaction = INInteraction(intent: intent, response: nil)
                     interaction.direction = .outgoing
                     interaction.donate { error in

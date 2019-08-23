@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import TelegramPresentationData
 
 private func generateShareButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationShare"), color: theme.rootController.navigationBar.accentTextColor)

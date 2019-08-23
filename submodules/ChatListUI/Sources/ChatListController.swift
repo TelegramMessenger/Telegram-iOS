@@ -853,7 +853,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         self.chatListDisplayNode.isEmptyUpdated = { [weak self] isEmpty in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let _ = strongSelf.validLayout {
                 if isEmpty {
                     searchContentNode.updateListVisibleContentOffset(.known(0.0))
                 }

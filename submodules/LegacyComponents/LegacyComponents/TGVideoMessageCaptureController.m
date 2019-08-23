@@ -1330,8 +1330,9 @@ static UIImage *startImage = nil;
     {
         NSTimeInterval timestamp = timestampVal.doubleValue;
         NSNumber *closestTimestamp = [self closestTimestampForTimestamp:timestamp timestamps:thumbnailTimestamps start:i finalIndex:&i];
-        
-        [thumbnails addObject:_thumbnails[closestTimestamp]];
+        if (closestTimestamp != nil) {
+            [thumbnails addObject:_thumbnails[closestTimestamp]];
+        }
     }];
     
     return thumbnails;
@@ -1339,6 +1340,9 @@ static UIImage *startImage = nil;
 
 - (NSNumber *)closestTimestampForTimestamp:(NSTimeInterval)timestamp timestamps:(NSArray *)timestamps start:(NSUInteger)start finalIndex:(NSUInteger *)finalIndex
 {
+    if (start >= timestamps.count) {
+        return nil;
+    }
     NSTimeInterval leftTimestamp = [timestamps[start - 1] doubleValue];
     NSTimeInterval rightTimestamp = [timestamps[start] doubleValue];
     

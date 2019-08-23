@@ -71,7 +71,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     return false
                 }
             case let .peer(lhsIndex, lhsTheme, lhsPeer, lhsAssociatedPeer, lhsPresence, lhsStrings):
-                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme {
+                if case let .peer(rhsIndex, rhsTheme, rhsPeer, rhsAssociatedPeer, rhsPresence, rhsStrings) = rhs, lhsPeer.isEqual(rhsPeer) && arePeersEqual(lhsAssociatedPeer, rhsAssociatedPeer) && lhsIndex == rhsIndex && lhsStrings === rhsStrings && lhsTheme === rhsTheme && arePeerPresencesEqual(lhsPresence, rhsPresence) {
                     return true
                 } else {
                     return false
@@ -436,7 +436,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToItem: GridNodeScrollToItem?
         if !self.contentGridNode.isHidden, let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.entries.index(where: { $0.peer.peerId == ensurePeerVisibleOnLayout }) {
+            if let index = self.entries.firstIndex(where: { $0.peer.peerId == ensurePeerVisibleOnLayout }) {
                 scrollToItem = GridNodeScrollToItem(index: index, position: .visible, transition: transition, directionHint: .up, adjustForSection: false)
             }
         }
@@ -444,7 +444,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
         var scrollToRecentItem: GridNodeScrollToItem?
         if !self.recentGridNode.isHidden, let ensurePeerVisibleOnLayout = self.ensurePeerVisibleOnLayout {
             self.ensurePeerVisibleOnLayout = nil
-            if let index = self.recentEntries.index(where: {
+            if let index = self.recentEntries.firstIndex(where: {
                 switch $0 {
                     case .topPeers:
                         return false

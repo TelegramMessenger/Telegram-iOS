@@ -838,7 +838,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode<BotCheckoutEntry>,
                             }
                             
                             if let shippingOptions = strongSelf.currentValidatedFormInfo?.shippingOptions, let shippingOptionId = strongSelf.currentShippingOptionId {
-                                if let shippingOptionIndex = shippingOptions.index(where: { $0.id == shippingOptionId }) {
+                                if let shippingOptionIndex = shippingOptions.firstIndex(where: { $0.id == shippingOptionId }) {
                                     for price in shippingOptions[shippingOptionIndex].prices {
                                         totalAmount += price.amount
                                         

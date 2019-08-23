@@ -184,6 +184,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
         if let item = self.item {
             self.phoneNode.numberField?.textField.textColor = item.theme.list.itemPrimaryTextColor
             self.phoneNode.numberField?.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.phoneNode.numberField?.textField.tintColor = item.theme.list.itemAccentColor
         }
     }
     
@@ -233,6 +234,7 @@ class UserInfoEditingPhoneItemNode: ItemListRevealOptionsItemNode, ItemListItemN
                         
                         strongSelf.phoneNode.numberField?.textField.textColor = updatedTheme.list.itemPrimaryTextColor
                         strongSelf.phoneNode.numberField?.textField.keyboardAppearance = updatedTheme.chatList.searchBarKeyboardColor.keyboardAppearance
+                        strongSelf.phoneNode.numberField?.textField.tintColor = item.theme.list.itemAccentColor
                         
                         strongSelf.clearButton.setImage(generateClearIcon(color: updatedTheme.list.inputClearButtonColor), for: [])
                     }

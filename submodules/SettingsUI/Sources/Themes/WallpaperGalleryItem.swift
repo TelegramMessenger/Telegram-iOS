@@ -267,7 +267,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                         }
                                     }
                                     return
-                                } else if let offset = self.validOffset, self.arguments.colorPreview && fabs(offset) > 0.0 {
+                                } else if let offset = self.validOffset, self.arguments.colorPreview && abs(offset) > 0.0 {
                                     return
                                 }
                                 else {
@@ -314,7 +314,7 @@ final class WallpaperGalleryItemNode: GalleryItemNode {
                                 let convertedRepresentations: [ImageRepresentationWithReference] = representations.map({ ImageRepresentationWithReference(representation: $0, reference: .wallpaper(resource: $0.resource)) })
                                 signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
                                 
-                                if let largestIndex = convertedRepresentations.index(where: { $0.representation == largestSize }) {
+                                if let largestIndex = convertedRepresentations.firstIndex(where: { $0.representation == largestSize }) {
                                     fetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: convertedRepresentations[largestIndex].reference)
                                 } else {
                                     fetchSignal = .complete()

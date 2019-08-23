@@ -60,6 +60,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputField.textField.textColor = theme.list.freeInputField.primaryColor
         self.inputField.textField.attributedPlaceholder = NSAttributedString(string: hint.isEmpty ? strings.LoginPassword_PasswordPlaceholder : hint, font: passwordFont, textColor: theme.list.freeInputField.placeholderColor)
         self.inputField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.inputField.textField.tintColor = theme.list.itemAccentColor
         
         self.buttonNode = HighlightableButtonNode()
         

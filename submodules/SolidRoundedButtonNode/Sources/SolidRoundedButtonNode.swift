@@ -71,9 +71,12 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     }
     
     public func updateTheme(_ theme: PresentationTheme) {
+        guard theme !== self.theme else {
+            return
+        }
         self.theme = theme
         
-        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.list.itemCheckColors.fillColor)
+        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: self.buttonCornerRadius, color: theme.list.itemCheckColors.fillColor)
         self.buttonGlossNode.color = theme.list.itemCheckColors.foregroundColor
         self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
     }

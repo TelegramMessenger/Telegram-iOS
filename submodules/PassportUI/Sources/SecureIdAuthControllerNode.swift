@@ -163,7 +163,6 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         
         let wrappingContentRect = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - insets.bottom - navigationBarHeight))
         let contentRect = CGRect(origin: CGPoint(), size: wrappingContentRect.size)
-        let overscrollY = self.scrollNode.view.bounds.minY
         transition.updateFrame(node: self.scrollNode, frame: wrappingContentRect)
         
         if let contentNode = self.contentNode {
@@ -608,7 +607,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         }
         
         let completionImpl: (SecureIdDocumentFormRequestedData) -> Void = { [weak self] requestedData in
-            guard let strongSelf = self, let state = strongSelf.state, let verificationState = state.verificationState, case let .verified(context) = verificationState, let formData = form.formData, let validLayout = strongSelf.validLayout?.0 else {
+            guard let strongSelf = self, let state = strongSelf.state, let verificationState = state.verificationState, case .verified = verificationState, let formData = form.formData, let validLayout = strongSelf.validLayout?.0 else {
                 return
             }
             

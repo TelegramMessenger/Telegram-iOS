@@ -263,13 +263,8 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.image = generateLoupeIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor)
         self.clearButton.setImage(generateClearIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor), for: [])
         self.cancelButton.setAttributedTitle(NSAttributedString(string: strings.Common_Cancel, font: Font.regular(17.0), textColor: theme.chat.inputPanel.panelControlAccentColor), for: [])
-        
-        switch theme.chatList.searchBarKeyboardColor {
-            case .light:
-                self.textField.keyboardAppearance = .default
-            case .dark:
-                self.textField.keyboardAppearance = .dark
-        }
+        self.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textField.tintColor = theme.list.itemAccentColor
         
         if let (boundingSize, leftInset, rightInset) = self.validLayout {
             self.updateLayout(boundingSize: boundingSize, leftInset: leftInset, rightInset: rightInset, transition: .immediate)

@@ -128,8 +128,10 @@ final class ChangePhoneNumberControllerNode: ASDisplayNode {
         self.phoneInputNode = PhoneInputNode(fontSize: 17.0)
         self.phoneInputNode.countryCodeField.textField.textColor = self.presentationData.theme.list.itemPrimaryTextColor
         self.phoneInputNode.countryCodeField.textField.keyboardAppearance = self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.phoneInputNode.countryCodeField.textField.tintColor = self.presentationData.theme.list.itemAccentColor
         self.phoneInputNode.numberField.textField.textColor = self.presentationData.theme.list.itemPrimaryTextColor
         self.phoneInputNode.numberField.textField.keyboardAppearance = self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.phoneInputNode.numberField.textField.tintColor = self.presentationData.theme.list.itemAccentColor
         
         super.init()
         

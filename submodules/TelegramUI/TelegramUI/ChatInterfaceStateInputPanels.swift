@@ -169,13 +169,15 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
         
         var displayBotStartPanel = false
-        if let _ = chatPresentationInterfaceState.botStartPayload {
-            if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                displayBotStartPanel = true
-            }
-        } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
-            if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                displayBotStartPanel = true
+        if !chatPresentationInterfaceState.isScheduledMessages {
+            if let _ = chatPresentationInterfaceState.botStartPayload {
+                if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                    displayBotStartPanel = true
+                }
+            } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
+                if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                    displayBotStartPanel = true
+                }
             }
         }
         

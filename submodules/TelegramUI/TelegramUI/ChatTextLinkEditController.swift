@@ -57,6 +57,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.textInputNode.autocapitalizationType = .none
         self.textInputNode.returnKeyType = .done
         self.textInputNode.autocorrectionType = .no
+        self.textInputNode.tintColor = theme.actionSheet.controlAccentColor
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
@@ -75,9 +76,10 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
     func updateTheme(_ theme: PresentationTheme) {
         self.theme = theme
         
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
-        self.textInputNode.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
+        self.textInputNode.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
         self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
+        self.textInputNode.tintColor = self.theme.actionSheet.controlAccentColor
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {

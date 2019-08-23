@@ -183,7 +183,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?
                 return result
             }
         } else if (dict["type"] as! NSString) == "video" {
-            var thumbnail = dict["previewImage"] as? UIImage
+            let thumbnail = dict["previewImage"] as? UIImage
             var asFile = false
             if let document = dict["document"] as? NSNumber, document.boolValue {
                 asFile = true

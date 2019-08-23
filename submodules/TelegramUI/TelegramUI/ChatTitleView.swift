@@ -16,6 +16,7 @@ import ChatTitleActivityNode
 enum ChatTitleContent {
     case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
     case group([Peer])
+    case custom(String)
 }
 
 private final class ChatTitleNetworkStatusNode: ASDisplayNode {
@@ -182,7 +183,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 switch titleContent {
                     case let .peer(peerView, _, isScheduledMessages):
                         if isScheduledMessages {
-                            if let peer = peerViewMainPeer(peerView), peerView.peerId == self.account.peerId {
+                            if peerView.peerId == self.account.peerId {
                                  string = NSAttributedString(string: self.strings.ScheduledMessages_RemindersTitle, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             } else {
                                 string = NSAttributedString(string: self.strings.ScheduledMessages_Title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
@@ -212,6 +213,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                         }
                     case .group:
                         string = NSAttributedString(string: "Feed", font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    case let .custom(text):
+                        string = NSAttributedString(string: text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 }
                 
                 if let string = string, self.titleNode.attributedText == nil || !self.titleNode.attributedText!.isEqual(to: string) {
@@ -263,7 +266,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     }
                 }
             default:
-                break
+                inputActivitiesAllowed = false
             }
         }
         
@@ -429,7 +432,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                             }
                         }
-                    case .group:
+                    default:
                         break
                 }
                 

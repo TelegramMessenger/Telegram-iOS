@@ -309,7 +309,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
         |> then(deleteUser)
         |> then(reportSignal)
         |> then(postbox.transaction { transaction -> Void in
-            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id)
+            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .all)
         })
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
@@ -328,7 +328,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false, type: operation.deleteGloballyIfPossible ? .forEveryone : .forLocalPeer)
             |> then(reportSignal)
             |> then(postbox.transaction { transaction -> Void in
-                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id)
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .not(Namespaces.Message.allScheduled))
             })
         } else {
             return .complete()

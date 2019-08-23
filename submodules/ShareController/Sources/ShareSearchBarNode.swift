@@ -42,13 +42,14 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textInputNode.fixOffset = false
         let textColor: UIColor = theme.actionSheet.inputTextColor
         let keyboardAppearance: UIKeyboardAppearance = UIKeyboardAppearance.default
-        textInputNode.textField.font = Font.regular(16.0)
-        textInputNode.textField.textColor = textColor
-        textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(16.0), NSAttributedString.Key.foregroundColor: textColor]
-        textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
-        textInputNode.textField.keyboardAppearance = keyboardAppearance
-        textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)
-        textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.textField.font = Font.regular(16.0)
+        self.textInputNode.textField.textColor = textColor
+        self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(16.0), NSAttributedString.Key.foregroundColor: textColor]
+        self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
+        self.textInputNode.textField.keyboardAppearance = keyboardAppearance
+        self.textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)
+        self.textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
         
         super.init()
         

@@ -400,7 +400,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
         self.reactionRecognizer = reactionRecognizer
         reactionRecognizer.availableReactions = { [weak self] in
-            guard let strongSelf = self, let item = strongSelf.item else {
+            guard let strongSelf = self, let item = strongSelf.item, !Namespaces.Message.allScheduled.contains(item.message.id.namespace) else {
                 return []
             }
             if strongSelf.selectionNode != nil {

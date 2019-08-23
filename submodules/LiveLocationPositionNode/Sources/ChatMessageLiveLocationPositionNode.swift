@@ -73,7 +73,7 @@ public final class ChatMessageLiveLocationPositionNode: ASDisplayNode {
         return { [weak self] account, theme, peer, liveActive in
             let backgroundImage: UIImage?
             var hasPulse = false
-            if let peer = peer {
+            if let _ = peer {
                 backgroundImage = avatarBackgroundImage
                 
                 if let liveActive = liveActive {

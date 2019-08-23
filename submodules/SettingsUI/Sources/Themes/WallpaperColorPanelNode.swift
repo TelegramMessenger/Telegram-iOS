@@ -112,6 +112,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.delegate = self
         self.textFieldNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
         self.textFieldNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
+        self.textFieldNode.textField.tintColor = self.theme.list.itemAccentColor
     }
     
     func updateTheme(_ theme: PresentationTheme) {
@@ -123,6 +124,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         
         self.textFieldNode.textField.textColor = self.theme.chat.inputPanel.inputTextColor
         self.textFieldNode.textField.keyboardAppearance = self.theme.chat.inputPanel.keyboardColor.keyboardAppearance
+        self.textFieldNode.textField.tintColor = self.theme.list.itemAccentColor
     }
     
     private func setColor(_ color: UIColor, updatePicker: Bool = true, ended: Bool = true) {

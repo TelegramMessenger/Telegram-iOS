@@ -2953,7 +2953,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
             }
             index += 1
         }
-        if let _ = innerState.documents.index(where: { $0.id == document.id }) {
+        if let _ = innerState.documents.firstIndex(where: { $0.id == document.id }) {
             for itemDocument in innerState.documents {
                 entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
                 if document.id == itemDocument.id {
@@ -2962,7 +2962,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 index += 1
             }
         }
-        if let _ = innerState.translations.index(where: { $0.id == document.id }) {
+        if let _ = innerState.translations.firstIndex(where: { $0.id == document.id }) {
             for itemDocument in innerState.translations {
                 entries.append(SecureIdDocumentGalleryEntry(index: Int32(index), resource: itemDocument.resource, location: SecureIdDocumentGalleryEntryLocation(position: Int32(index), totalCount: totalCount), error: ""))
                 if document.id == itemDocument.id {

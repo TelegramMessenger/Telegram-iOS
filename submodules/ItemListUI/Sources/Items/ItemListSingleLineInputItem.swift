@@ -154,6 +154,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         if let item = self.item {
             self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
             self.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.textNode.textField.tintColor = item.theme.list.itemAccentColor
             self.textNode.textField.accessibilityHint = item.placeholder
         }
         self.textNode.clipsToBounds = true
@@ -210,6 +211,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                         
                         strongSelf.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
                         strongSelf.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                        strongSelf.textNode.textField.tintColor = item.theme.list.itemAccentColor
                     }
                     
                     let _ = titleApply()

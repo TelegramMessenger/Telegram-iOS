@@ -4614,6 +4614,7 @@ Any member of this group will be able to see messages in the channel.";
 "ScheduledMessages.DeleteMany" = "Delete Scheduled Messages";
 "ScheduledMessages.EmptyPlaceholder" = "No scheduled messages here yet...";
 "ScheduledMessages.BotActionUnavailable" = "This action will become available after the message is published.";
+"ScheduledMessages.PollUnavailable" = "Voting will become available after the message is published.";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 

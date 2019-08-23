@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import TelegramPresentationData
 
 private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 7.0, height: 13.0), rotatedContext: { size, context in

@@ -20,7 +20,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     private let contentContainerNode: ASDisplayNode
     private let contentBackgroundNode: ASImageNode
     private let titleNode: ASTextNode
-    private let separatorNode: ASDisplayNode
     private let cancelButton: HighlightableButtonNode
     private let doneButton: SolidRoundedButtonNode
     
@@ -46,8 +45,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
-        let roundedBackground = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
-        
         self.contentContainerNode = ASDisplayNode()
         self.contentContainerNode.isOpaque = false
         self.contentContainerNode.clipsToBounds = true
@@ -55,7 +52,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.contentBackgroundNode = ASImageNode()
         self.contentBackgroundNode.displaysAsynchronously = false
         self.contentBackgroundNode.displayWithoutProcessing = true
-        self.contentBackgroundNode.image = roundedBackground
+        self.contentBackgroundNode.image = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
         
         let title: String
         switch mode {
@@ -67,9 +64,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         
         self.titleNode = ASTextNode()
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
-        
-        self.separatorNode = ASDisplayNode()
-        //self.separatorNode.backgroundColor = self.theme.controlColor
         
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
@@ -107,7 +101,6 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.pickerView.timeZone = TimeZone.current
         self.pickerView.minuteInterval = 1
         self.pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
-        
         self.contentContainerNode.view.addSubview(self.pickerView)
         self.pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
         
@@ -116,6 +109,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
             if let strongSelf = self {
                 if strongSelf.pickerView.date < Date() {
                     strongSelf.updateMinimumDate()
+                    strongSelf.updateButtonTitle()
                     strongSelf.pickerView.layer.addShakeAnimation()
                 } else {
                     strongSelf.doneButton.isUserInteractionEnabled = false
@@ -128,6 +122,17 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.updateButtonTitle()
     }
     
+    func updatePresentationData(_ presentationData: PresentationData) {
+        self.presentationData = presentationData
+        
+        self.contentBackgroundNode.image = generateStretchableFilledCircleImage(radius: 16.0, color: self.presentationData.theme.actionSheet.opaqueItemBackgroundColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
+        self.pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
+    
+        self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
+        self.doneButton.updateTheme(self.presentationData.theme)
+    }
+    
     private func updateMinimumDate(currentTime: Int32? = nil) {
         let timeZone = TimeZone(secondsFromGMT: 0)!
         var calendar = Calendar(identifier: .gregorian)
@@ -137,16 +142,19 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         components.second = 0
         let minute = (components.minute ?? 0) % 5
         
+        let next1MinDate = calendar.date(byAdding: .minute, value: 1, to: calendar.date(from: components)!)
+        let next5MinDate = calendar.date(byAdding: .minute, value: 5 - minute, to: calendar.date(from: components)!)
+        
         if let date = calendar.date(byAdding: .day, value: 365, to: currentDate) {
             self.pickerView.maximumDate = date
         }
         
-        if let date = calendar.date(byAdding: .minute, value: 5 - minute, to: calendar.date(from: components)!) {
-            self.pickerView.minimumDate = date
-            if let currentTime = currentTime {
+        if let next1MinDate = next1MinDate, let next5MinDate = next5MinDate {
+            self.pickerView.minimumDate = next1MinDate
+            if let currentTime = currentTime, Double(currentTime) > currentDate.timeIntervalSince1970 {
                 self.pickerView.date = Date(timeIntervalSince1970: Double(currentTime))
             } else {
-                self.pickerView.date = date
+                self.pickerView.date = next5MinDate
             }
         }
     }
@@ -300,6 +308,5 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.pickerView.frame = CGRect(origin: CGPoint(x: 0.0, y: 54.0), size: CGSize(width: contentFrame.width, height: pickerHeight))
         
         transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame)
-        transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleHeight), size: CGSize(width: contentContainerFrame.size.width, height: UIScreenPixel)))
     }
 }

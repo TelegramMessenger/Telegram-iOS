@@ -40,5 +40,7 @@ func presentationStringsPluralizationForm(_ lc: UInt32, _ value: Int32) -> Plura
             return .many
         case .other:
             return .other
+        @unknown default:
+            fatalError()
     }
 }

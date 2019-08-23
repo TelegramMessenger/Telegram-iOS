@@ -49,17 +49,17 @@ public func removePeerChat(account: Account, transaction: Transaction, mediaBox:
                 }
             }
         }
-        clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId)
+        clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
         transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
         transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
     } else {
         cloudChatAddRemoveChatOperation(transaction: transaction, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
         if peerId.namespace == Namespaces.Peer.CloudUser  {
             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
-            clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId)
+            clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
         } else if peerId.namespace == Namespaces.Peer.CloudGroup {
             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
-            clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId)
+            clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
         } else {
             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
         }

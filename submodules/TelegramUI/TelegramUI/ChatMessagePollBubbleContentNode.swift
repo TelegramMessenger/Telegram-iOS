@@ -773,6 +773,9 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         canVote = true
                     }
                 }
+                if Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                    canVote = true
+                }
                 
                 return (boundingSize.width, { boundingWidth in
                     var resultSize = CGSize(width: max(boundingSize.width, boundingWidth), height: boundingSize.height)

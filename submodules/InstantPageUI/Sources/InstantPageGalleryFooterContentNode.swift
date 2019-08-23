@@ -112,7 +112,7 @@ final class InstantPageGalleryFooterContentNode: GalleryFooterContentNode {
             let sideInset: CGFloat = leftInset + 8.0
             let topInset: CGFloat = 0.0
             let bottomInset: CGFloat = 0.0
-            var textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+            let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude))
             
             var x = sideInset
             if let hasRTL = self.textNode.cachedLayout?.hasRTL, hasRTL {

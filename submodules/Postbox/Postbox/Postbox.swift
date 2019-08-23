@@ -86,9 +86,9 @@ public final class Transaction {
         self.postbox?.withAllMessages(peerId: peerId, namespace: namespace, f)
     }
     
-    public func clearHistory(_ peerId: PeerId) {
+    public func clearHistory(_ peerId: PeerId, namespaces: MessageIdNamespaces) {
         assert(!self.disposed)
-        self.postbox?.clearHistory(peerId)
+        self.postbox?.clearHistory(peerId, namespaces: namespaces)
     }
     
     public func removeAllMessagesWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
@@ -1519,9 +1519,9 @@ public final class Postbox {
         }
     }
     
-    fileprivate func clearHistory(_ peerId: PeerId) {
-        self.messageHistoryTable.clearHistory(peerId: peerId, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
-        for namespace in self.messageHistoryHoleIndexTable.existingNamespaces(peerId: peerId, holeSpace: .everywhere) {
+    fileprivate func clearHistory(_ peerId: PeerId, namespaces: MessageIdNamespaces) {
+        self.messageHistoryTable.clearHistory(peerId: peerId, namespaces: namespaces, operationsByPeerId: &self.currentOperationsByPeerId, updatedMedia: &self.currentUpdatedMedia, unsentMessageOperations: &currentUnsentOperations, updatedPeerReadStateOperations: &self.currentUpdatedSynchronizeReadStateOperations, globalTagsOperations: &self.currentGlobalTagsOperations, pendingActionsOperations: &self.currentPendingMessageActionsOperations, updatedMessageActionsSummaries: &self.currentUpdatedMessageActionsSummaries, updatedMessageTagSummaries: &self.currentUpdatedMessageTagSummaries, invalidateMessageTagSummaries: &self.currentInvalidateMessageTagSummaries, localTagsOperations: &self.currentLocalTagsOperations)
+        for namespace in self.messageHistoryHoleIndexTable.existingNamespaces(peerId: peerId, holeSpace: .everywhere) where namespaces.contains(namespace) {
             self.messageHistoryHoleIndexTable.remove(peerId: peerId, namespace: namespace, space: .everywhere, range: 1 ... Int32.max - 1, operations: &self.currentPeerHoleOperations)
         }
     }

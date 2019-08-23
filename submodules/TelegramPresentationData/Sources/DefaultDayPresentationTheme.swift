@@ -25,7 +25,7 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         outgoingBubbleFillColor = accentColor
         
         let hsv = accentColor.hsv
-        accentColor = UIColor(hue: hsv.0, saturation: hsv.1 * 1.1, brightness: min(hsv.2, 0.77), alpha: 1.0)
+        accentColor = UIColor(hue: hsv.0, saturation: hsv.1 * 1.1, brightness: min(hsv.2, 0.7), alpha: 1.0)
     } else {
         outgoingPrimaryTextColor = .white
         outgoingSecondaryTextColor = UIColor(rgb: 0xffffff, alpha: 0.65)

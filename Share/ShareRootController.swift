@@ -19,7 +19,6 @@ class ShareRootController: UIViewController {
             
             let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
             
-            let apiId: Int32 = buildConfig.apiId
             let languagesCategory = "ios"
             
             let appGroupName = "group.\(baseAppBundleId)"
