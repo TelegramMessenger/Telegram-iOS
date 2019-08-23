@@ -20,7 +20,7 @@ ui_tests = [
 static_library_dependencies = [
 ]
 framework_dependencies = [
-    #'//submodules/MtProtoKit:MtProtoKit',
+    '//submodules/MtProtoKit:MtProtoKit',
     '//submodules/Emoji:Emoji',
 ]
 
