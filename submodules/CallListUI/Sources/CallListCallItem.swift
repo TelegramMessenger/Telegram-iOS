@@ -317,7 +317,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             var leftInset: CGFloat = 86.0 + params.leftInset
             let rightInset: CGFloat = 13.0 + params.rightInset
-            var infoIconRightInset: CGFloat = rightInset
+            var infoIconRightInset: CGFloat = rightInset - 1.0
             
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
@@ -335,7 +335,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                     insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
-            var dateRightInset: CGFloat = 43.0 + params.rightInset
+            var dateRightInset: CGFloat = 46.0 + params.rightInset
             if item.editing {
                 leftInset += editingOffset
                 dateRightInset += 5.0
@@ -558,7 +558,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                 if strongSelf.typeIconNode.image !== outgoingIcon {
                                     strongSelf.typeIconNode.image = outgoingIcon
                                 }
-                                transition.updateFrameAdditive(node: strongSelf.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 76.0, y: floor((nodeLayout.contentSize.height - outgoingIcon.size.height) / 2.0)), size: outgoingIcon.size))
+                                transition.updateFrameAdditive(node: strongSelf.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 81.0, y: floor((nodeLayout.contentSize.height - outgoingIcon.size.height) / 2.0)), size: outgoingIcon.size))
                             }
                             strongSelf.typeIconNode.isHidden = !hasOutgoing
                             
@@ -653,9 +653,9 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             let leftInset: CGFloat = 86.0 + params.leftInset + editingOffset
             let rightInset: CGFloat = 13.0 + params.rightInset
-            var infoIconRightInset: CGFloat = rightInset
+            var infoIconRightInset: CGFloat = rightInset - 1.0
             
-            var dateRightInset: CGFloat = 43.0 + params.rightInset
+            var dateRightInset: CGFloat = 46.0 + params.rightInset
             if item.editing {
                 dateRightInset += 5.0
                 infoIconRightInset -= 36.0
@@ -669,7 +669,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             
             transition.updateFrameAdditive(node: self.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + self.bounds.size.width - dateRightInset - self.dateNode.bounds.size.width, y: self.dateNode.frame.minY), size: self.dateNode.bounds.size))
             
-            transition.updateFrameAdditive(node: self.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 76.0, y: self.typeIconNode.frame.minY), size: self.typeIconNode.bounds.size))
+            transition.updateFrameAdditive(node: self.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 81.0, y: self.typeIconNode.frame.minY), size: self.typeIconNode.bounds.size))
             
             transition.updateFrameAdditive(node: self.infoButtonNode, frame: CGRect(origin: CGPoint(x: revealOffset + self.bounds.size.width - infoIconRightInset - self.infoButtonNode.bounds.width, y: self.infoButtonNode.frame.minY), size: self.infoButtonNode.bounds.size))
         }

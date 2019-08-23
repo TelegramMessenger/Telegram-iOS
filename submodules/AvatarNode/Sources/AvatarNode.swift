@@ -9,7 +9,7 @@ import TelegramPresentationData
 import AnimationUI
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
-private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()
+private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 
 public enum AvatarNodeClipStyle {

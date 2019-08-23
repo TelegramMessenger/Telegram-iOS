@@ -225,7 +225,7 @@ class ContactListActionItemNode: ListViewItemNode {
                                         titleOffset = iconFrame.maxX - totalWidth
                                 }
                             default:
-                                iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
+                                iconFrame = CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + 3.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                         }
                         strongSelf.iconNode.frame = iconFrame
                     }

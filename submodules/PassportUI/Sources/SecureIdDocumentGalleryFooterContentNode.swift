@@ -10,7 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import GalleryUI
 
-private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: .white)
+private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 
 private let textFont = Font.regular(16.0)
 private let titleFont = Font.medium(15.0)
