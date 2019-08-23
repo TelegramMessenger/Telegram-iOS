@@ -90,7 +90,7 @@ public final class ReactionContextNode: ASDisplayNode {
     
     private var isExpanded: Bool = false
     private var highlightedReaction: String?
-    private var validLayout: (CGSize, CGRect)?
+    private var validLayout: (CGSize, UIEdgeInsets, CGRect)?
     
     public var reactionSelected: ((ReactionGestureItem) -> Void)?
     
@@ -151,7 +151,7 @@ public final class ReactionContextNode: ASDisplayNode {
         self.addSubnode(self.backgroundContainerNode)
         
         self.itemNodes = self.items.map { item in
-            return ReactionNode(account: account, theme: theme, reaction: .reaction(value: item.value, text: item.text, path: item.path), maximizedReactionSize: 30.0 - 18.0, loadFirstFrame: false)
+            return ReactionNode(account: account, theme: theme, reaction: .reaction(value: item.value, text: item.text, path: item.path), maximizedReactionSize: 30.0 - 18.0, loadFirstFrame: true)
         }
         self.itemNodes.forEach(self.addSubnode)
     }
@@ -162,11 +162,11 @@ public final class ReactionContextNode: ASDisplayNode {
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    public func updateLayout(size: CGSize, anchorRect: CGRect, transition: ContainedViewLayoutTransition) {
-        self.updateLayout(size: size, anchorRect: anchorRect, transition: transition, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
+    public func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, transition: ContainedViewLayoutTransition) {
+        self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: transition, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
     }
     
-    private func calculateBackgroundFrame(containerSize: CGSize, anchorRect: CGRect, contentSize: CGSize) -> (CGRect, Bool) {
+    private func calculateBackgroundFrame(containerSize: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, contentSize: CGSize) -> (CGRect, Bool) {
         let sideInset: CGFloat = 12.0
         let backgroundOffset: CGPoint = CGPoint(x: 22.0, y: -7.0)
         
@@ -180,13 +180,13 @@ public final class ReactionContextNode: ASDisplayNode {
             isLeftAligned = false
         }
         rect.origin.x = max(sideInset, rect.origin.x)
-        rect.origin.y = max(sideInset, rect.origin.y)
+        rect.origin.y = max(insets.top + sideInset, rect.origin.y)
         rect.origin.x = min(containerSize.width - contentSize.width - sideInset, rect.origin.x)
         return (rect, isLeftAligned)
     }
     
-    private func updateLayout(size: CGSize, anchorRect: CGRect, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
-        self.validLayout = (size, anchorRect)
+    private func updateLayout(size: CGSize, insets: UIEdgeInsets, anchorRect: CGRect, transition: ContainedViewLayoutTransition, animateInFromAnchorRect: CGRect?, animateOutToAnchorRect: CGRect?, animateReactionHighlight: Bool = false) {
+        self.validLayout = (size, insets, anchorRect)
         
         let sideInset: CGFloat = 10.0
         let itemSpacing: CGFloat = 6.0
@@ -200,7 +200,7 @@ public final class ReactionContextNode: ASDisplayNode {
         let rowCount = self.items.count / columnCount + (self.items.count % columnCount == 0 ? 0 : 1)
         let contentHeight = rowHeight * CGFloat(rowCount)
         
-        let (backgroundFrame, isLeftAligned) = self.calculateBackgroundFrame(containerSize: size, anchorRect: anchorRect, contentSize: CGSize(width: contentWidth, height: contentHeight))
+        let (backgroundFrame, isLeftAligned) = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: anchorRect, contentSize: CGSize(width: contentWidth, height: contentHeight))
         
         for i in 0 ..< self.items.count {
             let row = CGFloat(i / columnCount)
@@ -226,7 +226,7 @@ public final class ReactionContextNode: ASDisplayNode {
             
             transition.updateFrame(node: self.itemNodes[i], frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideInset + column * (minimizedItemSize + itemSpacing) - itemOffset, y: backgroundFrame.minY + row * rowHeight + floor((rowHeight - minimizedItemSize) / 2.0) - itemOffset), size: CGSize(width: itemSize, height: itemSize)), beginWithCurrentState: true)
             self.itemNodes[i].updateLayout(size: CGSize(width: itemSize, height: itemSize), scale: itemSize / (maximizedItemSize + 18.0), transition: transition, displayText: false)
-            self.itemNodes[i].updateIsAnimating(true, animated: false)
+            self.itemNodes[i].updateIsAnimating(false, animated: false)
             if row != 0 {
                 if self.isExpanded {
                     self.itemNodes[i].alpha = 1.0
@@ -270,11 +270,11 @@ public final class ReactionContextNode: ASDisplayNode {
             let springDuration: Double = 0.42
             let springDamping: CGFloat = 104.0
             
-            let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: contentWidth, height: contentHeight)).0
+            let sourceBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: animateInFromAnchorRect, contentSize: CGSize(width: contentWidth, height: contentHeight)).0
             
             self.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: sourceBackgroundFrame.minX - backgroundFrame.minX, y: sourceBackgroundFrame.minY - backgroundFrame.minY)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
         } else if let animateOutToAnchorRect = animateOutToAnchorRect {
-            let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: contentWidth, height: contentHeight)).0
+            let targetBackgroundFrame = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: animateOutToAnchorRect, contentSize: CGSize(width: contentWidth, height: contentHeight)).0
             
             self.layer.animatePosition(from: CGPoint(), to: CGPoint(x: targetBackgroundFrame.minX - backgroundFrame.minX, y: targetBackgroundFrame.minY - backgroundFrame.minY), duration: 0.2, removeOnCompletion: false, additive: true)
         }
@@ -283,8 +283,8 @@ public final class ReactionContextNode: ASDisplayNode {
     public func animateIn(from sourceAnchorRect: CGRect) {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         
-        if let (size, anchorRect) = self.validLayout {
-            self.updateLayout(size: size, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
+        if let (size, insets, anchorRect) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: sourceAnchorRect, animateOutToAnchorRect: nil)
         }
     }
     
@@ -299,8 +299,8 @@ public final class ReactionContextNode: ASDisplayNode {
             itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
         
-        if let targetAnchorRect = targetAnchorRect, let (size, anchorRect) = self.validLayout {
-            self.updateLayout(size: size, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: targetAnchorRect)
+        if let targetAnchorRect = targetAnchorRect, let (size, insets, anchorRect) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: targetAnchorRect)
         }
     }
     
@@ -416,8 +416,8 @@ public final class ReactionContextNode: ASDisplayNode {
     
     public func setHighlightedReaction(_ value: String?) {
         self.highlightedReaction = value
-        if let (size, anchorRect) = self.validLayout {
-            self.updateLayout(size: size, anchorRect: anchorRect, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+        if let (size, insets, anchorRect) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
         }
     }
 }

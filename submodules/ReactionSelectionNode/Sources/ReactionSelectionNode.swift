@@ -208,6 +208,11 @@ final class ReactionSelectionNode: ASDisplayNode {
     func updateLayout(constrainedSize: CGSize, startingPoint: CGPoint, offsetFromStart: CGFloat, isInitial: Bool) {
         let initialAnchorX = startingPoint.x
         
+        var isRightAligned = false
+        if initialAnchorX > constrainedSize.width / 2.0 {
+            isRightAligned = true
+        }
+        
         if isInitial && self.reactionNodes.isEmpty {
             let availableContentWidth = constrainedSize.width //max(100.0, initialAnchorX)
             var minimizedReactionSize = (availableContentWidth - self.maximizedReactionSize) / (CGFloat(self.reactions.count - 1) + CGFloat(self.reactions.count + 1) * 0.2)
@@ -241,13 +246,13 @@ final class ReactionSelectionNode: ASDisplayNode {
         let contentWidth: CGFloat = CGFloat(self.reactionNodes.count - 1) * (minimizedReactionSize) + maximizedReactionSize + CGFloat(self.reactionNodes.count + 1) * reactionSpacing
         
         var backgroundFrame = CGRect(origin: CGPoint(x: -shadowBlur, y: -shadowBlur), size: CGSize(width: contentWidth + shadowBlur * 2.0, height: backgroundHeight + shadowBlur * 2.0))
-        var isRightAligned = false
-        if initialAnchorX > constrainedSize.width / 2.0 {
-            isRightAligned = true
+        if isRightAligned {
             backgroundFrame = backgroundFrame.offsetBy(dx: initialAnchorX - contentWidth + backgroundHeight / 2.0, dy: startingPoint.y - backgroundHeight - 16.0)
         } else {
             backgroundFrame = backgroundFrame.offsetBy(dx: initialAnchorX - backgroundHeight / 2.0, dy: startingPoint.y - backgroundHeight - 16.0)
         }
+        backgroundFrame.origin.x = max(0.0, backgroundFrame.minX)
+        backgroundFrame.origin.x = min(constrainedSize.width - backgroundFrame.width, backgroundFrame.minX)
         
         self.isRightAligned = isRightAligned
         self.backgroundNode.frame = backgroundFrame

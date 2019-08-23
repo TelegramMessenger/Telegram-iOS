@@ -213,7 +213,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNodeContainer.addSubnode(self.historyNode)
         
         self.reactionContainerNode = ReactionSelectionParentNode(account: context.account, theme: chatPresentationInterfaceState.theme)
-        self.historyNodeContainer.addSubnode(self.reactionContainerNode)
         
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper)
         
@@ -1446,6 +1445,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
             }
+        }
+        
+        if self.reactionContainerNode.supernode == nil {
+            self.addSubnode(self.reactionContainerNode)
         }
     }
     

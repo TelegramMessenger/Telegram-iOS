@@ -596,7 +596,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 let lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(presentationData.theme.theme)
                 
                 var boundingSize = textFrame.size
-                var lineHeight = textFrame.size.height
+                var lineHeight = textLayout.rawTextSize.height
                 if let statusFrame = statusFrame {
                     boundingSize = textFrame.union(statusFrame).size
                     if let _ = actionTitle {

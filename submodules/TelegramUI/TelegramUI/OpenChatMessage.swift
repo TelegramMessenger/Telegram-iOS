@@ -158,6 +158,13 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     #endif
                 }
                 
+                if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
+                    let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                        navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                        }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
+                    return .gallery(gallery)
+                }
+                
                 if !file.isVideo {
                     return .document(file)
                 }
