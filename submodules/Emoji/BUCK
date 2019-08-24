@@ -1,12 +1,20 @@
 load("//Config:buck_rule_macros.bzl", "static_library", "framework")
 
+apple_resource(
+    name = 'EmojiFiles',
+    dirs = [
+        "TestFolder.bundle",
+    ],
+    visibility = [
+        "PUBLIC",
+    ],
+)
+
 framework(
     name = "Emoji",
     srcs = glob([
         "Sources/*.swift",
     ]),
-    deps = [
-    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/CoreText.framework",

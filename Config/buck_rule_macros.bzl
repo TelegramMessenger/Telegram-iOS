@@ -15,6 +15,7 @@ def apple_lib(
         exported_headers = [],
         extra_xcode_files = [],
         deps = [],
+        exported_deps = [],
         frameworks = [],
         swift_version = None,
         modular = True,
@@ -47,6 +48,7 @@ def apple_lib(
                 headers = headers,
                 exported_headers = exported_headers,
                 deps = deps,
+                exported_deps = exported_deps,
                 extra_xcode_files = extra_xcode_files,
                 frameworks = frameworks,
                 visibility = visibility,
@@ -57,24 +59,19 @@ def apple_lib(
                 swift_compiler_flags = swift_compiler_flags,
                 preferred_linkage = "shared",
                 link_style = "static",
-                linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
-            )
-            native.apple_bundle(
-                name = name + "Framework",
-                visibility = visibility,
-                binary = ":" + name + "#shared",
-                extension = "framework",
-                info_plist = "Info.plist",
-                info_plist_substitutions = info_plist_substitutions(name),
+                #linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
+                linker_flags = ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)],
             )
         else:
             native.apple_library(
-                name = name,
+                name = name + "",
                 srcs = srcs,
                 header_namespace = name,
+                module_name = name,
                 headers = headers,
                 exported_headers = exported_headers,
                 deps = deps,
+                exported_deps = exported_deps,
                 extra_xcode_files = extra_xcode_files,
                 frameworks = frameworks,
                 visibility = visibility,
@@ -85,15 +82,8 @@ def apple_lib(
                 swift_compiler_flags = swift_compiler_flags,
                 preferred_linkage = "shared",
                 link_style = "static",
-                linker_flags = ["-Wl,-install_name,@rpath/%s.dylib" % (name)],
-            )
-            native.apple_bundle(
-                name = name + "Framework",
-                visibility = visibility,
-                binary = ":" + name + "#shared",
-                extension = "framework",
-                info_plist = "Info.plist",
-                info_plist_substitutions = info_plist_substitutions(name),
+                #linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
+                linker_flags = ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)],
             )
     else:
         native.apple_library(
@@ -152,6 +142,7 @@ def framework(
         exported_headers = [],
         extra_xcode_files = [],
         deps = [],
+        exported_deps = [],
         frameworks = [],
         info_plist = None,
         info_plist_substitutions = {},
@@ -171,6 +162,7 @@ def framework(
         swift_compiler_flags = swift_compiler_flags,
         extra_xcode_files = extra_xcode_files,
         deps = deps,
+        exported_deps = exported_deps,
         frameworks = frameworks,
         warning_as_error = warning_as_error,
         suppress_warnings = suppress_warnings,
@@ -214,7 +206,7 @@ def framework_binary_dependencies(names):
     result = []
     if native.read_config("custom", "mode") == "project":
         for name in names:
-            result.append(name + "")
+            result.append(name + "#shared")
     else:
         for name in names:
             result.append(name + "#shared")
@@ -228,6 +220,6 @@ def framework_bundle_dependencies(names):
             pass
     else:
         for name in names:
-            result.append(name + "Framework")
+            #result.append(name + "Framework")
             pass
     return result

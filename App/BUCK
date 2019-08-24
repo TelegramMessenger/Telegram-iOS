@@ -80,6 +80,7 @@ apple_bundle(
     info_plist = "Info.plist",
     info_plist_substitutions = app_info_plist_substitutions("App"),
     deps = [
+        "//submodules/Emoji:EmojiFiles",
     ]
     + framework_bundle_dependencies(framework_dependencies),
 )

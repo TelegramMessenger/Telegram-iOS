@@ -1,6 +1,6 @@
 .PHONY : install_buck build targets audit project clean
 
-BUCK=/Users/peter/build/buck/buck-out/gen/programs/buck.pex
+BUCK=/Users/peter/build/buck-next/buck/buck-out/gen/programs/buck.pex
 
 log:
 	echo "Make"

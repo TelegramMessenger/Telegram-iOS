@@ -71,6 +71,7 @@ def framework_library_configs(name):
         "SKIP_INSTALL": "YES",
         "MACH_O_TYPE": "mh_dylib",
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier(name),
+        "CODE_SIGNING_ALLOWED": "NO",
     }
 
     library_config = merge_dict(SHARED_CONFIGS, lib_specific_config)
