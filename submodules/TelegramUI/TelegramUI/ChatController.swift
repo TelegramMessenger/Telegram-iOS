@@ -4267,6 +4267,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.validLayout = layout
         self.chatTitleView?.layout = layout
         
+        if self.hasScheduledMessages, let h = layout.inputHeight, h > 100.0 {
+            print()
+        }
+        
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop)
         })
@@ -4554,11 +4558,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.updateChatPresentationInterfaceState(updatedChatPresentationInterfaceState, transition: transition, interactive: interactive)
         }
         
-        if let selectionState = self.presentationInterfaceState.interfaceState.selectionState, !selectionState.selectedIds.isEmpty {
-            self.chatTitleView?.titleContent = .custom(self.presentationData.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)))
-        } else {
-            
-        }
+//        if let selectionState = self.presentationInterfaceState.interfaceState.selectionState, !selectionState.selectedIds.isEmpty {
+//            self.chatTitleView?.titleContent = .custom(self.presentationData.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)))
+//        } else {
+//
+//        }
         
         if let button = leftNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState, strings: updatedChatPresentationInterfaceState.strings, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction))  {
             if self.leftNavigationButton != button {
@@ -4892,14 +4896,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return result
             }
             let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
-                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting in
+                self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting, scheduleTime in
                     if !inputText.string.isEmpty {
                         //strongSelf.clearInputText()
                     }
                     if editMediaOptions != nil {
                         self?.editMessageMediaWithLegacySignals(signals)
                     } else {
-                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
+                        self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
                     }
                 })
             }, openCamera: { [weak self] cameraView, menuController in
@@ -4919,6 +4923,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self, let (host, port, username, password, secret) = parseProxyUrl(code) {
                             strongSelf.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
                         }
+                    }, presentScheduleController: { [weak self] done in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let mode: ChatScheduleTimeControllerMode
+                        if case let .peer(peerId) = strongSelf.presentationInterfaceState.chatLocation, peerId == strongSelf.context.account.peerId {
+                            mode = .reminders
+                        } else {
+                            mode = .scheduledMessages
+                        }
+                        let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, completion: { [weak self] time in
+                            if let strongSelf = self {
+                                done(time)
+                                if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                    let controller = ChatControllerImpl(context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: .scheduledMessages)
+                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                                }
+                            }
+                        })
+                        strongSelf.present(controller, in: .window(.root))
                     })
                 }
             }, openFileGallery: {
@@ -4941,16 +4965,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return
                 }
                 strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentMultipleFilesDisabled, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
-            }, sendMessagesWithSignals: { [weak self] signals, mode in
+            }, presentScheduleController: { [weak self] done in
+                guard let strongSelf = self else {
+                    return
+                }
+                let mode: ChatScheduleTimeControllerMode
+                if case let .peer(peerId) = strongSelf.presentationInterfaceState.chatLocation, peerId == strongSelf.context.account.peerId {
+                    mode = .reminders
+                } else {
+                    mode = .scheduledMessages
+                }
+                let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, completion: { [weak self] time in
+                    if let strongSelf = self {
+                        done(time)
+                        if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                            let controller = ChatControllerImpl(context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: .scheduledMessages)
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                        }
+                    }
+                })
+                strongSelf.present(controller, in: .window(.root))
+            }, sendMessagesWithSignals: { [weak self] signals, silentPosting, scheduleTime in
                 if !inputText.string.isEmpty {
                     //strongSelf.clearInputText()
                 }
                 if editMediaOptions != nil {
                     self?.editMessageMediaWithLegacySignals(signals!)
                 } else {
-                    var silentPosting = false
-                    //if mode ==
-                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
+                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
                 }
             }, selectRecentlyUsedInlineBot: { [weak self] peer in
                 if let strongSelf = self, let addressName = peer.addressName {
@@ -4986,11 +5028,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             ActionSheetButtonItem(title: self.presentationData.strings.Conversation_FilePhotoOrVideo, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
-                    strongSelf.presentMediaPicker(fileMode: true, editingMedia: editingMessage, completion: { signals, silentPosting in
+                    strongSelf.presentMediaPicker(fileMode: true, editingMedia: editingMessage, completion: { signals, silentPosting, scheduleTime in
                         if editingMessage {
                             self?.editMessageMediaWithLegacySignals(signals)
                         } else {
-                            self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
+                            self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
                         }
                     })
                 }
@@ -5054,7 +5096,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any], Bool) -> Void) {
+    private func presentMediaPicker(fileMode: Bool, editingMedia: Bool, completion: @escaping ([Any], Bool, Int32) -> Void) {
         let postbox = self.context.account.postbox
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> Signal<(GeneratedMediaStoreSettings, SearchBotsConfiguration), NoError> in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings) as? GeneratedMediaStoreSettings
@@ -5108,13 +5150,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: nil, text: strongSelf.presentationData.strings.Chat_AttachmentLimitReached, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                    }, presentScheduleController: { [weak self] done in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let mode: ChatScheduleTimeControllerMode
+                        if case let .peer(peerId) = strongSelf.presentationInterfaceState.chatLocation, peerId == strongSelf.context.account.peerId {
+                            mode = .reminders
+                        } else {
+                            mode = .scheduledMessages
+                        }
+                        let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, completion: { [weak self] time in
+                            if let strongSelf = self {
+                                done(time)
+                                if !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                    let controller = ChatControllerImpl(context: strongSelf.context, chatLocation: strongSelf.chatLocation, subject: .scheduledMessages)
+                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                                }
+                            }
+                        })
+                        strongSelf.present(controller, in: .window(.root))
                     })
                     controller.descriptionGenerator = legacyAssetPickerItemGenerator()
-                    controller.completionBlock = { [weak legacyController] signals, mode in
+                    controller.completionBlock = { [weak legacyController] signals, silentPosting, scheduleTime in
                         if let legacyController = legacyController {
                             legacyController.dismiss()
-                            var silentPosting = false
-                            completion(signals!, silentPosting)
+                            completion(signals!, silentPosting, scheduleTime)
                         }
                     }
                     controller.dismissalBlock = { [weak legacyController] in
@@ -5381,7 +5442,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             } else {
                 mode = .scheduledMessages
             }
-            let controller = ChatScheduleTimeController(context: self.context, mode: mode, completion: { [weak self] time in
+            let controller = ChatScheduleTimeController(context: self.context, mode: mode, dismissByTapOutside: false, completion: { [weak self] time in
                 if let strongSelf = self {
                     strongSelf.sendMessages(strongSelf.transformEnqueueMessages(messages, silentPosting: false, scheduleTime: time), commit: true)
                 }

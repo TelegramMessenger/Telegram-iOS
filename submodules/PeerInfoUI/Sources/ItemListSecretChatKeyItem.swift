@@ -273,7 +273,7 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
                     }
                     
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 15.0 - arrowImage.size.width, y: 15.0), size: arrowImage.size)
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width, y: 15.0), size: arrowImage.size)
                     }
                     
                     switch item.disclosureStyle {

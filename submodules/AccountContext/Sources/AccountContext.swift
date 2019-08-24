@@ -166,6 +166,7 @@ public enum ResolvedUrl {
     case cancelAccountReset(phone: String, hash: String)
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
+    case theme(String)
 }
 
 public enum NavigateToChatKeepStack {

@@ -28,11 +28,17 @@ public struct WallpaperPresentationOptions: OptionSet {
 
 public enum PresentationThemeReference: PostboxCoding, Equatable {
     case builtin(PresentationBuiltinThemeReference)
+    case local(LocalFileMediaResource)
+    case cloud(TelegramTheme)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
+            case 1:
+                self = .local(decoder.decodeObjectForKey("resource", decoder: { LocalFileMediaResource(decoder: $0) }) as! LocalFileMediaResource)
+            case 2:
+                self = .cloud(decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme)
             default:
                 assertionFailure()
                 self = .builtin(.dayClassic)
@@ -44,6 +50,12 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case let .builtin(reference):
                 encoder.encodeInt32(0, forKey: "v")
                 encoder.encodeInt32(reference.rawValue, forKey: "t")
+            case let .local(resource):
+                encoder.encodeInt32(1, forKey: "v")
+                encoder.encodeObject(resource, forKey: "resource")
+            case let .cloud(theme):
+                encoder.encodeInt32(2, forKey: "v")
+                encoder.encodeObject(theme, forKey: "theme")
         }
     }
     
@@ -51,6 +63,18 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
         switch lhs {
             case let .builtin(reference):
                 if case .builtin(reference) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .local(lhsResource):
+                if case let .local(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
+                    return true
+                } else {
+                    return false
+                }
+            case let .cloud(lhsTheme):
+                if case let .cloud(rhsTheme) = rhs, lhsTheme == rhsTheme {
                     return true
                 } else {
                     return false
@@ -65,6 +89,12 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case let .builtin(reference):
                 namespace = 0
                 id = reference.rawValue
+            case let .local(resource):
+                namespace = 1
+                id = 1//1reference.rawValue
+            case let .cloud(theme):
+                namespace = 2
+                id = Int32(clamping: theme.id)
         }
         
         return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
@@ -301,6 +331,14 @@ public struct PresentationThemeSettings: PreferencesEntry {
         resources.append(contentsOf: wallpaperResources(self.chatWallpaper))
         for (_, chatWallpaper) in self.themeSpecificChatWallpapers {
             resources.append(contentsOf: wallpaperResources(chatWallpaper))
+        }
+        switch self.theme {
+            case .builtin:
+                break
+            case let .local(resource):
+                resources.append(resource.id)
+            case let .cloud(theme):
+                resources.append(theme.file.resource.id)
         }
         return resources
     }

@@ -311,13 +311,13 @@
         strongSelf->_galleryMixin = nil;
     };
     
-    mixin.completeWithItem = ^(TGMediaPickerGalleryItem *item, TGMediaPickerGalleryCompletionMode mode)
+    mixin.completeWithItem = ^(TGMediaPickerGalleryItem *item, bool silentPosting, int32_t scheduleTime)
     {
         __strong TGMediaAssetsPickerController *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
         
-        [(TGMediaAssetsController *)strongSelf.navigationController completeWithCurrentItem:item.asset mode:mode];
+        [(TGMediaAssetsController *)strongSelf.navigationController completeWithCurrentItem:item.asset silentPosting:silentPosting scheduleTime:scheduleTime];
     };
 }
 
@@ -341,7 +341,7 @@
     bool asFile = (_intent == TGMediaAssetsControllerSendFileIntent);
     
     TGMediaPickerModernGalleryMixin *mixin = [self _galleryMixinForContext:_context item:asset thumbnailImage:thumbnailImage selectionContext:self.selectionContext editingContext:self.editingContext suggestionContext:self.suggestionContext hasCaptions:self.captionsEnabled allowCaptionEntities:self.allowCaptionEntities inhibitDocumentCaptions:self.inhibitDocumentCaptions asFile:asFile];
-    
+    mixin.presentScheduleController = self.presentScheduleController;
     __weak TGMediaAssetsPickerController *weakSelf = self;
     mixin.thumbnailSignalForItem = ^SSignal *(id item)
     {

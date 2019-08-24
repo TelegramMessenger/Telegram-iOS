@@ -14,6 +14,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     private let context: AccountContext
     private let mode: ChatScheduleTimeControllerMode
     private var presentationData: PresentationData
+    private let dismissByTapOutside: Bool
     
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
@@ -32,10 +33,11 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32?) {
+    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32?, dismissByTapOutside: Bool) {
         self.context = context
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.dismissByTapOutside = dismissByTapOutside
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -208,7 +210,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     }
     
     @objc func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
-        if case .ended = recognizer.state {
+        if self.dismissByTapOutside, case .ended = recognizer.state {
             self.cancelButtonPressed()
         }
     }

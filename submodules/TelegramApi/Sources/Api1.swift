@@ -4022,6 +4022,7 @@ public extension Api {
         case updateNewScheduledMessage(message: Api.Message)
         case updateDeleteScheduledMessages(peer: Api.Peer, messages: [Int32])
         case updateMessageReactions(peer: Api.Peer, msgId: Int32, reactions: Api.MessageReactions)
+        case updateTheme(theme: Api.Theme)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4648,6 +4649,12 @@ public extension Api {
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     reactions.serialize(buffer, true)
                     break
+                case .updateTheme(let theme):
+                    if boxed {
+                        buffer.appendInt32(-2112423005)
+                    }
+                    theme.serialize(buffer, true)
+                    break
     }
     }
     
@@ -4801,6 +4808,8 @@ public extension Api {
                 return ("updateDeleteScheduledMessages", [("peer", peer), ("messages", messages)])
                 case .updateMessageReactions(let peer, let msgId, let reactions):
                 return ("updateMessageReactions", [("peer", peer), ("msgId", msgId), ("reactions", reactions)])
+                case .updateTheme(let theme):
+                return ("updateTheme", [("theme", theme)])
     }
     }
     
@@ -6067,6 +6076,19 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updateTheme(_ reader: BufferReader) -> Update? {
+            var _1: Api.Theme?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Theme
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateTheme(theme: _1!)
+            }
+            else {
+                return nil
+            }
+        }
     
     }
     public enum PopularContact: TypeConstructorDescription {
@@ -6958,6 +6980,64 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.InlineBotSwitchPM.inlineBotSwitchPM(text: _1!, startParam: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum InputTheme: TypeConstructorDescription {
+        case inputTheme(id: Int64, accessHash: Int64)
+        case inputThemeSlug(slug: String)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .inputTheme(let id, let accessHash):
+                    if boxed {
+                        buffer.appendInt32(1012306921)
+                    }
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    break
+                case .inputThemeSlug(let slug):
+                    if boxed {
+                        buffer.appendInt32(-175567375)
+                    }
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .inputTheme(let id, let accessHash):
+                return ("inputTheme", [("id", id), ("accessHash", accessHash)])
+                case .inputThemeSlug(let slug):
+                return ("inputThemeSlug", [("slug", slug)])
+    }
+    }
+    
+        public static func parse_inputTheme(_ reader: BufferReader) -> InputTheme? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputTheme.inputTheme(id: _1!, accessHash: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_inputThemeSlug(_ reader: BufferReader) -> InputTheme? {
+            var _1: String?
+            _1 = parseString(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.InputTheme.inputThemeSlug(slug: _1!)
             }
             else {
                 return nil
@@ -10424,40 +10504,6 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.EncryptedFile.encryptedFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, keyFingerprint: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    public enum CodeSettings: TypeConstructorDescription {
-        case codeSettings(flags: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .codeSettings(let flags):
-                    if boxed {
-                        buffer.appendInt32(-557924733)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .codeSettings(let flags):
-                return ("codeSettings", [("flags", flags)])
-    }
-    }
-    
-        public static func parse_codeSettings(_ reader: BufferReader) -> CodeSettings? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.CodeSettings.codeSettings(flags: _1!)
             }
             else {
                 return nil
@@ -18172,6 +18218,74 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.WebDocument.webDocument(url: _1!, accessHash: _2!, size: _3!, mimeType: _4!, attributes: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum Theme: TypeConstructorDescription {
+        case themeDocumentNotModified
+        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .themeDocumentNotModified:
+                    if boxed {
+                        buffer.appendInt32(1211967244)
+                    }
+                    
+                    break
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document):
+                    if boxed {
+                        buffer.appendInt32(1464749545)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(id, buffer: buffer, boxed: false)
+                    serializeInt64(accessHash, buffer: buffer, boxed: false)
+                    serializeString(slug, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    document.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .themeDocumentNotModified:
+                return ("themeDocumentNotModified", [])
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document):
+                return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document)])
+    }
+    }
+    
+        public static func parse_themeDocumentNotModified(_ reader: BufferReader) -> Theme? {
+            return Api.Theme.themeDocumentNotModified
+        }
+        public static func parse_theme(_ reader: BufferReader) -> Theme? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int64?
+            _3 = reader.readInt64()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: String?
+            _5 = parseString(reader)
+            var _6: Api.Document?
+            if let signature = reader.readInt32() {
+                _6 = Api.parse(reader, signature: signature) as? Api.Document
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            let _c6 = _6 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
+                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6!)
             }
             else {
                 return nil

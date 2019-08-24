@@ -122,6 +122,7 @@
         pickerController.onlyCrop = strongController.onlyCrop;
         pickerController.hasSilentPosting = strongController.hasSilentPosting;
         pickerController.hasSchedule = strongController.hasSchedule;
+        pickerController.presentScheduleController = strongController.presentScheduleController;
         [strongController pushViewController:pickerController animated:true];
     };
     [groupsController loadViewIfNeeded];
@@ -211,6 +212,11 @@
 {
     _hasSchedule = hasSchedule;
     self.pickerController.hasSchedule = hasSchedule;
+}
+
+- (void)setPresentScheduleController:(void (^)(void (^)(int32_t)))presentScheduleController {
+    _presentScheduleController = [presentScheduleController copy];
+    self.pickerController.presentScheduleController = presentScheduleController;
 }
 
 - (void)setOnlyCrop:(bool)onlyCrop
@@ -457,7 +463,7 @@
     {
         __strong TGMediaAssetsController *strongSelf = weakSelf;
         if (strongSelf != nil)
-            [strongSelf completeWithCurrentItem:nil mode:TGMediaPickerGalleryCompletionModeGeneric];
+            [strongSelf completeWithCurrentItem:nil silentPosting:false scheduleTime:0];
     };
 }
 
@@ -538,12 +544,12 @@
         self.avatarCompletionBlock(image);
 }
 
-- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem mode:(TGMediaPickerGalleryCompletionMode)mode
+- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime
 {
     if (self.completionBlock != nil)
     {
         NSArray *signals = [self resultSignalsWithCurrentItem:currentItem descriptionGenerator:self.descriptionGenerator];
-        self.completionBlock(signals, mode);
+        self.completionBlock(signals, silentPosting, scheduleTime);
     }
     else if (self.singleCompletionBlock != nil)
     {

@@ -32,12 +32,13 @@
 @property (nonatomic) bool disableStickers;
 @property (nonatomic) bool hasSilentPosting;
 @property (nonatomic) bool hasSchedule;
+@property (nonatomic, copy) void (^presentScheduleController)(void (^)(int32_t));
 
 @property (nonatomic, strong) NSArray *underlyingViews;
 @property (nonatomic, assign) bool openEditor;
 
 @property (nonatomic, copy) void (^cameraPressed)(TGAttachmentCameraView *cameraView);
-@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, TGMediaPickerGalleryCompletionMode mode);
+@property (nonatomic, copy) void (^sendPressed)(TGMediaAsset *currentItem, bool asFiles, bool silentPosting, int32_t scheduleTime);
 @property (nonatomic, copy) void (^avatarCompletionBlock)(UIImage *image);
 
 @property (nonatomic, copy) void (^editorOpened)(void);

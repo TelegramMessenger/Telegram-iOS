@@ -366,44 +366,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                 }
                 
-                if let _ = self.controllerView.emptyDetailView {
-//                    transition.updateFrame(view: navigationBackgroundView, frame: navigationBackgroundFrame)
-//                    transition.updateFrame(view: navigationSeparatorView, frame: CGRect(origin: CGPoint(x: navigationBackgroundFrame.minX, y: navigationBackgroundFrame.maxY), size: CGSize(width: navigationBackgroundFrame.width, height: UIScreenPixel)))
-//                    if let image = emptyDetailView.image {
-//                        transition.updateFrame(view: emptyDetailView, frame: CGRect(origin: CGPoint(x: masterData.0.maxX + floor((lastControllerFrameAndLayout.0.size.width - image.size.width) / 2.0), y: floor((lastControllerFrameAndLayout.0.size.height - image.size.height) / 2.0)), size: image.size))
-//                    }
-                } else {
- //                   let navigationBackgroundView = UIView()
-//                    navigationBackgroundView.backgroundColor = self.theme.navigationBar.c
-//                    let navigationSeparatorView = UIView()
-//                    navigationSeparatorView.backgroundColor = self.theme.navigationBar.separatorColor
-//                    let emptyDetailView = UIImageView()
-//                    emptyDetailView.image = self.theme.emptyDetailIcon
-//                    emptyDetailView.alpha = 0.0
-//
-//                    self.controllerView.navigationBackgroundView = navigationBackgroundView
-//                    self.controllerView.navigationSeparatorView = navigationSeparatorView
-//                    self.controllerView.emptyDetailView = emptyDetailView
-//
-//                    self.controllerView.insertSubview(navigationBackgroundView, at: 0)
-//                    self.controllerView.insertSubview(navigationSeparatorView, at: 1)
-                   // self.controllerView.insertSubview(emptyDetailView, at: 0)
-                    
-//                    navigationBackgroundView.frame = navigationBackgroundFrame
-//                    navigationSeparatorView.frame = CGRect(origin: CGPoint(x: navigationBackgroundFrame.minX, y: navigationBackgroundFrame.maxY), size: CGSize(width: navigationBackgroundFrame.width, height: UIScreenPixel))
-//
-//                    transition.animatePositionAdditive(layer: navigationBackgroundView.layer, offset: CGPoint(x: navigationBackgroundFrame.width, y: 0.0))
-//                    transition.animatePositionAdditive(layer: navigationSeparatorView.layer, offset: CGPoint(x: navigationBackgroundFrame.width, y: 0.0))
-                    
-//                    if let image = emptyDetailView.image {
-//                        emptyDetailView.frame = CGRect(origin: CGPoint(x: masterData.0.maxX + floor((lastControllerFrameAndLayout.0.size.width - image.size.width) / 2.0), y: floor((lastControllerFrameAndLayout.0.size.height - image.size.height) / 2.0)), size: image.size)
-//                    }
-//
-//                    transition.updateAlpha(layer: emptyDetailView.layer, alpha: 1.0)
-                }
-                
                 if let blackout = self.masterDetailsBlackout {
-                    
                     let blackoutFrame: CGRect
                     switch blackout {
                     case .details:
@@ -493,15 +456,15 @@ open class NavigationController: UINavigationController, ContainableController, 
                 } else if case .masterDetail = layoutConfiguration, i == 1 {
                     controller.navigationBar?.previousItem = .close
                 } else {
-                    controller.navigationBar?.previousItem = .item(viewControllers[i - 1].navigationItem)
+                    controller.navigationBar?.previousItem = .item(self.viewControllers[i - 1].navigationItem)
                 }
                 if i < self._viewControllers.count - 1 {
-                    controller.updateNavigationCustomData((viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0, transition: transition)
+                    controller.updateNavigationCustomData((self.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0, transition: transition)
                 } else {
                     controller.updateNavigationCustomData(nil, progress: 1.0, transition: transition)
                 }
             }
-            viewControllers[i].navigation_setNavigationController(self)
+            self.viewControllers[i].navigation_setNavigationController(self)
             
             if i == 0, let (_, layout) = firstControllerFrameAndLayout {
                 controllersAndFrames.append((true, self._viewControllers[i], layout))
@@ -526,7 +489,15 @@ open class NavigationController: UINavigationController, ContainableController, 
                 frame = lastControllerFrameAndLayout.0
             }
             let isAppearing = record.controller.view.superview == nil
-            (record.controller as? ViewController)?.containerLayoutUpdated(layout, transition: isAppearing ? .immediate : transition)
+            if let controller = record.controller as? ViewController {
+                let updatedLayout: ContainerViewLayout
+                if previousControllers.count == self.viewControllers.count + 1, previousControllers[previousControllers.count - 2].controller === controller {
+                    updatedLayout = layout.withUpdatedInputHeight(controller.hasActiveInput ? layout.inputHeight : nil)
+                } else {
+                    updatedLayout = layout
+                }
+                controller.containerLayoutUpdated(updatedLayout, transition: isAppearing ? .immediate : transition)
+            }
             if isAppearing {
                 if isMaster {
                     appearingMasterController = record

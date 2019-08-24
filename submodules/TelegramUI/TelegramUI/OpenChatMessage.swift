@@ -138,7 +138,9 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             if let file = galleryMedia as? TelegramMediaFile {
                 if let fileName = file.fileName {
                     let ext = (fileName as NSString).pathExtension.lowercased()
-                    if ext == "wav" || ext == "opus" {
+                    if ext == "tgios-theme" {
+                        return .theme(file)
+                    } else if ext == "wav" || ext == "opus" {
                         return .audio(file)
                     } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
                         if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let _ = LOTComposition(filePath: path) {
@@ -365,7 +367,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     return nil
                 }))
             case let .theme(media):
-                let controller = ThemePreviewController(context: params.context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, baseColor: nil, day: true, preview: false), media: .message(message: MessageReference(params.message), media: media))
+                let controller = ThemePreviewController(context: params.context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, baseColor: nil, day: true, preview: false), source: .media(.message(message: MessageReference(params.message), media: media)))
                 params.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }

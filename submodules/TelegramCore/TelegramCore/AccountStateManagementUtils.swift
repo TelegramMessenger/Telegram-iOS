@@ -1314,6 +1314,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     messageIds.append(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.ScheduledCloud, id: message))
                 }
                 updatedState.deleteMessages(messageIds)
+            case let .updateTheme(theme):
+                break
             default:
                 break
         }

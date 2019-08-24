@@ -4,12 +4,6 @@
 @class TGMediaAsset;
 @class TGMediaSelectionContext;
 
-typedef NS_ENUM(NSUInteger, TGMediaPickerGalleryCompletionMode) {
-    TGMediaPickerGalleryCompletionModeGeneric,
-    TGMediaPickerGalleryCompletionModeSilent,
-    TGMediaPickerGalleryCompletionModeSchedule
-};
-
 @interface TGMediaAssetsPreheatMixin : NSObject
 
 @property (nonatomic, copy) NSInteger (^assetCount)(void);

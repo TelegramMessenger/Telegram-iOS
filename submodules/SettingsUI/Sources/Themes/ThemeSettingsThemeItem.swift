@@ -21,7 +21,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
         let lineWidth: CGFloat
         if selected {
             var accentColor = theme.list.itemAccentColor
-            if accentColor.rgb == UIColor.white.rgb {
+            if accentColor.rgb == 0xffffff {
                 accentColor = UIColor(rgb: 0x999999)
             }
             context.setStrokeColor(accentColor.cgColor)
@@ -40,32 +40,40 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
 
 private func generateThemeIconImage(theme: PresentationThemeReference, accentColor: UIColor?) -> UIImage {
     return generateImage(CGSize(width: 98.0, height: 62.0), rotatedContext: { size, context in
-        guard case let .builtin(theme) = theme else {
-            return
-        }
         let bounds = CGRect(origin: CGPoint(), size: size)
         
         let background: UIColor
         let incomingFill: UIColor
         let outgoingFill: UIColor
         switch theme {
-            case .dayClassic:
+            case let .builtin(theme):
+                switch theme {
+                    case .dayClassic:
+                        background = UIColor(rgb: 0xd6e2ee)
+                        incomingFill = UIColor(rgb: 0xffffff)
+                        outgoingFill = UIColor(rgb: 0xe1ffc7)
+                    case .day:
+                        background = .white
+                        incomingFill = UIColor(rgb: 0xd5dde6)
+                        outgoingFill = accentColor ?? UIColor(rgb: 0x007aff)
+                    case .night:
+                        background = UIColor(rgb: 0x000000)
+                        incomingFill = UIColor(rgb: 0x1f1f1f)
+                        outgoingFill = accentColor ?? UIColor(rgb: 0x313131)
+                    case .nightAccent:
+                        let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
+                        background = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
+                        incomingFill = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
+                        outgoingFill = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+                }
+            case let .cloud(theme):
                 background = UIColor(rgb: 0xd6e2ee)
                 incomingFill = UIColor(rgb: 0xffffff)
                 outgoingFill = UIColor(rgb: 0xe1ffc7)
-            case .day:
-                background = .white
-                incomingFill = UIColor(rgb: 0xd5dde6)
-                outgoingFill = accentColor ?? UIColor(rgb: 0x007aff)
-            case .night:
-                background = UIColor(rgb: 0x000000)
-                incomingFill = UIColor(rgb: 0x1f1f1f)
-                outgoingFill = accentColor ?? UIColor(rgb: 0x313131)
-            case .nightAccent:
-                let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
-                background = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
-                incomingFill = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
-                outgoingFill = accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)
+            default:
+                background = UIColor(rgb: 0xd6e2ee)
+                incomingFill = UIColor(rgb: 0xffffff)
+                outgoingFill = UIColor(rgb: 0xe1ffc7)
         }
             
         context.setFillColor(background.cgColor)
@@ -336,19 +344,22 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                         }
                         
                         let name: String?
-                        if case let .builtin(theme) = theme {
-                            switch theme {
-                                case .dayClassic:
-                                    name = item.strings.Appearance_ThemeCarouselClassic
-                                case .day:
-                                    name = item.strings.Appearance_ThemeCarouselDay
-                                case .night:
-                                    name = item.strings.Appearance_ThemeCarouselNewNight
-                                case .nightAccent:
-                                    name = item.strings.Appearance_ThemeCarouselTintedNight
-                            }
-                        } else {
-                            name = nil
+                        switch theme {
+                            case let .builtin(theme):
+                                switch theme {
+                                    case .dayClassic:
+                                        name = item.strings.Appearance_ThemeCarouselClassic
+                                    case .day:
+                                        name = item.strings.Appearance_ThemeCarouselDay
+                                    case .night:
+                                        name = item.strings.Appearance_ThemeCarouselNewNight
+                                    case .nightAccent:
+                                        name = item.strings.Appearance_ThemeCarouselTintedNight
+                                }
+                            case let .cloud(theme):
+                                name = theme.title
+                            default:
+                                name = nil
                         }
                         
                         if let name = name {

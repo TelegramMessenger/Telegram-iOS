@@ -22,6 +22,8 @@
 		0962E66F21B6147600245FD9 /* AppConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E66E21B6147600245FD9 /* AppConfiguration.swift */; };
 		0962E67521B6437600245FD9 /* SplitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67421B6437600245FD9 /* SplitTest.swift */; };
 		0962E68121BAA20E00245FD9 /* SearchBotsConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */; };
+		09B4A9B4230FB70B005C2E08 /* Themes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B3230FB70B005C2E08 /* Themes.swift */; };
+		09B4A9B6230FBB2B005C2E08 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B5230FBB2B005C2E08 /* Theme.swift */; };
 		09EC0DE922C6825D00E7185B /* AppUpdate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DE822C6825D00E7185B /* AppUpdate.swift */; };
 		09EDAD382213120C0012A50B /* AutodownloadSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD372213120C0012A50B /* AutodownloadSettings.swift */; };
 		09EDAD3A22131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */; };
@@ -808,6 +810,8 @@
 		0962E66E21B6147600245FD9 /* AppConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfiguration.swift; sourceTree = "<group>"; };
 		0962E67421B6437600245FD9 /* SplitTest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitTest.swift; sourceTree = "<group>"; };
 		0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBotsConfiguration.swift; sourceTree = "<group>"; };
+		09B4A9B3230FB70B005C2E08 /* Themes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Themes.swift; sourceTree = "<group>"; };
+		09B4A9B5230FBB2B005C2E08 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		09EC0DE822C6825D00E7185B /* AppUpdate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdate.swift; sourceTree = "<group>"; };
 		09EDAD372213120C0012A50B /* AutodownloadSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutodownloadSettings.swift; sourceTree = "<group>"; };
 		09EDAD3922131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedAutodownloadSettingsUpdates.swift; sourceTree = "<group>"; };
@@ -1270,6 +1274,7 @@
 				0962E66E21B6147600245FD9 /* AppConfiguration.swift */,
 				0962E68021BAA20E00245FD9 /* SearchBotsConfiguration.swift */,
 				09EDAD372213120C0012A50B /* AutodownloadSettings.swift */,
+				09B4A9B5230FBB2B005C2E08 /* Theme.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -1667,6 +1672,7 @@
 				D099E221229420D600561B75 /* BlockedPeersContext.swift */,
 				D098907E22942E3B0053F151 /* ActiveSessionsContext.swift */,
 				D069257022D8B526002FC021 /* SecretChatSettings.swift */,
+				09B4A9B3230FB70B005C2E08 /* Themes.swift */,
 			);
 			name = Settings;
 			sourceTree = "<group>";
@@ -2148,6 +2154,7 @@
 				D03B0CE01D62249100955575 /* StoreMessage_Telegram.swift in Sources */,
 				D03E416C2304D5B30049C28B /* ValidateAddressNameInteractive.swift in Sources */,
 				D08774FE1E3E3A3500A97350 /* GlobalNotificationSettings.swift in Sources */,
+				09B4A9B6230FBB2B005C2E08 /* Theme.swift in Sources */,
 				D023E67821540624008C27D1 /* UpdateMessageMedia.swift in Sources */,
 				D0EE7FC420986C5300981319 /* SecureIdPassportRegistrationValue.swift in Sources */,
 				D03B0CB91D62233400955575 /* Either.swift in Sources */,
@@ -2155,6 +2162,7 @@
 				0962E66D21B5C56F00245FD9 /* JSON.swift in Sources */,
 				D0338740223BD48B007A2CE4 /* ContactsSettings.swift in Sources */,
 				D03B0CBD1D62234300955575 /* Regex.swift in Sources */,
+				09B4A9B4230FB70B005C2E08 /* Themes.swift in Sources */,
 				D00BDA191EE593D600C64C5E /* TelegramChannelAdminRights.swift in Sources */,
 				09EDAD3A22131D010012A50B /* ManagedAutodownloadSettingsUpdates.swift in Sources */,
 				D0EA188220D3D2B1001AEE19 /* RemoteStorageConfiguration.swift in Sources */,

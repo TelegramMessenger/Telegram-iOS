@@ -59,6 +59,7 @@ public struct Namespaces {
         public static let CloudWallpapers: Int32 = 6
         public static let CloudSavedStickers: Int32 = 7
         public static let RecentlyUsedHashtags: Int32 = 8
+        public static let CloudThemes: Int32 = 9
     }
     
     struct CachedItemCollection {
@@ -70,6 +71,7 @@ public struct Namespaces {
         public static let cachedStickerQueryResults: Int8 = 5
         public static let cachedSecureIdConfiguration: Int8 = 6
         public static let cachedWallpapersConfiguration: Int8 = 7
+        public static let cachedThemesConfiguration: Int8 = 7
     }
     
     struct UnorderedItemList {

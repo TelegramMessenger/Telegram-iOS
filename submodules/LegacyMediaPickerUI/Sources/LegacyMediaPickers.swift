@@ -17,7 +17,7 @@ public func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
+public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentScheduleController: @escaping (@escaping (Int32) -> Void) -> Void) {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     controller.captionsEnabled = captionsEnabled
@@ -30,6 +30,11 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
         controller.hasSilentPosting = !isSecretChat
     }
     controller.hasSchedule = !isSecretChat
+    controller.presentScheduleController = { done in
+        presentScheduleController { time in
+            done?(time)
+        }
+    }
     controller.dismissalBlock = {
     }
     controller.selectionLimitExceeded = {

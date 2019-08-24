@@ -115,12 +115,21 @@
     _containerView.layer.cornerRadius = 12.0;
     [self.view addSubview:_containerView];
     
+    __weak TGMediaPickerSendActionSheetController *weakSelf = self;
     if (_canSendSilently) {
         _sendSilentlyButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.SendSilently") icon:TGComponentsImageNamed(@"MediaMute")];
+        _sendSilentlyButton.pressed = ^{
+            __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
+            [strongSelf sendSilentlyPressed];
+        };
         [_containerView addSubview:_sendSilentlyButton];
     }
     
     _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule")];
+    _scheduleButton.pressed = ^{
+        __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
+        [strongSelf schedulePressed];
+    };
     [_containerView addSubview:_scheduleButton];
     
     TGMediaAssetsPallete *pallete = nil;

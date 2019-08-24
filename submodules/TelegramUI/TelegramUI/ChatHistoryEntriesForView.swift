@@ -20,7 +20,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             }
         }
     }
-    
+
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
         for media in entry.message.media {

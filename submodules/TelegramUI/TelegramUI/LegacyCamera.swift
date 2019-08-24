@@ -10,7 +10,7 @@ import ShareController
 import LegacyUI
 import LegacyMediaPickerUI
 
-func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }) {
+func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAttachmentCameraView?, menuController: TGMenuSheetController?, parentController: ViewController, editingMedia: Bool, saveCapturedPhotos: Bool, mediaGrouping: Bool, initialCaption: String, sendMessagesWithSignals: @escaping ([Any]?) -> Void, recognizedQRCode: @escaping (String) -> Void = { _ in }, presentScheduleController: @escaping (@escaping (Int32) -> Void) -> Void) {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme)
     legacyController.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .portrait, compactSize: .portrait)

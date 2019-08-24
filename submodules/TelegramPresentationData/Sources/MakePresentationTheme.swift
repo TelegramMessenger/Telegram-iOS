@@ -16,6 +16,10 @@ public func makePresentationTheme(themeReference: PresentationThemeReference, ac
                 case .day:
                     theme = makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, day: true, preview: preview)
             }
+        case let .local(resource):
+            theme = makeDefaultDayPresentationTheme(serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, day: false, preview: preview)
+        case let .cloud(info):
+            theme = makeDefaultDayPresentationTheme(serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, day: false, preview: preview)
     }
     return theme
 }

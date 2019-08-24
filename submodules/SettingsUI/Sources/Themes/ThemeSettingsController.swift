@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import AlertUI
 import AccountContext
 
 private final class ThemeSettingsControllerArguments {
@@ -294,16 +295,15 @@ private struct ThemeSettingsState: Equatable {
     }
 }
 
-private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
+private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], availableThemes: [PresentationThemeReference], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
     entries.append(.themeListHeader(presentationData.theme, strings.Appearance_ColorTheme.uppercased()))
     entries.append(.chatPreview(presentationData.theme, theme, wallpaper, fontSize, presentationData.strings, dateTimeFormat, presentationData.nameDisplayOrder))
     
-    let availableThemes: [PresentationThemeReference] = [.builtin(.dayClassic), .builtin(.day), .builtin(.night), .builtin(.nightAccent)]
     entries.append(.themeItem(presentationData.theme, presentationData.strings, availableThemes, themeReference, themeSpecificAccentColors, themeSpecificAccentColors[themeReference.index]))
     
-    if theme.name != .builtin(.dayClassic) {
+    if case let .builtin(theme) = themeReference, theme != .dayClassic {
         entries.append(.accentColor(presentationData.theme, themeReference, strings.Appearance_AccentColor, themeSpecificAccentColors[themeReference.index]))
     }
     
@@ -348,6 +348,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    
+    var moreImpl: (() -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
     
@@ -426,9 +428,14 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         context.sharedContext.applicationBindings.requestSetAlternateIconName(name, { _ in
         })
     })
-        
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), availableAppIcons, currentAppIconName.get(), statePromise.get())
-    |> map { presentationData, sharedData, availableAppIcons, currentAppIconName, state -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
+    
+    let savedThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network)
+    |> map { themes -> [PresentationThemeReference] in
+        return themes.map { .cloud($0) }
+    }
+    
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), savedThemes, availableAppIcons, currentAppIconName.get(), statePromise.get())
+    |> map { presentationData, sharedData, savedThemes, availableAppIcons, currentAppIconName, state -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let fontSize = settings.fontSize
@@ -446,8 +453,15 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             wallpaper = settings.chatWallpaper
         }
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeReference: settings.theme, themeSpecificAccentColors: settings.themeSpecificAccentColors, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let rightNavigationButton = ItemListNavigationButton(content: .icon(.action), style: .regular, enabled: true, action: {
+            moreImpl?()
+        })
+        
+        let defaultThemes: [PresentationThemeReference] = [.builtin(.dayClassic), .builtin(.day), .builtin(.night), .builtin(.nightAccent)]
+        let availableThemes = defaultThemes + savedThemes
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeReference: settings.theme,  themeSpecificAccentColors: settings.themeSpecificAccentColors, availableThemes: availableThemes, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
                 
         return (controllerState, (listState, arguments))
     }
@@ -459,6 +473,46 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    moreImpl = { [weak controller] in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetButtonItem(title: "Create New Theme", color: .accent, action: { [weak actionSheet] in
+            actionSheet?.dismissAnimated()
+           
+            var randomId: Int64 = 0
+            arc4random_buf(&randomId, 8)
+            let path = NSTemporaryDirectory() + "\(randomId)"
+            
+            let encoder = PresentationThemeEncoder()
+            let theme = presentationData.theme
+            guard let strings = try? encoder.encode(theme), let _ = try? strings.write(toFile: path, atomically: true, encoding: .utf8) else {
+                return
+            }
+            
+            let id = arc4random64()
+            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/x-tgtheme-ios", size: nil, attributes: [.FileName(fileName: "\(theme.name.string).tgios-theme")])
+            let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+            
+            let _ = enqueueMessages(account: context.account, peerId: context.account.peerId, messages: [message]).start()
+            
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: "A new theme template has been added to your Saved Messages.", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
+                if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId)))
+                }
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], actionLayout: .vertical), nil)
+        }))
+        items.append(ActionSheetButtonItem(title: "Upload Theme", color: .accent, action: { [weak actionSheet] in
+            actionSheet?.dismissAnimated()
+    
+        }))
+        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        presentControllerImpl?(actionSheet, nil)
     }
     return controller
 }

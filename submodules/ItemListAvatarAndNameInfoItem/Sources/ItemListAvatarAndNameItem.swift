@@ -927,7 +927,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         if strongSelf.arrowNode.supernode == nil {
                             strongSelf.addSubnode(strongSelf.arrowNode)
                         }
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 15.0 - arrowImage.size.width, y: floor((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width, y: floor((layout.contentSize.height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     } else if strongSelf.arrowNode.supernode != nil {
                         strongSelf.arrowNode.removeFromSupernode()
                     }

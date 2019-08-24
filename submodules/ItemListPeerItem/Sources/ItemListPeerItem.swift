@@ -859,7 +859,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         if let labelArrowNode = self.labelArrowNode {
             if let image = labelArrowNode.image {
-                let labelArrowNodeFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - image.size.width, y: labelArrowNode.frame.minY), size: image.size)
+                let labelArrowNodeFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - image.size.width + 8.0, y: labelArrowNode.frame.minY), size: image.size)
                 transition.updateFrame(node: labelArrowNode, frame: labelArrowNodeFrame)
                 rightLabelInset += 19.0
             }

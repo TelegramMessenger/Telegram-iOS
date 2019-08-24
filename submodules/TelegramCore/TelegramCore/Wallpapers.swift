@@ -26,7 +26,7 @@ final class CachedWallpapersConfiguration: PostboxCoding {
 }
 
 public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramWallpaper], NoError> {
-    let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<[TelegramWallpaper], NoError> = { list, hash in
+    let fetch: ([TelegramWallpaper]?, Int32?) -> Signal<[TelegramWallpaper], NoError> = { current, hash in
         network.request(Api.functions.account.getWallPapers(hash: hash ?? 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<([TelegramWallpaper], Int32), NoError> in
@@ -49,7 +49,7 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                         items.append(.builtin(WallpaperSettings()))
                     }
                     
-                    if items == list {
+                    if items == current {
                         return .complete()
                     } else {
                         return .single((items, hash))
@@ -85,9 +85,9 @@ public func telegramWallpapers(postbox: Postbox, network: Network, forceUpdate: 
                 return (items.map { $0.contents as! TelegramWallpaper }, configuration?.hash)
             }
         }
-        |> mapToSignal { list, hash -> Signal<[TelegramWallpaper], NoError> in
-            return .single(list)
-            |> then(fetch(list, hash))
+        |> mapToSignal { current, hash -> Signal<[TelegramWallpaper], NoError> in
+            return .single(current)
+            |> then(fetch(current, hash))
         }
     }
 }
@@ -101,7 +101,7 @@ public enum UploadWallpaperError {
     case generic
 }
 
-public struct UploadedWallpaperData {
+private struct UploadedWallpaperData {
     fileprivate let resource: MediaResource
     fileprivate let content: UploadedWallpaperDataContent
 }
@@ -134,9 +134,9 @@ public func uploadWallpaper(account: Account, resource: MediaResource, mimeType:
                         return .single((.progress(progress), result.resource))
                     case let .inputFile(file):
                         return account.network.request(Api.functions.account.uploadWallPaper(file: file, mimeType: mimeType, settings: apiWallpaperSettings(settings)))
-                        |> mapError {_ in return UploadWallpaperError.generic}
-                        |> mapToSignal { wallpaper -> Signal<(UploadWallpaperStatus, MediaResource?), UploadWallpaperError> in
-                            return .single((.complete(TelegramWallpaper(apiWallpaper: wallpaper)), result.resource))
+                        |> mapError { _ in return UploadWallpaperError.generic }
+                        |> map { wallpaper -> (UploadWallpaperStatus, MediaResource?) in
+                            return (.complete(TelegramWallpaper(apiWallpaper: wallpaper)), result.resource)
                         }
                     default:
                         return .fail(.generic)

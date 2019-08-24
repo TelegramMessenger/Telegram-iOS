@@ -338,6 +338,8 @@ private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchPar
                 default:
                     break
             }
+        default:
+            return false
     }
     switch parameters.trigger {
         case .none:

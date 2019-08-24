@@ -196,7 +196,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     
                     strongSelf.iconNode.image = item.icon
                     if let image = item.icon {
-                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - image.size.width) / 2.0), y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size))
+                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + 3.0, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size))
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {

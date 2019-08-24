@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramUIPreferences
+import TelegramPresentationData
 import AccountContext
 import OverlayStatusController
 import AlertUI
@@ -232,6 +233,23 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 controller?.dismiss()
                 let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, color, intensity, nil))
                 present(galleryController, nil)
+            }, error: { [weak controller] error in
+                controller?.dismiss()
+            })
+            dismissInput()
+        case let .theme(slug):
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            let signal = getTheme(account: context.account, slug: slug)
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            present(controller, nil)
+            
+            let _ = (signal
+            |> deliverOnMainQueue).start(next: { [weak controller] theme in
+                controller?.dismiss()
+                let previewTheme = makePresentationTheme(themeReference: .cloud(theme), accentColor: nil, serviceBackgroundColor: .black, baseColor: nil)
+                let previewController = ThemePreviewController(context: context, previewTheme: previewTheme, source: .theme(theme))
+                present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             }, error: { [weak controller] error in
                 controller?.dismiss()
             })

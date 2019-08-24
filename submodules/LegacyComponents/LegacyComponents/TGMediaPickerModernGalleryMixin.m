@@ -136,7 +136,7 @@
             strongSelf->_galleryModel.dismiss(true, false);
             
             if (strongSelf.completeWithItem != nil)
-                strongSelf.completeWithItem(item, false);
+                strongSelf.completeWithItem(item, false, 0);
         };
         
         model.interfaceView.doneLongPressed = ^(TGMediaPickerGalleryItem *item) {
@@ -156,19 +156,9 @@
                 strongSelf->_galleryModel.dismiss(true, false);
                 
                 if (strongSelf.completeWithItem != nil)
-                    strongSelf.completeWithItem(item, TGMediaPickerGalleryCompletionModeGeneric);
+                    strongSelf.completeWithItem(item, false, 0);
             };
             controller.sendSilently = ^{
-                __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
-                if (strongSelf == nil)
-                    return;
-                
-                strongSelf->_galleryModel.dismiss(true, TGMediaPickerGalleryCompletionModeSilent);
-                
-                if (strongSelf.completeWithItem != nil)
-                    strongSelf.completeWithItem(item, true);
-            };
-            controller.schedule = ^{
                 __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
@@ -176,7 +166,23 @@
                 strongSelf->_galleryModel.dismiss(true, false);
                 
                 if (strongSelf.completeWithItem != nil)
-                    strongSelf.completeWithItem(item, TGMediaPickerGalleryCompletionModeSchedule);
+                    strongSelf.completeWithItem(item, true, 0);
+            };
+            controller.schedule = ^{
+                __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                strongSelf.presentScheduleController(^(int32_t time) {
+                    __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    strongSelf->_galleryModel.dismiss(true, false);
+                    
+                    if (strongSelf.completeWithItem != nil)
+                        strongSelf.completeWithItem(item, false, time);
+                });
             };
             
             TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:[strongSelf->_context makeOverlayWindowManager] parentController:strongSelf->_parentController contentController:controller];

@@ -817,6 +817,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         })
                     case .wallpaper:
                         break
+                    case .theme:
+                        break
                 }
             }
         }))

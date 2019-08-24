@@ -25,6 +25,7 @@ public enum ItemListNavigationButtonStyle {
 public enum ItemListNavigationButtonContentIcon {
     case search
     case add
+    case action
 }
 
 public enum ItemListNavigationButtonContent: Equatable {
@@ -309,6 +310,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                                             image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
                                         case .add:
                                             image = PresentationResourcesRootController.navigationAddIcon(controllerState.theme)
+                                        case .action:
+                                            image = PresentationResourcesRootController.navigationShareIcon(controllerState.theme)
                                     }
                                     item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
                             }
@@ -364,6 +367,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                                                 image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
                                             case .add:
                                                 image = PresentationResourcesRootController.navigationAddIcon(controllerState.theme)
+                                            case .action:
+                                                image = PresentationResourcesRootController.navigationShareIcon(controllerState.theme)
                                         }
                                         item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
                                 }

@@ -238,6 +238,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[967122427] = { return Api.Update.parse_updateNewScheduledMessage($0) }
     dict[-1870238482] = { return Api.Update.parse_updateDeleteScheduledMessages($0) }
     dict[357013699] = { return Api.Update.parse_updateMessageReactions($0) }
+    dict[-2112423005] = { return Api.Update.parse_updateTheme($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
@@ -263,6 +264,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-748155807] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[1679398724] = { return Api.SecureFile.parse_secureFileEmpty($0) }
     dict[-534283678] = { return Api.SecureFile.parse_secureFile($0) }
+    dict[-199313886] = { return Api.account.Themes.parse_themesNotModified($0) }
+    dict[2137482273] = { return Api.account.Themes.parse_themes($0) }
     dict[236446268] = { return Api.PhotoSize.parse_photoSizeEmpty($0) }
     dict[2009052699] = { return Api.PhotoSize.parse_photoSize($0) }
     dict[-374917894] = { return Api.PhotoSize.parse_photoCachedSize($0) }
@@ -274,6 +277,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1359533640] = { return Api.messages.FoundStickerSets.parse_foundStickerSets($0) }
     dict[471437699] = { return Api.account.WallPapers.parse_wallPapersNotModified($0) }
     dict[1881892265] = { return Api.account.WallPapers.parse_wallPapers($0) }
+    dict[1012306921] = { return Api.InputTheme.parse_inputTheme($0) }
+    dict[-175567375] = { return Api.InputTheme.parse_inputThemeSlug($0) }
     dict[1158290442] = { return Api.messages.FoundGifs.parse_foundGifs($0) }
     dict[-1199954735] = { return Api.MessageReactions.parse_messageReactions($0) }
     dict[-1132476723] = { return Api.FileLocation.parse_fileLocationToBeDeprecated($0) }
@@ -420,7 +425,6 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-2128640689] = { return Api.account.SentEmailCode.parse_sentEmailCode($0) }
     dict[-1038136962] = { return Api.EncryptedFile.parse_encryptedFileEmpty($0) }
     dict[1248893260] = { return Api.EncryptedFile.parse_encryptedFile($0) }
-    dict[-557924733] = { return Api.CodeSettings.parse_codeSettings($0) }
     dict[-391902247] = { return Api.SecureValueError.parse_secureValueErrorData($0) }
     dict[12467706] = { return Api.SecureValueError.parse_secureValueErrorFrontSide($0) }
     dict[-2037765467] = { return Api.SecureValueError.parse_secureValueErrorReverseSide($0) }
@@ -715,6 +719,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1363483106] = { return Api.DialogPeer.parse_dialogPeerFolder($0) }
     dict[-104284986] = { return Api.WebDocument.parse_webDocumentNoProxy($0) }
     dict[475467473] = { return Api.WebDocument.parse_webDocument($0) }
+    dict[1211967244] = { return Api.Theme.parse_themeDocumentNotModified($0) }
+    dict[1464749545] = { return Api.Theme.parse_theme($0) }
     dict[-1290580579] = { return Api.contacts.Found.parse_found($0) }
     dict[-368018716] = { return Api.ChannelAdminLogEventsFilter.parse_channelAdminLogEventsFilter($0) }
     dict[1889961234] = { return Api.PeerNotifySettings.parse_peerNotifySettingsEmpty($0) }
@@ -944,6 +950,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureFile:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.account.Themes:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.PhotoSize:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Stickers:
@@ -953,6 +961,8 @@ public struct Api {
             case let _1 as Api.messages.FoundStickerSets:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.account.WallPapers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.InputTheme:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FoundGifs:
                 _1.serialize(buffer, boxed)
@@ -1067,8 +1077,6 @@ public struct Api {
             case let _1 as Api.account.SentEmailCode:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.EncryptedFile:
-                _1.serialize(buffer, boxed)
-            case let _1 as Api.CodeSettings:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueError:
                 _1.serialize(buffer, boxed)
@@ -1301,6 +1309,8 @@ public struct Api {
             case let _1 as Api.DialogPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.WebDocument:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.Theme:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.Found:
                 _1.serialize(buffer, boxed)
