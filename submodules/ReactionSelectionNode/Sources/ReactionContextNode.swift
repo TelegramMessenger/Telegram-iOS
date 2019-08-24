@@ -86,7 +86,9 @@ public final class ReactionContextNode: ASDisplayNode {
     private let smallCircleNode: ASImageNode
     private let smallCircleShadowNode: ASImageNode
     
+    private let contentContainer: ASDisplayNode
     private var itemNodes: [ReactionNode] = []
+    private let disclosureButton: HighlightTrackingButtonNode
     
     private var isExpanded: Bool = false
     private var highlightedReaction: String?
@@ -139,6 +141,28 @@ public final class ReactionContextNode: ASDisplayNode {
         self.largeCircleShadowNode.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: largeCircleSize, shadowBlur: shadowBlur)
         self.smallCircleShadowNode.image = generateBubbleShadowImage(shadow: UIColor(white: 0.0, alpha: 0.2), diameter: smallCircleSize, shadowBlur: shadowBlur)
         
+        self.contentContainer = ASDisplayNode()
+        self.contentContainer.clipsToBounds = true
+        
+        self.disclosureButton = HighlightTrackingButtonNode()
+        self.disclosureButton.hitTestSlop = UIEdgeInsets(top: -6.0, left: -6.0, bottom: -6.0, right: -6.0)
+        let buttonImage = generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(theme.contextMenu.dimColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+            context.setBlendMode(.copy)
+            context.setStrokeColor(UIColor.clear.cgColor)
+            context.setLineWidth(2.0)
+            context.setLineCap(.round)
+            context.setLineJoin(.round)
+            context.beginPath()
+            context.move(to: CGPoint(x: 8.0, y: size.height / 2.0 + 3.0))
+            context.addLine(to: CGPoint(x: size.width / 2.0, y: 11.0))
+            context.addLine(to: CGPoint(x: size.width - 8.0, y: size.height / 2.0 + 3.0))
+            context.strokePath()
+        })
+        self.disclosureButton.setImage(buttonImage, for: [])
+        
         super.init()
         
         self.addSubnode(self.smallCircleShadowNode)
@@ -150,10 +174,23 @@ public final class ReactionContextNode: ASDisplayNode {
         self.backgroundContainerNode.addSubnode(self.backgroundNode)
         self.addSubnode(self.backgroundContainerNode)
         
+        self.contentContainer.addSubnode(self.disclosureButton)
+        
         self.itemNodes = self.items.map { item in
             return ReactionNode(account: account, theme: theme, reaction: .reaction(value: item.value, text: item.text, path: item.path), maximizedReactionSize: 30.0 - 18.0, loadFirstFrame: true)
         }
-        self.itemNodes.forEach(self.addSubnode)
+        self.itemNodes.forEach(self.contentContainer.addSubnode)
+        
+        self.addSubnode(self.contentContainer)
+        
+        self.disclosureButton.addTarget(self, action: #selector(self.disclosurePressed), forControlEvents: .touchUpInside)
+        self.disclosureButton.highligthedChanged = { [weak self] highlighted in
+            if highlighted {
+                self?.disclosureButton.layer.animateScale(from: 1.0, to: 0.8, duration: 0.15, removeOnCompletion: false)
+            } else {
+                self?.disclosureButton.layer.animateScale(from: 0.8, to: 1.0, duration: 0.25)
+            }
+        }
     }
     
     override public func didLoad() {
@@ -193,18 +230,27 @@ public final class ReactionContextNode: ASDisplayNode {
         let minimizedItemSize: CGFloat = 30.0
         let maximizedItemSize: CGFloat = 30.0 - 18.0
         let shadowBlur: CGFloat = 5.0
-        let rowHeight: CGFloat = 52.0
+        let verticalInset: CGFloat = 11.0
+        let rowHeight: CGFloat = 30.0
+        let rowSpacing: CGFloat = itemSpacing
         
-        let columnCount = min(7, self.items.count)
+        let columnCount = min(6, self.items.count)
         let contentWidth = CGFloat(columnCount) * minimizedItemSize + (CGFloat(columnCount) - 1.0) * itemSpacing + sideInset * 2.0
         let rowCount = self.items.count / columnCount + (self.items.count % columnCount == 0 ? 0 : 1)
-        let contentHeight = rowHeight * CGFloat(rowCount)
+        
+        let expandedRowCount = self.isExpanded ? rowCount : 1
+        
+        let contentHeight = verticalInset * 2.0 + rowHeight * CGFloat(expandedRowCount) + CGFloat(expandedRowCount - 1) * rowSpacing
         
         let (backgroundFrame, isLeftAligned) = self.calculateBackgroundFrame(containerSize: size, insets: insets, anchorRect: anchorRect, contentSize: CGSize(width: contentWidth, height: contentHeight))
         
+        transition.updateFrame(node: self.contentContainer, frame: backgroundFrame)
+        
         for i in 0 ..< self.items.count {
-            let row = CGFloat(i / columnCount)
-            let column = CGFloat(i % columnCount)
+            let rowIndex = i / columnCount
+            let columnIndex = i % columnCount
+            let row = CGFloat(rowIndex)
+            let column = CGFloat(columnIndex)
             
             var reactionValue: String?
             switch self.itemNodes[i].reaction {
@@ -224,17 +270,42 @@ public final class ReactionContextNode: ASDisplayNode {
                 itemSize = updatedSize
             }
             
-            transition.updateFrame(node: self.itemNodes[i], frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideInset + column * (minimizedItemSize + itemSpacing) - itemOffset, y: backgroundFrame.minY + row * rowHeight + floor((rowHeight - minimizedItemSize) / 2.0) - itemOffset), size: CGSize(width: itemSize, height: itemSize)), beginWithCurrentState: true)
+            let itemFrame = CGRect(origin: CGPoint(x: sideInset + column * (minimizedItemSize + itemSpacing) - itemOffset, y: verticalInset + row * (rowHeight + rowSpacing) + floor((rowHeight - minimizedItemSize) / 2.0) - itemOffset), size: CGSize(width: itemSize, height: itemSize))
+            transition.updateFrame(node: self.itemNodes[i], frame: itemFrame, beginWithCurrentState: true)
             self.itemNodes[i].updateLayout(size: CGSize(width: itemSize, height: itemSize), scale: itemSize / (maximizedItemSize + 18.0), transition: transition, displayText: false)
             self.itemNodes[i].updateIsAnimating(false, animated: false)
-            if row != 0 {
+            if rowIndex != 0 || columnIndex == columnCount - 1 {
                 if self.isExpanded {
-                    self.itemNodes[i].alpha = 1.0
+                    if self.itemNodes[i].alpha.isZero {
+                        self.itemNodes[i].alpha = 1.0
+                        if transition.isAnimated {
+                            let delayOffset: Double = 1.0 - Double(columnIndex) / Double(columnCount - 1)
+                            self.itemNodes[i].layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4 + delayOffset * 0.32, initialVelocity: 0.0, damping: 95.0)
+                            self.itemNodes[i].layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.05)
+                        }
+                    }
                 } else {
                     self.itemNodes[i].alpha = 0.0
                 }
             } else {
                 self.itemNodes[i].alpha = 1.0
+            }
+            
+            if rowIndex == 0 && columnIndex == columnCount - 1 {
+                transition.updateFrame(node: self.disclosureButton, frame: itemFrame)
+                if self.isExpanded {
+                    if self.disclosureButton.alpha.isEqual(to: 1.0) {
+                        self.disclosureButton.alpha = 0.0
+                        if transition.isAnimated {
+                            self.disclosureButton.layer.animateScale(from: 0.8, to: 0.1, duration: 0.2, removeOnCompletion: false)
+                            self.disclosureButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak self] _ in
+                                self?.disclosureButton.layer.removeAnimation(forKey: "scale")
+                            })
+                        }
+                    }
+                } else {
+                    self.disclosureButton.alpha = 1.0
+                }
             }
         }
      
@@ -254,10 +325,10 @@ public final class ReactionContextNode: ASDisplayNode {
         let largeCircleFrame: CGRect
         let smallCircleFrame: CGRect
         if isLeftAligned {
-            largeCircleFrame = CGRect(origin: CGPoint(x: anchorRect.maxX + 22.0 - rowHeight + floor((rowHeight - largeCircleSize) / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
+            largeCircleFrame = CGRect(origin: CGPoint(x: anchorRect.maxX + 16.0 - rowHeight + floor((rowHeight - largeCircleSize) / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
             smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.maxX - 3.0, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
         } else {
-            largeCircleFrame = CGRect(origin: CGPoint(x: anchorRect.minX - 24.0 + floor((rowHeight - largeCircleSize) / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
+            largeCircleFrame = CGRect(origin: CGPoint(x: anchorRect.minX - 18.0 + floor((rowHeight - largeCircleSize) / 2.0), y: backgroundFrame.maxY - largeCircleSize / 2.0), size: CGSize(width: largeCircleSize, height: largeCircleSize))
             smallCircleFrame = CGRect(origin: CGPoint(x: largeCircleFrame.minX + 3.0 - smallCircleSize, y: largeCircleFrame.maxY + 2.0), size: CGSize(width: smallCircleSize, height: smallCircleSize))
         }
         
@@ -289,15 +360,16 @@ public final class ReactionContextNode: ASDisplayNode {
     }
     
     public func animateOut(to targetAnchorRect: CGRect?, animatingOutToReaction: Bool) {
+        self.backgroundNode.layer.animateAlpha(from: self.backgroundNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.backgroundShadowNode.layer.animateAlpha(from: self.backgroundShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.largeCircleNode.layer.animateAlpha(from: self.largeCircleNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.largeCircleShadowNode.layer.animateAlpha(from: self.largeCircleShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.smallCircleNode.layer.animateAlpha(from: self.smallCircleNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
+        self.smallCircleShadowNode.layer.animateAlpha(from: self.smallCircleShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
         for itemNode in self.itemNodes {
-            self.backgroundNode.layer.animateAlpha(from: self.backgroundNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.backgroundShadowNode.layer.animateAlpha(from: self.backgroundShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.largeCircleNode.layer.animateAlpha(from: self.largeCircleNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.largeCircleShadowNode.layer.animateAlpha(from: self.largeCircleShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.smallCircleNode.layer.animateAlpha(from: self.smallCircleNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.smallCircleShadowNode.layer.animateAlpha(from: self.smallCircleShadowNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            itemNode.layer.animateAlpha(from: itemNode.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
         }
+        self.disclosureButton.layer.animateAlpha(from: self.disclosureButton.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false)
         
         if let targetAnchorRect = targetAnchorRect, let (size, insets, anchorRect) = self.validLayout {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: targetAnchorRect)
@@ -383,8 +455,14 @@ public final class ReactionContextNode: ASDisplayNode {
     }
     
     override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let contentPoint = self.contentContainer.view.convert(point, from: self.view)
+        if !self.disclosureButton.alpha.isZero {
+            if let result = self.disclosureButton.hitTest(self.disclosureButton.view.convert(point, from: self.view), with: event) {
+                return result
+            }
+        }
         for itemNode in self.itemNodes {
-            if itemNode.frame.contains(point) {
+            if !itemNode.alpha.isZero && itemNode.frame.contains(contentPoint) {
                 return self.view
             }
         }
@@ -401,13 +479,14 @@ public final class ReactionContextNode: ASDisplayNode {
     }
     
     public func reaction(at point: CGPoint) -> ReactionGestureItem? {
+        let contentPoint = self.contentContainer.view.convert(point, from: self.view)
         for itemNode in self.itemNodes {
-            if itemNode.frame.contains(point) {
+            if !itemNode.alpha.isZero && itemNode.frame.contains(contentPoint) {
                 return itemNode.reaction
             }
         }
         for itemNode in self.itemNodes {
-            if itemNode.frame.insetBy(dx: -8.0, dy: -8.0).contains(point) {
+            if !itemNode.alpha.isZero && itemNode.frame.insetBy(dx: -8.0, dy: -8.0).contains(contentPoint) {
                 return itemNode.reaction
             }
         }
@@ -418,6 +497,13 @@ public final class ReactionContextNode: ASDisplayNode {
         self.highlightedReaction = value
         if let (size, insets, anchorRect) = self.validLayout {
             self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
+        }
+    }
+    
+    @objc private func disclosurePressed() {
+        self.isExpanded = true
+        if let (size, insets, anchorRect) = self.validLayout {
+            self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.3, curve: .spring), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)
         }
     }
 }

@@ -26,7 +26,15 @@ public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [M
             }
         }
     }
-    transaction.deleteMessages(ids)
+    transaction.deleteMessages(ids, forEachMedia: { media in
+        processRemovedMedia(mediaBox, media)
+    })
+}
+
+public func deleteAllMessagesWithAuthor(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) {
+    transaction.removeAllMessagesWithAuthor(peerId, authorId: authorId, namespace: namespace, forEachMedia: { media in
+        processRemovedMedia(mediaBox, media)
+    })
 }
 
 public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: PeerId, namespaces: MessageIdNamespaces) {
@@ -36,5 +44,7 @@ public func clearHistory(transaction: Transaction, mediaBox: MediaBox, peerId: P
             return true
         })
     }
-    transaction.clearHistory(peerId, namespaces: namespaces)
+    transaction.clearHistory(peerId, namespaces: namespaces, forEachMedia: { media in
+        processRemovedMedia(mediaBox, media)
+    })
 }

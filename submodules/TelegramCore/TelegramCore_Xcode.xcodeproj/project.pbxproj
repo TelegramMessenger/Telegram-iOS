@@ -604,6 +604,8 @@
 		D0B844531DAC0773005F29E1 /* TelegramUserPresence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B844521DAC0773005F29E1 /* TelegramUserPresence.swift */; };
 		D0B85AC51F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B85AC41F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift */; };
 		D0B85AC61F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B85AC41F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift */; };
+		D0BAAA14230FDB4100AFC473 /* ProcessRemovedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA13230FDB4100AFC473 /* ProcessRemovedMedia.swift */; };
+		D0BAAA15230FDB4100AFC473 /* ProcessRemovedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BAAA13230FDB4100AFC473 /* ProcessRemovedMedia.swift */; };
 		D0BB7C5A1E5C8074001527C3 /* ChannelParticipants.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BB7C591E5C8074001527C3 /* ChannelParticipants.swift */; };
 		D0BC386E1E3FDAB70044D6FE /* CreateGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386D1E3FDAB70044D6FE /* CreateGroup.swift */; };
 		D0BC38701E40853E0044D6FE /* UpdatePeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BC386F1E40853E0044D6FE /* UpdatePeers.swift */; };
@@ -1122,6 +1124,7 @@
 		D0B843961DA7FBBC005F29E1 /* ChangePeerNotificationSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangePeerNotificationSettings.swift; sourceTree = "<group>"; };
 		D0B844521DAC0773005F29E1 /* TelegramUserPresence.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TelegramUserPresence.swift; sourceTree = "<group>"; };
 		D0B85AC41F6B2B9400B8B5CE /* RecentlyUsedHashtags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyUsedHashtags.swift; sourceTree = "<group>"; };
+		D0BAAA13230FDB4100AFC473 /* ProcessRemovedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessRemovedMedia.swift; sourceTree = "<group>"; };
 		D0BB7C591E5C8074001527C3 /* ChannelParticipants.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChannelParticipants.swift; sourceTree = "<group>"; };
 		D0BC386D1E3FDAB70044D6FE /* CreateGroup.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CreateGroup.swift; sourceTree = "<group>"; };
 		D0BC386F1E40853E0044D6FE /* UpdatePeers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UpdatePeers.swift; sourceTree = "<group>"; };
@@ -1518,6 +1521,7 @@
 				D03B0D121D62257600955575 /* Resources */,
 				D0DFD5DE1FCDBCFD0039B3B1 /* CachedSentMediaReferences.swift */,
 				D0879BC722F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift */,
+				D0BAAA13230FDB4100AFC473 /* ProcessRemovedMedia.swift */,
 			);
 			name = Media;
 			sourceTree = "<group>";
@@ -2492,6 +2496,7 @@
 				D041E3F81E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
 				D076F8892296D8E9004F895A /* ManageChannelDiscussionGroup.swift in Sources */,
 				D0B417C11D7DCEEF004562A4 /* ApiGroupOrChannel.swift in Sources */,
+				D0BAAA14230FDB4100AFC473 /* ProcessRemovedMedia.swift in Sources */,
 				D041E3F51E535464008C24B4 /* AddPeerMember.swift in Sources */,
 				D0AF32311FACEDEC0097362B /* CoreSettings.swift in Sources */,
 				D054649A20738760002ECC1E /* SecureIdRentalAgreementValue.swift in Sources */,
@@ -2883,6 +2888,7 @@
 				D0B418971D7E0580004562A4 /* TelegramMediaImage.swift in Sources */,
 				D01843A92190C28100278AFF /* ConfirmTwoStepRecoveryEmail.swift in Sources */,
 				D041E3F91E535A88008C24B4 /* RemovePeerMember.swift in Sources */,
+				D0BAAA15230FDB4100AFC473 /* ProcessRemovedMedia.swift in Sources */,
 				D049EAF61E44DF3300A2CD3A /* AccountState.swift in Sources */,
 				D0467D1620D7F2C90055C28F /* ManagedSynchronizeMarkAllUnseenPersonalMessagesOperations.swift in Sources */,
 				D041E3F61E535464008C24B4 /* AddPeerMember.swift in Sources */,

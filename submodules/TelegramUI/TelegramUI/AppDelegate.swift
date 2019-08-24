@@ -1229,6 +1229,9 @@ final class SharedApplicationContext {
                     extendNow = true
                 }
             }
+            #if DEBUG
+            extendNow = false
+            #endif
             sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0, extendNow: extendNow)
         })
         
@@ -1300,7 +1303,20 @@ final class SharedApplicationContext {
         }
         
         Logger.shared.log("App \(self.episodeId)", "remoteNotification: \(redactedPayload)")
-        completionHandler(UIBackgroundFetchResult.noData)
+        
+        if userInfo["p"] == nil {
+            return
+        }
+        
+        let _ = (self.sharedContextPromise.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+            
+            sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
+                completionHandler(.newData)
+            }, timeout: 29.0)
+            sharedApplicationContext.notificationManager.addNotification(userInfo)
+        })
     }
     
     func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
@@ -1325,260 +1341,10 @@ final class SharedApplicationContext {
             
             if case PKPushType.voIP = type {
                 Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
-                sharedApplicationContext.notificationManager.addEncryptedNotification(payload.dictionaryPayload)
+                sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
             }
         })
     }
-    
-    /*private func processPushPayload(_ payload: [AnyHashable: Any], account: Account) {
-        let decryptedPayload: Signal<[AnyHashable: Any]?, NoError>
-        if let _ = payload["aps"] as? [AnyHashable: Any] {
-            decryptedPayload = .single(payload)
-        } else if var encryptedPayload = payload["p"] as? String {
-            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
-            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
-            while encryptedPayload.count % 4 != 0 {
-                encryptedPayload.append("=")
-            }
-            if let data = Data(base64Encoded: encryptedPayload) {
-                decryptedPayload = decryptedNotificationPayload(account: account, data: data)
-                |> map { value -> [AnyHashable: Any]? in
-                    if let value = value, let object = try? JSONSerialization.jsonObject(with: value, options: []) {
-                        return object as? [AnyHashable: Any]
-                    }
-                    return nil
-                }
-            } else {
-                decryptedPayload = .single(nil)
-            }
-        } else {
-            decryptedPayload = .single(nil)
-        }
-        
-        let _ = (decryptedPayload
-        |> deliverOnMainQueue).start(next: { payload in
-            guard let payload = payload else {
-                return
-            }
-            
-            var redactedPayload = payload
-            if var aps = redactedPayload["aps"] as? [AnyHashable: Any] {
-                if Logger.shared.redactSensitiveData {
-                    if aps["alert"] != nil {
-                        aps["alert"] = "[[redacted]]"
-                    }
-                    if aps["body"] != nil {
-                        aps["body"] = "[[redacted]]"
-                    }
-                }
-                redactedPayload["aps"] = aps
-            }
-            Logger.shared.log("Apns \(self.episodeId)", "\(redactedPayload)")
-            
-            let aps = payload["aps"] as? [AnyHashable: Any]
-            
-            if UIApplication.shared.applicationState == .background {
-                var readMessageId: MessageId?
-                var isCall = false
-                var isAnnouncement = false
-                var isLocationPolling = false
-                var isMutePolling = false
-                var title: String = ""
-                var body: String?
-                var apnsSound: String?
-                var configurationUpdate: (Int32, String, Int32, Data?)?
-                if let aps = aps, let alert = aps["alert"] as? String {
-                    if let range = alert.range(of: ": ") {
-                        title = String(alert[..<range.lowerBound])
-                        body = String(alert[range.upperBound...])
-                    } else {
-                        body = alert
-                    }
-                } else if let aps = aps, let alert = aps["alert"] as? [AnyHashable: AnyObject] {
-                    if let alertBody = alert["body"] as? String {
-                        body = alertBody
-                        if let alertTitle = alert["title"] as? String {
-                            title = alertTitle
-                        }
-                    }
-                    if let locKey = alert["loc-key"] as? String {
-                        if locKey == "PHONE_CALL_REQUEST" {
-                            isCall = true
-                        } else if locKey == "GEO_LIVE_PENDING" {
-                            isLocationPolling = true
-                        } else if locKey == "MESSAGE_MUTED" {
-                            isMutePolling = true
-                        }
-                        let string = NSLocalizedString(locKey, comment: "")
-                        if !string.isEmpty {
-                            if let locArgs = alert["loc-args"] as? [AnyObject] {
-                                var args: [CVarArg] = []
-                                var failed = false
-                                for arg in locArgs {
-                                    if let arg = arg as? CVarArg {
-                                        args.append(arg)
-                                    } else {
-                                        failed = true
-                                        break
-                                    }
-                                }
-                                if failed {
-                                    body = "\(string)"
-                                } else {
-                                    body = String(format: string, arguments: args)
-                                }
-                            } else {
-                                body = "\(string)"
-                            }
-                        } else {
-                            body = nil
-                        }
-                    } else {
-                        body = nil
-                    }
-                }
-                
-                if let aps = aps, let address = aps["addr"] as? String, let datacenterId = aps["dc"] as? Int {
-                    var host = address
-                    var port: Int32 = 443
-                    if let range = address.range(of: ":") {
-                        host = String(address[address.startIndex ..< range.lowerBound])
-                        if let portValue = Int(String(address[range.upperBound...])) {
-                            port = Int32(portValue)
-                        }
-                    }
-                    var secret: Data?
-                    if let secretString = aps["sec"] as? String {
-                        let data = dataWithHexString(secretString)
-                        if data.count == 16 || data.count == 32 {
-                            secret = data
-                        }
-                    }
-                    configurationUpdate = (Int32(datacenterId), host, port, secret)
-                }
-                
-                if let aps = aps, let sound = aps["sound"] as? String {
-                    apnsSound = sound
-                }
-                
-                if payload["call_id"] != nil {
-                    isCall = true
-                }
-                
-                if payload["announcement"] != nil {
-                    isAnnouncement = true
-                }
-                
-                if let body = body {
-                    if isAnnouncement {
-                        self.queuedAnnouncements.append(body)
-                        self.maybeDequeueAnnouncements()
-                    } else {
-                        var peerId: PeerId?
-                        var notificationRequestId: NotificationManagedNotificationRequestId?
-                        
-                        if let fromId = payload["from_id"] {
-                            let fromIdValue = fromId as! NSString
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
-                        } else if let fromId = payload["chat_id"] {
-                            let fromIdValue = fromId as! NSString
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
-                        } else if let fromId = payload["channel_id"] {
-                            let fromIdValue = fromId as! NSString
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
-                        }
-                        
-                        if let msgId = payload["msg_id"] {
-                            let msgIdValue = msgId as! NSString
-                            if let peerId = peerId {
-                                notificationRequestId = .messageId(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(msgIdValue.intValue)))
-                            }
-                        } else if let randomId = payload["random_id"] {
-                            let randomIdValue = randomId as! NSString
-                            var peerId: PeerId?
-                            if let encryptionIdString = payload["encryption_id"] as? String, let encryptionId = Int32(encryptionIdString) {
-                                peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: encryptionId)
-                            }
-                            notificationRequestId = .globallyUniqueId(randomIdValue.longLongValue, peerId)
-                        } else {
-                            isMutePolling = true
-                        }
-                        
-                        if let notificationRequestId = notificationRequestId {
-                            self.queuedNotificationRequests.append((title, body, apnsSound, notificationRequestId))
-                            self.maybeDequeueNotificationRequests()
-                        } else if isMutePolling {
-                            self.queuedMutePolling = true
-                            self.maybeDequeueNotificationRequests()
-                        }
-                    }
-                } else if let _ = payload["max_id"] {
-                    var peerId: PeerId?
-                    
-                    if let fromId = payload["from_id"] {
-                        let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
-                    } else if let fromId = payload["chat_id"] {
-                        let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
-                    } else if let fromId = payload["channel_id"] {
-                        let fromIdValue = fromId as! NSString
-                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
-                    }
-                    
-                    if let peerId = peerId {
-                        if let msgId = payload["max_id"] {
-                            let msgIdValue = msgId as! NSString
-                            if msgIdValue.intValue != 0 {
-                                readMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(msgIdValue.intValue))
-                            }
-                        }
-                    }
-                }
-                
-                var addedWakeups = Set<QueuedWakeup>()
-                if isCall {
-                    addedWakeups.insert(.call)
-                }
-                if isLocationPolling {
-                    addedWakeups.insert(.backgroundLocation)
-                }
-                if !addedWakeups.isEmpty {
-                    self.queuedWakeups.formUnion(addedWakeups)
-                    self.maybeDequeueWakeups()
-                }
-                if let readMessageId = readMessageId {
-                    self.clearNotificationsManager?.append(readMessageId)
-                    self.clearNotificationsManager?.commitNow()
-                    
-                    let signal = self.context.get()
-                    |> take(1)
-                    |> mapToSignal { context -> Signal<Void, NoError> in
-                        if let context = context {
-                            return context.context.account.postbox.transaction (ignoreDisabled: true, { transaction -> Void in
-                                transaction.applyIncomingReadMaxId(readMessageId)
-                            })
-                        } else {
-                            return .complete()
-                        }
-                    }
-                    let _ = signal.start()
-                }
-                
-                if let (datacenterId, host, port, secret) = configurationUpdate {
-                    let signal = self.context.get()
-                    |> take(1)
-                    |> mapToSignal { context -> Signal<Void, NoError> in
-                        if let context = context {
-                            context.context.account.network.mergeBackupDatacenterAddress(datacenterId: datacenterId, host: host, port: port, secret: secret)
-                        }
-                        return .complete()
-                    }
-                    let _ = signal.start()
-                }
-            }
-        })
-    }*/
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {
         Logger.shared.log("App \(self.episodeId)", "invalidated token for \(type)")

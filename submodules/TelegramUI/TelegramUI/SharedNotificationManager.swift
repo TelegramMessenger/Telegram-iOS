@@ -21,6 +21,14 @@ private final class PollStateContext {
     }
 }
 
+private final class NotificationInfo {
+    let dict: [AnyHashable: Any]
+    
+    init(dict: [AnyHashable: Any]) {
+        self.dict = dict
+    }
+}
+
 public final class SharedNotificationManager {
     private let episodeId: UInt32
     private let application: UIApplication
@@ -35,7 +43,7 @@ public final class SharedNotificationManager {
     private var accountsAndKeys: [(Account, Bool, MasterNotificationKey)]?
     private var accountsAndKeysDisposable: Disposable?
     
-    private var encryptedNotifications: [[AnyHashable: Any]] = []
+    private var notifications: [NotificationInfo] = []
     
     private var pollStateContexts: [AccountRecordId: PollStateContext] = [:]
     
@@ -149,8 +157,8 @@ public final class SharedNotificationManager {
         }
     }
     
-    func addEncryptedNotification(_ dict: [AnyHashable: Any]) {
-        self.encryptedNotifications.append(dict)
+    func addNotification(_ dict: [AnyHashable: Any]) {
+        self.notifications.append(NotificationInfo(dict: dict))
         
         if self.accountsAndKeys != nil {
             self.process()
@@ -162,8 +170,8 @@ public final class SharedNotificationManager {
             return
         }
         var decryptedNotifications: [(Account, Bool, [AnyHashable: Any])] = []
-        for dict in self.encryptedNotifications {
-            if var encryptedPayload = dict["p"] as? String {
+        for notification in self.notifications {
+            if var encryptedPayload = notification.dict["p"] as? String {
                 encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
                 encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
                 while encryptedPayload.count % 4 != 0 {
@@ -181,7 +189,7 @@ public final class SharedNotificationManager {
                 }
             }
         }
-        self.encryptedNotifications.removeAll()
+        self.notifications.removeAll()
         
         for (account, isCurrent, payload) in decryptedNotifications {
             var redactedPayload = payload
@@ -206,7 +214,7 @@ public final class SharedNotificationManager {
             var isAnnouncement = false
             var isLocationPolling = false
             var notificationRequestId: NotificationManagedNotificationRequestId?
-            var isMutePolling = false
+            var shouldPollState = false
             var title: String = ""
             var body: String?
             var apnsSound: String?
@@ -226,63 +234,37 @@ public final class SharedNotificationManager {
                         title = alertTitle
                     }
                 }
-                if let locKey = alert["loc-key"] as? String {
-                    if locKey == "SESSION_REVOKE" {
-                        isForcedLogOut = true
-                    } else if locKey == "PHONE_CALL_REQUEST" {
-                        isCall = true
-                    } else if locKey == "GEO_LIVE_PENDING" {
-                        isLocationPolling = true
-                    } else if locKey == "MESSAGE_MUTED" {
-                        isMutePolling = true
-                    } else if locKey == "MESSAGE_DELETED" {
-                        var peerId: PeerId?
-                        if let fromId = payload["from_id"] {
-                            let fromIdValue = fromId as! NSString
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
-                        } else if let fromId = payload["chat_id"] {
-                            let fromIdValue = fromId as! NSString
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
-                        } else if let fromId = payload["channel_id"] {
-                            let fromIdValue = fromId as! NSString
-                            peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
-                        }
-                        if let peerId = peerId {
-                            if let messageIds = payload["messages"] as? String {
-                                for messageId in messageIds.split(separator: ",") {
-                                    if let messageIdValue = Int32(messageId) {
-                                        messagesDeleted.append(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageIdValue))
-                                    }
+            }
+            if let locKey = payload["loc-key"] as? String {
+                if locKey == "SESSION_REVOKE" {
+                    isForcedLogOut = true
+                } else if locKey == "PHONE_CALL_REQUEST" {
+                    isCall = true
+                } else if locKey == "GEO_LIVE_PENDING" {
+                    isLocationPolling = true
+                } else if locKey == "MESSAGE_MUTED" {
+                    shouldPollState = true
+                } else if locKey == "MESSAGE_DELETED" {
+                    var peerId: PeerId?
+                    if let fromId = payload["from_id"] {
+                        let fromIdValue = fromId as! NSString
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
+                    } else if let fromId = payload["chat_id"] {
+                        let fromIdValue = fromId as! NSString
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: Int32(fromIdValue.intValue))
+                    } else if let fromId = payload["channel_id"] {
+                        let fromIdValue = fromId as! NSString
+                        peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: Int32(fromIdValue.intValue))
+                    }
+                    if let peerId = peerId {
+                        if let messageIds = payload["messages"] as? String {
+                            for messageId in messageIds.split(separator: ",") {
+                                if let messageIdValue = Int32(messageId) {
+                                    messagesDeleted.append(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: messageIdValue))
                                 }
                             }
                         }
                     }
-                    let string = NSLocalizedString(locKey, comment: "")
-                    if !string.isEmpty {
-                        if let locArgs = alert["loc-args"] as? [AnyObject] {
-                            var args: [CVarArg] = []
-                            var failed = false
-                            for arg in locArgs {
-                                if let arg = arg as? CVarArg {
-                                    args.append(arg)
-                                } else {
-                                    failed = true
-                                    break
-                                }
-                            }
-                            if failed {
-                                body = "\(string)"
-                            } else {
-                                body = String(format: string, arguments: args)
-                            }
-                        } else {
-                            body = "\(string)"
-                        }
-                    } else {
-                        body = nil
-                    }
-                } else {
-                    body = nil
                 }
             }
             
@@ -326,6 +308,8 @@ public final class SharedNotificationManager {
                 } else {
                     var peerId: PeerId?
                     
+                    shouldPollState = true
+                    
                     if let fromId = payload["from_id"] {
                         let fromIdValue = fromId as! NSString
                         peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: Int32(fromIdValue.intValue))
@@ -350,7 +334,7 @@ public final class SharedNotificationManager {
                         }
                         notificationRequestId = .globallyUniqueId(randomIdValue.longLongValue, peerId)
                     } else {
-                        isMutePolling = true
+                        shouldPollState = true
                     }
                 }
             } else if let _ = payload["max_id"] {
@@ -386,7 +370,7 @@ public final class SharedNotificationManager {
                 return
             }
             
-            if notificationRequestId != nil || isMutePolling || isCall {
+            if notificationRequestId != nil || shouldPollState || isCall {
                 if !self.inForeground || !isCurrent {
                     self.beginPollingState(account: account)
                 }
@@ -411,7 +395,7 @@ public final class SharedNotificationManager {
             
             if !messagesDeleted.isEmpty {
                 let _ = account.postbox.transaction(ignoreDisabled: true, { transaction -> Void in
-                    transaction.deleteMessages(messagesDeleted)
+                    deleteMessages(transaction: transaction, mediaBox: account.postbox.mediaBox, ids: messagesDeleted)
                 }).start()
             }
             

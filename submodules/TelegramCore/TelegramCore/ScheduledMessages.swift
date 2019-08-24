@@ -127,7 +127,9 @@ func managedApplyPendingScheduledMessagesActions(postbox: Postbox, network: Netw
                 })
                 |> then(
                     postbox.transaction { transaction -> Void in
-                        transaction.deleteMessages([entry.id])
+                        transaction.deleteMessages([entry.id], forEachMedia: { media in
+                            processRemovedMedia(postbox.mediaBox, media)
+                        })
                     }
                     |> ignoreValues
                 )
