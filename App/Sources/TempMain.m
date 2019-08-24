@@ -1,6 +1,6 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import <MtProtoKit/MTProto.h>
+//#import <MtProtoKit/MTProto.h>
 
 @interface AppDelegate : NSObject <UIApplicationDelegate>
 
@@ -21,9 +21,9 @@
 @end
 
 int main(int argc, const char **argv) {
-	MTProto *mtProto = [[MTProto alloc] init];
+	//MTProto *mtProto = [[MTProto alloc] init];
     @autoreleasepool {
-        return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
+        return UIApplicationMain(argc, argv, nil, @"AppDelegate1");
     }
 }
 

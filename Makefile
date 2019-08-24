@@ -34,3 +34,7 @@ clean: kill_xcode
 project: clean
 	$(BUCK) project //App:workspace --config custom.mode=project
 	open App/App.xcworkspace
+
+next_project: clean
+	/Users/peter/build/buck-next/buck/buck-out/gen/programs/buck.pex project //App:workspace --config custom.mode=project
+	#open App/App.xcworkspace

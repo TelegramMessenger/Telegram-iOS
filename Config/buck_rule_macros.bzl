@@ -43,7 +43,7 @@ def apple_lib(
                 name = name + "",
                 srcs = srcs,
                 header_namespace = name,
-                #module_name = name,
+                module_name = name,
                 headers = headers,
                 exported_headers = exported_headers,
                 deps = deps,
@@ -61,7 +61,6 @@ def apple_lib(
             )
             native.apple_bundle(
                 name = name + "Framework",
-                #module_name = name,
                 visibility = visibility,
                 binary = ":" + name + "#shared",
                 extension = "framework",
@@ -215,7 +214,7 @@ def framework_binary_dependencies(names):
     result = []
     if native.read_config("custom", "mode") == "project":
         for name in names:
-            result.append(name + "Framework")
+            result.append(name + "")
     else:
         for name in names:
             result.append(name + "#shared")

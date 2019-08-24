@@ -43,6 +43,9 @@ public extension UnicodeScalar {
     }
 }
 
+private final class FrameworkClass: NSObject {
+}
+
 public extension String {
     func trimmingTrailingSpaces() -> String {
         var t = self
@@ -53,7 +56,7 @@ public extension String {
     }
     
     var isSingleEmoji: Bool {
-        let _ = try? AVFoundation.AVAudioFile(forReading: URL(string: "")!)
+        print(Bundle(for: FrameworkClass.self).bundlePath)
         return self.emojis.count == 1 && self.containsEmoji
     }
     
