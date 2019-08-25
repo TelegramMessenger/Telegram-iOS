@@ -59,7 +59,6 @@ def apple_lib(
                 swift_compiler_flags = swift_compiler_flags,
                 preferred_linkage = "shared",
                 link_style = "static",
-                #linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
                 linker_flags = ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)],
             )
         else:
@@ -68,6 +67,7 @@ def apple_lib(
                 srcs = srcs,
                 header_namespace = name,
                 module_name = name,
+                soname = "lib" + name + ".dylib",
                 headers = headers,
                 exported_headers = exported_headers,
                 deps = deps,
@@ -82,9 +82,17 @@ def apple_lib(
                 swift_compiler_flags = swift_compiler_flags,
                 preferred_linkage = "shared",
                 link_style = "static",
-                #linker_flags = ["-Wl,-install_name,@rpath/%sFramework.framework/%sFramework" % (name, name)],
                 linker_flags = ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)],
             )
+            native.apple_bundle(
+                name = name + "Framework",
+                visibility = visibility,
+                binary = ":" + name + "#shared",
+                extension = "framework",
+                info_plist = "Info.plist",
+                info_plist_substitutions = info_plist_substitutions(name),
+            )
+
     else:
         native.apple_library(
             name = name,
@@ -92,6 +100,9 @@ def apple_lib(
             headers = headers,
             exported_headers = exported_headers,
             deps = deps,
+            exported_deps = exported_deps,
+            extra_xcode_files = extra_xcode_files,
+            frameworks = frameworks,
             visibility = visibility,
             swift_version = swift_version,
             configs = library_configs(),
@@ -220,6 +231,6 @@ def framework_bundle_dependencies(names):
             pass
     else:
         for name in names:
-            #result.append(name + "Framework")
+            result.append(name + "#shared")
             pass
     return result

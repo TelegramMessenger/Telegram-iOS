@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E6969DF6200000000"
-               BuildableName = "libEmoji.dylib"
+               BuildableName = ".dylib"
                BlueprintName = "Emoji#shared"
                ReferencedContainer = "container:Emoji.xcodeproj">
             </BuildableReference>
@@ -46,7 +46,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E66DC04E6969DF6200000000"
-            BuildableName = "libEmoji.dylib"
+            BuildableName = ".dylib"
             BlueprintName = "Emoji#shared"
             ReferencedContainer = "container:Emoji.xcodeproj">
          </BuildableReference>

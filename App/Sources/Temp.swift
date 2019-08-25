@@ -9,7 +9,7 @@ public final class AppDelegate: NSObject, UIApplicationDelegate {
 	override init() {
 		super.init()
 
-		print("OK".isSingleEmoji)
+		print("OK6".isSingleEmoji)
 	}
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {

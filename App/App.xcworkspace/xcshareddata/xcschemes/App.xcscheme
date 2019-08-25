@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E6969DF6200000000"
-               BuildableName = "libEmoji.dylib"
+               BuildableName = ".dylib"
                BlueprintName = "Emoji#shared"
                ReferencedContainer = "container:../submodules/Emoji/Emoji.xcodeproj">
             </BuildableReference>
@@ -29,7 +29,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04EB4B57B8200000000"
-               BuildableName = "libopenssl.a"
+               BuildableName = "lib.a"
                BlueprintName = "openssl"
                ReferencedContainer = "container:../submodules/MtProtoKit/MtProtoKit.xcodeproj">
             </BuildableReference>
@@ -43,7 +43,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E123A55F300000000"
-               BuildableName = "libMtProtoKit.dylib"
+               BuildableName = ".dylib"
                BlueprintName = "MtProtoKit#shared"
                ReferencedContainer = "container:../submodules/MtProtoKit/MtProtoKit.xcodeproj">
             </BuildableReference>
@@ -57,7 +57,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04EC43AA77A00000000"
-               BuildableName = "libAppLibrary.a"
+               BuildableName = "lib.a"
                BlueprintName = "AppLibrary"
                ReferencedContainer = "container:App.xcodeproj">
             </BuildableReference>
@@ -71,7 +71,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E0001020100000000"
-               BuildableName = "App.app"
+               BuildableName = ".app"
                BlueprintName = "App"
                ReferencedContainer = "container:App.xcodeproj">
             </BuildableReference>
@@ -103,7 +103,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E66DC04E0001020100000000"
-            BuildableName = "App.app"
+            BuildableName = ".app"
             BlueprintName = "App"
             ReferencedContainer = "container:App.xcodeproj">
          </BuildableReference>
@@ -122,7 +122,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E66DC04E0001020100000000"
-            BuildableName = "App.app"
+            BuildableName = ".app"
             BlueprintName = "App"
             ReferencedContainer = "container:App.xcodeproj">
          </BuildableReference>
