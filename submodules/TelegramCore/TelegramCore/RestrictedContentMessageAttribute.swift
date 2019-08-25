@@ -6,25 +6,17 @@ import Postbox
 #endif
 
 public class RestrictedContentMessageAttribute: MessageAttribute {
-    public let platformSelector: String
-    public let category: String
-    public let text: String
+    public let rules: [RestrictionRule]
     
-    public init(platformSelector: String, category: String, text: String) {
-        self.platformSelector = platformSelector
-        self.category = category
-        self.text = text
+    public init(rules: [RestrictionRule]) {
+        self.rules = rules
     }
     
     required public init(decoder: PostboxDecoder) {
-        self.platformSelector = decoder.decodeStringForKey("ps", orElse: "")
-        self.category = decoder.decodeStringForKey("c", orElse: "")
-        self.text = decoder.decodeStringForKey("t", orElse: "")
+        self.rules = decoder.decodeObjectArrayWithDecoderForKey("rs")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeString(self.platformSelector, forKey: "ps")
-        encoder.encodeString(self.category, forKey: "c")
-        encoder.encodeString(self.text, forKey: "t")
+        encoder.encodeObjectArray(self.rules, forKey: "rs")
     }
 }

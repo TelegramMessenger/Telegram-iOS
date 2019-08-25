@@ -83,8 +83,8 @@ public enum MessageContentKind: Equatable {
 public func messageContentKind(_ message: Message, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, accountPeerId: PeerId) -> MessageContentKind {
     for attribute in message.attributes {
         if let attribute = attribute as? RestrictedContentMessageAttribute {
-            if attribute.matchesPlatform() {
-                return .restricted(attribute.text)
+            if let text = attribute.platformText(platform: "ios") {
+                return .restricted(text)
             }
             break
         }

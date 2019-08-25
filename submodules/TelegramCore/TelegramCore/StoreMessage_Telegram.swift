@@ -543,14 +543,8 @@ extension StoreMessage {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
                 }
                 
-                if let restrictionReason = restrictionReason, let range = restrictionReason.range(of: ":") {
-                    let space = restrictionReason[restrictionReason.startIndex ..< range.lowerBound]
-                    if let platformRange = space.range(of: "-") {
-                        let category = space[space.startIndex ..< platformRange.lowerBound]
-                        let platformSelector = space[space.endIndex...]
-                        
-                        attributes.append(RestrictedContentMessageAttribute(platformSelector: String(platformSelector), category: String(category), text: String(restrictionReason[range.upperBound...])))
-                    }
+                if let restrictionReason = restrictionReason {
+                    attributes.append(RestrictedContentMessageAttribute(rules: restrictionReason.map(RestrictionRule.init(apiReason:))))
                 }
                 
                 var storeFlags = StoreMessageFlags()
