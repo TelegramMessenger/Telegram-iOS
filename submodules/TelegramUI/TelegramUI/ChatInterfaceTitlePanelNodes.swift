@@ -7,7 +7,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     if case .overlay = chatPresentationInterfaceState.mode {
         return nil
     }
-    if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText != nil {
+    if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios") != nil {
         return nil
     }
     if chatPresentationInterfaceState.search != nil {

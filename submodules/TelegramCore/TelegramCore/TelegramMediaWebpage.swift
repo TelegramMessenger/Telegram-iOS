@@ -291,7 +291,7 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             return nil
         case let .webPagePending(id, date):
             return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Pending(date, url))
-        case let .webPage(_, id, url, displayUrl, hash, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document, cachedPage):
+        case let .webPage(_, id, url, displayUrl, hash, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document, documents, cachedPage):
             var embedSize: CGSize?
             if let embedWidth = embedWidth, let embedHeight = embedHeight {
                 embedSize = CGSize(width: CGFloat(embedWidth), height: CGFloat(embedHeight))
