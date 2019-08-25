@@ -1653,24 +1653,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var hasScheduledMessages: Signal<Bool, NoError> = .single(false)
                     
                     if peerId.namespace == Namespaces.Peer.CloudChannel {
-                        let recentOnlineSignal: Signal<Int32, NoError> = context.account.viewTracker.peerView(peerId)
-                        |> map { view -> Bool in
-                            if let cachedData = view.cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, memberCount > 50 {
-                                return true
+                        let recentOnlineSignal: Signal<Int32?, NoError> = peerView.get()
+                        |> map { view -> Bool? in
+                            if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
+                                if case .broadcast = peer.info {
+                                    return nil
+                                } else if let memberCount = cachedData.participantsSummary.memberCount, memberCount > 50 {
+                                    return true
+                                } else {
+                                    return false
+                                }
                             } else {
                                 return false
                             }
                         }
                         |> distinctUntilChanged
-                        |> mapToSignal { isLarge -> Signal<Int32, NoError> in
-                            if isLarge {
-                                return context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                        |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
+                            if let isLarge = isLarge {
+                                if isLarge {
+                                    return context.peerChannelMemberCategoriesContextsManager.recentOnline(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                                    |> map(Optional.init)
+                                } else {
+                                    return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                                    |> map(Optional.init)
+                                }
                             } else {
-                                return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                                return .single(nil)
                             }
                         }
                         onlineMemberCount = recentOnlineSignal
-                        |> map(Optional.init)
                         
                         self.reportIrrelvantGeoNoticePromise.set(context.account.postbox.transaction { transaction -> Bool? in
                             if let _ = transaction.getNoticeEntry(key: ApplicationSpecificNotice.irrelevantPeerGeoReportKey(peerId: peerId)) as? ApplicationSpecificBoolNotice {
@@ -1684,9 +1695,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if !isScheduledMessages && peerId.namespace != Namespaces.Peer.SecretChat {
-                        hasScheduledMessages = context.account.viewTracker.scheduledMessagesViewForLocation(chatLocation)
-                        |> map { view, _, _ in
-                            return !view.entries.isEmpty
+                        hasScheduledMessages = peerView.get()
+                        |> take(1)
+                        |> mapToSignal { view -> Signal<Bool, NoError> in
+                            if let peer = peerViewMainPeer(view) as? TelegramChannel, !peer.hasPermission(.sendMessages) {
+                                return .single(false)
+                            } else {
+                                return context.account.viewTracker.scheduledMessagesViewForLocation(chatLocation)
+                                |> map { view, _, _ in
+                                    return !view.entries.isEmpty
+                                }
+                            }
                         }
                     }
                     

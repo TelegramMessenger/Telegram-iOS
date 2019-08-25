@@ -92,7 +92,6 @@ public func channelMembers(postbox: Postbox, network: Network, accountPeerId: Pe
                                     if let peer = peers[participant.peerId] {
                                         items.append(RenderedChannelParticipant(participant: participant, peer: peer, peers: peers, presences: presences))
                                     }
-                                    
                                 }
                             case .channelParticipantsNotModified:
                                 return nil

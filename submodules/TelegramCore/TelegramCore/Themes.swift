@@ -1,12 +1,12 @@
 import Foundation
 #if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
-import TelegramApiMac
+    import PostboxMac
+    import SwiftSignalKitMac
+    import TelegramApiMac
 #else
-import Postbox
-import SwiftSignalKit
-import TelegramApi
+    import Postbox
+    import SwiftSignalKit
+    import TelegramApi
 #endif
 
 final class CachedThemesConfiguration: PostboxCoding {

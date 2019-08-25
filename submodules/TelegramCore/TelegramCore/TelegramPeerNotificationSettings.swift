@@ -286,11 +286,7 @@ extension PeerMessageSound {
             case .default:
                 return nil
             case let .bundledModern(id):
-                if id == 0 {
-                    return "default"
-                } else {
-                    return "\(id + 100)"
-                }
+                return "\(id + 100)"
             case let .bundledClassic(id):
                 return "\(id + 2)"
         }

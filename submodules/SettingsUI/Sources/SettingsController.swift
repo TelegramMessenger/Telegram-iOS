@@ -1220,7 +1220,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && arePeersEqual($0?.1, $1?.1) })
     |> mapToSignal { primary -> Signal<UIImage?, NoError> in
         if let primary = primary {
-            if let signal = peerAvatarImage(account: primary.0, peer: primary.1, authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: CGSize(width: 25.0, height: 25.0), emptyColor: nil, synchronousLoad: false) {
+            if let signal = peerAvatarImage(account: primary.0, peer: primary.1, authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: CGSize(width: 31.0, height: 31.0), inset: 3.0, emptyColor: nil, synchronousLoad: false) {
                 return signal
                 |> map { image -> UIImage? in
                     return image.flatMap { image -> UIImage in
@@ -1229,9 +1229,10 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 }
             } else {
                 return Signal { subscriber in
-                    let size = CGSize(width: 25.0, height: 25.0)
+                    let size = CGSize(width: 31.0, height: 31.0)
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.translateBy(x: 3.0, y: 3.0)
                         drawPeerAvatarLetters(context: context, size: size, font: avatarFont, letters: primary.1.displayLetters, accountPeerId: primary.1.id, peerId: primary.1.id)
                     })?.withRenderingMode(.alwaysOriginal)
                     subscriber.putNext(image)

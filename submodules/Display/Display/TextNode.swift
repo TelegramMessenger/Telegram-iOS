@@ -60,9 +60,9 @@ private func displayLineFrame(frame: CGRect, isRTL: Bool, boundingRect: CGRect, 
         return frame
     }
     var lineFrame = frame
-    let intersectionFrame = lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height)
     if isRTL {
         lineFrame.origin.x = max(0.0, floor(boundingRect.width - lineFrame.size.width))
+        let intersectionFrame = lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height / 4.5)
         if let topRight = cutout?.topRight {
             let topRightRect = CGRect(origin: CGPoint(x: boundingRect.width - topRight.width, y: 0.0), size: topRight)
             if intersectionFrame.intersects(topRightRect) {
@@ -225,9 +225,6 @@ public final class TextNodeLayout: NSObject {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
-                        if line.isRTL {
-                            lineFrame.origin.x = self.size.width - lineFrame.size.width
-                        }
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
@@ -296,9 +293,6 @@ public final class TextNodeLayout: NSObject {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
-                        if line.isRTL {
-                            lineFrame.origin.x = self.size.width - lineFrame.size.width
-                        }
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
@@ -374,9 +368,6 @@ public final class TextNodeLayout: NSObject {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
-                        if line.isRTL {
-                            lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
-                        }
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
