@@ -30,7 +30,7 @@ apple_library(
 static_library(
     name = "opus",
     srcs = glob([
-        "Sources/*.swift",
+        "Sources/**/*.swift",
     ]),
     exported_headers = glob([
         "Sources/**/*.h",

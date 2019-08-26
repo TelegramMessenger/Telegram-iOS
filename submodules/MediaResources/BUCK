@@ -3,7 +3,7 @@ load("//Config:buck_rule_macros.bzl", "static_library")
 static_library(
     name = "MediaResources",
     srcs = glob([
-        "Sources/*.swift",
+        "Sources/**/*.swift",
     ]),
     deps = [
     	"//submodules/TelegramCore:TelegramCore#shared",
