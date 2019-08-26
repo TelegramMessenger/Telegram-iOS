@@ -6,6 +6,18 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/LocalAuth:LocalAuth",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/PasswordSetupUI:PasswordSetupUI",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/Stripe:Stripe",
+        "//submodules/CountrySelectionUI:CountrySelectionUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

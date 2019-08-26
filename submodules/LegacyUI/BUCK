@@ -1,0 +1,24 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "LegacyUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramAudio:TelegramAudio",
+        "//submodules/DeviceAccess:DeviceAccess",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/StickerResources:StickerResources",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

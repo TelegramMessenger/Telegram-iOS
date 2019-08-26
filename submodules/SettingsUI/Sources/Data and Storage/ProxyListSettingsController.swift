@@ -5,7 +5,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+#if BUCK
+import MtProtoKit
+#else
 import MtProtoKitDynamic
+#endif
 import ItemListUI
 import AccountContext
 import UrlEscaping

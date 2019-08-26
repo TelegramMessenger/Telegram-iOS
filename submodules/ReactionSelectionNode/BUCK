@@ -1,0 +1,19 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ReactionSelectionNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/AnimationUI:AnimationUI",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

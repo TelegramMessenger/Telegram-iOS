@@ -14,7 +14,7 @@ static_library(
         "//submodules/Tuples:Tuples",
         "//submodules/MediaResources:MediaResources",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
-        "//submodules/WebP:WebP",
+        "//submodules/WebP:WebPImage",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

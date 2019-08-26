@@ -6,12 +6,12 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-    	"//submodules/AvatarNode",
-    	"//submodules/TelegramPresentationData",
-        "//submodules/Postbox",
-        "//submodules/TelegramCore",
-        "//submodules/Display",
-        "//submodules/AsyncDisplayKit",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+    	"//submodules/AvatarNode:AvatarNode",
+    	"//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

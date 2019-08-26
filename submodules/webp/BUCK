@@ -28,7 +28,7 @@ apple_library(
 )
 
 static_library(
-    name = "WebP",
+    name = "WebPImage",
     srcs = glob([
         "WebP/*.m",
     ]),

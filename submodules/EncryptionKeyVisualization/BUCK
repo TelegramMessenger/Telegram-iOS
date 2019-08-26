@@ -3,6 +3,7 @@ load("//Config:buck_rule_macros.bzl", "static_library")
 static_library(
     name = "EncryptionKeyVisualization",
     srcs = glob([
+        "Sources/*.swift",
         "Sources/*.m",
     ]),
     headers = glob([

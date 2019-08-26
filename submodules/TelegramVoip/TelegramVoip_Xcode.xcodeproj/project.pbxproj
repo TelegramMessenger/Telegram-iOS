@@ -7,9 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D03292DF2314239E00338D35 /* libtgvoip.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03292DE2314239E00338D35 /* libtgvoip.framework */; };
 		D0AE316922B2694E0058D3BC /* TelegramVoip.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE316722B2694E0058D3BC /* TelegramVoip.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0AE317122B269E40058D3BC /* OngoingCallThreadLocalContext.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0AE316F22B269E30058D3BC /* OngoingCallThreadLocalContext.mm */; };
-		D0AE317222B269E40058D3BC /* OngoingCallThreadLocalContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE317022B269E40058D3BC /* OngoingCallThreadLocalContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AE317622B26F020058D3BC /* OngoingCallContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE317522B26F010058D3BC /* OngoingCallContext.swift */; };
 		D0AE317922B26F400058D3BC /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE317822B26F400058D3BC /* Postbox.framework */; };
 		D0AE317B22B26F470058D3BC /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE317A22B26F470058D3BC /* TelegramCore.framework */; };
@@ -18,11 +17,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D03292DE2314239E00338D35 /* libtgvoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = libtgvoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE316422B2694E0058D3BC /* TelegramVoip.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramVoip.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE316722B2694E0058D3BC /* TelegramVoip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramVoip.h; sourceTree = "<group>"; };
 		D0AE316822B2694E0058D3BC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D0AE316F22B269E30058D3BC /* OngoingCallThreadLocalContext.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OngoingCallThreadLocalContext.mm; sourceTree = "<group>"; };
-		D0AE317022B269E40058D3BC /* OngoingCallThreadLocalContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OngoingCallThreadLocalContext.h; sourceTree = "<group>"; };
 		D0AE317522B26F010058D3BC /* OngoingCallContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OngoingCallContext.swift; sourceTree = "<group>"; };
 		D0AE317822B26F400058D3BC /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE317A22B26F470058D3BC /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -35,6 +33,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03292DF2314239E00338D35 /* libtgvoip.framework in Frameworks */,
 				D0AE317F22B26F6B0058D3BC /* TelegramUIPreferences.framework in Frameworks */,
 				D0AE317D22B26F4B0058D3BC /* SwiftSignalKit.framework in Frameworks */,
 				D0AE317B22B26F470058D3BC /* TelegramCore.framework in Frameworks */,
@@ -67,8 +66,6 @@
 			isa = PBXGroup;
 			children = (
 				D0AE317522B26F010058D3BC /* OngoingCallContext.swift */,
-				D0AE317022B269E40058D3BC /* OngoingCallThreadLocalContext.h */,
-				D0AE316F22B269E30058D3BC /* OngoingCallThreadLocalContext.mm */,
 				D0AE316722B2694E0058D3BC /* TelegramVoip.h */,
 			);
 			path = Sources;
@@ -77,6 +74,7 @@
 		D0AE317722B26F400058D3BC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D03292DE2314239E00338D35 /* libtgvoip.framework */,
 				D0AE317E22B26F6B0058D3BC /* TelegramUIPreferences.framework */,
 				D0AE317C22B26F4B0058D3BC /* SwiftSignalKit.framework */,
 				D0AE317A22B26F470058D3BC /* TelegramCore.framework */,
@@ -92,7 +90,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0AE317222B269E40058D3BC /* OngoingCallThreadLocalContext.h in Headers */,
 				D0AE316922B2694E0058D3BC /* TelegramVoip.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -166,7 +163,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0AE317122B269E40058D3BC /* OngoingCallThreadLocalContext.mm in Sources */,
 				D0AE317622B26F020058D3BC /* OngoingCallContext.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

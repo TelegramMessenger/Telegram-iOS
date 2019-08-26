@@ -25,10 +25,10 @@ framework_dependencies = [
     "//submodules/Postbox:Postbox",
     "//submodules/TelegramCore:TelegramCore",
     "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+    "//submodules/Display:Display",
+    "//submodules/TelegramUI:TelegramUI",
 ]
 
-# Build Phase scripts need to be added as dependencies.
-# These only get executed when building with Xcode, not Buck.
 build_phase_scripts = [
 ]
 
@@ -41,8 +41,8 @@ apple_library(
     configs = library_configs(),
     swift_version = native.read_config("swift", "version"),
     srcs = [
-        "Sources/TempMain.m",
-        "Sources/Temp.swift"
+        "Sources/main.m",
+        "Sources/Application.swift"
     ],
     deps = [
     ]

@@ -4,6 +4,7 @@ static_library(
     name = "RaiseToListen",
     srcs = glob([
         "Sources/*.m",
+        "Sources/*.swift",
     ]),
     headers = glob([
         "Sources/*.h",

@@ -6,7 +6,8 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
+    	"//submodules/Display:Display#shared",
+        "//submodules/AccountContext:AccountContext",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

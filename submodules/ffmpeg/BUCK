@@ -106,14 +106,13 @@ ffmpeg_header_paths = [
     "libswresample/swresample.h",
 ]
 
-build_variant = "release"
-library_archs = "arm64" if build_variant == "release" else "arm64 armv7 x86_64 i386"
+library_archs = "arm64 armv7 x86_64" if native.read_config("custom", "mode") == "project" else "arm64 armv7"
 
 genrule(
     name = "libffmpeg_build",
     srcs = glob([
         "FFMpeg/**/*",
-    ]),
+    ], exclude = ["FFMpeg/**/.*"]),
     bash = "$SRCDIR/FFMpeg/build-ffmpeg.sh release \"" + library_archs + "\" $OUT $SRCDIR/FFMpeg",
     out = "libffmpeg",
     visibility = [

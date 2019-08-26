@@ -31,6 +31,7 @@ SHARED_CONFIGS = {
     "SWIFT_WHOLE_MODULE_OPTIMIZATION": "NO",
     "ONLY_ACTIVE_ARCH": "YES",
     "LD_RUNPATH_SEARCH_PATHS": "@executable_path/Frameworks",
+    "ENABLE_BITCODE": "NO",
 }
 
 def optimization_config():
@@ -57,7 +58,7 @@ def library_configs():
     configs = {
         "Debug": library_config,
         "Profile": library_config,
-        "Release": lib_specific_config,
+        "Release": library_config,
     }
     return configs
 
@@ -76,10 +77,11 @@ def framework_library_configs(name):
 
     library_config = merge_dict(SHARED_CONFIGS, lib_specific_config)
     library_config = merge_dict(library_config, optimization_config())
+    library_config = config_with_updated_linker_flags(library_config, ALL_LOAD_LINKER_FLAG)
     configs = {
         "Debug": library_config,
         "Profile": library_config,
-        "Release": lib_specific_config,
+        "Release": library_config,
     }
     return configs
 

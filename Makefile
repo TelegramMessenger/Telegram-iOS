@@ -23,7 +23,7 @@ kill_xcode:
 clean: kill_xcode
 	sh clean.sh
 
-project: clean
+project: kill_xcode
 	$(BUCK) project //App:workspace --config custom.mode=project
 	open App/App.xcworkspace
 

@@ -7,10 +7,10 @@ static_library(
     ]),
     headers = glob([
         "Sources/*.h",
-    ], exclude = ["Sources/WatchCommon.h"]),
+    ], exclude = ["Sources/WatchCommon.h", "Sources/WatchCommonWatch.h"]),
     exported_headers = glob([
         "Sources/*.h",
-    ], exclude = ["Sources/WatchCommon.h"]),
+    ], exclude = ["Sources/WatchCommon.h", "Sources/WatchCommonWatch.h"]),
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],

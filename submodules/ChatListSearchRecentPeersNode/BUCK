@@ -6,6 +6,15 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
+        "//submodules/HorizontalPeerItem:HorizontalPeerItem",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

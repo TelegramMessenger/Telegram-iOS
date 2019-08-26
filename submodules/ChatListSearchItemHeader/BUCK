@@ -6,6 +6,9 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
+        "//submodules/Display:Display#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -23,6 +23,7 @@ static_library(
         "Sources/STPBankAccountParams.h",
         "Sources/STPBINRange.h",
         "Sources/STPCardValidator.h",
+        "Sources/STPCardValidationState.h",
         "Sources/STPCustomer.h",
         "Sources/STPFormEncodable.h",
         "Sources/STPPaymentMethod.h",
@@ -31,6 +32,7 @@ static_library(
         "Sources/STPSource.h",
         "Sources/STPBlocks.h",
         "Sources/StripeError.h",
+        "Sources/STPBackendAPIAdapter.h",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

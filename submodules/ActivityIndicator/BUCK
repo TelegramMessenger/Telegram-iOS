@@ -6,8 +6,8 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-    	"//submodules/TelegramPresentationData",
-        "//submodules/AsyncDisplayKit",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+    	"//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
