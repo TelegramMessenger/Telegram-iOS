@@ -1,0 +1,21 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "EncryptionKeyVisualization",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/EncryptionKeyVisualization.h"]),
+    exported_headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/EncryptionKeyVisualization.h"]),
+    deps = [
+    	"//submodules/TelegramCore:TelegramCore#shared",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

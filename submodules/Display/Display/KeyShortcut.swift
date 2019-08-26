@@ -30,7 +30,7 @@ extension UIKeyModifierFlags: Hashable {
 
 extension KeyShortcut {
     var uiKeyCommand: UIKeyCommand {
-        if #available(iOSApplicationExtension 9.0, *), !self.title.isEmpty {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *), !self.title.isEmpty {
             return UIKeyCommand(input: self.input, modifierFlags: self.modifiers, action: #selector(KeyShortcutsController.handleKeyCommand(_:)), discoverabilityTitle: self.title)
         } else {
             return UIKeyCommand(input: self.input, modifierFlags: self.modifiers, action: #selector(KeyShortcutsController.handleKeyCommand(_:)))

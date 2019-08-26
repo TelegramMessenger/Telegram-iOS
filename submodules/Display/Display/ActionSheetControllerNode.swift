@@ -34,7 +34,7 @@ final class ActionSheetControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.canCancelAllTouchesInViews = true
         self.scrollView = self.scrollNode.view
         
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollView.contentInsetAdjustmentBehavior = .never
         }
         self.scrollView.alwaysBounceVertical = true

@@ -122,7 +122,7 @@
 					};
 				};
 			};
-			buildConfigurationList = D03E3E6D2304B63E0049C28B /* Build configuration list for PBXProject "YuvConversion" */;
+			buildConfigurationList = D03E3E6D2304B63E0049C28B /* Build configuration list for PBXProject "YuvConversion_Xcode" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -504,7 +504,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		D03E3E6D2304B63E0049C28B /* Build configuration list for PBXProject "YuvConversion" */ = {
+		D03E3E6D2304B63E0049C28B /* Build configuration list for PBXProject "YuvConversion_Xcode" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				D03E3E792304B63E0049C28B /* DebugAppStoreLLC */,

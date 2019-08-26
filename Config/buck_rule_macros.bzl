@@ -84,14 +84,6 @@ def apple_lib(
                 link_style = "static",
                 linker_flags = ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)],
             )
-            native.apple_bundle(
-                name = name + "Framework",
-                visibility = visibility,
-                binary = ":" + name + "#shared",
-                extension = "framework",
-                info_plist = "Info.plist",
-                info_plist_substitutions = info_plist_substitutions(name),
-            )
 
     else:
         native.apple_library(
@@ -205,14 +197,6 @@ def apple_cxx_lib(
         **kwargs
     )
 
-def apple_cxx_third_party_library(
-        **kwargs):
-    apple_cxx_lib(
-        warning_as_error = False,
-        suppress_warnings = True,
-        **kwargs
-    )
-
 def framework_binary_dependencies(names):
     result = []
     if native.read_config("custom", "mode") == "project":
@@ -233,4 +217,16 @@ def framework_bundle_dependencies(names):
         for name in names:
             result.append(name + "#shared")
             pass
+    return result
+
+def gen_header_targets(header_paths, prefix, flavor, source_rule, source_path):
+    result = dict()
+    for header_path in header_paths:
+        name = prefix + header_path.replace('/', '_sub_')
+        native.genrule(
+            name = name + flavor,
+            cmd = 'cp $(location :' + source_rule + ')/' + source_path + '/' + header_path + ' $OUT',
+            out = name,
+        )
+        result[header_path] = ':' + name + flavor
     return result

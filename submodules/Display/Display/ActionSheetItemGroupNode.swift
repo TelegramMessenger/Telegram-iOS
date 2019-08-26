@@ -43,7 +43,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         self.scrollNode.view.delaysContentTouches = false

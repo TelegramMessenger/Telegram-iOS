@@ -184,7 +184,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                             (presentedController.displayNode as? PeekControllerNode)?.applyDraggingOffset(offset)
                         }
                     case .press:
-                        if #available(iOSApplicationExtension 9.0, *) {
+                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                             if touch.force >= 2.5 {
                                 if presentedController.isNodeLoaded {
                                     (presentedController.displayNode as? PeekControllerNode)?.activateMenu()
@@ -275,7 +275,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                                             case .drag:
                                                 break
                                             case .press:
-                                                if #available(iOSApplicationExtension 9.0, *) {
+                                                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                                                     if presentedController.traitCollection.forceTouchCapability != .available {
                                                         strongSelf.startPressTimer()
                                                     }

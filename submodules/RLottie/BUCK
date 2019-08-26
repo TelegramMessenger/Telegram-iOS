@@ -1,0 +1,25 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "RLottie",
+    srcs = glob([
+        "Sources/rlottie/src/**/*.cpp",
+    ]) + [
+        "Sources/LottieInstance.mm"
+    ],
+    headers = glob([
+        "Sources/rlottie/src/**/*.h",
+        "Sources/rlottie/inc/**/*.h",
+    ], exclude = [
+        "Sources/rlottie/src/lottie/rapidjson/msinttypes/**/*",
+    ]) + [
+        "Sources/LottieInstance.h"
+    ],
+    exported_headers = [
+        "Sources/LottieInstance.h"
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

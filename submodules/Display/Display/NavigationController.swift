@@ -3,10 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 public final class NavigationControllerTheme {
     public let navigationBar: NavigationBarTheme
     public let emptyAreaColor: UIColor
@@ -781,7 +777,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.controllerView.backgroundColor = self.theme.emptyAreaColor
         self.controllerView.separatorView.backgroundColor = theme.navigationBar.separatorColor
         
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.navigationBar.prefersLargeTitles = false
         }
         self.navigationBar.removeFromSuperview()

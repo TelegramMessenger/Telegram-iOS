@@ -3,10 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 private let separatorHeight: CGFloat = 1.0 / UIScreen.main.scale
 private func tabBarItemImage(_ image: UIImage?, title: String, backgroundColor: UIColor, tintColor: UIColor, horizontal: Bool, imageMode: Bool) -> (UIImage, CGFloat) {
     let font = horizontal ? Font.regular(13.0) : Font.medium(10.0)

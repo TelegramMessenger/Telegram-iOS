@@ -4,11 +4,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import Display
-#if BUCK
-import WebPImage
-#else
 import WebP
-#endif
 import MediaResources
 import Emoji
 

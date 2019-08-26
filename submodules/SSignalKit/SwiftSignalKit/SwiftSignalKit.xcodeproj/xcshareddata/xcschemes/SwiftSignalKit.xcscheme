@@ -14,10 +14,10 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E66DC04E6969DF6200000000"
-               BuildableName = ".dylib"
-               BlueprintName = "Emoji#shared"
-               ReferencedContainer = "container:Emoji.xcodeproj">
+               BlueprintIdentifier = "E66DC04E89A74F8D00000000"
+               BuildableName = "libSwiftSignalKit.dylib"
+               BlueprintName = "SwiftSignalKit#shared"
+               ReferencedContainer = "container:SwiftSignalKit.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,10 +45,10 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "E66DC04E6969DF6200000000"
-            BuildableName = ".dylib"
-            BlueprintName = "Emoji#shared"
-            ReferencedContainer = "container:Emoji.xcodeproj">
+            BlueprintIdentifier = "E66DC04E89A74F8D00000000"
+            BuildableName = "libSwiftSignalKit.dylib"
+            BlueprintName = "SwiftSignalKit#shared"
+            ReferencedContainer = "container:SwiftSignalKit.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <AdditionalOptions>

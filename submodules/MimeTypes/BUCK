@@ -1,0 +1,17 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "MimeTypes",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/MimeTypes.h"]),
+    exported_headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/MimeTypes.h"]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

@@ -1,0 +1,23 @@
+load("//Config:buck_rule_macros.bzl", "framework")
+
+framework(
+    name = "Display",
+    srcs = glob([
+        "Display/*.swift",
+        "Display/*.m",
+    ]),
+    headers = glob([
+        "Display/*.h",
+    ], exclude = ["Display/Display.h"]),
+    exported_headers = glob([
+        "Display/*.h",
+    ], exclude = ["Display/Display.h"]),
+    deps = [
+    	"//submodules/AsyncDisplayKit:AsyncDisplayKit#dynamic",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

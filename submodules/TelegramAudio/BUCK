@@ -1,0 +1,14 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "TelegramAudio",
+    srcs = glob([
+        "Sources/*.swift",
+    ]),
+    deps = [
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

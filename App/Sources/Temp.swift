@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import Emoji
+//import Emoji
 
 @objc(AppDelegate1)
 public final class AppDelegate: NSObject, UIApplicationDelegate {
@@ -9,7 +9,7 @@ public final class AppDelegate: NSObject, UIApplicationDelegate {
 	override init() {
 		super.init()
 
-		print("OK6".isSingleEmoji)
+		//print("OK6".isSingleEmoji)
 	}
     
     public func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {

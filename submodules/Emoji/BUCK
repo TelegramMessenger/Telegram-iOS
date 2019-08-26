@@ -1,16 +1,6 @@
-load("//Config:buck_rule_macros.bzl", "static_library", "framework")
+load("//Config:buck_rule_macros.bzl", "static_library")
 
-apple_resource(
-    name = 'EmojiFiles',
-    dirs = [
-        "TestFolder.bundle",
-    ],
-    visibility = [
-        "PUBLIC",
-    ],
-)
-
-framework(
+static_library(
     name = "Emoji",
     srcs = glob([
         "Sources/*.swift",

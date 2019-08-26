@@ -6,11 +6,7 @@ import Display
 import AVFoundation
 import ImageIO
 import TelegramCore
-#if BUCK
-import WebPImage
-#else
 import WebP
-#endif
 import TelegramUIPreferences
 import MediaResources
 import AccountContext

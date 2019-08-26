@@ -1,9 +1,5 @@
 import UIKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 @objc private class CALayerAnimationDelegate: NSObject, CAAnimationDelegate {
     private let keyPath: String?
     var completion: ((Bool) -> Void)?

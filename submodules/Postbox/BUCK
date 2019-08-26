@@ -1,0 +1,24 @@
+load("//Config:buck_rule_macros.bzl", "framework")
+
+framework(
+    name = "Postbox",
+    srcs = glob([
+        "Postbox/*.swift",
+        "Postbox/*.m",
+    ]),
+    headers = [
+        "Postbox/MurMurHash32.h",
+    ],
+    exported_headers = [
+        "Postbox/MurMurHash32.h",
+    ],
+    deps = [
+    	"//submodules/Crc32:Crc32",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    	"//submodules/sqlcipher:sqlcipher",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/Security.framework",
+    ],
+)

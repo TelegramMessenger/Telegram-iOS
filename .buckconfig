@@ -1,7 +1,7 @@
 [cxx]
   default_platform = iphonesimulator-x86_64
-  cflags = -g -fmodules -fobjc-arc -D BUCK -w $(config custom.other_cflags)
-  cxxflags = -fobjc-arc -std=c++14 -D DEBUG -g $(config custom.other_cxxflags)
+  cflags = -g -fmodules -fobjc-arc -D BUCK -DTARGET_OS_IOS=1 -D DEBUG -w $(config custom.other_cflags)
+  cxxflags = -fobjc-arc -std=c++14 -D BUCK -DTARGET_OS_IOS=1 -D DEBUG -g $(config custom.other_cxxflags)
   combined_preprocess_and_compile = true
   pch_enabled = false
   ldflags = -Xlinker -objc_abi_version -Xlinker 2 -fobjc-arc -fobjc-link-runtime $(config custom.other_cxxflags)

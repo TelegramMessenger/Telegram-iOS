@@ -1,0 +1,23 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "StickerResources",
+    srcs = glob([
+        "Sources/*.swift",
+    ]),
+    deps = [
+    	"//submodules/TelegramCore:TelegramCore#shared",
+    	"//submodules/Postbox:Postbox#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/ImageBlur:ImageBlur",
+        "//submodules/Tuples:Tuples",
+        "//submodules/MediaResources:MediaResources",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/WebP:WebP",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

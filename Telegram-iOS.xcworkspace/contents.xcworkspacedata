@@ -177,7 +177,7 @@
          location = "container:"
          name = "Image Processing">
          <FileRef
-            location = "group:submodules/YuvConversion/YuvConversion.xcodeproj">
+            location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/YuvConversion/YuvConversion_Xcode.xcodeproj">
          </FileRef>
          <FileRef
             location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">

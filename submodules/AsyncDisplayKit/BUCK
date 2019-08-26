@@ -1,0 +1,39 @@
+load("//Config:buck_rule_macros.bzl", "framework")
+
+ASYNCDISPLAYKIT_EXPORTED_HEADERS = glob([
+  "Source/*.h",
+  "Source/Details/**/*.h",
+  "Source/Layout/*.h",
+  "Source/Base/*.h",
+  "Source/Debug/AsyncDisplayKit+Debug.h",
+  "Source/TextKit/ASTextNodeTypes.h",
+  "Source/TextKit/ASTextKitComponents.h"
+])
+
+ASYNCDISPLAYKIT_PRIVATE_HEADERS = glob([
+    "Source/**/*.h"
+  ],
+  exclude = ASYNCDISPLAYKIT_EXPORTED_HEADERS,
+)
+
+framework(
+  name = "AsyncDisplayKit",
+  headers = ASYNCDISPLAYKIT_PRIVATE_HEADERS,
+  exported_headers = ASYNCDISPLAYKIT_EXPORTED_HEADERS,
+  srcs = glob([
+    "Source/**/*.m",
+    "Source/**/*.mm",
+    "Source/Base/*.m"
+  ]),
+  compiler_flags = [
+    "-DMINIMAL_ASDK",
+  ],
+  frameworks = [
+    "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    "$SDKROOT/System/Library/Frameworks/QuartzCore.framework",
+    "$SDKROOT/System/Library/Frameworks/CoreMedia.framework",
+    "$SDKROOT/System/Library/Frameworks/CoreText.framework",
+    "$SDKROOT/System/Library/Frameworks/CoreGraphics.framework",
+  ]
+)
