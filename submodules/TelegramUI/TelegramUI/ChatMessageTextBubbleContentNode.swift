@@ -396,7 +396,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
-            if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+        if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
@@ -417,6 +417,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .none
             }
         } else {
+            if let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {
+                return .ignore
+            }
             return .none
         }
     }

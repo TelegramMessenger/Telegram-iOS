@@ -92,7 +92,7 @@ private struct MessageReactionListEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, presentationData: PresentationData) -> ListViewItem {
-        return ItemListPeerItem(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, account: context.account, peer: self.item.peer, height: .peerList, nameStyle: .distinctBold, presence: nil, text: .none, label: .text(self.item.reaction), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: {
+        return ItemListPeerItem(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, account: context.account, peer: self.item.peer, height: .peerList, nameStyle: .distinctBold, presence: nil, text: .none, label: .text(self.item.reaction, .custom(Font.regular(19.0))), editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), revealOptions: nil, switchValue: nil, enabled: true, selectable: false, sectionId: 0, action: {
             
         }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, noInsets: true, tag: nil)
     }
@@ -338,17 +338,20 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
                 for item in categoryState.items {
                     entries.append(MessageReactionListEntry(index: entries.count, item: item))
                 }
-                if !categoryState.items.isEmpty {
-                    self.isReady.set(.single(true))
-                }
             }
             index += 1
         }
         let transaction = preparedTransition(from: self.currentEntries ?? [], to: entries, context: self.context, presentationData: self.presentatonData)
+        let previousWasEmpty = self.currentEntries == nil || self.currentEntries?.count == 0
+        let isEmpty = entries.isEmpty
         self.currentEntries = entries
         
         self.enqueuedTransactions.append(transaction)
         self.dequeueTransaction()
+        
+        if previousWasEmpty && !isEmpty {
+            self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+        }
     }
     
     func setCategory(_ category: MessageReactionListCategory) {
@@ -359,7 +362,7 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
                 itemNode.isSelected = category == itemNode.category
             }
             
-            self.forceHeaderTransition = .animated(duration: 0.3, curve: .spring)
+            //self.forceHeaderTransition = .animated(duration: 0.3, curve: .spring)
             if let validLayout = self.validLayout {
                 self.containerLayoutUpdated(layout: validLayout, transition: .animated(duration: 0.3, curve: .spring))
             }
@@ -395,9 +398,10 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         insets.top = topInsetForLayout(layout: layout, itemCount: currentCategoryItemCount)
         insets.bottom = layout.intrinsicInsets.bottom
         
-        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listNode.bounds.size, insets: insets, duration: 0.0, curve: .Default(duration: nil))
+        let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: self.listNode.bounds.size, insets: insets, duration: 0.3, curve: .Default(duration: 0.3))
         
-        self.listNode.transaction(deleteIndices: transaction.deletions, insertIndicesAndItems: transaction.insertions, updateIndicesAndItems: transaction.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { _ in
+        self.listNode.transaction(deleteIndices: transaction.deletions, insertIndicesAndItems: transaction.insertions, updateIndicesAndItems: transaction.updates, options: options, updateSizeAndInsets: updateSizeAndInsets, updateOpaqueState: nil, completion: { [weak self] _ in
+            self?.isReady.set(.single(true))
         })
     }
     

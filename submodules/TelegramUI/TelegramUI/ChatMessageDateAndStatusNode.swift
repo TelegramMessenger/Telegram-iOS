@@ -586,7 +586,14 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                     return
                                 }
                                 if highlighted {
-                                    strongSelf.reactionButtonPressed()
+                                    for itemNode in strongSelf.reactionNodes {
+                                        itemNode.alpha = 0.4
+                                    }
+                                } else {
+                                    for itemNode in strongSelf.reactionNodes {
+                                        itemNode.alpha = 1.0
+                                        itemNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.3)
+                                    }
                                 }
                             }
                         }
