@@ -411,6 +411,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageReaction: { _, _ in
+        }, openMessageReactions: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,

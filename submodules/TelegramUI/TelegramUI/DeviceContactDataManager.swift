@@ -590,9 +590,8 @@ private final class DeviceContactDataManagerPrivateImpl {
         var importableContactData: [String: (DeviceContactStableId, ImportableDeviceContactData)] = [:]
         for (stableId, basicData) in self.stableIdToBasicContactData {
             for phoneNumber in basicData.phoneNumbers {
-                let normalizedNumber = formatPhoneNumber(phoneNumber.value)
                 var replace = false
-                if let current = importableContactData[normalizedNumber] {
+                if let current = importableContactData[phoneNumber.value] {
                     if stableId < current.0 {
                         replace = true
                     }
@@ -600,7 +599,7 @@ private final class DeviceContactDataManagerPrivateImpl {
                     replace = true
                 }
                 if replace {
-                    importableContactData[normalizedNumber] = (stableId, ImportableDeviceContactData(firstName: basicData.firstName, lastName: basicData.lastName))
+                    importableContactData[phoneNumber.value] = (stableId, ImportableDeviceContactData(firstName: basicData.firstName, lastName: basicData.lastName))
                 }
             }
         }
