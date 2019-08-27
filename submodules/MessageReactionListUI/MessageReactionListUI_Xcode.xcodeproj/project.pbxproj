@@ -17,6 +17,10 @@
 		D072F38023154E390009E66F /* MessageReactionListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D072F37F23154E390009E66F /* MessageReactionListController.swift */; };
 		D072F38223154EA90009E66F /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D072F38123154EA90009E66F /* TelegramPresentationData.framework */; };
 		D072F38623156B450009E66F /* MessageReactionCategoryNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D072F38523156B450009E66F /* MessageReactionCategoryNode.swift */; };
+		D072F38823159E270009E66F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D072F38723159E270009E66F /* Foundation.framework */; };
+		D072F38A23159E2B0009E66F /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D072F38923159E2B0009E66F /* UIKit.framework */; };
+		D072F38C23159E360009E66F /* MergeLists.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D072F38B23159E360009E66F /* MergeLists.framework */; };
+		D072F38E23159E3C0009E66F /* ItemListPeerItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D072F38D23159E3C0009E66F /* ItemListPeerItem.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +36,10 @@
 		D072F37F23154E390009E66F /* MessageReactionListController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageReactionListController.swift; sourceTree = "<group>"; };
 		D072F38123154EA90009E66F /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D072F38523156B450009E66F /* MessageReactionCategoryNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageReactionCategoryNode.swift; sourceTree = "<group>"; };
+		D072F38723159E270009E66F /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D072F38923159E2B0009E66F /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D072F38B23159E360009E66F /* MergeLists.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MergeLists.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D072F38D23159E3C0009E66F /* ItemListPeerItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListPeerItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +47,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D072F38E23159E3C0009E66F /* ItemListPeerItem.framework in Frameworks */,
+				D072F38C23159E360009E66F /* MergeLists.framework in Frameworks */,
+				D072F38A23159E2B0009E66F /* UIKit.framework in Frameworks */,
+				D072F38823159E270009E66F /* Foundation.framework in Frameworks */,
 				D072F38223154EA90009E66F /* TelegramPresentationData.framework in Frameworks */,
 				D072F37E23154E290009E66F /* AccountContext.framework in Frameworks */,
 				D072F37C23154E220009E66F /* TelegramCore.framework in Frameworks */,
@@ -83,6 +95,10 @@
 		D072F37223154E150009E66F /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D072F38D23159E3C0009E66F /* ItemListPeerItem.framework */,
+				D072F38B23159E360009E66F /* MergeLists.framework */,
+				D072F38923159E2B0009E66F /* UIKit.framework */,
+				D072F38723159E270009E66F /* Foundation.framework */,
 				D072F38123154EA90009E66F /* TelegramPresentationData.framework */,
 				D072F37D23154E290009E66F /* AccountContext.framework */,
 				D072F37B23154E220009E66F /* TelegramCore.framework */,

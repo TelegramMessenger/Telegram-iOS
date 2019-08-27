@@ -552,7 +552,7 @@
          location = "group:submodules/SettingsUI/SettingsUI_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/MessageReactionListUI/MessageReactionListUI_Xcode.xcodeproj">
+         location = "group:submodules/MessageReactionListUI/MessageReactionListUI_Xcode.xcodeproj">
       </FileRef>
    </Group>
    <Group
