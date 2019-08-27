@@ -68,6 +68,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetBiometricsData(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
+    case knockoutWallpaper(PresentationTheme, Bool)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -80,7 +81,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper:
             return DebugControllerSection.experiments.rawValue
         case .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -129,8 +130,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 18
         case .photoPreview:
             return 19
-        case .versionInfo:
+        case .knockoutWallpaper:
             return 20
+        case .versionInfo:
+            return 21
         }
     }
     
@@ -208,7 +211,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
-                                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
+                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                                 controller.peerSelected = { [weak controller] peerId in
                                     if let strongController = controller {
                                         strongController.dismiss()
@@ -484,6 +487,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
                         settings.chatListPhotos = value
+                        return settings
+                    })
+                }).start()
+            })
+        case let .knockoutWallpaper(theme, value):
+            return ItemListSwitchItem(theme: theme, title: "Knockout Wallpaper", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.knockoutWallpaper = value
                         return settings
                     })
                 }).start()
