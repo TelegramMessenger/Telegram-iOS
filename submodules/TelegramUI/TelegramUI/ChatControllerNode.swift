@@ -2041,7 +2041,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let _ = effectivePresentationInterfaceState.interfaceState.editMessage {
                 self.interfaceInteraction?.editMessage()
             } else {
-                if let _ = effectivePresentationInterfaceState.slowmodeState {
+                if let _ = effectivePresentationInterfaceState.slowmodeState, !effectivePresentationInterfaceState.isScheduledMessages && scheduleTime == nil {
                     if let rect = self.frameForInputActionButton() {
                         self.interfaceInteraction?.displaySlowmodeTooltip(self, rect)
                     }

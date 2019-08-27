@@ -402,7 +402,7 @@ private class ChatListStatusFailedNode: ChatListStatusContentNode {
         }
         
         let diameter: CGFloat = 14.0
-        let rect = CGRect(origin: CGPoint(x: floor((bounds.width - diameter) / 2.0), y: floor((bounds.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)).offsetBy(dx: 1.0, dy: 1.0)
+        let rect = CGRect(origin: CGPoint(x: floor((bounds.width - diameter) / 2.0), y: floor((bounds.height - diameter) / 2.0)), size: CGSize(width: diameter, height: diameter)).offsetBy(dx: 1.0, dy: UIScreenPixel)
         
         context.setFillColor(parameters.fill.cgColor)
         context.fillEllipse(in: rect)
@@ -412,7 +412,7 @@ private class ChatListStatusFailedNode: ChatListStatusContentNode {
         let stringRect = string.boundingRect(with: rect.size, options: .usesLineFragmentOrigin, context: nil)
         
         UIGraphicsPushContext(context)
-        string.draw(at: CGPoint(x: rect.minX + floor((rect.width - stringRect.width) / 2.0), y: 1.0 + rect.minY + floor((rect.height - stringRect.height) / 2.0)))
+        string.draw(at: CGPoint(x: rect.minX + floor((rect.width - stringRect.width) / 2.0), y: 1.0 - UIScreenPixel + rect.minY + floor((rect.height - stringRect.height) / 2.0)))
         UIGraphicsPopContext()
     }
     

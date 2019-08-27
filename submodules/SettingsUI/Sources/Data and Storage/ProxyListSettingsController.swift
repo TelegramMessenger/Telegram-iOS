@@ -35,6 +35,7 @@ private final class ProxySettingsControllerArguments {
 private enum ProxySettingsControllerSection: Int32 {
     case enabled
     case servers
+    case share
     case calls
 }
 
@@ -68,8 +69,10 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .enabled:
                 return ProxySettingsControllerSection.enabled.rawValue
-            case .serversHeader, .addServer, .server, .shareProxyList:
+            case .serversHeader, .addServer, .server:
                 return ProxySettingsControllerSection.servers.rawValue
+            case .shareProxyList:
+                return ProxySettingsControllerSection.share.rawValue
             case .useForCalls, .useForCallsInfo:
                 return ProxySettingsControllerSection.calls.rawValue
         }

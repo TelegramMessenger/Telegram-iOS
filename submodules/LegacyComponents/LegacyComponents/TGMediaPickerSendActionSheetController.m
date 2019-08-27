@@ -75,6 +75,7 @@
     
     CGRect _sendButtonFrame;
     bool _canSendSilently;
+    bool _canSchedule;
     bool _autorotationWasEnabled;
     bool _dismissed;
     
@@ -90,12 +91,13 @@
 
 @implementation TGMediaPickerSendActionSheetController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context sendButtonFrame:(CGRect)sendButtonFrame canSendSilently:(bool)canSendSilently canSchedule:(bool)canSchedule {
     self = [super initWithContext:context];
     if (self != nil) {
         _context = context;
         _sendButtonFrame = sendButtonFrame;
         _canSendSilently = canSendSilently;
+        _canSchedule = canSchedule;
     }
     return self;
 }
@@ -125,12 +127,14 @@
         [_containerView addSubview:_sendSilentlyButton];
     }
     
-    _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule")];
-    _scheduleButton.pressed = ^{
-        __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
-        [strongSelf schedulePressed];
-    };
-    [_containerView addSubview:_scheduleButton];
+    if (_canSchedule) {
+        _scheduleButton = [[TGMediaPickerSendActionSheetItemView alloc] initWithTitle:TGLocalized(@"Conversation.SendMessage.ScheduleMessage") icon:TGComponentsImageNamed(@"MediaSchedule")];
+        _scheduleButton.pressed = ^{
+            __strong TGMediaPickerSendActionSheetController *strongSelf = weakSelf;
+            [strongSelf schedulePressed];
+        };
+        [_containerView addSubview:_scheduleButton];
+    }
     
     TGMediaAssetsPallete *pallete = nil;
     if ([[LegacyComponentsGlobals provider] respondsToSelector:@selector(mediaAssetsPallete)])
@@ -238,7 +242,7 @@
     
     CGFloat itemHeight = 44.0;
     CGFloat containerWidth = 240.0;
-    CGFloat containerHeight = _canSendSilently ? itemHeight * 2.0 : itemHeight;
+    CGFloat containerHeight = _canSendSilently && _canSchedule ? itemHeight * 2.0 : itemHeight;
     containerWidth = MAX(containerWidth, MAX(_sendSilentlyButton.buttonLabel.frame.size.width, _scheduleButton.buttonLabel.frame.size.width) + 84.0);
     if (!_dismissed) {
         _containerView.frame = CGRectMake(CGRectGetMaxX(_sendButtonFrame) - containerWidth - 8.0, _sendButtonFrame.origin.y - containerHeight - 4.0, containerWidth, containerHeight);

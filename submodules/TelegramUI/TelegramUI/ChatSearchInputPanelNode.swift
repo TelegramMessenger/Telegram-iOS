@@ -114,10 +114,10 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             panelHeight = 45.0
         }
         
-        transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0 + 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.calendarButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 60.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
-        transition.updateFrame(node: self.membersButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 60.0 * 2.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
+        transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 48.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
+        transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 48.0 - 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
+        transition.updateFrame(node: self.calendarButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
+        transition.updateFrame(node: self.membersButton, frame: CGRect(origin: CGPoint(x: leftInset + 43.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
         
         var resultIndex: Int?
         var resultCount: Int?

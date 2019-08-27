@@ -33,7 +33,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
             let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
             chatScrollPosition = .index(index: index, position: position, directionHint: directionHint, animated: animated)
         }
-        return account.viewTracker.scheduledMessagesViewForLocation(chatLocation)
+        return account.viewTracker.scheduledMessagesViewForLocation(chatLocation, additionalData: additionalData)
         |> map { view, updateType, initialData -> ChatHistoryViewUpdate in
             let (cachedData, cachedDataMessages, readStateData) = extractAdditionalData(view: view, chatLocation: chatLocation)
             
