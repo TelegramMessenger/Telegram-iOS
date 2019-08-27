@@ -124,6 +124,8 @@ public enum MasterDetailLayoutBlackout : Equatable {
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
+    public var isModalWhenInOverlay: Bool = false
+    public var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private let _ready = Promise<Bool>(true)
     open var ready: Promise<Bool> {
@@ -551,7 +553,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 self.controllerView.containerView.addSubview(record.controller.view)
                 record.controller.setIgnoreAppearanceMethodInvocations(false)
                 
-                if let _ = previousControllers.index(where: { $0.controller === record.controller }) {
+                if let _ = previousControllers.firstIndex(where: { $0.controller === record.controller }) {
                     //previousControllers[index].transition = .appearance
                     let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.controllerView.containerView, topView: previousController.view, topNavigationBar: (previousController as? ViewController)?.navigationBar, bottomView: record.controller.view, bottomNavigationBar: (record.controller as? ViewController)?.navigationBar)
                     self.navigationTransitionCoordinator = navigationTransitionCoordinator
@@ -571,7 +573,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                         }
                     })
                 } else {
-                    if let index = self._viewControllers.index(where: { $0.controller === previousController }) {
+                    if let index = self._viewControllers.firstIndex(where: { $0.controller === previousController }) {
                         self._viewControllers[index].transition = .appearance
                     }
                     let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Push, container: self.controllerView.containerView, topView: record.controller.view, topNavigationBar: (record.controller as? ViewController)?.navigationBar, bottomView: previousController.view, bottomNavigationBar: (previousController as? ViewController)?.navigationBar)
@@ -580,7 +582,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.controllerView.inTransition = true
                     navigationTransitionCoordinator.animateCompletion(0.0, completion: { [weak self] in
                         if let strongSelf = self {
-                            if let index = strongSelf._viewControllers.index(where: { $0.controller === previousController }) {
+                            if let index = strongSelf._viewControllers.firstIndex(where: { $0.controller === previousController }) {
                                 strongSelf._viewControllers[index].transition = .none
                             }
                             strongSelf.navigationTransitionCoordinator = nil
@@ -713,7 +715,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.loadView()
         }
         self.validLayout = layout
-        transition.updateFrame(view: self.view, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
+        //transition.updateFrame(view: self.view, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         
         self.updateControllerLayouts(previousControllers: self._viewControllers, layout: layout, transition: transition)
         
@@ -730,6 +732,33 @@ open class NavigationController: UINavigationController, ContainableController, 
         if let navigationTransitionCoordinator = self.navigationTransitionCoordinator {
             navigationTransitionCoordinator.updateProgress(transition: transition)
         }
+    }
+    
+    private var modalTransition: CGFloat = 0.0
+    
+    public func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.modalTransition == value {
+            return
+        }
+        let scale = (self.view.bounds.width - 20.0 * 2.0) / self.view.bounds.width
+        let cornerRadius = value * 10.0 / scale
+        switch transition {
+        case let .animated(duration, curve):
+            let previous = self.displayNode.layer.cornerRadius
+            self.displayNode.layer.cornerRadius = cornerRadius
+            if !cornerRadius.isZero {
+                self.displayNode.clipsToBounds = true
+            }
+            self.displayNode.layer.animate(from: previous as NSNumber, to: cornerRadius as NSNumber, keyPath: "cornerRadius", timingFunction: curve.timingFunction, duration: duration, completion: { [weak self] _ in
+                if cornerRadius.isZero {
+                    self?.displayNode.clipsToBounds = false
+                }
+            })
+        case .immediate:
+            self.displayNode.layer.cornerRadius = cornerRadius
+            self.displayNode.clipsToBounds = !cornerRadius.isZero
+        }
+        self.modalTransition = value
     }
     
     public func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation) {

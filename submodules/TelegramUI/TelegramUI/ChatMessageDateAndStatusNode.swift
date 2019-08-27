@@ -98,9 +98,12 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private var impressionIcon: ASImageNode?
     private var reactionNodes: [StatusReactionNode] = []
     private var reactionCountNode: TextNode?
+    private var reactionButtonNode: HighlightTrackingButtonNode?
     
     private var type: ChatMessageDateAndStatusType?
     private var theme: ChatPresentationThemeData?
+    
+    var openReactions: (() -> Void)?
     
     override init() {
         self.dateNode = TextNode()
@@ -108,8 +111,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.dateNode.displaysAsynchronously = true
         
         super.init()
-        
-        self.isUserInteractionEnabled = false
         
         self.addSubnode(self.dateNode)
     }
@@ -561,7 +562,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                                 node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                             }
                         }
-                        node.frame = CGRect(origin: CGPoint(x: reactionOffset + 1, y: backgroundInsets.top + 1.0 + offset), size: layout.size)
+                        node.frame = CGRect(origin: CGPoint(x: reactionOffset + 1.0, y: backgroundInsets.top + 1.0 + offset), size: layout.size)
+                        reactionOffset += 1.0 + layout.size.width
                     } else if let reactionCountNode = strongSelf.reactionCountNode {
                         strongSelf.reactionCountNode = nil
                         if animated {
@@ -571,6 +573,27 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         } else {
                             reactionCountNode.removeFromSupernode()
                         }
+                    }
+                    
+                    if !strongSelf.reactionNodes.isEmpty {
+                        if strongSelf.reactionButtonNode == nil {
+                            let reactionButtonNode = HighlightTrackingButtonNode()
+                            strongSelf.reactionButtonNode = reactionButtonNode
+                            strongSelf.addSubnode(reactionButtonNode)
+                            reactionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.reactionButtonPressed), forControlEvents: .touchUpInside)
+                            reactionButtonNode.highligthedChanged = { [weak strongSelf] highlighted in
+                                guard let strongSelf = strongSelf else {
+                                    return
+                                }
+                                if highlighted {
+                                    strongSelf.reactionButtonPressed()
+                                }
+                            }
+                        }
+                        strongSelf.reactionButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset - reactionInset + backgroundInsets.left - 5.0, y: backgroundInsets.top + 1.0 + offset - 5.0), size: CGSize(width: reactionOffset + 5.0 * 2.0, height: 20.0))
+                    } else if let reactionButtonNode = strongSelf.reactionButtonNode {
+                        strongSelf.reactionButtonNode = nil
+                        reactionButtonNode.removeFromSupernode()
                     }
                 }
             })
@@ -601,6 +624,19 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         for node in self.reactionNodes {
             if node.value == value {
                 return (node, node.count)
+            }
+        }
+        return nil
+    }
+    
+    @objc private func reactionButtonPressed() {
+        self.openReactions?()
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let reactionButtonNode = self.reactionButtonNode {
+            if reactionButtonNode.frame.contains(point) {
+                return reactionButtonNode.view
             }
         }
         return nil
