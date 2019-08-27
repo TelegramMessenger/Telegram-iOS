@@ -19,7 +19,7 @@ final class MutableOrderedItemListView: MutablePostboxView {
                         self.items = items
                         updated = true
                     case let .addOrMoveToFirstPosition(item, maxCount):
-                        if let index = self.items.index(where: { $0.id == item.id }) {
+                        if let index = self.items.firstIndex(where: { $0.id == item.id }) {
                             self.items.remove(at: index)
                             self.items.insert(item, at: 0)
                         } else {

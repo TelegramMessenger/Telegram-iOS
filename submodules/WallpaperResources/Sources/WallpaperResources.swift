@@ -664,7 +664,7 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                     c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 42.0), size: CGSize(width: drawingRect.width, height: 42.0)))
                     
                     c.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
-                    c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 43.0), size: CGSize(width: drawingRect.width, height: 1.0)))
+                    c.fill(CGRect(origin: CGPoint(x: 1.0, y: drawingRect.height - 43.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
                     
                     c.setFillColor(theme.rootController.navigationBar.secondaryTextColor.cgColor)
                     c.fillEllipse(in: CGRect(origin: CGPoint(x: drawingRect.width - 28.0 - 7.0, y: drawingRect.height - 7.0 - 28.0 - UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
@@ -676,7 +676,7 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                     c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
                     
                     c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
-                    c.fill(CGRect(origin: CGPoint(x: 0.0, y: 42.0), size: CGSize(width: drawingRect.width, height: 1.0)))
+                    c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
                     
                     c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
                     c.setStrokeColor(theme.chat.inputPanel.inputStrokeColor.cgColor)
@@ -698,7 +698,7 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                     c.fill(drawingRect)
                 }
                 
-                if let emptyColor = arguments.emptyColor?.withAlphaComponent(1.0) {
+                if let emptyColor = arguments.emptyColor {
                     c.setStrokeColor(emptyColor.cgColor)
                     c.setLineWidth(2.0)
                     let borderPath = UIBezierPath(roundedRect: drawingRect, cornerRadius: 4.0)

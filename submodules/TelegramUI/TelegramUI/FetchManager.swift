@@ -587,7 +587,7 @@ public final class FetchManagerImpl: FetchManager {
                                             assert(entry.elevatedPriorityReferenceCount >= 0)
                                         }
                                         if let userInitiatedIndex = assignedUserInitiatedIndex {
-                                            if let index = entry.userInitiatedPriorityIndices.index(of: userInitiatedIndex) {
+                                            if let index = entry.userInitiatedPriorityIndices.firstIndex(of: userInitiatedIndex) {
                                                 entry.userInitiatedPriorityIndices.remove(at: index)
                                             } else {
                                                 assertionFailure()

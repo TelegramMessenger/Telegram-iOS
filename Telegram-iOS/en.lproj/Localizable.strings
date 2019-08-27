@@ -111,7 +111,7 @@
 "PUSH_MESSAGE" = "%1$@|sent you a message";
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
-"PUSH_MESSAGE_ALBUM" = "%1$@|sent you an album";
+"PUSH_ALBUM" = "%1$@|sent you an album";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -4280,6 +4280,10 @@ Sorry for the inconvenience.";
 "Privacy.AddNewPeer" = "Add Users or Groups";
 "PrivacyPhoneNumberSettings.WhoCanSeeMyPhoneNumber" = "WHO CAN SEE MY PHONE NUMBER";
 "PrivacyPhoneNumberSettings.CustomHelp" = "Users who already have your number saved in the contacts will also see it on Telegram.";
+"PrivacyPhoneNumberSettings.CustomDisabledHelp" = "Users who add your number to their contacts will see it on Telegram only if they are your contacts.";
+
+"PrivacyPhoneNumberSettings.DiscoveryHeader" = "WHO CAN FIND ME BY MY NUMBER";
+
 "Privacy.PhoneNumber" = "Phone Number";
 "PrivacySettings.PhoneNumber" = "Phone Number";
 "Contacts.SearchUsersAndGroupsLabel" = "Search for users and groups";
@@ -4661,6 +4665,8 @@ Any member of this group will be able to see messages in the channel.";
 "Undo.ScheduledMessagesCleared" = "Scheduled messages cleared";
 
 "Appearance.CreateTheme" = "Create New Theme";
+"Appearance.CreateThemeInfo" = "A new theme template has been created from your current theme and added to your Saved Messages.";
+"Appearance.Publish" = "Publish";
 
 "Conversation.Theme" = "Color Theme";
 "Conversation.ViewTheme" = "VIEW THEME";

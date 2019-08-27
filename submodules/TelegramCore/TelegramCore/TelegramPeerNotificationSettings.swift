@@ -252,7 +252,7 @@ extension PeerMessageSound {
             return
         }
         var rawApiSound = apiSound
-        if let index = rawApiSound.index(of: ".") {
+        if let index = rawApiSound.firstIndex(of: ".") {
             rawApiSound = String(rawApiSound[..<index])
         }
         

@@ -144,7 +144,7 @@ final class OrderedItemListTable: Table {
         var orderedIds = self.getItemIds(collectionId: collectionId)
         
         let offsetUntilIndex: Int
-        if let index = orderedIds.index(of: item.id) {
+        if let index = orderedIds.firstIndex(of: item.id) {
             offsetUntilIndex = index
             self.valueBox.remove(self.table, key: self.keyIndexToId(collectionId: collectionId, itemIndex: UInt32(index)), secure: false)
         } else {

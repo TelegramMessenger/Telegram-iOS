@@ -578,7 +578,7 @@ private enum GroupInfoEntry: ItemListNodeEntry {
                         }
                     }))
                 }
-                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
+                return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.context.account, peer: peer, presence: presence, text: .presence, label: label == nil ? .none : .text(label!, .standard), editing: editing, revealOptions: ItemListPeerItemRevealOptions(options: options), switchValue: nil, enabled: enabled, selectable: selectable, sectionId: self.section, action: {
                     if let infoController = arguments.context.sharedContext.makePeerInfoController(context: arguments.context, peer: peer, mode: .generic), selectable {
                         arguments.pushController(infoController)
                     }

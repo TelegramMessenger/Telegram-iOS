@@ -11,7 +11,7 @@ public func makeDefaultPresentationTheme(reference: PresentationBuiltinThemeRefe
         case .night:
             theme = makeDarkPresentationTheme(accentColor: accentColor, baseColor: baseColor, preview: preview)
         case .nightAccent:
-            theme = makeDarkAccentPresentationTheme(accentColor: accentColor, baseColor: baseColor, preview: preview)
+            theme = makeDarkAccentPresentationTheme(accentColor: accentColor, baseColor: nil, preview: preview)
         case .day:
             theme = makeDefaultDayPresentationTheme(accentColor: accentColor, serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, day: true, preview: preview)
     }

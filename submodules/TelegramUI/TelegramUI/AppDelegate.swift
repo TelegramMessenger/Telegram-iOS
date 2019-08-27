@@ -57,12 +57,13 @@ private class ApplicationStatusBarHost: StatusBarHost {
         return self.application.statusBarFrame
     }
     var statusBarStyle: UIStatusBarStyle {
-        get {
-            return self.application.statusBarStyle
-        } set(value) {
-            self.application.setStatusBarStyle(value, animated: false)
-        }
+        return self.application.statusBarStyle
     }
+    
+    func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
+        self.application.setStatusBarStyle(style, animated: animated)
+    }
+    
     var statusBarWindow: UIView? {
         return self.application.value(forKey: "statusBarWindow") as? UIView
     }
@@ -237,7 +238,7 @@ final class SharedApplicationContext {
         let (window, hostView, aboveStatusbarWindow) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
         self.aboveStatusbarWindow = aboveStatusbarWindow
-        window.backgroundColor = UIColor.white
+        hostView.containerView.backgroundColor = UIColor.white
         self.window = window
         self.nativeWindow = window
         
@@ -656,7 +657,7 @@ final class SharedApplicationContext {
         }
         |> deliverOnMainQueue
         |> mapToSignal { accountManager, initialPresentationDataAndSettings -> Signal<(SharedApplicationContext, LoggingSettings), NoError> in
-            self.window?.backgroundColor = initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
+            self.mainWindow?.hostView.containerView.backgroundColor =  initialPresentationDataAndSettings.presentationData.theme.chatList.backgroundColor
             
             let legacyBasePath = appGroupUrl.path
             let legacyCache = LegacyCache(path: legacyBasePath + "/Caches")

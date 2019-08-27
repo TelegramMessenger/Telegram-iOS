@@ -344,6 +344,9 @@ public final class AvatarNode: ASDisplayNode {
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
                 self.setNeedsDisplay()
+                if synchronousLoad {
+                    self.recursivelyEnsureDisplaySynchronously(true)
+                }
             }
         }
     }

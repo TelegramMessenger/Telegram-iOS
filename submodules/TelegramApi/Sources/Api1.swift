@@ -3967,6 +3967,7 @@ public extension Api {
         case privacyKeyForwards
         case privacyKeyProfilePhoto
         case privacyKeyPhoneNumber
+        case privacyKeyAddedByPhone
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4012,6 +4013,12 @@ public extension Api {
                     }
                     
                     break
+                case .privacyKeyAddedByPhone:
+                    if boxed {
+                        buffer.appendInt32(1124062251)
+                    }
+                    
+                    break
     }
     }
     
@@ -4031,6 +4038,8 @@ public extension Api {
                 return ("privacyKeyProfilePhoto", [])
                 case .privacyKeyPhoneNumber:
                 return ("privacyKeyPhoneNumber", [])
+                case .privacyKeyAddedByPhone:
+                return ("privacyKeyAddedByPhone", [])
     }
     }
     
@@ -4054,6 +4063,9 @@ public extension Api {
         }
         public static func parse_privacyKeyPhoneNumber(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyPhoneNumber
+        }
+        public static func parse_privacyKeyAddedByPhone(_ reader: BufferReader) -> PrivacyKey? {
+            return Api.PrivacyKey.privacyKeyAddedByPhone
         }
     
     }
@@ -4131,8 +4143,8 @@ public extension Api {
         case updatePeerLocated(peers: [Api.PeerLocated])
         case updateNewScheduledMessage(message: Api.Message)
         case updateDeleteScheduledMessages(peer: Api.Peer, messages: [Int32])
-        case updateMessageReactions(peer: Api.Peer, msgId: Int32, reactions: Api.MessageReactions)
         case updateTheme(theme: Api.Theme)
+        case updateMessageReactions(peer: Api.Peer, msgId: Int32, reactions: Api.MessageReactions)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4751,6 +4763,12 @@ public extension Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
                     break
+                case .updateTheme(let theme):
+                    if boxed {
+                        buffer.appendInt32(-2112423005)
+                    }
+                    theme.serialize(buffer, true)
+                    break
                 case .updateMessageReactions(let peer, let msgId, let reactions):
                     if boxed {
                         buffer.appendInt32(357013699)
@@ -4758,12 +4776,6 @@ public extension Api {
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     reactions.serialize(buffer, true)
-                    break
-                case .updateTheme(let theme):
-                    if boxed {
-                        buffer.appendInt32(-2112423005)
-                    }
-                    theme.serialize(buffer, true)
                     break
     }
     }
@@ -4916,10 +4928,10 @@ public extension Api {
                 return ("updateNewScheduledMessage", [("message", message)])
                 case .updateDeleteScheduledMessages(let peer, let messages):
                 return ("updateDeleteScheduledMessages", [("peer", peer), ("messages", messages)])
-                case .updateMessageReactions(let peer, let msgId, let reactions):
-                return ("updateMessageReactions", [("peer", peer), ("msgId", msgId), ("reactions", reactions)])
                 case .updateTheme(let theme):
                 return ("updateTheme", [("theme", theme)])
+                case .updateMessageReactions(let peer, let msgId, let reactions):
+                return ("updateMessageReactions", [("peer", peer), ("msgId", msgId), ("reactions", reactions)])
     }
     }
     
@@ -6165,6 +6177,19 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_updateTheme(_ reader: BufferReader) -> Update? {
+            var _1: Api.Theme?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Theme
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateTheme(theme: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_updateMessageReactions(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
@@ -6181,19 +6206,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateMessageReactions(peer: _1!, msgId: _2!, reactions: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_updateTheme(_ reader: BufferReader) -> Update? {
-            var _1: Api.Theme?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Theme
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.Update.updateTheme(theme: _1!)
             }
             else {
                 return nil
@@ -11045,6 +11057,7 @@ public extension Api {
         case inputPrivacyKeyForwards
         case inputPrivacyKeyProfilePhoto
         case inputPrivacyKeyPhoneNumber
+        case inputPrivacyKeyAddedByPhone
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11090,6 +11103,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputPrivacyKeyAddedByPhone:
+                    if boxed {
+                        buffer.appendInt32(-786326563)
+                    }
+                    
+                    break
     }
     }
     
@@ -11109,6 +11128,8 @@ public extension Api {
                 return ("inputPrivacyKeyProfilePhoto", [])
                 case .inputPrivacyKeyPhoneNumber:
                 return ("inputPrivacyKeyPhoneNumber", [])
+                case .inputPrivacyKeyAddedByPhone:
+                return ("inputPrivacyKeyAddedByPhone", [])
     }
     }
     
@@ -11132,6 +11153,9 @@ public extension Api {
         }
         public static func parse_inputPrivacyKeyPhoneNumber(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyPhoneNumber
+        }
+        public static func parse_inputPrivacyKeyAddedByPhone(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyAddedByPhone
         }
     
     }

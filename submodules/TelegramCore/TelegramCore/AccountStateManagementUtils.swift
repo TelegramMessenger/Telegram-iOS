@@ -1038,7 +1038,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateCachedPeerData(groupPeerId, { current in
                     if let current = current as? CachedGroupData, let participants = current.participants {
                         var updatedParticipants = participants.participants
-                        if updatedParticipants.index(where: { $0.peerId == userPeerId }) == nil {
+                        if updatedParticipants.firstIndex(where: { $0.peerId == userPeerId }) == nil {
                             updatedParticipants.append(.member(id: userPeerId, invitedBy: inviterPeerId, invitedAt: date))
                         }
                         return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
@@ -1052,7 +1052,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateCachedPeerData(groupPeerId, { current in
                     if let current = current as? CachedGroupData, let participants = current.participants {
                         var updatedParticipants = participants.participants
-                        if let index = updatedParticipants.index(where: { $0.peerId == userPeerId }) {
+                        if let index = updatedParticipants.firstIndex(where: { $0.peerId == userPeerId }) {
                             updatedParticipants.remove(at: index)
                         }
                         return current.withUpdatedParticipants(CachedGroupParticipants(participants: updatedParticipants, version: participants.version))
@@ -1066,7 +1066,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.updateCachedPeerData(groupPeerId, { current in
                     if let current = current as? CachedGroupData, let participants = current.participants {
                         var updatedParticipants = participants.participants
-                        if let index = updatedParticipants.index(where: { $0.peerId == userPeerId }) {
+                        if let index = updatedParticipants.firstIndex(where: { $0.peerId == userPeerId }) {
                             if isAdmin == .boolTrue {
                                 if case let .member(id, invitedBy, invitedAt) = updatedParticipants[index] {
                                     updatedParticipants[index] = .admin(id: id, invitedBy: invitedBy, invitedAt: invitedAt)
@@ -2587,7 +2587,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         switch itemId {
                             case let .peer(peerId):
                                 var currentItemIds = transaction.getPinnedItemIds(groupId: groupId)
-                                if let index = currentItemIds.index(of: .peer(peerId)) {
+                                if let index = currentItemIds.firstIndex(of: .peer(peerId)) {
                                     currentItemIds.remove(at: index)
                                     transaction.setPinnedItemIds(groupId: groupId, itemIds: currentItemIds)
                                 } else {
@@ -2745,7 +2745,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                         }
                         
                         var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
-                        if let index = updatedInfos.index(where: { $0.id == info.id }) {
+                        if let index = updatedInfos.firstIndex(where: { $0.id == info.id }) {
                             let currentInfo = updatedInfos[index]
                             updatedInfos.remove(at: index)
                             updatedInfos.insert(currentInfo, at: 0)

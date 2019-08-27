@@ -551,6 +551,9 @@
       <FileRef
          location = "group:submodules/SettingsUI/SettingsUI_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/MessageReactionListUI/MessageReactionListUI_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"

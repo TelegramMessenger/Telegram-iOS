@@ -486,7 +486,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         var items: [ActionSheetItem] = []
-        items.append(ActionSheetButtonItem(title: "Create New Theme", color: .accent, action: { [weak actionSheet] in
+        items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_CreateTheme, color: .accent, action: { [weak actionSheet] in
             actionSheet?.dismissAnimated()
            
             var randomId: Int64 = 0
@@ -503,7 +503,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             
             let _ = enqueueMessages(account: context.account, peerId: context.account.peerId, messages: [message]).start()
             
-            presentControllerImpl?(textAlertController(context: context, title: nil, text: "A new theme template has been created from your current theme and added to your Saved Messages.", actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
+            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.Appearance_CreateThemeInfo, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
                 if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
                     context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(context.account.peerId)))
                 }

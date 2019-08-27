@@ -104,7 +104,7 @@ final class ItemCollectionInfoTable: Table {
             if let resultCollectionIdAndIndex = resultCollectionIdAndIndex {
                 return resultCollectionIdAndIndex
             } else {
-                let index = namespaceList.index(of: currentNamespace)!
+                let index = namespaceList.firstIndex(of: currentNamespace)!
                 if index == 0 {
                     return nil
                 } else {
@@ -127,7 +127,7 @@ final class ItemCollectionInfoTable: Table {
             if let resultCollectionIdAndIndex = resultCollectionIdAndIndex {
                 return resultCollectionIdAndIndex
             } else {
-                let index = namespaceList.index(of: currentNamespace)!
+                let index = namespaceList.firstIndex(of: currentNamespace)!
                 if index == namespaceList.count - 1 {
                     return nil
                 } else {
