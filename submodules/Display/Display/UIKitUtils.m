@@ -118,7 +118,7 @@ UIBlurEffect *makeCustomZoomBlurEffect() {
     
     NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
     CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
-    result.blurRadius = 20.0;
+    result.blurRadius = 18.0;
     result.zoom = 0.015;
     result.colorTint = nil;
     result.colorTintAlpha = 0.0;
