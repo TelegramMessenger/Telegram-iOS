@@ -143,7 +143,7 @@ private func createThemeControllerEntries(presentationData: PresentationData, th
 }
 
 public func createThemeController(context: AccountContext, theme: PresentationTheme, resource: MediaResource) -> ViewController {
-    let initialState = CreateThemeControllerState(mode: .create, title: "", slug: "")
+    let initialState = CreateThemeControllerState(mode: .create, title: theme.name.string, slug: "")
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateThemeControllerState) -> CreateThemeControllerState) -> Void = { f in

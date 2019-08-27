@@ -60,7 +60,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
-    case exportTheme(PresentationTheme)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -73,7 +72,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return DebugControllerSection.logging.rawValue
             case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
                 return DebugControllerSection.experiments.rawValue
-            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .exportTheme:
+            case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .optimizeDatabase, .photoPreview, .knockoutWallpaper:
                 return DebugControllerSection.experiments.rawValue
             case .versionInfo:
                 return DebugControllerSection.info.rawValue
@@ -122,10 +121,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 return 18
             case .knockoutWallpaper:
                 return 19
-            case .exportTheme:
-                return 20
             case .versionInfo:
-                return 21
+                return 20
         }
     }
     
@@ -475,35 +472,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             return settings
                         })
                     }).start()
-                })
-            case let .exportTheme(theme):
-                return ItemListActionItem(theme: theme, title: "Export Theme", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                    guard let context = arguments.context else {
-                        return
-                    }
-                    
-                    var randomId: Int64 = 0
-                    arc4random_buf(&randomId, 8)
-                    let path = NSTemporaryDirectory() + "\(randomId)"
-                    
-                    let encoder = PresentationThemeEncoder()
-                    guard let strings = try? encoder.encode(theme), let _ = try? strings.write(toFile: path, atomically: true, encoding: .utf8) else {
-                        return
-                    }
-                    
-                    let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                    controller.peerSelected = { [weak controller] peerId in
-                        if let strongController = controller {
-                            strongController.dismiss()
-                            
-                            let id = arc4random64()
-                            let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: path, randomId: id), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "\(theme.name.string).tgios-theme")])
-                            let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
-                            
-                            let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
-                        }
-                    }
-                    arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
                 })
             case let .versionInfo(theme):
                 let bundle = Bundle.main

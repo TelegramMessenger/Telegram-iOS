@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09B4A9BC23151A40005C2E08 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 09B4A9BB23151A3F005C2E08 /* VideoToolbox.framework */; };
 		69015D941E9D848700AC9763 /* NetworkSocket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69015D921E9D848700AC9763 /* NetworkSocket.cpp */; };
 		6915307B1E6B5BAB004F643F /* logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6915307A1E6B5BAB004F643F /* logging.cpp */; };
 		6929CD102233ED81009B7378 /* PrivateDefines.h in Headers */ = {isa = PBXBuildFile; fileRef = 6929CD0F2233ED81009B7378 /* PrivateDefines.h */; };
@@ -381,6 +382,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		09B4A9BB23151A3F005C2E08 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
 		69015D921E9D848700AC9763 /* NetworkSocket.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkSocket.cpp; sourceTree = "<group>"; };
 		69015D931E9D848700AC9763 /* NetworkSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkSocket.h; sourceTree = "<group>"; };
 		6915307A1E6B5BAB004F643F /* logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logging.cpp; sourceTree = "<group>"; };
@@ -1057,6 +1059,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				09B4A9BC23151A40005C2E08 /* VideoToolbox.framework in Frameworks */,
 				692AB91F1E675F7000706ACC /* AudioToolbox.framework in Frameworks */,
 				692AB9201E675F7000706ACC /* AudioUnit.framework in Frameworks */,
 				692AB9211E675F7000706ACC /* CoreAudio.framework in Frameworks */,
@@ -1172,6 +1175,7 @@
 		692AB9061E675E8700706ACC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				09B4A9BB23151A3F005C2E08 /* VideoToolbox.framework */,
 				692AB91C1E675F7000706ACC /* AudioToolbox.framework */,
 				692AB91D1E675F7000706ACC /* AudioUnit.framework */,
 				692AB91E1E675F7000706ACC /* CoreAudio.framework */,
@@ -2415,6 +2419,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 69F8422C1E67540700C110F7;

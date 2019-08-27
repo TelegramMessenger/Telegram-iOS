@@ -210,6 +210,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                         self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                     })
                 }
+            }, openTheme: { _ in
             }, openHashtag: { _, _ in
             }, updateInputState: { _ in
             }, updateInputMode: { _ in

@@ -295,7 +295,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                     }
                     strongSelf.navigationButtonActions = (left: controllerState.leftNavigationButton?.action, right: controllerState.rightNavigationButton?.action, secondaryRight: controllerState.secondaryRightNavigationButton?.action)
                     
-                    if strongSelf.leftNavigationButtonTitleAndStyle?.0 != controllerState.leftNavigationButton?.content || strongSelf.leftNavigationButtonTitleAndStyle?.1 != controllerState.leftNavigationButton?.style {
+                    let themeUpdated = strongSelf.theme !== controllerState.theme
+                    if strongSelf.leftNavigationButtonTitleAndStyle?.0 != controllerState.leftNavigationButton?.content || strongSelf.leftNavigationButtonTitleAndStyle?.1 != controllerState.leftNavigationButton?.style || themeUpdated {
                         if let leftNavigationButton = controllerState.leftNavigationButton {
                             let item: UIBarButtonItem
                             switch leftNavigationButton.content {
@@ -345,7 +346,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                         }
                     }
                     
-                    if updateRightButtonItems {
+                    if updateRightButtonItems || themeUpdated {
                         strongSelf.rightNavigationButtonTitleAndStyle = rightNavigationButtonTitleAndStyle.map { ($0.0, $0.1) }
                         var items: [UIBarButtonItem] = []
                         var index = 0

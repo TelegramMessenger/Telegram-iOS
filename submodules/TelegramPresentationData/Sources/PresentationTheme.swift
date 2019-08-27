@@ -918,7 +918,7 @@ public enum PresentationThemeName: Equatable {
                     case .night:
                         return "Night"
                     case .nightAccent:
-                        return "Night"
+                        return "Tinted Night"
                 }
             case let .custom(name):
                 return name
@@ -929,6 +929,7 @@ public enum PresentationThemeName: Equatable {
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let author: String?
+    public let referenceTheme: PresentationBuiltinThemeReference
     public let overallDarkAppearance: Bool
     public let baseColor: PresentationThemeBaseColor?
     public let intro: PresentationThemeIntro
@@ -944,9 +945,10 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, author: String?, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
         self.author = author
+        self.referenceTheme = referenceTheme
         self.overallDarkAppearance = overallDarkAppearance
         self.baseColor = baseColor
         self.intro = intro

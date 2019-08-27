@@ -13,6 +13,7 @@ import CounterContollerTitleView
 
 public enum ThemePreviewSource {
     case theme(TelegramTheme)
+    case slug(String, TelegramMediaFile)
     case media(AnyMediaReference)
 }
 
@@ -20,6 +21,7 @@ public final class ThemePreviewController: ViewController {
     private let context: AccountContext
     private let previewTheme: PresentationTheme
     private let source: ThemePreviewSource
+    private let theme = Promise<TelegramTheme?>()
     
     private var controllerNode: ThemePreviewControllerNode {
         return self.displayNode as! ThemePreviewControllerNode
@@ -42,7 +44,16 @@ public final class ThemePreviewController: ViewController {
         let themeName: String
         if case let .theme(theme) = source {
             themeName = theme.title
+            self.theme.set(.single(theme))
+        } else if case let .slug(slug, _) = source {
+            self.theme.set(getTheme(account: context.account, slug: slug)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                return .single(nil)
+            })
+            themeName = previewTheme.name.string
         } else {
+            self.theme.set(.single(nil))
             themeName = previewTheme.name.string
         }
         
@@ -53,6 +64,7 @@ public final class ThemePreviewController: ViewController {
         } else {
             self.title = themeName
         }
+        
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -95,25 +107,50 @@ public final class ThemePreviewController: ViewController {
             }
         }, apply: { [weak self] in
             if let strongSelf = self {
-                let theme: PresentationThemeReference
-                if case let .theme(info) = strongSelf.source {
-                    theme = .cloud(info)
-                } else {
-                    theme = .builtin(.day)
+                let previewTheme = strongSelf.previewTheme
+                let theme: Signal<PresentationThemeReference?, NoError>
+                
+                switch strongSelf.source {
+                    case .theme, .slug:
+                        theme = strongSelf.theme.get()
+                        |> take(1)
+                        |> map { theme in
+                            if let theme = theme {
+                                return .cloud(theme)
+                            } else {
+                                return nil
+                            }
+                        }
+                    case .media:
+                        if let strings = encodePresentationTheme(previewTheme), let data = strings.data(using: .utf8) {
+                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                            strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+
+                            theme = .single(.local(PresentationLocalTheme(title: previewTheme.name.string, resource: resource)))
+                        } else {
+                            theme = .single(.builtin(.dayClassic))
+                        }
                 }
                 
-                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                        let current: PresentationThemeSettings
-                        if let entry = entry as? PresentationThemeSettings {
-                            current = entry
-                        } else {
-                            current = PresentationThemeSettings.defaultSettings
-                        }
-                        
-                        return PresentationThemeSettings(chatWallpaper: .color(0xffffff), theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                    })
-                }).start(completed: { [weak self] in
+                let signal = theme
+                |> mapToSignal { theme -> Signal<Void, NoError> in
+                    guard let theme = theme else {
+                        return .complete()
+                    }
+                    return strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
+                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                            let current: PresentationThemeSettings
+                            if let entry = entry as? PresentationThemeSettings {
+                                current = entry
+                            } else {
+                                current = PresentationThemeSettings.defaultSettings
+                            }
+                            return PresentationThemeSettings(chatWallpaper: previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                        })
+                    }
+                }
+                
+                let _ = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.dismiss()
                     }
@@ -146,6 +183,9 @@ public final class ThemePreviewController: ViewController {
         switch self.source {
             case let .theme(theme):
                 subject = .url("https://t.me/addtheme/\(theme.slug)")
+                preferredAction = .default
+            case let .slug(slug, _):
+                subject = .url("https://t.me/addtheme/\(slug)")
                 preferredAction = .default
             case let .media(media):
                 subject = .media(media)

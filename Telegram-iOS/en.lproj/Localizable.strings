@@ -4651,15 +4651,22 @@ Any member of this group will be able to see messages in the channel.";
 "Appearance.ThemePreview.ChatList.8.Name" = "What";
 "Appearance.ThemePreview.ChatList.8.Text" = "Hola!";
 
-"Appearance.ThemePreview.Chat.1.Text" = "Reminds me of a Chinese proverb: the best time to plant a tree was 20 years ago. The second best time is now.";
-"Appearance.ThemePreview.Chat.1.ReplyName" = "Alex Cassio";
-"Appearance.ThemePreview.Chat.1.ReplyText" = "Mark Twain said that ☝️";
-
-"Appearance.ThemePreview.Chat.2.Text" = "Mark Twain said that ☝️";
-"Appearance.ThemePreview.Chat.3.Text" = "Twenty years from now you will be more disappointed by the things that you didn't do than by the ones you did do, so throw off the bowlines, sail away from safe harboor, catch the trade winds in your sails.";
-
-"Appearance.ThemePreview.Chat.4.Text" = "Nearly missed the sunrise.";
+"Appearance.ThemePreview.Chat.1.Text" = "Does he want me to, to turn from the right or turn from the left? 🤔";
+"Appearance.ThemePreview.Chat.2.ReplyName" = "Bob Harris";
+"Appearance.ThemePreview.Chat.2.Text" = "Right side. And, uh, with intensity.";
+"Appearance.ThemePreview.Chat.3.Text" = "Is that everything? It seemed like he said quite a bit more than that. 😯";
 
 "GroupInfo.Permissions.SlowmodeValue.Off" = "Off";
 
 "Undo.ScheduledMessagesCleared" = "Scheduled messages cleared";
+
+"Appearance.CreateTheme" = "Create New Theme";
+
+"Conversation.Theme" = "Color Theme";
+"Conversation.ViewTheme" = "VIEW THEME";
+
+"CreateTheme.Title" = "Publish Theme";
+"CreateTheme.Preview" = "PREVIEW";
+"CreateTheme.Title" = "Title";
+"CreateTheme.ShortLink" = "Short Link";
+"CreateTheme.ShortLinkInfo" = "Short Link";

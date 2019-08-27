@@ -971,6 +971,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 })
             }
+        }, openTheme: { [weak self] message in
+            if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+                strongSelf.chatDisplayNode.dismissInput()
+                openChatTheme(context: strongSelf.context, message: message, present: { [weak self] c, a in
+                    self?.present(c, in: .window(.root), with: a, blockInteraction: true)
+                })
+            }
         }, openHashtag: { [weak self] peerName, hashtag in
             guard let strongSelf = self else {
                 return

@@ -326,6 +326,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     return PresentationTheme(
         name: .builtin(.nightAccent),
         author: "Telegram",
+        referenceTheme: .nightAccent,
         overallDarkAppearance: true,
         baseColor: baseColor,
         intro: intro,

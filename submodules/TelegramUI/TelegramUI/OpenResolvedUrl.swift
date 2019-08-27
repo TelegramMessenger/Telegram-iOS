@@ -239,17 +239,50 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
         case let .theme(slug):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            
             let signal = getTheme(account: context.account, slug: slug)
+            |> mapToSignal { themeInfo -> Signal<(Data, TelegramTheme), GetThemeError> in
+                return Signal<(Data, TelegramTheme), GetThemeError> { subscriber in
+                    let disposables = DisposableSet()
+                    let mediaBox = context.sharedContext.accountManager.mediaBox
+                    let resource = themeInfo.file.resource
+                    
+                    disposables.add(fetchedMediaResource(mediaBox: mediaBox, reference: .standalone(resource: resource)).start())
+                    
+                    let maybeFetched = mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                    |> take(1)
+                    |> mapToSignal { maybeData -> Signal<Data?, NoError> in
+                        if maybeData.complete {
+                            let loadedData = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+                            return .single(loadedData)
+                        } else {
+                            return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                            |> map { next -> Data? in
+                                return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                            }
+                        }
+                    }
+                    
+                    disposables.add(maybeFetched.start(next: { data in
+                        if let data = data {
+                            subscriber.putNext((data, themeInfo))
+                            subscriber.putCompletion()
+                        }
+                    }))
+                    
+                    return disposables
+                }
+            }
             let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
             present(controller, nil)
             
             let _ = (signal
-            |> deliverOnMainQueue).start(next: { [weak controller] theme in
+            |> deliverOnMainQueue).start(next: { [weak controller] dataAndTheme in
                 controller?.dismiss()
-                let previewTheme = makePresentationTheme(themeReference: .cloud(theme), accentColor: nil, serviceBackgroundColor: .black, baseColor: nil)
-                let previewController = ThemePreviewController(context: context, previewTheme: previewTheme, source: .theme(theme))
-                present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                
+                if let theme = makePresentationTheme(data: dataAndTheme.0) {
+                    let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
+                    present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
             }, error: { [weak controller] error in
                 controller?.dismiss()
             })

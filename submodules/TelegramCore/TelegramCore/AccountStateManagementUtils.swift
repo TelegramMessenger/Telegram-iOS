@@ -1315,7 +1315,9 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
                 updatedState.deleteMessages(messageIds)
             case let .updateTheme(theme):
-                break
+                if let theme = TelegramTheme(apiTheme: theme) {
+                    updatedState.updateTheme(theme)
+                }
             default:
                 break
         }
@@ -2030,7 +2032,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby:
+            case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -2111,6 +2113,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     var syncRecentGifs = false
     var langPackDifferences: [String: [Api.LangPackDifference]] = [:]
     var pollLangPacks = Set<String>()
+    var updatedThemes: [Int64: TelegramTheme] = [:]
     var delayNotificatonsUntil: Int32?
     var peerActivityTimestamps: [PeerId: Int32] = [:]
     
@@ -2127,7 +2130,6 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     }
     
     var wasOpearationScheduledMessegeIds: [MessageId] = []
-
     
     var addedOperationIncomingMessageIds: [MessageId] = []
     for operation in finalState.state.operations {
@@ -2650,6 +2652,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 isContactUpdates.append((peerId, value))
             case let .UpdatePeersNearby(peersNearby):
                 updatedPeersNearby = peersNearby
+            case let .UpdateTheme(theme):
+                updatedThemes[theme.id] = theme
         }
     }
     
@@ -2932,6 +2936,25 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 }
             }
         }).start()
+    }
+    
+    if !updatedThemes.isEmpty {
+        let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
+        let themes = items.map { entry -> TelegramTheme in
+            let theme = entry.contents as! TelegramTheme
+            if let updatedTheme = updatedThemes[theme.id] {
+                return updatedTheme
+            } else {
+                return theme
+            }
+        }
+        var entries: [OrderedItemListEntry] = []
+        for theme in themes {
+            var intValue = Int32(entries.count)
+            let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+            entries.append(OrderedItemListEntry(id: id, contents: theme))
+        }
+        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: entries)
     }
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)

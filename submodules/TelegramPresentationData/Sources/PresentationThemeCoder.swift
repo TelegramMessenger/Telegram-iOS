@@ -1,5 +1,298 @@
 import Foundation
 
+public func encodePresentationTheme(_ theme: PresentationTheme) -> String? {
+    let encoding = PresentationThemeEncoding()
+    if let _ = try? theme.encode(to: encoding) {
+        return encoding.data.formatted
+    } else {
+        return nil
+    }
+}
+
+private func renderNodes(string: inout String, nodes: [PresentationThemeEncoding.Node], level: Int = 0) {
+    for node in nodes {
+        if level > 1 {
+            string.append(String(repeating: "  ", count: level - 1))
+        }
+        switch node.value {
+        case let .string(value):
+            if let key = node.key {
+                string.append("\(key): \(value)\n")
+            }
+        case let .subnode(nodes):
+            if let key = node.key {
+                string.append("\(key):\n")
+            }
+            renderNodes(string: &string, nodes: nodes, level: level + 1)
+        }
+    }
+}
+
+fileprivate class PresentationThemeEncoding: Encoder {
+    fileprivate enum NodeValue {
+        case string(String)
+        case subnode([Node])
+    }
+    
+    fileprivate final class Node {
+        var key: String?
+        var value: NodeValue
+        
+        init(key: String? = nil, value: NodeValue) {
+            self.key = key
+            self.value = value
+        }
+    }
+    
+    fileprivate final class Data {
+        private(set) var rootNode = Node(value: .subnode([]))
+        
+        func encode(key codingKey: [CodingKey], value: String) {
+            var currentNode: Node = self.rootNode
+            for i in 0 ..< codingKey.count {
+                let key = codingKey[i].stringValue
+                var found = false
+                switch currentNode.value {
+                    case var .subnode(nodes):
+                        for node in nodes {
+                            if node.key == key {
+                                currentNode = node
+                                found = true
+                            }
+                        }
+                        if !found {
+                            let newNode: Node
+                            if i == codingKey.count - 1 {
+                                newNode = Node(key: key, value: .string(value))
+                            } else {
+                                newNode = Node(key: key, value: .subnode([]))
+                            }
+                            nodes.append(newNode)
+                            currentNode.value = .subnode(nodes)
+                            currentNode = newNode
+                        }
+                    case .string:
+                        break
+                }
+            }
+        }
+        
+        var formatted: String {
+            var result = ""
+            renderNodes(string: &result, nodes: [self.rootNode])
+            return result
+        }
+    }
+    
+    fileprivate var data: Data
+    var codingPath: [CodingKey] = []
+    let userInfo: [CodingUserInfoKey : Any] = [:]
+    
+    init(to encodedData: Data = Data()) {
+        self.data = encodedData
+    }
+    
+    func container<Key: CodingKey>(keyedBy type: Key.Type) -> KeyedEncodingContainer<Key> {
+        var container = StringsKeyedEncoding<Key>(to: self.data)
+        container.codingPath = self.codingPath
+        return KeyedEncodingContainer(container)
+    }
+    
+    func unkeyedContainer() -> UnkeyedEncodingContainer {
+        var container = StringsUnkeyedEncoding(to: self.data)
+        container.codingPath = self.codingPath
+        return container
+    }
+    
+    func singleValueContainer() -> SingleValueEncodingContainer {
+        var container = StringsSingleValueEncoding(to: self.data)
+        container.codingPath = self.codingPath
+        return container
+    }
+    
+    func entry(for codingKey: [String]) -> Any? {
+        var currentNode: Node = self.data.rootNode
+        for component in codingKey {
+            switch currentNode.value {
+                case let .subnode(nodes):
+                    inner: for node in nodes {
+                        if node.key == component {
+                            if component == codingKey.last {
+                                if case let .string(string) = node.value {
+                                    return string
+                                } else {
+                                    return nil
+                                }
+                            } else {
+                                currentNode = node
+                                break inner
+                            }
+                        }
+                    }
+                case let .string(string):
+                    if component == codingKey.last {
+                        return string
+                    }
+            }
+        }
+        return nil
+    }
+}
+
+fileprivate struct StringsKeyedEncoding<Key: CodingKey>: KeyedEncodingContainerProtocol {
+    private let data: PresentationThemeEncoding.Data
+    var codingPath: [CodingKey] = []
+    
+    init(to data: PresentationThemeEncoding.Data) {
+        self.data = data
+    }
+    
+    mutating func encodeNil(forKey key: Key) throws {
+    }
+    
+    mutating func encode(_ value: Bool, forKey key: Key) throws {
+        self.data.encode(key: self.codingPath + [key], value: value.description)
+    }
+    
+    mutating func encode(_ value: String, forKey key: Key) throws {
+        self.data.encode(key: self.codingPath + [key], value: value)
+    }
+    
+    mutating func encode(_ value: Int32, forKey key: Key) throws {
+        self.data.encode(key: self.codingPath + [key], value: value.description)
+    }
+    
+    mutating func encode<T: Encodable>(_ value: T, forKey key: Key) throws {
+        let stringsEncoding = PresentationThemeEncoding(to: self.data)
+        stringsEncoding.codingPath = self.codingPath + [key]
+        try value.encode(to: stringsEncoding)
+    }
+    
+    mutating func nestedContainer<NestedKey: CodingKey>(keyedBy keyType: NestedKey.Type, forKey key: Key) -> KeyedEncodingContainer<NestedKey> {
+        var container = StringsKeyedEncoding<NestedKey>(to: self.data)
+        container.codingPath = self.codingPath + [key]
+        return KeyedEncodingContainer(container)
+    }
+    
+    mutating func nestedUnkeyedContainer(forKey key: Key) -> UnkeyedEncodingContainer {
+        var container = StringsUnkeyedEncoding(to: data)
+        container.codingPath = self.codingPath + [key]
+        return container
+    }
+    
+    mutating func superEncoder() -> Encoder {
+        let superKey = Key(stringValue: "super")!
+        return superEncoder(forKey: superKey)
+    }
+    
+    mutating func superEncoder(forKey key: Key) -> Encoder {
+        let stringsEncoding = PresentationThemeEncoding(to: self.data)
+        stringsEncoding.codingPath = self.codingPath + [key]
+        return stringsEncoding
+    }
+}
+
+fileprivate struct StringsUnkeyedEncoding: UnkeyedEncodingContainer {
+    private let data: PresentationThemeEncoding.Data
+    var codingPath: [CodingKey] = []
+    private(set) var count: Int = 0
+    
+    init(to data: PresentationThemeEncoding.Data) {
+        self.data = data
+    }
+    
+    private mutating func nextIndexedKey() -> CodingKey {
+        let nextCodingKey = IndexedCodingKey(intValue: count)!
+        self.count += 1
+        return nextCodingKey
+    }
+    
+    private struct IndexedCodingKey: CodingKey {
+        let intValue: Int?
+        let stringValue: String
+        
+        init?(intValue: Int) {
+            self.intValue = intValue
+            self.stringValue = intValue.description
+        }
+        
+        init?(stringValue: String) {
+            return nil
+        }
+    }
+    
+    mutating func encodeNil() throws {
+    }
+    
+    mutating func encode(_ value: Bool) throws {
+        self.data.encode(key: self.codingPath + [self.nextIndexedKey()], value: value.description)
+    }
+    
+    mutating func encode(_ value: String) throws {
+        self.data.encode(key: self.codingPath + [self.nextIndexedKey()], value: value)
+    }
+    
+    mutating func encode(_ value: Int32) throws {
+        self.data.encode(key: self.codingPath + [self.nextIndexedKey()], value: value.description)
+    }
+    
+    mutating func encode<T: Encodable>(_ value: T) throws {
+        let stringsEncoding = PresentationThemeEncoding(to: self.data)
+        stringsEncoding.codingPath = self.codingPath + [self.nextIndexedKey()]
+        try value.encode(to: stringsEncoding)
+    }
+    
+    mutating func nestedContainer<NestedKey: CodingKey>(
+        keyedBy keyType: NestedKey.Type) -> KeyedEncodingContainer<NestedKey> {
+        var container = StringsKeyedEncoding<NestedKey>(to: self.data)
+        container.codingPath = self.codingPath + [self.nextIndexedKey()]
+        return KeyedEncodingContainer(container)
+    }
+    
+    mutating func nestedUnkeyedContainer() -> UnkeyedEncodingContainer {
+        var container = StringsUnkeyedEncoding(to: self.data)
+        container.codingPath = self.codingPath + [self.nextIndexedKey()]
+        return container
+    }
+    
+    mutating func superEncoder() -> Encoder {
+        let stringsEncoding = PresentationThemeEncoding(to: self.data)
+        stringsEncoding.codingPath = self.codingPath
+        return stringsEncoding
+    }
+}
+
+fileprivate struct StringsSingleValueEncoding: SingleValueEncodingContainer {
+    private let data: PresentationThemeEncoding.Data
+    var codingPath: [CodingKey] = []
+    
+    init(to data: PresentationThemeEncoding.Data) {
+        self.data = data
+    }
+    
+    mutating func encodeNil() throws {
+    }
+    
+    mutating func encode(_ value: Bool) throws {
+        self.data.encode(key: self.codingPath, value: value.description)
+    }
+    
+    mutating func encode(_ value: String) throws {
+        self.data.encode(key: self.codingPath, value: value)
+    }
+    
+    mutating func encode(_ value: Int32) throws {
+        self.data.encode(key: self.codingPath, value: value.description)
+    }
+    
+    mutating func encode<T: Encodable>(_ value: T) throws {
+        let stringsEncoding = PresentationThemeEncoding(to: self.data)
+        stringsEncoding.codingPath = self.codingPath
+        try value.encode(to: stringsEncoding)
+    }
+}
+
+
 public enum PresentationThemeDecodingError: Error {
     case generic
     case dataCorrupted
@@ -16,27 +309,82 @@ extension Dictionary : _YAMLStringDictionaryDecodableMarker where Key == String,
     static var elementType: Decodable.Type { return Value.self }
 }
 
-open class PresentationThemeDecoder {
-    public init() {}
-
-    open func decode<T : Decodable>(_ type: T.Type, from data: Data) throws -> T {
-        let topLevel: Any
-        do {
-            topLevel = try JSONSerialization.jsonObject(with: data)
-        } catch {
-            throw PresentationThemeDecodingError.dataCorrupted
-        }
-
-        let decoder = PresentationThemeDecoding(referencing: topLevel)
-        guard let value = try decoder.unbox(topLevel, as: type) else {
-            throw PresentationThemeDecodingError.valueNotFound
-        }
-
-        return value
+private class PresentationThemeDecodingLevel {
+    let data: NSMutableDictionary
+    let index: Int
+    let previous: PresentationThemeDecodingLevel?
+    
+    init(data: NSMutableDictionary, index: Int, previous: PresentationThemeDecodingLevel?) {
+        self.data = data
+        self.index = index
+        self.previous = previous
     }
 }
 
-fileprivate class PresentationThemeDecoding : Decoder {
+public func makePresentationTheme(data: Data) -> PresentationTheme? {
+    guard let string = String(data: data, encoding: .utf8) else {
+        return nil
+    }
+    let lines = string.split { $0.isNewline }
+    
+    let topLevel = PresentationThemeDecodingLevel(data: NSMutableDictionary(), index: 0, previous: nil)
+    var currentLevel = topLevel
+    
+    for line in lines {
+        if let rangeOfColon = line.firstIndex(of: ":") {
+            let key = line.prefix(upTo: rangeOfColon)
+            
+            var lineLevel = 0
+            inner: for c in key {
+                if c == " " {
+                    lineLevel += 1
+                } else {
+                    break inner
+                }
+            }
+            guard lineLevel % 2 == 0 else {
+                return nil
+            }
+            lineLevel = lineLevel / 2
+            guard lineLevel <= currentLevel.index else {
+                return nil
+            }
+            
+            while lineLevel < currentLevel.index, let previous = currentLevel.previous {
+                currentLevel = previous
+            }
+            
+            let value: String?
+            if let valueStartIndex = line.index(rangeOfColon, offsetBy: 1, limitedBy: line.endIndex) {
+                let substring = line.suffix(from: valueStartIndex).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+                if !substring.isEmpty {
+                    value = substring
+                } else {
+                    value = nil
+                }
+            } else {
+                value = nil
+            }
+            
+            let trimmedKey = key.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            if let value = value {
+                currentLevel.data[trimmedKey] = value
+            } else {
+                let newLevel = PresentationThemeDecodingLevel(data: NSMutableDictionary(), index: currentLevel.index + 1, previous: currentLevel)
+                currentLevel.data[trimmedKey] = newLevel.data
+                currentLevel = newLevel
+            }
+        }
+    }
+    
+    let decoder = PresentationThemeDecoding(referencing: topLevel.data)
+    if let value = try? decoder.unbox(topLevel.data, as: PresentationTheme.self) {
+        return value
+    }
+    return nil
+}
+
+class PresentationThemeDecoding: Decoder {
     fileprivate var storage: PresentationThemeDecodingStorage
 
     fileprivate(set) public var codingPath: [CodingKey]
@@ -45,6 +393,24 @@ fileprivate class PresentationThemeDecoding : Decoder {
         return [:]
     }
 
+    var referenceTheme: PresentationTheme?
+    var serviceBackgroundColor: UIColor?
+    
+    private var _referenceCoding: PresentationThemeEncoding?
+    fileprivate var referenceCoding: PresentationThemeEncoding? {
+        if let referenceCoding = self._referenceCoding {
+            return referenceCoding
+        }
+        
+        let encoding = PresentationThemeEncoding()
+        if let theme = self.referenceTheme, let _ = try? theme.encode(to: encoding) {
+            self._referenceCoding = encoding
+            return encoding
+        } else {
+            return nil
+        }
+    }
+    
     fileprivate init(referencing container: Any, at codingPath: [CodingKey] = []) {
         self.storage = PresentationThemeDecodingStorage()
         self.storage.push(container: container)
@@ -103,7 +469,7 @@ fileprivate struct PresentationThemeDecodingStorage {
     }
 }
 
-fileprivate struct PresentationThemeKeyedDecodingContainer<K : CodingKey> : KeyedDecodingContainerProtocol {
+fileprivate struct PresentationThemeKeyedDecodingContainer<K : CodingKey>: KeyedDecodingContainerProtocol {
     typealias Key = K
 
     private let decoder: PresentationThemeDecoding
@@ -137,7 +503,12 @@ fileprivate struct PresentationThemeKeyedDecodingContainer<K : CodingKey> : Keye
     }
 
     public func decode(_ type: Bool.Type, forKey key: Key) throws -> Bool {
-        guard let entry = self.container[key.stringValue] else {
+        var containerEntry: Any? = self.container[key.stringValue]
+        if containerEntry == nil {
+            containerEntry = self.decoder.referenceCoding?.entry(for: self.codingPath.map { $0.stringValue } + [key.stringValue])
+        }
+        
+        guard let entry = containerEntry else {
             throw PresentationThemeDecodingError.keyNotFound
         }
 
@@ -152,7 +523,12 @@ fileprivate struct PresentationThemeKeyedDecodingContainer<K : CodingKey> : Keye
     }
 
     public func decode(_ type: Int32.Type, forKey key: Key) throws -> Int32 {
-        guard let entry = self.container[key.stringValue] else {
+        var containerEntry: Any? = self.container[key.stringValue]
+        if containerEntry == nil {
+            containerEntry = self.decoder.referenceCoding?.entry(for: self.codingPath.map { $0.stringValue } + [key.stringValue])
+        }
+        
+        guard let entry = containerEntry else {
             throw PresentationThemeDecodingError.keyNotFound
         }
 
@@ -167,7 +543,12 @@ fileprivate struct PresentationThemeKeyedDecodingContainer<K : CodingKey> : Keye
     }
 
     public func decode(_ type: String.Type, forKey key: Key) throws -> String {
-        guard let entry = self.container[key.stringValue] else {
+        var containerEntry: Any? = self.container[key.stringValue]
+        if containerEntry == nil {
+            containerEntry = self.decoder.referenceCoding?.entry(for: self.codingPath.map { $0.stringValue } + [key.stringValue])
+        }
+        
+        guard let entry = containerEntry else {
             throw PresentationThemeDecodingError.keyNotFound
         }
 
@@ -182,7 +563,12 @@ fileprivate struct PresentationThemeKeyedDecodingContainer<K : CodingKey> : Keye
     }
 
     public func decode<T : Decodable>(_ type: T.Type, forKey key: Key) throws -> T {
-        guard let entry = self.container[key.stringValue] else {
+        var containerEntry: Any? = self.container[key.stringValue]
+        if containerEntry == nil {
+            containerEntry = self.decoder.referenceCoding?.entry(for: self.codingPath.map { $0.stringValue } + [key.stringValue])
+        }
+        
+        guard let entry = containerEntry else {
             throw PresentationThemeDecodingError.keyNotFound
         }
 
@@ -244,7 +630,7 @@ fileprivate struct PresentationThemeKeyedDecodingContainer<K : CodingKey> : Keye
     }
 }
 
-fileprivate struct PresentationThemeUnkeyedDecodingContainer : UnkeyedDecodingContainer {
+fileprivate struct PresentationThemeUnkeyedDecodingContainer: UnkeyedDecodingContainer {
     private let decoder: PresentationThemeDecoding
     
     private let container: [Any]
@@ -401,7 +787,7 @@ fileprivate struct PresentationThemeUnkeyedDecodingContainer : UnkeyedDecodingCo
     }
 }
 
-extension PresentationThemeDecoding : SingleValueDecodingContainer {
+extension PresentationThemeDecoding: SingleValueDecodingContainer {
     private func expectNonNull<T>(_ type: T.Type) throws {
         guard !self.decodeNil() else {
             throw PresentationThemeDecodingError.valueNotFound
@@ -497,20 +883,7 @@ extension PresentationThemeDecoding {
     }
 
     fileprivate func unbox_(_ value: Any, as type: Decodable.Type) throws -> Any? {
-        if type == Date.self || type == NSDate.self {
-            return try self.unbox(value, as: Date.self)
-        } else if type == Data.self || type == NSData.self {
-            return try self.unbox(value, as: Data.self)
-        } else if type == URL.self || type == NSURL.self {
-            guard let urlString = try self.unbox(value, as: String.self) else {
-                return nil
-            }
-
-            guard let url = URL(string: urlString) else {
-                throw PresentationThemeDecodingError.dataCorrupted
-            }
-            return url
-        } else if type == Decimal.self || type == NSDecimalNumber.self {
+        if type == Decimal.self || type == NSDecimalNumber.self {
             return try self.unbox(value, as: Decimal.self)
         } else if let stringKeyedDictType = type as? _YAMLStringDictionaryDecodableMarker.Type {
             return try self.unbox(value, as: stringKeyedDictType)
@@ -522,7 +895,7 @@ extension PresentationThemeDecoding {
     }
 }
 
-fileprivate struct YAMLKey : CodingKey {
+fileprivate struct YAMLKey: CodingKey {
     public var stringValue: String
     public var intValue: Int?
     

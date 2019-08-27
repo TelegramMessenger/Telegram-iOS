@@ -81,6 +81,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, sendBotCommand: { _, _ in
         }, openInstantPage: { _, _ in
         }, openWallpaper: { _ in
+        }, openTheme: {_ in 
         }, openHashtag: { _, _ in
         }, updateInputState: { _ in
         }, updateInputMode: { _ in

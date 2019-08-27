@@ -339,7 +339,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode, .tooltip:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .tooltip:
                             return .waitForSingleTap
                     }
                 }
@@ -2290,6 +2290,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 item.controllerInteraction.openWallpaper(item.message)
                             }
                             break loop
+                        case .theme:
+                            foundTapAction = true
+                            if let item = self.item {
+                                item.controllerInteraction.openTheme(item.message)
+                            }
+                            break loop
                         case let .call(peerId):
                             foundTapAction = true
                             self.item?.controllerInteraction.callPeer(peerId)
@@ -2358,6 +2364,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             case .instantPage:
                                 break
                             case .wallpaper:
+                                break
+                            case .theme:
                                 break
                             case .call:
                                 break

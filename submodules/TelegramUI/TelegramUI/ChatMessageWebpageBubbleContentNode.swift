@@ -129,6 +129,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if content.type == "telegram_background" {
                         item.controllerInteraction.openWallpaper(item.message)
                         return
+                    } else if content.type == "telegram_theme" {
+                        item.controllerInteraction.openTheme(item.message)
+                        return
                     }
                 }
                 let openChatMessageMode: ChatControllerInteractionOpenMessageMode
@@ -255,7 +258,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, color, intensity) = wallpaper {
                             patternColor = color?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, patternColor))
+                        let media = WallpaperPreviewMedia(content: .file(file, patternColor, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
@@ -281,13 +284,18 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         mediaAndFlags = (image, flags)
                     }
-                } else if let type = webpage.type, type == "telegram_background" {
-                    if let text = webpage.text, let colorCodeRange = text.range(of: "#") {
-                        let colorCode = String(text[colorCodeRange.upperBound...])
-                        if colorCode.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: colorCode) {
-                            let media = WallpaperPreviewMedia(content: .color(color))
-                            mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                } else if let type = webpage.type {
+                    if type == "telegram_backgroud" {
+                        if let text = webpage.text, let colorCodeRange = text.range(of: "#") {
+                            let colorCode = String(text[colorCodeRange.upperBound...])
+                            if colorCode.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: colorCode) {
+                                let media = WallpaperPreviewMedia(content: .color(color))
+                                mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                            }
                         }
+                    } else if type == "telegram_theme", let files = webpage.files, let file = files.first {
+                        let media = WallpaperPreviewMedia(content: .file(file, nil, true))
+                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                     }
                 }
                 
@@ -312,6 +320,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             subtitle = nil
                             text = nil
                             actionTitle = item.presentationData.strings.Conversation_ViewBackground
+                        case "telegram_theme":
+                            title = item.presentationData.strings.Conversation_Theme
+                            text = nil
+                            actionTitle = item.presentationData.strings.Conversation_ViewTheme
                         default:
                             break
                     }
@@ -414,6 +426,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if content.type == "telegram_background" {
                     return .wallpaper
+                } else if content.type == "telegram_theme" {
+                    return .theme
                 }
             }
             if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {

@@ -39,7 +39,7 @@ final class ThemeAccentColorController: ViewController {
             color = defaultDayAccentColor
         }
         self.initialColor = color
-        self.initialTheme = makePresentationTheme(themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true)
+        self.initialTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true)
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -75,14 +75,15 @@ final class ThemeAccentColorController: ViewController {
             }
         }, apply: { [weak self] in
             if let strongSelf = self {
-                let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
+                let context = strongSelf.context
+                let _ = (updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
                     var themeSpecificAccentColors = current.themeSpecificAccentColors
                     let color = PresentationThemeAccentColor(baseColor: .custom, value: Int32(bitPattern: strongSelf.controllerNode.color))
                     themeSpecificAccentColors[current.theme.index] = color
                     
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                     
-                    let theme = makePresentationTheme(themeReference: strongSelf.currentTheme, accentColor: UIColor(rgb: strongSelf.controllerNode.color), serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor)
+                    let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: strongSelf.currentTheme, accentColor: UIColor(rgb: strongSelf.controllerNode.color), serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor)
                     var chatWallpaper = current.chatWallpaper
                     if let wallpaper = current.themeSpecificChatWallpapers[current.theme.index], wallpaper.hasWallpaper {
                     } else {
