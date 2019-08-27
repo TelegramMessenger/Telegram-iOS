@@ -8,6 +8,8 @@ import SwiftSignalKit
 import TelegramPresentationData
 import UniversalMediaPlayer
 import TelegramUIPreferences
+import AccountContext
+import PhotoResources
 
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in
@@ -247,7 +249,6 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     
                     displayData = value.item.displayData
                     
-                    let baseColor = strongSelf.theme.list.itemSecondaryTextColor
                     if value.order != strongSelf.currentOrder {
                         strongSelf.updateOrder?(value.order)
                         strongSelf.currentOrder = value.order
@@ -482,7 +483,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             if animateIn && transition.isAnimated {
                 largeAlbumArtNode.frame = largeAlbumArtFrame
                 transition.animatePositionAdditive(node: largeAlbumArtNode, offset: CGPoint(x: previousAlbumArtNodeFrame.center.x - largeAlbumArtFrame.center.x, y: previousAlbumArtNodeFrame.center.y - largeAlbumArtFrame.center.y))
-                //largeAlbumArtNode.layer.animatePosition(from: CGPoint(x: -50.0, y: 0.0), to: CGPoint(), duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, additive: true)
+                //largeAlbumArtNode.layer.animatePosition(from: CGPoint(x: -50.0, y: 0.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)
                 transition.animateTransformScale(node: largeAlbumArtNode, from: previousAlbumArtNodeFrame.size.height / largeAlbumArtFrame.size.height)
                 largeAlbumArtNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                 if let copyView = self.albumArtNode.view.snapshotContentTree() {
@@ -492,7 +493,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     transition.animatePositionAdditive(layer: copyView.layer, offset: CGPoint(x: previousAlbumArtNodeFrame.center.x - largeAlbumArtFrame.center.x, y: previousAlbumArtNodeFrame.center.y - largeAlbumArtFrame.center.y), completion: { [weak copyView] in
                         copyView?.removeFromSuperview()
                     })
-                    //copyView.layer.animatePosition(from: CGPoint(x: -50.0, y: 0.0), to: CGPoint(), duration: 0.15, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, additive: true)
+                    //copyView.layer.animatePosition(from: CGPoint(x: -50.0, y: 0.0), to: CGPoint(), duration: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, additive: true)
                     copyView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.28, removeOnCompletion: false)
                     transition.updateTransformScale(layer: copyView.layer, scale: largeAlbumArtFrame.size.height / previousAlbumArtNodeFrame.size.height)
                 }

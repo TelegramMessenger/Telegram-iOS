@@ -3,6 +3,8 @@ import UIKit
 import TelegramCore
 import Postbox
 import Display
+import AccountContext
+import Emoji
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32
@@ -256,7 +258,12 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                     }
                 }
-                if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
+                
+                if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 && chatPresentationInterfaceState.interfaceState.forwardMessageIds == nil {
+                    if chatPresentationInterfaceState.hasScheduledMessages {
+                        accessoryItems.append(.scheduledMessages)
+                    }
+                    
                     var stickersEnabled = true
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                         if case .broadcast = peer.info, canSendMessagesToPeer(peer) {

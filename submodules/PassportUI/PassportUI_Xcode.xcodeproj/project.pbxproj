@@ -1,0 +1,775 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D0C9C1F02300222100FAB518 /* PassportUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C1EE2300222100FAB518 /* PassportUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9C220230022AB00FAB518 /* SecureIdValueFormFileItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C1FA230022A400FAB518 /* SecureIdValueFormFileItem.swift */; };
+		D0C9C221230022AB00FAB518 /* SecureIdDocumentGalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C1FB230022A400FAB518 /* SecureIdDocumentGalleryFooterContentNode.swift */; };
+		D0C9C222230022AB00FAB518 /* SecureIdDocumentImageGalleryItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C1FC230022A400FAB518 /* SecureIdDocumentImageGalleryItem.swift */; };
+		D0C9C223230022AB00FAB518 /* SecureIdAuthListFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C1FD230022A400FAB518 /* SecureIdAuthListFieldNode.swift */; };
+		D0C9C224230022AB00FAB518 /* SecureIdDocumentFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C1FE230022A400FAB518 /* SecureIdDocumentFormController.swift */; };
+		D0C9C225230022AB00FAB518 /* SecureIdDocumentFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C1FF230022A400FAB518 /* SecureIdDocumentFormControllerNode.swift */; };
+		D0C9C226230022AB00FAB518 /* SecureIdValues.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C200230022A400FAB518 /* SecureIdValues.swift */; };
+		D0C9C227230022AB00FAB518 /* SecureIdAuthListContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C201230022A400FAB518 /* SecureIdAuthListContentNode.swift */; };
+		D0C9C228230022AB00FAB518 /* SecureIdDocumentGalleryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C202230022A500FAB518 /* SecureIdDocumentGalleryController.swift */; };
+		D0C9C229230022AB00FAB518 /* SecureIdAuthControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C203230022A500FAB518 /* SecureIdAuthControllerNode.swift */; };
+		D0C9C22A230022AB00FAB518 /* SecureIdVerificationDocumentsContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C204230022A500FAB518 /* SecureIdVerificationDocumentsContext.swift */; };
+		D0C9C22B230022AB00FAB518 /* SecureIdValueFormPhoneItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C205230022A500FAB518 /* SecureIdValueFormPhoneItem.swift */; };
+		D0C9C22C230022AB00FAB518 /* FormControllerActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C206230022A500FAB518 /* FormControllerActionItem.swift */; };
+		D0C9C22D230022AB00FAB518 /* FormEditableBlockItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C207230022A500FAB518 /* FormEditableBlockItemNode.swift */; };
+		D0C9C22E230022AB00FAB518 /* FormControllerScrollerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C208230022A600FAB518 /* FormControllerScrollerNode.swift */; };
+		D0C9C22F230022AB00FAB518 /* FormControllerTextItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C209230022A600FAB518 /* FormControllerTextItem.swift */; };
+		D0C9C230230022AB00FAB518 /* SecureIdAuthHeaderNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C20A230022A600FAB518 /* SecureIdAuthHeaderNode.swift */; };
+		D0C9C231230022AB00FAB518 /* SecureIdAuthAcceptNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C20B230022A600FAB518 /* SecureIdAuthAcceptNode.swift */; };
+		D0C9C232230022AB00FAB518 /* SecureIdDocumentTypeSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C20C230022A600FAB518 /* SecureIdDocumentTypeSelectionController.swift */; };
+		D0C9C233230022AB00FAB518 /* SecureIdAuthControllerState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C20D230022A600FAB518 /* SecureIdAuthControllerState.swift */; };
+		D0C9C234230022AB00FAB518 /* FormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C20E230022A700FAB518 /* FormControllerNode.swift */; };
+		D0C9C235230022AB00FAB518 /* FormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C20F230022A700FAB518 /* FormController.swift */; };
+		D0C9C236230022AB00FAB518 /* FormBlockItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C210230022A700FAB518 /* FormBlockItemNode.swift */; };
+		D0C9C237230022AB00FAB518 /* SecureIdAuthFormContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C211230022A700FAB518 /* SecureIdAuthFormContentNode.swift */; };
+		D0C9C238230022AB00FAB518 /* FormControllerTextInputItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C212230022A700FAB518 /* FormControllerTextInputItem.swift */; };
+		D0C9C239230022AB00FAB518 /* SecureIdAuthPasswordOptionContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C213230022A700FAB518 /* SecureIdAuthPasswordOptionContentNode.swift */; };
+		D0C9C23A230022AB00FAB518 /* SecureIdAuthPasswordSetupContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C214230022A700FAB518 /* SecureIdAuthPasswordSetupContentNode.swift */; };
+		D0C9C23B230022AB00FAB518 /* SecureIdAuthFormFieldNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C215230022A800FAB518 /* SecureIdAuthFormFieldNode.swift */; };
+		D0C9C23C230022AB00FAB518 /* SecureIdAuthController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C216230022A800FAB518 /* SecureIdAuthController.swift */; };
+		D0C9C23D230022AB00FAB518 /* FormControllerDetailActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C217230022A800FAB518 /* FormControllerDetailActionItem.swift */; };
+		D0C9C23E230022AB00FAB518 /* SecureIdLocalResource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C218230022A800FAB518 /* SecureIdLocalResource.swift */; };
+		D0C9C23F230022AB00FAB518 /* SecureIdPlaintextFormController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C219230022A800FAB518 /* SecureIdPlaintextFormController.swift */; };
+		D0C9C240230022AB00FAB518 /* SecureIdPlaintextFormControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C21A230022A800FAB518 /* SecureIdPlaintextFormControllerNode.swift */; };
+		D0C9C241230022AB00FAB518 /* SecureIdVerificationDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C21B230022A900FAB518 /* SecureIdVerificationDocument.swift */; };
+		D0C9C242230022AB00FAB518 /* FormControllerItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C21D230022AB00FAB518 /* FormControllerItem.swift */; };
+		D0C9C243230022AB00FAB518 /* SecureIdAuthContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C21E230022AB00FAB518 /* SecureIdAuthContentNode.swift */; };
+		D0C9C244230022AB00FAB518 /* FormControllerHeaderItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C21F230022AB00FAB518 /* FormControllerHeaderItem.swift */; };
+		D0C9C247230022C100FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C246230022C100FAB518 /* UIKit.framework */; };
+		D0C9C249230022C300FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C248230022C200FAB518 /* Foundation.framework */; };
+		D0C9C24B230022C500FAB518 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C24A230022C500FAB518 /* Postbox.framework */; };
+		D0C9C24D230022C900FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C24C230022C900FAB518 /* TelegramCore.framework */; };
+		D0C9C24F230022CE00FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C24E230022CE00FAB518 /* SwiftSignalKit.framework */; };
+		D0C9C251230022D400FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C250230022D400FAB518 /* AsyncDisplayKit.framework */; };
+		D0C9C253230022D800FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C252230022D800FAB518 /* Display.framework */; };
+		D0C9C255230022E000FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C254230022E000FAB518 /* TelegramPresentationData.framework */; };
+		D0C9C25923009EC900FAB518 /* FindSecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C25823009EC900FAB518 /* FindSecureIdValue.swift */; };
+		D0C9C2812300A04900FAB518 /* PhoneInputNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2802300A04900FAB518 /* PhoneInputNode.framework */; };
+		D0C9C2852300A0BF00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C2842300A0BF00FAB518 /* FrameworkBundle.swift */; };
+		D0C9C2B32300A1D300FAB518 /* CountrySelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2B22300A1D300FAB518 /* CountrySelectionUI.framework */; };
+		D0C9C3332300AA0100FAB518 /* GalleryUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C3322300AA0100FAB518 /* GalleryUI.framework */; };
+		D0C9C4492300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4482300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift */; };
+		D0C9C44B2300E17600FAB518 /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C44A2300E17600FAB518 /* LegacyComponents.framework */; };
+		D0C9C44D2300E17A00FAB518 /* OverlayStatusController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C44C2300E17A00FAB518 /* OverlayStatusController.framework */; };
+		D0C9C44F2300E1D600FAB518 /* LegacySecureIdScanController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C44E2300E1D600FAB518 /* LegacySecureIdScanController.swift */; };
+		D0C9C47D2300E31700FAB518 /* LegacyUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C47C2300E31700FAB518 /* LegacyUI.framework */; };
+		D0C9C4BF2300E5B400FAB518 /* ImageCompression.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C4BE2300E5B400FAB518 /* ImageCompression.framework */; };
+		D0C9C4DA2300E67200FAB518 /* DateSelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C4D92300E67200FAB518 /* DateSelectionUI.framework */; };
+		D0C9C52D2300EFB100FAB518 /* PasswordSetupUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C52C2300EFB100FAB518 /* PasswordSetupUI.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D0C9C1EB2300222100FAB518 /* PassportUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PassportUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C1EE2300222100FAB518 /* PassportUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PassportUI.h; sourceTree = "<group>"; };
+		D0C9C1EF2300222100FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		D0C9C1FA230022A400FAB518 /* SecureIdValueFormFileItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdValueFormFileItem.swift; sourceTree = "<group>"; };
+		D0C9C1FB230022A400FAB518 /* SecureIdDocumentGalleryFooterContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentGalleryFooterContentNode.swift; sourceTree = "<group>"; };
+		D0C9C1FC230022A400FAB518 /* SecureIdDocumentImageGalleryItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentImageGalleryItem.swift; sourceTree = "<group>"; };
+		D0C9C1FD230022A400FAB518 /* SecureIdAuthListFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthListFieldNode.swift; sourceTree = "<group>"; };
+		D0C9C1FE230022A400FAB518 /* SecureIdDocumentFormController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentFormController.swift; sourceTree = "<group>"; };
+		D0C9C1FF230022A400FAB518 /* SecureIdDocumentFormControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentFormControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C200230022A400FAB518 /* SecureIdValues.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdValues.swift; sourceTree = "<group>"; };
+		D0C9C201230022A400FAB518 /* SecureIdAuthListContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthListContentNode.swift; sourceTree = "<group>"; };
+		D0C9C202230022A500FAB518 /* SecureIdDocumentGalleryController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentGalleryController.swift; sourceTree = "<group>"; };
+		D0C9C203230022A500FAB518 /* SecureIdAuthControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C204230022A500FAB518 /* SecureIdVerificationDocumentsContext.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdVerificationDocumentsContext.swift; sourceTree = "<group>"; };
+		D0C9C205230022A500FAB518 /* SecureIdValueFormPhoneItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdValueFormPhoneItem.swift; sourceTree = "<group>"; };
+		D0C9C206230022A500FAB518 /* FormControllerActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerActionItem.swift; sourceTree = "<group>"; };
+		D0C9C207230022A500FAB518 /* FormEditableBlockItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormEditableBlockItemNode.swift; sourceTree = "<group>"; };
+		D0C9C208230022A600FAB518 /* FormControllerScrollerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerScrollerNode.swift; sourceTree = "<group>"; };
+		D0C9C209230022A600FAB518 /* FormControllerTextItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerTextItem.swift; sourceTree = "<group>"; };
+		D0C9C20A230022A600FAB518 /* SecureIdAuthHeaderNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthHeaderNode.swift; sourceTree = "<group>"; };
+		D0C9C20B230022A600FAB518 /* SecureIdAuthAcceptNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthAcceptNode.swift; sourceTree = "<group>"; };
+		D0C9C20C230022A600FAB518 /* SecureIdDocumentTypeSelectionController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdDocumentTypeSelectionController.swift; sourceTree = "<group>"; };
+		D0C9C20D230022A600FAB518 /* SecureIdAuthControllerState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthControllerState.swift; sourceTree = "<group>"; };
+		D0C9C20E230022A700FAB518 /* FormControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C20F230022A700FAB518 /* FormController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormController.swift; sourceTree = "<group>"; };
+		D0C9C210230022A700FAB518 /* FormBlockItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormBlockItemNode.swift; sourceTree = "<group>"; };
+		D0C9C211230022A700FAB518 /* SecureIdAuthFormContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthFormContentNode.swift; sourceTree = "<group>"; };
+		D0C9C212230022A700FAB518 /* FormControllerTextInputItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerTextInputItem.swift; sourceTree = "<group>"; };
+		D0C9C213230022A700FAB518 /* SecureIdAuthPasswordOptionContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthPasswordOptionContentNode.swift; sourceTree = "<group>"; };
+		D0C9C214230022A700FAB518 /* SecureIdAuthPasswordSetupContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthPasswordSetupContentNode.swift; sourceTree = "<group>"; };
+		D0C9C215230022A800FAB518 /* SecureIdAuthFormFieldNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthFormFieldNode.swift; sourceTree = "<group>"; };
+		D0C9C216230022A800FAB518 /* SecureIdAuthController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthController.swift; sourceTree = "<group>"; };
+		D0C9C217230022A800FAB518 /* FormControllerDetailActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerDetailActionItem.swift; sourceTree = "<group>"; };
+		D0C9C218230022A800FAB518 /* SecureIdLocalResource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdLocalResource.swift; sourceTree = "<group>"; };
+		D0C9C219230022A800FAB518 /* SecureIdPlaintextFormController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormController.swift; sourceTree = "<group>"; };
+		D0C9C21A230022A800FAB518 /* SecureIdPlaintextFormControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdPlaintextFormControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C21B230022A900FAB518 /* SecureIdVerificationDocument.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdVerificationDocument.swift; sourceTree = "<group>"; };
+		D0C9C21D230022AB00FAB518 /* FormControllerItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerItem.swift; sourceTree = "<group>"; };
+		D0C9C21E230022AB00FAB518 /* SecureIdAuthContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecureIdAuthContentNode.swift; sourceTree = "<group>"; };
+		D0C9C21F230022AB00FAB518 /* FormControllerHeaderItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FormControllerHeaderItem.swift; sourceTree = "<group>"; };
+		D0C9C246230022C100FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		D0C9C248230022C200FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		D0C9C24A230022C500FAB518 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C24C230022C900FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C24E230022CE00FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C250230022D400FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C252230022D800FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C254230022E000FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C25823009EC900FAB518 /* FindSecureIdValue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FindSecureIdValue.swift; sourceTree = "<group>"; };
+		D0C9C2802300A04900FAB518 /* PhoneInputNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhoneInputNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C2842300A0BF00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9C2B22300A1D300FAB518 /* CountrySelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CountrySelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C3322300AA0100FAB518 /* GalleryUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GalleryUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C4482300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacySecureIdAttachmentMenu.swift; sourceTree = "<group>"; };
+		D0C9C44A2300E17600FAB518 /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C44C2300E17A00FAB518 /* OverlayStatusController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OverlayStatusController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C44E2300E1D600FAB518 /* LegacySecureIdScanController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacySecureIdScanController.swift; sourceTree = "<group>"; };
+		D0C9C47C2300E31700FAB518 /* LegacyUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C4BE2300E5B400FAB518 /* ImageCompression.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageCompression.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C4D92300E67200FAB518 /* DateSelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DateSelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C52C2300EFB100FAB518 /* PasswordSetupUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PasswordSetupUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D0C9C1E82300222100FAB518 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C52D2300EFB100FAB518 /* PasswordSetupUI.framework in Frameworks */,
+				D0C9C4DA2300E67200FAB518 /* DateSelectionUI.framework in Frameworks */,
+				D0C9C4BF2300E5B400FAB518 /* ImageCompression.framework in Frameworks */,
+				D0C9C47D2300E31700FAB518 /* LegacyUI.framework in Frameworks */,
+				D0C9C44D2300E17A00FAB518 /* OverlayStatusController.framework in Frameworks */,
+				D0C9C44B2300E17600FAB518 /* LegacyComponents.framework in Frameworks */,
+				D0C9C3332300AA0100FAB518 /* GalleryUI.framework in Frameworks */,
+				D0C9C2B32300A1D300FAB518 /* CountrySelectionUI.framework in Frameworks */,
+				D0C9C2812300A04900FAB518 /* PhoneInputNode.framework in Frameworks */,
+				D0C9C255230022E000FAB518 /* TelegramPresentationData.framework in Frameworks */,
+				D0C9C253230022D800FAB518 /* Display.framework in Frameworks */,
+				D0C9C251230022D400FAB518 /* AsyncDisplayKit.framework in Frameworks */,
+				D0C9C24F230022CE00FAB518 /* SwiftSignalKit.framework in Frameworks */,
+				D0C9C24D230022C900FAB518 /* TelegramCore.framework in Frameworks */,
+				D0C9C24B230022C500FAB518 /* Postbox.framework in Frameworks */,
+				D0C9C249230022C300FAB518 /* Foundation.framework in Frameworks */,
+				D0C9C247230022C100FAB518 /* UIKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D0C9C1E12300222100FAB518 = {
+			isa = PBXGroup;
+			children = (
+				D0C9C1EF2300222100FAB518 /* Info.plist */,
+				D0C9C1ED2300222100FAB518 /* Sources */,
+				D0C9C1EC2300222100FAB518 /* Products */,
+				D0C9C245230022BF00FAB518 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D0C9C1EC2300222100FAB518 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C1EB2300222100FAB518 /* PassportUI.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D0C9C1ED2300222100FAB518 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C21C230022AB00FAB518 /* Form */,
+				D0C9C20B230022A600FAB518 /* SecureIdAuthAcceptNode.swift */,
+				D0C9C21E230022AB00FAB518 /* SecureIdAuthContentNode.swift */,
+				D0C9C216230022A800FAB518 /* SecureIdAuthController.swift */,
+				D0C9C203230022A500FAB518 /* SecureIdAuthControllerNode.swift */,
+				D0C9C20D230022A600FAB518 /* SecureIdAuthControllerState.swift */,
+				D0C9C211230022A700FAB518 /* SecureIdAuthFormContentNode.swift */,
+				D0C9C215230022A800FAB518 /* SecureIdAuthFormFieldNode.swift */,
+				D0C9C20A230022A600FAB518 /* SecureIdAuthHeaderNode.swift */,
+				D0C9C201230022A400FAB518 /* SecureIdAuthListContentNode.swift */,
+				D0C9C1FD230022A400FAB518 /* SecureIdAuthListFieldNode.swift */,
+				D0C9C213230022A700FAB518 /* SecureIdAuthPasswordOptionContentNode.swift */,
+				D0C9C214230022A700FAB518 /* SecureIdAuthPasswordSetupContentNode.swift */,
+				D0C9C1FE230022A400FAB518 /* SecureIdDocumentFormController.swift */,
+				D0C9C1FF230022A400FAB518 /* SecureIdDocumentFormControllerNode.swift */,
+				D0C9C202230022A500FAB518 /* SecureIdDocumentGalleryController.swift */,
+				D0C9C1FB230022A400FAB518 /* SecureIdDocumentGalleryFooterContentNode.swift */,
+				D0C9C1FC230022A400FAB518 /* SecureIdDocumentImageGalleryItem.swift */,
+				D0C9C20C230022A600FAB518 /* SecureIdDocumentTypeSelectionController.swift */,
+				D0C9C218230022A800FAB518 /* SecureIdLocalResource.swift */,
+				D0C9C219230022A800FAB518 /* SecureIdPlaintextFormController.swift */,
+				D0C9C21A230022A800FAB518 /* SecureIdPlaintextFormControllerNode.swift */,
+				D0C9C1FA230022A400FAB518 /* SecureIdValueFormFileItem.swift */,
+				D0C9C205230022A500FAB518 /* SecureIdValueFormPhoneItem.swift */,
+				D0C9C200230022A400FAB518 /* SecureIdValues.swift */,
+				D0C9C21B230022A900FAB518 /* SecureIdVerificationDocument.swift */,
+				D0C9C204230022A500FAB518 /* SecureIdVerificationDocumentsContext.swift */,
+				D0C9C25823009EC900FAB518 /* FindSecureIdValue.swift */,
+				D0C9C4482300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift */,
+				D0C9C44E2300E1D600FAB518 /* LegacySecureIdScanController.swift */,
+				D0C9C2842300A0BF00FAB518 /* FrameworkBundle.swift */,
+				D0C9C1EE2300222100FAB518 /* PassportUI.h */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		D0C9C21C230022AB00FAB518 /* Form */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C210230022A700FAB518 /* FormBlockItemNode.swift */,
+				D0C9C20F230022A700FAB518 /* FormController.swift */,
+				D0C9C206230022A500FAB518 /* FormControllerActionItem.swift */,
+				D0C9C217230022A800FAB518 /* FormControllerDetailActionItem.swift */,
+				D0C9C21F230022AB00FAB518 /* FormControllerHeaderItem.swift */,
+				D0C9C21D230022AB00FAB518 /* FormControllerItem.swift */,
+				D0C9C20E230022A700FAB518 /* FormControllerNode.swift */,
+				D0C9C208230022A600FAB518 /* FormControllerScrollerNode.swift */,
+				D0C9C212230022A700FAB518 /* FormControllerTextInputItem.swift */,
+				D0C9C209230022A600FAB518 /* FormControllerTextItem.swift */,
+				D0C9C207230022A500FAB518 /* FormEditableBlockItemNode.swift */,
+			);
+			path = Form;
+			sourceTree = "<group>";
+		};
+		D0C9C245230022BF00FAB518 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D0C9C52C2300EFB100FAB518 /* PasswordSetupUI.framework */,
+				D0C9C4D92300E67200FAB518 /* DateSelectionUI.framework */,
+				D0C9C4BE2300E5B400FAB518 /* ImageCompression.framework */,
+				D0C9C47C2300E31700FAB518 /* LegacyUI.framework */,
+				D0C9C44C2300E17A00FAB518 /* OverlayStatusController.framework */,
+				D0C9C44A2300E17600FAB518 /* LegacyComponents.framework */,
+				D0C9C3322300AA0100FAB518 /* GalleryUI.framework */,
+				D0C9C2B22300A1D300FAB518 /* CountrySelectionUI.framework */,
+				D0C9C2802300A04900FAB518 /* PhoneInputNode.framework */,
+				D0C9C254230022E000FAB518 /* TelegramPresentationData.framework */,
+				D0C9C252230022D800FAB518 /* Display.framework */,
+				D0C9C250230022D400FAB518 /* AsyncDisplayKit.framework */,
+				D0C9C24E230022CE00FAB518 /* SwiftSignalKit.framework */,
+				D0C9C24C230022C900FAB518 /* TelegramCore.framework */,
+				D0C9C24A230022C500FAB518 /* Postbox.framework */,
+				D0C9C248230022C200FAB518 /* Foundation.framework */,
+				D0C9C246230022C100FAB518 /* UIKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D0C9C1E62300222100FAB518 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C1F02300222100FAB518 /* PassportUI.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D0C9C1EA2300222100FAB518 /* PassportUI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D0C9C1F32300222100FAB518 /* Build configuration list for PBXNativeTarget "PassportUI" */;
+			buildPhases = (
+				D0C9C1E62300222100FAB518 /* Headers */,
+				D0C9C1E72300222100FAB518 /* Sources */,
+				D0C9C1E82300222100FAB518 /* Frameworks */,
+				D0C9C1E92300222100FAB518 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PassportUI;
+			productName = PassportUI;
+			productReference = D0C9C1EB2300222100FAB518 /* PassportUI.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D0C9C1E22300222100FAB518 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				DefaultBuildSystemTypeForWorkspace = Latest;
+				LastUpgradeCheck = 1030;
+				ORGANIZATIONNAME = "Telegram Messenger LLP";
+				TargetAttributes = {
+					D0C9C1EA2300222100FAB518 = {
+						CreatedOnToolsVersion = 10.3;
+						LastSwiftMigration = 1030;
+					};
+				};
+			};
+			buildConfigurationList = D0C9C1E52300222100FAB518 /* Build configuration list for PBXProject "PassportUI_Xcode" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = D0C9C1E12300222100FAB518;
+			productRefGroup = D0C9C1EC2300222100FAB518 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D0C9C1EA2300222100FAB518 /* PassportUI */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D0C9C1E92300222100FAB518 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D0C9C1E72300222100FAB518 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D0C9C222230022AB00FAB518 /* SecureIdDocumentImageGalleryItem.swift in Sources */,
+				D0C9C221230022AB00FAB518 /* SecureIdDocumentGalleryFooterContentNode.swift in Sources */,
+				D0C9C44F2300E1D600FAB518 /* LegacySecureIdScanController.swift in Sources */,
+				D0C9C229230022AB00FAB518 /* SecureIdAuthControllerNode.swift in Sources */,
+				D0C9C240230022AB00FAB518 /* SecureIdPlaintextFormControllerNode.swift in Sources */,
+				D0C9C4492300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift in Sources */,
+				D0C9C22F230022AB00FAB518 /* FormControllerTextItem.swift in Sources */,
+				D0C9C226230022AB00FAB518 /* SecureIdValues.swift in Sources */,
+				D0C9C242230022AB00FAB518 /* FormControllerItem.swift in Sources */,
+				D0C9C243230022AB00FAB518 /* SecureIdAuthContentNode.swift in Sources */,
+				D0C9C23F230022AB00FAB518 /* SecureIdPlaintextFormController.swift in Sources */,
+				D0C9C244230022AB00FAB518 /* FormControllerHeaderItem.swift in Sources */,
+				D0C9C232230022AB00FAB518 /* SecureIdDocumentTypeSelectionController.swift in Sources */,
+				D0C9C231230022AB00FAB518 /* SecureIdAuthAcceptNode.swift in Sources */,
+				D0C9C25923009EC900FAB518 /* FindSecureIdValue.swift in Sources */,
+				D0C9C225230022AB00FAB518 /* SecureIdDocumentFormControllerNode.swift in Sources */,
+				D0C9C234230022AB00FAB518 /* FormControllerNode.swift in Sources */,
+				D0C9C22A230022AB00FAB518 /* SecureIdVerificationDocumentsContext.swift in Sources */,
+				D0C9C224230022AB00FAB518 /* SecureIdDocumentFormController.swift in Sources */,
+				D0C9C23C230022AB00FAB518 /* SecureIdAuthController.swift in Sources */,
+				D0C9C22E230022AB00FAB518 /* FormControllerScrollerNode.swift in Sources */,
+				D0C9C22C230022AB00FAB518 /* FormControllerActionItem.swift in Sources */,
+				D0C9C2852300A0BF00FAB518 /* FrameworkBundle.swift in Sources */,
+				D0C9C237230022AB00FAB518 /* SecureIdAuthFormContentNode.swift in Sources */,
+				D0C9C22D230022AB00FAB518 /* FormEditableBlockItemNode.swift in Sources */,
+				D0C9C239230022AB00FAB518 /* SecureIdAuthPasswordOptionContentNode.swift in Sources */,
+				D0C9C23D230022AB00FAB518 /* FormControllerDetailActionItem.swift in Sources */,
+				D0C9C227230022AB00FAB518 /* SecureIdAuthListContentNode.swift in Sources */,
+				D0C9C241230022AB00FAB518 /* SecureIdVerificationDocument.swift in Sources */,
+				D0C9C228230022AB00FAB518 /* SecureIdDocumentGalleryController.swift in Sources */,
+				D0C9C223230022AB00FAB518 /* SecureIdAuthListFieldNode.swift in Sources */,
+				D0C9C238230022AB00FAB518 /* FormControllerTextInputItem.swift in Sources */,
+				D0C9C23A230022AB00FAB518 /* SecureIdAuthPasswordSetupContentNode.swift in Sources */,
+				D0C9C230230022AB00FAB518 /* SecureIdAuthHeaderNode.swift in Sources */,
+				D0C9C23B230022AB00FAB518 /* SecureIdAuthFormFieldNode.swift in Sources */,
+				D0C9C233230022AB00FAB518 /* SecureIdAuthControllerState.swift in Sources */,
+				D0C9C235230022AB00FAB518 /* FormController.swift in Sources */,
+				D0C9C22B230022AB00FAB518 /* SecureIdValueFormPhoneItem.swift in Sources */,
+				D0C9C220230022AB00FAB518 /* SecureIdValueFormFileItem.swift in Sources */,
+				D0C9C23E230022AB00FAB518 /* SecureIdLocalResource.swift in Sources */,
+				D0C9C236230022AB00FAB518 /* FormBlockItemNode.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D0C9C1F12300222100FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C1F22300222100FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C1F42300222100FAB518 /* DebugAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PassportUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugAppStoreLLC;
+		};
+		D0C9C1F52300222100FAB518 /* ReleaseAppStoreLLC */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PassportUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseAppStoreLLC;
+		};
+		D0C9C1F62300225100FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C1F72300225100FAB518 /* DebugHockeyapp */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PassportUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = DebugHockeyapp;
+		};
+		D0C9C1F82300225D00FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+		D0C9C1F92300225D00FAB518 /* ReleaseHockeyappInternal */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_IDENTITY = "";
+				CODE_SIGN_STYLE = Manual;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACH_O_TYPE = staticlib;
+				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.PassportUI;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = ReleaseHockeyappInternal;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D0C9C1E52300222100FAB518 /* Build configuration list for PBXProject "PassportUI_Xcode" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C1F12300222100FAB518 /* DebugAppStoreLLC */,
+				D0C9C1F62300225100FAB518 /* DebugHockeyapp */,
+				D0C9C1F22300222100FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C1F82300225D00FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+		D0C9C1F32300222100FAB518 /* Build configuration list for PBXNativeTarget "PassportUI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D0C9C1F42300222100FAB518 /* DebugAppStoreLLC */,
+				D0C9C1F72300225100FAB518 /* DebugHockeyapp */,
+				D0C9C1F52300222100FAB518 /* ReleaseAppStoreLLC */,
+				D0C9C1F92300225D00FAB518 /* ReleaseHockeyappInternal */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = ReleaseAppStoreLLC;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D0C9C1E22300222100FAB518 /* Project object */;
+}

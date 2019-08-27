@@ -8,6 +8,13 @@ import TelegramCore
 import CoreImage
 import TelegramPresentationData
 import Compression
+import TextFormat
+import AccountContext
+import MediaResources
+import StickerResources
+import ContextUI
+import AnimationUI
+import Emoji
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -15,8 +22,8 @@ private let inlineBotNameFont = nameFont
 
 private class ChatMessageHeartbeatHaptic {
     private var hapticFeedback = HapticFeedback()
-    var timer: SwiftSignalKit.Timer?
-    var time: Double = 0
+    private var timer: SwiftSignalKit.Timer?
+    private var time: Double = 0.0
     var enabled = false {
         didSet {
             if !self.enabled {
@@ -52,7 +59,7 @@ private class ChatMessageHeartbeatHaptic {
         if time > 2.0 {
             return
         }
-        
+
         var startTime: Double = 0.0
         var delay: Double = 0.0
         
@@ -100,6 +107,7 @@ private class ChatMessageHeartbeatHaptic {
 }
 
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     let imageNode: TransformImageNode
     private let animationNode: AnimatedStickerNode
     private var didSetUpAnimationNode = false
@@ -130,6 +138,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.imageNode = TransformImageNode()
         self.animationNode = AnimatedStickerNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
@@ -149,9 +158,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
         
         self.imageNode.displaysAsynchronously = false
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.animationNode)
-        self.addSubnode(self.dateAndStatusNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.imageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.animationNode)
+        self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
     }
     
     deinit {
@@ -230,7 +240,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 break
             }
         }
-        
+
         let (emoji, fitz) = item.message.text.basicEmoji
         if self.telegramFile == nil, let emojiFile = item.associatedData.animatedEmojiStickers[emoji]?.file {
             if self.emojiFile?.id != emojiFile.id {
@@ -294,7 +304,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                     let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                    self.animationNode.setup(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
+                    self.animationNode.setup(account: item.context.account, resource: .resource(file.resource), fitzModifier: fitzModifier, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
         }
@@ -369,8 +379,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
+            let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+            
             var needShareButton = false
-            if item.message.id.peerId == item.context.account.peerId {
+            if isFailed {
+                needShareButton = false
+            } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
                         needShareButton = true
@@ -414,7 +428,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             var deliveryFailedInset: CGFloat = 0.0
-            if item.content.firstMessage.flags.contains(.Failed) {
+            if isFailed {
                 deliveryFailedInset += 24.0
             }
             
@@ -436,7 +450,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if item.message.effectivelyIncoming(item.context.account.peerId) {
                 statusType = .FreeIncoming
             } else {
-                if item.message.flags.contains(.Failed) {
+                if isFailed {
                     statusType = .FreeOutgoing(.Failed)
                 } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                     statusType = .FreeOutgoing(.Sending)
@@ -452,9 +466,22 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal)
+            var dateReactions: [MessageReaction] = []
+            var dateReactionCount = 0
+            if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                for reaction in reactionsAttribute.reactions {
+                    if reaction.isSelected {
+                        dateReactions.insert(reaction, at: 0)
+                    } else {
+                        dateReactions.append(reaction)
+                    }
+                    dateReactionCount += Int(reaction.count)
+                }
+            }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData, false, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .minimal, reactionCount: dateReactionCount)
+            
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, false, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -564,6 +591,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
                         transition = .animated(duration: duration, curve: .spring)
@@ -579,6 +609,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     strongSelf.animationNode.frame = updatedContentFrame.insetBy(dx: imageInset, dy: imageInset)
                     strongSelf.animationNode.updateLayout(size: updatedContentFrame.insetBy(dx: imageInset, dy: imageInset).size)
                     imageApply()
+                    
+                    strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -631,7 +663,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if item.content.firstMessage.flags.contains(.Failed) {
+                    if isFailed {
                         let deliveryFailedNode: ChatMessageDeliveryFailedNode
                         var isAppearing = false
                         if let current = strongSelf.deliveryFailedNode {
@@ -712,7 +744,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             var navigate: ChatControllerInteractionNavigateToPeer
                             
                             if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                navigate = .chat(textInputState: nil, messageId: nil)
+                                navigate = .chat(textInputState: nil, subject: nil)
                             } else {
                                 navigate = .info
                             }
@@ -720,7 +752,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                             for attribute in item.content.firstMessage.attributes {
                                 if let attribute = attribute as? SourceReferenceMessageAttribute {
                                     openPeerId = attribute.messageId.peerId
-                                    navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                    navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                 }
                             }
                             
@@ -790,8 +822,6 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                     |> deliverOnMainQueue
                             }
                             
-                            
-                            
                             if let text = self.item?.message.text, let firstScalar = text.unicodeScalars.first, firstScalar.value == 0x2764 {
                                 let _ = startTime.start(next: { [weak self] time in
                                     guard let strongSelf = self else {
@@ -818,7 +848,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     self.item?.controllerInteraction.clickThroughMessage()
                 case .longTap, .doubleTap:
                     if let item = self.item, self.imageNode.frame.contains(location) {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
                     }
                 case .hold:
                     break
@@ -1016,5 +1046,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

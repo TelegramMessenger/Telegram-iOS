@@ -7,6 +7,10 @@ import Postbox
 import TelegramCore
 import UniversalMediaPlayer
 import TelegramPresentationData
+import AccountContext
+import RadialStatusNode
+import PhotoResources
+import TelegramUniversalVideoContent
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize
@@ -242,23 +246,31 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 }
             }
             
-            let edited = false
+            var edited = false
             let sentViaBot = false
             var viewCount: Int? = nil
             for attribute in item.message.attributes {
-                if let _ = attribute as? EditedMessageAttribute {
-                   // edited = true
+                if let attribute = attribute as? EditedMessageAttribute {
+                   edited = !attribute.isHidden
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
-                }// else if let _ = attribute as? InlineBotMessageAttribute {
-                //    sentViaBot = true
-              //  }
+                }
             }
-           // if let author = item.message.author as? TelegramUser, author.botInfo != nil {
-           //     sentViaBot = true
-           // }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
+            var dateReactions: [MessageReaction] = []
+            var dateReactionCount = 0
+            if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                for reaction in reactionsAttribute.reactions {
+                    if reaction.isSelected {
+                        dateReactions.insert(reaction, at: 0)
+                    } else {
+                        dateReactions.append(reaction)
+                    }
+                    dateReactionCount += Int(reaction.count)
+                }
+            }
+            
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, reactionCount: dateReactionCount)
             
             let maxDateAndStatusWidth: CGFloat
             if case .bubble = statusDisplayType {
@@ -266,7 +278,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             } else {
                 maxDateAndStatusWidth = width - videoFrame.midX - 85.0
             }
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude))
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited && !sentViaBot, viewCount, dateText, statusType, CGSize(width: max(1.0, maxDateAndStatusWidth), height: CGFloat.greatestFiniteMagnitude), dateReactions)
             
             var contentSize = imageSize
             var dateAndStatusOverflow = false
@@ -655,7 +667,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             self.item?.controllerInteraction.clickThroughMessage()
                         case .longTap, .doubleTap:
                             if let item = self.item, let videoNode = self.videoNode, videoNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, videoNode.frame)
+                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, videoNode.frame, nil)
                             }
                         case .hold:
                             break

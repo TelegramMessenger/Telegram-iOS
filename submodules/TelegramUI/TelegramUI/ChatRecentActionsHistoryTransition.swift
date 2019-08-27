@@ -4,6 +4,8 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import MergeLists
+import AccountContext
 
 enum ChatRecentActionsEntryContentIndex: Int32 {
     case header = 0

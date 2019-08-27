@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import WebSearchUI
 
 func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bool) -> Void)?) -> Signal<[FileMediaReference]?, NoError> {
     let delayRequest = true
@@ -234,7 +236,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
             self.addSubnode(multiplexedNode)
             
             multiplexedNode.fileSelected = { [weak self] fileReference, sourceNode, sourceRect in
-                self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
+                let _ = self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in

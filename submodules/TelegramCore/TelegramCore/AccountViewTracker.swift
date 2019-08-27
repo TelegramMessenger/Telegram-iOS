@@ -76,12 +76,17 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
     |> take(1)
     |> mapToSignal { peer in
         if let inputPeer = apiInputPeer(peer) {
+            let isScheduledMessage = Namespaces.Message.allScheduled.contains(messageId.namespace)
             let messages: Signal<Api.messages.Messages, MTRpcError>
-            switch inputPeer {
-                case let .inputPeerChannel(channelId, accessHash):
-                    messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
-                default:
-                    messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+            if isScheduledMessage {
+                messages = account.network.request(Api.functions.messages.getScheduledMessages(peer: inputPeer, id: [messageId.id]))
+            } else {
+                switch inputPeer {
+                    case let .inputPeerChannel(channelId, accessHash):
+                        messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+                    default:
+                        messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+                }
             }
             return messages
             |> retryRequest
@@ -125,7 +130,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     }
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message) {
+                        if let storeMessage = StoreMessage(apiMessage: message, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
                             var webpage: TelegramMediaWebpage?
                             for media in storeMessage.media {
                                 if let media = media as? TelegramMediaWebpage {
@@ -189,7 +194,7 @@ private func wrappedHistoryViewAdditionalData(chatLocation: ChatLocation, additi
     switch chatLocation {
         case let .peer(peerId):
             if peerId.namespace == Namespaces.Peer.CloudChannel {
-                if result.index(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
+                if result.firstIndex(where: { if case .peerChatState = $0 { return true } else { return false } }) == nil {
                     result.append(.peerChatState(peerId))
                 }
             }
@@ -617,11 +622,15 @@ public final class AccountViewTracker {
                                 return .complete()
                             }
                             var fetchSignal: Signal<Api.messages.Messages, MTRpcError>?
-                            if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-                                fetchSignal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                            if let messageId = messageIds.first, messageId.namespace == Namespaces.Message.ScheduledCloud {
+                                if let inputPeer = apiInputPeer(peer) {
+                                    fetchSignal = account.network.request(Api.functions.messages.getScheduledMessages(peer: inputPeer, id: messageIds.map { $0.id }))
+                                }
+                            } else if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                                fetchSignal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map { Api.InputMessage.inputMessageID(id: $0.id) }))
                             } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 if let inputChannel = apiInputChannel(peer) {
-                                    fetchSignal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                                    fetchSignal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map { Api.InputMessage.inputMessageID(id: $0.id) }))
                                 }
                             }
                             guard let signal = fetchSignal else {
@@ -872,9 +881,7 @@ public final class AccountViewTracker {
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
-                    }/* else if case .group = chatLocation {
-                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
-                    }*/
+                    }
                 }
             }
         }, disposed: { [weak self] viewId in
@@ -887,8 +894,6 @@ public final class AccountViewTracker {
                             if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
                             }
-                        /*case .group:
-                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)*/
                     }
                 }
             }
@@ -914,9 +919,39 @@ public final class AccountViewTracker {
         }
     }
     
+    public func scheduledMessagesViewForLocation(_ chatLocation: ChatLocation, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+        if let account = self.account {
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: nil, namespaces: .just(Namespaces.Message.allScheduled), orderStatistics: [], additionalData: additionalData)
+            return withState(signal, { [weak self] () -> Int32 in
+                if let strongSelf = self {
+                    return OSAtomicIncrement32(&strongSelf.nextViewId)
+                } else {
+                    return -1
+                }
+            }, next: { [weak self] next, viewId in
+                if let strongSelf = self {
+                    strongSelf.queue.async {
+                        let (messageIds, localWebpages) = pendingWebpages(entries: next.0.entries)
+                        strongSelf.updatePendingWebpages(viewId: viewId, messageIds: messageIds, localWebpages: localWebpages)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
+                    }
+                }
+            }, disposed: { [weak self] viewId in
+                if let strongSelf = self {
+                    strongSelf.queue.async {
+                        strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [], localWebpages: [:])
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                    }
+                }
+            })
+        } else {
+            return .never()
+        }
+    }
+    
     public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
@@ -925,7 +960,7 @@ public final class AccountViewTracker {
     
     public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
@@ -943,7 +978,7 @@ public final class AccountViewTracker {
                 case let .message(index):
                     inputAnchor = .index(index)
             }
-            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
             return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
         } else {
             return .never()
@@ -1159,18 +1194,18 @@ public final class AccountViewTracker {
             let pendingKey: PostboxViewKey = .pendingMessageActionsSummary(type: .consumeUnseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
             let summaryKey: PostboxViewKey = .historyTagSummaryView(tag: .unseenPersonalMessage, peerId: peerId, namespace: Namespaces.Message.Cloud)
             return account.postbox.combinedView(keys: [pendingKey, summaryKey])
-                |> map { views -> Int32 in
-                    var count: Int32 = 0
-                    if let view = views.views[pendingKey] as? PendingMessageActionsSummaryView {
-                        count -= view.count
+            |> map { views -> Int32 in
+                var count: Int32 = 0
+                if let view = views.views[pendingKey] as? PendingMessageActionsSummaryView {
+                    count -= view.count
+                }
+                if let view = views.views[summaryKey] as? MessageHistoryTagSummaryView {
+                    if let unseenCount = view.count {
+                        count += unseenCount
                     }
-                    if let view = views.views[summaryKey] as? MessageHistoryTagSummaryView {
-                        if let unseenCount = view.count {
-                            count += unseenCount
-                        }
-                    }
-                    return max(0, count)
-                } |> distinctUntilChanged
+                }
+                return max(0, count)
+            } |> distinctUntilChanged
         } else {
             return .never()
         }

@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import Postbox
+import AccountContext
 
 private final class OverlayMediaControllerNodeView: UITracingLayerView {
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
@@ -266,7 +267,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         }
         node.unminimize = { [weak self, weak node] in
             if let strongSelf = self, let node = node {
-                if let index = strongSelf.videoNodes.index(where: { $0.node === node }), let validLayout = strongSelf.validLayout, node !== strongSelf.draggingNode, strongSelf.videoNodes[index].isMinimized {
+                if let index = strongSelf.videoNodes.firstIndex(where: { $0.node === node }), let validLayout = strongSelf.validLayout, node !== strongSelf.draggingNode, strongSelf.videoNodes[index].isMinimized {
                     strongSelf.videoNodes[index].isMinimized = false
                     node.updateMinimizedEdge(nil, adjusting: true)
                     strongSelf.containerLayoutUpdated(validLayout, transition: .animated(duration: 0.3, curve: .spring))
@@ -280,7 +281,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
         if node.supernode === self {
             node.hasAttachedContextUpdated = nil
             node.setShouldAcquireContext(false)
-            if let index = self.videoNodes.index(where: { $0.node === node }), let validLayout = self.validLayout {
+            if let index = self.videoNodes.firstIndex(where: { $0.node === node }), let validLayout = self.validLayout {
                 if customTransition {
                     node.removeFromSupernode()
                 } else {
@@ -292,7 +293,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
             } else {
                 node.removeFromSupernode()
             }
-            if let index = self.videoNodes.index(where: { $0.node === node }) {
+            if let index = self.videoNodes.firstIndex(where: { $0.node === node }) {
                 self.videoNodes.remove(at: index)
             }
         }
@@ -301,7 +302,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
     @objc func panGesture(_ recognizer: UIPanGestureRecognizer) {
         switch recognizer.state {
             case .began:
-                if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.index(where: { $0.node === draggingNode }){
+                if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.firstIndex(where: { $0.node === draggingNode }){
                     let nodeSize = self.videoNodes[index].currentSize
                     let previousFrame = draggingNode.frame
                     draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: !draggingNode.customTransition && !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
@@ -330,7 +331,7 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                     draggingNode.frame = nodeFrame
                 }
             case .ended, .cancelled:
-                if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.index(where: { $0.node === draggingNode }){
+                if let draggingNode = self.draggingNode, let validLayout = self.validLayout, let index = self.videoNodes.firstIndex(where: { $0.node === draggingNode }){
                     let nodeSize = self.videoNodes[index].currentSize
                     let previousFrame = draggingNode.frame
                     

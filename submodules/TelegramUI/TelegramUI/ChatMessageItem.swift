@@ -7,6 +7,9 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import AccountContext
+import Emoji
+import PersistentStringHash
 
 public enum ChatMessageItemContent: Sequence {
     case message(message: Message, read: Bool, selection: ChatHistoryMessageSelection, attributes: ChatMessageEntryAttributes)
@@ -211,14 +214,16 @@ public final class ChatMessageItemAssociatedData: Equatable {
     let automaticDownloadPeerType: MediaAutoDownloadPeerType
     let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     let isRecentActions: Bool
+    let isScheduledMessages: Bool
     let contactsPeerIds: Set<PeerId>
     let animatedEmojiStickers: [String: StickerPackItem]
     let forcedResourceStatus: FileMediaResourceStatus?
     
-    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: StickerPackItem] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
+    init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, isScheduledMessages: Bool = false, contactsPeerIds: Set<PeerId> = Set(), animatedEmojiStickers: [String: StickerPackItem] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
+        self.isScheduledMessages = isScheduledMessages
         self.contactsPeerIds = contactsPeerIds
         self.animatedEmojiStickers = animatedEmojiStickers
         self.forcedResourceStatus = forcedResourceStatus
@@ -234,7 +239,13 @@ public final class ChatMessageItemAssociatedData: Equatable {
         if lhs.isRecentActions != rhs.isRecentActions {
             return false
         }
+        if lhs.isScheduledMessages != rhs.isScheduledMessages {
+            return false
+        }
         if lhs.contactsPeerIds != rhs.contactsPeerIds {
+            return false
+        }
+        if lhs.animatedEmojiStickers != rhs.animatedEmojiStickers {
             return false
         }
         if lhs.forcedResourceStatus != rhs.forcedResourceStatus {
@@ -319,7 +330,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         self.effectiveAuthorId = effectiveAuthor?.id
         
-        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, presentationData: presentationData, action: { timestamp in
+        self.header = ChatMessageDateHeader(timestamp: content.index.timestamp, scheduled: associatedData.isScheduledMessages, presentationData: presentationData, context: context, action: { timestamp in
             var calendar = NSCalendar.current
             calendar.timeZone = TimeZone(abbreviation: "UTC")!
             let date = Date(timeIntervalSince1970: TimeInterval(timestamp))

@@ -221,21 +221,27 @@ final class ContextMenuNode: ASDisplayNode {
         self.scrollNode.layout()
     }
     
-    func animateIn() {
-        self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.2)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4)
+    func animateIn(bounce: Bool) {
+        if bounce {
+            self.containerNode.layer.animateSpring(from: NSNumber(value: Float(0.2)), to: NSNumber(value: Float(1.0)), keyPath: "transform.scale", duration: 0.4)
+            let containerPosition = self.containerNode.layer.position
+            self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: containerPosition.x, y: containerPosition.y + (self.arrowOnBottom ? 1.0 : -1.0) * self.containerNode.bounds.size.height / 2.0)), to: NSValue(cgPoint: containerPosition), keyPath: "position", duration: 0.4)
+        }
         
-        let containerPosition = self.containerNode.layer.position
-        self.containerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: containerPosition.x, y: containerPosition.y + (self.arrowOnBottom ? 1.0 : -1.0) * self.containerNode.bounds.size.height / 2.0)), to: NSValue(cgPoint: containerPosition), keyPath: "position", duration: 0.4)
-        
-        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+        self.containerNode.allowsGroupOpacity = true
+        self.containerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1, completion: { [weak self] _ in
+            self?.containerNode.allowsGroupOpacity = false
+        })
         
         if let feedback = self.feedback {
             feedback.impact(.light)
         }
     }
     
-    func animateOut(completion: @escaping () -> Void) {
-        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
+    func animateOut(bounce: Bool, completion: @escaping () -> Void) {
+        self.containerNode.allowsGroupOpacity = true
+        self.containerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.containerNode.allowsGroupOpacity = false
             completion()
         })
     }

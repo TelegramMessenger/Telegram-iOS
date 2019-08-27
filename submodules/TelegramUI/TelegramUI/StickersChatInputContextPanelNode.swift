@@ -6,25 +6,12 @@ import TelegramCore
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import AccountContext
+import StickerPackPreviewUI
 
 private struct StickersChatInputContextPanelEntryStableId: Hashable {
     let ids: [MediaId]
-    
-    var hashValue: Int {
-        var hash: Int = 0
-        for i in 0 ..< self.ids.count {
-            if i == 0 {
-                hash = self.ids[i].hashValue
-            } else {
-                hash = hash &* 31 &+ self.ids[i].hashValue
-            }
-        }
-        return hash
-    }
-    
-    static func ==(lhs: StickersChatInputContextPanelEntryStableId, rhs: StickersChatInputContextPanelEntryStableId) -> Bool {
-        return lhs.ids == rhs.ids
-    }
 }
 
 final class StickersChatInputContextPanelInteraction {

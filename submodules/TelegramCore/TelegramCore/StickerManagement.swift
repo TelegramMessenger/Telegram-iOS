@@ -8,7 +8,6 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
-import TelegramCorePrivateModule
 
 private func hashForIdsReverse(_ ids: [Int64]) -> Int32 {
     var acc: UInt32 = 0
@@ -47,28 +46,28 @@ func updatedFeaturedStickerPacks(network: Network, postbox: Postbox) -> Signal<V
         }
         let initialHash: Int32 = hashForIdsReverse(initialPackIds)
         return network.request(Api.functions.messages.getFeaturedStickers(hash: 0))
-            |> retryRequest
-            |> mapToSignal { result -> Signal<Void, NoError> in
-                return postbox.transaction { transaction -> Void in
-                    switch result {
-                        case .featuredStickersNotModified:
-                            break
-                        case let .featuredStickers(_, sets, unread):
-                            let unreadIds = Set(unread)
-                            var updatedPacks: [FeaturedStickerPackItem] = []
-                            for set in sets {
-                                var (info, items) = parsePreviewStickerSet(set)
-                                if let previousPack = initialPackMap[info.id.id] {
-                                    if previousPack.info.hash == info.hash {
-                                        items = previousPack.topItems
-                                    }
+        |> retryRequest
+        |> mapToSignal { result -> Signal<Void, NoError> in
+            return postbox.transaction { transaction -> Void in
+                switch result {
+                    case .featuredStickersNotModified:
+                        break
+                    case let .featuredStickers(_, sets, unread):
+                        let unreadIds = Set(unread)
+                        var updatedPacks: [FeaturedStickerPackItem] = []
+                        for set in sets {
+                            var (info, items) = parsePreviewStickerSet(set)
+                            if let previousPack = initialPackMap[info.id.id] {
+                                if previousPack.info.hash == info.hash {
+                                    items = previousPack.topItems
                                 }
-                                updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
                             }
-                            transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
-                    }
+                            updatedPacks.append(FeaturedStickerPackItem(info: info, topItems: items, unread: unreadIds.contains(info.id.id)))
+                        }
+                        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedStickerPacks, items: updatedPacks.map { OrderedItemListEntry(id: FeaturedStickerPackItemId($0.info.id.id).rawValue, contents: $0) })
                 }
             }
+        }
     } |> switchToLatest
 }
 

@@ -6,6 +6,10 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import AVFoundation
+import RadialStatusNode
+import StickerResources
+import PhotoResources
+import AnimationUI
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
@@ -117,19 +121,19 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                     
                     let displayLink = CADisplayLink(target: DisplayLinkProxy(target: self), selector: #selector(DisplayLinkProxy.displayLinkEvent))
                     self.displayLink = displayLink
-                    displayLink.add(to: RunLoop.main, forMode: RunLoopMode.commonModes)
+                    displayLink.add(to: RunLoop.main, forMode: .common)
                     if #available(iOS 10.0, *) {
                         displayLink.preferredFramesPerSecond = 25
                     } else {
                         displayLink.frameInterval = 2
                     }
                     displayLink.isPaused = false
-                    CMTimebaseSetRate(self.timebase, 1.0)
+                    CMTimebaseSetRate(self.timebase, rate: 1.0)
                 } else if let displayLink = self.displayLink {
                     self.displayLink = nil
                     displayLink.isPaused = true
                     displayLink.invalidate()
-                    CMTimebaseSetRate(self.timebase, 0.0)
+                    CMTimebaseSetRate(self.timebase, rate: 0.0)
                 }
             }
         }
@@ -150,8 +154,8 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         self.imageNode.displaysAsynchronously = false
         
         var timebase: CMTimebase?
-        CMTimebaseCreateWithMasterClock(nil, CMClockGetHostTimeClock(), &timebase)
-        CMTimebaseSetRate(timebase!, 0.0)
+        CMTimebaseCreateWithMasterClock(allocator: nil, masterClock: CMClockGetHostTimeClock(), timebaseOut: &timebase)
+        CMTimebaseSetRate(timebase!, rate: 0.0)
         self.timebase = timebase!
         
         super.init(layerBacked: false, dynamicBounce: false)
@@ -382,7 +386,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             }
                             let dimensions = animatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
                             let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                            animationNode.setup(account: item.account, resource: animatedStickerFile.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                            animationNode.setup(account: item.account, resource: .resource(animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
                     
@@ -442,6 +446,6 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
         guard let item = self.item else {
             return
         }
-        item.resultSelected(item.result, self, self.bounds)
+        let _ = item.resultSelected(item.result, self, self.bounds)
     }
 }

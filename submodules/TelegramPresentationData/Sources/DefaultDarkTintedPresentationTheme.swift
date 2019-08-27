@@ -2,10 +2,14 @@ import Foundation
 import UIKit
 import TelegramUIPreferences
 
-private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> PresentationTheme {
+private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: PresentationThemeBaseColor?, preview: Bool) -> PresentationTheme {
     let destructiveColor: UIColor = UIColor(rgb: 0xff6767)
     let constructiveColor: UIColor = UIColor(rgb: 0x08a723)
     let secretColor: UIColor = UIColor(rgb: 0x89df9e)
+    
+    var accentColor = accentColor
+    let hsv = accentColor.hsv
+    accentColor = UIColor(hue: hsv.0, saturation: hsv.1, brightness: max(hsv.2, 0.18), alpha: 1.0)
     
     let mainBackgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
     let mainSelectionColor = accentColor.withMultiplied(hue: 1.03, saturation: 0.585, brightness: 0.12)
@@ -292,6 +296,18 @@ private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> P
         inputClearButtonColor: mainSecondaryColor,
         checkContentColor: .white
     )
+    
+    let contextMenu = PresentationThemeContextMenu(
+        dimColor: UIColor(rgb: 0x000000, alpha: 0.6),
+        backgroundColor: rootNavigationBar.backgroundColor.withAlphaComponent(0.78),
+        itemSeparatorColor: UIColor(rgb: 0xFFFFFF, alpha: 0.15),
+        sectionSeparatorColor: UIColor(rgb: 0x000000, alpha: 0.2),
+        itemBackgroundColor: UIColor(rgb: 0x000000, alpha: 0.0),
+        itemHighlightedBackgroundColor: UIColor(rgb: 0xFFFFFF, alpha: 0.15),
+        primaryColor: UIColor(rgb: 0xffffff, alpha: 1.0),
+        secondaryColor: UIColor(rgb: 0xffffff, alpha: 0.8),
+        destructiveColor: destructiveColor
+    )
 
     let inAppNotification = PresentationThemeInAppNotification(
         fillColor: mainBackgroundColor,
@@ -310,7 +326,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> P
     return PresentationTheme(
         name: .builtin(.nightAccent),
         author: "Telegram",
+        referenceTheme: .nightAccent,
         overallDarkAppearance: true,
+        baseColor: baseColor,
         intro: intro,
         passcode: passcode,
         rootController: rootController,
@@ -318,18 +336,19 @@ private func makeDarkPresentationTheme(accentColor: UIColor, preview: Bool) -> P
         chatList: chatList,
         chat: chat,
         actionSheet: actionSheet,
+        contextMenu: contextMenu,
         inAppNotification: inAppNotification,
         preview: preview
     )
 }
 
 public let defaultDarkAccentColor = UIColor(rgb: 0x2ea6ff)
-public let defaultDarkAccentPresentationTheme = makeDarkAccentPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff), preview: false)
+public let defaultDarkAccentPresentationTheme = makeDarkAccentPresentationTheme(accentColor: UIColor(rgb: 0x2ea6ff), baseColor: .blue, preview: false)
 
-public func makeDarkAccentPresentationTheme(accentColor: UIColor?, preview: Bool) -> PresentationTheme {
+public func makeDarkAccentPresentationTheme(accentColor: UIColor?, baseColor: PresentationThemeBaseColor?, preview: Bool) -> PresentationTheme {
     var accentColor = accentColor ?? defaultDarkAccentColor
     if accentColor == PresentationThemeBaseColor.blue.color {
         accentColor = defaultDarkAccentColor
     }
-    return makeDarkPresentationTheme(accentColor: accentColor, preview: preview)
+    return makeDarkPresentationTheme(accentColor: accentColor, baseColor: baseColor, preview: preview)
 }

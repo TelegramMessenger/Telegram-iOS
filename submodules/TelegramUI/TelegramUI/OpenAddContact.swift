@@ -3,8 +3,11 @@ import SwiftSignalKit
 import TelegramCore
 import Display
 import DeviceAccess
+import AccountContext
+import AlertUI
+import PeerInfoUI
 
-func openAddContact(context: AccountContext, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
+func openAddContactImpl(context: AccountContext, firstName: String = "", lastName: String = "", phoneNumber: String, label: String = "_$!<Mobile>!$_", present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void = {}) {
     let _ = (DeviceAccess.authorizationStatus(subject: .contacts)
     |> take(1)
     |> deliverOnMainQueue).start(next: { value in
@@ -13,13 +16,13 @@ func openAddContact(context: AccountContext, firstName: String = "", lastName: S
                 let contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: firstName, lastName: lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: label, value: phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
                 present(deviceContactInfoController(context: context, subject: .create(peer: nil, contactData: contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                     if let peer = peer {
-                        if let infoController = peerInfoController(context: context, peer: peer) {
+                        if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
                             pushController(infoController)
                         }
                     } else {
-                        pushController(deviceContactInfoController(context: context, subject: .vcard(nil, stableId, contactData)))
+                        pushController(deviceContactInfoController(context: context, subject: .vcard(nil, stableId, contactData), completed: nil, cancelled: nil))
                     }
-                }), completed: completed), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }), completed: completed, cancelled: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
             case .notDetermined:
                 DeviceAccess.authorizeAccess(to: .contacts)
             default:

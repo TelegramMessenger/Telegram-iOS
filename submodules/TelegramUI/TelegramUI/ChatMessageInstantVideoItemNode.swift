@@ -7,6 +7,10 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import TextFormat
+import AccountContext
+import LocalizedPeerData
+import ContextUI
 
 private let nameFont = Font.medium(14.0)
 
@@ -14,6 +18,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private var selectionNode: ChatMessageSelectionNode?
@@ -49,11 +54,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     }
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
         
         super.init(layerBacked: false)
         
-        self.addSubnode(self.interactiveVideoNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.interactiveVideoNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -373,6 +380,9 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
                     strongSelf.appliedItem = item
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     
@@ -390,6 +400,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         videoLayoutData = .constrained(left: max(0.0, availableContentWidth - videoFrame.width), right: 0.0)
                     }
                     videoApply(videoLayoutData, transition)
+                    
+                    strongSelf.contextSourceNode.contentRect = videoFrame
                     
                     if let updatedShareButtonNode = updatedShareButtonNode {
                         if updatedShareButtonNode !== strongSelf.shareButtonNode {
@@ -568,7 +580,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 var navigate: ChatControllerInteractionNavigateToPeer
                                 
                                 if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                    navigate = .chat(textInputState: nil, messageId: nil)
+                                    navigate = .chat(textInputState: nil, subject: nil)
                                 } else {
                                     navigate = .info
                                 }
@@ -576,7 +588,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                 for attribute in item.content.firstMessage.attributes {
                                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                                         openPeerId = attribute.messageId.peerId
-                                        navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                        navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                     }
                                 }
                                 
@@ -619,7 +631,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                                     }
                                     item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                 } else if let id = forwardInfo.source?.id ?? forwardInfo.author?.id {
-                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, messageId: nil), nil)
+                                    item.controllerInteraction.openPeer(id, .chat(textInputState: nil, subject: nil), nil)
                                 } else if let _ = forwardInfo.authorSignature {
                                     item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                                 }
@@ -630,7 +642,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         self.item?.controllerInteraction.clickThroughMessage()
                     case .longTap, .doubleTap:
                         if let item = self.item, let videoContentNode = self.interactiveVideoNode.videoContentNode(at: self.view.convert(location, to: self.interactiveVideoNode.view)) {
-                            item.controllerInteraction.openMessageContextMenu(item.message, false, videoContentNode, videoContentNode.bounds)
+                            item.controllerInteraction.openMessageContextMenu(item.message, false, videoContentNode, videoContentNode.bounds, nil)
                         }
                     case .hold:
                         break
@@ -811,5 +823,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     
     override func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.interactiveVideoNode.playMediaWithSound()
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

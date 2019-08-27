@@ -5,6 +5,7 @@ import SwiftSignalKit
 import TelegramCore
 import LegacyComponents
 import FFMpeg
+import LocalMediaResources
 
 private final class AVURLAssetCopyItem: MediaResourceDataFetchCopyLocalItem {
     private let url: URL

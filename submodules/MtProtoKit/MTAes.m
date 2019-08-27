@@ -255,7 +255,8 @@ static void ctr128_inc_aligned(unsigned char *counter)
     unsigned int n;
     size_t l = 0;
     
-    assert(in && out);
+    assert(in);
+    assert(out);
     assert(_num < 16);
     
     n = _num;

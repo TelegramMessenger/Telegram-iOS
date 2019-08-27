@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import LegacyComponents
+import AccountContext
 
 private let offsetThreshold: CGFloat = 10.0
 private let dismissOffsetThreshold: CGFloat = 70.0

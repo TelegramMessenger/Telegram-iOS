@@ -4,9 +4,11 @@ import AsyncDisplayKit
 
 public final class ContextMenuControllerPresentationArguments {
     fileprivate let sourceNodeAndRect: () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?
+    fileprivate let bounce: Bool
     
-    public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?) {
+    public init(sourceNodeAndRect: @escaping () -> (ASDisplayNode, CGRect, ASDisplayNode, CGRect)?, bounce: Bool = true) {
         self.sourceNodeAndRect = sourceNodeAndRect
+        self.bounce = bounce
     }
 }
 
@@ -16,7 +18,7 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder {
     }
     
     public var keyShortcuts: [KeyShortcut] {
-        return [KeyShortcut(input: UIKeyInputEscape, action: { [weak self] in
+        return [KeyShortcut(input: UIKeyCommand.inputEscape, action: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
             }
@@ -45,9 +47,9 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder {
     override public func loadDisplayNode() {
         self.displayNode = ContextMenuNode(actions: self.actions, dismiss: { [weak self] in
             self?.dismissed?()
-            self?.contextMenuNode.animateOut {
+            self?.contextMenuNode.animateOut(bounce: (self?.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: {
                 self?.presentingViewController?.dismiss(animated: false)
-            }
+            })
         }, catchTapsOutside: self.catchTapsOutside, hasHapticFeedback: self.hasHapticFeedback)
         self.displayNodeDidLoad()
     }
@@ -55,14 +57,14 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.contextMenuNode.animateIn()
+        self.contextMenuNode.animateIn(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true)
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.dismissed?()
-        self.contextMenuNode.animateOut { [weak self] in
+        self.contextMenuNode.animateOut(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: { [weak self] in
             self?.presentingViewController?.dismiss(animated: false)
-        }
+        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -70,9 +72,9 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder {
         
         if self.layout != nil && self.layout! != layout {
             self.dismissed?()
-            self.contextMenuNode.animateOut { [weak self] in
+            self.contextMenuNode.animateOut(bounce: (self.presentationArguments as? ContextMenuControllerPresentationArguments)?.bounce ?? true, completion: { [weak self] in
                 self?.presentingViewController?.dismiss(animated: false)
-            }
+            })
         } else {
             self.layout = layout
             
@@ -90,7 +92,5 @@ public final class ContextMenuController: ViewController, KeyShortcutResponder {
     
     override public func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
-        self.contextMenuNode.animateIn()
     }
 }

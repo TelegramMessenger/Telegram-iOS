@@ -4,6 +4,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramCallsUI
+import AccountContext
 
 private struct AccountTasks {
     let stateSynchronization: Bool
@@ -59,6 +60,8 @@ public final class SharedWakeupManager {
     private var hasActiveAudioSessionDisposable: Disposable?
     private var tasksDisposable: Disposable?
     private var currentTask: (UIBackgroundTaskIdentifier, Double, SwiftSignalKit.Timer)?
+    private var currentExternalCompletion: (() -> Void, SwiftSignalKit.Timer)?
+    private var currentExternalCompletionValidationTimer: SwiftSignalKit.Timer?
     
     private var managedPausedInBackgroundPlayer: Disposable?
     
@@ -200,8 +203,51 @@ public final class SharedWakeupManager {
         }
     }
     
+    func replaceCurrentExtensionWithExternalTime(completion: @escaping () -> Void, timeout: Double) {
+        if let (currentCompletion, timer) = self.currentExternalCompletion {
+            currentCompletion()
+            timer.invalidate()
+            self.currentExternalCompletion = nil
+        }
+        let timer = SwiftSignalKit.Timer(timeout: timeout - 5.0, repeat: false, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.currentExternalCompletionValidationTimer?.invalidate()
+            strongSelf.currentExternalCompletionValidationTimer = nil
+            if let (completion, timer) = strongSelf.currentExternalCompletion {
+                strongSelf.currentExternalCompletion = nil
+                timer.invalidate()
+                completion()
+            }
+            strongSelf.checkTasks()
+        }, queue: Queue.mainQueue())
+        self.currentExternalCompletion = (completion, timer)
+        timer.start()
+        
+        self.currentExternalCompletionValidationTimer?.invalidate()
+        let validationTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: false, completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.currentExternalCompletionValidationTimer?.invalidate()
+            strongSelf.currentExternalCompletionValidationTimer = nil
+            strongSelf.checkTasks()
+        }, queue: Queue.mainQueue())
+        self.currentExternalCompletionValidationTimer = validationTimer
+        validationTimer.start()
+        self.checkTasks()
+    }
+    
     func checkTasks() {
+        var hasTasksForBackgroundExtension = false
         if self.inForeground || self.hasActiveAudioSession {
+            if let (completion, timer) = self.currentExternalCompletion {
+                self.currentExternalCompletion = nil
+                completion()
+                timer.invalidate()
+            }
+            
             if let (taskId, _, timer) = self.currentTask {
                 self.currentTask = nil
                 timer.invalidate()
@@ -209,13 +255,21 @@ public final class SharedWakeupManager {
                 self.isInBackgroundExtension = false
             }
         } else {
-            var hasTasksForBackgroundExtension = false
             for (_, _, tasks) in self.accountsAndTasks {
                 if !tasks.isEmpty {
                     hasTasksForBackgroundExtension = true
                     break
                 }
             }
+            
+            if !hasTasksForBackgroundExtension && self.currentExternalCompletionValidationTimer == nil {
+                if let (completion, timer) = self.currentExternalCompletion {
+                    self.currentExternalCompletion = nil
+                    completion()
+                    timer.invalidate()
+                }
+            }
+            
             if self.activeExplicitExtensionTimer != nil {
                 hasTasksForBackgroundExtension = true
             }
@@ -264,11 +318,11 @@ public final class SharedWakeupManager {
                 self.isInBackgroundExtension = false
             }
         }
-        self.updateAccounts()
+        self.updateAccounts(hasTasks: hasTasksForBackgroundExtension)
     }
     
-    private func updateAccounts() {
-        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || self.activeExplicitExtensionTimer != nil {
+    private func updateAccounts(hasTasks: Bool) {
+        if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil {
             for (account, primary, tasks) in self.accountsAndTasks {
                 if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) {
                     account.shouldBeServiceTaskMaster.set(.single(.always))

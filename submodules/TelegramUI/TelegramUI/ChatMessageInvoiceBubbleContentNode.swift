@@ -6,6 +6,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramUIPreferences
+import TelegramStringFormatting
 
 private let titleFont: UIFont = Font.semibold(15.0)
 private let textFont: UIFont = Font.regular(15.0)
@@ -133,5 +134,9 @@ final class ChatMessageInvoiceBubbleContentNode: ChatMessageBubbleContentNode {
             return nil
         }
         return self.contentNode.transitionNode(media: media)
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        return self.contentNode.reactionTargetNode(value: value)
     }
 }

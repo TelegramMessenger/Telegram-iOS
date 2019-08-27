@@ -6,6 +6,10 @@ import Display
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
+import LocalizedPeerData
+import PhotoResources
+import TelegramStringFormatting
 
 private let titleFont = Font.medium(14.0)
 private let textFont = Font.regular(14.0)
@@ -159,6 +163,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
                 
                 node.previousMediaReference = updatedMediaReference
+                
+                node.titleNode?.displaysAsynchronously = !presentationData.isPreview
+                node.textNode?.displaysAsynchronously = !presentationData.isPreview
                 
                 let titleNode = titleApply()
                 let textNode = textApply()

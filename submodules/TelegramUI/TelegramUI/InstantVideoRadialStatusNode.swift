@@ -134,7 +134,7 @@ final class InstantVideoRadialStatusNode: ASDisplayNode {
                 }) as? POPAnimatableProperty
                 animation.fromValue = progress as NSNumber
                 animation.toValue = 1.0 as NSNumber
-                animation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                 animation.duration = max(0.0, duration - timestamp) / baseRate
                 animation.beginTime = statusValue.generationTimestamp
                 self.pop_add(animation, forKey: "progress")

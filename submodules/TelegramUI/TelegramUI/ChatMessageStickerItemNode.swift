@@ -6,12 +6,17 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TextFormat
+import AccountContext
+import StickerResources
+import ContextUI
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 class ChatMessageStickerItemNode: ChatMessageItemView {
+    private let contextSourceNode: ContextContentContainingNode
     let imageNode: TransformImageNode
     var textNode: TextNode?
     
@@ -37,14 +42,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     required init() {
+        self.contextSourceNode = ContextContentContainingNode()
         self.imageNode = TransformImageNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
         super.init(layerBacked: false)
         
         self.imageNode.displaysAsynchronously = false
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.dateAndStatusNode)
+        self.addSubnode(self.contextSourceNode)
+        self.contextSourceNode.contentNode.addSubnode(self.imageNode)
+        self.contextSourceNode.contentNode.addSubnode(self.dateAndStatusNode)
     }
     
     required init?(coder aDecoder: NSCoder) {
@@ -174,8 +181,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
+            let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+            
             var needShareButton = false
-            if item.message.flags.contains(.Failed) {
+            if isFailed {
                 needShareButton = false
             } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
@@ -221,7 +230,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var deliveryFailedInset: CGFloat = 0.0
-            if item.content.firstMessage.flags.contains(.Failed) {
+            if isFailed {
                 deliveryFailedInset += 24.0
             }
             
@@ -239,7 +248,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             if item.message.effectivelyIncoming(item.context.account.peerId) {
                 statusType = .FreeIncoming
             } else {
-                if item.message.flags.contains(.Failed) {
+                if isFailed {
                     statusType = .FreeOutgoing(.Failed)
                 } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                     statusType = .FreeOutgoing(.Sending)
@@ -258,9 +267,22 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular)
+            var dateReactions: [MessageReaction] = []
+            var dateReactionCount = 0
+            if let reactionsAttribute = mergedMessageReactions(attributes: item.message.attributes), !reactionsAttribute.reactions.isEmpty {
+                for reaction in reactionsAttribute.reactions {
+                    if reaction.isSelected {
+                        dateReactions.insert(reaction, at: 0)
+                    } else {
+                        dateReactions.append(reaction)
+                    }
+                    dateReactionCount += Int(reaction.count)
+                }
+            }
             
-            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude))
+            let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: item.message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: .regular, reactionCount: dateReactionCount)
+            
+            let (dateAndStatusSize, dateAndStatusApply) = makeDateAndStatusLayout(item.context, item.presentationData, edited, viewCount, dateText, statusType, CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude), dateReactions)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
@@ -376,6 +398,9 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             
             return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _ in
                 if let strongSelf = self {
+                    strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
+                    
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration) = animation {
                         transition = .animated(duration: duration, curve: .spring)
@@ -384,6 +409,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     let updatedImageFrame = imageFrame.offsetBy(dx: 0.0, dy: floor((contentHeight - imageSize.height) / 2.0))
                     transition.updateFrame(node: strongSelf.imageNode, frame: updatedImageFrame)
                     imageApply()
+                    
+                    strongSelf.contextSourceNode.contentRect = strongSelf.imageNode.frame
                     
                     dateAndStatusApply(false)
                     
@@ -478,7 +505,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if item.content.firstMessage.flags.contains(.Failed) {
+                    
+                    if isFailed {
                         let deliveryFailedNode: ChatMessageDeliveryFailedNode
                         var isAppearing = false
                         if let current = strongSelf.deliveryFailedNode {
@@ -559,7 +587,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     var navigate: ChatControllerInteractionNavigateToPeer
                                     
                                     if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                        navigate = .chat(textInputState: nil, messageId: nil)
+                                        navigate = .chat(textInputState: nil, subject: nil)
                                     } else {
                                         navigate = .info
                                     }
@@ -567,7 +595,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     for attribute in item.content.firstMessage.attributes {
                                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                                             openPeerId = attribute.messageId.peerId
-                                            navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                         }
                                     }
                                     
@@ -631,7 +659,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                             self.item?.controllerInteraction.clickThroughMessage()
                         case .longTap, .doubleTap:
                             if let item = self.item, self.imageNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame)
+                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
                             }
                         case .hold:
                             break
@@ -853,5 +881,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         super.animateAdded(currentTimestamp, duration: duration)
         
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+    }
+    
+    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+        return self.contextSourceNode
+    }
+    
+    override func addAccessoryItemNode(_ accessoryItemNode: ListViewAccessoryItemNode) {
+        self.contextSourceNode.contentNode.addSubnode(accessoryItemNode)
     }
 }

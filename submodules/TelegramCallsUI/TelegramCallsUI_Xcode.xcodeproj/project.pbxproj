@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D021289F230EF3B2006B8456 /* ItemListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D021289E230EF3B2006B8456 /* ItemListUI.framework */; };
 		D0750C6A22B28A8000BE5F6E /* UniversalMediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0750C6922B28A8000BE5F6E /* UniversalMediaPlayer.framework */; };
 		D0AE30FB22B1DC3F0058D3BC /* TelegramCallsUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AE30F922B1DC3F0058D3BC /* TelegramCallsUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AE310D22B1DD160058D3BC /* PresentationCallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AE310922B1DD160058D3BC /* PresentationCallManager.swift */; };
@@ -18,9 +19,26 @@
 		D0AE319B22B270D60058D3BC /* TelegramAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE319A22B270D60058D3BC /* TelegramAudio.framework */; };
 		D0AE31C122B274BA0058D3BC /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE31C022B274BA0058D3BC /* TelegramPresentationData.framework */; };
 		D0AE320722B281AE0058D3BC /* DeviceAccess.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AE320622B281AE0058D3BC /* DeviceAccess.framework */; };
+		D0C9C08A22FE3CF300FAB518 /* CallDebugNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08022FE3CF200FAB518 /* CallDebugNode.swift */; };
+		D0C9C08B22FE3CF300FAB518 /* CallControllerStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08122FE3CF200FAB518 /* CallControllerStatusNode.swift */; };
+		D0C9C08C22FE3CF300FAB518 /* CallControllerButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08222FE3CF300FAB518 /* CallControllerButton.swift */; };
+		D0C9C08D22FE3CF300FAB518 /* CallController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08322FE3CF300FAB518 /* CallController.swift */; };
+		D0C9C08E22FE3CF300FAB518 /* CallControllerButtonsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08422FE3CF300FAB518 /* CallControllerButtonsNode.swift */; };
+		D0C9C08F22FE3CF300FAB518 /* CallFeedbackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08522FE3CF300FAB518 /* CallFeedbackController.swift */; };
+		D0C9C09022FE3CF300FAB518 /* CallControllerKeyPreviewNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08622FE3CF300FAB518 /* CallControllerKeyPreviewNode.swift */; };
+		D0C9C09122FE3CF300FAB518 /* CallRatingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08722FE3CF300FAB518 /* CallRatingController.swift */; };
+		D0C9C09222FE3CF300FAB518 /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08822FE3CF300FAB518 /* CallRouteActionSheetItem.swift */; };
+		D0C9C09322FE3CF300FAB518 /* CallControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08922FE3CF300FAB518 /* CallControllerNode.swift */; };
+		D0C9C09522FE3D1700FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C09422FE3D1700FAB518 /* FrameworkBundle.swift */; };
+		D0C9C0CF22FE3E2400FAB518 /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0CE22FE3E2400FAB518 /* PhotoResources.framework */; };
+		D0C9C12522FE41C600FAB518 /* CallsEmoji.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C12422FE41C600FAB518 /* CallsEmoji.m */; };
+		D0C9C12722FE41DB00FAB518 /* CallsEmoji.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C12622FE41D200FAB518 /* CallsEmoji.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0C9C14B22FE439300FAB518 /* TelegramNotices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C14A22FE439300FAB518 /* TelegramNotices.framework */; };
+		D0C9C17B22FEF26C00FAB518 /* CallSuggestTabController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C17A22FEF26C00FAB518 /* CallSuggestTabController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D021289E230EF3B2006B8456 /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0750C6922B28A8000BE5F6E /* UniversalMediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UniversalMediaPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE30F622B1DC3F0058D3BC /* TelegramCallsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TelegramCallsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE30F922B1DC3F0058D3BC /* TelegramCallsUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TelegramCallsUI.h; sourceTree = "<group>"; };
@@ -34,6 +52,22 @@
 		D0AE319A22B270D60058D3BC /* TelegramAudio.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramAudio.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE31C022B274BA0058D3BC /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AE320622B281AE0058D3BC /* DeviceAccess.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceAccess.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C08022FE3CF200FAB518 /* CallDebugNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallDebugNode.swift; sourceTree = "<group>"; };
+		D0C9C08122FE3CF200FAB518 /* CallControllerStatusNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerStatusNode.swift; sourceTree = "<group>"; };
+		D0C9C08222FE3CF300FAB518 /* CallControllerButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerButton.swift; sourceTree = "<group>"; };
+		D0C9C08322FE3CF300FAB518 /* CallController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallController.swift; sourceTree = "<group>"; };
+		D0C9C08422FE3CF300FAB518 /* CallControllerButtonsNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerButtonsNode.swift; sourceTree = "<group>"; };
+		D0C9C08522FE3CF300FAB518 /* CallFeedbackController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallFeedbackController.swift; sourceTree = "<group>"; };
+		D0C9C08622FE3CF300FAB518 /* CallControllerKeyPreviewNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerKeyPreviewNode.swift; sourceTree = "<group>"; };
+		D0C9C08722FE3CF300FAB518 /* CallRatingController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRatingController.swift; sourceTree = "<group>"; };
+		D0C9C08822FE3CF300FAB518 /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
+		D0C9C08922FE3CF300FAB518 /* CallControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerNode.swift; sourceTree = "<group>"; };
+		D0C9C09422FE3D1700FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0C9C0CE22FE3E2400FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C12422FE41C600FAB518 /* CallsEmoji.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CallsEmoji.m; sourceTree = "<group>"; };
+		D0C9C12622FE41D200FAB518 /* CallsEmoji.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CallsEmoji.h; sourceTree = "<group>"; };
+		D0C9C14A22FE439300FAB518 /* TelegramNotices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramNotices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0C9C17A22FEF26C00FAB518 /* CallSuggestTabController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSuggestTabController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +75,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D021289F230EF3B2006B8456 /* ItemListUI.framework in Frameworks */,
+				D0C9C14B22FE439300FAB518 /* TelegramNotices.framework in Frameworks */,
+				D0C9C0CF22FE3E2400FAB518 /* PhotoResources.framework in Frameworks */,
 				D0750C6A22B28A8000BE5F6E /* UniversalMediaPlayer.framework in Frameworks */,
 				D0AE320722B281AE0058D3BC /* DeviceAccess.framework in Frameworks */,
 				D0AE31C122B274BA0058D3BC /* TelegramPresentationData.framework in Frameworks */,
@@ -74,10 +111,24 @@
 		D0AE30F822B1DC3F0058D3BC /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				D0C9C08322FE3CF300FAB518 /* CallController.swift */,
+				D0C9C08222FE3CF300FAB518 /* CallControllerButton.swift */,
+				D0C9C08422FE3CF300FAB518 /* CallControllerButtonsNode.swift */,
+				D0C9C08622FE3CF300FAB518 /* CallControllerKeyPreviewNode.swift */,
+				D0C9C08922FE3CF300FAB518 /* CallControllerNode.swift */,
+				D0C9C08122FE3CF200FAB518 /* CallControllerStatusNode.swift */,
+				D0C9C08022FE3CF200FAB518 /* CallDebugNode.swift */,
+				D0C9C08522FE3CF300FAB518 /* CallFeedbackController.swift */,
+				D0C9C08722FE3CF300FAB518 /* CallRatingController.swift */,
+				D0C9C08822FE3CF300FAB518 /* CallRouteActionSheetItem.swift */,
 				D0AE310C22B1DD160058D3BC /* CallKitIntegration.swift */,
 				D0AE310A22B1DD160058D3BC /* PresentationCall.swift */,
 				D0AE310922B1DD160058D3BC /* PresentationCallManager.swift */,
 				D0AE310B22B1DD160058D3BC /* PresentationCallToneData.swift */,
+				D0C9C09422FE3D1700FAB518 /* FrameworkBundle.swift */,
+				D0C9C17A22FEF26C00FAB518 /* CallSuggestTabController.swift */,
+				D0C9C12622FE41D200FAB518 /* CallsEmoji.h */,
+				D0C9C12422FE41C600FAB518 /* CallsEmoji.m */,
 				D0AE30F922B1DC3F0058D3BC /* TelegramCallsUI.h */,
 			);
 			path = Sources;
@@ -86,6 +137,9 @@
 		D0AE315522B1DEF10058D3BC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D021289E230EF3B2006B8456 /* ItemListUI.framework */,
+				D0C9C14A22FE439300FAB518 /* TelegramNotices.framework */,
+				D0C9C0CE22FE3E2400FAB518 /* PhotoResources.framework */,
 				D0750C6922B28A8000BE5F6E /* UniversalMediaPlayer.framework */,
 				D0AE320622B281AE0058D3BC /* DeviceAccess.framework */,
 				D0AE31C022B274BA0058D3BC /* TelegramPresentationData.framework */,
@@ -104,6 +158,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0AE30FB22B1DC3F0058D3BC /* TelegramCallsUI.h in Headers */,
+				D0C9C12722FE41DB00FAB518 /* CallsEmoji.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -140,7 +195,7 @@
 				TargetAttributes = {
 					D0AE30F522B1DC3F0058D3BC = {
 						CreatedOnToolsVersion = 10.1;
-						LastSwiftMigration = 1010;
+						LastSwiftMigration = 1030;
 					};
 				};
 			};
@@ -177,9 +232,22 @@
 			buildActionMask = 2147483647;
 			files = (
 				D0AE310D22B1DD160058D3BC /* PresentationCallManager.swift in Sources */,
+				D0C9C08B22FE3CF300FAB518 /* CallControllerStatusNode.swift in Sources */,
+				D0C9C09122FE3CF300FAB518 /* CallRatingController.swift in Sources */,
 				D0AE310E22B1DD160058D3BC /* PresentationCall.swift in Sources */,
+				D0C9C08A22FE3CF300FAB518 /* CallDebugNode.swift in Sources */,
+				D0C9C09322FE3CF300FAB518 /* CallControllerNode.swift in Sources */,
+				D0C9C08F22FE3CF300FAB518 /* CallFeedbackController.swift in Sources */,
+				D0C9C09222FE3CF300FAB518 /* CallRouteActionSheetItem.swift in Sources */,
+				D0C9C17B22FEF26C00FAB518 /* CallSuggestTabController.swift in Sources */,
 				D0AE310F22B1DD160058D3BC /* PresentationCallToneData.swift in Sources */,
+				D0C9C09022FE3CF300FAB518 /* CallControllerKeyPreviewNode.swift in Sources */,
+				D0C9C12522FE41C600FAB518 /* CallsEmoji.m in Sources */,
 				D0AE311022B1DD160058D3BC /* CallKitIntegration.swift in Sources */,
+				D0C9C08E22FE3CF300FAB518 /* CallControllerButtonsNode.swift in Sources */,
+				D0C9C08C22FE3CF300FAB518 /* CallControllerButton.swift in Sources */,
+				D0C9C08D22FE3CF300FAB518 /* CallController.swift in Sources */,
+				D0C9C09522FE3D1700FAB518 /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,7 +342,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = DebugHockeyapp;
@@ -360,7 +428,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = ReleaseHockeyappInternal;
@@ -511,7 +579,7 @@
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = DebugAppStoreLLC;
@@ -539,7 +607,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = ReleaseAppStoreLLC;

@@ -21,7 +21,7 @@ class VolumeButtonsListener: NSObject {
         
         super.init()
         
-        impl = { [weak self] in
+        impl = {
             valueChanged()
         }
         

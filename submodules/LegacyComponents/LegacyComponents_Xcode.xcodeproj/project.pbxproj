@@ -996,16 +996,6 @@
 		D07BCA891F2B443700ED97AA /* TGMediaAssetsController.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA711F2B443700ED97AA /* TGMediaAssetsController.m */; };
 		D07BCA8A1F2B443700ED97AA /* TGMediaAssetsGifCell.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA721F2B443700ED97AA /* TGMediaAssetsGifCell.h */; };
 		D07BCA8B1F2B443700ED97AA /* TGMediaAssetsGifCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA731F2B443700ED97AA /* TGMediaAssetsGifCell.m */; };
-		D07BCA8C1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA741F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.h */; };
-		D07BCA8D1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA751F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.m */; };
-		D07BCA8E1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA761F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.h */; };
-		D07BCA8F1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA771F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.m */; };
-		D07BCA901F2B443700ED97AA /* TGMediaAssetsMomentsController.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA781F2B443700ED97AA /* TGMediaAssetsMomentsController.h */; };
-		D07BCA911F2B443700ED97AA /* TGMediaAssetsMomentsController.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA791F2B443700ED97AA /* TGMediaAssetsMomentsController.m */; };
-		D07BCA921F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA7A1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.h */; };
-		D07BCA931F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA7B1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.m */; };
-		D07BCA941F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA7C1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.h */; };
-		D07BCA951F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA7D1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.m */; };
 		D07BCA961F2B443700ED97AA /* TGMediaAssetsPhotoCell.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA7E1F2B443700ED97AA /* TGMediaAssetsPhotoCell.h */; };
 		D07BCA971F2B443700ED97AA /* TGMediaAssetsPhotoCell.m in Sources */ = {isa = PBXBuildFile; fileRef = D07BCA7F1F2B443700ED97AA /* TGMediaAssetsPhotoCell.m */; };
 		D07BCA981F2B443700ED97AA /* TGMediaAssetsPickerController.h in Headers */ = {isa = PBXBuildFile; fileRef = D07BCA801F2B443700ED97AA /* TGMediaAssetsPickerController.h */; };
@@ -2169,16 +2159,6 @@
 		D07BCA711F2B443700ED97AA /* TGMediaAssetsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsController.m; sourceTree = "<group>"; };
 		D07BCA721F2B443700ED97AA /* TGMediaAssetsGifCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsGifCell.h; sourceTree = "<group>"; };
 		D07BCA731F2B443700ED97AA /* TGMediaAssetsGifCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsGifCell.m; sourceTree = "<group>"; };
-		D07BCA741F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsMomentsCollectionLayout.h; sourceTree = "<group>"; };
-		D07BCA751F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsMomentsCollectionLayout.m; sourceTree = "<group>"; };
-		D07BCA761F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsMomentsCollectionView.h; sourceTree = "<group>"; };
-		D07BCA771F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsMomentsCollectionView.m; sourceTree = "<group>"; };
-		D07BCA781F2B443700ED97AA /* TGMediaAssetsMomentsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsMomentsController.h; sourceTree = "<group>"; };
-		D07BCA791F2B443700ED97AA /* TGMediaAssetsMomentsController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsMomentsController.m; sourceTree = "<group>"; };
-		D07BCA7A1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsMomentsSectionHeader.h; sourceTree = "<group>"; };
-		D07BCA7B1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsMomentsSectionHeader.m; sourceTree = "<group>"; };
-		D07BCA7C1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsMomentsSectionHeaderView.h; sourceTree = "<group>"; };
-		D07BCA7D1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsMomentsSectionHeaderView.m; sourceTree = "<group>"; };
 		D07BCA7E1F2B443700ED97AA /* TGMediaAssetsPhotoCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsPhotoCell.h; sourceTree = "<group>"; };
 		D07BCA7F1F2B443700ED97AA /* TGMediaAssetsPhotoCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGMediaAssetsPhotoCell.m; sourceTree = "<group>"; };
 		D07BCA801F2B443700ED97AA /* TGMediaAssetsPickerController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGMediaAssetsPickerController.h; sourceTree = "<group>"; };
@@ -3627,16 +3607,6 @@
 				D07BCA711F2B443700ED97AA /* TGMediaAssetsController.m */,
 				D07BCA721F2B443700ED97AA /* TGMediaAssetsGifCell.h */,
 				D07BCA731F2B443700ED97AA /* TGMediaAssetsGifCell.m */,
-				D07BCA741F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.h */,
-				D07BCA751F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.m */,
-				D07BCA761F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.h */,
-				D07BCA771F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.m */,
-				D07BCA781F2B443700ED97AA /* TGMediaAssetsMomentsController.h */,
-				D07BCA791F2B443700ED97AA /* TGMediaAssetsMomentsController.m */,
-				D07BCA7A1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.h */,
-				D07BCA7B1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.m */,
-				D07BCA7C1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.h */,
-				D07BCA7D1F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.m */,
 				D07BCA7E1F2B443700ED97AA /* TGMediaAssetsPhotoCell.h */,
 				D07BCA7F1F2B443700ED97AA /* TGMediaAssetsPhotoCell.m */,
 				D07BCA801F2B443700ED97AA /* TGMediaAssetsPickerController.h */,
@@ -3952,7 +3922,6 @@
 				D01777511F1F8FE60044446D /* LegacyComponentsGlobals.h in Headers */,
 				D07BC9BE1F2A722400ED97AA /* TGHistogramView.h in Headers */,
 				D01778211F1F961D0044446D /* TGMessageEntityPre.h in Headers */,
-				D07BCA8C1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.h in Headers */,
 				D07BC91B1F2A380D00ED97AA /* TGPaintRender.h in Headers */,
 				D07BCAA41F2B445E00ED97AA /* TGMediaGroupCell.h in Headers */,
 				D0177A661F21FB9B0044446D /* TGModernGalleryItem.h in Headers */,
@@ -3983,7 +3952,6 @@
 				D07BC9911F2A480800ED97AA /* TGStickerKeyboardTabCell.h in Headers */,
 				D07BC9F91F2A9A2B00ED97AA /* TGMediaPickerGalleryInterfaceView.h in Headers */,
 				D01778BA1F2009880044446D /* Freedom.h in Headers */,
-				D07BCA8E1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.h in Headers */,
 				D0177A881F2219220044446D /* TGModernGalleryZoomableItemView.h in Headers */,
 				D0177A321F21F1980044446D /* AVURLAsset+TGMediaItem.h in Headers */,
 				D07BC7171F2A29B700ED97AA /* TGPhotoEditorController.h in Headers */,
@@ -4131,7 +4099,6 @@
 				D01779711F2103FD0044446D /* TGPaintUndoManager.h in Headers */,
 				D07BCAEF1F2B507600ED97AA /* TGAttachmentPhotoCell.h in Headers */,
 				D07BC7B61F2A2BBE00ED97AA /* PGBlurTool.h in Headers */,
-				D07BCA921F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.h in Headers */,
 				D07BC7881F2A2B3700ED97AA /* TGPhotoEditorTintSwatchView.h in Headers */,
 				D07BC8221F2A2C0B00ED97AA /* PGShadowsTool.h in Headers */,
 				D01778311F1F961D0044446D /* TGInstantPage.h in Headers */,
@@ -4194,7 +4161,6 @@
 				D07BC9581F2A3EBF00ED97AA /* TGModernConversationAssociatedInputPanel.h in Headers */,
 				D017795C1F2103440044446D /* PGPhotoEditorValues.h in Headers */,
 				D07BC89B1F2A375800ED97AA /* TGPhotoCropRotationView.h in Headers */,
-				D07BCA941F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.h in Headers */,
 				D0177AEF1F23DF6D0044446D /* TGImageDataSource.h in Headers */,
 				D01777681F1F8FE60044446D /* TGUser.h in Headers */,
 				D07BCA551F2A9E1600ED97AA /* TGDraggableCollectionView.h in Headers */,
@@ -4304,7 +4270,6 @@
 				D017775E1F1F8FE60044446D /* TGBotComandInfo.h in Headers */,
 				D07BC9071F2A380D00ED97AA /* TGPaintEllipticalBrush.h in Headers */,
 				D07BC7701F2A2B3700ED97AA /* TGPhotoEditorCollectionView.h in Headers */,
-				D07BCA901F2B443700ED97AA /* TGMediaAssetsMomentsController.h in Headers */,
 				D07BC86B1F2A2F3800ED97AA /* HPGrowingTextView.h in Headers */,
 				D07BC8761F2A2F7B00ED97AA /* TGWeakDelegate.h in Headers */,
 				D07BC8FF1F2A380D00ED97AA /* TGPaintBrush.h in Headers */,
@@ -4846,7 +4811,6 @@
 				D07BCB791F2B6DB900ED97AA /* TGEmbedCoubPlayerView.m in Sources */,
 				D07BCB231F2B646A00ED97AA /* TGTextField.m in Sources */,
 				D017780B1F1F961D0044446D /* TGViaUserAttachment.m in Sources */,
-				D07BCA8F1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionView.m in Sources */,
 				D07BC8A01F2A375800ED97AA /* TGPhotoCropView.m in Sources */,
 				D0177AF01F23DF6D0044446D /* TGImageDataSource.m in Sources */,
 				D01778BF1F200A9A0044446D /* UIScrollView+TGHacks.m in Sources */,
@@ -4892,11 +4856,9 @@
 				D07BC9A31F2A49C200ED97AA /* TGItemPreviewController.m in Sources */,
 				D01779301F20FFAC0044446D /* TGMediaAssetsLegacyLibrary.m in Sources */,
 				D01778021F1F961D0044446D /* TGMessageViewCountContentProperty.m in Sources */,
-				D07BCA951F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeaderView.m in Sources */,
 				D01779F11F2139980044446D /* POPAnimator.mm in Sources */,
 				D01779F71F2139980044446D /* POPCGUtils.mm in Sources */,
 				D07BCBB01F2B6F6300ED97AA /* CBCoubAudioSource.m in Sources */,
-				D07BCA931F2B443700ED97AA /* TGMediaAssetsMomentsSectionHeader.m in Sources */,
 				D07BC9201F2A380D00ED97AA /* TGPaintShaderSet.m in Sources */,
 				D01778261F1F961D0044446D /* TGMessageEntityUrl.m in Sources */,
 				D07BCBEC1F2B72DC00ED97AA /* STKAutoRecoveringHTTPDataSource.m in Sources */,
@@ -4984,7 +4946,6 @@
 				D01778101F1F961D0044446D /* TGMessageEntity.m in Sources */,
 				D07BC7241F2A29E400ED97AA /* TGPhotoToolsController.m in Sources */,
 				D07BC7AF1F2A2B8900ED97AA /* GPUImageTwoInputFilter.m in Sources */,
-				D07BCA8D1F2B443700ED97AA /* TGMediaAssetsMomentsCollectionLayout.m in Sources */,
 				D0F7C9C51F55DA49005B255A /* TGVideoCameraMovieRecorder.m in Sources */,
 				D07BC8D21F2A37EC00ED97AA /* TGPhotoPaintSparseView.m in Sources */,
 				D07BCA561F2A9E1600ED97AA /* TGDraggableCollectionView.m in Sources */,
@@ -5071,7 +5032,6 @@
 				D07BC7281F2A2A5300ED97AA /* UICollectionView+Utils.m in Sources */,
 				D07BCB671F2B6A5600ED97AA /* TGEmbedPlayerState.m in Sources */,
 				092A65CA22EC4ADC0032E20C /* TGMediaPickerSendActionSheetController.m in Sources */,
-				D07BCA911F2B443700ED97AA /* TGMediaAssetsMomentsController.m in Sources */,
 				D07BCBC41F2B6F6300ED97AA /* CBJSONCoubMapper.m in Sources */,
 				D07BC7871F2A2B3700ED97AA /* TGPhotoEditorTabController.m in Sources */,
 				D02660631F34A7F8000E2DC5 /* TGLocationPinView.m in Sources */,
@@ -5131,7 +5091,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -5211,7 +5171,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -5257,7 +5217,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5365,7 +5325,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -5439,7 +5399,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5513,7 +5473,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5588,7 +5548,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -5662,7 +5622,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5742,7 +5702,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -5816,7 +5776,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -5890,7 +5850,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";

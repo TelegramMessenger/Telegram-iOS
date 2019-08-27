@@ -4,6 +4,10 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import AccountContext
+import LocalizedPeerData
+import ContextUI
+import ChatListUI
 
 struct ChatMessageItemWidthFill {
     let compactInset: CGFloat
@@ -148,7 +152,7 @@ final class ChatMessageAccessibilityData {
         var label: String = ""
         let value: String
         var hint: String?
-        var traits: UIAccessibilityTraits = 0
+        var traits: UIAccessibilityTraits = []
         var singleUrl: String?
         
         var customActions: [ChatMessageAccessibilityCustomAction] = []
@@ -174,16 +178,18 @@ final class ChatMessageAccessibilityData {
                 if let _ = media as? TelegramMediaImage {
                     if isIncoming {
                         if announceIncomingAuthors, let authorName = authorName {
-                            label = "Photo, from: \(authorName)"
+                            label = item.presentationData.strings.VoiceOver_Chat_PhotoFrom(authorName).0
                         } else {
-                            label = "Photo"
+                            label = item.presentationData.strings.VoiceOver_Chat_Photo
                         }
                     } else {
-                        label = "Your photo"
+                        label = item.presentationData.strings.VoiceOver_Chat_YourPhoto
                     }
                     text = ""
                     if !item.message.text.isEmpty {
-                        text.append("\nCaption: \(item.message.text)")
+                        text.append("\n")
+                        
+                        text.append(item.presentationData.strings.VoiceOver_Chat_Caption(item.message.text).0)
                     }
                 } else if let file = media as? TelegramMediaFile {
                     var isSpecialFile = false
@@ -192,93 +198,98 @@ final class ChatMessageAccessibilityData {
                             case let .Audio(audio):
                                 isSpecialFile = true
                                 if isSelected == nil {
-                                    hint = "Double tap to play"
+                                    hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                 }
-                                traits |= UIAccessibilityTraitStartsMediaSession
+                                traits.insert(.startsMediaSession)
                                 if audio.isVoice {
                                     let durationString = voiceMessageDurationFormatter.string(from: Double(audio.duration)) ?? ""
                                     if isIncoming {
                                         if announceIncomingAuthors, let authorName = authorName {
-                                            label = "Voice message, from: \(authorName)"
+                                            label = item.presentationData.strings.VoiceOver_Chat_VoiceMessageFrom(authorName).0
                                         } else {
-                                            label = "Voice message"
+                                            label = item.presentationData.strings.VoiceOver_Chat_VoiceMessage
                                         }
                                     } else {
-                                        label = "Your voice message"
+                                        label = item.presentationData.strings.VoiceOver_Chat_YourVoiceMessage
                                     }
-                                    text = "Duration: \(durationString)"
+                                    text = item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0
                                 } else {
                                     let durationString = musicDurationFormatter.string(from: Double(audio.duration)) ?? ""
                                     if isIncoming {
                                         if announceIncomingAuthors, let authorName = authorName {
-                                            label = "Music file, from: \(authorName)"
+                                            label = item.presentationData.strings.VoiceOver_Chat_MusicFrom(authorName).0
                                         } else {
-                                            label = "Music file"
+                                            label = item.presentationData.strings.VoiceOver_Chat_Music
                                         }
                                     } else {
-                                        label = "Your music file"
+                                        label = item.presentationData.strings.VoiceOver_Chat_YourMusic
                                     }
                                     let performer = audio.performer ?? "Unknown"
                                     let title = audio.title ?? "Unknown"
-                                    text = "\(title), by \(performer). Duration: \(durationString)"
+                                    
+                                    text = item.presentationData.strings.VoiceOver_Chat_MusicTitle(title, performer).0
+                                    text.append(item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0)
                                 }
                             case let .Video(video):
                                 isSpecialFile = true
                                 if isSelected == nil {
-                                    hint = "Double tap to play"
+                                    hint = item.presentationData.strings.VoiceOver_Chat_PlayHint
                                 }
-                                traits |= UIAccessibilityTraitStartsMediaSession
+                                traits.insert(.startsMediaSession)
                                 let durationString = voiceMessageDurationFormatter.string(from: Double(video.duration)) ?? ""
                                 if video.flags.contains(.instantRoundVideo) {
                                     if isIncoming {
                                         if announceIncomingAuthors, let authorName = authorName {
-                                            label = "Video message, from: \(authorName)"
+                                            label = item.presentationData.strings.VoiceOver_Chat_VideoMessageFrom(authorName).0
                                         } else {
-                                            label = "Video message"
+                                            label = item.presentationData.strings.VoiceOver_Chat_VideoMessage
                                         }
                                     } else {
-                                        label = "Your video message"
+                                        label = item.presentationData.strings.VoiceOver_Chat_YourVideoMessage
                                     }
                                 } else {
                                     if isIncoming {
                                         if announceIncomingAuthors, let authorName = authorName {
-                                            label = "Video, from: \(authorName)"
+                                            label = item.presentationData.strings.VoiceOver_Chat_VideoFrom(authorName).0
                                         } else {
-                                            label = "Video"
+                                            label = item.presentationData.strings.VoiceOver_Chat_Video
                                         }
                                     } else {
-                                        label = "Your video"
+                                        label = item.presentationData.strings.VoiceOver_Chat_YourVideo
                                     }
                                 }
-                                text = "Duration: \(durationString)"
+                                text = item.presentationData.strings.VoiceOver_Chat_Duration(durationString).0
                             default:
                                 break
                         }
                     }
                     if !isSpecialFile {
                         if isSelected == nil {
-                            hint = "Double tap to open"
+                            hint = item.presentationData.strings.VoiceOver_Chat_OpenHint
                         }
                         let sizeString = fileSizeFormatter.string(fromByteCount: Int64(file.size ?? 0))
                         if isIncoming {
                             if announceIncomingAuthors, let authorName = authorName {
-                                label = "File, from: \(authorName)"
+                                label = item.presentationData.strings.VoiceOver_Chat_FileFrom(authorName).0
                             } else {
-                                label = "File"
+                                label = item.presentationData.strings.VoiceOver_Chat_File
                             }
                         } else {
-                            label = "Your file"
+                            label = item.presentationData.strings.VoiceOver_Chat_YourFile
                         }
-                        text = "\(file.fileName ?? ""). Size: \(sizeString)"
+                        text = "\(file.fileName ?? ""). "
+                        text.append(item.presentationData.strings.VoiceOver_Chat_Size(sizeString).0)
                     }
                     if !item.message.text.isEmpty {
-                        text.append("\nCaption: \(item.message.text)")
+                        text.append("\n")
+                        text.append(item.presentationData.strings.VoiceOver_Chat_Caption(item.message.text).0)
                     }
                     break loop
                 } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
-                    var contentText = "Page preview. "
+                    var contentText = item.presentationData.strings.VoiceOver_Chat_PagePreview + ". "
                     if let title = content.title, !title.isEmpty {
-                        contentText.append("Title: \(title). ")
+                        contentText.append(item.presentationData.strings.VoiceOver_Chat_Title(title).0)
+                        contentText.append(". ")
                     }
                     if let text = content.text, !text.isEmpty {
                         contentText.append(text)
@@ -287,12 +298,12 @@ final class ChatMessageAccessibilityData {
                 } else if let contact = media as? TelegramMediaContact {
                     if isIncoming {
                         if announceIncomingAuthors, let authorName = authorName {
-                            label = "Shared contact, from: \(authorName)"
+                            label = item.presentationData.strings.VoiceOver_Chat_ContactFrom(authorName).0
                         } else {
-                            label = "Shared contact"
+                            label = item.presentationData.strings.VoiceOver_Chat_Contact
                         }
                     } else {
-                        label = "Your shared contact"
+                        label = item.presentationData.strings.VoiceOver_Chat_YourContact
                     }
                     var displayName = ""
                     if !contact.firstName.isEmpty {
@@ -348,32 +359,36 @@ final class ChatMessageAccessibilityData {
                     text = "\(displayName)."
                     if !phoneNumbersString.isEmpty {
                         if phoneNumberCount > 1 {
-                            text.append("\(phoneNumberCount) phone numbers: ")
+                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactPhoneNumberCount(Int32(phoneNumberCount)))
+                            text.append(": ")
                         } else {
-                            text.append("Phone number: ")
+                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactPhoneNumber)
                         }
                         text.append("\(phoneNumbersString). ")
                     }
                     if !emailAddressesString.isEmpty {
                         if emailAddressCount > 1 {
-                            text.append("\(emailAddressCount) email addresses: ")
+                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactEmailCount(Int32(emailAddressCount)))
+                            text.append(": ")
                         } else {
-                            text.append("Email: ")
+                            text.append(item.presentationData.strings.VoiceOver_Chat_ContactEmail)
+                            text.append(": ")
                         }
                         text.append("\(emailAddressesString). ")
                     }
                     if !organizationString.isEmpty {
-                        text.append("Organization: \(organizationString).")
+                        text.append(item.presentationData.strings.VoiceOver_Chat_ContactOrganization(organizationString).0)
+                        text.append(".")
                     }
                 } else if let poll = media as? TelegramMediaPoll {
                     if isIncoming {
                         if announceIncomingAuthors, let authorName = authorName {
-                            label = "Anonymous poll, from: \(authorName)"
+                            label = item.presentationData.strings.VoiceOver_Chat_AnonymousPollFrom(authorName).0
                         } else {
-                            label = "Anonymous poll"
+                            label = item.presentationData.strings.VoiceOver_Chat_AnonymousPoll
                         }
                     } else {
-                        label = "Your anonymous poll"
+                        label = item.presentationData.strings.VoiceOver_Chat_YourAnonymousPoll
                     }
                     
                     var optionVoterCount: [Int: Int32] = [:]
@@ -415,9 +430,11 @@ final class ChatMessageAccessibilityData {
                         optionVoterCounts = Array(repeating: 0, count: poll.options.count)
                     }
                     
-                    text = "Title: \(poll.text). "
+                    text = item.presentationData.strings.VoiceOver_Chat_Title(poll.text).0
+                    text.append(". ")
                     
-                    text.append("\(poll.options.count) options: ")
+                    text.append(item.presentationData.strings.VoiceOver_Chat_PollOptionCount(Int32(poll.options.count)))
+                    text.append(": ")
                     var optionsText = ""
                     for i in 0 ..< poll.options.count {
                         let option = poll.options[i]
@@ -427,7 +444,8 @@ final class ChatMessageAccessibilityData {
                         }
                         optionsText.append(option.text)
                         if let selectedOptionId = selectedOptionId, selectedOptionId == option.opaqueIdentifier {
-                            optionsText.append(", selected")
+                            optionsText.append(", ")
+                            optionsText.append(item.presentationData.strings.VoiceOver_Chat_OptionSelected)
                         }
                         
                         if let _ = optionVoterCount[i] {
@@ -438,16 +456,12 @@ final class ChatMessageAccessibilityData {
                     }
                     text.append("\(optionsText). ")
                     if totalVoterCount != 0 {
-                        if totalVoterCount == 1 {
-                            text.append("1 vote. ")
-                        } else {
-                            text.append("\(totalVoterCount) votes. ")
-                        }
+                        text.append(item.presentationData.strings.VoiceOver_Chat_PollVotes(Int32(totalVoterCount)))
                     } else {
-                        text.append("No votes. ")
+                        text.append(item.presentationData.strings.VoiceOver_Chat_PollNoVotes)
                     }
                     if poll.isClosed {
-                        text.append("Final results. ")
+                        text.append(item.presentationData.strings.VoiceOver_Chat_PollFinalResults)
                     }
                 }
             }
@@ -456,9 +470,10 @@ final class ChatMessageAccessibilityData {
             
             if let isSelected = isSelected {
                 if isSelected {
-                    result += "Selected.\n"
+                    result += item.presentationData.strings.VoiceOver_Chat_Selected
+                    result += "\n"
                 }
-                traits |= UIAccessibilityTraitStartsMediaSession
+                traits.insert(.startsMediaSession)
             }
             
             result += "\(text)"
@@ -468,9 +483,9 @@ final class ChatMessageAccessibilityData {
             result += "\n\(dateString)"
             if !isIncoming && item.read {
                 if announceIncomingAuthors {
-                    result += "Seen by recipients"
+                    result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipients
                 } else {
-                    result += "Seen by recipient"
+                    result += item.presentationData.strings.VoiceOver_Chat_SeenByRecipient
                 }
             }
             value = result
@@ -483,10 +498,10 @@ final class ChatMessageAccessibilityData {
                 if isIncoming {
                     label = author.displayTitle
                 } else {
-                    label = "Your message"
+                    label = item.presentationData.strings.VoiceOver_Chat_YourMessage
                 }
             } else {
-                label = "Message"
+                label = item.presentationData.strings.VoiceOver_Chat_Message
             }
         }
         
@@ -521,25 +536,25 @@ final class ChatMessageAccessibilityData {
                 let replyLabel: String
                 if replyMessage.flags.contains(.Incoming) {
                     if let author = replyMessage.author {
-                        replyLabel = "Reply to message from \(author.displayTitle)"
+                        replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyFrom(author.displayTitle).0
                     } else {
-                        replyLabel = "Reply to message"
+                        replyLabel = item.presentationData.strings.VoiceOver_Chat_Reply
                     }
                 } else {
-                    replyLabel = "Reply to your message"
+                    replyLabel = item.presentationData.strings.VoiceOver_Chat_ReplyToYourMessage
                 }
                 label = "\(replyLabel) . \(label)"
             }
         }
         
         if hint == nil && singleUrl != nil {
-            hint = "Double tap to open link"
+            hint = item.presentationData.strings.VoiceOver_Chat_OpenLinkHint
         }
         
         if let forwardInfo = item.message.forwardInfo {
             let forwardLabel: String
             if let author = forwardInfo.author, author.id == item.context.account.peerId {
-                forwardLabel = "Forwarded from you"
+                forwardLabel = item.presentationData.strings.VoiceOver_Chat_ForwardedFromYou
             } else {
                 let peerString: String
                 if let peer = forwardInfo.author {
@@ -553,7 +568,7 @@ final class ChatMessageAccessibilityData {
                 } else {
                     peerString = ""
                 }
-                forwardLabel = "Forwarded from \(peerString)"
+                forwardLabel = item.presentationData.strings.VoiceOver_Chat_ForwardedFrom(peerString).0
             }
             label = "\(forwardLabel). \(label)"
         }
@@ -573,9 +588,9 @@ final class ChatMessageAccessibilityData {
             }
             
             if canReply {
-                customActions.append(ChatMessageAccessibilityCustomAction(name: "Reply", target: nil, selector: #selector(self.noop), action: .reply))
+                customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextReply, target: nil, selector: #selector(self.noop), action: .reply))
             }
-            customActions.append(ChatMessageAccessibilityCustomAction(name: "Open message menu", target: nil, selector: #selector(self.noop), action: .options))
+            customActions.append(ChatMessageAccessibilityCustomAction(name: item.presentationData.strings.VoiceOver_MessageContextOpenMessageMenu, target: nil, selector: #selector(self.noop), action: .options))
         }
         
         self.label = label
@@ -595,6 +610,8 @@ public class ChatMessageItemView: ListViewItemNode {
     
     var item: ChatMessageItem?
     var accessibilityData: ChatMessageAccessibilityData?
+    
+    var awaitingAppliedReaction: (String, () -> Void)?
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -659,6 +676,10 @@ public class ChatMessageItemView: ListViewItemNode {
     }
     
     func transitionNode(id: MessageId, media: Media) -> (ASDisplayNode, () -> (UIView?, UIView?))? {
+        return nil
+    }
+    
+    func getMessageContextSourceNode() -> ContextContentContainingNode? {
         return nil
     }
     
@@ -768,5 +789,9 @@ public class ChatMessageItemView: ListViewItemNode {
                     break
             }
         }
+    }
+    
+    func targetReactionNode(value: String) -> (ASImageNode, Int)? {
+        return nil
     }
 }

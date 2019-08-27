@@ -149,6 +149,8 @@ public final class OngoingCallContext {
                         return .connected
                     case .failed:
                         return .failed
+                    default:
+                        return .failed
                 }
             }
         }

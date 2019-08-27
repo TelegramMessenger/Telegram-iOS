@@ -170,6 +170,7 @@ private func checkIsPreviewingView(_ view: UIView) -> Bool {
 private func applyThemeToPreviewingView(_ view: UIView, accentColor: UIColor, darkBlur: Bool) {
     if let previewingActionGroupClass = previewingActionGroupClass, view.isKind(of: previewingActionGroupClass) {
         view.tintColor = accentColor
+        testZoomBlurEffect((view.superview?.superview?.subviews[1] as? UIVisualEffectView)?.effect)
         if darkBlur {
             applyThemeToPreviewingEffectView(view)
         }
@@ -214,6 +215,7 @@ public func getFirstResponderAndAccessoryHeight(_ view: UIView, _ accessoryHeigh
 public final class WindowHostView {
     public let containerView: UIView
     public let eventView: UIView
+    public let aboveStatusBarView: UIView
     public let isRotating: () -> Bool
     
     let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
@@ -235,9 +237,10 @@ public final class WindowHostView {
     var forEachController: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElements: (() -> [Any]?)?
     
-    init(containerView: UIView, eventView: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePreferNavigationUIHidden: @escaping (Bool) -> Void) {
+    init(containerView: UIView, eventView: UIView, aboveStatusBarView: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePreferNavigationUIHidden: @escaping (Bool) -> Void) {
         self.containerView = containerView
         self.eventView = eventView
+        self.aboveStatusBarView = aboveStatusBarView
         self.isRotating = isRotating
         self.updateSupportedInterfaceOrientations = updateSupportedInterfaceOrientations
         self.updateDeferScreenEdgeGestures = updateDeferScreenEdgeGestures
@@ -341,10 +344,6 @@ public class Window1 {
     
     private var isInteractionBlocked = false
     
-    /*private var accessibilityElements: [Any]? {
-        return self.viewController?.view.accessibilityElements
-    }*/
-    
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         
@@ -372,7 +371,9 @@ public class Window1 {
         self.windowLayout = WindowLayout(size: boundsSize, metrics: layoutMetricsForScreenSize(boundsSize), statusBarHeight: statusBarHeight, forceInCallStatusBarText: self.forceInCallStatusBarText, inputHeight: 0.0, safeInsets: safeInsetsForScreenSize(boundsSize, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), onScreenNavigationHeight: onScreenNavigationHeight, upperKeyboardInputPositionBound: nil, inVoiceOver: UIAccessibility.isVoiceOverRunning)
         self.updatingLayout = UpdatingLayout(layout: self.windowLayout, transition: .immediate)
         self.presentationContext = PresentationContext()
-        self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost)
+        self.overlayPresentationContext = GlobalOverlayPresentationContext(statusBarHost: statusBarHost, parentView: self.hostView.aboveStatusBarView)
+        
+        self.presentationContextContainerView = UIView()
         
         self.presentationContext.updateIsInteractionBlocked = { [weak self] value in
             self?.isInteractionBlocked = value
@@ -380,6 +381,10 @@ public class Window1 {
         
         self.presentationContext.updateHasOpaqueOverlay = { [weak self] value in
             self?._rootController?.displayNode.accessibilityElementsHidden = value
+        }
+        
+        self.presentationContext.updateModalTransition = { [weak self] value, transition in
+            self?.updateModalTransition(value, transition: transition)
         }
         
         self.hostView.present = { [weak self] controller, level, blockInteraction, completion in
@@ -437,18 +442,13 @@ public class Window1 {
             })
         }
         
-        /*self.hostView.getAccessibilityElements = { [weak self] in
-            return self?.accessibilityElements
-        }*/
-        
-        self.presentationContext.view = self.hostView.containerView
-        self.presentationContext.volumeControlStatusBarNodeView = self.volumeControlStatusBarNode.view
+        self.presentationContext.view = self.presentationContextContainerView
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
         self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
         
-        self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIApplicationWillChangeStatusBarFrame, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
+        self.statusBarChangeObserver = NotificationCenter.default.addObserver(forName: UIApplication.willChangeStatusBarFrameNotification, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
             if let strongSelf = self {
-                let statusBarHeight: CGFloat = max(20.0, (notification.userInfo?[UIApplicationStatusBarFrameUserInfoKey] as? NSValue)?.cgRectValue.height ?? 20.0)
+                let statusBarHeight: CGFloat = max(20.0, (notification.userInfo?[UIApplication.statusBarFrameUserInfoKey] as? NSValue)?.cgRectValue.height ?? 20.0)
                 
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .easeInOut)
                 strongSelf.updateLayout { $0.update(statusBarHeight: statusBarHeight, transition: transition, overrideTransition: false) }
@@ -460,11 +460,11 @@ public class Window1 {
                     return
                 }
                 let keyboardHeight = max(0.0, strongSelf.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0)
-                var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
+                var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5
                 }
-                let curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
+                let curve: UInt = (notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
                 
                 let transitionCurve: ContainedViewLayoutTransitionCurve
                 if curve == 7 {
@@ -477,9 +477,9 @@ public class Window1 {
             }
         })
         
-        self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIKeyboardWillChangeFrame, object: nil, queue: nil, using: { [weak self] notification in
+        self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
-                let keyboardFrame: CGRect = (notification.userInfo?[UIKeyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
+                let keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
                 
                 let screenHeight: CGFloat
                 
@@ -494,11 +494,11 @@ public class Window1 {
                 }
                 
                 let keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
-                var duration: Double = (notification.userInfo?[UIKeyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
+                var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5
                 }
-                let curve: UInt = (notification.userInfo?[UIKeyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
+                let curve: UInt = (notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as? NSNumber)?.uintValue ?? 7
                 
                 let transitionCurve: ContainedViewLayoutTransitionCurve
                 if curve == 7 {
@@ -512,7 +512,7 @@ public class Window1 {
         })
         
         if #available(iOSApplicationExtension 11.0, *) {
-            self.keyboardTypeChangeObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UITextInputCurrentInputModeDidChange, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
+            self.keyboardTypeChangeObserver = NotificationCenter.default.addObserver(forName: UITextInputMode.currentInputModeDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] notification in
                 if let strongSelf = self, let initialInputHeight = strongSelf.windowLayout.inputHeight, let firstResponder = getFirstResponderAndAccessoryHeight(strongSelf.hostView.eventView).0 {
                     if firstResponder.textInputMode?.primaryLanguage != nil {
                         return
@@ -540,7 +540,7 @@ public class Window1 {
         }
         
         if #available(iOSApplicationExtension 11.0, *) {
-            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIAccessibilityVoiceOverStatusDidChange, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
+            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.updateLayout { $0.update(inVoiceOver: UIAccessibility.isVoiceOverRunning) }
                 }
@@ -563,6 +563,8 @@ public class Window1 {
         }
         self.windowPanRecognizer = recognizer
         self.hostView.containerView.addGestureRecognizer(recognizer)
+        
+        self.hostView.containerView.addSubview(self.presentationContextContainerView)
         
         self.hostView.containerView.addSubview(self.volumeControlStatusBar)
         self.hostView.containerView.addSubview(self.volumeControlStatusBarNode.view)
@@ -665,7 +667,7 @@ public class Window1 {
             }
         }
         
-        if let result = self.presentationContext.hitTest(point, with: event) {
+        if let result = self.presentationContext.hitTest(view: self.hostView.containerView, point: point, with: event) {
             return result
         }
         return self.viewController?.view.hitTest(point, with: event)
@@ -694,13 +696,45 @@ public class Window1 {
             
             if let rootController = self._rootController {
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
-                    rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation), transition: .immediate)
+                    let rootLayout = containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation)
+                    var positionOffset: CGFloat = 0.0
+                    if !self.appliedModalLevel.isZero {
+                        let scale = ((rootLayout.size.width - 20.0 * 2.0) / rootLayout.size.width)
+                        rootController.displayNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
+                        let transformedUpperBound = (self.windowLayout.size.height - rootLayout.size.height * scale) / 2.0
+                        let targetBound = (self.windowLayout.statusBarHeight ?? 0.0) + 20.0 - 10.0
+                        positionOffset = targetBound - transformedUpperBound
+                    }
+                    rootController.displayNode.position = CGPoint(x: self.windowLayout.size.width / 2.0, y: self.windowLayout.size.height / 2.0 + positionOffset)
+                    rootController.displayNode.bounds = CGRect(origin: CGPoint(), size: rootLayout.size)
+                    rootController.containerLayoutUpdated(rootLayout, transition: .immediate)
+                    rootController.updateModalTransition(self.appliedModalLevel, transition: .immediate)
                 }
                 
                 self.hostView.containerView.insertSubview(rootController.view, at: 0)
             }
             
             self.hostView.eventView.setNeedsLayout()
+        }
+    }
+    
+    private func insertContentViewAtTop(_ view: UIView) {
+        if let dimView = self.dimView {
+            self.hostView.containerView.insertSubview(view, belowSubview: dimView)
+        } else {
+            self.hostView.containerView.insertSubview(view, belowSubview: self.presentationContextContainerView)
+        }
+    }
+    
+    private func insertCoveringView(_ view: UIView) {
+        self.hostView.containerView.insertSubview(view, belowSubview: self.volumeControlStatusBarNode.view)
+    }
+    
+    private func insertDimView(_ view: UIView) {
+        if let coveringView = self.coveringView {
+            self.hostView.containerView.insertSubview(view, belowSubview: coveringView)
+        } else {
+            self.hostView.containerView.insertSubview(view, belowSubview: self.presentationContextContainerView)
         }
     }
     
@@ -718,17 +752,16 @@ public class Window1 {
             let layout = containedLayoutForWindowLayout(self.windowLayout, hasOnScreenNavigation: self.hostView.hasOnScreenNavigation)
             for controller in self._topLevelOverlayControllers {
                 controller.containerLayoutUpdated(layout, transition: .immediate)
-                
-                if let coveringView = self.coveringView {
-                    self.hostView.containerView.insertSubview(controller.view, belowSubview: coveringView)
-                } else {
-                    self.hostView.containerView.insertSubview(controller.view, belowSubview: self.volumeControlStatusBarNode.view)
-                }
+                self.insertContentViewAtTop(controller.view)
             }
             
             self.presentationContext.topLevelSubview = self._topLevelOverlayControllers.first?.view
         }
     }
+    
+    private var dimView: UIView? = nil
+    
+    private let presentationContextContainerView: UIView
     
     public var coveringView: WindowCoveringView? {
         didSet {
@@ -743,7 +776,7 @@ public class Window1 {
                     coveringView.layer.removeAnimation(forKey: "opacity")
                     coveringView.layer.allowsGroupOpacity = false
                     coveringView.alpha = 1.0
-                    self.hostView.containerView.insertSubview(coveringView, belowSubview: self.volumeControlStatusBarNode.view)
+                    self.insertCoveringView(coveringView)
                     if !self.windowLayout.size.width.isZero {
                         coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                         coveringView.updateLayout(self.windowLayout.size)
@@ -752,6 +785,8 @@ public class Window1 {
             }
         }
     }
+    
+    private var appliedModalLevel: CGFloat = 0.0
     
     private func layoutSubviews() {
         var hasPreview = false
@@ -768,11 +803,19 @@ public class Window1 {
             updatedHasPreview = true
         }
         
-        if self.tracingStatusBarsInvalidated || updatedHasPreview, let statusBarManager = statusBarManager, let keyboardManager = keyboardManager {
+        var modalLevelUpdated = false
+        if self.appliedModalLevel != self.modalTransition {
+            modalLevelUpdated = self.appliedModalLevel.isZero != self.modalTransition.isZero
+            self.appliedModalLevel = self.modalTransition
+        }
+        
+        if self.tracingStatusBarsInvalidated || updatedHasPreview || modalLevelUpdated, let statusBarManager = statusBarManager, let keyboardManager = keyboardManager {
             self.tracingStatusBarsInvalidated = false
             
             if self.statusBarHidden {
-                statusBarManager.updateState(surfaces: [], withSafeInsets: false, forceInCallStatusBarText: nil, forceHiddenBySystemWindows: false, animated: false)
+                statusBarManager.updateState(surfaces: [], withSafeInsets: false, forceInCallStatusBarText: nil, forceHiddenBySystemWindows: false, forceAppearance: nil, animated: false)
+            } else if !self.modalTransition.isZero || self.isInTransitionOutOfModal {
+                statusBarManager.updateState(surfaces: [], withSafeInsets: false, forceInCallStatusBarText: nil, forceHiddenBySystemWindows: false, forceAppearance: self.isInTransitionOutOfModal ? .default : .lightContent, animated: modalLevelUpdated)
             } else {
                 var statusBarSurfaces: [StatusBarSurface] = []
                 for layers in self.hostView.containerView.layer.traceableLayerSurfaces(withTag: WindowTracingTags.statusBar) {
@@ -793,7 +836,7 @@ public class Window1 {
                     }
                 }
                 self.cachedWindowSubviewCount = self.hostView.containerView.window?.subviews.count ?? 0
-                statusBarManager.updateState(surfaces: statusBarSurfaces, withSafeInsets: !self.windowLayout.safeInsets.top.isZero, forceInCallStatusBarText: self.forceInCallStatusBarText, forceHiddenBySystemWindows: hasPreview, animated: animatedUpdate)
+                statusBarManager.updateState(surfaces: statusBarSurfaces, withSafeInsets: !self.windowLayout.safeInsets.top.isZero, forceInCallStatusBarText: self.forceInCallStatusBarText, forceHiddenBySystemWindows: hasPreview, forceAppearance: nil, animated: animatedUpdate || modalLevelUpdated)
             }
             
             var keyboardSurfaces: [KeyboardSurface] = []
@@ -966,13 +1009,31 @@ public class Window1 {
                 let childLayoutUpdated = self.updatedContainerLayout != childLayout
                 self.updatedContainerLayout = childLayout
                 
+                updatingLayout.transition.updateFrame(view: self.presentationContextContainerView, frame: CGRect(origin: CGPoint(), size: self.windowLayout.size))
+                if let dimView = self.dimView {
+                    updatingLayout.transition.updateFrame(view: dimView, frame: CGRect(origin: CGPoint(), size: self.windowLayout.size))
+                }
+                
                 if childLayoutUpdated {
                     var rootLayout = childLayout
                     let rootTransition = updatingLayout.transition
                     if self.presentationContext.isCurrentlyOpaque {
                         rootLayout.inputHeight = nil
                     }
-                    self._rootController?.containerLayoutUpdated(rootLayout, transition: rootTransition)
+                    var positionOffset: CGFloat = 0.0
+                    if let rootController = self._rootController {
+                        if !self.modalTransition.isZero {
+                            let scale = (rootLayout.size.width - 20.0 * 2.0) / rootLayout.size.width
+                            rootTransition.updateTransformScale(node: rootController.displayNode, scale: scale)
+                            
+                            let transformedUpperBound = (self.windowLayout.size.height - rootLayout.size.height * scale) / 2.0
+                            let targetBound = (self.windowLayout.statusBarHeight ?? 0.0) + 20.0 - 10.0
+                            positionOffset = targetBound - transformedUpperBound
+                        }
+                        rootTransition.updatePosition(node: rootController.displayNode, position: CGPoint(x: self.windowLayout.size.width / 2.0, y: self.windowLayout.size.height / 2.0 + positionOffset))
+                        rootTransition.updateBounds(node: rootController.displayNode, bounds: CGRect(origin: CGPoint(), size: rootLayout.size))
+                        rootController.containerLayoutUpdated(rootLayout, transition: rootTransition)
+                    }
                     self.presentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                     self.overlayPresentationContext.containerLayoutUpdated(childLayout, transition: updatingLayout.transition)
                 
@@ -1001,6 +1062,62 @@ public class Window1 {
                     coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                     coveringView.updateLayout(self.windowLayout.size)
                 }
+            }
+        }
+    }
+    
+    private var modalTransition: CGFloat = 0.0
+    private var defaultBackgroundColor: UIColor?
+    private var isInTransitionOutOfModal: Bool = false
+    
+    private func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.modalTransition = value
+        if !value.isZero {
+            if self.dimView == nil {
+                let dimView = UIView()
+                dimView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
+                dimView.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
+                self.dimView = dimView
+                self.insertDimView(dimView)
+                dimView.alpha = 0.0
+                transition.updateAlpha(layer: dimView.layer, alpha: 1.0)
+                
+                self.defaultBackgroundColor = self.hostView.containerView.backgroundColor
+                self.hostView.containerView.backgroundColor = .black
+                
+                var positionOffset: CGFloat = 0.0
+                if let rootController = self._rootController {
+                    let rootSize = rootController.displayNode.bounds.size
+                    let scale = (rootSize.width - 20.0 * 2.0) / rootSize.width
+                    transition.updateTransformScale(node: rootController.displayNode, scale: scale)
+                    
+                    let transformedUpperBound = (self.windowLayout.size.height - rootSize.height * scale) / 2.0
+                    let targetBound = (self.windowLayout.statusBarHeight ?? 0.0) + 20.0 - 10.0
+                    positionOffset = targetBound - transformedUpperBound
+                    
+                    transition.updatePosition(node: rootController.displayNode, position: CGPoint(x: self.windowLayout.size.width / 2.0, y: self.windowLayout.size.height / 2.0 + positionOffset))
+                    rootController.updateModalTransition(value, transition: transition)
+                }
+                self.layoutSubviews()
+            }
+        } else {
+            if let dimView = self.dimView {
+                self.dimView = nil
+                self.isInTransitionOutOfModal = true
+                transition.updateAlpha(layer: dimView.layer, alpha: 0.0, completion: { [weak self, weak dimView] _ in
+                    dimView?.removeFromSuperview()
+                    if let strongSelf = self {
+                        strongSelf.hostView.containerView.backgroundColor = strongSelf.defaultBackgroundColor
+                        strongSelf.isInTransitionOutOfModal = false
+                        strongSelf.layoutSubviews()
+                    }
+                })
+                if let rootController = self._rootController {
+                    transition.updateTransformScale(node: rootController.displayNode, scale: 1.0)
+                    transition.updatePosition(node: rootController.displayNode, position: CGPoint(x: self.windowLayout.size.width / 2.0, y: self.windowLayout.size.height / 2.0))
+                    rootController.updateModalTransition(0.0, transition: transition)
+                }
+                self.layoutSubviews()
             }
         }
     }

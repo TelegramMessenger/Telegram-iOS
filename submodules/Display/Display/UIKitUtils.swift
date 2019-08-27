@@ -83,9 +83,13 @@ public extension UIColor {
         var red: CGFloat = 0.0
         var green: CGFloat = 0.0
         var blue: CGFloat = 0.0
-        self.getRed(&red, green: &green, blue: &blue, alpha: nil)
-        
-        return (UInt32(red * 255.0) << 16) | (UInt32(green * 255.0) << 8) | (UInt32(blue * 255.0))
+        if self.getRed(&red, green: &green, blue: &blue, alpha: nil) {
+            return (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, green) * 255.0) << 8) | (UInt32(max(0.0, blue) * 255.0))
+        } else if self.getWhite(&red, alpha: nil) {
+            return (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, red) * 255.0) << 8) | (UInt32(max(0.0, red) * 255.0))
+        } else {
+            return 0
+        }
     }
     
     var argb: UInt32 {
@@ -93,9 +97,13 @@ public extension UIColor {
         var green: CGFloat = 0.0
         var blue: CGFloat = 0.0
         var alpha: CGFloat = 0.0
-        self.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        
-        return (UInt32(alpha * 255.0) << 24) | (UInt32(red * 255.0) << 16) | (UInt32(green * 255.0) << 8) | (UInt32(blue * 255.0))
+        if self.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+            return (UInt32(alpha * 255.0) << 24) | (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, green) * 255.0) << 8) | (UInt32(max(0.0, blue) * 255.0))
+        } else if self.getWhite(&red, alpha: &alpha) {
+            return (UInt32(max(0.0, alpha) * 255.0) << 24) | (UInt32(max(0.0, red) * 255.0) << 16) | (UInt32(max(0.0, red) * 255.0) << 8) | (UInt32(max(0.0, red) * 255.0))
+        } else {
+            return 0
+        }
     }
     
     var hsv: (CGFloat, CGFloat, CGFloat) {
@@ -106,6 +114,19 @@ public extension UIColor {
             return (hue, saturation, value)
         } else {
             return (0.0, 0.0, 0.0)
+        }
+    }
+    
+    var lightness: CGFloat {
+        var red: CGFloat = 0.0
+        var green: CGFloat = 0.0
+        var blue: CGFloat = 0.0
+        if self.getRed(&red, green: &green, blue: &blue, alpha: nil) {
+            return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+        } else if self.getWhite(&red, alpha: nil) {
+            return red
+        } else {
+            return 0.0
         }
     }
     
@@ -316,6 +337,7 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
         for sublayer in sublayers {
             let subtree = makeLayerSubtreeSnapshot(layer: sublayer)
             if let subtree = subtree {
+                subtree.transform = sublayer.transform
                 subtree.frame = sublayer.frame
                 subtree.bounds = sublayer.bounds
                 layer.addSublayer(subtree)
@@ -339,6 +361,7 @@ public extension UIView {
         }
         if let snapshot = snapshot {
             snapshot.frame = self.frame
+            snapshot.bounds = self.bounds
             return snapshot
         }
         
@@ -358,6 +381,7 @@ public extension CALayer {
         }
         if let snapshot = snapshot {
             snapshot.frame = self.frame
+            snapshot.bounds = self.bounds
             return snapshot
         }
         

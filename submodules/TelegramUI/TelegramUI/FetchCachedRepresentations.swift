@@ -13,7 +13,11 @@ import WebPImage
 import WebP
 #endif
 import Lottie
-import TelegramUIPrivateModule
+import MediaResources
+import PhotoResources
+import ImageBlur
+import AnimationUI
+import WallpaperResources
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {
     if let representation = representation as? CachedStickerAJpegRepresentation {
@@ -77,7 +81,7 @@ public func fetchCachedResourceRepresentation(account: Account, resource: MediaR
                 return .complete()
             }
             return fetchCachedPatternWallpaperRepresentation(account: account, resource: resource, resourceData: data, representation: representation)
-        }
+        } 
     } else if let representation = representation as? CachedAlbumArtworkRepresentation {
         return account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false))
         |> mapToSignal { data -> Signal<CachedMediaResourceRepresentationResult, NoError> in
@@ -710,7 +714,7 @@ private func fetchEmojiThumbnailRepresentation(account: Account, resource: Media
         
         let nsString = (resource.emoji as NSString)
         let font = Font.regular(52.0)
-        let stringAttributes = [NSAttributedStringKey.font: font]
+        let stringAttributes = [NSAttributedString.Key.font: font]
         var textSize = nsString.size(withAttributes: stringAttributes)
         textSize = CGSize(width: ceil(textSize.width) + 1.0, height: ceil(textSize.height) + 1.0)
         
@@ -904,7 +908,7 @@ private func fetchAnimatedStickerFirstFrameRepresentation(account: Account, reso
             return EmptyDisposable
         }
     })
-        |> runOn(Queue.concurrentDefaultQueue())
+    |> runOn(Queue.concurrentDefaultQueue())
 }
 
 private func fetchAnimatedStickerRepresentation(account: Account, resource: MediaResource, resourceData: MediaResourceData, representation: CachedAnimatedStickerRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {

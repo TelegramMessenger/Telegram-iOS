@@ -24,6 +24,7 @@
 @property (nonatomic, assign) bool shouldStoreAssets;
 @property (nonatomic, assign) bool hasTimer;
 @property (nonatomic, assign) bool hasSilentPosting;
+@property (nonatomic, assign) bool hasSchedule;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context image:(UIImage *)image metadata:(PGCameraShotMetadata *)metadata recipientName:(NSString *)recipientName backButtonTitle:(NSString *)backButtonTitle doneButtonTitle:(NSString *)doneButtonTitle saveCapturedMedia:(bool)saveCapturedMedia saveEditedPhotos:(bool)saveEditedPhotos;

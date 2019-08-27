@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
 
 enum ChatMessageBubbleContentBackgroundHiding {
     case never
@@ -73,6 +74,7 @@ enum ChatMessageBubbleContentTapAction {
     case hashtag(String?, String)
     case instantPage
     case wallpaper
+    case theme
     case call(PeerId)
     case openMessage
     case timecode(Double, String)
@@ -106,6 +108,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     var visibility: ListViewItemNodeVisibility = .none
     
     var item: ChatMessageBubbleContentItem?
+    
+    var updateIsTextSelectionActive: ((Bool) -> Void)?
     
     required override init() {
         super.init()
@@ -164,5 +168,15 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     
     func updateHighlightedState(animated: Bool) -> Bool {
         return false
+    }
+    
+    func willUpdateIsExtractedToContextPreview(_ value: Bool) {    
+    }
+    
+    func updateIsExtractedToContextPreview(_ value: Bool) {
+    }
+    
+    func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        return nil
     }
 }

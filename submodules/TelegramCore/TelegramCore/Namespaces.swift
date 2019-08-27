@@ -10,6 +10,10 @@ public struct Namespaces {
         public static let Cloud: Int32 = 0
         public static let Local: Int32 = 1
         public static let SecretIncoming: Int32 = 2
+        public static let ScheduledCloud: Int32 = 3
+        public static let ScheduledLocal: Int32 = 4
+        
+        public static let allScheduled: Set<Int32> = Set([Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal])
     }
     
     public struct Media {
@@ -55,6 +59,7 @@ public struct Namespaces {
         public static let CloudWallpapers: Int32 = 6
         public static let CloudSavedStickers: Int32 = 7
         public static let RecentlyUsedHashtags: Int32 = 8
+        public static let CloudThemes: Int32 = 9
     }
     
     struct CachedItemCollection {
@@ -66,6 +71,7 @@ public struct Namespaces {
         public static let cachedStickerQueryResults: Int8 = 5
         public static let cachedSecureIdConfiguration: Int8 = 6
         public static let cachedWallpapersConfiguration: Int8 = 7
+        public static let cachedThemesConfiguration: Int8 = 7
     }
     
     struct UnorderedItemList {
@@ -107,6 +113,8 @@ public extension LocalMessageTags {
 
 public extension PendingMessageActionType {
     static let consumeUnseenPersonalMessage = PendingMessageActionType(rawValue: 0)
+    static let updateReaction = PendingMessageActionType(rawValue: 1)
+    static let sendScheduledMessageImmediately = PendingMessageActionType(rawValue: 2)
 }
 
 let peerIdNamespacesWithInitialCloudMessageHoles = [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel]
@@ -135,9 +143,9 @@ public struct OperationLogTags {
 }
 
 public extension PeerSummaryCounterTags {
-    public static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
-    public static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
-    public static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
+    static let regularChatsAndPrivateGroups = PeerSummaryCounterTags(rawValue: 1 << 0)
+    static let publicGroups = PeerSummaryCounterTags(rawValue: 1 << 1)
+    static let channels = PeerSummaryCounterTags(rawValue: 1 << 2)
 }
 
 private enum PreferencesKeyValues: Int32 {

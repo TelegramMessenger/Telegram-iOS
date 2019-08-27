@@ -1,11 +1,12 @@
 import Foundation
 import SwiftSignalKit
-import TelegramUIPrivateModule
 import CoreMedia
 import AVFoundation
 import TelegramCore
 import TelegramAudio
 import UniversalMediaPlayer
+import AccountContext
+import OpusBinding
 
 private let kOutputBus: UInt32 = 0
 private let kInputBus: UInt32 = 1
@@ -133,12 +134,6 @@ private func rendererInputProc(refCon: UnsafeMutableRawPointer, ioActionFlags: U
     return noErr
 }
 
-struct RecordedAudioData {
-    let compressedData: Data
-    let duration: Double
-    let waveform: Data?
-}
-
 private let beginToneData: TonePlayerData? = {
     guard let url = Bundle.main.url(forResource: "begin_record", withExtension: "caf") else {
         return nil
@@ -241,7 +236,7 @@ final class ManagedAudioRecorderContext {
                     toneData.withUnsafeBytes { (dataBytes: UnsafePointer<UInt8>) -> Void in
                         memcpy(bytes, dataBytes.advanced(by: takeRange.lowerBound), takeRange.count)
                     }
-                    let status = CMBlockBufferCreateWithMemoryBlock(nil, bytes, takeRange.count, nil, nil, 0, takeRange.count, 0, &blockBuffer)
+                    let status = CMBlockBufferCreateWithMemoryBlock(allocator: nil, memoryBlock: bytes, blockLength: takeRange.count, blockAllocator: nil, customBlockSource: nil, offsetToData: 0, dataLength: takeRange.count, flags: 0, blockBufferOut: &blockBuffer)
                     if status != noErr {
                         return .finished
                     }
@@ -252,7 +247,7 @@ final class ManagedAudioRecorderContext {
                     var timingInfo = CMSampleTimingInfo(duration: CMTime(value: Int64(sampleCount), timescale: 44100), presentationTimeStamp: pts, decodeTimeStamp: pts)
                     var sampleBuffer: CMSampleBuffer?
                     var sampleSize = takeRange.count
-                    guard CMSampleBufferCreate(nil, blockBuffer, true, nil, nil, nil, 1, 1, &timingInfo, 1, &sampleSize, &sampleBuffer) == noErr else {
+                    guard CMSampleBufferCreate(allocator: nil, dataBuffer: blockBuffer, dataReady: true, makeDataReadyCallback: nil, refcon: nil, formatDescription: nil, sampleCount: 1, sampleTimingEntryCount: 1, sampleTimingArray: &timingInfo, sampleSizeEntryCount: 1, sampleSizeArray: &sampleSize, sampleBufferOut: &sampleBuffer) == noErr else {
                         return .finished
                     }
                     
@@ -646,13 +641,7 @@ final class ManagedAudioRecorderContext {
     }
 }
 
-enum AudioRecordingState: Equatable {
-    case paused(duration: Double)
-    case recording(duration: Double, durationMediaTimestamp: Double)
-    case stopped
-}
-
-final class ManagedAudioRecorder {
+final class ManagedAudioRecorderImpl: ManagedAudioRecorder {
     private let queue = Queue()
     private var contextRef: Unmanaged<ManagedAudioRecorderContext>?
     private let micLevelValue = ValuePromise<Float>(0.0)

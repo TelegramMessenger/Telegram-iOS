@@ -6,23 +6,11 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import TelegramUIPreferences
-
-enum WebsiteType {
-    case generic
-    case twitter
-    case instagram
-}
-
-func websiteType(of webpage: TelegramMediaWebpageLoadedContent) -> WebsiteType {
-    if let websiteName = webpage.websiteName?.lowercased() {
-        if websiteName == "twitter" {
-            return .twitter
-        } else if websiteName == "instagram" {
-            return .instagram
-        }
-    }
-    return .generic
-}
+import TextFormat
+import AccountContext
+import WebsiteType
+import InstantPageUI
+import UrlHandling
 
 enum InstantPageType {
     case generic
@@ -34,7 +22,7 @@ func instantPageType(of webpage: TelegramMediaWebpageLoadedContent) -> InstantPa
         return .album
     }
     
-    switch websiteType(of: webpage) {
+    switch websiteType(of: webpage.websiteName) {
         case .instagram, .twitter:
             return .album
         default:
@@ -141,6 +129,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     } else if content.type == "telegram_background" {
                         item.controllerInteraction.openWallpaper(item.message)
                         return
+                    } else if content.type == "telegram_theme" {
+                        item.controllerInteraction.openTheme(item.message)
+                        return
                     }
                 }
                 let openChatMessageMode: ChatControllerInteractionOpenMessageMode
@@ -204,7 +195,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             var actionTitle: String?
             
             if let webpage = webPageContent {
-                let type = websiteType(of: webpage)
+                let type = websiteType(of: webpage.websiteName)
                 
                 if let websiteName = webpage.websiteName, !websiteName.isEmpty {
                     title = websiteName
@@ -267,7 +258,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, color, intensity) = wallpaper {
                             patternColor = color?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, patternColor))
+                        let media = WallpaperPreviewMedia(content: .file(file, patternColor, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
@@ -293,13 +284,18 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         mediaAndFlags = (image, flags)
                     }
-                } else if let type = webpage.type, type == "telegram_background" {
-                    if let text = webpage.text, let colorCodeRange = text.range(of: "#") {
-                        let colorCode = String(text[colorCodeRange.upperBound...])
-                        if colorCode.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: colorCode) {
-                            let media = WallpaperPreviewMedia(content: .color(color))
-                            mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                } else if let type = webpage.type {
+                    if type == "telegram_backgroud" {
+                        if let text = webpage.text, let colorCodeRange = text.range(of: "#") {
+                            let colorCode = String(text[colorCodeRange.upperBound...])
+                            if colorCode.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789abcdefABCDEF").inverted) == nil, let color = UIColor(hexString: colorCode) {
+                                let media = WallpaperPreviewMedia(content: .color(color))
+                                mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                            }
                         }
+                    } else if type == "telegram_theme", let files = webpage.files, let file = files.first {
+                        let media = WallpaperPreviewMedia(content: .file(file, nil, true))
+                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                     }
                 }
                 
@@ -324,6 +320,10 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             subtitle = nil
                             text = nil
                             actionTitle = item.presentationData.strings.Conversation_ViewBackground
+                        case "telegram_theme":
+                            title = item.presentationData.strings.Conversation_Theme
+                            text = nil
+                            actionTitle = item.presentationData.strings.Conversation_ViewTheme
                         default:
                             break
                     }
@@ -388,7 +388,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if mention.hasPrefix("@") {
                             mention = String(mention[mention.index(after: mention.startIndex)...])
                         }
-                        switch websiteType(of: content) {
+                        switch websiteType(of: content.websiteName) {
                             case .twitter:
                                 return .url(url: "https://twitter.com/\(mention)", concealed: false)
                             case .instagram:
@@ -403,7 +403,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if hashtag.hasPrefix("#") {
                             hashtag = String(hashtag[hashtag.index(after: hashtag.startIndex)...])
                         }
-                        switch websiteType(of: content) {
+                        switch websiteType(of: content.websiteName) {
                             case .twitter:
                                 return .url(url: "https://twitter.com/hashtag/\(hashtag)", concealed: false)
                             case .instagram:
@@ -418,7 +418,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
             
             if let webPage = self.webPage, case let .Loaded(content) = webPage.content {
                 if content.instantPage != nil {
-                    switch websiteType(of: content) {
+                    switch websiteType(of: content.websiteName) {
                         case .instagram, .twitter:
                             return .none
                         default:
@@ -426,6 +426,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                 } else if content.type == "telegram_background" {
                     return .wallpaper
+                } else if content.type == "telegram_theme" {
+                    return .theme
                 }
             }
             if self.contentNode.hasActionAtPoint(point.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY)) {
@@ -499,5 +501,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateTouchesAtPoint(_ point: CGPoint?) {
         let contentNodeFrame = self.contentNode.frame
         self.contentNode.updateTouchesAtPoint(point.flatMap { $0.offsetBy(dx: -contentNodeFrame.minX, dy: -contentNodeFrame.minY) })
+    }
+    
+    override func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        return self.contentNode.reactionTargetNode(value: value)
     }
 }

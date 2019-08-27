@@ -13,6 +13,10 @@ import MtProtoKitDynamic
 import MessageUI
 import CoreTelephony
 import TelegramPresentationData
+import TextFormat
+import AccountContext
+import CountrySelectionUI
+import SettingsUI
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)
@@ -309,7 +313,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                                 })]), on: .root, blockInteraction: false, completion: {})
                                             })
                                         ], actionLayout: .vertical)
-                                        contentNode.textAttributeAction = (NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), { value in
+                                        contentNode.textAttributeAction = (NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), { value in
                                             if let value = value as? String {
                                                 strongSelf.openUrl(value)
                                             }
@@ -811,7 +815,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
     }
     
     private func animateOut(completion: (() -> Void)? = nil) {
-        self.view.layer.animatePosition(from: self.view.layer.position, to: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), duration: 0.2, timingFunction: kCAMediaTimingFunctionEaseInEaseOut, removeOnCompletion: false, completion: { _ in
+        self.view.layer.animatePosition(from: self.view.layer.position, to: CGPoint(x: self.view.layer.position.x, y: self.view.layer.position.y + self.view.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
             completion?()
         })
     }

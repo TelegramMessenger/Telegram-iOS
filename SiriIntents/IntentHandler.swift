@@ -174,6 +174,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     }
     
     private func resolve(persons: [INPerson]?, with completion: @escaping ([ResolveResult]) -> Void) {
+        let account = self.accountPromise.get()
         guard let initialPersons = persons, !initialPersons.isEmpty else {
             completion([.needsValue])
             return
@@ -229,8 +230,6 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             }
             return nil
         })
-        
-        let account = self.accountPromise.get()
         
         let signal = matchingDeviceContacts(stableIds: stableIds)
         |> take(1)
@@ -521,6 +520,11 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         self.resolve(persons: intent.contacts, with: { result in
             completion(result.map { $0.personResolutionResult })
         })
+    }
+    
+    @available(iOSApplicationExtension 11.0, *)
+    func resolveDestinationType(for intent: INStartAudioCallIntent, with completion: @escaping (INCallDestinationTypeResolutionResult) -> Void) {
+        completion(.success(with: .normal))
     }
     
     func handle(intent: INStartAudioCallIntent, completion: @escaping (INStartAudioCallIntentResponse) -> Void) {

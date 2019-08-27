@@ -9,8 +9,6 @@ import Foundation
     import SwiftSignalKit
 #endif
 
-import TelegramCorePrivateModule
-
 enum PendingMessageUploadedContent {
     case text(String)
     case media(Api.InputMedia, String)
@@ -304,7 +302,7 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                         storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil)
                                     }
                                     var updatedAttributes = currentMessage.attributes
-                                    if let index = updatedAttributes.index(where: { $0 is OutgoingMessageInfoAttribute }){
+                                    if let index = updatedAttributes.firstIndex(where: { $0 is OutgoingMessageInfoAttribute }){
                                         let attribute = updatedAttributes[index] as! OutgoingMessageInfoAttribute
                                         updatedAttributes[index] = attribute.withUpdatedFlags(attribute.flags.union([.transformedMedia]))
                                     } else {
@@ -566,7 +564,7 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                                     storeForwardInfo = StoreMessageForwardInfo(authorId: forwardInfo.author?.id, sourceId: forwardInfo.source?.id, sourceMessageId: forwardInfo.sourceMessageId, date: forwardInfo.date, authorSignature: nil)
                                 }
                                 var updatedAttributes = currentMessage.attributes
-                                if let index = updatedAttributes.index(where: { $0 is OutgoingMessageInfoAttribute }){
+                                if let index = updatedAttributes.firstIndex(where: { $0 is OutgoingMessageInfoAttribute }){
                                     let attribute = updatedAttributes[index] as! OutgoingMessageInfoAttribute
                                     updatedAttributes[index] = attribute.withUpdatedFlags(attribute.flags.union([.transformedMedia]))
                                 } else {

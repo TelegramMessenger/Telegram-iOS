@@ -4,6 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import Display
+import PhotoResources
 
 private final class SoftwareVideoThumbnailLayerNullAction: NSObject, CAAction {
     @objc func run(forKey event: String, object anObject: Any, arguments dict: [AnyHashable : Any]?) {
@@ -25,7 +26,7 @@ final class SoftwareVideoThumbnailLayer: CALayer {
         super.init()
         
         self.backgroundColor = UIColor.clear.cgColor
-        self.contentsGravity = "resizeAspectFill"
+        self.contentsGravity = .resizeAspectFill
         self.masksToBounds = true
         
         if let dimensions = fileReference.media.dimensions {

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import TelegramPresentationData
 
 enum ChatMessageBackgroundMergeType: Equatable {
     case None, Side, Top(side: Bool), Bottom, Both
@@ -58,8 +59,9 @@ enum ChatMessageBackgroundType: Equatable {
 
 class ChatMessageBackground: ASImageNode {
     private(set) var type: ChatMessageBackgroundType?
-    private var currentHighlighted = false
+    private var currentHighlighted: Bool?
     private var graphics: PrincipalThemeEssentialGraphics?
+    private var maskMode: Bool?
     
     override init() {
         super.init()
@@ -69,9 +71,15 @@ class ChatMessageBackground: ASImageNode {
         self.displayWithoutProcessing = true
     }
     
-    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, transition: ContainedViewLayoutTransition) {
+    func setMaskMode(_ maskMode: Bool) {
+        if let type = self.type, let highlighted = self.currentHighlighted, let graphics = self.graphics {
+            self.setType(type: type, highlighted: highlighted, graphics: graphics, maskMode: maskMode, transition: .immediate)
+        }
+    }
+    
+    func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, transition: ContainedViewLayoutTransition) {
         let previousType = self.type
-        if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics {
+        if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, self.maskMode == maskMode {
             return
         }
         self.type = type
@@ -80,42 +88,50 @@ class ChatMessageBackground: ASImageNode {
         
         let image: UIImage?
         switch type {
-            case .none:
+        case .none:
+            image = nil
+        case let .incoming(mergeType):
+            if maskMode && graphics.incomingBubbleGradientImage != nil {
                 image = nil
-            case let .incoming(mergeType):
+            } else {
                 switch mergeType {
-                    case .None:
-                        image = highlighted ? graphics.chatMessageBackgroundIncomingHighlightedImage : graphics.chatMessageBackgroundIncomingImage
-                    case let .Top(side):
-                        if side {
-                            image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopSideHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopSideImage
-                        } else {
-                            image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopImage
-                        }
-                    case .Bottom:
-                        image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBottomHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBottomImage
-                    case .Both:
-                        image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBothHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBothImage
-                    case .Side:
-                        image = highlighted ? graphics.chatMessageBackgroundIncomingMergedSideHighlightedImage : graphics.chatMessageBackgroundIncomingMergedSideImage
+                case .None:
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingHighlightedImage : graphics.chatMessageBackgroundIncomingImage
+                case let .Top(side):
+                    if side {
+                        image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopSideHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopSideImage
+                    } else {
+                        image = highlighted ? graphics.chatMessageBackgroundIncomingMergedTopHighlightedImage : graphics.chatMessageBackgroundIncomingMergedTopImage
+                    }
+                case .Bottom:
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBottomHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBottomImage
+                case .Both:
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingMergedBothHighlightedImage : graphics.chatMessageBackgroundIncomingMergedBothImage
+                case .Side:
+                    image = highlighted ? graphics.chatMessageBackgroundIncomingMergedSideHighlightedImage : graphics.chatMessageBackgroundIncomingMergedSideImage
                 }
-            case let .outgoing(mergeType):
+            }
+        case let .outgoing(mergeType):
+            if maskMode && graphics.outgoingBubbleGradientImage != nil {
+                image = nil
+            } else {
                 switch mergeType {
-                    case .None:
-                        image = highlighted ? graphics.chatMessageBackgroundOutgoingHighlightedImage : graphics.chatMessageBackgroundOutgoingImage
-                    case let .Top(side):
-                        if side {
-                            image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopSideHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopSideImage
-                        } else {
-                            image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopImage
-                        }
-                    case .Bottom:
-                        image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBottomHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBottomImage
-                    case .Both:
-                        image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBothHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBothImage
-                    case .Side:
-                        image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedSideHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedSideImage
+                case .None:
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingHighlightedImage : graphics.chatMessageBackgroundOutgoingImage
+                case let .Top(side):
+                    if side {
+                        image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopSideHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopSideImage
+                    } else {
+                        image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedTopHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedTopImage
+                    }
+                case .Bottom:
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBottomHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBottomImage
+                case .Both:
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedBothHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedBothImage
+                case .Side:
+                    image = highlighted ? graphics.chatMessageBackgroundOutgoingMergedSideHighlightedImage : graphics.chatMessageBackgroundOutgoingMergedSideImage
                 }
+            }
         }
         
         if let previousType = previousType, previousType != .none, type == .none {

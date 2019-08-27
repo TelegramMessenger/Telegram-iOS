@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
+import AccountContext
 
 final class ChatSendMessageActionSheetController: ViewController {
     var controllerNode: ChatSendMessageActionSheetControllerNode {
@@ -60,11 +61,19 @@ final class ChatSendMessageActionSheetController: ViewController {
             forwardedCount = forwardMessageIds.count
         }
         
-        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
+        var reminders = false
+        if case let .peer(peerId) = self.interfaceState.chatLocation, peerId == context.account.peerId {
+            reminders = true
+        }
+        
+        self.displayNode = ChatSendMessageActionSheetControllerNode(context: self.context, reminders: reminders, sendButtonFrame: self.sendButtonFrame, textInputNode: self.textInputNode, forwardedCount: forwardedCount, send: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(false)
             self?.dismiss(cancel: false)
         }, sendSilently: { [weak self] in
             self?.controllerInteraction?.sendCurrentMessage(true)
+            self?.dismiss(cancel: false)
+        }, schedule: { [weak self] in
+            self?.controllerInteraction?.scheduleCurrentMessage()
             self?.dismiss(cancel: false)
         }, cancel: { [weak self] in
             self?.dismiss(cancel: true)

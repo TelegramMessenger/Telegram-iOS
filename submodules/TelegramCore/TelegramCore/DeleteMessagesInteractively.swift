@@ -80,28 +80,39 @@ public func deleteMessagesInteractively(postbox: Postbox, messageIds initialMess
     }
 }
 
-public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: InteractiveMessagesDeletionType) -> Signal<Void, NoError> {
+public enum InteractiveHistoryClearingType: Int32 {
+    case forLocalPeer = 0
+    case forEveryone = 1
+    case scheduledMessages = 2
+}
+
+public func clearHistoryInteractively(postbox: Postbox, peerId: PeerId, type: InteractiveHistoryClearingType) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup || peerId.namespace == Namespaces.Peer.CloudChannel {
-            cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil, type: type)
-            var topIndex: MessageIndex?
-            if let topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud), let topMessage = transaction.getMessage(topMessageId) {
-                topIndex = topMessage.index
-            }
-            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
-            if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference {
-                cloudChatAddClearHistoryOperation(transaction: transaction, peerId: migrationReference.maxMessageId.peerId, explicitTopMessageId: MessageId(peerId: migrationReference.maxMessageId.peerId, namespace: migrationReference.maxMessageId.namespace, id: migrationReference.maxMessageId.id + 1), type: type)
-                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: migrationReference.maxMessageId.peerId)
-            }
-            if let topIndex = topIndex {
-                if peerId.namespace == Namespaces.Peer.CloudUser {
-                    let _ = transaction.addMessages([StoreMessage(id: topIndex.id, globallyUniqueId: nil, groupingKey: nil, timestamp: topIndex.timestamp, flags: StoreMessageFlags(), tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [TelegramMediaAction(action: .historyCleared)])], location: .Random)
-                } else {
-                    updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: topIndex.timestamp, forceRootGroupIfNotExists: false)
+            cloudChatAddClearHistoryOperation(transaction: transaction, peerId: peerId, explicitTopMessageId: nil, type: CloudChatClearHistoryType(type))
+            if type == .scheduledMessages {
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .just(Namespaces.Message.allScheduled))
+            } else {
+                var topIndex: MessageIndex?
+                if let topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud), let topMessage = transaction.getMessage(topMessageId) {
+                    topIndex = topMessage.index
+                }
+            
+                clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .not(Namespaces.Message.allScheduled))
+                if let cachedData = transaction.getPeerCachedData(peerId: peerId) as? CachedChannelData, let migrationReference = cachedData.migrationReference {
+                    cloudChatAddClearHistoryOperation(transaction: transaction, peerId: migrationReference.maxMessageId.peerId, explicitTopMessageId: MessageId(peerId: migrationReference.maxMessageId.peerId, namespace: migrationReference.maxMessageId.namespace, id: migrationReference.maxMessageId.id + 1), type: CloudChatClearHistoryType(type))
+                    clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: migrationReference.maxMessageId.peerId, namespaces: .all)
+                }
+                if let topIndex = topIndex {
+                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                        let _ = transaction.addMessages([StoreMessage(id: topIndex.id, globallyUniqueId: nil, groupingKey: nil, timestamp: topIndex.timestamp, flags: StoreMessageFlags(), tags: [], globalTags: [], localTags: [], forwardInfo: nil, authorId: nil, text: "", attributes: [], media: [TelegramMediaAction(action: .historyCleared)])], location: .Random)
+                    } else {
+                        updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: topIndex.timestamp, forceRootGroupIfNotExists: false)
+                    }
                 }
             }
         } else if peerId.namespace == Namespaces.Peer.SecretChat {
-            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId)
+            clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peerId, namespaces: .all)
             
             if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
                 var layer: SecretChatLayer?
@@ -156,7 +167,9 @@ public func clearAuthorHistory(account: Account, peerId: PeerId, memberId: PeerI
             |> `catch` { success -> Signal<Void, NoError> in
                 if success {
                     return account.postbox.transaction { transaction -> Void in
-                        transaction.removeAllMessagesWithAuthor(peerId, authorId: memberId, namespace: Namespaces.Message.Cloud)
+                        transaction.removeAllMessagesWithAuthor(peerId, authorId: memberId, namespace: Namespaces.Message.Cloud, forEachMedia: { media in
+                            processRemovedMedia(account.postbox.mediaBox, media)
+                        })
                     }
                 } else {
                     return .complete()

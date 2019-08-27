@@ -22,7 +22,7 @@ public class ImmediateTextNode: TextNode {
     
     public var trailingLineWidth: CGFloat?
     
-    public var highlightAttributeAction: (([NSAttributedStringKey: Any]) -> NSAttributedStringKey?)? {
+    public var highlightAttributeAction: (([NSAttributedString.Key: Any]) -> NSAttributedString.Key?)? {
         didSet {
             if self.isNodeLoaded {
                 self.updateInteractiveActions()
@@ -30,8 +30,8 @@ public class ImmediateTextNode: TextNode {
         }
     }
     
-    public var tapAttributeAction: (([NSAttributedStringKey: Any]) -> Void)?
-    public var longTapAttributeAction: (([NSAttributedStringKey: Any]) -> Void)?
+    public var tapAttributeAction: (([NSAttributedString.Key: Any]) -> Void)?
+    public var longTapAttributeAction: (([NSAttributedString.Key: Any]) -> Void)?
     
     public func updateLayout(_ constrainedSize: CGSize) -> CGSize {
         let makeLayout = TextNode.asyncLayout(self)

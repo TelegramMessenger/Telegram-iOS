@@ -5,6 +5,8 @@ import Display
 import TelegramPresentationData
 
 final class ChatTextInputActionButtonsNode: ASDisplayNode {
+    private let strings: PresentationStrings
+    
     let micButton: ChatTextInputMediaRecordingButton
     let sendButton: HighlightTrackingButton
     var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
@@ -21,7 +23,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme, presentController: @escaping (ViewController) -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, presentController: @escaping (ViewController) -> Void) {
+        self.strings = strings
+        
         self.micButton = ChatTextInputMediaRecordingButton(theme: theme, presentController: presentController)
         self.sendButton = HighlightTrackingButton()
         self.sendButton.adjustsImageWhenHighlighted = false
@@ -32,7 +36,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         super.init()
         
         self.isAccessibilityElement = true
-        self.accessibilityTraits = UIAccessibilityTraitButton | UIAccessibilityTraitNotEnabled
+        self.accessibilityTraits = [.button, .notEnabled]
         
         self.sendButton.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -85,7 +89,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         
         transition.updateFrame(layer: self.sendButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         
-        if let slowmodeState = interfaceState.slowmodeState, interfaceState.editMessageState == nil {
+        if let slowmodeState = interfaceState.slowmodeState, !interfaceState.isScheduledMessages && interfaceState.editMessageState == nil {
             let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
             if let current = self.sendButtonRadialStatusNode {
                 sendButtonRadialStatusNode = current
@@ -123,18 +127,18 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
     
     func updateAccessibility() {
         if !self.micButton.alpha.isZero {
-            self.accessibilityTraits = UIAccessibilityTraitButton
+            self.accessibilityTraits = .button
             switch self.micButton.mode {
                 case .audio:
-                    self.accessibilityLabel = "Voice Message"
-                    self.accessibilityHint = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to video."
+                    self.accessibilityLabel = self.strings.VoiceOver_Chat_RecordModeVoiceMessage
+                    self.accessibilityHint = self.strings.VoiceOver_Chat_RecordModeVoiceMessageInfo
                 case .video:
-                    self.accessibilityLabel = "Video Message"
-                    self.accessibilityHint = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to audio."
+                    self.accessibilityLabel = self.strings.VoiceOver_Chat_RecordModeVideoMessage
+                    self.accessibilityHint = self.strings.VoiceOver_Chat_RecordModeVideoMessageInfo
             }
         } else {
-            self.accessibilityTraits = UIAccessibilityTraitButton
-            self.accessibilityLabel = "Send"
+            self.accessibilityTraits = .button
+            self.accessibilityLabel = self.strings.MediaPicker_Send
             self.accessibilityHint = nil
         }
     }

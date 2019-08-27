@@ -126,7 +126,7 @@ private class StatusBarItemNode: ASDisplayNode {
                     
                     formatter?.locale = Locale.current
                     if let string = formatter?.string(from: Date()) {
-                        let attributedString = NSAttributedString(string: string, attributes: [NSAttributedStringKey.font: UIFont.boldSystemFont(ofSize: 12.0), NSAttributedStringKey.foregroundColor: color])
+                        let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 12.0), NSAttributedString.Key.foregroundColor: color])
                         
                         let line = CTLineCreateWithAttributedString(attributedString)
 
@@ -482,7 +482,7 @@ class StatusBarProxyNode: ASDisplayNode {
                     self.timer = Timer(timeInterval: 5.0, target: StatusBarProxyNodeTimerTarget { [weak self] in
                         self?.updateItems()
                     }, selector: #selector(StatusBarProxyNodeTimerTarget.tick), userInfo: nil, repeats: true)
-                    RunLoop.main.add(self.timer!, forMode: .commonModes)
+                    RunLoop.main.add(self.timer!, forMode: .common)
                 } else {
                     self.timer?.invalidate()
                     self.timer = nil

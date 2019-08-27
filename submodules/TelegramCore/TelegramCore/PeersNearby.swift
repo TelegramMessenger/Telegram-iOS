@@ -184,7 +184,7 @@ public func updateChannelGeoLocation(postbox: Postbox, network: Network, channel
                         } else {
                             peerGeoLocation = nil
                         }
-                        return current.withUpdatedPeerGeoLocation(peerGeoLocation: peerGeoLocation)
+                        return current.withUpdatedPeerGeoLocation(peerGeoLocation)
                     })
                 }
                 |> map { _ in

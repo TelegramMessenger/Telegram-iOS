@@ -6,6 +6,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import MergeLists
+import AccountContext
+import StickerPackPreviewUI
+import PeerInfoUI
+import SettingsUI
 
 private struct PeerSpecificPackData {
     let peer: Peer
@@ -923,7 +928,7 @@ final class ChatMediaInputNode: ChatInputNode {
                 for pane in panes {
                     if pane.supernode != nil, pane.frame.contains(point) {
                         if let pane = pane as? ChatMediaInputGifPane {
-                            if let (file, rect) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
+                            if let (file, _) = pane.fileAt(point: point.offsetBy(dx: -pane.frame.minX, dy: -pane.frame.minY)) {
                                 return .single((strongSelf, ChatContextResultPeekContent(account: strongSelf.context.account, contextResult: .internalReference(queryId: 0, id: "", type: "gif", title: nil, description: nil, image: nil, file: file.media, message: .auto(caption: "", entities: nil, replyMarkup: nil)), menu: [
                                     PeekControllerMenuItem(title: strongSelf.strings.ShareMenu_Send, color: .accent, font: .bold, action: { node, rect in
                                         if let strongSelf = self {
@@ -1037,7 +1042,7 @@ final class ChatMediaInputNode: ChatInputNode {
     }
     
     private func setCurrentPane(_ pane: ChatMediaInputPaneType, transition: ContainedViewLayoutTransition, collectionIdHint: Int32? = nil) {
-        if let index = self.paneArrangement.panes.index(of: pane), index != self.paneArrangement.currentIndex {
+        if let index = self.paneArrangement.panes.firstIndex(of: pane), index != self.paneArrangement.currentIndex {
             let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
             if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, isVisible) = self.validLayout {
@@ -1122,8 +1127,8 @@ final class ChatMediaInputNode: ChatInputNode {
         }
         
         if let currentView = self.currentView, let firstVisibleCollectionId = firstVisibleCollectionId, !ensuredNodeVisible {
-            let targetIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == collectionId })
-            let firstVisibleIndex = currentView.collectionInfos.index(where: { id, _, _ in return id == firstVisibleCollectionId })
+            let targetIndex = currentView.collectionInfos.firstIndex(where: { id, _, _ in return id == collectionId })
+            let firstVisibleIndex = currentView.collectionInfos.firstIndex(where: { id, _, _ in return id == firstVisibleCollectionId })
             if let targetIndex = targetIndex, let firstVisibleIndex = firstVisibleIndex {
                 let toRight = targetIndex > firstVisibleIndex
                 self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [], scrollToItem: ListViewScrollToItem(index: targetIndex, position: toRight ? .bottom(0.0) : .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: toRight ? .Down : .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil)
@@ -1355,7 +1360,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if !self.animatingGifPaneOut {
                         self.animatingGifPaneOut = true
                         var toLeft = false
-                        if let index = self.paneArrangement.panes.index(of: .gifs), index < self.paneArrangement.currentIndex {
+                        if let index = self.paneArrangement.panes.firstIndex(of: .gifs), index < self.paneArrangement.currentIndex {
                             toLeft = true
                         }
                         transition.animatePosition(node: self.gifPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.gifPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
@@ -1380,7 +1385,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if !self.animatingStickerPaneOut {
                         self.animatingStickerPaneOut = true
                         var toLeft = false
-                        if let index = self.paneArrangement.panes.index(of: .stickers), index < self.paneArrangement.currentIndex {
+                        if let index = self.paneArrangement.panes.firstIndex(of: .stickers), index < self.paneArrangement.currentIndex {
                             toLeft = true
                         }
                         transition.animatePosition(node: self.stickerPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.stickerPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in
@@ -1405,7 +1410,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     if !self.animatingTrendingPaneOut {
                         self.animatingTrendingPaneOut = true
                         var toLeft = false
-                        if let index = self.paneArrangement.panes.index(of: .trending), index < self.paneArrangement.currentIndex {
+                        if let index = self.paneArrangement.panes.firstIndex(of: .trending), index < self.paneArrangement.currentIndex {
                             toLeft = true
                         }
                         transition.animatePosition(node: self.trendingPane, to: CGPoint(x: (toLeft ? -width : width) + width / 2.0, y: self.trendingPane.layer.position.y), removeOnCompletion: false, completion: { [weak self] value in

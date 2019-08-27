@@ -6,6 +6,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import StickerResources
+import AccountContext
+import AnimationUI
 
 class MediaInputPaneTrendingItem: ListViewItem {
     let account: Account
@@ -115,7 +118,7 @@ final class TrendingTopItemNode: ASDisplayNode {
             }
             let dimensions = item.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
             let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-            animationNode.setup(account: account, resource: item.file.resource, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+            animationNode.setup(account: account, resource: .resource(item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
             self.loadDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
         } else {
             self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: true, synchronousLoad: synchronousLoads), attemptSynchronously: synchronousLoads)

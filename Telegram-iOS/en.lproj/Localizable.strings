@@ -111,7 +111,7 @@
 "PUSH_MESSAGE" = "%1$@|sent you a message";
 "PUSH_MESSAGES_1" = "%1$@|sent you a message";
 "PUSH_MESSAGES_any" = "%1$@|sent you %2$d messages";
-"PUSH_MESSAGE_ALBUM" = "%1$@|sent you an album";
+"PUSH_ALBUM" = "%1$@|sent you an album";
 
 "PUSH_CHANNEL_MESSAGE_TEXT" = "%1$@|%2$@";
 "PUSH_CHANNEL_MESSAGE_NOTEXT" = "%1$@|posted a message";
@@ -4280,6 +4280,10 @@ Sorry for the inconvenience.";
 "Privacy.AddNewPeer" = "Add Users or Groups";
 "PrivacyPhoneNumberSettings.WhoCanSeeMyPhoneNumber" = "WHO CAN SEE MY PHONE NUMBER";
 "PrivacyPhoneNumberSettings.CustomHelp" = "Users who already have your number saved in the contacts will also see it on Telegram.";
+"PrivacyPhoneNumberSettings.CustomDisabledHelp" = "Users who add your number to their contacts will see it on Telegram only if they are your contacts.";
+
+"PrivacyPhoneNumberSettings.DiscoveryHeader" = "WHO CAN FIND ME BY MY NUMBER";
+
 "Privacy.PhoneNumber" = "Phone Number";
 "PrivacySettings.PhoneNumber" = "Phone Number";
 "Contacts.SearchUsersAndGroupsLabel" = "Search for users and groups";
@@ -4481,7 +4485,8 @@ Any member of this group will be able to see messages in the channel.";
 
 "Chat.SlowmodeTooltip" = "Slowmode is enabled. You can send\nyour next message in %@.";
 "Chat.SlowmodeTooltipPending" = "Slowmode is enabled. You can't send more than one message at once.";
-"Chat.AttachmentLimitExceeded" = "Slowmode is enabled. You can't select more items.";
+"Chat.AttachmentLimitReached" = "You can't select more items.";
+"Chat.SlowmodeAttachmentLimitReached" = "Slowmode is enabled. You can't select more items.";
 "Chat.AttachmentMultipleFilesDisabled" = "Slowmode is enabled. You can't send multiple files at once.";
 "Chat.AttachmentMultipleForwardDisabled" = "Slowmode is enabled. You can't forward multiple messages at once.";
 "Chat.MultipleTextMessagesDisabled" = "Slowmode is enabled. You can't send multiple messages at once.";
@@ -4497,6 +4502,7 @@ Any member of this group will be able to see messages in the channel.";
 "Group.EditAdmin.RankAdminPlaceholder" = "admin";
 
 "Conversation.SendMessage.SendSilently" = "Send Without Sound";
+"Conversation.SendMessage.ScheduleMessage" = "Schedule Message";
 
 "Appearance.ThemeCarouselTintedNight" = "Tinted Night";
 "Appearance.ThemeCarouselNewNight" = "Night";
@@ -4504,3 +4510,169 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.AdminLog.MessageRankName" = "changed custom title for %1$@:\n%2$@";
 "Channel.AdminLog.MessageRankUsername" = "changed custom title for %1$@ (%2$@):\n%3$@";
 "Channel.AdminLog.MessageRank" = "changed custom title:\n%1$@";
+
+"VoiceOver.Editing.ClearText" = "Clear text";
+"VoiceOver.Recording.StopAndPreview" = "Stop and preview";
+"VoiceOver.Media.PlaybackRate" = "Playback rate";
+"VoiceOver.Media.PlaybackRateNormal" = "Normal";
+"VoiceOver.Media.PlaybackRateFast" = "Fast";
+"VoiceOver.Media.PlaybackRateChange" = "Double tap to change";
+"VoiceOver.Media.PlaybackStop" = "Stop playback";
+"VoiceOver.Media.PlaybackPlay" = "Play";
+"VoiceOver.Media.PlaybackPause" = "Pause";
+"VoiceOver.Navigation.Compose" = "Compose";
+"VoiceOver.Navigation.Search" = "Search";
+"VoiceOver.Navigation.ProxySettings" = "Proxy settings";
+"VoiceOver.DiscardPreparedContent" = "Discard";
+"VoiceOver.AttachMedia" = "Send media";
+"VoiceOver.Chat.RecordPreviewVoiceMessage" = "Preview voice message";
+"VoiceOver.Chat.RecordModeVoiceMessage" = "Voice message";
+"VoiceOver.Chat.RecordModeVoiceMessageInfo" = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to video.";
+"VoiceOver.Chat.RecordModeVideoMessage" = "Video message";
+"VoiceOver.Chat.RecordModeVideoMessageInfo" = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to audio.";
+"VoiceOver.Chat.Message" = "Message";
+"VoiceOver.Chat.YourMessage" = "Your message";
+"VoiceOver.Chat.ReplyFrom" = "Reply to message from: %@";
+"VoiceOver.Chat.Reply" = "Reply to message";
+"VoiceOver.Chat.ReplyToYourMessage" = "Reply to your message";
+"VoiceOver.Chat.ForwardedFrom" = "Forwarded from: %@";
+"VoiceOver.Chat.ForwardedFromYou" = "Forwarded from you";
+"VoiceOver.Chat.PhotoFrom" = "Photo, from: %@";
+"VoiceOver.Chat.Photo" = "Photo";
+"VoiceOver.Chat.YourPhoto" = "Your photo";
+"VoiceOver.Chat.VoiceMessageFrom" = "Voice message, from: %@";
+"VoiceOver.Chat.VoiceMessage" = "Voice message";
+"VoiceOver.Chat.YourVoiceMessage" = "Your voice message";
+"VoiceOver.Chat.MusicFrom" = "Music file, from: %@";
+"VoiceOver.Chat.Music" = "Music message";
+"VoiceOver.Chat.YourMusic" = "Your music message";
+"VoiceOver.Chat.VideoFrom" = "Video, from: %@";
+"VoiceOver.Chat.Video" = "Video";
+"VoiceOver.Chat.YourVideo" = "Your video";
+"VoiceOver.Chat.VideoMessageFrom" = "Video message, from: %@";
+"VoiceOver.Chat.VideoMessage" = "Video message";
+"VoiceOver.Chat.YourVideoMessage" = "Your video message";
+"VoiceOver.Chat.FileFrom" = "File, from: %@";
+"VoiceOver.Chat.File" = "File";
+"VoiceOver.Chat.YourFile" = "Your file";
+"VoiceOver.Chat.ContactFrom" = "Shared contact, from: %@";
+"VoiceOver.Chat.Contact" = "Shared contact";
+"VoiceOver.Chat.ContactPhoneNumberCount_1" = "%@ phone number";
+"VoiceOver.Chat.ContactPhoneNumberCount_any" = "%@ phone numbers";
+"VoiceOver.Chat.ContactPhoneNumber" = "Phone number";
+"VoiceOver.Chat.ContactEmailCount_1" = "%@ email address";
+"VoiceOver.Chat.ContactEmailCount_any" = "%@ email addresses";
+"VoiceOver.Chat.ContactEmail" = "Email";
+"VoiceOver.Chat.ContactOrganization" = "Organization: %@";
+"VoiceOver.Chat.YourContact" = "Your shared contact";
+"VoiceOver.Chat.AnonymousPollFrom" = "Anonymous poll, from: %@";
+"VoiceOver.Chat.AnonymousPoll" = "Anonymous poll";
+"VoiceOver.Chat.YourAnonymousPoll" = "Your Anonymous poll";
+"VoiceOver.Chat.PollOptionCount_1" = "%@ option:";
+"VoiceOver.Chat.PollOptionCount_any" = "%@ options:";
+"VoiceOver.Chat.PollVotes_1" = "%@ vote";
+"VoiceOver.Chat.PollVotes_any" = "%@ votes";
+"VoiceOver.Chat.PollNoVotes" = "No votes";
+"VoiceOver.Chat.PollFinalResults" = "Final results";
+"VoiceOver.Chat.OptionSelected" = "selected";
+"VoiceOver.Chat.PagePreview" = "Page preview";
+"VoiceOver.Chat.Title" = "Title: %@";
+"VoiceOver.Chat.Caption" = "Caption: %@";
+"VoiceOver.Chat.Duration" = "Duration: %@";
+"VoiceOver.Chat.Size" = "Size %@";
+"VoiceOver.Chat.MusicTitle" = "%1$@, by %2$@";
+"VoiceOver.Chat.PlayHint" = "Double tap to play";
+"VoiceOver.Chat.OpenHint" = "Double tap to open";
+"VoiceOver.Chat.OpenLinkHint" = "Double tap to open link";
+"VoiceOver.Chat.SeenByRecipient" = "Seen by recipient";
+"VoiceOver.Chat.SeenByRecipients" = "Seen by recipients";
+"VoiceOver.Chat.Selected" = "Selected";
+"VoiceOver.MessageContextDelete" = "Delete";
+"VoiceOver.MessageContextReport" = "Report";
+"VoiceOver.MessageContextForward" = "Forward";
+"VoiceOver.MessageContextShare" = "Share";
+"VoiceOver.MessageContextSend" = "Send";
+"VoiceOver.MessageContextReply" = "Reply";
+"VoiceOver.MessageContextOpenMessageMenu" = "Open message menu";
+
+"ProxyServer.VoiceOver.Active" = "Active";
+
+"Conversation.ScheduleMessage.Title" = "Schedule Message";
+"Conversation.ScheduleMessage.SendToday" = "Send today at %@";
+"Conversation.ScheduleMessage.SendTomorrow" = "Send tomorrow at %@";
+"Conversation.ScheduleMessage.SendOn" = "Send on %@ at %@";
+
+"Conversation.SetReminder.Title" = "Set a Reminder";
+"Conversation.SetReminder.RemindToday" = "Remind today at %@";
+"Conversation.SetReminder.RemindTomorrow" = "Remind tomorrow at %@";
+"Conversation.SetReminder.RemindOn" = "Remind on %@ at %@";
+
+"ScheduledMessages.Title" = "Scheduled Messages";
+"ScheduledMessages.RemindersTitle" = "Reminders";
+"ScheduledMessages.ScheduledDate" = "Scheduled for %@";
+"ScheduledMessages.SendNow" = "Send Now";
+"ScheduledMessages.EditTime" = "Reschedule";
+"ScheduledMessages.ClearAll" = "Clear All";
+"ScheduledMessages.ClearAllConfirmation" = "Clear Scheduled Messages";
+"ScheduledMessages.Delete" = "Delete Scheduled Message";
+"ScheduledMessages.DeleteMany" = "Delete Scheduled Messages";
+"ScheduledMessages.EmptyPlaceholder" = "No scheduled messages here yet...";
+"ScheduledMessages.BotActionUnavailable" = "This action will become available after the message is published.";
+"ScheduledMessages.PollUnavailable" = "Voting will become available after the message is published.";
+
+"Conversation.SendMessage.SetReminder" = "Set a Reminder";
+
+"Conversation.SelectedMessages_1" = "%@ Message Selected";
+"Conversation.SelectedMessages_2" = "%@ Messages Selected";
+"Conversation.SelectedMessages_3_10" = "%@ Messages Selected";
+"Conversation.SelectedMessages_any" = "%@ Messages Selected";
+"Conversation.SelectedMessages_many" = "%@ Messages Selected";
+"Conversation.SelectedMessages_0" = "%@ Messages Selected";
+
+"AccentColor.Title" = "Accent Color";
+
+"Appearance.ThemePreview.ChatList.1.Name" = "Eva Summer";
+"Appearance.ThemePreview.ChatList.1.Text" = "Text";
+
+"Appearance.ThemePreview.ChatList.2.Name" = "Your inner Competition";
+"Appearance.ThemePreview.ChatList.2.Text" = "Hey";
+
+"Appearance.ThemePreview.ChatList.3.Name" = "Mike Apple";
+"Appearance.ThemePreview.ChatList.3.Text" = "Mike Apple";
+
+"Appearance.ThemePreview.ChatList.4.Name" = "Paul Newman";
+"Appearance.ThemePreview.ChatList.4.Text" = "Any ideas?";
+
+"Appearance.ThemePreview.ChatList.5.Name" = "Old Pirates";
+"Appearance.ThemePreview.ChatList.5.Text" = "Yo-ho-ho";
+
+"Appearance.ThemePreview.ChatList.6.Name" = "Kate Bright";
+"Appearance.ThemePreview.ChatList.6.Text" = "Hola!";
+
+"Appearance.ThemePreview.ChatList.7.Name" = "What";
+"Appearance.ThemePreview.ChatList.7.Text" = "Hola!";
+
+"Appearance.ThemePreview.ChatList.8.Name" = "What";
+"Appearance.ThemePreview.ChatList.8.Text" = "Hola!";
+
+"Appearance.ThemePreview.Chat.1.Text" = "Does he want me to, to turn from the right or turn from the left? 🤔";
+"Appearance.ThemePreview.Chat.2.ReplyName" = "Bob Harris";
+"Appearance.ThemePreview.Chat.2.Text" = "Right side. And, uh, with intensity.";
+"Appearance.ThemePreview.Chat.3.Text" = "Is that everything? It seemed like he said quite a bit more than that. 😯";
+
+"GroupInfo.Permissions.SlowmodeValue.Off" = "Off";
+
+"Undo.ScheduledMessagesCleared" = "Scheduled messages cleared";
+
+"Appearance.CreateTheme" = "Create New Theme";
+"Appearance.CreateThemeInfo" = "A new theme template has been created from your current theme and added to your Saved Messages.";
+"Appearance.Publish" = "Publish";
+
+"Conversation.Theme" = "Color Theme";
+"Conversation.ViewTheme" = "VIEW THEME";
+
+"CreateTheme.Title" = "Publish Theme";
+"CreateTheme.Preview" = "PREVIEW";
+"CreateTheme.Title" = "Title";
+"CreateTheme.ShortLink" = "Short Link";
+"CreateTheme.ShortLinkInfo" = "Short Link";

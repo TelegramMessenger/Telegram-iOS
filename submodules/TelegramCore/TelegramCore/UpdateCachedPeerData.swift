@@ -176,8 +176,13 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                 let pinnedMessageId = userFull.pinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                                 
                                 let peerStatusSettings = PeerStatusSettings(apiSettings: userFull.settings)
+                                
+                                var hasScheduledMessages = false
+                                if (userFull.flags & 1 << 12) != 0 {
+                                    hasScheduledMessages = true
+                                }
                             
-                                return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId)
+                                return previous.withUpdatedAbout(userFull.about).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFull.commonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedCallsAvailable(callsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                         }
                     })
                 }
@@ -237,6 +242,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         flags.insert(.canChangeUsername)
                                     }
                                     
+                                    var hasScheduledMessages = false
+                                    if (chatFull.flags & 1 << 8) != 0 {
+                                        hasScheduledMessages = true
+                                    }
+                                    
                                     transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                         let previous: CachedGroupData
                                         if let current = current as? CachedGroupData {
@@ -251,6 +261,7 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             .withUpdatedPinnedMessageId(pinnedMessageId)
                                             .withUpdatedAbout(chatFull.about)
                                             .withUpdatedFlags(flags)
+                                            .withUpdatedHasScheduledMessages(hasScheduledMessages)
                                     })
                                 case .channelFull:
                                     break
@@ -379,6 +390,11 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                             return StickerPackCollectionInfo(apiSet: apiSet, namespace: namespace)
                                         }
                                         
+                                        var hasScheduledMessages = false
+                                        if (flags & (1 << 19)) != 0 {
+                                            hasScheduledMessages = true
+                                        }
+                                        
                                         var minAvailableMessageIdUpdated = false
                                         transaction.updatePeerCachedData(peerIds: [peerId], update: { _, current in
                                             var previous: CachedChannelData
@@ -402,13 +418,16 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                                 .withUpdatedMinAvailableMessageId(minAvailableMessageId)
                                                 .withUpdatedMigrationReference(migrationReference)
                                                 .withUpdatedLinkedDiscussionPeerId(linkedDiscussionPeerId)
-                                                .withUpdatedPeerGeoLocation(peerGeoLocation: peerGeoLocation)
-                                                .withUpdatedSlowModeTimeout(slowModeTimeout: slowmodeSeconds)
-                                                .withUpdatedSlowModeValidUntilTimestamp(slowModeValidUntilTimestamp: slowmodeNextSendDate)
+                                                .withUpdatedPeerGeoLocation(peerGeoLocation)
+                                                .withUpdatedSlowModeTimeout(slowmodeSeconds)
+                                                .withUpdatedSlowModeValidUntilTimestamp(slowmodeNextSendDate)
+                                                .withUpdatedHasScheduledMessages(hasScheduledMessages)
                                         })
                                     
                                         if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
-                                            transaction.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id)
+                                            transaction.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id, forEachMedia: { media in
+                                                processRemovedMedia(postbox.mediaBox, media)
+                                            })
                                         }
                                     case .chatFull:
                                         break

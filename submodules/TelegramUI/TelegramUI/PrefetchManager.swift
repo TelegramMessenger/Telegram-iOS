@@ -3,6 +3,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import AccountContext
+import PhotoResources
+import Emoji
 
 private final class PrefetchMediaContext {
     let fetchDisposable = MetaDisposable()
@@ -167,7 +170,7 @@ private final class PrefetchManagerImpl {
                     if validIds.contains(id) {
                         continue
                     }
-                
+
                     var automaticDownload: InteractiveMediaNodeAutodownloadMode = .none
                     let peerType = MediaAutoDownloadPeerType.contact
                     

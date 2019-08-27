@@ -6,6 +6,9 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import MergeLists
+import AccountContext
+import SearchUI
 
 private enum ChatHistorySearchEntryStableId: Hashable {
     case messageId(MessageId)

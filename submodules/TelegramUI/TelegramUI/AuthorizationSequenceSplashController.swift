@@ -6,7 +6,6 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
-import TelegramUIPrivateModule
 import LegacyComponents
 
 import RMIntro

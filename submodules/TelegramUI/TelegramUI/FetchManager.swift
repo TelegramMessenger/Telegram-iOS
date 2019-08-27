@@ -4,6 +4,7 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramUIPreferences
+import AccountContext
 
 private struct FetchManagerLocationEntryId: Hashable {
     let location: FetchManagerLocation
@@ -25,65 +26,6 @@ private struct FetchManagerLocationEntryId: Hashable {
     
     var hashValue: Int {
         return self.resourceId.hashValue &* 31 &+ self.locationKey.hashValue
-    }
-}
-
-enum FetchManagerForegroundDirection {
-    case toEarlier
-    case toLater
-}
-
-enum FetchManagerPriority: Comparable {
-    case userInitiated
-    case foregroundPrefetch(direction: FetchManagerForegroundDirection, localOrder: MessageIndex)
-    case backgroundPrefetch(locationOrder: HistoryPreloadIndex, localOrder: MessageIndex)
-    
-    static func <(lhs: FetchManagerPriority, rhs: FetchManagerPriority) -> Bool {
-        switch lhs {
-            case .userInitiated:
-                switch rhs {
-                    case .userInitiated:
-                        return false
-                    case .foregroundPrefetch:
-                        return true
-                    case .backgroundPrefetch:
-                        return true
-                }
-            case let .foregroundPrefetch(lhsDirection, lhsLocalOrder):
-                switch rhs {
-                    case .userInitiated:
-                        return false
-                    case let .foregroundPrefetch(rhsDirection, rhsLocalOrder):
-                        if lhsDirection == rhsDirection {
-                            switch lhsDirection {
-                                case .toEarlier:
-                                    return lhsLocalOrder > rhsLocalOrder
-                                case .toLater:
-                                    return lhsLocalOrder < rhsLocalOrder
-                            }
-                        } else {
-                            if lhsDirection == .toEarlier {
-                                return true
-                            } else {
-                                return false
-                            }
-                        }
-                    case .backgroundPrefetch:
-                        return true
-                }
-            case let .backgroundPrefetch(lhsLocationOrder, lhsLocalOrder):
-                switch rhs {
-                    case .userInitiated:
-                        return false
-                    case .foregroundPrefetch:
-                        return false
-                    case let .backgroundPrefetch(rhsLocationOrder, rhsLocalOrder):
-                        if lhsLocationOrder != rhsLocationOrder {
-                            return lhsLocationOrder < rhsLocationOrder
-                        }
-                        return lhsLocalOrder > rhsLocalOrder
-                }
-        }
     }
 }
 
@@ -516,7 +458,7 @@ private final class FetchManagerCategoryContext {
     }
 }
 
-public final class FetchManager {
+public final class FetchManagerImpl: FetchManager {
     private let queue = Queue.mainQueue()
     private let postbox: Postbox
     private let storeManager: DownloadedMediaStoreManager?
@@ -588,7 +530,7 @@ public final class FetchManager {
         }
     }
     
-    func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: IndexSet = IndexSet(integersIn: 0 ..< Int(Int32.max) as Range<Int>), statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority = .userInitiated, storeToDownloadsPeerType: MediaAutoDownloadPeerType? = nil) -> Signal<Void, NoError> {
+    public func interactivelyFetched(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, mediaReference: AnyMediaReference?, resourceReference: MediaResourceReference, ranges: IndexSet, statsCategory: MediaResourceStatsCategory, elevatedPriority: Bool, userInitiated: Bool, priority: FetchManagerPriority = .userInitiated, storeToDownloadsPeerType: MediaAutoDownloadPeerType?) -> Signal<Void, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
@@ -645,7 +587,7 @@ public final class FetchManager {
                                             assert(entry.elevatedPriorityReferenceCount >= 0)
                                         }
                                         if let userInitiatedIndex = assignedUserInitiatedIndex {
-                                            if let index = entry.userInitiatedPriorityIndices.index(of: userInitiatedIndex) {
+                                            if let index = entry.userInitiatedPriorityIndices.firstIndex(of: userInitiatedIndex) {
                                                 entry.userInitiatedPriorityIndices.remove(at: index)
                                             } else {
                                                 assertionFailure()
@@ -663,7 +605,7 @@ public final class FetchManager {
         } |> runOn(self.queue)
     }
     
-    func cancelInteractiveFetches(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource) {
+    public func cancelInteractiveFetches(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource) {
         self.queue.async {
             self.withCategoryContext(category, { context in
                 context.cancelEntry(FetchManagerLocationEntryId(location: location, resourceId: resource.id, locationKey: locationKey))
@@ -673,7 +615,7 @@ public final class FetchManager {
         }
     }
     
-    func fetchStatus(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
+    public func fetchStatus(category: FetchManagerCategory, location: FetchManagerLocation, locationKey: FetchManagerLocationKey, resource: MediaResource) -> Signal<MediaResourceStatus, NoError> {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {

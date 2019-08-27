@@ -8,6 +8,10 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
+import TextFormat
+import AccountContext
+import UrlEscaping
+import PhotoResources
 
 private let titleFont = Font.semibold(15.0)
 private let textFont = Font.regular(15.0)
@@ -301,22 +305,29 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             var contentMode: InteractiveMediaNodeContentMode = preferMediaAspectFilled ? .aspectFill : .aspectFit
             
             var edited = false
-            var sentViaBot = false
             var viewCount: Int?
             for attribute in message.attributes {
-                if let _ = attribute as? EditedMessageAttribute {
-                    edited = true
+                if let attribute = attribute as? EditedMessageAttribute {
+                    edited = !attribute.isHidden
                 } else if let attribute = attribute as? ViewCountMessageAttribute {
                     viewCount = attribute.count
-                } else if let _ = attribute as? InlineBotMessageAttribute {
-                    sentViaBot = true
                 }
             }
-            if let author = message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                sentViaBot = true
+            
+            var dateReactions: [MessageReaction] = []
+            var dateReactionCount = 0
+            if let reactionsAttribute = mergedMessageReactions(attributes: message.attributes), !reactionsAttribute.reactions.isEmpty {
+                for reaction in reactionsAttribute.reactions {
+                    if reaction.isSelected {
+                        dateReactions.insert(reaction, at: 0)
+                    } else {
+                        dateReactions.append(reaction)
+                    }
+                    dateReactionCount += Int(reaction.count)
+                }
             }
             
-            let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
+            let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
             
             var webpageGalleryMediaCount: Int?
             for media in message.media {
@@ -386,9 +397,16 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             
             var automaticPlayback = false
             
+            var skipStandardStatus = false
+            
             if let (media, flags) = mediaAndFlags {
                 if let file = media as? TelegramMediaFile {
-                    if file.isInstantVideo {
+                    if file.mimeType == "application/x-tgtheme-ios", let size = file.size, size < 16 * 1024 {
+                        let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file)
+                        let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, file, automaticDownload ? .full : .none, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
+                        initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
+                        refineContentImageLayout = refineLayout
+                    } else if file.isInstantVideo {
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file)
                         let (videoLayout, apply) = contentInstantVideoLayout(ChatMessageBubbleContentItem(context: context, controllerInteraction: controllerInteraction, message: message, read: messageRead, presentationData: presentationData, associatedData: associatedData), constrainedSize.width - horizontalInsets.left - horizontalInsets.right, CGSize(width: 212.0, height: 212.0), .bubble, automaticDownload)
                         initialWidth = videoLayout.contentSize.width + videoLayout.overflowLeft + videoLayout.overflowRight
@@ -465,6 +483,9 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     let (_, initialImageWidth, refineLayout) = contentImageLayout(context, presentationData.theme.theme, presentationData.strings, presentationData.dateTimeFormat, message, wallpaper, .full, associatedData.automaticDownloadPeerType, .constrained(CGSize(width: constrainedSize.width - horizontalInsets.left - horizontalInsets.right, height: constrainedSize.height)), layoutConstants, contentMode)
                     initialWidth = initialImageWidth + horizontalInsets.left + horizontalInsets.right
                     refineContentImageLayout = refineLayout
+                    if case let .file(_, _, isTheme) = wallpaper.content, isTheme {
+                        skipStandardStatus = true
+                    }
                 }
             }
             
@@ -498,7 +519,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         let imageMode = !((refineContentImageLayout == nil && refineContentFileLayout == nil && contentInstantVideoSizeAndApply == nil) || preferMediaBeforeText)
                         statusInText = !imageMode
                         
-                        var skipStandardStatus = false
+                        
                         if let count = webpageGalleryMediaCount {
                             additionalImageBadgeContent = .text(inset: 0.0, backgroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusFillColor, foregroundColor: presentationData.theme.theme.chat.message.mediaDateAndStatusTextColor, text: NSAttributedString(string: "1 \(presentationData.strings.Common_of) \(count)"))
                             skipStandardStatus = imageMode
@@ -536,7 +557,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 }
                             }
                         
-                            statusSizeAndApply = statusLayout(presentationData, edited && !sentViaBot, viewCount, dateText, statusType, textConstrainedSize)
+                            statusSizeAndApply = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, textConstrainedSize, dateReactions)
                         }
                     default:
                         break
@@ -585,7 +606,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                 let lineImage = incoming ? PresentationResourcesChat.chatBubbleVerticalLineIncomingImage(presentationData.theme.theme) : PresentationResourcesChat.chatBubbleVerticalLineOutgoingImage(presentationData.theme.theme)
                 
                 var boundingSize = textFrame.size
-                var lineHeight = textFrame.size.height
+                var lineHeight = textLayout.rawTextSize.height
                 if let statusFrame = statusFrame {
                     boundingSize = textFrame.union(statusFrame).size
                     if let _ = actionTitle {
@@ -958,19 +979,19 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.URL)] as? String {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
                     concealed = !doesUrlMatchText(url: url, text: attributeText)
                 }
                 return .url(url: url, concealed: concealed)
-            } else if let peerMention = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
+            } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
                 return .peerMention(peerMention.peerId, peerMention.mention)
-            } else if let peerName = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
                 return .textMention(peerName)
-            } else if let botCommand = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.BotCommand)] as? String {
+            } else if let botCommand = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.BotCommand)] as? String {
                 return .botCommand(botCommand)
-            } else if let hashtag = attributes[NSAttributedStringKey(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
                 return .hashtag(hashtag.peerName, hashtag.hashtag)
             } else {
                 return .none
@@ -994,7 +1015,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         TelegramTextAttributes.Hashtag
                     ]
                     for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                             rects = self.textNode.attributeRects(name: name, at: index)
                             break
                         }
@@ -1024,5 +1045,12 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
     
     func playMediaWithSound() -> ((Double?) -> Void, Bool, Bool, Bool, ASDisplayNode?)? {
         return self.contentImageNode?.playMediaWithSound()
+    }
+    
+    func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        if !self.statusNode.isHidden {
+            return self.statusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

@@ -12,6 +12,7 @@ import UserNotifications
 import CoreTelephony
 import TelegramPresentationData
 import LegacyComponents
+import AccountContext
 
 public enum DeviceAccessMicrophoneSubject {
     case audio
@@ -40,14 +41,6 @@ public enum DeviceAccessSubject {
     case notifications
     case siri
     case cellularData
-}
-
-public enum AccessType {
-    case notDetermined
-    case allowed
-    case denied
-    case restricted
-    case unreachable
 }
 
 private let cachedMediaLibraryAccessStatus = Atomic<Bool?>(value: nil)
@@ -230,6 +223,8 @@ public final class DeviceAccess {
                             subscriber.putNext(.denied)
                         case .notDetermined:
                             subscriber.putNext(.notDetermined)
+                        @unknown default:
+                            fatalError()
                     }
                     subscriber.putCompletion()
                     return EmptyDisposable
@@ -340,6 +335,8 @@ public final class DeviceAccess {
                                     value = false
                                 case .authorized:
                                     value = true
+                                @unknown default:
+                                    fatalError()
                             }
                             let _ = cachedMediaLibraryAccessStatus.swap(value)
                             continueWithValue(value)
@@ -383,7 +380,9 @@ public final class DeviceAccess {
                             }
                         case .notDetermined:
                             completion(true)
-                    }
+                        @unknown default:
+                            fatalError()
+                }
                 case .contacts:
                     let _ = (self.contactsPromise.get()
                     |> take(1)

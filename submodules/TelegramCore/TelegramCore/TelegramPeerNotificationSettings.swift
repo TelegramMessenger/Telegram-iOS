@@ -252,7 +252,7 @@ extension PeerMessageSound {
             return
         }
         var rawApiSound = apiSound
-        if let index = rawApiSound.index(of: ".") {
+        if let index = rawApiSound.firstIndex(of: ".") {
             rawApiSound = String(rawApiSound[..<index])
         }
         
@@ -286,11 +286,7 @@ extension PeerMessageSound {
             case .default:
                 return nil
             case let .bundledModern(id):
-                if id == 0 {
-                    return "default"
-                } else {
-                    return "\(id + 100)"
-                }
+                return "\(id + 100)"
             case let .bundledClassic(id):
                 return "\(id + 2)"
         }

@@ -7,6 +7,12 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
+import AvatarNode
+import AccountContext
+import LocalizedPeerData
+import StickerResources
+import PhotoResources
+import TelegramStringFormatting
 
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext

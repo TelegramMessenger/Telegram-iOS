@@ -51,7 +51,7 @@
     
     __weak TGMenuSheetController *weakController = controller;
     __weak TGViewController *weakParentController = parentController;
-    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:intent == TGPassportAttachIntentMultiple allowEditing:true document:true selectionLimit: 10];
+    TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:context camera:true selfPortrait:intent == TGPassportAttachIntentSelfie forProfilePhoto:false assetType:TGMediaAssetPhotoType saveEditedPhotos:false allowGrouping:false allowSelection:intent == TGPassportAttachIntentMultiple allowEditing:true document:true selectionLimit:10];
     __weak TGAttachmentCarouselItemView *weakCarouselItem = carouselItem;
     carouselItem.onlyCrop = true;
     carouselItem.parentController = parentController;
@@ -67,7 +67,7 @@
         
         [TGPassportAttachMenu _displayCameraWithView:cameraView menuController:strongController parentController:strongParentController context:context intent:intent uploadAction:uploadAction];
     };
-    carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles, __unused bool silentPosting)
+    carouselItem.sendPressed = ^(TGMediaAsset *currentItem, __unused bool asFiles, __unused bool silentPosting, __unused int32_t scheduleTime)
     {
         __strong TGMenuSheetController *strongController = weakController;
         if (strongController == nil)

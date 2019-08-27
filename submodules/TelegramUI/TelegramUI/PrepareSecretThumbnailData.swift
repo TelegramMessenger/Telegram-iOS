@@ -11,7 +11,7 @@ func prepareSecretThumbnailData(_ data: MediaResourceData) -> (CGSize, Data)? {
             }
         }
         let scaledSize = image.size.fitted(CGSize(width: 90.0, height: 90.0))
-        if let scaledImage = generateScaledImage(image: image, size: scaledSize, scale: 1.0), let scaledData = UIImageJPEGRepresentation(scaledImage, 0.4) {
+        if let scaledImage = generateScaledImage(image: image, size: scaledSize, scale: 1.0), let scaledData = scaledImage.jpegData(compressionQuality: 0.4) {
             return (scaledSize, scaledData)
         }
     }

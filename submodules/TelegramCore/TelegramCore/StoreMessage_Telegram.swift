@@ -111,7 +111,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
 
 func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
     switch messsage {
-        case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             switch toId {
                 case let .peerUser(userId):
                     return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
@@ -136,7 +136,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _):
+        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
                 case let .peerUser(userId):
@@ -240,7 +240,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _):
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
@@ -380,9 +380,9 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 }
 
 extension StoreMessage {
-    convenience init?(apiMessage: Api.Message) {
+    convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, reactions, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -506,7 +506,7 @@ extension StoreMessage {
                 }
                 
                 if let editDate = editDate {
-                    attributes.append(EditedMessageAttribute(date: editDate))
+                    attributes.append(EditedMessageAttribute(date: editDate, isHidden: (flags & (1 << 21)) != 0))
                 }
                 
                 var entitiesAttribute: TextEntitiesMessageAttribute?
@@ -537,6 +537,16 @@ extension StoreMessage {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
+                
+                
+                if let reactions = reactions {
+                    attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
+                }
+                
+                if let restrictionReason = restrictionReason {
+                    attributes.append(RestrictedContentMessageAttribute(rules: restrictionReason.map(RestrictionRule.init(apiReason:))))
+                }
+                
                 var storeFlags = StoreMessageFlags()
                 
                 if let replyMarkup = replyMarkup {
@@ -549,6 +559,10 @@ extension StoreMessage {
                 
                 if (flags & (1 << 1)) == 0 {
                     storeFlags.insert(.Incoming)
+                }
+                
+                if (flags & (1 << 18)) != 0 {
+                    storeFlags.insert(.WasScheduled)
                 }
                 
                 if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {
@@ -568,7 +582,7 @@ extension StoreMessage {
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: groupingId, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: forwardInfo, authorId: authorId, text: messageText, attributes: attributes, media: medias)
             case .messageEmpty:
                 return nil
             case let .messageService(flags, id, fromId, toId, replyToMsgId, date, action):
@@ -607,6 +621,7 @@ extension StoreMessage {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
+                
                 var storeFlags = StoreMessageFlags()
                 if (flags & 2) == 0 {
                     let _ = storeFlags.insert(.Incoming)
@@ -632,7 +647,11 @@ extension StoreMessage {
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
                 
-                self.init(id: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
+                if (flags & (1 << 18)) != 0 {
+                    storeFlags.insert(.WasScheduled)
+                }
+                
+                self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }
     }
 }

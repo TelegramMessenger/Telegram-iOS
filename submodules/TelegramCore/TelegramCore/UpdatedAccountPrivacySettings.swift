@@ -17,12 +17,13 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
     let profilePhotoPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyProfilePhoto))
     let forwardPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyForwards))
     let phoneNumberPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyPhoneNumber))
+    let phoneDiscoveryPrivacy = account.network.request(Api.functions.account.getPrivacy(key: .inputPrivacyKeyAddedByPhone))
     let autoremoveTimeout = account.network.request(Api.functions.account.getAccountTTL())
-    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, autoremoveTimeout)
+    return combineLatest(lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, autoremoveTimeout)
     |> `catch` { _ in
         return .complete()
     }
-    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
+    |> mapToSignal { lastSeenPrivacy, groupPrivacy, voiceCallPrivacy, voiceCallP2P, profilePhotoPrivacy, forwardPrivacy, phoneNumberPrivacy, phoneDiscoveryPrivacy, autoremoveTimeout -> Signal<AccountPrivacySettings, NoError> in
         let accountTimeoutSeconds: Int32
         switch autoremoveTimeout {
             case let .accountDaysTTL(days):
@@ -88,6 +89,19 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
                 phoneNumberRules = rules
         }
         
+        var phoneDiscoveryValue = false
+        switch phoneDiscoveryPrivacy {
+            case let .privacyRules(rules, _, _):
+                for rule in rules {
+                    switch rule {
+                    case .privacyValueAllowAll:
+                        phoneDiscoveryValue = true
+                    default:
+                        break
+                    }
+                }
+        }
+        
         var peers: [SelectivePrivacyPeer] = []
         for user in apiUsers {
             peers.append(SelectivePrivacyPeer(peer: TelegramUser(user: user), participantCount: nil))
@@ -114,7 +128,7 @@ public func requestAccountPrivacySettings(account: Account) -> Signal<AccountPri
                 return updated
             })
             
-            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), accountRemovalTimeout: accountTimeoutSeconds)
+            return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, accountRemovalTimeout: accountTimeoutSeconds)
         }
     }
 }
@@ -125,6 +139,20 @@ public func updateAccountRemovalTimeout(account: Account, timeout: Int32) -> Sig
         |> mapToSignal { _ -> Signal<Void, NoError> in
             return .complete()
         }
+}
+
+public func updatePhoneNumberDiscovery(account: Account, value: Bool) -> Signal<Void, NoError> {
+    var rules: [Api.InputPrivacyRule] = []
+    if value {
+        rules.append(.inputPrivacyValueAllowAll)
+    } else {
+        rules.append(.inputPrivacyValueAllowContacts)
+    }
+    return account.network.request(Api.functions.account.setPrivacy(key: .inputPrivacyKeyAddedByPhone, rules: rules))
+    |> retryRequest
+    |> mapToSignal { _ -> Signal<Void, NoError> in
+        return .complete()
+    }
 }
 
 public enum UpdateSelectiveAccountPrivacySettingsType {

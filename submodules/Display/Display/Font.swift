@@ -69,15 +69,15 @@ public struct Font {
 
 public extension NSAttributedString {
     convenience init(string: String, font: UIFont? = nil, textColor: UIColor = UIColor.black, paragraphAlignment: NSTextAlignment? = nil) {
-        var attributes: [NSAttributedStringKey: AnyObject] = [:]
+        var attributes: [NSAttributedString.Key: AnyObject] = [:]
         if let font = font {
-            attributes[NSAttributedStringKey.font] = font
+            attributes[NSAttributedString.Key.font] = font
         }
-        attributes[NSAttributedStringKey.foregroundColor] = textColor
+        attributes[NSAttributedString.Key.foregroundColor] = textColor
         if let paragraphAlignment = paragraphAlignment {
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = paragraphAlignment
-            attributes[NSAttributedStringKey.paragraphStyle] = paragraphStyle
+            attributes[NSAttributedString.Key.paragraphStyle] = paragraphStyle
         }
         self.init(string: string, attributes: attributes)
     }

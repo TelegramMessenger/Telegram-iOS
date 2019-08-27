@@ -6,6 +6,7 @@ import Postbox
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import AccountContext
 
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (String, Bool) {
     for media in message.media {
@@ -83,9 +84,9 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
         self.theme = theme
         
         self.closeButton = ASButtonNode()
-        self.closeButton.accessibilityLabel = "Discard"
+        self.closeButton.accessibilityLabel = strings.VoiceOver_DiscardPreparedContent
         self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(theme), for: [])
-        self.closeButton.hitTestSlop = UIEdgeInsetsMake(-8.0, -8.0, -8.0, -8.0)
+        self.closeButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -8.0, bottom: -8.0, right: -8.0)
         self.closeButton.displaysAsynchronously = false
         
         self.lineNode = ASImageNode()

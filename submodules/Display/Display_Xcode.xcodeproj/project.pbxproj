@@ -36,6 +36,7 @@
 		D02958001D6F096000360E5E /* ContextMenuContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */; };
 		D02BDB021B6AC703008AFAD2 /* RuntimeUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */; };
 		D02C61F322A94BD600D4EC86 /* Keyboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02C61F222A94BD600D4EC86 /* Keyboard.swift */; };
+		D0329EA822FC8E7600F9F071 /* DisplayLinkAnimator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0329EA722FC8E7600F9F071 /* DisplayLinkAnimator.swift */; };
 		D03310B3213F232600FC83CD /* ListViewTapGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */; };
 		D033874E223D3E86007A2CE4 /* AccessibilityAreaNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */; };
 		D0338750223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033874F223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift */; };
@@ -102,6 +103,7 @@
 		D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */; };
 		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
+		D060185F22F35E7400796784 /* ShakeAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060185E22F35E7400796784 /* ShakeAnimation.swift */; };
 		D06B76DB20592A97006E9EEA /* LayoutSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06B76DA20592A97006E9EEA /* LayoutSizes.swift */; };
 		D06D37A220779C82009219B6 /* VolumeControlStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06D37A120779C82009219B6 /* VolumeControlStatusBar.swift */; };
 		D06EE8451B7140FF00837186 /* Font.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06EE8441B7140FF00837186 /* Font.swift */; };
@@ -130,8 +132,6 @@
 		D0BE93191E8ED71100DCC1E6 /* NativeWindowHostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */; };
 		D0C0B5991EDF3BC9000F4D2C /* ActionSheetTextItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */; };
 		D0C0B59D1EE022CC000F4D2C /* NavigationBarContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B59C1EE022CC000F4D2C /* NavigationBarContentNode.swift */; };
-		D0C0D28F1C997110001D2851 /* FBAnimationPerformanceTracker.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C0D28D1C997110001D2851 /* FBAnimationPerformanceTracker.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		D0C0D2901C997110001D2851 /* FBAnimationPerformanceTracker.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */; };
 		D0C12A1A1F3375B400B3F66D /* NavigationBarTitleTransitionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C12A191F3375B400B3F66D /* NavigationBarTitleTransitionNode.swift */; };
 		D0C2DFC61CC4431D0044FF83 /* ASTransformLayerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBB1CC4431D0044FF83 /* ASTransformLayerNode.swift */; };
 		D0C2DFC71CC4431D0044FF83 /* ListViewItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C2DFBC1CC4431D0044FF83 /* ListViewItemNode.swift */; };
@@ -212,6 +212,7 @@
 		D02957FF1D6F096000360E5E /* ContextMenuContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContextMenuContainerNode.swift; sourceTree = "<group>"; };
 		D02BDB011B6AC703008AFAD2 /* RuntimeUtils.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RuntimeUtils.swift; sourceTree = "<group>"; };
 		D02C61F222A94BD600D4EC86 /* Keyboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keyboard.swift; sourceTree = "<group>"; };
+		D0329EA722FC8E7600F9F071 /* DisplayLinkAnimator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayLinkAnimator.swift; sourceTree = "<group>"; };
 		D03310B2213F232600FC83CD /* ListViewTapGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewTapGestureRecognizer.swift; sourceTree = "<group>"; };
 		D033874D223D3E86007A2CE4 /* AccessibilityAreaNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityAreaNode.swift; sourceTree = "<group>"; };
 		D033874F223EE5A4007A2CE4 /* ActionSheetSwitchItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionSheetSwitchItem.swift; sourceTree = "<group>"; };
@@ -281,6 +282,7 @@
 		D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationBarProxy.m; sourceTree = "<group>"; };
 		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
+		D060185E22F35E7400796784 /* ShakeAnimation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShakeAnimation.swift; sourceTree = "<group>"; };
 		D06B76DA20592A97006E9EEA /* LayoutSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutSizes.swift; sourceTree = "<group>"; };
 		D06D37A120779C82009219B6 /* VolumeControlStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeControlStatusBar.swift; sourceTree = "<group>"; };
 		D06EE8441B7140FF00837186 /* Font.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Font.swift; sourceTree = "<group>"; };
@@ -309,8 +311,6 @@
 		D0BE93181E8ED71100DCC1E6 /* NativeWindowHostView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NativeWindowHostView.swift; sourceTree = "<group>"; };
 		D0C0B5981EDF3BC9000F4D2C /* ActionSheetTextItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ActionSheetTextItem.swift; sourceTree = "<group>"; };
 		D0C0B59C1EE022CC000F4D2C /* NavigationBarContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarContentNode.swift; sourceTree = "<group>"; };
-		D0C0D28D1C997110001D2851 /* FBAnimationPerformanceTracker.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FBAnimationPerformanceTracker.h; sourceTree = "<group>"; };
-		D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FBAnimationPerformanceTracker.mm; sourceTree = "<group>"; };
 		D0C12A191F3375B400B3F66D /* NavigationBarTitleTransitionNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTitleTransitionNode.swift; sourceTree = "<group>"; };
 		D0C2DFBB1CC4431D0044FF83 /* ASTransformLayerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ASTransformLayerNode.swift; sourceTree = "<group>"; };
 		D0C2DFBC1CC4431D0044FF83 /* ListViewItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewItemNode.swift; sourceTree = "<group>"; };
@@ -586,6 +586,7 @@
 		D05CC3001B6955D500E235A3 /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				D060185E22F35E7400796784 /* ShakeAnimation.swift */,
 				D0750C7522B2934800BE5F6E /* ImageNode.swift */,
 				D0750C7222B2931900BE5F6E /* TransformImageArguments.swift */,
 				D0750C7122B2931900BE5F6E /* TransformImageNode.swift */,
@@ -617,13 +618,12 @@
 				D03E7DF61C96C5F200C07816 /* NSWeakReference.h */,
 				D03E7DF71C96C5F200C07816 /* NSWeakReference.m */,
 				D03E7E001C974AB300C07816 /* DisplayLinkDispatcher.swift */,
-				D0C0D28D1C997110001D2851 /* FBAnimationPerformanceTracker.h */,
-				D0C0D28E1C997110001D2851 /* FBAnimationPerformanceTracker.mm */,
 				D0D94A161D3814F900740E02 /* UniversalTapRecognizer.swift */,
 				D01F728121F13891006AB634 /* Accessibility.swift */,
 				09167E1E229803DC005734A7 /* UIMenuItem+Icons.h */,
 				09167E1F229803DC005734A7 /* UIMenuItem+Icons.m */,
 				D02C61F222A94BD600D4EC86 /* Keyboard.swift */,
+				D0329EA722FC8E7600F9F071 /* DisplayLinkAnimator.swift */,
 			);
 			name = Utils;
 			sourceTree = "<group>";
@@ -765,7 +765,6 @@
 				D05174B31EAA833200A1BF36 /* CASeeThroughTracingLayer.h in Headers */,
 				D05CC3081B69575900E235A3 /* NSBag.h in Headers */,
 				09167E20229803DC005734A7 /* UIMenuItem+Icons.h in Headers */,
-				D0C0D28F1C997110001D2851 /* FBAnimationPerformanceTracker.h in Headers */,
 				D05CC2671B69316F00E235A3 /* Display.h in Headers */,
 				D05CC2F91B6955D000E235A3 /* UIViewController+Navigation.h in Headers */,
 			);
@@ -985,11 +984,11 @@
 				D03AA4DD202DB1840056C405 /* PeekControllerGestureRecognizer.swift in Sources */,
 				D007019A2029CAE2006B9E34 /* TooltipControllerNode.swift in Sources */,
 				D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */,
+				D060185F22F35E7400796784 /* ShakeAnimation.swift in Sources */,
 				D077B8E91F4637040046D27A /* NavigationBarBadge.swift in Sources */,
 				D0CE67921F7DA11700FFB557 /* ActionSheetTheme.swift in Sources */,
 				D0A134642034DE580059716A /* TabBarTapRecognizer.swift in Sources */,
 				D03AA4E3202DD52E0056C405 /* PeekControllerMenuItemNode.swift in Sources */,
-				D0C0D2901C997110001D2851 /* FBAnimationPerformanceTracker.mm in Sources */,
 				D015F7521D1AE08D00E269B5 /* ContainableController.swift in Sources */,
 				D036574B1E71C44D00BB1EE4 /* MinimizeKeyboardGestureRecognizer.swift in Sources */,
 				D0CB78901F9822F8004AB79B /* WindowPanRecognizer.swift in Sources */,
@@ -1002,6 +1001,7 @@
 				D02383861DE0E3B4004018B6 /* ListViewIntermediateState.swift in Sources */,
 				D0DA444E1E4DCA6E005FDCA7 /* AlertControllerNode.swift in Sources */,
 				D0B367201C94A53A00346D2E /* StatusBarProxyNode.swift in Sources */,
+				D0329EA822FC8E7600F9F071 /* DisplayLinkAnimator.swift in Sources */,
 				09DD88EB21BCA5E0000766BC /* EditableTextNode.swift in Sources */,
 				D05CC2A21B69326C00E235A3 /* WindowContent.swift in Sources */,
 				D05CC3151B695A9600E235A3 /* NavigationTransitionCoordinator.swift in Sources */,
@@ -1108,7 +1108,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugFork;
 		};
@@ -1240,7 +1240,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugHockeyapp;
 		};
@@ -1269,7 +1269,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseHockeyapp;
 		};
@@ -1370,7 +1370,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugAppStore;
 		};
@@ -1452,7 +1452,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseAppStore;
 		};
@@ -1534,7 +1534,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseHockeyappInternal;
 		};
@@ -1624,7 +1624,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = DebugAppStoreLLC;
 		};
@@ -1706,7 +1706,7 @@
 				SKIP_INSTALL = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				SWIFT_REFLECTION_METADATA_LEVEL = none;
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = ReleaseAppStoreLLC;
 		};

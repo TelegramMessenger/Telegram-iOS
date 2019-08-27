@@ -4,6 +4,8 @@ import Postbox
 import Display
 import TelegramCore
 import TelegramPresentationData
+import AvatarNode
+import AccountContext
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 

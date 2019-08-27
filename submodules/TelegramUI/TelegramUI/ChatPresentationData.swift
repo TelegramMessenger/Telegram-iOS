@@ -26,33 +26,6 @@ extension PresentationFontSize {
     }
 }
 
-extension TelegramWallpaper {
-    var isEmpty: Bool {
-        switch self {
-            case .image:
-                return false
-            case let .file(file):
-                if file.isPattern, file.settings.color == 0xffffff {
-                    return true
-                } else {
-                    return false
-                }
-            case let .color(color):
-                return color == 0xffffff
-            default:
-                return false
-        }
-    }
-    var isBuiltin: Bool {
-        switch self {
-            case .builtin:
-                return true
-            default:
-                return false
-        }
-    }
-}
-
 public final class ChatPresentationThemeData: Equatable {
     public let theme: PresentationTheme
     public let wallpaper: TelegramWallpaper
@@ -75,6 +48,8 @@ public final class ChatPresentationData {
     let nameDisplayOrder: PresentationPersonNameOrder
     let disableAnimations: Bool
     let largeEmoji: Bool
+    let animatedEmojiScale: CGFloat
+    let isPreview: Bool
     
     let messageFont: UIFont
     let messageEmojiFont1: UIFont
@@ -86,9 +61,7 @@ public final class ChatPresentationData {
     let messageFixedFont: UIFont
     let messageBlockQuoteFont: UIFont
     
-    let animatedEmojiScale: CGFloat
-    
-    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, animatedEmojiScale: CGFloat = 1.0) {
+    init(theme: ChatPresentationThemeData, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool, largeEmoji: Bool, animatedEmojiScale: CGFloat = 1.0, isPreview: Bool = false) {
         self.theme = theme
         self.fontSize = fontSize
         self.strings = strings
@@ -96,6 +69,7 @@ public final class ChatPresentationData {
         self.nameDisplayOrder = nameDisplayOrder
         self.disableAnimations = disableAnimations
         self.largeEmoji = largeEmoji
+        self.isPreview = isPreview
         
         let baseFontSize = fontSize.baseDisplaySize
         self.messageFont = UIFont.systemFont(ofSize: baseFontSize)

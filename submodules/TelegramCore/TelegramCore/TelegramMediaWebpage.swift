@@ -24,9 +24,10 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
     
     public let image: TelegramMediaImage?
     public let file: TelegramMediaFile?
+    public let files: [TelegramMediaFile]?
     public let instantPage: InstantPage?
     
-    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: CGSize?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, instantPage: InstantPage?) {
+    public init(url: String, displayUrl: String, hash: Int32, type: String?, websiteName: String?, title: String?, text: String?, embedUrl: String?, embedType: String?, embedSize: CGSize?, duration: Int?, author: String?, image: TelegramMediaImage?, file: TelegramMediaFile?, files: [TelegramMediaFile]?, instantPage: InstantPage?) {
         self.url = url
         self.displayUrl = displayUrl
         self.hash = hash
@@ -41,6 +42,7 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         self.author = author
         self.image = image
         self.file = file
+        self.files = files
         self.instantPage = instantPage
     }
     
@@ -77,6 +79,8 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         } else {
             self.file = nil
         }
+        
+        self.files = decoder.decodeOptionalObjectArrayWithDecoderForKey("fis")
         
         if let instantPage = decoder.decodeObjectForKey("ip", decoder: { InstantPage(decoder: $0) }) as? InstantPage {
             self.instantPage = instantPage
@@ -146,6 +150,11 @@ public final class TelegramMediaWebpageLoadedContent: PostboxCoding, Equatable {
         } else {
             encoder.encodeNil(forKey: "fi")
         }
+        if let files = self.files {
+            encoder.encodeObjectArray(files, forKey: "fis")
+        } else {
+            encoder.encodeNil(forKey: "fis")
+        }
         if let instantPage = self.instantPage {
             encoder.encodeObject(instantPage, forKey: "ip")
         } else {
@@ -183,6 +192,20 @@ public func ==(lhs: TelegramMediaWebpageLoadedContent, rhs: TelegramMediaWebpage
             return false
         }
     } else if (lhs.file == nil) != (rhs.file == nil) {
+        return false
+    }
+    
+    if let lhsFiles = lhs.files, let rhsFiles = rhs.files {
+        if lhsFiles.count != rhsFiles.count {
+            return false
+        } else {
+            for i in 0 ..< lhsFiles.count {
+                if !lhsFiles[i].isEqual(to: rhsFiles[i]) {
+                    return false
+                }
+            }
+        }
+    } else if (lhs.files == nil) != (rhs.files == nil) {
         return false
     }
     
@@ -291,7 +314,7 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             return nil
         case let .webPagePending(id, date):
             return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Pending(date, url))
-        case let .webPage(_, id, url, displayUrl, hash, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document, cachedPage):
+        case let .webPage(_, id, url, displayUrl, hash, type, siteName, title, description, photo, embedUrl, embedType, embedWidth, embedHeight, duration, author, document, documents, cachedPage):
             var embedSize: CGSize?
             if let embedWidth = embedWidth, let embedHeight = embedHeight {
                 embedSize = CGSize(width: CGFloat(embedWidth), height: CGFloat(embedHeight))
@@ -308,11 +331,15 @@ func telegramMediaWebpageFromApiWebpage(_ webpage: Api.WebPage, url: String?) ->
             if let document = document {
                 file = telegramMediaFileFromApiDocument(document)
             }
+            var files: [TelegramMediaFile]?
+            if let documents = documents {
+                files = documents.compactMap(telegramMediaFileFromApiDocument)
+            }
             var instantPage: InstantPage?
             if let cachedPage = cachedPage {
                 instantPage = InstantPage(apiPage: cachedPage)
             }
-            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, instantPage: instantPage)))
+            return TelegramMediaWebpage(webpageId: MediaId(namespace: Namespaces.Media.CloudWebpage, id: id), content: .Loaded(TelegramMediaWebpageLoadedContent(url: url, displayUrl: displayUrl, hash: hash, type: type, websiteName: siteName, title: title, text: description, embedUrl: embedUrl, embedType: embedType, embedSize: embedSize, duration: webpageDuration, author: author, image: image, file: file, files: files, instantPage: instantPage)))
         case .webPageEmpty:
             return nil
     }

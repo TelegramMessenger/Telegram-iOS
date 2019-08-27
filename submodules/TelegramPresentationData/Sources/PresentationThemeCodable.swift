@@ -1,20 +1,17 @@
 import Foundation
 import UIKit
 import TelegramCore
-
-public enum PresentationThemeColorDecodingError: Error {
-    case generic
-}
+import TelegramUIPreferences
 
 private func decodeColor<Key>(_ values: KeyedDecodingContainer<Key>, _ key: Key) throws -> UIColor {
-    if let value = try? values.decode(String.self, forKey: key) {
-        if value.lowercased() == "clear" {
-            return UIColor.clear
-        } else if let color = UIColor(hexString: value) {
-            return color
-        }
+    let value = try values.decode(String.self, forKey: key)
+    if value.lowercased() == "clear" {
+        return UIColor.clear
+    } else if let color = UIColor(hexString: value) {
+        return color
+    } else {
+        throw PresentationThemeDecodingError.generic
     }
-    throw PresentationThemeColorDecodingError.generic
 }
 
 private func encodeColor<Key>(_ values: inout KeyedEncodingContainer<Key>, _ value: UIColor, _ key: Key) throws {
@@ -38,11 +35,12 @@ extension TelegramWallpaper: Codable {
                     if let color = UIColor(hexString: value) {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
-                        throw PresentationThemeColorDecodingError.generic
+                        throw PresentationThemeDecodingError.generic
                     }
             }
+        } else {
+            throw PresentationThemeDecodingError.generic
         }
-        throw PresentationThemeColorDecodingError.generic
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -143,6 +141,22 @@ extension PresentationThemeKeyboardColor: Codable {
 }
 
 extension PresentationThemeExpandedNotificationBackgroundType: Codable {
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.singleValueContainer()
+        if let value = try? values.decode(String.self) {
+            switch value.lowercased() {
+                case "light":
+                    self = .light
+                case "dark":
+                    self = .dark
+                default:
+                    self = .light
+            }
+        } else {
+            self = .light
+        }
+    }
+    
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
@@ -414,6 +428,7 @@ extension PresentationThemeActionSheet: Codable {
         try encodeColor(&values, self.opaqueItemBackgroundColor, .opaqueItemBg)
         try encodeColor(&values, self.itemBackgroundColor, .itemBg)
         try encodeColor(&values, self.opaqueItemHighlightedBackgroundColor, .opaqueItemHighlightedBg)
+        try encodeColor(&values, self.itemHighlightedBackgroundColor, .itemHighlightedBg)
         try encodeColor(&values, self.opaqueItemSeparatorColor, .opaqueItemSeparator)
         try encodeColor(&values, self.standardActionTextColor, .standardActionText)
         try encodeColor(&values, self.destructiveActionTextColor, .destructiveActionText)
@@ -1363,6 +1378,47 @@ extension PresentationThemeExpandedNotification: Codable {
     }
 }
 
+extension PresentationThemeContextMenu: Codable {
+    enum CodingKeys: String, CodingKey {
+        case dim
+        case background
+        case itemSeparator
+        case sectionSeparator
+        case itemBg
+        case itemHighlightedBg
+        case primary
+        case secondary
+        case destructive
+    }
+    
+    public convenience init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(dimColor: try decodeColor(values, .dim),
+                  backgroundColor: try decodeColor(values, .background),
+                  itemSeparatorColor: try decodeColor(values, .itemSeparator),
+                  sectionSeparatorColor: try decodeColor(values, .sectionSeparator),
+                  itemBackgroundColor: try decodeColor(values, .itemBg),
+                  itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
+                  primaryColor: try decodeColor(values, .primary),
+                  secondaryColor: try decodeColor(values, .secondary),
+                  destructiveColor: try decodeColor(values, .destructive)
+        )
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try encodeColor(&values, self.dimColor, .dim)
+        try encodeColor(&values, self.backgroundColor, .background)
+        try encodeColor(&values, self.itemSeparatorColor, .itemSeparator)
+        try encodeColor(&values, self.sectionSeparatorColor, .sectionSeparator)
+        try encodeColor(&values, self.itemBackgroundColor, .itemBg)
+        try encodeColor(&values, self.itemHighlightedBackgroundColor, .itemHighlightedBg)
+        try encodeColor(&values, self.primaryColor, .primary)
+        try encodeColor(&values, self.secondaryColor, .secondary)
+        try encodeColor(&values, self.destructiveColor, .destructive)
+    }
+}
+
 extension PresentationThemeInAppNotification: Codable {
     enum CodingKeys: String, CodingKey {
         case bg
@@ -1411,10 +1467,47 @@ extension PresentationThemeName: Codable {
     }
 }
 
+extension PresentationBuiltinThemeReference: Codable {
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.singleValueContainer()
+        if let value = try? values.decode(String.self) {
+            switch value.lowercased() {
+                case "day":
+                    self = .day
+                case "classic":
+                    self = .dayClassic
+                case "nightTinted":
+                    self = .nightAccent
+                case "night":
+                    self = .night
+                default:
+                    self = .dayClassic
+            }
+        } else {
+            self = .dayClassic
+        }
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+            case .day:
+                try container.encode("day")
+            case .dayClassic:
+                try container.encode("classic")
+            case .nightAccent:
+                try container.encode("nightTinted")
+            case .night:
+                try container.encode("night")
+        }
+    }
+}
+
 extension PresentationTheme: Codable {
     enum CodingKeys: String, CodingKey {
         case name
         case author
+        case basedOn
         case dark
         case intro
         case passcode
@@ -1423,14 +1516,29 @@ extension PresentationTheme: Codable {
         case chatList
         case chat
         case actionSheet
+        case contextMenu
         case notification
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(name: try values.decode(PresentationThemeName.self, forKey: .name),
+        let referenceTheme: PresentationBuiltinThemeReference
+        if let theme = try? values.decode(PresentationBuiltinThemeReference.self, forKey: .basedOn) {
+            referenceTheme = theme
+        } else {
+            referenceTheme = .dayClassic
+        }
+        
+        if let decoder = decoder as? PresentationThemeDecoding {
+            let serviceBackgroundColor = decoder.serviceBackgroundColor ?? .black
+            decoder.referenceTheme = makeDefaultPresentationTheme(reference: referenceTheme, accentColor: nil, serviceBackgroundColor: serviceBackgroundColor, baseColor: nil)
+        }
+        
+        self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),
                   author: (try? values.decode(String.self, forKey: .author)) ?? nil,
+                  referenceTheme: referenceTheme,
                   overallDarkAppearance: (try? values.decode(Bool.self, forKey: .dark)) ?? false,
+                  baseColor: nil,
                   intro: try values.decode(PresentationThemeIntro.self, forKey: .intro),
                   passcode: try values.decode(PresentationThemePasscode.self, forKey: .passcode),
                   rootController: try values.decode(PresentationThemeRootController.self, forKey: .root),
@@ -1438,13 +1546,16 @@ extension PresentationTheme: Codable {
                   chatList: try values.decode(PresentationThemeChatList.self, forKey: .chatList),
                   chat: try values.decode(PresentationThemeChat.self, forKey: .chat),
                   actionSheet: try values.decode(PresentationThemeActionSheet.self, forKey: .actionSheet),
-                  inAppNotification: try values.decode(PresentationThemeInAppNotification.self, forKey: .notification))
+                  contextMenu: try values.decode(PresentationThemeContextMenu.self, forKey: .contextMenu),
+                  inAppNotification: try values.decode(PresentationThemeInAppNotification.self, forKey: .notification)
+        )
     }
     
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.name, forKey: .name)
         try container.encode(self.author, forKey: .author)
+        try container.encode(self.referenceTheme, forKey: .basedOn)
         try container.encode(self.overallDarkAppearance, forKey: .dark)
         try container.encode(self.intro, forKey: .intro)
         try container.encode(self.passcode, forKey: .passcode)
@@ -1453,6 +1564,7 @@ extension PresentationTheme: Codable {
         try container.encode(self.chatList, forKey: .chatList)
         try container.encode(self.chat, forKey: .chat)
         try container.encode(self.actionSheet, forKey: .actionSheet)
+        try container.encode(self.contextMenu, forKey: .contextMenu)
         try container.encode(self.inAppNotification, forKey: .notification)
     }
 }

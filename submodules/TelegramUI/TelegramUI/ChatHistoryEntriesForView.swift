@@ -1,6 +1,8 @@
 import Foundation
 import Postbox
 import TelegramCore
+import TemporaryCachedPeerDataManager
+import Emoji
 
 func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView, includeUnreadEntry: Bool, includeEmptyEntry: Bool, includeChatInfoEntry: Bool, includeSearchEntry: Bool, reverse: Bool, groupMessages: Bool, selectedMessages: Set<MessageId>?, presentationData: ChatPresentationData, historyAppearsCleared: Bool, associatedData: ChatMessageItemAssociatedData) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
@@ -18,7 +20,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             }
         }
     }
-    
+
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
         for media in entry.message.media {

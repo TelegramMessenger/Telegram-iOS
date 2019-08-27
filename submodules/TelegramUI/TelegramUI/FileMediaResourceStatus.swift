@@ -4,21 +4,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import UniversalMediaPlayer
-
-enum FileMediaResourcePlaybackStatus: Equatable {
-    case playing
-    case paused
-}
-
-struct FileMediaResourceStatus: Equatable {
-    let mediaStatus: FileMediaResourceMediaStatus
-    let fetchStatus: MediaResourceStatus
-}
-
-enum FileMediaResourceMediaStatus: Equatable {
-    case fetchStatus(MediaResourceStatus)
-    case playbackStatus(FileMediaResourcePlaybackStatus)
-}
+import AccountContext
 
 private func internalMessageFileMediaPlaybackStatus(context: AccountContext, file: TelegramMediaFile, message: Message, isRecentActions: Bool) -> Signal<MediaPlayerStatus?, NoError> {
     guard let playerType = peerMessageMediaPlayerType(message) else {

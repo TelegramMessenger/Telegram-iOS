@@ -6,6 +6,8 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import RadialStatusNode
+import PhotoResources
 
 final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
     fileprivate let account: Account

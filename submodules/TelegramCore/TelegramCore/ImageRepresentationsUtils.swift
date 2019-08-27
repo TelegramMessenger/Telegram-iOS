@@ -1,10 +1,12 @@
 #if os(macOS)
     import PostboxMac
     import TelegramApiMac
+    import MtProtoKitMac
 #else
     import Postbox
     import UIKit
     import TelegramApi
+    import MtProtoKitDynamic
 #endif
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {
@@ -74,7 +76,18 @@ public func imageRepresentationLargerThan(_ representations: [TelegramMediaImage
 }
 
 public func parseMediaData(data: Data) -> Media? {
-    if let object = Api.parse(Buffer(data: data)) {
+    let buffer = BufferReader(Buffer(data: data))
+    var parseBuffer: Buffer?
+    guard let signature = buffer.readInt32() else {
+        return nil
+    }
+    if signature == 0x3072cfa1 {
+        parseBuffer = parseBytes(buffer).flatMap({ $0.makeData() }).flatMap(MTGzip.decompress).flatMap(Buffer.init(data:))
+    } else {
+        parseBuffer = Buffer(data: data)
+    }
+    
+    if let parseBuffer = parseBuffer, let object = Api.parse(parseBuffer) {
         if let photo = object as? Api.Photo {
             return telegramMediaImageFromApiPhoto(photo)
         } else if let document = object as? Api.Document {

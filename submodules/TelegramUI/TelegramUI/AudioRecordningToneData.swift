@@ -39,7 +39,7 @@ private func loadAudioRecordingToneData() -> Data? {
         if let nextBuffer = readerOutput.copyNextSampleBuffer() {
             var abl = AudioBufferList()
             var blockBuffer: CMBlockBuffer? = nil
-            CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(nextBuffer, nil, &abl, MemoryLayout<AudioBufferList>.size, nil, nil, kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment, &blockBuffer)
+            CMSampleBufferGetAudioBufferListWithRetainedBlockBuffer(nextBuffer, bufferListSizeNeededOut: nil, bufferListOut: &abl, bufferListSize: MemoryLayout<AudioBufferList>.size, blockBufferAllocator: nil, blockBufferMemoryAllocator: nil, flags: kCMSampleBufferFlag_AudioBufferList_Assure16ByteAlignment, blockBufferOut: &blockBuffer)
             let size = Int(CMSampleBufferGetTotalSampleSize(nextBuffer))
             if size != 0, let mData = abl.mBuffers.mData {
                 data.append(Data(bytes: mData, count: size))

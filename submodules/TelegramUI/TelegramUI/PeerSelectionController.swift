@@ -5,8 +5,12 @@ import Display
 import TelegramCore
 import Postbox
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
+import SearchUI
+import ChatListUI
 
-public final class PeerSelectionController: ViewController {
+public final class PeerSelectionControllerImpl: ViewController, PeerSelectionController {
     private let context: AccountContext
     
     private var presentationData: PresentationData
@@ -14,10 +18,10 @@ public final class PeerSelectionController: ViewController {
     
     private var customTitle: String?
     
-    var peerSelected: ((PeerId) -> Void)?
+    public var peerSelected: ((PeerId) -> Void)?
     private let filter: ChatListNodePeersFilter
     
-    var inProgress: Bool = false {
+    public var inProgress: Bool = false {
         didSet {
             if self.inProgress != oldValue {
                 if self.isNodeLoaded {
@@ -48,16 +52,16 @@ public final class PeerSelectionController: ViewController {
     
     private var searchContentNode: NavigationBarSearchContentNode?
     
-    public init(context: AccountContext, filter: ChatListNodePeersFilter = [.onlyWriteable], hasContactSelector: Bool = true, title: String? = nil) {
-        self.context = context
-        self.filter = filter
-        self.hasContactSelector = hasContactSelector
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    public init(_ params: PeerSelectionControllerParams) {
+        self.context = params.context
+        self.filter = params.filter
+        self.hasContactSelector = params.hasContactSelector
+        self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        self.customTitle = title
+        self.customTitle = params.title
         self.title = self.customTitle ?? self.presentationData.strings.Conversation_ForwardTitle
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
@@ -71,7 +75,7 @@ public final class PeerSelectionController: ViewController {
             }
         }
         
-        self.presentationDataDisposable = (context.sharedContext.presentationData
+        self.presentationDataDisposable = (self.context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 let previousTheme = strongSelf.presentationData.theme

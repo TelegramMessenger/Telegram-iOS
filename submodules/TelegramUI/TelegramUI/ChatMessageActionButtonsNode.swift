@@ -5,6 +5,7 @@ import TelegramCore
 import Postbox
 import Display
 import TelegramPresentationData
+import AccountContext
 
 private let titleFont = Font.medium(16.0)
 
@@ -20,6 +21,8 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
     
     var longTapRecognizer: UILongPressGestureRecognizer?
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     override init() {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displayWithoutProcessing = true
@@ -28,9 +31,18 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         self.backgroundNode.alpha = 1.0
         self.backgroundNode.isUserInteractionEnabled = false
         
+        self.accessibilityArea = AccessibilityAreaNode()
+        self.accessibilityArea.accessibilityTraits = .button
+        
         super.init()
         
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.accessibilityArea)
+        
+        self.accessibilityArea.activate = { [weak self] in
+            self?.buttonPressed()
+            return true
+        }
     }
     
     override func didLoad() {
@@ -39,6 +51,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
         let buttonView = HighlightTrackingButton(frame: self.bounds)
         buttonView.addTarget(self, action: #selector(self.buttonPressed), for: [.touchUpInside])
         self.buttonView = buttonView
+        buttonView.isAccessibilityElement = false
         self.view.addSubview(buttonView)
         buttonView.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -167,6 +180,9 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                     
                     node.buttonView?.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
                     node.iconNode?.frame = CGRect(x: width - 16.0, y: 4.0, width: 12.0, height: 12.0)
+                    
+                    node.accessibilityArea.accessibilityLabel = title
+                    node.accessibilityArea.frame = CGRect(origin: CGPoint(), size: CGSize(width: width, height: 42.0))
                     
                     return node
                 })

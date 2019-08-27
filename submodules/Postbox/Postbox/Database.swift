@@ -22,7 +22,11 @@
 // THE SOFTWARE.
 //
 
+#if os(macOS)
+import sqlciphermac
+#else
 import sqlcipher
+#endif
 
 public final class Database {
     internal var handle: OpaquePointer? = nil

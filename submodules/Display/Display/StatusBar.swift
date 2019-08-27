@@ -178,14 +178,14 @@ public final class StatusBar: ASDisplayNode {
                 
                 self.inCallBackgroundNode.layer.backgroundColor = inCallBackgroundColor.cgColor
                 if animated {
-                    self.inCallBackgroundNode.layer.animate(from: UIColor.clear.cgColor, to: inCallBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+                    self.inCallBackgroundNode.layer.animate(from: UIColor.clear.cgColor, to: inCallBackgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.3)
                 }
             } else {
                 self.inCallLabel.removeFromSupernode()
                 
                 self.inCallBackgroundNode.layer.backgroundColor = UIColor.clear.cgColor
                 if animated {
-                    self.inCallBackgroundNode.layer.animate(from: inCallBackgroundColor.cgColor, to: UIColor.clear.cgColor, keyPath: "backgroundColor", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.3)
+                    self.inCallBackgroundNode.layer.animate(from: inCallBackgroundColor.cgColor, to: UIColor.clear.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.3)
                 }
             }
         }

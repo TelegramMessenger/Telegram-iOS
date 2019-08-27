@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import AlertUI
 
 private enum SubscriberAction {
     case join
@@ -68,7 +69,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
     override init() {
         self.button = HighlightableButtonNode()
         self.discussButton = HighlightableButtonNode()
-        self.activityIndicator = UIActivityIndicatorView(activityIndicatorStyle: .gray)
+        self.activityIndicator = UIActivityIndicatorView(style: .gray)
         self.activityIndicator.isHidden = true
         
         self.discussButtonText = ImmediateTextNode()
@@ -197,7 +198,7 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
                     guard let strongSelf = self, let interfaceState = strongSelf.presentationInterfaceState, let image = strongSelf.badgeBackground.image else {
                         return
                     }
-                    let text = "\(value ?? 0)"
+                    let text = compactNumericCountString(value ?? 0, decimalSeparator: interfaceState.dateTimeFormat.decimalSeparator)
                     
                     strongSelf.badgeText.attributedText = NSAttributedString(string: text, font: badgeFont, textColor: interfaceState.theme.chatList.unreadBadgeActiveTextColor)
                     let textSize = strongSelf.badgeText.updateLayout(CGSize(width: 100.0, height: 100.0))

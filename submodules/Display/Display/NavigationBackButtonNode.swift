@@ -6,10 +6,10 @@ public class NavigationBackButtonNode: ASControlNode {
         return UIFont.systemFont(ofSize: 17.0)
     }
     
-    private func attributesForCurrentState() -> [NSAttributedStringKey : AnyObject] {
+    private func attributesForCurrentState() -> [NSAttributedString.Key : AnyObject] {
         return [
-            NSAttributedStringKey.font: self.fontForCurrentState(),
-            NSAttributedStringKey.foregroundColor: self.isEnabled ? self.color : self.disabledColor
+            NSAttributedString.Key.font: self.fontForCurrentState(),
+            NSAttributedString.Key.foregroundColor: self.isEnabled ? self.color : self.disabledColor
         ]
     }
     
@@ -137,7 +137,7 @@ public class NavigationBackButtonNode: ASControlNode {
             let alpha: CGFloat = !self.isEnabled ? 1.0 : (highlighted ? 0.4 : 1.0)
             
             if animated {
-                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIViewAnimationOptions.beginFromCurrentState, animations: { () -> Void in
+                UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions.beginFromCurrentState, animations: { () -> Void in
                     self.alpha = alpha
                     }, completion: nil)
             }

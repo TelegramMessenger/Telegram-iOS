@@ -4,281 +4,11 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
-import TelegramUIPrivateModule
 import UniversalMediaPlayer
 import TelegramAudio
-
-enum SharedMediaPlayerPlaybackControlAction {
-    case play
-    case pause
-    case togglePlayPause
-}
-
-enum SharedMediaPlayerControlAction {
-    case next
-    case previous
-    case playback(SharedMediaPlayerPlaybackControlAction)
-    case seek(Double)
-    case setOrder(MusicPlaybackSettingsOrder)
-    case setLooping(MusicPlaybackSettingsLooping)
-    case setBaseRate(AudioPlaybackRate)
-}
-
-enum SharedMediaPlaylistControlAction {
-    case next
-    case previous
-}
-
-enum SharedMediaPlaybackDataType {
-    case music
-    case voice
-    case instantVideo
-}
-
-enum SharedMediaPlaybackDataSource: Equatable {
-    case telegramFile(FileMediaReference)
-    
-    static func ==(lhs: SharedMediaPlaybackDataSource, rhs: SharedMediaPlaybackDataSource) -> Bool {
-        switch lhs {
-            case let .telegramFile(lhsFileReference):
-                if case let .telegramFile(rhsFileReference) = rhs {
-                    if !lhsFileReference.media.isEqual(to: rhsFileReference.media) {
-                        return false
-                    }
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
-
-struct SharedMediaPlaybackData: Equatable {
-    let type: SharedMediaPlaybackDataType
-    let source: SharedMediaPlaybackDataSource
-    
-    static func ==(lhs: SharedMediaPlaybackData, rhs: SharedMediaPlaybackData) -> Bool {
-        return lhs.type == rhs.type && lhs.source == rhs.source
-    }
-}
-
-struct SharedMediaPlaybackAlbumArt: Equatable {
-    let thumbnailResource: TelegramMediaResource
-    let fullSizeResource: TelegramMediaResource
-    
-    static func ==(lhs: SharedMediaPlaybackAlbumArt, rhs: SharedMediaPlaybackAlbumArt) -> Bool {
-        if !lhs.thumbnailResource.isEqual(to: rhs.thumbnailResource) {
-            return false
-        }
-        
-        if !lhs.fullSizeResource.isEqual(to: rhs.fullSizeResource) {
-            return false
-        }
-        
-        return true
-    }
-}
-
-enum SharedMediaPlaybackDisplayData: Equatable {
-    case music(title: String?, performer: String?, albumArt: SharedMediaPlaybackAlbumArt?)
-    case voice(author: Peer?, peer: Peer?)
-    case instantVideo(author: Peer?, peer: Peer?, timestamp: Int32)
-    
-    static func ==(lhs: SharedMediaPlaybackDisplayData, rhs: SharedMediaPlaybackDisplayData) -> Bool {
-        switch lhs {
-            case let .music(lhsTitle, lhsPerformer, lhsAlbumArt):
-                if case let .music(rhsTitle, rhsPerformer, rhsAlbumArt) = rhs, lhsTitle == rhsTitle, lhsPerformer == rhsPerformer, lhsAlbumArt == rhsAlbumArt {
-                    return true
-                } else {
-                    return false
-                }
-            case let .voice(lhsAuthor, lhsPeer):
-                if case let .voice(rhsAuthor, rhsPeer) = rhs, arePeersEqual(lhsAuthor, rhsAuthor), arePeersEqual(lhsPeer, rhsPeer) {
-                    return true
-                } else {
-                    return false
-                }
-            case let .instantVideo(lhsAuthor, lhsPeer, lhsTimestamp):
-                if case let .instantVideo(rhsAuthor, rhsPeer, rhsTimestamp) = rhs, arePeersEqual(lhsAuthor, rhsAuthor), arePeersEqual(lhsPeer, rhsPeer), lhsTimestamp == rhsTimestamp {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
-
-protocol SharedMediaPlaylistItem {
-    var stableId: AnyHashable { get }
-    var id: SharedMediaPlaylistItemId { get }
-    var playbackData: SharedMediaPlaybackData? { get }
-    var displayData: SharedMediaPlaybackDisplayData? { get }
-}
-
-func arePlaylistItemsEqual(_ lhs: SharedMediaPlaylistItem?, _ rhs: SharedMediaPlaylistItem?) -> Bool {
-    if lhs?.stableId != rhs?.stableId {
-        return false
-    }
-    if lhs?.playbackData != rhs?.playbackData {
-        return false
-    }
-    if lhs?.displayData != rhs?.displayData {
-        return false
-    }
-    return true
-}
-
-final class SharedMediaPlaylistState: Equatable {
-    let loading: Bool
-    let playedToEnd: Bool
-    let item: SharedMediaPlaylistItem?
-    let nextItem: SharedMediaPlaylistItem?
-    let previousItem: SharedMediaPlaylistItem?
-    let order: MusicPlaybackSettingsOrder
-    let looping: MusicPlaybackSettingsLooping
-    
-    init(loading: Bool, playedToEnd: Bool, item: SharedMediaPlaylistItem?, nextItem: SharedMediaPlaylistItem?, previousItem: SharedMediaPlaylistItem?, order: MusicPlaybackSettingsOrder, looping: MusicPlaybackSettingsLooping) {
-        self.loading = loading
-        self.playedToEnd = playedToEnd
-        self.item = item
-        self.nextItem = nextItem
-        self.previousItem = previousItem
-        self.order = order
-        self.looping = looping
-    }
-    
-    static func ==(lhs: SharedMediaPlaylistState, rhs: SharedMediaPlaylistState) -> Bool {
-        if lhs.loading != rhs.loading {
-            return false
-        }
-        if !arePlaylistItemsEqual(lhs.item, rhs.item) {
-            return false
-        }
-        if !arePlaylistItemsEqual(lhs.nextItem, rhs.nextItem) {
-            return false
-        }
-        if !arePlaylistItemsEqual(lhs.previousItem, rhs.previousItem) {
-            return false
-        }
-        if lhs.order != rhs.order {
-            return false
-        }
-        if lhs.looping != rhs.looping {
-            return false
-        }
-        return true
-    }
-}
-
-protocol SharedMediaPlaylistId {
-    func isEqual(to: SharedMediaPlaylistId) -> Bool
-}
-
-protocol SharedMediaPlaylistItemId {
-    func isEqual(to: SharedMediaPlaylistItemId) -> Bool
-}
-
-func areSharedMediaPlaylistItemIdsEqual(_ lhs: SharedMediaPlaylistItemId?, _ rhs: SharedMediaPlaylistItemId?) -> Bool {
-    if let lhs = lhs, let rhs = rhs {
-        return lhs.isEqual(to: rhs)
-    } else if (lhs != nil) != (rhs != nil) {
-        return false
-    } else {
-        return true
-    }
-}
-
-protocol SharedMediaPlaylistLocation {
-    func isEqual(to: SharedMediaPlaylistLocation) -> Bool
-}
-
-protocol SharedMediaPlaylist: class {
-    var id: SharedMediaPlaylistId { get }
-    var location: SharedMediaPlaylistLocation { get }
-    var state: Signal<SharedMediaPlaylistState, NoError> { get }
-    var looping: MusicPlaybackSettingsLooping { get }
-    var currentItemDisappeared: (() -> Void)? { get set }
-        
-    func control(_ action: SharedMediaPlaylistControlAction)
-    func setOrder(_ order: MusicPlaybackSettingsOrder)
-    func setLooping(_ looping: MusicPlaybackSettingsLooping)
-    
-    func onItemPlaybackStarted(_ item: SharedMediaPlaylistItem)
-}
-
-final class SharedMediaPlayerItemPlaybackState: Equatable {
-    let playlistId: SharedMediaPlaylistId
-    let playlistLocation: SharedMediaPlaylistLocation
-    let item: SharedMediaPlaylistItem
-    let previousItem: SharedMediaPlaylistItem?
-    let nextItem: SharedMediaPlaylistItem?
-    let status: MediaPlayerStatus
-    let order: MusicPlaybackSettingsOrder
-    let looping: MusicPlaybackSettingsLooping
-    let playerIndex: Int32
-    
-    init(playlistId: SharedMediaPlaylistId, playlistLocation: SharedMediaPlaylistLocation, item: SharedMediaPlaylistItem, previousItem: SharedMediaPlaylistItem?, nextItem: SharedMediaPlaylistItem?, status: MediaPlayerStatus, order: MusicPlaybackSettingsOrder, looping: MusicPlaybackSettingsLooping, playerIndex: Int32) {
-        self.playlistId = playlistId
-        self.playlistLocation = playlistLocation
-        self.item = item
-        self.previousItem = previousItem
-        self.nextItem = nextItem
-        self.status = status
-        self.order = order
-        self.looping = looping
-        self.playerIndex = playerIndex
-    }
-    
-    static func ==(lhs: SharedMediaPlayerItemPlaybackState, rhs: SharedMediaPlayerItemPlaybackState) -> Bool {
-        if !lhs.playlistId.isEqual(to: rhs.playlistId) {
-            return false
-        }
-        if !arePlaylistItemsEqual(lhs.item, rhs.item) {
-            return false
-        }
-        if !arePlaylistItemsEqual(lhs.previousItem, rhs.previousItem) {
-            return false
-        }
-        if !arePlaylistItemsEqual(lhs.nextItem, rhs.nextItem) {
-            return false
-        }
-        if lhs.status != rhs.status {
-            return false
-        }
-        if lhs.playerIndex != rhs.playerIndex {
-            return false
-        }
-        if lhs.order != rhs.order {
-            return false
-        }
-        if lhs.looping != rhs.looping {
-            return false
-        }
-        return true
-    }
-}
-
-enum SharedMediaPlayerState: Equatable {
-    case loading
-    case item(SharedMediaPlayerItemPlaybackState)
-    
-    static func ==(lhs: SharedMediaPlayerState, rhs: SharedMediaPlayerState) -> Bool {
-        switch lhs {
-            case .loading:
-                if case .loading = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .item(item):
-                if case .item(item) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
-}
+import AccountContext
+import TelegramUniversalVideoContent
+import DeviceProximity
 
 private enum SharedMediaPlaybackItem: Equatable {
     case audio(MediaPlayer)
@@ -459,7 +189,7 @@ final class SharedMediaPlayer {
                                 playbackItem.pause()
                             case let .instantVideo(node):
                                node.setSoundEnabled(false)
-                               strongSelf.overlayMediaManager.controller?.removeNode(node)
+                               strongSelf.overlayMediaManager.controller?.removeNode(node, customTransition: false)
                         }
                     }
                     strongSelf.playbackItem = nil
@@ -487,7 +217,7 @@ final class SharedMediaPlayer {
                                     switch playbackData.source {
                                         case let .telegramFile(fileReference):
                                             let videoNode = OverlayInstantVideoNode(postbox: strongSelf.account.postbox, audioSession: strongSelf.audioSession, manager: mediaManager.universalVideoManager, content: NativeVideoContent(id: .message(item.message.stableId, fileReference.media.fileId), fileReference: fileReference, enableSound: false, baseRate: rateValue), close: { [weak mediaManager] in
-                                                mediaManager?.setPlaylist(nil, type: .voice)
+                                                mediaManager?.setPlaylist(nil, type: .voice, control: .playback(.pause))
                                             })
                                             strongSelf.playbackItem = .instantVideo(videoNode)
                                             videoNode.setSoundEnabled(true)
@@ -516,7 +246,7 @@ final class SharedMediaPlayer {
                             case .audio:
                                 break
                             case let .instantVideo(node):
-                                strongSelf.overlayMediaManager.controller?.addNode(node)
+                                strongSelf.overlayMediaManager.controller?.addNode(node, customTransition: false)
                         }
                         
                         if let scheduledPlaybackAction = strongSelf.scheduledPlaybackAction {
@@ -641,7 +371,7 @@ final class SharedMediaPlayer {
                     playbackItem.pause()
                 case let .instantVideo(node):
                     node.setSoundEnabled(false)
-                    self.overlayMediaManager.controller?.removeNode(node)
+                    self.overlayMediaManager.controller?.removeNode(node, customTransition: false)
             }
         }
     }

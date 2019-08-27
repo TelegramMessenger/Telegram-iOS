@@ -8,10 +8,15 @@ import SwiftSignalKit
 import LegacyComponents
 import TelegramPresentationData
 import TelegramUIPreferences
+import ActivityIndicator
+import TelegramStringFormatting
+import PeerPresenceStatusManager
+import ChatTitleActivityNode
 
 enum ChatTitleContent {
-    case peer(peerView: PeerView, onlineMemberCount: Int32?)
+    case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)
     case group([Peer])
+    case custom(String)
 }
 
 private final class ChatTitleNetworkStatusNode: ASDisplayNode {
@@ -174,30 +179,42 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleLeftIcon: ChatTitleIcon = .none
                 var titleRightIcon: ChatTitleIcon = .none
                 var titleScamIcon = false
+                var isEnabled = true
                 switch titleContent {
-                    case let .peer(peerView, _):
-                        if let peer = peerViewMainPeer(peerView) {
+                    case let .peer(peerView, _, isScheduledMessages):
+                        if isScheduledMessages {
                             if peerView.peerId == self.account.peerId {
-                                string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                 string = NSAttributedString(string: self.strings.ScheduledMessages_RemindersTitle, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             } else {
-                                if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
-                                    string = NSAttributedString(string: formatPhoneNumber(phone), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                                } else {
-                                    string = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
-                                }
+                                string = NSAttributedString(string: self.strings.ScheduledMessages_Title, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                             }
-                            titleScamIcon = peer.isScam
-                        }
-                        if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
-                            titleLeftIcon = .lock
-                        }
-                        if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                            if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                                titleRightIcon = .mute
+                            isEnabled = false
+                        } else {
+                            if let peer = peerViewMainPeer(peerView) {
+                                if peerView.peerId == self.account.peerId {
+                                    string = NSAttributedString(string: self.strings.Conversation_SavedMessages, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                } else {
+                                    if !peerView.peerIsContact, let user = peer as? TelegramUser, !user.flags.contains(.isSupport), user.botInfo == nil, let phone = user.phone, !phone.isEmpty {
+                                        string = NSAttributedString(string: formatPhoneNumber(phone), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                    } else {
+                                        string = NSAttributedString(string: peer.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                                    }
+                                }
+                                titleScamIcon = peer.isScam
+                            }
+                            if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
+                                titleLeftIcon = .lock
+                            }
+                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                    titleRightIcon = .mute
+                                }
                             }
                         }
                     case .group:
                         string = NSAttributedString(string: "Feed", font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                    case let .custom(text):
+                        string = NSAttributedString(string: text, font: Font.medium(17.0), textColor: self.theme.rootController.navigationBar.primaryTextColor)
                 }
                 
                 if let string = string, self.titleNode.attributedText == nil || !self.titleNode.attributedText!.isEqual(to: string) {
@@ -232,7 +249,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                     }
                     self.setNeedsLayout()
                 }
-                
+                self.isUserInteractionEnabled = isEnabled
                 self.updateStatus()
             }
         }
@@ -242,14 +259,14 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-            case let .peer(peerView, _):
+            case let .peer(peerView, _, isScheduledMessages):
                 if let peer = peerViewMainPeer(peerView) {
-                    if peer.id == self.account.peerId {
+                    if peer.id == self.account.peerId || isScheduledMessages {
                         inputActivitiesAllowed = false
                     }
                 }
             default:
-                break
+                inputActivitiesAllowed = false
             }
         }
         
@@ -313,10 +330,10 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         } else {
             if let titleContent = self.titleContent {
                 switch titleContent {
-                    case let .peer(peerView, onlineMemberCount):
+                    case let .peer(peerView, onlineMemberCount, isScheduledMessages):
                         if let peer = peerViewMainPeer(peerView) {
                             let servicePeer = isServicePeer(peer)
-                            if peer.id == self.account.peerId {
+                            if peer.id == self.account.peerId || isScheduledMessages {
                                 let string = NSAttributedString(string: "", font: Font.regular(13.0), textColor: self.theme.rootController.navigationBar.secondaryTextColor)
                                 state = .info(string, .generic)
                             } else if let user = peer as? TelegramUser {
@@ -415,7 +432,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                 }
                             }
                         }
-                    case .group:
+                    default:
                         break
                 }
                 
@@ -466,7 +483,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         super.init(frame: CGRect())
         
         self.isAccessibilityElement = true
-        self.accessibilityTraits = UIAccessibilityTraitHeader
+        self.accessibilityTraits = .header
         
         self.addSubnode(self.contentContainer)
         self.contentContainer.addSubnode(self.titleNode)
@@ -534,7 +551,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
-        var clearBounds = clearBounds
         self.validLayout = (size, clearBounds)
         
         let transition: ContainedViewLayoutTransition = .immediate

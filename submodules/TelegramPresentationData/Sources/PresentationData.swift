@@ -150,14 +150,15 @@ private func currentDateTimeFormat() -> PresentationDateTimeFormat {
                 break
             }
         }
-    }
-    
-    if dateString.contains("M\(dateSeparator)d") {
-        dateFormat = .monthFirst
+        if dateString.contains("M\(dateSeparator)d") {
+            dateFormat = .monthFirst
+        } else {
+            dateFormat = .dayFirst
+        }
     } else {
         dateFormat = .dayFirst
     }
-    
+
     let decimalSeparator = locale.decimalSeparator ?? "."
     let groupingSeparator = locale.groupingSeparator ?? ""
     return PresentationDateTimeFormat(timeFormat: timeFormat, dateFormat: dateFormat, dateSeparator: dateSeparator, decimalSeparator: decimalSeparator, groupingSeparator: groupingSeparator)
@@ -259,7 +260,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         }
         
         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-        themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor)
+        themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue)
         
         if effectiveTheme != themeSettings.theme {
             switch effectiveChatWallpaper {
@@ -337,6 +338,8 @@ private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchPar
                 default:
                     break
             }
+        default:
+            return false
     }
     switch parameters.trigger {
         case .none:
@@ -523,7 +526,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         }
                         
                         let effectiveAccentColor = themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.color
-                        let themeValue = makePresentationTheme(themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor)
+                        let themeValue = makePresentationTheme(mediaBox: accountManager.mediaBox, themeReference: effectiveTheme, accentColor: effectiveAccentColor, serviceBackgroundColor: serviceBackgroundColor, baseColor: themeSettings.themeSpecificAccentColors[effectiveTheme.index]?.baseColor ?? .blue)
                         
                         if effectiveTheme != themeSettings.theme && themeSettings.themeSpecificChatWallpapers[effectiveTheme.index] == nil {
                             switch effectiveChatWallpaper {

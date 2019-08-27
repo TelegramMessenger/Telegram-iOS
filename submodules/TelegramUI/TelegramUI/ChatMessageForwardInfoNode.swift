@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import LocalizedPeerData
 
 private let prefixFont = Font.regular(13.0)
 private let peerFont = Font.medium(13.0)
@@ -77,9 +78,9 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             }
             
             let completeString: NSString = completeSourceString.0 as NSString
-            let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedStringKey.foregroundColor: titleColor, NSAttributedStringKey.font: prefixFont])
+            let string = NSMutableAttributedString(string: completeString as String, attributes: [NSAttributedString.Key.foregroundColor: titleColor, NSAttributedString.Key.font: prefixFont])
             if highlight, let range = completeSourceString.1.first?.1 {
-                string.addAttributes([NSAttributedStringKey.font: peerFont], range: range)
+                string.addAttributes([NSAttributedString.Key.font: peerFont], range: range)
             }
             
             var credibilityIconWidth: CGFloat = 0.0

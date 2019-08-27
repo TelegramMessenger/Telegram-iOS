@@ -38,21 +38,28 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
     private let label: ASTextNode
     private let switchNode: SwitchNode
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
         self.button = HighlightTrackingButton()
+        self.button.isAccessibilityElement = false
         
         self.label = ASTextNode()
         self.label.isUserInteractionEnabled = false
         self.label.maximumNumberOfLines = 1
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
+        self.label.isAccessibilityElement = false
         
         self.switchNode = SwitchNode()
         self.switchNode.frameColor = theme.switchFrameColor
         self.switchNode.contentColor = theme.switchContentColor
         self.switchNode.handleColor = theme.switchHandleColor
+        self.switchNode.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(theme: theme)
         
@@ -62,9 +69,16 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
         self.addSubnode(self.label)
         self.addSubnode(self.switchNode)
         
+        self.addSubnode(self.accessibilityArea)
+        
         self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
         self.switchNode.valueUpdated = { [weak self] value in
             self?.item?.action(value)
+        }
+        
+        self.accessibilityArea.activate = { [weak self] in
+            self?.buttonPressed()
+            return true
         }
     }
     
@@ -72,8 +86,17 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
         self.item = item
         
         self.label.attributedText = NSAttributedString(string: item.title, font: ActionSheetButtonNode.defaultFont, textColor: self.theme.primaryTextColor)
+        self.label.isAccessibilityElement = false
         
         self.switchNode.isOn = item.isOn
+        
+        self.accessibilityArea.accessibilityLabel = item.title
+        
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
+        if item.isOn {
+            accessibilityTraits.insert(.selected)
+        }
+        self.accessibilityArea.accessibilityTraits = accessibilityTraits
         
         self.setNeedsLayout()
     }
@@ -94,6 +117,8 @@ public class ActionSheetSwitchNode: ActionSheetItemNode {
         
         let switchSize = CGSize(width: 51.0, height: 31.0)
         self.switchNode.frame = CGRect(origin: CGPoint(x: size.width - 16.0 - switchSize.width, y: floor((size.height - switchSize.height) / 2.0)), size: switchSize)
+        
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     @objc func buttonPressed() {

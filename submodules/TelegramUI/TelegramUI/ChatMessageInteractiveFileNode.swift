@@ -7,6 +7,10 @@ import Display
 import TelegramCore
 import UniversalMediaPlayer
 import TelegramPresentationData
+import AccountContext
+import RadialStatusNode
+import PhotoResources
+import TelegramStringFormatting
 
 private struct FetchControls {
     let fetch: () -> Void
@@ -263,24 +267,31 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 if let statusType = dateAndStatusType {
                     var edited = false
-                    var sentViaBot = false
                     var viewCount: Int?
                     for attribute in message.attributes {
-                        if let _ = attribute as? EditedMessageAttribute {
-                            edited = true
+                        if let attribute = attribute as? EditedMessageAttribute {
+                            edited = !attribute.isHidden
                         } else if let attribute = attribute as? ViewCountMessageAttribute {
                             viewCount = attribute.count
-                        } else if let _ = attribute as? InlineBotMessageAttribute {
-                            sentViaBot = true
                         }
                     }
-                    if let author = message.author as? TelegramUser, author.botInfo != nil || author.flags.contains(.isSupport) {
-                        sentViaBot = true
+                    
+                    var dateReactions: [MessageReaction] = []
+                    var dateReactionCount = 0
+                    if let reactionsAttribute = mergedMessageReactions(attributes: message.attributes), !reactionsAttribute.reactions.isEmpty {
+                        for reaction in reactionsAttribute.reactions {
+                            if reaction.isSelected {
+                                dateReactions.insert(reaction, at: 0)
+                            } else {
+                                dateReactions.append(reaction)
+                            }
+                            dateReactionCount += Int(reaction.count)
+                        }
                     }
                     
-                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings)
+                    let dateText = stringForMessageTimestampStatus(accountPeerId: context.account.peerId, message: message, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, strings: presentationData.strings, reactionCount: dateReactionCount)
                     
-                    let (size, apply) = statusLayout(presentationData, edited && !sentViaBot, viewCount, dateText, statusType, constrainedSize)
+                    let (size, apply) = statusLayout(context, presentationData, edited, viewCount, dateText, statusType, constrainedSize, dateReactions)
                     statusSize = size
                     statusApply = apply
                 }
@@ -423,7 +434,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if hasThumbnail {
                     fileIconImage = nil
                 } else {
-                    let principalGraphics = PresentationResourcesChat.principalGraphics(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                    let principalGraphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
                     
                     fileIconImage = incoming ? principalGraphics.radialIndicatorFileIconIncoming : principalGraphics.radialIndicatorFileIconOutgoing
                 }
@@ -540,7 +551,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             if isVoice {
                                 if strongSelf.waveformScrubbingNode == nil {
                                     let waveformScrubbingNode = MediaPlayerScrubbingNode(content: .custom(backgroundNode: strongSelf.waveformNode, foregroundContentNode: strongSelf.waveformForegroundNode))
-                                    waveformScrubbingNode.hitTestSlop = UIEdgeInsetsMake(-10.0, 0.0, -10.0, 0.0)
+                                    waveformScrubbingNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: 0.0, bottom: -10.0, right: 0.0)
                                     waveformScrubbingNode.seek = { timestamp in
                                         if let strongSelf = self, let context = strongSelf.context, let message = strongSelf.message, let type = peerMessageMediaPlayerType(message) {
                                             context.sharedContext.mediaManager.playlistControl(.seek(timestamp), type: type)
@@ -928,5 +939,12 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private func stopTimer() {
         self.playerUpdateTimer?.invalidate()
         self.playerUpdateTimer = nil
+    }
+    
+    func reactionTargetNode(value: String) -> (ASImageNode, Int)? {
+        if !self.dateAndStatusNode.isHidden {
+            return self.dateAndStatusNode.reactionNode(value: value)
+        }
+        return nil
     }
 }

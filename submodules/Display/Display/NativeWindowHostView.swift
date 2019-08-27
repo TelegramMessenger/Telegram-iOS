@@ -112,7 +112,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
         self.extendedLayoutIncludesOpaqueBars = true
         
         if #available(iOSApplicationExtension 11.0, *) {
-            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: NSNotification.Name.UIAccessibilityVoiceOverStatusDidChange, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
+            self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.updatePreviewingRegistration()
                 }
@@ -130,11 +130,11 @@ private final class WindowRootViewController: UIViewController, UIViewController
         }
     }
     
-    override func preferredScreenEdgesDeferringSystemGestures() -> UIRectEdge {
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
         return self.gestureEdges
     }
     
-    override func prefersHomeIndicatorAutoHidden() -> Bool {
+    override var prefersHomeIndicatorAutoHidden: Bool {
         return self.preferNavigationUIHidden
     }
     
@@ -337,7 +337,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     }
 }
 
-public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
+public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView, UIWindow) {
     let window = NativeWindow(frame: UIScreen.main.bounds)
     
     let rootViewController = WindowRootViewController()
@@ -346,7 +346,9 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     rootViewController.view.frame = CGRect(origin: CGPoint(), size: window.bounds.size)
     rootViewController.viewDidAppear(false)
     
-    let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, isRotating: {
+    let aboveStatusbarWindow = AboveStatusBarWindow(frame: UIScreen.main.bounds)
+    
+    let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, aboveStatusBarView: rootViewController.view, isRotating: {
         return window.isRotating()
     }, updateSupportedInterfaceOrientations: { orientations in
         rootViewController.orientations = orientations
@@ -422,5 +424,5 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         }
     }
     
-    return (window, hostView)
+    return (window, hostView, aboveStatusbarWindow)
 }

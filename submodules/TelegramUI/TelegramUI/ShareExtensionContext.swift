@@ -5,15 +5,20 @@ import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
-import TelegramUIPrivateModule
+import AccountContext
+import ShareController
+import LegacyUI
+import PeerInfoUI
+import ShareItems
+import SettingsUI
 
 private let inForeground = ValuePromise<Bool>(false, ignoreRepeated: true)
 
 private final class InternalContext {
-    let sharedContext: SharedAccountContext
+    let sharedContext: SharedAccountContextImpl
     let wakeupManager: SharedWakeupManager
     
-    init(sharedContext: SharedAccountContext) {
+    init(sharedContext: SharedAccountContextImpl) {
         self.sharedContext = sharedContext
         self.wakeupManager = SharedWakeupManager(beginBackgroundTask: { _, _ in nil }, endBackgroundTask: { _ in }, backgroundTimeRemaining: { 0.0 }, activeAccounts: sharedContext.activeAccounts |> map { ($0.0, $0.1.map { ($0.0, $0.1) }) }, liveLocationPolling: .single(nil), watchTasks: .single(nil), inForeground: inForeground.get(), hasActiveAudioSession: .single(false), notificationManager: nil, mediaManager: sharedContext.mediaManager, callManager: sharedContext.callManager, accountUserInterfaceInUse: { id in
             return sharedContext.accountUserInterfaceInUse(id)
@@ -166,16 +171,16 @@ public class ShareRootControllerImpl {
                 })
                 semaphore.wait()
                 
-                let sharedContext = SharedAccountContext(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData)), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, appData: .single(self.initializationData.bundleData)), rootPath: rootPath, legacyBasePath: nil, legacyCache: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
             }
             
-            let account: Signal<(SharedAccountContext, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContext, LoggingSettings) in
+            let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
                 return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
             }
             |> introduceError(ShareAuthorizationError.self)
-            |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContext, Account, [AccountWithInfo]), ShareAuthorizationError> in
+            |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
                 Logger.shared.logToFile = loggingSettings.logToFile
                 Logger.shared.logToConsole = loggingSettings.logToConsole
                 
@@ -184,7 +189,7 @@ public class ShareRootControllerImpl {
                 return sharedContext.activeAccountsWithInfo
                 |> introduceError(ShareAuthorizationError.self)
                 |> take(1)
-                |> mapToSignal { primary, accounts -> Signal<(SharedAccountContext, Account, [AccountWithInfo]), ShareAuthorizationError> in
+                |> mapToSignal { primary, accounts -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
                     guard let primary = primary else {
                         return .fail(.unauthorized)
                     }
@@ -207,7 +212,7 @@ public class ShareRootControllerImpl {
                 |> introduceError(ShareAuthorizationError.self)
                 |> map { sharedData, limitsConfiguration, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
-                    let context = AccountContext(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfiguration)
+                    let context = AccountContextImpl(sharedContext: sharedContext, account: account, limitsConfiguration: limitsConfiguration)
                     return (context, data.data, otherAccounts)
                 }
             }
@@ -229,7 +234,7 @@ public class ShareRootControllerImpl {
                                             subscriber.putNext([.media(.media(.standalone(media: TelegramMediaContact(firstName: contactData.basicData.firstName, lastName: contactData.basicData.lastName, phoneNumber: phone, peerId: nil, vCardData: vCardData))))])
                                         }
                                         subscriber.putCompletion()
-                                    }), cancelled: {
+                                    }), completed: nil, cancelled: {
                                         cancelImpl?()
                                     })
                                     

@@ -83,12 +83,31 @@ final class CloudChatRemoveChatOperation: PostboxCoding {
     }
 }
 
+enum CloudChatClearHistoryType: Int32 {
+    case forLocalPeer
+    case forEveryone
+    case scheduledMessages
+}
+
+extension CloudChatClearHistoryType {
+    init(_ type: InteractiveHistoryClearingType) {
+        switch type {
+            case .forLocalPeer:
+                self = .forLocalPeer
+            case .forEveryone:
+                self = .forEveryone
+            case .scheduledMessages:
+                self = .scheduledMessages
+        }
+    }
+}
+
 final class CloudChatClearHistoryOperation: PostboxCoding {
     let peerId: PeerId
     let topMessageId: MessageId
-    let type: InteractiveMessagesDeletionType
+    let type: CloudChatClearHistoryType
     
-    init(peerId: PeerId, topMessageId: MessageId, type: InteractiveMessagesDeletionType) {
+    init(peerId: PeerId, topMessageId: MessageId, type: CloudChatClearHistoryType) {
         self.peerId = peerId
         self.topMessageId = topMessageId
         self.type = type
@@ -97,7 +116,7 @@ final class CloudChatClearHistoryOperation: PostboxCoding {
     init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.topMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0))
-        self.type = InteractiveMessagesDeletionType(rawValue: decoder.decodeInt32ForKey("type", orElse: 0)) ?? .forLocalPeer
+        self.type = CloudChatClearHistoryType(rawValue: decoder.decodeInt32ForKey("type", orElse: 0)) ?? .forLocalPeer
     }
     
     func encode(_ encoder: PostboxEncoder) {
@@ -117,14 +136,23 @@ func cloudChatAddRemoveChatOperation(transaction: Transaction, peerId: PeerId, r
     transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible, topMessageId: transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)))
 }
 
-func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId, explicitTopMessageId: MessageId?, type: InteractiveMessagesDeletionType) {
-    let topMessageId: MessageId?
-    if let explicitTopMessageId = explicitTopMessageId {
-        topMessageId = explicitTopMessageId
+func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId, explicitTopMessageId: MessageId?, type: CloudChatClearHistoryType) {
+    if type == .scheduledMessages {
+        var messageIds: [MessageId] = []
+        transaction.withAllMessages(peerId: peerId, namespace: Namespaces.Message.ScheduledCloud) { message -> Bool in
+            messageIds.append(message.id)
+            return true
+        }
+        cloudChatAddRemoveMessagesOperation(transaction: transaction, peerId: peerId, messageIds: messageIds, type: .forLocalPeer)
     } else {
-        topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)
-    }
-    if let topMessageId = topMessageId {
-        transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId, type: type))
+        let topMessageId: MessageId?
+        if let explicitTopMessageId = explicitTopMessageId {
+            topMessageId = explicitTopMessageId
+        } else {
+            topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)
+        }
+        if let topMessageId = topMessageId {
+            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId, type: type))
+        }
     }
 }

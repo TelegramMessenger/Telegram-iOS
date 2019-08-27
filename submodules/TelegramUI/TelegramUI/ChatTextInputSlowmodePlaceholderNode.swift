@@ -2,6 +2,7 @@ import Foundation
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
 
 final class ChatTextInputSlowmodePlaceholderNode: ASDisplayNode {
     private var theme: PresentationTheme
@@ -74,12 +75,12 @@ final class ChatTextInputSlowmodePlaceholderNode: ASDisplayNode {
                 if timeout <= 30 {
                     if self.iconArrowNode.layer.animation(forKey: "rotation") == nil {
                         let basicAnimation = CABasicAnimation(keyPath: "transform.rotation.z")
-                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionEaseInEaseOut)
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.easeInEaseOut)
                         basicAnimation.duration = 1.0
                         basicAnimation.fromValue = NSNumber(value: Float(0.0))
                         basicAnimation.toValue = NSNumber(value: Float(Double.pi * 2.0))
                         basicAnimation.repeatCount = Float.infinity
-                        basicAnimation.timingFunction = CAMediaTimingFunction(name: kCAMediaTimingFunctionLinear)
+                        basicAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
                         self.iconArrowNode.layer.add(basicAnimation, forKey: "rotation")
                     }
                 } else {

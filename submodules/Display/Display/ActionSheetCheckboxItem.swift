@@ -50,20 +50,25 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
     private let labelNode: ImmediateTextNode
     private let checkNode: ASImageNode
     
+    private let accessibilityArea: AccessibilityAreaNode
+    
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
         self.button = HighlightTrackingButton()
+        self.button.isAccessibilityElement = false
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
+        self.titleNode.isAccessibilityElement = false
         
         self.labelNode = ImmediateTextNode()
         self.labelNode.maximumNumberOfLines = 1
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = false
+        self.labelNode.isAccessibilityElement = false
         
         self.checkNode = ASImageNode()
         self.checkNode.isUserInteractionEnabled = false
@@ -78,6 +83,9 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
             context.addLine(to: CGPoint(x: 1.0, y: 5.81145833))
             context.strokePath()
         })
+        self.checkNode.isAccessibilityElement = false
+        
+        self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(theme: theme)
         
@@ -85,6 +93,7 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         self.addSubnode(self.titleNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.checkNode)
+        self.addSubnode(self.accessibilityArea)
         
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -98,6 +107,11 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
             }
         }
         
+        self.accessibilityArea.activate = { [weak self] in
+            self?.buttonPressed()
+            return true
+        }
+        
         self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
     }
     
@@ -107,6 +121,14 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         self.titleNode.attributedText = NSAttributedString(string: item.title, font: ActionSheetCheckboxItemNode.defaultFont, textColor: self.theme.primaryTextColor)
         self.labelNode.attributedText = NSAttributedString(string: item.label, font: ActionSheetCheckboxItemNode.defaultFont, textColor: self.theme.secondaryTextColor)
         self.checkNode.isHidden = !item.value
+        
+        self.accessibilityArea.accessibilityLabel = item.title
+        
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
+        if item.value {
+            accessibilityTraits.insert(.selected)
+        }
+        self.accessibilityArea.accessibilityTraits = accessibilityTraits
         
         self.setNeedsLayout()
     }
@@ -137,6 +159,8 @@ public class ActionSheetCheckboxItemNode: ActionSheetItemNode {
         if let image = self.checkNode.image {
             self.checkNode.frame = CGRect(origin: CGPoint(x: floor(checkOrigin - (image.size.width / 2.0)), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
+        
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     @objc func buttonPressed() {

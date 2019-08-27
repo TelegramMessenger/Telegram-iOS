@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import TelegramPresentationData
+import ProgressNavigationButtonNode
 
 final class AuthorizationSequenceAwaitingAccountResetController: ViewController {
     private var controllerNode: AuthorizationSequenceAwaitingAccountResetControllerNode {

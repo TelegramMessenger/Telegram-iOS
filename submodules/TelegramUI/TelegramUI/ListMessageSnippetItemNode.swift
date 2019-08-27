@@ -6,6 +6,11 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import ItemListUI
+import TextFormat
+import PhotoResources
+import WebsiteType
+import UrlHandling
 
 private let titleFont = Font.medium(16.0)
 private let descriptionFont = Font.regular(14.0)
@@ -214,7 +219,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         let plainUrlString = NSAttributedString(string: content.displayUrl, font: descriptionFont, textColor: item.theme.list.itemAccentColor)
                         let urlString = NSMutableAttributedString()
                         urlString.append(plainUrlString)
-                        urlString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
+                        urlString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: content.displayUrl, range: NSMakeRange(0, urlString.length))
                         linkText = urlString
                         
                         descriptionText = mutableDescriptionText
@@ -273,9 +278,9 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                                     let urlAttributedString = NSMutableAttributedString()
                                     urlAttributedString.append(NSAttributedString(string: urlString, font: descriptionFont, textColor: item.theme.list.itemAccentColor))
                                     if item.theme.list.itemAccentColor.isEqual(item.theme.list.itemPrimaryTextColor) {
-                                        urlAttributedString.addAttribute(NSAttributedStringKey.underlineStyle, value: NSUnderlineStyle.styleSingle.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
+                                        urlAttributedString.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue as NSNumber, range: NSMakeRange(0, urlAttributedString.length))
                                     }
-                                    urlAttributedString.addAttribute(NSAttributedStringKey(rawValue: TelegramTextAttributes.URL), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
+                                    urlAttributedString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.URL), value: urlString, range: NSMakeRange(0, urlAttributedString.length))
                                     linkText = urlAttributedString
 
                                     descriptionText = mutableDescriptionText
@@ -484,7 +489,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
         if let item = self.item, let currentPrimaryUrl = self.currentPrimaryUrl {
             if let webpage = self.currentMedia as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
                 if content.instantPage != nil {
-                    if websiteType(of: content) == .instagram {
+                    if websiteType(of: content.websiteName) == .instagram {
                         if !item.controllerInteraction.openMessage(item.message, .default) {
                             item.controllerInteraction.openInstantPage(item.message, nil)
                         }
@@ -527,7 +532,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                 TelegramTextAttributes.URL,
             ]
             for name in possibleNames {
-                if let value = attributes[NSAttributedStringKey(rawValue: name)] as? String {
+                if let value = attributes[NSAttributedString.Key(rawValue: name)] as? String {
                     return value
                 }
             }
@@ -575,7 +580,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
                         TelegramTextAttributes.URL
                     ]
                     for name in possibleNames {
-                        if let _ = attributes[NSAttributedStringKey(rawValue: name)] {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                             rects = self.linkNode.attributeRects(name: name, at: index)
                             break
                         }
@@ -605,7 +610,7 @@ final class ListMessageSnippetItemNode: ListMessageNode {
     
     override func longTapped() {
         if let item = self.item {
-            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds)
+            item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.bounds, nil)
         }
     }
 }

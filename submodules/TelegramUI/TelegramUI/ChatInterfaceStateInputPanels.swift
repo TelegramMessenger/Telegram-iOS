@@ -2,9 +2,10 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import TelegramCore
+import AccountContext
 
 func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputPanelNode?, textInputPanelNode: ChatTextInputPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputPanelNode? {
-    if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText != nil {
+    if let renderedPeer = chatPresentationInterfaceState.renderedPeer, renderedPeer.peer?.restrictionText(platform: "ios") != nil {
         return nil
     }
     if chatPresentationInterfaceState.isNotAccessible {
@@ -36,7 +37,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             currentPanel.updateTheme(theme: chatPresentationInterfaceState.theme)
             return currentPanel
         } else {
-            let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme)
+            let panel = ChatMessageSelectionInputPanelNode(theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings)
             panel.context = context
             panel.selectedMessages = selectionState.selectedIds
             panel.interfaceInteraction = interfaceInteraction
@@ -168,13 +169,15 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
         }
         
         var displayBotStartPanel = false
-        if let _ = chatPresentationInterfaceState.botStartPayload {
-            if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                displayBotStartPanel = true
-            }
-        } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
-            if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
-                displayBotStartPanel = true
+        if !chatPresentationInterfaceState.isScheduledMessages {
+            if let _ = chatPresentationInterfaceState.botStartPayload {
+                if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                    displayBotStartPanel = true
+                }
+            } else if let chatHistoryState = chatPresentationInterfaceState.chatHistoryState, case .loaded(true) = chatHistoryState {
+                if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil {
+                    displayBotStartPanel = true
+                }
             }
         }
         

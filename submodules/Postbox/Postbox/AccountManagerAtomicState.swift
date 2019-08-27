@@ -28,7 +28,7 @@ final class AccountManagerAtomicState: Codable {
         } else {
             self.records = try container.decode(Dictionary<AccountRecordId, AccountRecord>.self, forKey: .records)
         }
-        if let maybeIdString = try? container.decodeIfPresent(String.self, forKey: .currentRecordId), let idString = maybeIdString, let idValue = Int64(idString) {
+        if let idString = try? container.decodeIfPresent(String.self, forKey: .currentRecordId), let idValue = Int64(idString) {
             self.currentRecordId = AccountRecordId(rawValue: idValue)
         } else {
             self.currentRecordId = try container.decodeIfPresent(AccountRecordId.self, forKey: .currentRecordId)

@@ -8,7 +8,6 @@ import Foundation
     import Postbox
     import SwiftSignalKit
 #endif
-import TelegramCorePrivateModule
 
 private func md5(_ data: Data) -> Data {
     return data.withUnsafeBytes { bytes -> Data in

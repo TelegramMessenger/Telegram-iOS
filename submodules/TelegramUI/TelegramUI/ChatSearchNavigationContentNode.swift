@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import SearchBarNode
 
 private let searchBarFont = Font.regular(17.0)
 

@@ -40,7 +40,7 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
 }
 
 public extension Message {
-    public var containsSecretMedia: Bool {
+    var containsSecretMedia: Bool {
         var found = false
         for attribute in self.attributes {
             if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
@@ -72,10 +72,10 @@ public extension Message {
         return false
     }
     
-    public var secretMediaDuration: Int32? {
+    var secretMediaDuration: Int32? {
         var found = false
         for attribute in self.attributes {
-            if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {
+            if let _ = attribute as? AutoremoveTimeoutMessageAttribute {
                 found = true
                 break
             }

@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import ActivityIndicator
 
 private let labelFont = Font.regular(15.0)
 
@@ -113,10 +114,10 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             panelHeight = 45.0
         }
         
-        transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: leftInset + 12.0 + 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.calendarButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 60.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
-        transition.updateFrame(node: self.membersButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 60.0 * 2.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
+        transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 48.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
+        transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 48.0 - 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
+        transition.updateFrame(node: self.calendarButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
+        transition.updateFrame(node: self.membersButton, frame: CGRect(origin: CGPoint(x: leftInset + 43.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
         
         var resultIndex: Int?
         var resultCount: Int?
@@ -124,7 +125,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         if let results = interfaceState.search?.resultsState {
             resultCount = results.messageIndices.count
             let displayTotalCount = results.completed ? results.messageIndices.count : Int(results.totalCount)
-            if let currentId = results.currentId, let index = results.messageIndices.index(where: { $0.id == currentId }) {
+            if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 let adjustedIndex = results.messageIndices.count - 1 - index
                 resultIndex = index
                 resultsText = NSAttributedString(string: "\(adjustedIndex + 1) \(interfaceState.strings.Common_of) \(displayTotalCount)", font: labelFont, textColor: interfaceState.theme.chat.inputPanel.primaryTextColor)

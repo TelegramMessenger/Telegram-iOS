@@ -75,6 +75,8 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
     let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
     
+    precondition(readCount < 3 * 1024 * 1024)
+    
     if let maximumFetchSize = context.maximumFetchSize {
         context.touchedRanges.insert(integersIn: requestRange)
         var totalCount = 0
@@ -122,12 +124,14 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                 let readingOffset = context.readingOffset
                 let readCount = max(0, min(fileSize - readingOffset, Int(bufferSize)))
                 let range = readingOffset ..< (readingOffset + readCount)
+                precondition(readCount < 1 * 1024 * 1024)
                 
                 lseek(fd, off_t(range.lowerBound), SEEK_SET)
                 var data = Data(count: readCount)
-                data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                    let readBytes = read(fd, bytes, readCount)
-                    assert(readBytes <= readCount)
+                data.withUnsafeMutableBytes { bytes -> Void in
+                    precondition(bytes.baseAddress != nil)
+                    let readBytes = read(fd, bytes.baseAddress, readCount)
+                    precondition(readBytes <= readCount)
                 }
                 fetchedData = data
                 close(fd)
@@ -143,13 +147,17 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
                     let readCount = max(0, min(next.size - readingOffset, Int(bufferSize)))
                     let range = readingOffset ..< (readingOffset + readCount)
                     
+                    precondition(readCount < 1 * 1024 * 1024)
+                    
                     let fd = open(next.path, O_RDONLY, S_IRUSR)
                     if fd >= 0 {
                         lseek(fd, off_t(range.lowerBound), SEEK_SET)
                         var data = Data(count: readCount)
-                        data.withUnsafeMutableBytes { (bytes: UnsafeMutablePointer<UInt8>) -> Void in
-                            let readBytes = read(fd, bytes, readCount)
+                        data.withUnsafeMutableBytes { bytes -> Void in
+                            precondition(bytes.baseAddress != nil)
+                            let readBytes = read(fd, bytes.baseAddress, readCount)
                             assert(readBytes <= readCount)
+                            precondition(readBytes <= readCount)
                         }
                         fetchedData = data
                         close(fd)
@@ -168,8 +176,9 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
         }
     }
     if let fetchedData = fetchedData {
-        fetchedData.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Void in
-            memcpy(buffer, bytes, fetchedData.count)
+        fetchedData.withUnsafeBytes { bytes -> Void in
+            precondition(bytes.baseAddress != nil)
+            memcpy(buffer, bytes.baseAddress, fetchedData.count)
         }
         fetchedCount = Int32(fetchedData.count)
         context.readingOffset += Int(fetchedCount)

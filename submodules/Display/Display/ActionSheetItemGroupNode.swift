@@ -1,12 +1,6 @@
 import UIKit
 import AsyncDisplayKit
 
-private class ActionSheetItemGroupNodeScrollView: UIScrollView {
-    override func touchesShouldCancel(in view: UIView) -> Bool {
-        return true
-    }
-}
-
 final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     private let theme: ActionSheetControllerTheme
     
@@ -17,7 +11,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let clippingNode: ASDisplayNode
     private let backgroundEffectView: UIVisualEffectView
-    private let scrollView: UIScrollView
+    private let scrollNode: ASScrollNode
     
     private var itemNodes: [ActionSheetItemNode] = []
     private var leadingVisibleNodeCount: CGFloat = 100.0
@@ -47,14 +41,15 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.backgroundEffectView = UIVisualEffectView(effect: UIBlurEffect(style: self.theme.backgroundType == .light ? .light : .dark))
         
-        self.scrollView = ActionSheetItemGroupNodeScrollView()
+        self.scrollNode = ASScrollNode()
+        self.scrollNode.canCancelAllTouchesInViews = true
         if #available(iOSApplicationExtension 11.0, *) {
-            self.scrollView.contentInsetAdjustmentBehavior = .never
+            self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
-        self.scrollView.delaysContentTouches = false
-        self.scrollView.canCancelContentTouches = true
-        self.scrollView.showsVerticalScrollIndicator = false
-        self.scrollView.showsHorizontalScrollIndicator = false
+        self.scrollNode.view.delaysContentTouches = false
+        self.scrollNode.view.canCancelContentTouches = true
+        self.scrollNode.view.showsVerticalScrollIndicator = false
+        self.scrollNode.view.showsHorizontalScrollIndicator = false
         
         super.init()
         
@@ -63,10 +58,10 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         self.view.addSubview(self.bottomDimView)
         self.view.addSubview(self.trailingDimView)
         
-        self.scrollView.delegate = self
+        self.scrollNode.view.delegate = self
         
         self.clippingNode.view.addSubview(self.backgroundEffectView)
-        self.clippingNode.view.addSubview(self.scrollView)
+        self.clippingNode.addSubnode(self.scrollNode)
         
         self.addSubnode(self.clippingNode)
     }
@@ -80,7 +75,7 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         
         for node in nodes {
             if !self.itemNodes.contains(where: { $0 === node }) {
-                self.scrollView.addSubnode(node)
+                self.scrollNode.addSubnode(node)
             }
         }
         
@@ -117,8 +112,8 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     override func layout() {
         let scrollViewFrame = CGRect(origin: CGPoint(), size: self.calculatedSize)
         var updateOffset = false
-        if !self.scrollView.frame.equalTo(scrollViewFrame) {
-            self.scrollView.frame = scrollViewFrame
+        if !self.scrollNode.frame.equalTo(scrollViewFrame) {
+            self.scrollNode.frame = scrollViewFrame
             updateOffset = true
         }
         
@@ -149,17 +144,17 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let scrollViewContentSize = CGSize(width: self.calculatedSize.width, height: itemNodesHeight)
-        if !self.scrollView.contentSize.equalTo(scrollViewContentSize) {
-            self.scrollView.contentSize = scrollViewContentSize
+        if !self.scrollNode.view.contentSize.equalTo(scrollViewContentSize) {
+            self.scrollNode.view.contentSize = scrollViewContentSize
         }
         let scrollViewContentInsets = UIEdgeInsets(top: max(0.0, self.calculatedSize.height - leadingVisibleNodeSize), left: 0.0, bottom: 0.0, right: 0.0)
         
-        if !UIEdgeInsetsEqualToEdgeInsets(self.scrollView.contentInset, scrollViewContentInsets) {
-            self.scrollView.contentInset = scrollViewContentInsets
+        if self.scrollNode.view.contentInset != scrollViewContentInsets {
+            self.scrollNode.view.contentInset = scrollViewContentInsets
         }
         
         if updateOffset {
-            self.scrollView.contentOffset = CGPoint(x: 0.0, y: -scrollViewContentInsets.top)
+            self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -scrollViewContentInsets.top)
         }
         
         self.updateOverscroll()
@@ -167,20 +162,20 @@ final class ActionSheetItemGroupNode: ASDisplayNode, UIScrollViewDelegate {
     
     private func currentVerticalOverscroll() -> CGFloat {
         var verticalOverscroll: CGFloat = 0.0
-        if scrollView.contentOffset.y < 0.0 {
-            verticalOverscroll = scrollView.contentOffset.y
-        } else if scrollView.contentOffset.y > scrollView.contentSize.height - scrollView.bounds.size.height {
-            verticalOverscroll = scrollView.contentOffset.y - (scrollView.contentSize.height - scrollView.bounds.size.height)
+        if scrollNode.view.contentOffset.y < 0.0 {
+            verticalOverscroll = scrollNode.view.contentOffset.y
+        } else if scrollNode.view.contentOffset.y > scrollNode.view.contentSize.height - scrollNode.view.bounds.size.height {
+            verticalOverscroll = scrollNode.view.contentOffset.y - (scrollNode.view.contentSize.height - scrollNode.view.bounds.size.height)
         }
         return verticalOverscroll
     }
     
     private func currentRealVerticalOverscroll() -> CGFloat {
         var verticalOverscroll: CGFloat = 0.0
-        if scrollView.contentOffset.y < 0.0 {
-            verticalOverscroll = scrollView.contentOffset.y
-        } else if scrollView.contentOffset.y > scrollView.contentSize.height - scrollView.bounds.size.height {
-            verticalOverscroll = scrollView.contentOffset.y - (scrollView.contentSize.height - scrollView.bounds.size.height)
+        if scrollNode.view.contentOffset.y < 0.0 {
+            verticalOverscroll = scrollNode.view.contentOffset.y
+        } else if scrollNode.view.contentOffset.y > scrollNode.view.contentSize.height - scrollNode.view.bounds.size.height {
+            verticalOverscroll = scrollNode.view.contentOffset.y - (scrollNode.view.contentSize.height - scrollNode.view.bounds.size.height)
         }
         return verticalOverscroll
     }

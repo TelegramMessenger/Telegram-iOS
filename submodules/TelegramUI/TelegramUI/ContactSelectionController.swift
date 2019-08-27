@@ -6,8 +6,12 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import ProgressNavigationButtonNode
+import AccountContext
+import ContactListUI
+import SearchUI
 
-class ContactSelectionController: ViewController, PresentableController {
+class ContactSelectionControllerImpl: ViewController, ContactSelectionController, PresentableController {
     private let context: AccountContext
     private let autoDismiss: Bool
     
@@ -63,13 +67,13 @@ class ContactSelectionController: ViewController, PresentableController {
         }
     }
     
-    init(context: AccountContext, autoDismiss: Bool = true, title: @escaping (PresentationStrings) -> String, options: [ContactListAdditionalOption] = [], displayDeviceContacts: Bool = false, confirmation: @escaping (ContactListPeer) -> Signal<Bool, NoError> = { _ in .single(true) }) {
-        self.context = context
-        self.autoDismiss = autoDismiss
-        self.titleProducer = title
-        self.options = options
-        self.displayDeviceContacts = displayDeviceContacts
-        self.confirmation = confirmation
+    init(_ params: ContactSelectionControllerParams) {
+        self.context = params.context
+        self.autoDismiss = params.autoDismiss
+        self.titleProducer = params.title
+        self.options = params.options
+        self.displayDeviceContacts = params.displayDeviceContacts
+        self.confirmation = params.confirmation
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -160,7 +164,7 @@ class ContactSelectionController: ViewController, PresentableController {
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
-                presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
+                strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                     strongSelf.present(c, in: .window(.root), with: a)
                 })
             }

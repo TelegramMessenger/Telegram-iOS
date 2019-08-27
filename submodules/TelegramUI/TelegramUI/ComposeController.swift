@@ -6,6 +6,10 @@ import Postbox
 import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
+import AlertUI
+import SearchUI
+import TelegramPermissionsUI
 
 public class ComposeController: ViewController {
     private let context: AccountContext
@@ -113,7 +117,7 @@ public class ComposeController: ViewController {
 
         self.contactsNode.openCreateNewGroup = { [weak self] in
             if let strongSelf = self {
-                let controller = ContactMultiselectionController(context: strongSelf.context, mode: .groupCreation, options: [])
+                let controller = strongSelf.context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(context: strongSelf.context, mode: .groupCreation, options: []))
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
@@ -122,13 +126,13 @@ public class ComposeController: ViewController {
                 strongSelf.createActionDisposable.set((controller.result
                 |> deliverOnMainQueue).start(next: { [weak controller] peerIds in
                     if let strongSelf = self, let controller = controller {
-                        let createGroup = createGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
+                        let createGroup = strongSelf.context.sharedContext.makeCreateGroupController(context: strongSelf.context, peerIds: peerIds.compactMap({ peerId in
                             if case let .peer(peerId) = peerId {
                                 return peerId
                             } else {
                                 return nil
                             }
-                        }))
+                        }), initialTitle: nil, mode: .generic, completion: nil)
                         (controller.navigationController as? NavigationController)?.pushViewController(createGroup)
                     }
                 }))
@@ -137,7 +141,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.openCreateNewSecretChat = { [weak self] in
             if let strongSelf = self {
-                let controller = ContactSelectionController(context: strongSelf.context, title: { $0.Compose_NewEncryptedChatTitle })
+                let controller = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: strongSelf.context, title: { $0.Compose_NewEncryptedChatTitle }))
                 strongSelf.createActionDisposable.set((controller.result
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak controller] peer in
@@ -147,7 +151,7 @@ public class ComposeController: ViewController {
                         strongSelf.createActionDisposable.set((createSecretChat(account: strongSelf.context.account, peerId: peer.id) |> deliverOnMainQueue).start(next: { peerId in
                             if let strongSelf = self, let controller = controller {
                                 controller.displayNavigationActivity = false
-                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatController(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
+                                (controller.navigationController as? NavigationController)?.replaceAllButRootController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: true)
                             }
                         }, error: { _ in
                             if let strongSelf = self, let controller = controller {
@@ -187,7 +191,7 @@ public class ComposeController: ViewController {
         
         self.contactsNode.contactListNode.suppressPermissionWarning = { [weak self] in
             if let strongSelf = self {
-                presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
+                strongSelf.context.sharedContext.presentContactsWarningSuppression(context: strongSelf.context, present: { c, a in
                     strongSelf.present(c, in: .window(.root), with: a)
                 })
             }
@@ -250,6 +254,6 @@ public class ComposeController: ViewController {
     }
     
     private func openPeer(peerId: PeerId) {
-        (self.navigationController as? NavigationController)?.replaceTopController(ChatController(context: self.context, chatLocation: .peer(peerId)), animated: true)
+        (self.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId)), animated: true)
     }
 }

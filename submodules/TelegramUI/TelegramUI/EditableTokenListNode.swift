@@ -32,14 +32,16 @@ final class EditableTokenListNodeTheme {
     let placeholderTextColor: UIColor
     let primaryTextColor: UIColor
     let selectedTextColor: UIColor
+    let accentColor: UIColor
     let keyboardColor: PresentationThemeKeyboardColor
     
-    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, selectedTextColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
+    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, selectedTextColor: UIColor, accentColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.placeholderTextColor = placeholderTextColor
         self.primaryTextColor = primaryTextColor
         self.selectedTextColor = selectedTextColor
+        self.accentColor = accentColor
         self.keyboardColor = keyboardColor
     }
 }
@@ -123,12 +125,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.textColor = theme.primaryTextColor
         self.textFieldNode.textField.autocorrectionType = .no
         self.textFieldNode.textField.returnKeyType = .done
-        switch theme.keyboardColor {
-            case .light:
-                self.textFieldNode.textField.keyboardAppearance = .default
-            case .dark:
-                self.textFieldNode.textField.keyboardAppearance = .dark
-        }
+        self.textFieldNode.textField.keyboardAppearance = theme.keyboardColor.keyboardAppearance
+        self.textFieldNode.textField.tintColor = theme.accentColor
         
         self.caretIndicatorNode = CaretIndicatorNode()
         self.caretIndicatorNode.isLayerBacked = true
@@ -241,7 +239,7 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
                         let targetEndPosition = CGPoint(x: tokenFrame.midX, y: tokenFrame.midY)
                         tokenNode.frame = tokenFrame
                         
-                        let initialAnimation = tokenNode.layer.makeAnimation(from: NSValue(cgPoint: initialStartPosition), to: NSValue(cgPoint: initialEndPosition), keyPath: "position", timingFunction: kCAMediaTimingFunctionEaseInEaseOut, duration: 0.12, mediaTimingFunction: nil, removeOnCompletion: true, additive: false, completion: nil)
+                        let initialAnimation = tokenNode.layer.makeAnimation(from: NSValue(cgPoint: initialStartPosition), to: NSValue(cgPoint: initialEndPosition), keyPath: "position", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.12, mediaTimingFunction: nil, removeOnCompletion: true, additive: false, completion: nil)
                         let targetAnimation = tokenNode.layer.makeAnimation(from: NSValue(cgPoint: targetStartPosition), to: NSValue(cgPoint: targetEndPosition), keyPath: "position", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.2 + animationDelay, mediaTimingFunction: nil, removeOnCompletion: true, additive: false, completion: nil)
                         tokenNode.layer.animateGroup([initialAnimation, targetAnimation], key: "slide")
                         animationDelay += 0.025

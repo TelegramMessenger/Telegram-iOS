@@ -28,7 +28,7 @@ public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId, itemId: Pin
         }
         
         let additionalCount: Int
-        if let _ = itemIds.index(of: itemId) {
+        if let _ = itemIds.firstIndex(of: itemId) {
             additionalCount = -1
         } else {
             additionalCount = 1
@@ -45,7 +45,7 @@ public func toggleItemPinned(postbox: Postbox, groupId: PeerGroupId, itemId: Pin
         if sameKind.count + additionalCount > limitCount {
             return .limitExceeded(limitCount)
         } else {
-            if let index = itemIds.index(of: itemId) {
+            if let index = itemIds.firstIndex(of: itemId) {
                 itemIds.remove(at: index)
             } else {
                 itemIds.insert(itemId, at: 0)

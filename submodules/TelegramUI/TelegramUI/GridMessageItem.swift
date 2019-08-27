@@ -6,6 +6,11 @@ import TelegramCore
 import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramStringFormatting
+import AccountContext
+import RadialStatusNode
+import PhotoResources
+import GridMessageSelectionNode
 
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {
@@ -432,7 +437,7 @@ final class GridMessageItemNode: GridItemNode {
                                 let _ = controllerInteraction.openMessage(message, .default)
                             }
                         case .longTap:
-                            controllerInteraction.openMessageContextMenu(message, false, self, self.bounds)
+                            controllerInteraction.openMessageContextMenu(message, false, self, self.bounds, nil)
                         default:
                             break
                     }

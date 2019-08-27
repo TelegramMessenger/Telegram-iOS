@@ -55,11 +55,13 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
     
     private let button: HighlightTrackingButton
     private let label: ASTextNode
+    private let accessibilityArea: AccessibilityAreaNode
     
     override public init(theme: ActionSheetControllerTheme) {
         self.theme = theme
         
         self.button = HighlightTrackingButton()
+        self.button.isAccessibilityElement = false
         
         self.label = ASTextNode()
         self.label.isUserInteractionEnabled = false
@@ -67,12 +69,16 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         self.label.displaysAsynchronously = false
         self.label.truncationMode = .byTruncatingTail
         
+        self.accessibilityArea = AccessibilityAreaNode()
+        
         super.init(theme: theme)
         
         self.view.addSubview(self.button)
         
         self.label.isUserInteractionEnabled = false
         self.addSubnode(self.label)
+        
+        self.addSubnode(self.accessibilityArea)
         
         self.button.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
@@ -87,6 +93,10 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         }
         
         self.button.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+        self.accessibilityArea.activate = { [weak self] in
+            self?.buttonPressed()
+            return true
+        }
     }
     
     func setItem(_ item: ActionSheetButtonItem) {
@@ -109,8 +119,17 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
                 textFont = ActionSheetButtonNode.boldFont
         }
         self.label.attributedText = NSAttributedString(string: item.title, font: textFont, textColor: textColor)
+        self.label.isAccessibilityElement = false
         
         self.button.isEnabled = item.enabled
+        
+        self.accessibilityArea.accessibilityLabel = item.title
+        
+        var accessibilityTraits: UIAccessibilityTraits = [.button]
+        if !item.enabled {
+            accessibilityTraits.insert(.notEnabled)
+        }
+        self.accessibilityArea.accessibilityTraits = accessibilityTraits
         
         self.setNeedsLayout()
     }
@@ -128,6 +147,7 @@ public class ActionSheetButtonNode: ActionSheetItemNode {
         
         let labelSize = self.label.measure(CGSize(width: max(1.0, size.width - 10.0), height: size.height))
         self.label.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - labelSize.width) / 2.0), y: floorToScreenPixels((size.height - labelSize.height) / 2.0)), size: labelSize)
+        self.accessibilityArea.frame = CGRect(origin: CGPoint(), size: size)
     }
     
     @objc func buttonPressed() {

@@ -30,3 +30,4 @@ AppBinary.xcworkspace/*
 Project.xcodeproj/*
 Watch/Watch.xcodeproj/*
 AppBundle.xcworkspace/*
+tools/buck

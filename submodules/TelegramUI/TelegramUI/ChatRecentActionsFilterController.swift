@@ -6,6 +6,9 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
+import ItemListUI
+import AccountContext
+import ItemListPeerItem
 
 private final class ChatRecentActionsFilterControllerArguments {
     let account: Account
@@ -418,13 +421,13 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
             |> deliverOnMainQueue).start(next: { admins in
                 if let admins = admins {
                     updateState { current in
-                        if let adminPeerIds = current.adminPeerIds, let index = adminPeerIds.index(of: adminId) {
+                        if let adminPeerIds = current.adminPeerIds, let index = adminPeerIds.firstIndex(of: adminId) {
                             var updatedAdminPeerIds = adminPeerIds
                             updatedAdminPeerIds.remove(at: index)
                             return current.withUpdatedAdminPeerIds(updatedAdminPeerIds)
                         } else {
                             var updatedAdminPeerIds = current.adminPeerIds ?? admins.map { $0.peer.id }
-                            if updatedAdminPeerIds.contains(adminId), let index = updatedAdminPeerIds.index(of: adminId) {
+                            if updatedAdminPeerIds.contains(adminId), let index = updatedAdminPeerIds.firstIndex(of: adminId) {
                                 updatedAdminPeerIds.remove(at: index)
                             } else {
                                 updatedAdminPeerIds.append(adminId)
