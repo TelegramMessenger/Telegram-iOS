@@ -1329,7 +1329,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let currentMutedIconImage = currentMutedIconImage {
                         strongSelf.mutedIconNode.image = currentMutedIconImage
                         strongSelf.mutedIconNode.isHidden = false
-
                         transition.updateFrame(node: strongSelf.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 4.0, y: contentRect.origin.y - 2.0), size: currentMutedIconImage.size))
                         nextTitleIconOrigin += currentMutedIconImage.size.width + 1.0
                     } else {
@@ -1568,7 +1567,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let mutedIconFrame = self.mutedIconNode.frame
-            transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 6.0, y: contentRect.origin.y - 1.0), size: mutedIconFrame.size))
+            transition.updateFrame(node: self.mutedIconNode, frame: CGRect(origin: CGPoint(x: nextTitleIconOrigin - 4.0, y: contentRect.origin.y - 2.0), size: mutedIconFrame.size))
             nextTitleIconOrigin += mutedIconFrame.size.width + 3.0
             
             let badgeFrame = self.badgeNode.frame

@@ -144,6 +144,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return ItemListDisclosureItem(theme: theme, title: "Send Logs", label: "", sectionId: self.section, style: .blocks, action: {
                 let _ = (Logger.shared.collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
+                        guard let context = arguments.context else {
+                            return
+                        }
+                        
                         let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
                         
@@ -153,7 +157,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
-                                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
+                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                                 controller.peerSelected = { [weak controller] peerId in
                                     if let strongController = controller {
                                         strongController.dismiss()
@@ -253,7 +257,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         guard let context = arguments.context else {
                             return
                         }
-                        let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
+                        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                         controller.peerSelected = { [weak controller] peerId in
                             if let strongController = controller {
                                 strongController.dismiss()
@@ -282,7 +286,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             items.append(ActionSheetButtonItem(title: "Via Telegram", color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                                 
-                                let controller = PeerSelectionController(context: context, filter: [.onlyWriteable, .excludeDisabled])
+                                let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
                                 controller.peerSelected = { [weak controller] peerId in
                                     if let strongController = controller {
                                         strongController.dismiss()
@@ -522,7 +526,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetHoles(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
-    
+    entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
+
     entries.append(.versionInfo(presentationData.theme))
     
     return entries
