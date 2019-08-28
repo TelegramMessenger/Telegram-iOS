@@ -398,16 +398,22 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         
-        if let propertyAnimator = self.propertyAnimator {
+        if #available(iOS 10.0, *) {
+            self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2, curve: .easeInOut, animations: { [weak self] in
+                self?.effectView.effect = nil
+            })
+        }
+        
+        if let _ = self.propertyAnimator {
             if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.2 * animationDurationFactor, from: (propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete ?? 0.2, to: 0.0, update: { [weak self] value in
+                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.2 * animationDurationFactor, from: 0.0, to: 0.999, update: { [weak self] value in
                     (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
-                }, completion: { [weak self] in
-                    self?.effectView.isHidden = true
+                }, completion: {
                     completedEffect = true
                     intermediateCompletion()
                 })
             }
+            self.effectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.05 * animationDurationFactor, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
         } else {
             UIView.animate(withDuration: 0.21 * animationDurationFactor, animations: {
                 if #available(iOS 9.0, *) {

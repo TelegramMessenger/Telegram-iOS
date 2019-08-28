@@ -90,7 +90,7 @@ CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t)
 
 @interface CustomBlurEffect : UIBlurEffect
 
-@property (nonatomic) double blurRadius;
+/*@property (nonatomic) double blurRadius;
 @property (nonatomic) double colorBurnTintAlpha;
 @property (nonatomic) double colorBurnTintLevel;
 @property (nonatomic, retain) UIColor *colorTint;
@@ -104,7 +104,7 @@ CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t)
 @property (nonatomic) bool lightenGrayscaleWithSourceOver;
 @property (nonatomic) double saturationDeltaFactor;
 @property (nonatomic) double scale;
-@property (nonatomic) double zoom;
+@property (nonatomic) double zoom;*/
 
 + (id)effectWithStyle:(long long)arg1;
 
@@ -113,23 +113,64 @@ CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t)
 void testZoomBlurEffect(UIVisualEffect *effect) {
 }
 
-UIBlurEffect *makeCustomZoomBlurEffect() {
-    //return [UIBlurEffect effectWithStyle:UIBlurEffectStyleRegular];
+static NSString *encodeText(NSString *string, int key) {
+    NSMutableString *result = [[NSMutableString alloc] init];
     
+    for (int i = 0; i < (int)[string length]; i++) {
+        unichar c = [string characterAtIndex:i];
+        c += key;
+        [result appendString:[NSString stringWithCharacters:&c length:1]];
+    }
+    
+    return result;
+}
+
+static void setField(CustomBlurEffect *object, NSString *name, double value) {
+    SEL selector = NSSelectorFromString(name);
+    NSMethodSignature *signature = [[object class] instanceMethodSignatureForSelector:selector];
+    if (signature == nil) {
+        return;
+    }
+    
+    NSInvocation *inv = [NSInvocation invocationWithMethodSignature:signature];
+    [inv setSelector:selector];
+    [inv setArgument:&value atIndex:2];
+    [inv setTarget:object];
+    [inv invoke];
+}
+
+static void setNilField(CustomBlurEffect *object, NSString *name) {
+    SEL selector = NSSelectorFromString(name);
+    NSMethodSignature *signature = [[object class] instanceMethodSignatureForSelector:selector];
+    if (signature == nil) {
+        return;
+    }
+    
+    NSInvocation *inv = [NSInvocation invocationWithMethodSignature:signature];
+    [inv setSelector:selector];
+    id value = nil;
+    [inv setArgument:&value atIndex:2];
+    [inv setTarget:object];
+    [inv invoke];
+}
+
+UIBlurEffect *makeCustomZoomBlurEffect() {
     NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
     CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
-    result.blurRadius = 18.0;
-    result.zoom = 0.015;
-    result.colorTint = nil;
-    result.colorTintAlpha = 0.0;
-    result.darkeningTintAlpha = 0.0;
-    result.grayscaleTintAlpha = 0.0;
-    result.saturationDeltaFactor = 1.0;
-    /*if ([UIScreen mainScreen].scale > 2.5f) {
-        result.scale = 0.25;
+    
+    setField(result, encodeText(@"tfuCmvsSbejvt;", -1), 10.0);
+    setField(result, encodeText(@"tfu[ppn;", -1), 0.015);
+    setNilField(result, encodeText(@"tfuDpmpsUjou;", -1));
+    setField(result, encodeText(@"tfuDpmpsUjouBmqib;", -1), 0.0);
+    setField(result, encodeText(@"tfuEbslfojohUjouBmqib;", -1), 0.0);
+    setField(result, encodeText(@"tfuHsbztdbmfUjouBmqib;", -1), 0.0);
+    setField(result, encodeText(@"tfuTbuvsbujpoEfmubGbdups;", -1), 1.0);
+    
+    if ([UIScreen mainScreen].scale > 2.5f) {
+        setField(result, encodeText(@"setScale:", 0), 0.3);
     } else {
-        result.scale = 0.5;
-    }*/
+        setField(result, encodeText(@"setScale:", 0), 0.5);
+    }
     
     return result;
 }
