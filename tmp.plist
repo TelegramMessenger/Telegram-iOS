@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>AppIDName</key>
+	<string>Telegram iOS</string>
+	<key>ApplicationIdentifierPrefix</key>
+	<array>
+	<string>X834Q8SBVP</string>
+	</array>
+	<key>CreationDate</key>
+	<date>2018-11-02T22:14:21Z</date>
+	<key>Platform</key>
+	<array>
+		<string>iOS</string>
+	</array>
+    <key>IsXcodeManaged</key>
+    <false/>
+	<key>DeveloperCertificates</key>
+	<array>
+		<data>MIIFlDCCBHygAwIBAgIIela2HzM/EwQwDQYJKoZIhvcNAQEFBQAwgZYxCzAJBgNVBAYTAlVTMRMwEQYDVQQKDApBcHBsZSBJbmMuMSwwKgYDVQQLDCNBcHBsZSBXb3JsZHdpZGUgRGV2ZWxvcGVyIFJlbGF0aW9uczFEMEIGA1UEAww7QXBwbGUgV29ybGR3aWRlIERldmVsb3BlciBSZWxhdGlvbnMgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkwHhcNMTgxMTAyMjIwMzU5WhcNMjExMTAxMjIwMzU5WjCBlTEaMBgGCgmSJomT8ixkAQEMClg4MzRROFNCVlAxNDAyBgNVBAMMK2lQaG9uZSBEaXN0cmlidXRpb246IFRFTEVHUkFNIE1FU1NFTkdFUiBMTFAxEzARBgNVBAsMClg4MzRROFNCVlAxHzAdBgNVBAoMFlRFTEVHUkFNIE1FU1NFTkdFUiBMTFAxCzAJBgNVBAYTAkdCMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA/L6ntx8MRezWVRAJZOJRCE+ITkPaygFNY5yI01wvaqZTgncla+gftsTM9h0OJkW4xOAy+0zbV7uAbhwtREK0HSkw0Rl3QyNXqVHwtz0pDytWkzfYnOdbWLG2fS4UFWX0OK328rEHZeuZtlIkjl/mPHC6yQpwQcZeAsg+wilRPXe8I4n1ymzu2NmEf3r4Ci+LDNaChO88j589TDC7dI6AajBJEFyXawVKWmMORDxtWTMbvzDV6TiEqu0igokoXQLejs7mtsqy5gnIeBMlj6rIT1hLExEuQj8FZq21p485N171Rfe0WDxUpO6XsM9tiJ9xCWfiRVrFiiXl5rGwmV8iCQIDAQABo4IB4zCCAd8wDAYDVR0TAQH/BAIwADAfBgNVHSMEGDAWgBSIJxcJqbYYYIvs67r2R1nFUlSjtzA/BggrBgEFBQcBAQQzMDEwLwYIKwYBBQUHMAGGI2h0dHA6Ly9vY3NwLmFwcGxlLmNvbS9vY3NwMDItd3dkcjAxMIIBDwYDVR0gBIIBBjCCAQIwgf8GCSqGSIb3Y2QFATCB8TCBwwYIKwYBBQUHAgIwgbYMgbNSZWxpYW5jZSBvbiB0aGlzIGNlcnRpZmljYXRlIGJ5IGFueSBwYXJ0eSBhc3N1bWVzIGFjY2VwdGFuY2Ugb2YgdGhlIHRoZW4gYXBwbGljYWJsZSBzdGFuZGFyZCB0ZXJtcyBhbmQgY29uZGl0aW9ucyBvZiB1c2UsIGNlcnRpZmljYXRlIHBvbGljeSBhbmQgY2VydGlmaWNhdGlvbiBwcmFjdGljZSBzdGF0ZW1lbnRzLjApBggrBgEFBQcCARYdaHR0cDovL3d3dy5hcHBsZS5jb20vYXBwbGVjYS8wFgYDVR0lAQH/BAwwCgYIKwYBBQUHAwMwHQYDVR0OBBYEFCDr/Jte3cDM3K5DtQY2dDG9rHxqMA4GA1UdDwEB/wQEAwIHgDATBgoqhkiG92NkBgEEAQH/BAIFADANBgkqhkiG9w0BAQUFAAOCAQEAYpNcj2gQHbLyD4NEPlCOl4GbTLqy0+amp0VhjhImOelNug+N/gxTz6px+DPCNSeZbZaHJ5rYvo5Rhlx7Zk/khN6A2yVhFMgdJMyGYvmLpn/70rwCB0VxJW8zpiL6J5F5IVf4259cwawmkGWst1aakiW+g62BfGqZzhJ/ojwK7Cy/JPn03zteeSlJrJd8ZCXFFQkvyIjs+ycRa9yls3vjqvf7mbVdTjCCos3KAdTblgHLiXktOj4RUTzyNaIrDnnmfM5CSZ4t81bd9ycNaPjCkUY4JidvL9A2O8rF7rl1k3Fuj+wKoVahcaEhkntQrojt6tlfTx/jWYcu2yQjuk1IcA==</data>
+	</array>
+
+
+	<key>Entitlements</key>
+	<dict>
+		<key>keychain-access-groups</key>
+		<array>
+			<string>X834Q8SBVP.*</string>		
+		</array>
+		<key>get-task-allow</key>
+		<false/>
+		<key>application-identifier</key>
+		<string>X834Q8SBVP.org.telegram.Telegram-iOS</string>
+		<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+		<string>X834Q8SBVP.*</string>
+		<key>com.apple.developer.icloud-services</key>
+		<string>*</string>
+		<key>com.apple.developer.icloud-container-environment</key>
+		<array>
+			<string>Development</string>
+			<string>Production</string>
+		</array>
+		<key>com.apple.developer.icloud-container-identifiers</key>
+		<array>
+			<string>iCloud.org.telegram.Telegram-iOS</string>
+		</array>
+		<key>com.apple.developer.icloud-container-development-container-identifiers</key>
+		<array>
+			<string>iCloud.org.telegram.Telegram-iOS</string>
+		</array>
+		<key>com.apple.developer.ubiquity-container-identifiers</key>
+		<array>
+			<string>iCloud.org.telegram.Telegram-iOS</string>
+		</array>
+		<key>com.apple.developer.associated-domains</key>
+		<string>*</string>
+		<key>com.apple.security.application-groups</key>
+		<array>
+			<string>group.org.telegram.Telegram-iOS</string>
+		</array>
+		<key>com.apple.developer.team-identifier</key>
+		<string>X834Q8SBVP</string>
+		<key>aps-environment</key>
+		<string>production</string>
+		<key>com.apple.developer.siri</key>
+		<true/>
+
+	</dict>
+	<key>ExpirationDate</key>
+	<date>2019-11-02T22:14:21Z</date>
+	<key>Name</key>
+	<string>match InHouse org.telegram.Telegram-iOS</string>
+	<key>ProvisionsAllDevices</key>
+	<true/>
+	<key>TeamIdentifier</key>
+	<array>
+		<string>X834Q8SBVP</string>
+	</array>
+	<key>TeamName</key>
+	<string>TELEGRAM MESSENGER LLP</string>
+	<key>TimeToLive</key>
+	<integer>365</integer>
+	<key>UUID</key>
+	<string>569d19a4-e9f1-460f-a8e5-ba75ae51cd71</string>
+	<key>Version</key>
+	<integer>1</integer>
+</dict>
+</plist>

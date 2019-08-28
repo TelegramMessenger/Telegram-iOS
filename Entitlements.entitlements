@@ -2,35 +2,46 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>application-identifier</key>
+	<string>X834Q8SBVP.org.telegram.Telegram-iOS</string>
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>production</string>
 	<key>com.apple.developer.associated-domains</key>
+	<string>*</string>
+	<key>com.apple.developer.icloud-container-development-container-identifiers</key>
 	<array>
-		<string>applinks:telegram.me</string>
-		<string>applinks:t.me</string>
+		<string>iCloud.org.telegram.Telegram-iOS</string>
+	</array>
+	<key>com.apple.developer.icloud-container-environment</key>
+	<array>
+		<string>Development</string>
+		<string>Production</string>
 	</array>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
 		<string>iCloud.org.telegram.Telegram-iOS</string>
 	</array>
 	<key>com.apple.developer.icloud-services</key>
-	<array>
-		<string>CloudKit</string>
-		<string>CloudDocuments</string>
-	</array>
+	<string>*</string>
 	<key>com.apple.developer.siri</key>
 	<true/>
+	<key>com.apple.developer.team-identifier</key>
+	<string>X834Q8SBVP</string>
 	<key>com.apple.developer.ubiquity-container-identifiers</key>
 	<array>
 		<string>iCloud.org.telegram.Telegram-iOS</string>
 	</array>
+	<key>com.apple.developer.ubiquity-kvstore-identifier</key>
+	<string>X834Q8SBVP.*</string>
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.org.telegram.Telegram-iOS</string>
 	</array>
+	<key>get-task-allow</key>
+	<false/>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>X834Q8SBVP.org.telegram.Telegram-iOS</string>
+		<string>X834Q8SBVP.*</string>
 	</array>
 </dict>
 </plist>

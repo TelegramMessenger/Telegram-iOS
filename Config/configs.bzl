@@ -91,6 +91,7 @@ def app_binary_configs(name):
         "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
+        "CODE_SIGN_ENTITLEMENTS": "Telegram-iOS.entitlements",
         "DEVELOPMENT_TEAM": "X834Q8SBVP",
         "PROVISIONING_PROFILE_SPECIFIER": "match Development org.telegram.Telegram-iOS",
     }
