@@ -88,7 +88,7 @@ CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t)
     return [(CASpringAnimation *)animation valueAt:t];
 }
 
-@interface CustomBlurEffect : UIBlurEffect
+/*@interface CustomBlurEffect : UIBlurEffect
 
 @property (nonatomic) double blurRadius;
 @property (nonatomic) double colorBurnTintAlpha;
@@ -108,15 +108,15 @@ CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t)
 
 + (id)effectWithStyle:(long long)arg1;
 
-@end
+@end*/
 
 void testZoomBlurEffect(UIVisualEffect *effect) {
 }
 
 UIBlurEffect *makeCustomZoomBlurEffect() {
-    //return [UIBlurEffect effectWithStyle:UIBlurEffectStyleRegular];
+    return [UIBlurEffect effectWithStyle:UIBlurEffectStyleRegular];
     
-    NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
+    /*NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
     CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
     result.blurRadius = 18.0;
     result.zoom = 0.015;
@@ -129,7 +129,7 @@ UIBlurEffect *makeCustomZoomBlurEffect() {
         result.scale = 0.25;
     } else {
         result.scale = 0.5;
-    }*/
+    }
     
-    return result;
+    return result;*/
 }

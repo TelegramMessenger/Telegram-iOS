@@ -308,7 +308,7 @@ public final class PresentationContext {
         for (controller, _) in self.controllers.reversed() {
             if controller.isModalWhenInOverlay {
                 if modalController == nil {
-                    modalController = controller
+                    //modalController = controller
                 }
             }
             if topHasOpaque {

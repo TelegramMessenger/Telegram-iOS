@@ -347,7 +347,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.blocksBackgroundWhenInOverlay = true
         if let subject = subject, case .scheduledMessages = subject {
-            self.isModalWhenInOverlay = true
+            //self.isModalWhenInOverlay = true
         }
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
@@ -535,7 +535,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
-                    let reactions: [(String, String, String)] = [
+                    /*let reactions: [(String, String, String)] = [
                         ("😔", "Sad", "sad"),
                         ("😳", "Surprised", "surprised"),
                         ("😂", "Fun", "lol"),
@@ -548,14 +548,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         ("😐", "Poker", "poker"),
                         ("💩", "Poop", "poop"),
                         ("😊", "Smile", "smile")
-                    ]
+                    ]*/
                     
                     var reactionItems: [ReactionContextItem] = []
-                    for (value, text, name) in reactions {
+                    /*for (value, text, name) in reactions {
                         if let path = frameworkBundle.path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
                             reactionItems.append(ReactionContextItem(value: value, text: text, path: path))
                         }
-                    }
+                    }*/
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                         reactionItems = []
                     }
@@ -4312,10 +4312,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
-        if let subject = self.subject, case .scheduledMessages = subject {
+        /*if let subject = self.subject, case .scheduledMessages = subject {
             self.chatDisplayNode.animateIn()
             self.updateTransitionWhenPresentedAsModal?(1.0, .animated(duration: 0.5, curve: .spring))
-        }
+        }*/
     }
     
     override public func viewWillDisappear(_ animated: Bool) {
@@ -7639,7 +7639,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func openScheduledMessages() {
         let controller = ChatControllerImpl(context: self.context, chatLocation: self.chatLocation, subject: .scheduledMessages)
-        self.present(controller, in: .window(.root))
+        (self.navigationController as? NavigationController)?.pushViewController(controller)
+        //self.present(controller, in: .window(.root))
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
