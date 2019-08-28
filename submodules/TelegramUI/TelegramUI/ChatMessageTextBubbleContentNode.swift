@@ -94,7 +94,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var maxTextWidth = CGFloat.greatestFiniteMagnitude
                 for media in item.message.media {
-                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" {
+                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" || content.type == "telegram_theme" {
                         maxTextWidth = layoutConstants.wallpapers.maxTextWidth
                         break
                     }

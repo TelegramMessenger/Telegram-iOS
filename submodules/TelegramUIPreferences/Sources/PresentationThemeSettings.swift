@@ -26,9 +26,39 @@ public struct WallpaperPresentationOptions: OptionSet {
     public static let blur = WallpaperPresentationOptions(rawValue: 1 << 1)
 }
 
+public struct PresentationLocalTheme: PostboxCoding, Equatable {
+    public let title: String
+    public let resource: LocalFileMediaResource
+    
+    public init(title: String, resource: LocalFileMediaResource) {
+        self.title = title
+        self.resource = resource
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.title = decoder.decodeStringForKey("title", orElse: "")
+        self.resource = decoder.decodeObjectForKey("resource", decoder: { LocalFileMediaResource(decoder: $0) }) as! LocalFileMediaResource
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.title, forKey: "title")
+        encoder.encodeObject(self.resource, forKey: "resource")
+    }
+    
+    public static func ==(lhs: PresentationLocalTheme, rhs: PresentationLocalTheme) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if !lhs.resource.isEqual(to: rhs.resource) {
+            return false
+        }
+        return true
+    }
+}
+
 public enum PresentationThemeReference: PostboxCoding, Equatable {
     case builtin(PresentationBuiltinThemeReference)
-    case local(LocalFileMediaResource)
+    case local(PresentationLocalTheme)
     case cloud(TelegramTheme)
     
     public init(decoder: PostboxDecoder) {
@@ -36,7 +66,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case 0:
                 self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
             case 1:
-                self = .local(decoder.decodeObjectForKey("resource", decoder: { LocalFileMediaResource(decoder: $0) }) as! LocalFileMediaResource)
+                self = .local(decoder.decodeObjectForKey("localTheme", decoder: { PresentationLocalTheme(decoder: $0) }) as! PresentationLocalTheme)
             case 2:
                 self = .cloud(decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme)
             default:
@@ -50,9 +80,9 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case let .builtin(reference):
                 encoder.encodeInt32(0, forKey: "v")
                 encoder.encodeInt32(reference.rawValue, forKey: "t")
-            case let .local(resource):
+            case let .local(theme):
                 encoder.encodeInt32(1, forKey: "v")
-                encoder.encodeObject(resource, forKey: "resource")
+                encoder.encodeObject(theme, forKey: "localTheme")
             case let .cloud(theme):
                 encoder.encodeInt32(2, forKey: "v")
                 encoder.encodeObject(theme, forKey: "theme")
@@ -67,8 +97,8 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
-            case let .local(lhsResource):
-                if case let .local(rhsResource) = rhs, lhsResource.isEqual(to: rhsResource) {
+            case let .local(lhsTheme):
+                if case let .local(rhsTheme) = rhs, lhsTheme == rhsTheme {
                     return true
                 } else {
                     return false
@@ -85,16 +115,27 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
     public var index: Int64 {
         let namespace: Int32
         let id: Int32
+        
+        func themeId(for id: Int64) -> Int32 {
+            var acc: UInt32 = 0
+            let low = UInt32(UInt64(bitPattern: id) & (0xffffffff as UInt64))
+            let high = UInt32((UInt64(bitPattern: id) >> 32) & (0xffffffff as UInt64))
+            acc = (acc &* 20261) &+ high
+            acc = (acc &* 20261) &+ low
+            
+            return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+        }
+        
         switch self {
             case let .builtin(reference):
                 namespace = 0
                 id = reference.rawValue
-            case let .local(resource):
+            case let .local(theme):
                 namespace = 1
-                id = 1//1reference.rawValue
+                id = themeId(for: theme.resource.fileId)
             case let .cloud(theme):
                 namespace = 2
-                id = Int32(clamping: theme.id)
+                id = themeId(for: theme.id)
         }
         
         return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
@@ -335,8 +376,8 @@ public struct PresentationThemeSettings: PreferencesEntry {
         switch self.theme {
             case .builtin:
                 break
-            case let .local(resource):
-                resources.append(resource.id)
+            case let .local(theme):
+                resources.append(theme.resource.id)
             case let .cloud(theme):
                 resources.append(theme.file.resource.id)
         }

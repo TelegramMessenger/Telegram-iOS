@@ -9,7 +9,7 @@ import TelegramPresentationData
 import AccountContext
 
 private let leftInset: CGFloat = 16.0
-private let rightInset: CGFloat = 46.0
+private let rightInset: CGFloat = 16.0
 
 private enum ChatSendMessageActionIcon {
     case sendWithoutSound

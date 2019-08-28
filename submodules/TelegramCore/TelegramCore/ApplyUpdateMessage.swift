@@ -166,7 +166,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             
             let (tags, globalTags) = tagsForStoreMessage(incoming: currentMessage.flags.contains(.Incoming), attributes: attributes, media: media, textEntities: entitiesAttribute?.entities)
             
-            if currentMessage.id.peerId.namespace == Namespaces.Peer.CloudChannel, !currentMessage.flags.contains(.Incoming) {
+            if currentMessage.id.peerId.namespace == Namespaces.Peer.CloudChannel, !currentMessage.flags.contains(.Incoming), !Namespaces.Message.allScheduled.contains(currentMessage.id.namespace) {
                 let peerId = currentMessage.id.peerId
                 if let peer = transaction.getPeer(peerId) {
                     if let peer = peer as? TelegramChannel {
@@ -188,9 +188,7 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                         }
                     }
                 }
-                
             }
-            
             
             return .update(StoreMessage(id: updatedId, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, timestamp: updatedTimestamp ?? currentMessage.timestamp, flags: [], tags: tags, globalTags: globalTags, localTags: currentMessage.localTags, forwardInfo: forwardInfo, authorId: currentMessage.author?.id, text: text, attributes: attributes, media: media))
         })

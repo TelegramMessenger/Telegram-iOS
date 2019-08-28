@@ -74,6 +74,7 @@ enum ChatMessageBubbleContentTapAction {
     case hashtag(String?, String)
     case instantPage
     case wallpaper
+    case theme
     case call(PeerId)
     case openMessage
     case timecode(Double, String)

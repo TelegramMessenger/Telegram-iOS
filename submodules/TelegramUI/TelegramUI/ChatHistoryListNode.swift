@@ -490,6 +490,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let fixedCombinedReadStates = Atomic<MessageHistoryViewReadState?>(value: nil)
         
+        var scheduled = false
+        if let subject = subject, case .scheduledMessages = subject {
+            scheduled = true
+        }
+        
         var additionalData: [AdditionalMessageHistoryViewData] = []
         if case let .peer(peerId) = chatLocation {
             additionalData.append(.cachedPeerData(peerId))
@@ -503,13 +508,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 additionalData.append(.peerIsContact(peerId))
             }
         }
-        additionalData.append(.totalUnreadState)
-        
-        var scheduled = false
-        if let subject = subject, case .scheduledMessages = subject {
-            scheduled = true
+        if !scheduled {
+            additionalData.append(.totalUnreadState)
         }
-        
+
         let currentViewVersion = Atomic<Int?>(value: nil)
         
         let historyViewUpdate = self.chatHistoryLocationPromise.get()

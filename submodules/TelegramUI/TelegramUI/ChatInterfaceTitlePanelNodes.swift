@@ -14,7 +14,7 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         return nil
     }
     var selectedContext: ChatTitlePanelContext?
-    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty {
+    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty && !chatPresentationInterfaceState.isScheduledMessages {
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
             switch context {
                 case .pinnedMessage:

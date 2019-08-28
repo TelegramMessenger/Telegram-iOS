@@ -21,7 +21,7 @@ public func addStickerPackInteractively(postbox: Postbox, info: StickerPackColle
         if let namespace = namespace {
             addSynchronizeInstalledStickerPacksOperation(transaction: transaction, namespace: namespace, content: .add([info.id]))
             var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! StickerPackCollectionInfo }
-            if let index = updatedInfos.index(where: { $0.id == info.id }) {
+            if let index = updatedInfos.firstIndex(where: { $0.id == info.id }) {
                 let currentInfo = updatedInfos[index]
                 updatedInfos.remove(at: index)
                 updatedInfos.insert(currentInfo, at: 0)

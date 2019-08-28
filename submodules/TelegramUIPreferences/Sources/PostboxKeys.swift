@@ -64,10 +64,12 @@ private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case webSearchRecentQueries = 0
     case wallpaperSearchRecentQueries = 1
     case settingsSearchRecentItems = 2
+    case localThemes = 3
 }
 
 public struct ApplicationSpecificOrderedItemListCollectionId {
     public static let webSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.webSearchRecentQueries.rawValue)
     public static let wallpaperSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.wallpaperSearchRecentQueries.rawValue)
     public static let settingsSearchRecentItems = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.settingsSearchRecentItems.rawValue)
+    public static let localThemes = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.localThemes.rawValue)
 }

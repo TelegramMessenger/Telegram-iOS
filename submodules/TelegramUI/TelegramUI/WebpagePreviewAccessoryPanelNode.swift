@@ -111,6 +111,8 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                     if let file = content.file, let mediaKind = mediaContentKind(file) {
                         if content.type == "telegram_background" {
                             text = strings.Message_Wallpaper
+                        } else if content.type == "telegram_theme" {
+                            text = strings.Message_Wallpaper
                         } else {
                             text = stringForMediaKind(mediaKind, strings: self.strings).0
                         }

@@ -9,6 +9,7 @@ import ImageBlur
 import TinyThumbnail
 import PhotoResources
 import LocalMediaResources
+import TelegramPresentationData
 
 private func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
@@ -581,6 +582,132 @@ public func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryM
                     c.draw(cgImage, in: fittedRect)
                 }
             }
+            
+            return context
+        }
+    }
+}
+
+public func telegramThemeData(account: Account, accountManager: AccountManager, resource: MediaResource, synchronousLoad: Bool) -> Signal<Data?, NoError> {
+    let maybeFetched = accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
+    return maybeFetched
+    |> take(1)
+    |> mapToSignal { maybeData in
+        if maybeData.complete {
+            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+            return .single(loadedData)
+        } else {
+            let data = account.postbox.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+            return Signal { subscriber in
+                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: resource)).start()
+                let disposable = (data
+                |> map { data -> Data? in
+                    return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
+                }).start(next: { next in
+                    if let data = next {
+                        accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                    }
+                    subscriber.putNext(next)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+                return ActionDisposable {
+                    fetch.dispose()
+                    disposable.dispose()
+                }
+            }
+        }
+    }
+}
+
+private func generateBackArrowImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 13.0, height: 22.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(color.cgColor)
+        
+        context.translateBy(x: 0.0, y: -UIScreenPixel)
+        
+        let _ = try? drawSvgPath(context, path: "M3.60751322,11.5 L11.5468531,3.56066017 C12.1326395,2.97487373 12.1326395,2.02512627 11.5468531,1.43933983 C10.9610666,0.853553391 10.0113191,0.853553391 9.42553271,1.43933983 L0.449102936,10.4157696 C-0.149700979,11.0145735 -0.149700979,11.9854265 0.449102936,12.5842304 L9.42553271,21.5606602 C10.0113191,22.1464466 10.9610666,22.1464466 11.5468531,21.5606602 C12.1326395,20.9748737 12.1326395,20.0251263 11.5468531,19.4393398 L3.60751322,11.5 Z ")
+    })
+}
+
+public func themeImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+
+    return telegramThemeData(account: account, accountManager: accountManager, resource: fileReference.media.resource, synchronousLoad: synchronousLoad)
+    |> map { data in
+        let theme: PresentationTheme?
+        if let data = data {
+            theme = makePresentationTheme(data: data)
+        } else {
+            theme = nil
+        }
+        
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, scale: 0.0, clear: true)
+            
+            let drawingRect = arguments.drawingRect
+            
+            context.withFlippedContext { c in
+                c.setBlendMode(.normal)
+                
+                if let theme = theme {
+                    if case let .color(value) = theme.chat.defaultWallpaper {
+                        c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
+                    } else {
+                        c.setFillColor(theme.chatList.backgroundColor.cgColor)
+                    }
+                    c.fill(drawingRect)
+                    
+                    c.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
+                    c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 42.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+                    
+                    c.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
+                    c.fill(CGRect(origin: CGPoint(x: 1.0, y: drawingRect.height - 43.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+                    
+                    c.setFillColor(theme.rootController.navigationBar.secondaryTextColor.cgColor)
+                    c.fillEllipse(in: CGRect(origin: CGPoint(x: drawingRect.width - 28.0 - 7.0, y: drawingRect.height - 7.0 - 28.0 - UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
+                    
+                    if let arrow = generateBackArrowImage(color: theme.rootController.navigationBar.buttonColor), let image = arrow.cgImage {
+                        c.draw(image, in: CGRect(x: 9.0, y: drawingRect.height - 11.0 - 22.0 + UIScreenPixel, width: 13.0, height: 22.0))
+                    }
+                    c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
+                    c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+                    
+                    c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
+                    c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+                    
+                    c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
+                    c.setStrokeColor(theme.chat.inputPanel.inputStrokeColor.cgColor)
+                    
+                    c.setLineWidth(1.0)
+                    let path = UIBezierPath(roundedRect: CGRect(x: 34.0, y: 6.0, width: drawingRect.width - 34.0 * 2.0, height: 31.0), cornerRadius: 15.5)
+                    c.addPath(path.cgPath)
+                    c.drawPath(using: .fillStroke)
+                    
+                    if let attachment = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor), let image = attachment.cgImage {
+                        c.draw(image, in: CGRect(origin: CGPoint(x: 3.0, y: 6.0 + UIScreenPixel), size: attachment.size.fitted(CGSize(width: 30.0, height: 30.0))))
+                    }
+                    
+                    if let microphone = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: theme.chat.inputPanel.panelControlColor), let image = microphone.cgImage {
+                        c.draw(image, in: CGRect(origin: CGPoint(x: drawingRect.width - 3.0 - 29.0, y: 7.0 + UIScreenPixel), size: microphone.size.fitted(CGSize(width: 30.0, height: 30.0))))
+                    }
+                } else if let emptyColor = arguments.emptyColor {
+                    c.setFillColor(emptyColor.cgColor)
+                    c.fill(drawingRect)
+                }
+                
+                if let emptyColor = arguments.emptyColor {
+                    c.setStrokeColor(emptyColor.cgColor)
+                    c.setLineWidth(2.0)
+                    let borderPath = UIBezierPath(roundedRect: drawingRect, cornerRadius: 4.0)
+                    c.addPath(borderPath.cgPath)
+                    c.drawPath(using: .stroke)
+                }
+            }
+            
+            addCorners(context, arguments: arguments)
             
             return context
         }

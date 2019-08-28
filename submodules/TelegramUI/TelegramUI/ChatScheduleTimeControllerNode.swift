@@ -15,6 +15,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     private let mode: ChatScheduleTimeControllerMode
     private var presentationData: PresentationData
     private let dismissByTapOutside: Bool
+    private let minimalTime: Int32?
     
     private let dimNode: ASDisplayNode
     private let wrappingScrollNode: ASScrollNode
@@ -33,11 +34,12 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
     var dismiss: (() -> Void)?
     var cancel: (() -> Void)?
     
-    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32?, dismissByTapOutside: Bool) {
+    init(context: AccountContext, mode: ChatScheduleTimeControllerMode, currentTime: Int32?, minimalTime: Int32?, dismissByTapOutside: Bool) {
         self.context = context
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.dismissByTapOutside = dismissByTapOutside
+        self.minimalTime = minimalTime
         
         self.wrappingScrollNode = ASScrollNode()
         self.wrappingScrollNode.view.alwaysBounceVertical = true
@@ -131,6 +133,17 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.titleNode.attributedText = NSAttributedString(string: self.titleNode.attributedText?.string ?? "", font: Font.bold(17.0), textColor: self.presentationData.theme.actionSheet.primaryTextColor)
         self.pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")
     
+        func updatePickerViewSubviews(_ subviews: [UIView]) {
+            for view in subviews {
+                if let label = view as? UILabel {
+                    label.textColor = self.presentationData.theme.actionSheet.primaryTextColor
+                } else {
+                    updatePickerViewSubviews(view.subviews)
+                }
+            }
+        }
+        updatePickerViewSubviews(self.pickerView.subviews)
+        
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         self.doneButton.updateTheme(self.presentationData.theme)
     }
@@ -152,8 +165,9 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         }
         
         if let next1MinDate = next1MinDate, let next5MinDate = next5MinDate {
-            self.pickerView.minimumDate = next1MinDate
-            if let currentTime = currentTime, Double(currentTime) > currentDate.timeIntervalSince1970 {
+            let minimalTime = self.minimalTime.flatMap(Double.init) ?? 0.0
+            self.pickerView.minimumDate = max(next1MinDate, Date(timeIntervalSince1970: minimalTime))
+            if let currentTime = currentTime, Double(currentTime) > max(currentDate.timeIntervalSince1970, minimalTime) {
                 self.pickerView.date = Date(timeIntervalSince1970: Double(currentTime))
             } else {
                 self.pickerView.date = next5MinDate

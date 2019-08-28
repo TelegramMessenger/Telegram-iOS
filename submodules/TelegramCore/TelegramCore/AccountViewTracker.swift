@@ -919,9 +919,9 @@ public final class AccountViewTracker {
         }
     }
     
-    public func scheduledMessagesViewForLocation(_ chatLocation: ChatLocation) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func scheduledMessagesViewForLocation(_ chatLocation: ChatLocation, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: nil, namespaces: .just(Namespaces.Message.allScheduled), orderStatistics: [], additionalData: [])
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: nil, namespaces: .just(Namespaces.Message.allScheduled), orderStatistics: [], additionalData: additionalData)
             return withState(signal, { [weak self] () -> Int32 in
                 if let strongSelf = self {
                     return OSAtomicIncrement32(&strongSelf.nextViewId)

@@ -1991,7 +1991,7 @@ public final class Postbox {
     
     fileprivate func removeItemCollection(collectionId: ItemCollectionId) {
         var infos = self.itemCollectionInfoTable.getInfos(namespace: collectionId.namespace)
-        if let index = infos.index(where: { $0.1 == collectionId }) {
+        if let index = infos.firstIndex(where: { $0.1 == collectionId }) {
             infos.remove(at: index)
             self.replaceItemCollectionInfos(namespace: collectionId.namespace, itemCollectionInfos: infos.map { ($0.1, $0.2) })
         }

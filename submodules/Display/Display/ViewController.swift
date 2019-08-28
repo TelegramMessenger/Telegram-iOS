@@ -526,7 +526,7 @@ open class ViewControllerPresentationArguments {
     
     public final func navigationNextSibling() -> UIViewController? {
         if let navigationController = self.navigationController as? NavigationController {
-            if let index = navigationController.viewControllers.index(where: { $0 === self }) {
+            if let index = navigationController.viewControllers.firstIndex(where: { $0 === self }) {
                 if index != navigationController.viewControllers.count - 1 {
                     return navigationController.viewControllers[index + 1]
                 }

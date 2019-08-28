@@ -4610,6 +4610,7 @@ Any member of this group will be able to see messages in the channel.";
 "ScheduledMessages.Title" = "Scheduled Messages";
 "ScheduledMessages.RemindersTitle" = "Reminders";
 "ScheduledMessages.ScheduledDate" = "Scheduled for %@";
+"ScheduledMessages.ScheduledToday" = "Scheduled for today";
 "ScheduledMessages.SendNow" = "Send Now";
 "ScheduledMessages.EditTime" = "Reschedule";
 "ScheduledMessages.ClearAll" = "Clear All";
@@ -4619,6 +4620,7 @@ Any member of this group will be able to see messages in the channel.";
 "ScheduledMessages.EmptyPlaceholder" = "No scheduled messages here yet...";
 "ScheduledMessages.BotActionUnavailable" = "This action will become available after the message is published.";
 "ScheduledMessages.PollUnavailable" = "Voting will become available after the message is published.";
+"ScheduledMessages.ReminderNotification" = "📅 Reminder";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 
@@ -4631,39 +4633,46 @@ Any member of this group will be able to see messages in the channel.";
 
 "AccentColor.Title" = "Accent Color";
 
-"Appearance.ThemePreview.ChatList.1.Name" = "Eva Summer";
-"Appearance.ThemePreview.ChatList.1.Text" = "Text";
+"Appearance.ThemePreview.ChatList.1.Name" = "Alicia Torreaux";
+"Appearance.ThemePreview.ChatList.1.Text" = "Bob says hi.";
 
-"Appearance.ThemePreview.ChatList.2.Name" = "Your inner Competition";
-"Appearance.ThemePreview.ChatList.2.Text" = "Hey";
+"Appearance.ThemePreview.ChatList.2.Name" = "Roberto";
+"Appearance.ThemePreview.ChatList.2.Text" = "Say hello to Alice 👋";
 
-"Appearance.ThemePreview.ChatList.3.Name" = "Mike Apple";
-"Appearance.ThemePreview.ChatList.3.Text" = "Mike Apple";
+"Appearance.ThemePreview.ChatList.3.Name" = "Campus Public Chat";
+"Appearance.ThemePreview.ChatList.3.AuthorName" = "Jennie Alpha";
+"Appearance.ThemePreview.ChatList.3.Text" = "We just reached 2,500 members! WOO!";
 
-"Appearance.ThemePreview.ChatList.4.Name" = "Paul Newman";
-"Appearance.ThemePreview.ChatList.4.Text" = "Any ideas?";
+"Appearance.ThemePreview.ChatList.4.Name" = "Veronica";
+"Appearance.ThemePreview.ChatList.4.Text" = "Table for four, 2PM. Be there.";
 
-"Appearance.ThemePreview.ChatList.5.Name" = "Old Pirates";
-"Appearance.ThemePreview.ChatList.5.Text" = "Yo-ho-ho";
+"Appearance.ThemePreview.ChatList.5.Name" = "Animal Videos";
+"Appearance.ThemePreview.ChatList.5.Text" = "Vote now! Moar cat videos in this channel?";
 
-"Appearance.ThemePreview.ChatList.6.Name" = "Kate Bright";
-"Appearance.ThemePreview.ChatList.6.Text" = "Hola!";
+"Appearance.ThemePreview.ChatList.6.Name" = "Little Sister";
+"Appearance.ThemePreview.ChatList.6.Text" = "Don't tell mom yet, but I got the job! I'm going to ROME!";
 
-"Appearance.ThemePreview.ChatList.7.Name" = "What";
-"Appearance.ThemePreview.ChatList.7.Text" = "Hola!";
+"Appearance.ThemePreview.ChatList.7.Name" = "Jennie Alpha";
+"Appearance.ThemePreview.ChatList.7.Text" = "🖼 Check these out";
 
-"Appearance.ThemePreview.ChatList.8.Name" = "What";
-"Appearance.ThemePreview.ChatList.8.Text" = "Hola!";
-
-"Appearance.ThemePreview.Chat.1.Text" = "Reminds me of a Chinese proverb: the best time to plant a tree was 20 years ago. The second best time is now.";
-"Appearance.ThemePreview.Chat.1.ReplyName" = "Alex Cassio";
-"Appearance.ThemePreview.Chat.1.ReplyText" = "Mark Twain said that ☝️";
-
-"Appearance.ThemePreview.Chat.2.Text" = "Mark Twain said that ☝️";
-"Appearance.ThemePreview.Chat.3.Text" = "Twenty years from now you will be more disappointed by the things that you didn't do than by the ones you did do, so throw off the bowlines, sail away from safe harboor, catch the trade winds in your sails.";
-
-"Appearance.ThemePreview.Chat.4.Text" = "Nearly missed the sunrise.";
+"Appearance.ThemePreview.Chat.1.Text" = "Does he want me to, to turn from the right or turn from the left? 🤔";
+"Appearance.ThemePreview.Chat.2.ReplyName" = "Bob Harris";
+"Appearance.ThemePreview.Chat.2.Text" = "Right side. And, uh, with intensity.";
+"Appearance.ThemePreview.Chat.3.Text" = "Is that everything? It seemed like he said quite a bit more than that. 😯";
 
 "GroupInfo.Permissions.SlowmodeValue.Off" = "Off";
 
 "Undo.ScheduledMessagesCleared" = "Scheduled messages cleared";
+
+"Appearance.CreateTheme" = "Create New Theme";
+"Appearance.CreateThemeInfo" = "A new theme template has been created from your current theme and added to your Saved Messages.";
+"Appearance.Publish" = "Publish";
+
+"Conversation.Theme" = "Color Theme";
+"Conversation.ViewTheme" = "VIEW THEME";
+
+"CreateTheme.Title" = "Publish Theme";
+"CreateTheme.Preview" = "PREVIEW";
+"CreateTheme.Title" = "Title";
+"CreateTheme.ShortLink" = "Short Link";
+"CreateTheme.ShortLinkInfo" = "Short Link";

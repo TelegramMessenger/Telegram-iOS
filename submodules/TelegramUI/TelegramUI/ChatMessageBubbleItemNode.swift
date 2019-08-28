@@ -339,7 +339,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .call, .openMessage, .timecode, .tooltip:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .tooltip:
                             return .waitForSingleTap
                     }
                 }
@@ -373,7 +373,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
         
-        /*let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
+        let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
         replyRecognizer.shouldBegin = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if strongSelf.selectionNode != nil {
@@ -395,9 +395,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             return false
         }
-        self.view.addGestureRecognizer(replyRecognizer)*/
+        self.view.addGestureRecognizer(replyRecognizer)
         
-        let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
+        /*let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
         self.reactionRecognizer = reactionRecognizer
         reactionRecognizer.availableReactions = { [weak self] in
             guard let strongSelf = self, let item = strongSelf.item, !item.presentationData.isPreview && !Namespaces.Message.allScheduled.contains(item.message.id.namespace) else {
@@ -542,7 +542,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             }
         }
-        self.view.addGestureRecognizer(reactionRecognizer)
+        self.view.addGestureRecognizer(reactionRecognizer)*/
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
@@ -2290,6 +2290,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                                 item.controllerInteraction.openWallpaper(item.message)
                             }
                             break loop
+                        case .theme:
+                            foundTapAction = true
+                            if let item = self.item {
+                                item.controllerInteraction.openTheme(item.message)
+                            }
+                            break loop
                         case let .call(peerId):
                             foundTapAction = true
                             self.item?.controllerInteraction.callPeer(peerId)
@@ -2358,6 +2364,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                             case .instantPage:
                                 break
                             case .wallpaper:
+                                break
+                            case .theme:
                                 break
                             case .call:
                                 break
@@ -2708,7 +2716,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
-        /*switch recognizer.state {
+        switch recognizer.state {
             case .began:
                 self.currentSwipeToReplyTranslation = 0.0
                 if self.swipeToReplyFeedback == nil {
@@ -2767,7 +2775,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             default:
                 break
-        }*/
+        }
     }
     
     private var absoluteRect: (CGRect, CGSize)?

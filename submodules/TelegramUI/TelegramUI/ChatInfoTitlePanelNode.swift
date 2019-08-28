@@ -99,7 +99,7 @@ private func peerButtons(_ peer: Peer, interfaceState: ChatPresentationInterface
     }
 }
 
-private let buttonFont = Font.regular(10.0)
+private let buttonFont = Font.medium(10.0)
 
 private final class ChatInfoTitlePanelButtonNode: HighlightableButtonNode {
     override init() {

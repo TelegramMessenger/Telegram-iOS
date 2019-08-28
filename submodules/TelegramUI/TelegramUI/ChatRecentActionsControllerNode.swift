@@ -204,6 +204,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     self?.presentController(c, a)
                 })
             }
+        }, openTheme: { _ in      
         }, openHashtag: { [weak self] peerName, hashtag in
             guard let strongSelf = self else {
                 return

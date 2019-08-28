@@ -51,7 +51,7 @@ private final class NavigationControllerView: UITracingLayerView {
     var navigationBackgroundView: UIView?
     var navigationSeparatorView: UIView?
     var emptyDetailView: UIImageView?
-    var detailsBackground: WallpaperbackgroundNode?
+    var detailsBackground: WallpaperBackgroundNode?
     var masterDetailsBlackout: ASDisplayNode?
     var topControllerNode: ASDisplayNode?
     
@@ -338,11 +338,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                                     emptyDetailView?.removeFromSuperview()
                                 })
                             }
-                            let detailsBackground: WallpaperbackgroundNode
+                            let detailsBackground: WallpaperBackgroundNode
                             if let background = self.controllerView.detailsBackground {
                                 detailsBackground = background
                             } else {
-                                detailsBackground = WallpaperbackgroundNode()
+                                detailsBackground = WallpaperBackgroundNode()
                                 detailsBackground.alpha = 0.0
                                 self.controllerView.detailsBackground = detailsBackground
                             }

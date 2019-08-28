@@ -8,8 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0938677D22E0B9CB000EF19E /* MakePresentationTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0938677C22E0B9CB000EF19E /* MakePresentationTheme.swift */; };
-		0957DE1522D88B82001B4D57 /* PresentationThemeEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0957DE1422D88B82001B4D57 /* PresentationThemeEncoder.swift */; };
-		0957DE1922D95E0F001B4D57 /* PresentationThemeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0957DE1822D95E0F001B4D57 /* PresentationThemeDecoder.swift */; };
+		0957DE1922D95E0F001B4D57 /* PresentationThemeCoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0957DE1822D95E0F001B4D57 /* PresentationThemeCoder.swift */; };
 		097A581B22D528680078B73C /* PresentationThemeCodable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 097A581A22D528680078B73C /* PresentationThemeCodable.swift */; };
 		D06017EB22F3578200796784 /* PresentationResourcesSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06017E422F3578100796784 /* PresentationResourcesSettings.swift */; };
 		D06017EC22F3578200796784 /* PresentationResourcesChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06017E522F3578100796784 /* PresentationResourcesChat.swift */; };
@@ -49,8 +48,7 @@
 
 /* Begin PBXFileReference section */
 		0938677C22E0B9CB000EF19E /* MakePresentationTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MakePresentationTheme.swift; sourceTree = "<group>"; };
-		0957DE1422D88B82001B4D57 /* PresentationThemeEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeEncoder.swift; sourceTree = "<group>"; };
-		0957DE1822D95E0F001B4D57 /* PresentationThemeDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeDecoder.swift; sourceTree = "<group>"; };
+		0957DE1822D95E0F001B4D57 /* PresentationThemeCoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeCoder.swift; sourceTree = "<group>"; };
 		097A581A22D528680078B73C /* PresentationThemeCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationThemeCodable.swift; sourceTree = "<group>"; };
 		D06017E422F3578100796784 /* PresentationResourcesSettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationResourcesSettings.swift; sourceTree = "<group>"; };
 		D06017E522F3578100796784 /* PresentationResourcesChat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PresentationResourcesChat.swift; sourceTree = "<group>"; };
@@ -161,8 +159,7 @@
 				D0AE31B122B2746B0058D3BC /* PresentationStrings.swift */,
 				D0AE31B322B2746B0058D3BC /* PresentationTheme.swift */,
 				097A581A22D528680078B73C /* PresentationThemeCodable.swift */,
-				0957DE1422D88B82001B4D57 /* PresentationThemeEncoder.swift */,
-				0957DE1822D95E0F001B4D57 /* PresentationThemeDecoder.swift */,
+				0957DE1822D95E0F001B4D57 /* PresentationThemeCoder.swift */,
 				D06017F422F35A4000796784 /* PresentationThemeEssentialGraphics.swift */,
 				D06017F622F35A9200796784 /* ChatMessageBubbleImages.swift */,
 				D06017F822F35ACF00796784 /* WallpaperUtils.swift */,
@@ -280,7 +277,7 @@
 				D06017EB22F3578200796784 /* PresentationResourcesSettings.swift in Sources */,
 				D0AE31CB22B279D00058D3BC /* NumericFormat.swift in Sources */,
 				D06017F722F35A9200796784 /* ChatMessageBubbleImages.swift in Sources */,
-				0957DE1922D95E0F001B4D57 /* PresentationThemeDecoder.swift in Sources */,
+				0957DE1922D95E0F001B4D57 /* PresentationThemeCoder.swift in Sources */,
 				D0AE31B422B2746B0058D3BC /* PresentationStrings.swift in Sources */,
 				D0AE321422B2826A0058D3BC /* ComponentsThemes.swift in Sources */,
 				D084F9F022F3AEFD004874CE /* ChatControllerBackgroundNode.swift in Sources */,
@@ -294,7 +291,6 @@
 				D0AE31D322B27A780058D3BC /* DefaultDarkTintedPresentationTheme.swift in Sources */,
 				D0AE31B622B2746B0058D3BC /* PresentationTheme.swift in Sources */,
 				D06017ED22F3578200796784 /* PresentationResourcesCallList.swift in Sources */,
-				0957DE1522D88B82001B4D57 /* PresentationThemeEncoder.swift in Sources */,
 				D0AE31D222B27A780058D3BC /* DefaultDarkPresentationTheme.swift in Sources */,
 				D06017EE22F3578200796784 /* PresentationResourcesRootController.swift in Sources */,
 				D06017F522F35A4000796784 /* PresentationThemeEssentialGraphics.swift in Sources */,

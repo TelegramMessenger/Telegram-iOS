@@ -47,13 +47,13 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             }
         }
     }
-    if let subject = subject, case .scheduledMessages = subject {
+    /*if let subject = subject, case .scheduledMessages = subject {
         if let currentButton = currentButton, currentButton.action == .dismiss {
             return currentButton
         } else {
             return ChatNavigationButton(action: .dismiss, buttonItem: UIBarButtonItem(title: strings.Common_Done, style: .plain, target: target, action: selector))
         }
-    }
+    }*/
     return nil
 }
 

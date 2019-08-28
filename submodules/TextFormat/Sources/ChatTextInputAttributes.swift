@@ -510,11 +510,13 @@ private func trimRangesForChatInputText(_ text: NSAttributedString) -> (Int, Int
     var lower = 0
     var upper = 0
     
+    let trimmedCharacters: [UnicodeScalar] = [" ", "\t", "\n", "\u{200C}"]
+    
     let nsString: NSString = text.string as NSString
     
     for i in 0 ..< nsString.length {
         if let c = UnicodeScalar(nsString.character(at: i)) {
-            if c == " " as UnicodeScalar || c == "\t" as UnicodeScalar || c == "\n" as UnicodeScalar {
+            if trimmedCharacters.contains(c) {
                 lower += 1
             } else {
                 break
@@ -527,7 +529,7 @@ private func trimRangesForChatInputText(_ text: NSAttributedString) -> (Int, Int
     if lower != nsString.length {
         for i in (lower ..< nsString.length).reversed() {
             if let c = UnicodeScalar(nsString.character(at: i)) {
-                if c == " " as UnicodeScalar || c == "\t" as UnicodeScalar || c == "\n" as UnicodeScalar {
+                if trimmedCharacters.contains(c) {
                     upper += 1
                 } else {
                     break

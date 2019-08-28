@@ -367,7 +367,18 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     return nil
                 }))
             case let .theme(media):
-                let controller = ThemePreviewController(context: params.context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, baseColor: nil, day: true, preview: false), source: .media(.message(message: MessageReference(params.message), media: media)))
+                let path = params.context.account.postbox.mediaBox.completedResourcePath(media.resource)
+                var previewTheme: PresentationTheme?
+                if let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                    let startTime = CACurrentMediaTime()
+                    previewTheme = makePresentationTheme(data: data)
+                    print("time \(CACurrentMediaTime() - startTime)")
+                }
+                
+                guard let theme = previewTheme else {
+                    return false
+                }
+                let controller = ThemePreviewController(context: params.context, previewTheme: theme, source: .media(.message(message: MessageReference(params.message), media: media)))
                 params.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
@@ -440,6 +451,23 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                     
                     let controller = WallpaperGalleryController(context: context, source: source)
                     present(controller, nil)
+                }
+            })
+        }
+    }
+}
+
+func openChatTheme(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+    for media in message.media {
+        if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
+            |> deliverOnMainQueue).start(next: { resolvedUrl in
+                if case let .theme(slug) = resolvedUrl {
+                    let file = content.files!.first!
+                    if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let theme = makePresentationTheme(data: data) {
+                        let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }
                 }
             })
         }

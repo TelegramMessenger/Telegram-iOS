@@ -1,12 +1,12 @@
 import Foundation
 #if os(macOS)
-import PostboxMac
-import SwiftSignalKitMac
-import TelegramApiMac
+    import PostboxMac
+    import SwiftSignalKitMac
+    import TelegramApiMac
 #else
-import Postbox
-import SwiftSignalKit
-import TelegramApi
+    import Postbox
+    import SwiftSignalKit
+    import TelegramApi
 #endif
 
 final class CachedThemesConfiguration: PostboxCoding {
@@ -217,10 +217,19 @@ public func createTheme(account: Account, resource: MediaResource, title: String
     }
 }
 
-public func updateTheme(account: Account, theme: TelegramTheme, title: String?, resource: MediaResource?) -> Signal<Bool, NoError> {
-    guard title != nil || resource != nil else {
+public func updateTheme(account: Account, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?) -> Signal<TelegramTheme, CreateThemeError> {
+    guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
     
+    var flags: Int32 = 0
+    if let _ = title {
+        flags |= 1 << 1
+    }
+    if let _ = slug {
+        flags |= 1 << 0
+    }
+    
     return .never()
+    //return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: <#T##Api.InputDocument?#>))
 }

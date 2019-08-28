@@ -290,14 +290,14 @@ final class NavigationButtonNode: ASDisplayNode {
             node.color = self.color
             node.highlightChanged = { [weak node, weak self] value in
                 if let strongSelf = self, let node = node {
-                    if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                    if let index = strongSelf.nodes.firstIndex(where: { $0 === node }) {
                         strongSelf.highlightChanged(index, value)
                     }
                 }
             }
             node.pressed = { [weak self, weak node] in
                 if let strongSelf = self, let node = node {
-                    if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                    if let index = strongSelf.nodes.firstIndex(where: { $0 === node }) {
                         strongSelf.pressed(index)
                     }
                 }
@@ -339,14 +339,14 @@ final class NavigationButtonNode: ASDisplayNode {
                 node.color = self.color
                 node.highlightChanged = { [weak node, weak self] value in
                     if let strongSelf = self, let node = node {
-                        if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                        if let index = strongSelf.nodes.firstIndex(where: { $0 === node }) {
                             strongSelf.highlightChanged(index, value)
                         }
                     }
                 }
                 node.pressed = { [weak self, weak node] in
                     if let strongSelf = self, let node = node {
-                        if let index = strongSelf.nodes.index(where: { $0 === node }) {
+                        if let index = strongSelf.nodes.firstIndex(where: { $0 === node }) {
                             strongSelf.pressed(index)
                         }
                     }
@@ -369,7 +369,7 @@ final class NavigationButtonNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(constrainedSize: CGSize) -> CGSize                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            {
+    func updateLayout(constrainedSize: CGSize) -> CGSize {
         var nodeOrigin = CGPoint()
         var totalSize = CGSize()
         for node in self.nodes {
@@ -382,7 +382,7 @@ final class NavigationButtonNode: ASDisplayNode {
             nodeSize.height = ceil(nodeSize.height)
             totalSize.width += nodeSize.width
             totalSize.height = max(totalSize.height, nodeSize.height)
-            node.frame = CGRect(origin: nodeOrigin, size: nodeSize)
+            node.frame = CGRect(origin: CGPoint(x: nodeOrigin.x, y: floor((totalSize.height - nodeSize.height) / 2.0)), size: nodeSize)
             nodeOrigin.x += node.bounds.width
         }
         return totalSize

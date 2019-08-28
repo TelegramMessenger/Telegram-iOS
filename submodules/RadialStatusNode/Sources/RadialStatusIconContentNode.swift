@@ -22,11 +22,12 @@ private final class RadialStatusIconContentNodeParameters: NSObject {
 final class RadialStatusIconContentNode: RadialStatusContentNode {
     private let icon: RadialStatusIcon
     
-    init(icon: RadialStatusIcon) {
+    init(icon: RadialStatusIcon, synchronous: Bool) {
         self.icon = icon
         
         super.init()
         
+        self.displaysAsynchronously = !synchronous
         self.isLayerBacked = true
         self.isOpaque = false
     }
