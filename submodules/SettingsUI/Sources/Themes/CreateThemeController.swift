@@ -30,12 +30,13 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
     case title(PresentationTheme, PresentationStrings, String, String)
     case slug(PresentationTheme, PresentationStrings, String, String, Bool)
+    case slugInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
             case .chatPreviewHeader, .chatPreview:
                 return CreateThemeControllerSection.chatPreview.rawValue
-            case .title, .slug:
+            case .title, .slug, .slugInfo:
                 return CreateThemeControllerSection.info.rawValue
         }
     }
@@ -50,6 +51,8 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
                 return 2
             case .slug:
                 return 3
+            case .slugInfo:
+                return 4
         }
     }
     
@@ -79,6 +82,12 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .slugInfo(lhsTheme, lhsText):
+                if case let .slugInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -101,13 +110,15 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
                     }
                 }, action: {})
             case let .slug(theme, strings, title, text, enabled):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: "t.me/addtheme/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "Short Name", type: .username, enabled: enabled, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: "t.me/addtheme/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: title, type: .username, enabled: enabled, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.slug = value
                         return state
                     }
                 }, action: {})
+            case let .slugInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -133,11 +144,12 @@ private struct CreateThemeControllerState: Equatable {
 private func createThemeControllerEntries(presentationData: PresentationData, theme: PresentationTheme, state: CreateThemeControllerState) -> [CreateThemeControllerEntry] {
     var entries: [CreateThemeControllerEntry] = []
     
-    entries.append(.chatPreviewHeader(presentationData.theme, "Preview".uppercased()))
+    entries.append(.chatPreviewHeader(presentationData.theme, presentationData.strings.CreateTheme_Preview.uppercased()))
     entries.append(.chatPreview(presentationData.theme, theme, theme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder))
     
-    entries.append(.title(presentationData.theme, presentationData.strings, "Title", state.title))
-    entries.append(.slug(presentationData.theme, presentationData.strings, "Slug", state.slug, true))
+    entries.append(.title(presentationData.theme, presentationData.strings, presentationData.strings.CreateTheme_Title, state.title))
+    entries.append(.slug(presentationData.theme, presentationData.strings, presentationData.strings.CreateTheme_ShortLink, state.slug, true))
+    entries.append(.slugInfo(presentationData.theme, presentationData.strings.CreateTheme_ShortLinkInfo))
     
     return entries
 }
@@ -169,7 +181,7 @@ public func createThemeController(context: AccountContext, theme: PresentationTh
                 })
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Publish Theme"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CreateTheme_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: createThemeControllerEntries(presentationData: presentationData, theme: theme, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))

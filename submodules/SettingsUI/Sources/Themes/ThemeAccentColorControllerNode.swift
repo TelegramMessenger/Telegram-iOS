@@ -39,11 +39,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     
     private let chatListBackgroundNode: ASDisplayNode
     private var chatNodes: [ListViewItemNode]?
+    private let maskNode: ASImageNode
     
     private let chatBackgroundNode: WallpaperBackgroundNode
     private var messageNodes: [ListViewItemNode]?
-    
-    private let maskNode: ASImageNode
     
     private var colorPanelNode: WallpaperColorPanelNode
     private let toolbarNode: WallpaperGalleryToolbarNode

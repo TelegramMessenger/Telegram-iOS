@@ -4612,6 +4612,7 @@ Any member of this group will be able to see messages in the channel.";
 "ScheduledMessages.Title" = "Scheduled Messages";
 "ScheduledMessages.RemindersTitle" = "Reminders";
 "ScheduledMessages.ScheduledDate" = "Scheduled for %@";
+"ScheduledMessages.ScheduledToday" = "Scheduled for today";
 "ScheduledMessages.SendNow" = "Send Now";
 "ScheduledMessages.EditTime" = "Reschedule";
 "ScheduledMessages.ClearAll" = "Clear All";

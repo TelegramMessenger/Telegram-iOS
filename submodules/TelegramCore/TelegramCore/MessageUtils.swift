@@ -194,7 +194,7 @@ public extension Message {
         if self.flags.contains(.Failed) {
             return true
         } else if self.id.namespace == Namespaces.Message.ScheduledCloud {
-            return timestamp > self.timestamp
+            return timestamp > self.timestamp + 30
         } else {
             return false
         }
