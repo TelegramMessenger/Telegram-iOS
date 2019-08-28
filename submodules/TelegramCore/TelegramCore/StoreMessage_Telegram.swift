@@ -501,7 +501,7 @@ extension StoreMessage {
                     attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
                 }
                 
-                if let views = views {
+                if let views = views, namespace != Namespaces.Message.ScheduledCloud {
                     attributes.append(ViewCountMessageAttribute(count: Int(views)))
                 }
                 
@@ -536,8 +536,6 @@ extension StoreMessage {
                 if (flags & (1 << 17)) != 0 {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
-                
-                
                 
                 if let reactions = reactions {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))

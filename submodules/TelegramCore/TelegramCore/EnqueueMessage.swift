@@ -329,17 +329,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             attributes.append(ConsumableContentMessageAttribute(consumed: false))
                         }
                     }
-                    if let peer = peer as? TelegramChannel {
-                        switch peer.info {
-                            case let .broadcast(info):
-                                attributes.append(ViewCountMessageAttribute(count: 1))
-                                if info.flags.contains(.messagesShouldHaveSignatures) {
-                                    attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
-                                }
-                            case .group:
-                                break
-                        }
-                    }
                     
                     var entitiesAttribute: TextEntitiesMessageAttribute?
                     for attribute in attributes {
@@ -395,6 +384,20 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             messageNamespace = Namespaces.Message.ScheduledLocal
                             effectiveTimestamp = attribute.scheduleTime
                             break
+                        }
+                    }
+                    
+                    if let peer = peer as? TelegramChannel {
+                        switch peer.info {
+                            case let .broadcast(info):
+                                if messageNamespace != Namespaces.Message.ScheduledLocal {
+                                    attributes.append(ViewCountMessageAttribute(count: 1))
+                                }
+                                if info.flags.contains(.messagesShouldHaveSignatures) {
+                                    attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
+                                }
+                            case .group:
+                                break
                         }
                     }
                     
