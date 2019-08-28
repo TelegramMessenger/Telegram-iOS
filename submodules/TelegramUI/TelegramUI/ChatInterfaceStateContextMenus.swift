@@ -365,7 +365,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if let starStatus = data.starStatus {
             actions.append(.action(ContextMenuActionItem(text: starStatus ? chatPresentationInterfaceState.strings.Stickers_RemoveFromFavorites : chatPresentationInterfaceState.strings.Stickers_AddToFavorites, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.actionSheet.primaryTextColor)
+                return generateTintedImage(image: starStatus ? UIImage(bundleImageName: "Chat/Context Menu/Unstar") : UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 interfaceInteraction.toggleMessageStickerStarred(messages[0].id)
                 f(.default)
@@ -376,8 +376,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuReply, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
-                interfaceInteraction.setupReplyMessage(messages[0].id)
-                f(.dismissWithoutContent)
+                interfaceInteraction.setupReplyMessage(messages[0].id, { transition in
+                    f(.custom(transition))
+                })
             })))
         }
         
@@ -403,8 +404,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_MessageDialogEdit, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
-                interfaceInteraction.setupEditMessage(messages[0].id)
-                f(.dismissWithoutContent)
+                interfaceInteraction.setupEditMessage(messages[0].id, { transition in
+                    f(.custom(transition))
+                })
             })))
         }
         
@@ -551,13 +553,13 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         if channel.addressName == nil {
-                            controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, true)), nil)
+                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Conversation_PrivateMessageLinkCopied, true)), nil)
                         } else {
-                            controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
+                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.GroupInfo_InviteLink_CopyAlert_Success, false)), nil)
                         }
                     }
                 })
-                f(.dismissWithoutContent)
+                f(.default)
             })))
         }
         
@@ -667,8 +669,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuMore, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/More"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
-                interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id])
-                f(.default)
+                interfaceInteraction.beginMessageSelection(selectAll ? messages.map { $0.id } : [message.id], { transition in
+                    f(.custom(transition))
+                })
             })))
         }
         

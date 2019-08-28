@@ -217,6 +217,8 @@
 "PUSH_CHAT_MESSAGE_GAME_SCORE" = "%1$@ scored %4$@ in game %3$@ in the group %2$@";
 "PUSH_CHAT_MESSAGE_VIDEOS" = "%1$@ sent %3$@ videos to the group %2$@";
 
+"PUSH_REMINDER_TITLE" = "🗓 Reminder";
+
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
 "LOCAL_CHAT_MESSAGE_FWDS" = "%1$@ forwarded %2$d messages";
@@ -4529,7 +4531,7 @@ Any member of this group will be able to see messages in the channel.";
 "VoiceOver.Chat.RecordModeVoiceMessage" = "Voice message";
 "VoiceOver.Chat.RecordModeVoiceMessageInfo" = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to video.";
 "VoiceOver.Chat.RecordModeVideoMessage" = "Video message";
-"VoiceOver.Chat.RecordModeVideoMessageInfo" = "Double tap and hold to record voice message. Slide up to pin recording, slide left to cancel. Double tap to switch to audio.";
+"VoiceOver.Chat.RecordModeVideoMessageInfo" = "Double tap and hold to record video message. Slide up to pin recording, slide left to cancel. Double tap to switch to audio.";
 "VoiceOver.Chat.Message" = "Message";
 "VoiceOver.Chat.YourMessage" = "Your message";
 "VoiceOver.Chat.ReplyFrom" = "Reply to message from: %@";

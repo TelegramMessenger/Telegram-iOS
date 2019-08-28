@@ -54,7 +54,7 @@ final class ContextMenuActionNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = UIColor(white: 0.0, alpha: 0.8)
+        self.backgroundColor = UIColor(rgb: 0x2f2f2f)
         if let textNode = self.textNode {
             self.addSubnode(textNode)
         }
@@ -63,7 +63,7 @@ final class ContextMenuActionNode: ASDisplayNode {
         }
         
         self.button.highligthedChanged = { [weak self] highlighted in
-            self?.backgroundColor = highlighted ? UIColor(white: 0.0, alpha: 0.4) : UIColor(white: 0.0, alpha: 0.8)
+            self?.backgroundColor = highlighted ? UIColor(rgb: 0x8c8e8e) : UIColor(rgb: 0x2f2f2f)
         }
         self.view.addSubview(self.button)
         self.addSubnode(self.actionArea)

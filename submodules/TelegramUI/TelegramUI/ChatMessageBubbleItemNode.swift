@@ -2092,6 +2092,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                     break
                 }
                 self.contextSourceNode.contentRect = backgroundFrame.offsetBy(dx: incomingOffset, dy: 0.0)
+                if !self.contextSourceNode.isExtractedToContextPreview {
+                    if let (rect, size) = self.absoluteRect {
+                        self.updateAbsoluteRect(rect, within: size)
+                    }
+                }
             }
             self.messageAccessibilityArea.frame = backgroundFrame
             
@@ -2615,12 +2620,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
                 if animated {
-                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
                     
                     if !incoming {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                     }
                 }
             }
@@ -2630,13 +2635,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DIdentity
                 if animated {
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4, completion: { [weak selectionNode]_ in
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, completion: { [weak selectionNode]_ in
                         selectionNode?.removeFromSupernode()
                     })
-                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                     if CGFloat(0.0).isLessThanOrEqualTo(selectionNode.frame.origin.x) {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                     }
                 } else {
                     selectionNode.removeFromSupernode()

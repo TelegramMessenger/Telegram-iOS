@@ -197,6 +197,8 @@ public final class TextSelectionNode: ASDisplayNode {
     private var currentRange: (Int, Int)?
     private var currentRects: [CGRect]?
     
+    public let highlightAreaNode: ASDisplayNode
+    
     public init(theme: TextSelectionTheme, textNode: TextNode, updateIsActive: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void, rootNode: ASDisplayNode, performAction: @escaping (String, TextSelectionAction) -> Void) {
         self.theme = theme
         self.textNode = textNode
@@ -216,6 +218,8 @@ public final class TextSelectionNode: ASDisplayNode {
         self.rightKnob.displaysAsynchronously = false
         self.rightKnob.displayWithoutProcessing = true
         self.rightKnob.alpha = 0.0
+        
+        self.highlightAreaNode = ASDisplayNode()
         
         super.init()
         
@@ -262,7 +266,7 @@ public final class TextSelectionNode: ASDisplayNode {
                 let updatedRange = NSRange(location: min(updatedMin, updatedMax), length: max(updatedMin, updatedMax) - min(updatedMin, updatedMax))
                 if strongSelf.currentRange?.0 != updatedMin || strongSelf.currentRange?.1 != updatedMax {
                     strongSelf.currentRange = (updatedMin, updatedMax)
-                    strongSelf.updateSelection(range: updatedRange)
+                    strongSelf.updateSelection(range: updatedRange, animateIn: false)
                 }
                 
                 if let scrollView = findScrollView(view: strongSelf.view) {
@@ -311,7 +315,7 @@ public final class TextSelectionNode: ASDisplayNode {
             strongSelf.currentRange = resultRange.flatMap {
                 ($0.lowerBound, $0.upperBound)
             }
-            strongSelf.updateSelection(range: resultRange)
+            strongSelf.updateSelection(range: resultRange, animateIn: true)
             strongSelf.displayMenu()
             strongSelf.updateIsActive(true)
         }
@@ -322,7 +326,7 @@ public final class TextSelectionNode: ASDisplayNode {
         self.view.addGestureRecognizer(recognizer)
     }
     
-    private func updateSelection(range: NSRange?) {
+    private func updateSelection(range: NSRange?, animateIn: Bool) {
         var rects: [CGRect]?
         
         if let range = range {
@@ -342,7 +346,7 @@ public final class TextSelectionNode: ASDisplayNode {
                 highlightOverlay.outerRadius = 0.0
                 highlightOverlay.inset = 1.0
                 self.highlightOverlay = highlightOverlay
-                self.insertSubnode(highlightOverlay, at: 0)
+                self.highlightAreaNode.addSubnode(highlightOverlay)
             }
             highlightOverlay.frame = self.bounds
             highlightOverlay.updateRects(rects)
@@ -351,11 +355,27 @@ public final class TextSelectionNode: ASDisplayNode {
                 self.rightKnob.frame = CGRect(origin: CGPoint(x: floor(rects[rects.count - 1].maxX + 1.0 - image.size.width / 2.0), y: rects[rects.count - 1].maxY + 1.0 - (rects[0].height + 2.0)), size: CGSize(width: image.size.width, height: image.size.width + rects[0].height + 2.0))
             }
             if self.leftKnob.alpha.isZero {
-                highlightOverlay.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                highlightOverlay.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                 self.leftKnob.alpha = 1.0
-                self.leftKnob.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                self.leftKnob.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.14, delay: 0.19)
                 self.rightKnob.alpha = 1.0
-                self.rightKnob.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+                self.rightKnob.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.14, delay: 0.19)
+                self.leftKnob.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.2, delay: 0.25, initialVelocity: 0.0, damping: 80.0)
+                self.rightKnob.layer.animateSpring(from: 0.5 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.2, delay: 0.25, initialVelocity: 0.0, damping: 80.0)
+                
+                if animateIn {
+                    var result = CGRect()
+                    for rect in rects {
+                        if result.isEmpty {
+                            result = rect
+                        } else {
+                            result = result.union(rect)
+                        }
+                    }
+                    highlightOverlay.layer.animateScale(from: 2.0, to: 1.0, duration: 0.26)
+                    let fromResult = CGRect(origin: CGPoint(x: result.minX - result.width / 2.0, y: result.minY - result.height / 2.0), size: CGSize(width: result.width * 2.0, height: result.height * 2.0))
+                    highlightOverlay.layer.animatePosition(from: CGPoint(x: (-fromResult.midX + highlightOverlay.bounds.midX) / 1.0, y: (-fromResult.midY + highlightOverlay.bounds.midY) / 1.0), to: CGPoint(), duration: 0.26, additive: true)
+                }
             }
         } else if let highlightOverlay = self.highlightOverlay {
             self.highlightOverlay = nil
@@ -372,7 +392,7 @@ public final class TextSelectionNode: ASDisplayNode {
     
     private func dismissSelection() {
         self.currentRange = nil
-        self.updateSelection(range: nil)
+        self.updateSelection(range: nil, animateIn: false)
     }
     
     private func displayMenu() {

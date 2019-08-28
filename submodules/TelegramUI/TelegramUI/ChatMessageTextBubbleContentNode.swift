@@ -522,7 +522,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if !value {
             if let textSelectionNode = self.textSelectionNode {
                 self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                 textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
                     textSelectionNode?.removeFromSupernode()
                 })
             }
@@ -532,7 +534,17 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
             if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: item.presentationData.theme.theme.list.itemAccentColor.withAlphaComponent(0.5), knob: item.presentationData.theme.theme.list.itemAccentColor), textNode: self.textNode, updateIsActive: { [weak self] value in
+                let selectionColor: UIColor
+                let knobColor: UIColor
+                if item.message.effectivelyIncoming(item.context.account.peerId) {
+                    selectionColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
+                } else {
+                    selectionColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
+                }
+                
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), textNode: self.textNode, updateIsActive: { [weak self] value in
                     self?.updateIsTextSelectionActive?(value)
                 }, present: { [weak self] c, a in
                     self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
@@ -544,12 +556,16 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 })
                 self.textSelectionNode = textSelectionNode
                 self.addSubnode(textSelectionNode)
+                self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
                 textSelectionNode.frame = self.textNode.frame
+                textSelectionNode.highlightAreaNode.frame = self.textNode.frame
             }
         } else if let textSelectionNode = self.textSelectionNode {
             self.textSelectionNode = nil
             self.updateIsTextSelectionActive?(false)
+            textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
             textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.highlightAreaNode.removeFromSupernode()
                 textSelectionNode?.removeFromSupernode()
             })
         }
