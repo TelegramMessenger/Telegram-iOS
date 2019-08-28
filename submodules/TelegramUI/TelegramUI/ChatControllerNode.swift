@@ -75,7 +75,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    let backgroundNode: WallpaperbackgroundNode
+    let backgroundNode: WallpaperBackgroundNode
     let historyNode: ChatHistoryListNode
     let reactionContainerNode: ReactionSelectionParentNode
     let historyNodeContainer: ASDisplayNode
@@ -201,7 +201,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.navigationBar = navigationBar
         self.controller = controller
         
-        self.backgroundNode = WallpaperbackgroundNode()
+        self.backgroundNode = WallpaperBackgroundNode()
         self.backgroundNode.displaysAsynchronously = false
         
         self.titleAccessoryPanelContainer = ChatControllerTitlePanelNodeContainer()

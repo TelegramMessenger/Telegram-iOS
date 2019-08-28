@@ -61,7 +61,7 @@ func presentedLegacyCamera(context: AccountContext, peer: Peer, cameraView: TGAt
     controller.recipientName = peer.displayTitle
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
-            controller.hasTimer = !hasSchedule
+            controller.hasTimer = hasSchedule
         }
         controller.hasSilentPosting = !isSecretChat
     }

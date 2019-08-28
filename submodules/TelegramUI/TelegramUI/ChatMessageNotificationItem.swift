@@ -115,7 +115,11 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             } else if let author = firstMessage.author {
                 if author.id != peer.id {
-                    title = author.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    if author.id == item.context.account.peerId {
+                        title = presentationData.strings.DialogList_You + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    } else {
+                        title = author.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    }
                 } else {
                     title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     for attribute in firstMessage.attributes {
@@ -129,6 +133,14 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 }
             } else {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+            }
+            
+            if let text = title, firstMessage.flags.contains(.WasScheduled) {
+                if let author = firstMessage.author, author.id == peer.id, author.id == item.context.account.peerId {
+                    title = presentationData.strings.ScheduledMessages_ReminderNotification
+                } else {
+                    title = "📅 \(text)"
+                }
             }
         }
         

@@ -4619,6 +4619,7 @@ Any member of this group will be able to see messages in the channel.";
 "ScheduledMessages.EmptyPlaceholder" = "No scheduled messages here yet...";
 "ScheduledMessages.BotActionUnavailable" = "This action will become available after the message is published.";
 "ScheduledMessages.PollUnavailable" = "Voting will become available after the message is published.";
+"ScheduledMessages.ReminderNotification" = "📅 Reminder";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 
@@ -4631,29 +4632,27 @@ Any member of this group will be able to see messages in the channel.";
 
 "AccentColor.Title" = "Accent Color";
 
-"Appearance.ThemePreview.ChatList.1.Name" = "Eva Summer";
-"Appearance.ThemePreview.ChatList.1.Text" = "Text";
+"Appearance.ThemePreview.ChatList.1.Name" = "Alicia Torreaux";
+"Appearance.ThemePreview.ChatList.1.Text" = "Bob says hi.";
 
-"Appearance.ThemePreview.ChatList.2.Name" = "Your inner Competition";
-"Appearance.ThemePreview.ChatList.2.Text" = "Hey";
+"Appearance.ThemePreview.ChatList.2.Name" = "Roberto";
+"Appearance.ThemePreview.ChatList.2.Text" = "Say hello to Alice 👋";
 
-"Appearance.ThemePreview.ChatList.3.Name" = "Mike Apple";
-"Appearance.ThemePreview.ChatList.3.Text" = "Mike Apple";
+"Appearance.ThemePreview.ChatList.3.Name" = "Campus Public Chat";
+"Appearance.ThemePreview.ChatList.3.AuthorName" = "Jennie Alpha";
+"Appearance.ThemePreview.ChatList.3.Text" = "We just reached 2,500 members! WOO!";
 
-"Appearance.ThemePreview.ChatList.4.Name" = "Paul Newman";
-"Appearance.ThemePreview.ChatList.4.Text" = "Any ideas?";
+"Appearance.ThemePreview.ChatList.4.Name" = "Veronica";
+"Appearance.ThemePreview.ChatList.4.Text" = "Table for four, 2PM. Be there.";
 
-"Appearance.ThemePreview.ChatList.5.Name" = "Old Pirates";
-"Appearance.ThemePreview.ChatList.5.Text" = "Yo-ho-ho";
+"Appearance.ThemePreview.ChatList.5.Name" = "Animal Videos";
+"Appearance.ThemePreview.ChatList.5.Text" = "Vote now! Moar cat videos in this channel?";
 
-"Appearance.ThemePreview.ChatList.6.Name" = "Kate Bright";
-"Appearance.ThemePreview.ChatList.6.Text" = "Hola!";
+"Appearance.ThemePreview.ChatList.6.Name" = "Little Sister";
+"Appearance.ThemePreview.ChatList.6.Text" = "Don't tell mom yet, but I got the job! I'm going to ROME!";
 
-"Appearance.ThemePreview.ChatList.7.Name" = "What";
-"Appearance.ThemePreview.ChatList.7.Text" = "Hola!";
-
-"Appearance.ThemePreview.ChatList.8.Name" = "What";
-"Appearance.ThemePreview.ChatList.8.Text" = "Hola!";
+"Appearance.ThemePreview.ChatList.7.Name" = "Jennie Alpha";
+"Appearance.ThemePreview.ChatList.7.Text" = "🖼 Check these out";
 
 "Appearance.ThemePreview.Chat.1.Text" = "Does he want me to, to turn from the right or turn from the left? 🤔";
 "Appearance.ThemePreview.Chat.2.ReplyName" = "Bob Harris";

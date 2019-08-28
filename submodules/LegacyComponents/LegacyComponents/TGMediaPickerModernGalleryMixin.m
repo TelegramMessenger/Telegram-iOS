@@ -147,7 +147,20 @@
             UIImpactFeedbackGenerator *generator = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
             [generator impactOccurred];
             
-            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context sendButtonFrame:strongSelf.galleryModel.interfaceView.doneButtonFrame canSendSilently:hasSilentPosting canSchedule:hasSchedule];
+            bool effectiveHasSchedule = hasSchedule;
+            for (id item in strongSelf->_galleryModel.selectionContext.selectedItems)
+            {
+                if ([item isKindOfClass:[TGMediaAsset class]])
+                {
+                    if ([[strongSelf->_editingContext timerForItem:item] integerValue] > 0)
+                    {
+                        effectiveHasSchedule = false;
+                        break;
+                    }
+                }
+            }
+            
+            TGMediaPickerSendActionSheetController *controller = [[TGMediaPickerSendActionSheetController alloc] initWithContext:strongSelf->_context sendButtonFrame:strongSelf.galleryModel.interfaceView.doneButtonFrame canSendSilently:hasSilentPosting canSchedule:effectiveHasSchedule];
             controller.send = ^{
                 __strong TGMediaPickerModernGalleryMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)

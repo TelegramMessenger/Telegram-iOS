@@ -72,6 +72,65 @@ public enum RadialStatusNodeState: Equatable {
         }
     }
     
+    func isPrimarilyEqual(to rhs: RadialStatusNodeState) -> Bool {
+        switch self {
+            case .none:
+                if case .none = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .download:
+                if case .download = rhs{
+                    return true
+                } else {
+                    return false
+                }
+            case .play:
+                if case .play = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case .pause:
+                if case .pause = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .progress(lhsColor, lhsLineWidth, lhsValue, lhsCancelEnabled):
+                if case let .progress(rhsColor, rhsLineWidth, rhsValue, rhsCancelEnabled) = rhs, lhsColor.isEqual(rhsColor), lhsValue == rhsValue, lhsLineWidth == rhsLineWidth, lhsCancelEnabled == rhsCancelEnabled {
+                    return true
+                } else {
+                    return false
+                }
+            case let .cloudProgress(lhsColor, lhsStrokeBackgroundColor, lhsLineWidth, lhsValue):
+                if case let .cloudProgress(rhsColor, rhsStrokeBackgroundColor, rhsLineWidth, rhsValue) = rhs, lhsColor.isEqual(rhsColor), lhsStrokeBackgroundColor.isEqual(rhsStrokeBackgroundColor), lhsLineWidth.isEqual(to: rhsLineWidth), lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case .check:
+                if case .check = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .customIcon(lhsImage):
+                if case let .customIcon(rhsImage) = rhs, lhsImage === rhsImage {
+                    return true
+                } else {
+                    return false
+                }
+            case let .secretTimeout(lhsColor, lhsIcon, lhsBeginTime, lhsTimeout, lhsSparks):
+                if case let .secretTimeout(rhsColor, rhsIcon, rhsBeginTime, rhsTimeout, rhsSparks) = rhs, lhsColor.isEqual(rhsColor), lhsIcon === rhsIcon, lhsBeginTime.isEqual(to: rhsBeginTime), lhsTimeout.isEqual(to: rhsTimeout), lhsSparks == rhsSparks {
+                    return true
+                } else {
+                    return false
+                }
+        }
+    }
+    
     func backgroundColor(color: UIColor) -> UIColor? {
         switch self {
             case .none:
@@ -81,18 +140,18 @@ public enum RadialStatusNodeState: Equatable {
         }
     }
     
-    func contentNode(current: RadialStatusContentNode?) -> RadialStatusContentNode? {
+    func contentNode(current: RadialStatusContentNode?, synchronous: Bool) -> RadialStatusContentNode? {
         switch self {
             case .none:
                 return nil
             case let .download(color):
                 return RadialDownloadContentNode(color: color)
             case let .play(color):
-                return RadialStatusIconContentNode(icon: .play(color))
+                return RadialStatusIconContentNode(icon: .play(color), synchronous: synchronous)
             case let .pause(color):
-                return RadialStatusIconContentNode(icon: .pause(color))
+                return RadialStatusIconContentNode(icon: .pause(color), synchronous: synchronous)
             case let .customIcon(image):
-                return RadialStatusIconContentNode(icon: .custom(image))
+                return RadialStatusIconContentNode(icon: .custom(image), synchronous: synchronous)
             case let .check(color):
                 return RadialCheckContentNode(color: color)
             case let .progress(color, lineWidth, value, cancelEnabled):
@@ -144,12 +203,17 @@ public final class RadialStatusNode: ASControlNode {
         super.init()
     }
     
-    public func transitionToState(_ state: RadialStatusNodeState, animated: Bool = true, completion: @escaping () -> Void = {}) {
+    public func transitionToState(_ state: RadialStatusNodeState, animated: Bool = true, synchronous: Bool = false, completion: @escaping () -> Void = {}) {
+        var animated = animated
         if self.state != state {
             let fromState = self.state
             self.state = state
             
-            let contentNode = state.contentNode(current: self.contentNode)
+            if fromState.isPrimarilyEqual(to: state) {
+                animated = false
+            }
+            
+            let contentNode = state.contentNode(current: self.contentNode, synchronous: synchronous)
             if contentNode !== self.contentNode {
                 self.transitionToContentNode(contentNode, state: state, fromState: fromState, backgroundColor: state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
             } else {

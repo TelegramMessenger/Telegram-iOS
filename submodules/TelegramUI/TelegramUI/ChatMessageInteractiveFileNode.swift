@@ -310,7 +310,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
                         isAudio = true
                         
-                        if let forcedResourceStatus =  forcedResourceStatus {
+                        if let forcedResourceStatus = forcedResourceStatus, statusUpdated {
                             updatedStatusSignal = .single((forcedResourceStatus, nil))
                         } else if let currentUpdatedStatusSignal = updatedStatusSignal {
                             updatedStatusSignal = currentUpdatedStatusSignal
@@ -819,7 +819,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             if state == .none {
                 self.statusNode = nil
             }
-            statusNode.transitionToState(state, animated: animated, completion: { [weak statusNode] in
+            statusNode.transitionToState(state, animated: animated, synchronous: presentationData.theme.preview, completion: { [weak statusNode] in
                 if state == .none {
                     statusNode?.removeFromSupernode()
                 }
