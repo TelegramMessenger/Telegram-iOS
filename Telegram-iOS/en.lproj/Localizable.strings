@@ -4579,7 +4579,7 @@ Any member of this group will be able to see messages in the channel.";
 "VoiceOver.Chat.Title" = "Title: %@";
 "VoiceOver.Chat.Caption" = "Caption: %@";
 "VoiceOver.Chat.Duration" = "Duration: %@";
-"VoiceOver.Chat.Size" = "Size %@";
+"VoiceOver.Chat.Size" = "Size: %@";
 "VoiceOver.Chat.MusicTitle" = "%1$@, by %2$@";
 "VoiceOver.Chat.PlayHint" = "Double tap to play";
 "VoiceOver.Chat.OpenHint" = "Double tap to open";

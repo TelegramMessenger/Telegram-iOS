@@ -363,9 +363,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     |> map { data -> [ContextMenuItem] in
         var actions: [ContextMenuItem] = []
         
-        if let starStatus = data.starStatus, let image = starStatus ? starIconFilled : starIconEmpty {
-            actions.append(.action(ContextMenuActionItem(text: starStatus ? "Star" : "Unstar", icon: { theme in
-                return generateTintedImage(image: image, color: theme.actionSheet.primaryTextColor)
+        if let starStatus = data.starStatus {
+            actions.append(.action(ContextMenuActionItem(text: starStatus ? chatPresentationInterfaceState.strings.Stickers_RemoveFromFavorites : chatPresentationInterfaceState.strings.Stickers_AddToFavorites, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Rate"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 interfaceInteraction.toggleMessageStickerStarred(messages[0].id)
                 f(.default)
@@ -600,7 +600,7 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if data.messageActions.options.contains(.viewStickerPack) {
             actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.StickerPack_ViewPack, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Info"), color: theme.actionSheet.primaryTextColor)
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Sticker"), color: theme.actionSheet.primaryTextColor)
             }, action: { _, f in
                 let _ = controllerInteraction.openMessage(message, .default)
                 f(.dismissWithoutContent)
