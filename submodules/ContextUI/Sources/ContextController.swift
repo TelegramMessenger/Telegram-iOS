@@ -325,6 +325,17 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.dimNode.alpha = 1.0
         self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
+        
+        if #available(iOS 10.0, *) {
+            if let propertyAnimator = self.propertyAnimator {
+                let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+                propertyAnimator?.stopAnimation(true)
+            }
+            self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor, curve: .easeInOut, animations: { [weak self] in
+                self?.effectView.effect = makeCustomZoomBlurEffect()
+            })
+        }
+        
         if let _ = self.propertyAnimator {
             if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                 self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.25 * animationDurationFactor, from: 0.0, to: 1.0, update: { [weak self] value in
@@ -399,6 +410,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         if #available(iOS 10.0, *) {
+            if let propertyAnimator = self.propertyAnimator {
+                let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+                propertyAnimator?.stopAnimation(true)
+            }
             self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2, curve: .easeInOut, animations: { [weak self] in
                 self?.effectView.effect = nil
             })
