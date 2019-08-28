@@ -684,6 +684,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
                 if result is TextSelectionNodeView {
                     return result
+                } else if contentParentNode.contentRect.contains(contentPoint) {
+                    return contentParentNode.contentNode.view
                 }
             }
         }
