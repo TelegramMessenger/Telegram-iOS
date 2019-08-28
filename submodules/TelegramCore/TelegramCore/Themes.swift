@@ -82,11 +82,17 @@ public func telegramThemes(postbox: Postbox, network: Network, forceUpdate: Bool
 
 public enum GetThemeError {
     case generic
+    case unsupported
 }
 
 public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, GetThemeError> {
     return account.network.request(Api.functions.account.getTheme(format: themeFormat, theme: .inputThemeSlug(slug: slug), documentId: 0))
-    |> mapError { _ -> GetThemeError in return .generic }
+    |> mapError { error -> GetThemeError in
+        if error.errorDescription == "THEME_FORMAT_INVALID" {
+            return .unsupported
+        }
+        return .generic
+    }
     |> mapToSignal { theme -> Signal<TelegramTheme, GetThemeError> in
         if let theme = TelegramTheme(apiTheme: theme) {
             return .single(theme)

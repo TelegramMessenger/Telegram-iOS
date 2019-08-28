@@ -1203,7 +1203,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 UIPasteboard.general.string = mention
                             }))
                         }
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
@@ -3717,6 +3717,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return $0.withUpdatedSilentPosting(value)
                     }
                 })
+                strongSelf.saveInterfaceState()
                 
                 var rect: CGRect? = strongSelf.chatDisplayNode.frameForInputPanelAccessoryButton(.silentPost(true))
                 if rect == nil {
@@ -4073,6 +4074,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         case .slowmodeActive:
                             text = strongSelf.presentationData.strings.Chat_SlowmodeSendError
+                            moreInfo = false
+                        case .tooMuchScheduled:
+                            text = strongSelf.presentationData.strings.Conversation_SendMessageErrorTooMuchScheduled
                             moreInfo = false
                         }
                         let actions: [TextAlertAction]
@@ -7557,7 +7561,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func donateIntent() {
-        guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser else {
+        guard case let .peer(peerId) = self.chatLocation, peerId.namespace == Namespaces.Peer.CloudUser && peerId != context.account.peerId else {
             return
         }
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {

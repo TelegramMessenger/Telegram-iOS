@@ -379,7 +379,9 @@ public struct PresentationThemeSettings: PreferencesEntry {
             case let .local(theme):
                 resources.append(theme.resource.id)
             case let .cloud(theme):
-                resources.append(theme.file.resource.id)
+                if let file = theme.file {
+                    resources.append(file.resource.id)
+                }
         }
         return resources
     }

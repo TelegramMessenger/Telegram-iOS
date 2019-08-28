@@ -109,8 +109,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         
         var title: String?
         if let firstMessage = item.messages.first, let peer = messageMainPeer(firstMessage) {
-            self.avatarNode.setPeer(account: item.context.account, theme: presentationData.theme, peer: peer, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
-            
+            var overrideImage: AvatarNodeImageOverride?
             if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
             } else if let author = firstMessage.author {
@@ -138,10 +137,13 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if let text = title, firstMessage.flags.contains(.WasScheduled) {
                 if let author = firstMessage.author, author.id == peer.id, author.id == item.context.account.peerId {
                     title = presentationData.strings.ScheduledMessages_ReminderNotification
+                    overrideImage = .savedMessagesIcon
                 } else {
                     title = "📅 \(text)"
                 }
             }
+            
+            self.avatarNode.setPeer(account: item.context.account, theme: presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: presentationData.theme.list.mediaPlaceholderColor)
         }
         
         var titleIcon: UIImage?

@@ -244,30 +244,34 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 return Signal<(Data, TelegramTheme), GetThemeError> { subscriber in
                     let disposables = DisposableSet()
                     let mediaBox = context.sharedContext.accountManager.mediaBox
-                    let resource = themeInfo.file.resource
+                    let resource = themeInfo.file?.resource
                     
-                    disposables.add(fetchedMediaResource(mediaBox: mediaBox, reference: .standalone(resource: resource)).start())
-                    
-                    let maybeFetched = mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
-                    |> take(1)
-                    |> mapToSignal { maybeData -> Signal<Data?, NoError> in
-                        if maybeData.complete {
-                            let loadedData = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
-                            return .single(loadedData)
-                        } else {
-                            return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
-                            |> map { next -> Data? in
-                                return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                    if let resource = resource {
+                        disposables.add(fetchedMediaResource(mediaBox: mediaBox, reference: .standalone(resource: resource)).start())
+                        
+                        let maybeFetched = mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                        |> take(1)
+                        |> mapToSignal { maybeData -> Signal<Data?, NoError> in
+                            if maybeData.complete {
+                                let loadedData = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+                                return .single(loadedData)
+                            } else {
+                                return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                                |> map { next -> Data? in
+                                    return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                                }
                             }
                         }
+                   
+                        disposables.add(maybeFetched.start(next: { data in
+                            if let data = data {
+                                subscriber.putNext((data, themeInfo))
+                                subscriber.putCompletion()
+                            }
+                        }))
+                    } else {
+                        subscriber.putError(.generic)
                     }
-                    
-                    disposables.add(maybeFetched.start(next: { data in
-                        if let data = data {
-                            subscriber.putNext((data, themeInfo))
-                            subscriber.putCompletion()
-                        }
-                    }))
                     
                     return disposables
                 }
