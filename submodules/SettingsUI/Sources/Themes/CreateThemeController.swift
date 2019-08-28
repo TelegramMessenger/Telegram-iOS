@@ -181,7 +181,7 @@ public func createThemeController(context: AccountContext, theme: PresentationTh
                 })
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Publish Theme"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CreateTheme_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: createThemeControllerEntries(presentationData: presentationData, theme: theme, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
