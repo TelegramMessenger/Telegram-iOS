@@ -189,12 +189,7 @@ public final class ThemePreviewController: ViewController {
                 preferredAction = .default
             case let .media(media):
                 subject = .media(media)
-                preferredAction = .custom(action: ShareControllerAction(title: self.presentationData.strings.Appearance_Publish, action: { [weak self] in
-                    if let strongSelf = self, let file = media.media as? TelegramMediaFile {
-                        let controller = createThemeController(context: strongSelf.context, theme: strongSelf.previewTheme, resource: file.resource)
-                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
-                    }
-                }))
+                preferredAction = .default
         }
         let controller = ShareController(context: self.context, subject: subject, preferredAction: preferredAction)
         self.present(controller, in: .window(.root), blockInteraction: true)

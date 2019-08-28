@@ -10,22 +10,22 @@ import ItemListUI
 import AlertUI
 import AccountContext
 
-private final class CreateThemeControllerArguments {
+private final class EditThemeControllerArguments {
     let context: AccountContext
-    let updateState: ((CreateThemeControllerState) -> CreateThemeControllerState) -> Void
+    let updateState: ((EditThemeControllerState) -> EditThemeControllerState) -> Void
     
-    init(context: AccountContext, updateState: @escaping ((CreateThemeControllerState) -> CreateThemeControllerState) -> Void) {
+    init(context: AccountContext, updateState: @escaping ((EditThemeControllerState) -> EditThemeControllerState) -> Void) {
         self.context = context
         self.updateState = updateState
     }
 }
 
-private enum CreateThemeControllerSection: Int32 {
+private enum EditThemeControllerSection: Int32 {
     case chatPreview
     case info
 }
 
-private enum CreateThemeControllerEntry: ItemListNodeEntry {
+private enum EditThemeControllerEntry: ItemListNodeEntry {
     case chatPreviewHeader(PresentationTheme, String)
     case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
     case title(PresentationTheme, PresentationStrings, String, String)
@@ -35,9 +35,9 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
     var section: ItemListSectionId {
         switch self {
             case .chatPreviewHeader, .chatPreview:
-                return CreateThemeControllerSection.chatPreview.rawValue
+                return EditThemeControllerSection.chatPreview.rawValue
             case .title, .slug, .slugInfo:
-                return CreateThemeControllerSection.info.rawValue
+                return EditThemeControllerSection.info.rawValue
         }
     }
     
@@ -56,7 +56,7 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
         }
     }
     
-    static func ==(lhs: CreateThemeControllerEntry, rhs: CreateThemeControllerEntry) -> Bool {
+    static func ==(lhs: EditThemeControllerEntry, rhs: EditThemeControllerEntry) -> Bool {
         switch lhs {
             case let .chatPreviewHeader(lhsTheme, lhsText):
                 if case let .chatPreviewHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
@@ -91,11 +91,11 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
         }
     }
     
-    static func <(lhs: CreateThemeControllerEntry, rhs: CreateThemeControllerEntry) -> Bool {
+    static func <(lhs: EditThemeControllerEntry, rhs: EditThemeControllerEntry) -> Bool {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: CreateThemeControllerArguments) -> ListViewItem {
+    func item(_ arguments: EditThemeControllerArguments) -> ListViewItem {
         switch self {
             case let .chatPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -123,13 +123,7 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
     }
 }
 
-private enum CreateThemeControllerMode {
-    case create
-    case update
-}
-
-private struct CreateThemeControllerState: Equatable {
-    var mode: CreateThemeControllerMode
+private struct EditThemeControllerState: Equatable {
     var title: String
     var slug: String
     
@@ -141,24 +135,32 @@ private struct CreateThemeControllerState: Equatable {
     }
 }
 
-private func createThemeControllerEntries(presentationData: PresentationData, theme: PresentationTheme, state: CreateThemeControllerState) -> [CreateThemeControllerEntry] {
-    var entries: [CreateThemeControllerEntry] = []
+private func EditThemeControllerEntries(presentationData: PresentationData, theme: PresentationTheme?, state: EditThemeControllerState) -> [EditThemeControllerEntry] {
+    var entries: [EditThemeControllerEntry] = []
     
-    entries.append(.chatPreviewHeader(presentationData.theme, presentationData.strings.CreateTheme_Preview.uppercased()))
-    entries.append(.chatPreview(presentationData.theme, theme, theme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder))
+    if let theme = theme {
+        entries.append(.chatPreviewHeader(presentationData.theme, presentationData.strings.EditTheme_Preview.uppercased()))
+        entries.append(.chatPreview(presentationData.theme, theme, theme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder))
+    }
     
-    entries.append(.title(presentationData.theme, presentationData.strings, presentationData.strings.CreateTheme_Title, state.title))
-    entries.append(.slug(presentationData.theme, presentationData.strings, presentationData.strings.CreateTheme_ShortLink, state.slug, true))
-    entries.append(.slugInfo(presentationData.theme, presentationData.strings.CreateTheme_ShortLinkInfo))
+    entries.append(.title(presentationData.theme, presentationData.strings, presentationData.strings.EditTheme_Title, state.title))
+    entries.append(.slug(presentationData.theme, presentationData.strings, presentationData.strings.EditTheme_ShortLink, state.slug, true))
+    entries.append(.slugInfo(presentationData.theme, presentationData.strings.EditTheme_ShortLinkInfo))
     
     return entries
 }
 
-public func createThemeController(context: AccountContext, theme: PresentationTheme, resource: MediaResource) -> ViewController {
-    let initialState = CreateThemeControllerState(mode: .create, title: theme.name.string, slug: "")
+public enum EditThemeControllerMode {
+    case createNew
+    case createForExisting(TelegramTheme)
+    case edit(TelegramTheme)
+}
+
+public func editThemeController(context: AccountContext, theme: TelegramTheme) -> ViewController {
+    let initialState = EditThemeControllerState(title: theme.title, slug: theme.slug)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
-    let updateState: ((CreateThemeControllerState) -> CreateThemeControllerState) -> Void = { f in
+    let updateState: ((EditThemeControllerState) -> EditThemeControllerState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
     
@@ -166,23 +168,28 @@ public func createThemeController(context: AccountContext, theme: PresentationTh
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
     
-    let arguments = CreateThemeControllerArguments(context: context, updateState: { f in
+    let arguments = EditThemeControllerArguments(context: context, updateState: { f in
         updateState(f)
     })
     
+    var previewTheme: PresentationTheme?
+    if let file = theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data) {
+        previewTheme = theme
+    }
+    
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<CreateThemeControllerEntry>, CreateThemeControllerEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<EditThemeControllerEntry>, EditThemeControllerEntry.ItemGenerationArguments)) in
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             })
             let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: state.isComplete, action: {
-                let _ = (createTheme(account: context.account, resource: resource, title: state.title, slug: state.slug) |> deliverOnMainQueue).start(completed: {
-                    dismissImpl?()
-                })
+                //let _ = (updateTheme(account: context.account, resource: resource, title: state.title, slug: state.slug) |> deliverOnMainQueue).start(completed: {
+                //    dismissImpl?()
+                //})
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.CreateTheme_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(entries: createThemeControllerEntries(presentationData: presentationData, theme: theme, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.EditTheme_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let listState = ItemListNodeState(entries: EditThemeControllerEntries(presentationData: presentationData, theme: previewTheme, state: state), style: .blocks, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
     }

@@ -112,7 +112,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                         if content.type == "telegram_background" {
                             text = strings.Message_Wallpaper
                         } else if content.type == "telegram_theme" {
-                            text = strings.Message_Wallpaper
+                            text = strings.Message_Theme
                         } else {
                             text = stringForMediaKind(mediaKind, strings: self.strings).0
                         }

@@ -4637,23 +4637,17 @@ Any member of this group will be able to see messages in the channel.";
 
 "Appearance.ThemePreview.ChatList.1.Name" = "Alicia Torreaux";
 "Appearance.ThemePreview.ChatList.1.Text" = "Bob says hi.";
-
 "Appearance.ThemePreview.ChatList.2.Name" = "Roberto";
 "Appearance.ThemePreview.ChatList.2.Text" = "Say hello to Alice 👋";
-
 "Appearance.ThemePreview.ChatList.3.Name" = "Campus Public Chat";
 "Appearance.ThemePreview.ChatList.3.AuthorName" = "Jennie Alpha";
 "Appearance.ThemePreview.ChatList.3.Text" = "We just reached 2,500 members! WOO!";
-
 "Appearance.ThemePreview.ChatList.4.Name" = "Veronica";
 "Appearance.ThemePreview.ChatList.4.Text" = "Table for four, 2PM. Be there.";
-
 "Appearance.ThemePreview.ChatList.5.Name" = "Animal Videos";
 "Appearance.ThemePreview.ChatList.5.Text" = "Vote now! Moar cat videos in this channel?";
-
 "Appearance.ThemePreview.ChatList.6.Name" = "Little Sister";
 "Appearance.ThemePreview.ChatList.6.Text" = "Don't tell mom yet, but I got the job! I'm going to ROME!";
-
 "Appearance.ThemePreview.ChatList.7.Name" = "Jennie Alpha";
 "Appearance.ThemePreview.ChatList.7.Text" = "🖼 Check these out";
 
@@ -4667,14 +4661,23 @@ Any member of this group will be able to see messages in the channel.";
 "Undo.ScheduledMessagesCleared" = "Scheduled messages cleared";
 
 "Appearance.CreateTheme" = "Create New Theme";
+"Appearance.EditTheme" = "Edit Theme";
+"Appearance.RemoveTheme" = "Remove";
 "Appearance.CreateThemeInfo" = "A new theme template has been created from your current theme and added to your Saved Messages.";
-"Appearance.Publish" = "Publish";
 
 "Conversation.Theme" = "Color Theme";
 "Conversation.ViewTheme" = "VIEW THEME";
 
-"CreateTheme.Title" = "Publish Theme";
-"CreateTheme.Preview" = "PREVIEW";
-"CreateTheme.Title" = "Title";
-"CreateTheme.ShortLink" = "Short Link";
-"CreateTheme.ShortLinkInfo" = "Short Link";
+"Message.Theme" = "Color Theme";
+
+"EditTheme.Title" = "Edit Theme";
+"EditTheme.Preview" = "PREVIEW";
+"EditTheme.Title" = "Title";
+"EditTheme.ShortLink" = "Short Link";
+"EditTheme.ShortLinkInfo" = "Short Link";
+
+"Wallpaper.ErrorNotFound" = "Sorry, this chat background doesn't seem to exist.";
+"Theme.ErrorNotFound" = "Sorry, this color theme doesn't seem to exist.";
+"Theme.Unsupported" = "Sorry, this color theme doesn't support your device yet.";
+
+"Conversation.SendMessageErrorTooMuchScheduled" = "Sorry, you can not schedule more than 100 messages.";

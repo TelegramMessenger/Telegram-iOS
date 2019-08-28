@@ -643,15 +643,11 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
         } else {
             theme = nil
         }
-        
         return { arguments in
             let context = DrawingContext(size: arguments.drawingSize, scale: 0.0, clear: true)
-            
             let drawingRect = arguments.drawingRect
-            
             context.withFlippedContext { c in
                 c.setBlendMode(.normal)
-                
                 if let theme = theme {
                     if case let .color(value) = theme.chat.defaultWallpaper {
                         c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
@@ -693,22 +689,38 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                     if let microphone = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: theme.chat.inputPanel.panelControlColor), let image = microphone.cgImage {
                         c.draw(image, in: CGRect(origin: CGPoint(x: drawingRect.width - 3.0 - 29.0, y: 7.0 + UIScreenPixel), size: microphone.size.fitted(CGSize(width: 30.0, height: 30.0))))
                     }
-                } else if let emptyColor = arguments.emptyColor {
-                    c.setFillColor(emptyColor.cgColor)
-                    c.fill(drawingRect)
-                }
-                
-                if let emptyColor = arguments.emptyColor {
-                    c.setStrokeColor(emptyColor.cgColor)
+                    
+                    c.saveGState()
+                    c.setFillColor(theme.chat.message.incoming.bubble.withoutWallpaper.fill.cgColor)
+                    c.setStrokeColor(theme.chat.message.incoming.bubble.withoutWallpaper.stroke.cgColor)
+                    c.translateBy(x: 5.0, y: 65.0)
+                    c.translateBy(x: 114.0, y: 32.0)
+                    c.scaleBy(x: 1.0, y: -1.0)
+                    c.translateBy(x: -114.0, y: -32.0)
+                    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 Z")
+                    c.restoreGState()
+                    
+                    c.saveGState()
+                    c.setFillColor(theme.chat.message.outgoing.bubble.withoutWallpaper.fill.cgColor)
+                    c.setStrokeColor(theme.chat.message.outgoing.bubble.withoutWallpaper.stroke.cgColor)
+                    c.translateBy(x: drawingRect.width - 114.0 - 5.0, y: 25.0)
+                    c.translateBy(x: 114.0, y: 32.0)
+                    c.scaleBy(x: -1.0, y: -1.0)
+                    c.translateBy(x: 0, y: -32.0)
+                    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 Z")
+                    c.restoreGState()
+                    
+                    c.setStrokeColor(theme.rootController.navigationBar.separatorColor.cgColor)
                     c.setLineWidth(2.0)
                     let borderPath = UIBezierPath(roundedRect: drawingRect, cornerRadius: 4.0)
                     c.addPath(borderPath.cgPath)
                     c.drawPath(using: .stroke)
+                } else if let emptyColor = arguments.emptyColor {
+                    c.setFillColor(emptyColor.cgColor)
+                    c.fill(drawingRect)
                 }
             }
-            
             addCorners(context, arguments: arguments)
-            
             return context
         }
     }

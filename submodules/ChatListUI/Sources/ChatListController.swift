@@ -741,13 +741,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            
                             var scrollToEndIfExists = false
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
-                            
-                            
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(messageId), purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
@@ -772,12 +769,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         if dismissSearch {
                             strongSelf.deactivateSearch(animated: true)
                         }
-                        
                         var scrollToEndIfExists = false
                         if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                             scrollToEndIfExists = true
                         }
-                        
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 self?.deactivateSearch(animated: false)

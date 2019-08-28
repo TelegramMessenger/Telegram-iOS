@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		09B4A9B823102B7A005C2E08 /* CreateThemeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B723102B7A005C2E08 /* CreateThemeController.swift */; };
+		09B4A9B823102B7A005C2E08 /* EditThemeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B723102B7A005C2E08 /* EditThemeController.swift */; };
 		D03E465223075D930049C28B /* SettingsUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E465023075D930049C28B /* SettingsUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E466823075E660049C28B /* TabBarAccountSwitchControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E465C23075E630049C28B /* TabBarAccountSwitchControllerNode.swift */; };
 		D03E466923075E660049C28B /* LogoutOptionsController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E465D23075E630049C28B /* LogoutOptionsController.swift */; };
@@ -191,7 +191,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		09B4A9B723102B7A005C2E08 /* CreateThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateThemeController.swift; sourceTree = "<group>"; };
+		09B4A9B723102B7A005C2E08 /* EditThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditThemeController.swift; sourceTree = "<group>"; };
 		D03E464D23075D930049C28B /* SettingsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SettingsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E465023075D930049C28B /* SettingsUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SettingsUI.h; sourceTree = "<group>"; };
 		D03E465123075D930049C28B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -649,7 +649,7 @@
 				D03E46E523075FD40049C28B /* WallpaperGalleryToolbarNode.swift */,
 				D03E46EB23075FD60049C28B /* WallpaperPatternPanelNode.swift */,
 				D03E46EE23075FD60049C28B /* WallpaperSearchRecentQueries.swift */,
-				09B4A9B723102B7A005C2E08 /* CreateThemeController.swift */,
+				09B4A9B723102B7A005C2E08 /* EditThemeController.swift */,
 			);
 			path = Themes;
 			sourceTree = "<group>";
@@ -931,7 +931,7 @@
 				D03E468E23075F010049C28B /* SettingsSearchRecentItem.swift in Sources */,
 				D03E467223075E660049C28B /* ChangePhoneNumberCodeController.swift in Sources */,
 				D03E466823075E660049C28B /* TabBarAccountSwitchControllerNode.swift in Sources */,
-				09B4A9B823102B7A005C2E08 /* CreateThemeController.swift in Sources */,
+				09B4A9B823102B7A005C2E08 /* EditThemeController.swift in Sources */,
 				D03E471623075FE40049C28B /* WallpaperColorPanelNode.swift in Sources */,
 				D03E470023075FE40049C28B /* ThemeColorsGridControllerItem.swift in Sources */,
 				D03E468B23075F010049C28B /* SettingsSearchItem.swift in Sources */,
