@@ -83,7 +83,7 @@ private enum CreateThemeControllerEntry: ItemListNodeEntry {
                     return false
                 }
             case let .slugInfo(lhsTheme, lhsText):
-                if case let .slug(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                if case let .slugInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
