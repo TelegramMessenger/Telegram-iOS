@@ -151,7 +151,11 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         }
         
         if scheduled {
-            text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0
+            if timeinfo.tm_year == timeinfoNow.tm_year && timeinfo.tm_yday == timeinfoNow.tm_yday {
+                text = presentationData.strings.ScheduledMessages_ScheduledToday
+            } else {
+                text = presentationData.strings.ScheduledMessages_ScheduledDate(text).0
+            }
         }
         
         let attributedString = NSAttributedString(string: text, font: titleFont, textColor: bubbleVariableColor(variableColor: presentationData.theme.theme.chat.serviceMessage.dateTextColor, wallpaper: presentationData.theme.wallpaper))
