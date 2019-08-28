@@ -4143,8 +4143,8 @@ public extension Api {
         case updatePeerLocated(peers: [Api.PeerLocated])
         case updateNewScheduledMessage(message: Api.Message)
         case updateDeleteScheduledMessages(peer: Api.Peer, messages: [Int32])
-        case updateTheme(theme: Api.Theme)
         case updateMessageReactions(peer: Api.Peer, msgId: Int32, reactions: Api.MessageReactions)
+        case updateTheme(theme: Api.Theme)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4763,12 +4763,6 @@ public extension Api {
                         serializeInt32(item, buffer: buffer, boxed: false)
                     }
                     break
-                case .updateTheme(let theme):
-                    if boxed {
-                        buffer.appendInt32(-2112423005)
-                    }
-                    theme.serialize(buffer, true)
-                    break
                 case .updateMessageReactions(let peer, let msgId, let reactions):
                     if boxed {
                         buffer.appendInt32(357013699)
@@ -4776,6 +4770,12 @@ public extension Api {
                     peer.serialize(buffer, true)
                     serializeInt32(msgId, buffer: buffer, boxed: false)
                     reactions.serialize(buffer, true)
+                    break
+                case .updateTheme(let theme):
+                    if boxed {
+                        buffer.appendInt32(-2112423005)
+                    }
+                    theme.serialize(buffer, true)
                     break
     }
     }
@@ -4928,10 +4928,10 @@ public extension Api {
                 return ("updateNewScheduledMessage", [("message", message)])
                 case .updateDeleteScheduledMessages(let peer, let messages):
                 return ("updateDeleteScheduledMessages", [("peer", peer), ("messages", messages)])
-                case .updateTheme(let theme):
-                return ("updateTheme", [("theme", theme)])
                 case .updateMessageReactions(let peer, let msgId, let reactions):
                 return ("updateMessageReactions", [("peer", peer), ("msgId", msgId), ("reactions", reactions)])
+                case .updateTheme(let theme):
+                return ("updateTheme", [("theme", theme)])
     }
     }
     
@@ -6177,19 +6177,6 @@ public extension Api {
                 return nil
             }
         }
-        public static func parse_updateTheme(_ reader: BufferReader) -> Update? {
-            var _1: Api.Theme?
-            if let signature = reader.readInt32() {
-                _1 = Api.parse(reader, signature: signature) as? Api.Theme
-            }
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.Update.updateTheme(theme: _1!)
-            }
-            else {
-                return nil
-            }
-        }
         public static func parse_updateMessageReactions(_ reader: BufferReader) -> Update? {
             var _1: Api.Peer?
             if let signature = reader.readInt32() {
@@ -6206,6 +6193,19 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.Update.updateMessageReactions(peer: _1!, msgId: _2!, reactions: _3!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateTheme(_ reader: BufferReader) -> Update? {
+            var _1: Api.Theme?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Theme
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.Update.updateTheme(theme: _1!)
             }
             else {
                 return nil
@@ -10636,40 +10636,6 @@ public extension Api {
             let _c5 = _5 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 {
                 return Api.EncryptedFile.encryptedFile(id: _1!, accessHash: _2!, size: _3!, dcId: _4!, keyFingerprint: _5!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-    public enum CodeSettings: TypeConstructorDescription {
-        case codeSettings(flags: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .codeSettings(let flags):
-                    if boxed {
-                        buffer.appendInt32(-557924733)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .codeSettings(let flags):
-                return ("codeSettings", [("flags", flags)])
-    }
-    }
-    
-        public static func parse_codeSettings(_ reader: BufferReader) -> CodeSettings? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.CodeSettings.codeSettings(flags: _1!)
             }
             else {
                 return nil
@@ -18455,7 +18421,7 @@ public extension Api {
     }
     public enum Theme: TypeConstructorDescription {
         case themeDocumentNotModified
-        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document)
+        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18467,14 +18433,14 @@ public extension Api {
                     break
                 case .theme(let flags, let id, let accessHash, let slug, let title, let document):
                     if boxed {
-                        buffer.appendInt32(1464749545)
+                        buffer.appendInt32(975846885)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
                     serializeInt64(accessHash, buffer: buffer, boxed: false)
                     serializeString(slug, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
-                    document.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
                     break
     }
     }
@@ -18503,17 +18469,17 @@ public extension Api {
             var _5: String?
             _5 = parseString(reader)
             var _6: Api.Document?
-            if let signature = reader.readInt32() {
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.Document
-            }
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
-            let _c6 = _6 != nil
+            let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6!)
+                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6)
             }
             else {
                 return nil

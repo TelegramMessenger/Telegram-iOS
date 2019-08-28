@@ -96,6 +96,26 @@ public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, Ge
     }
 }
 
+public enum CheckThemeUpdatedResult {
+    case updated(TelegramTheme)
+    case notModified
+}
+
+public func checkThemeUpdated(account: Account, theme: TelegramTheme) -> Signal<CheckThemeUpdatedResult, GetThemeError> {
+    guard let file = theme.file, let fileId = file.id?.id else {
+        return .fail(.generic)
+    }
+    return account.network.request(Api.functions.account.getTheme(format: themeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: fileId))
+    |> mapError { _ -> GetThemeError in return .generic }
+    |> map { theme -> CheckThemeUpdatedResult in
+        if let theme = TelegramTheme(apiTheme: theme) {
+            return .updated(theme)
+        } else {
+            return .notModified
+        }
+    }
+}
+
 public func saveTheme(account: Account, theme: TelegramTheme) -> Signal<Void, NoError> {
     return saveUnsaveTheme(account: account, theme: theme, unsave: false)
 }
@@ -124,7 +144,7 @@ public func installTheme(account: Account, theme: TelegramTheme) -> Signal<Void,
     }
 }
 
-public enum UploadThemeStatus {
+public enum UploadThemeResult {
     case progress(Float)
     case complete(TelegramMediaFile)
 }
@@ -153,13 +173,13 @@ private func uploadedTheme(postbox: Postbox, network: Network, resource: MediaRe
     }
 }
 
-private func uploadTheme(account: Account, resource: MediaResource) -> Signal<UploadThemeStatus, UploadThemeError> {
+private func uploadTheme(account: Account, resource: MediaResource) -> Signal<UploadThemeResult, UploadThemeError> {
     let fileName = "theme.\(themeFileExtension)"
     let mimeType = "application/x-tgtheme-\(themeFormat)"
     
     return uploadedTheme(postbox: account.postbox, network: account.network, resource: resource)
     |> mapError { _ -> UploadThemeError in return .generic }
-    |> mapToSignal { result -> Signal<(UploadThemeStatus, MediaResource?), UploadThemeError> in
+    |> mapToSignal { result -> Signal<(UploadThemeResult, MediaResource?), UploadThemeError> in
         switch result.content {
             case .error:
                 return .fail(.generic)
@@ -170,7 +190,7 @@ private func uploadTheme(account: Account, resource: MediaResource) -> Signal<Up
                     case let .inputFile(file):
                         return account.network.request(Api.functions.account.uploadTheme(flags: 0, file: file, thumb: nil, fileName: fileName, mimeType: mimeType))
                         |> mapError { _ in return UploadThemeError.generic }
-                        |> mapToSignal { document -> Signal<(UploadThemeStatus, MediaResource?), UploadThemeError> in
+                        |> mapToSignal { document -> Signal<(UploadThemeResult, MediaResource?), UploadThemeError> in
                             if let file = telegramMediaFileFromApiDocument(document) {
                                 return .single((.complete(file), result.resource))
                             } else {
@@ -182,7 +202,7 @@ private func uploadTheme(account: Account, resource: MediaResource) -> Signal<Up
             }
         }
     }
-    |> map { result, _ -> UploadThemeStatus in
+    |> map { result, _ -> UploadThemeResult in
         return result
     }
 }
@@ -191,18 +211,23 @@ public enum CreateThemeError {
     case generic
 }
 
-public func createTheme(account: Account, resource: MediaResource, title: String, slug: String) -> Signal<TelegramTheme, CreateThemeError> {
+public enum CreateThemeResult {
+    case result(TelegramTheme)
+    case progress(Float)
+}
+
+public func createTheme(account: Account, resource: MediaResource, title: String) -> Signal<CreateThemeResult, CreateThemeError> {
     return uploadTheme(account: account, resource: resource)
     |> mapError { _ in return CreateThemeError.generic }
-    |> mapToSignal { status -> Signal<TelegramTheme, CreateThemeError> in
-        switch status {
+    |> mapToSignal { result -> Signal<CreateThemeResult, CreateThemeError> in
+        switch result {
             case let .complete(file):
                 if let resource = file.resource as? CloudDocumentMediaResource {
-                    return account.network.request(Api.functions.account.createTheme(slug: slug, title: title, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))))
+                    return account.network.request(Api.functions.account.createTheme(slug: "", title: title, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))))
                     |> mapError { _ in return CreateThemeError.generic }
-                    |> mapToSignal { apiTheme -> Signal<TelegramTheme, CreateThemeError> in
+                    |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
                         if let theme = TelegramTheme(apiTheme: apiTheme) {
-                            return .single(theme)
+                            return .single(.result(theme))
                         } else {
                             return .fail(.generic)
                         }
@@ -211,17 +236,16 @@ public func createTheme(account: Account, resource: MediaResource, title: String
                 else {
                     return .fail(.generic)
                 }
-            default:
-                return .complete()
+            case let .progress(progress):
+                return .single(.progress(progress))
         }
     }
 }
 
-public func updateTheme(account: Account, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?) -> Signal<TelegramTheme, CreateThemeError> {
+public func updateTheme(account: Account, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
-    
     var flags: Int32 = 0
     if let _ = title {
         flags |= 1 << 1
@@ -230,6 +254,42 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
         flags |= 1 << 0
     }
     
-    return .never()
-    //return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: <#T##Api.InputDocument?#>))
+    let uploadSignal: Signal<UploadThemeResult?, UploadThemeError>
+    if let resource = resource {
+        uploadSignal = uploadTheme(account: account, resource: resource)
+        |> map(Optional.init)
+    } else {
+        uploadSignal = .single(nil)
+    }
+    return uploadSignal
+    |> mapError { _ -> CreateThemeError in
+        return .generic
+    }
+    |> mapToSignal { result -> Signal<CreateThemeResult, CreateThemeError> in
+        let inputDocument: Api.InputDocument?
+        if let status = result {
+            switch status {
+                case let .complete(file):
+                    if let resource = file.resource as? CloudDocumentMediaResource {
+                        inputDocument = .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))
+                    } else {
+                        return .fail(.generic)
+                    }
+                case let .progress(progress):
+                    return .single(.progress(progress))
+            }
+        } else {
+            inputDocument = nil
+        }
+        
+        return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
+        |> mapError { _ in return CreateThemeError.generic }
+        |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
+            if let theme = TelegramTheme(apiTheme: apiTheme) {
+                return .single(.result(theme))
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
 }

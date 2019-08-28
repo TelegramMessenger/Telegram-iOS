@@ -14,11 +14,11 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
     public let accessHash: Int64
     public let slug: String
     public let title: String
-    public let file: TelegramMediaFile
+    public let file: TelegramMediaFile?
     public let isCreator: Bool
     public let isDefault: Bool
     
-    public init(id: Int64, accessHash: Int64, slug: String, title: String, file: TelegramMediaFile, isCreator: Bool, isDefault: Bool) {
+    public init(id: Int64, accessHash: Int64, slug: String, title: String, file: TelegramMediaFile?, isCreator: Bool, isDefault: Bool) {
         self.id = id
         self.accessHash = accessHash
         self.slug = slug
@@ -33,7 +33,7 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         self.accessHash = decoder.decodeInt64ForKey("accessHash", orElse: 0)
         self.slug = decoder.decodeStringForKey("slug", orElse: "")
         self.title = decoder.decodeStringForKey("title", orElse: "")
-        self.file = decoder.decodeObjectForKey("file", decoder: { TelegramMediaFile(decoder: $0) }) as! TelegramMediaFile
+        self.file = decoder.decodeObjectForKey("file", decoder: { TelegramMediaFile(decoder: $0) }) as? TelegramMediaFile
         self.isCreator = decoder.decodeInt32ForKey("isCreator", orElse: 0) != 0
         self.isDefault = decoder.decodeInt32ForKey("isDefault", orElse: 0) != 0
     }
@@ -43,7 +43,11 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         encoder.encodeInt64(self.accessHash, forKey: "accessHash")
         encoder.encodeString(self.slug, forKey: "slug")
         encoder.encodeString(self.title, forKey: "title")
-        encoder.encodeObject(self.file, forKey: "file")
+        if let file = self.file {
+            encoder.encodeObject(file, forKey: "file")
+        } else {
+            encoder.encodeNil(forKey: "file")
+        }
         encoder.encodeInt32(self.isCreator ? 1 : 0, forKey: "isCreator")
         encoder.encodeInt32(self.isDefault ? 1 : 0, forKey: "isDefault")
     }
@@ -61,7 +65,7 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         if lhs.title != rhs.title {
             return false
         }
-        if lhs.file.id != rhs.file.id {
+        if lhs.file?.id != rhs.file?.id {
             return false
         }
         if lhs.isCreator != rhs.isCreator {
@@ -78,11 +82,7 @@ extension TelegramTheme {
     convenience init?(apiTheme: Api.Theme) {
         switch apiTheme {
             case let .theme(flags, id, accessHash, slug, title, document):
-                if let file = telegramMediaFileFromApiDocument(document) {
-                    self.init(id: id, accessHash: accessHash, slug: slug, title: title, file: file, isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0)
-                } else {
-                    return nil
-                }
+                self.init(id: id, accessHash: accessHash, slug: slug, title: title, file: document.flatMap(telegramMediaFileFromApiDocument), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0)
             default:
                 return nil
         }

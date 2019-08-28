@@ -64,6 +64,7 @@ public enum PendingMessageFailureReason {
     case publicBan
     case mediaRestricted
     case slowmodeActive
+    case tooMuchScheduled
 }
 
 private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
@@ -75,6 +76,8 @@ private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
         return .mediaRestricted
     } else if error.hasPrefix("SLOWMODE_WAIT") {
         return .slowmodeActive
+    } else if error.hasPrefix("SCHEDULE_TOO_MUCH") {
+        return .tooMuchScheduled
     } else {
         return nil
     }
