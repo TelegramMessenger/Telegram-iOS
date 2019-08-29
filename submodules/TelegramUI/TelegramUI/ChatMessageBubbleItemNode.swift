@@ -276,7 +276,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         if let subnodes = self.subnodes {
             for node in subnodes {
-                if node !== self.accessoryItemNode {
+                if let contextNode = node as? ContextContentContainingNode {
+                    if let contextSubnodes = contextNode.contentNode.subnodes {
+                        for contextSubnode in contextSubnodes {
+                            if contextSubnode !== self.accessoryItemNode {
+                                contextSubnode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                        }
+                    }
+                } else if node !== self.accessoryItemNode {
                     node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
