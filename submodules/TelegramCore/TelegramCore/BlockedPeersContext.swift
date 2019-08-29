@@ -57,7 +57,6 @@ public final class BlockedPeersContext {
     }
     
     deinit {
-        assert(Queue.mainQueue().isCurrent())
         self.disposable.dispose()
     }
     

@@ -135,9 +135,8 @@ private func saveUnsaveTheme(account: Account, theme: TelegramTheme, unsave: Boo
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
         var items = entries.map { $0.contents as! TelegramTheme }
-        if unsave {
-            items = items.filter { $0.id != theme.id }
-        } else {
+        items = items.filter { $0.id != theme.id }
+        if !unsave {
             items.insert(theme, at: 0)
         }
         var updatedEntries: [OrderedItemListEntry] = []
@@ -182,7 +181,6 @@ public enum UploadThemeError {
 }
 
 private struct UploadedThemeData {
-    fileprivate let resource: MediaResource
     fileprivate let content: UploadedThemeDataContent
 }
 
@@ -194,44 +192,69 @@ private enum UploadedThemeDataContent {
 private func uploadedTheme(postbox: Postbox, network: Network, resource: MediaResource) -> Signal<UploadedThemeData, NoError> {
     return multipartUpload(network: network, postbox: postbox, source: .resource(.standalone(resource: resource)), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .file), hintFileSize: nil, hintFileIsLarge: false)
     |> map { result -> UploadedThemeData in
-        return UploadedThemeData(resource: resource, content: .result(result))
+        return UploadedThemeData(content: .result(result))
     }
     |> `catch` { _ -> Signal<UploadedThemeData, NoError> in
-        return .single(UploadedThemeData(resource: resource, content: .error))
+        return .single(UploadedThemeData(content: .error))
     }
 }
 
-private func uploadTheme(account: Account, resource: MediaResource) -> Signal<UploadThemeResult, UploadThemeError> {
+private func uploadedThemeThumbnail(postbox: Postbox, network: Network, data: Data) -> Signal<UploadedThemeData, NoError> {
+    return multipartUpload(network: network, postbox: postbox, source: .data(data), encrypt: false, tag: TelegramMediaResourceFetchTag(statsCategory: .image), hintFileSize: nil, hintFileIsLarge: false)
+    |> map { result -> UploadedThemeData in
+        return UploadedThemeData(content: .result(result))
+    }
+    |> `catch` { _ -> Signal<UploadedThemeData, NoError> in
+        return .single(UploadedThemeData(content: .error))
+    }
+}
+
+private func uploadTheme(account: Account, resource: MediaResource, thumbnailData: Data? = nil) -> Signal<UploadThemeResult, UploadThemeError> {
     let fileName = "theme.\(themeFileExtension)"
     let mimeType = "application/x-tgtheme-\(themeFormat)"
     
-    return uploadedTheme(postbox: account.postbox, network: account.network, resource: resource)
-    |> mapError { _ -> UploadThemeError in return .generic }
-    |> mapToSignal { result -> Signal<(UploadThemeResult, MediaResource?), UploadThemeError> in
-        switch result.content {
-            case .error:
-                return .fail(.generic)
-            case let .result(resultData):
-                switch resultData {
-                    case let .progress(progress):
-                        return .single((.progress(progress), result.resource))
-                    case let .inputFile(file):
-                        return account.network.request(Api.functions.account.uploadTheme(flags: 0, file: file, thumb: nil, fileName: fileName, mimeType: mimeType))
-                        |> mapError { _ in return UploadThemeError.generic }
-                        |> mapToSignal { document -> Signal<(UploadThemeResult, MediaResource?), UploadThemeError> in
-                            if let file = telegramMediaFileFromApiDocument(document) {
-                                return .single((.complete(file), result.resource))
-                            } else {
-                                return .fail(.generic)
+    let uploadedThumbnail: Signal<UploadedThemeData?, UploadThemeError>
+    if let thumbnailData = thumbnailData {
+        uploadedThumbnail = uploadedThemeThumbnail(postbox: account.postbox, network: account.network, data: thumbnailData)
+        |> mapError { _ -> UploadThemeError in return .generic }
+        |> map(Optional.init)
+    } else {
+        uploadedThumbnail = .single(nil)
+    }
+    
+    return uploadedThumbnail
+    |> mapToSignal { thumbnailResult -> Signal<UploadThemeResult, UploadThemeError> in
+        return uploadedTheme(postbox: account.postbox, network: account.network, resource: resource)
+        |> mapError { _ -> UploadThemeError in return .generic }
+        |> mapToSignal { result -> Signal<UploadThemeResult, UploadThemeError> in
+            switch result.content {
+                case .error:
+                    return .fail(.generic)
+                case let .result(resultData):
+                    switch resultData {
+                        case let .progress(progress):
+                            return .single(.progress(progress))
+                        case let .inputFile(file):
+                            var flags: Int32 = 0
+                            var thumbnailFile: Api.InputFile?
+                            if let thumbnailResult = thumbnailResult?.content, case let .result(result) = thumbnailResult, case let .inputFile(file) = result {
+                                thumbnailFile = file
+                                flags |= 1 << 0
                             }
-                        }
-                    default:
-                        return .fail(.generic)
+                            return account.network.request(Api.functions.account.uploadTheme(flags: flags, file: file, thumb: thumbnailFile, fileName: fileName, mimeType: mimeType))
+                            |> mapError { _ in return UploadThemeError.generic }
+                            |> mapToSignal { document -> Signal<UploadThemeResult, UploadThemeError> in
+                                if let file = telegramMediaFileFromApiDocument(document) {
+                                    return .single(.complete(file))
+                                } else {
+                                    return .fail(.generic)
+                                }
+                            }
+                        default:
+                            return .fail(.generic)
+                    }
             }
         }
-    }
-    |> map { result, _ -> UploadThemeResult in
-        return result
     }
 }
 
@@ -244,8 +267,8 @@ public enum CreateThemeResult {
     case progress(Float)
 }
 
-public func createTheme(account: Account, resource: MediaResource, title: String) -> Signal<CreateThemeResult, CreateThemeError> {
-    return uploadTheme(account: account, resource: resource)
+public func createTheme(account: Account, title: String, resource: MediaResource, thumbnailData: Data? = nil) -> Signal<CreateThemeResult, CreateThemeError> {
+    return uploadTheme(account: account, resource: resource, thumbnailData: thumbnailData)
     |> mapError { _ in return CreateThemeError.generic }
     |> mapToSignal { result -> Signal<CreateThemeResult, CreateThemeError> in
         switch result {
@@ -283,7 +306,7 @@ public func createTheme(account: Account, resource: MediaResource, title: String
     }
 }
 
-public func updateTheme(account: Account, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?) -> Signal<CreateThemeResult, CreateThemeError> {
+public func updateTheme(account: Account, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
@@ -294,10 +317,12 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
     if let _ = slug {
         flags |= 1 << 0
     }
-    
+    if let _ = resource {
+        flags |= 1 << 2
+    }
     let uploadSignal: Signal<UploadThemeResult?, UploadThemeError>
     if let resource = resource {
-        uploadSignal = uploadTheme(account: account, resource: resource)
+        uploadSignal = uploadTheme(account: account, resource: resource, thumbnailData: thumbnailData)
         |> map(Optional.init)
     } else {
         uploadSignal = .single(nil)

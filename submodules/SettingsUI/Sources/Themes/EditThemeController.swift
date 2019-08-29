@@ -9,6 +9,7 @@ import TelegramUIPreferences
 import ItemListUI
 import AlertUI
 import LegacyMediaPickerUI
+import WallpaperResources
 import AccountContext
 
 private final class EditThemeControllerArguments {
@@ -301,7 +302,6 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     if let navigateToChat = navigateToChat {
                         presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_ThemeTemplateAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
                             completion()
-
                             navigateToChat(context.account.peerId)
                         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
                             completion()
@@ -312,37 +312,56 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 }
                 
                 let theme: PresentationTheme?
-                let custom: Bool
+                let hasCustomFile: Bool
                 if let updatedTheme = state.updatedTheme {
                     theme = updatedTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
-                    custom = true
+                    hasCustomFile = true
                 } else {
                     if case let .edit(info) = mode, let _ = info.theme.file {
                         theme = nil
-                        custom = true
+                        hasCustomFile = true
                     } else {
                         theme = state.previewTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
-                        custom = false
+                        hasCustomFile = false
                     }
                 }
                 
                 let themeResource: LocalFileMediaResource?
                 let themeData: Data?
+                let themeThumbnailData: Data?
                 if let theme = theme, let themeString = encodePresentationTheme(theme), let data = themeString.data(using: .utf8) {
                     let resource = LocalFileMediaResource(fileId: arc4random64())
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
                     context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                     themeResource = resource
                     themeData = data
+                    
+                    let themeThumbnail = generateImage(CGSize(width: 213, height: 320.0), contextGenerator: { size, context in
+                        if let image = generateImage(CGSize(width: 194.0, height: 291.0), contextGenerator: { size, c in
+                            drawThemeImage(context: c, theme: theme, size: size)
+                        })?.cgImage {
+                            context.draw(image, in: CGRect(origin: CGPoint(), size: size))
+                        }
+                    }, scale: 1.0)
+                    themeThumbnailData = themeThumbnail?.jpegData(compressionQuality: 0.6)
                 } else {
                     themeResource = nil
                     themeData = nil
+                    themeThumbnailData = nil
+                }
+                
+                let resolvedWallpaper: TelegramWallpaper?
+                if let theme = theme, case let .file(file) = theme.chat.defaultWallpaper, file.id != 0 {
+                    resolvedWallpaper = theme.chat.defaultWallpaper
+                    updateCachedWallpaper(account: context.account, wallpaper: theme.chat.defaultWallpaper)
+                } else {
+                    resolvedWallpaper = nil
                 }
                 
                 switch mode {
                     case .create:
                         if let themeResource = themeResource {
-                            let _ = (createTheme(account: context.account, resource: themeResource, title: state.title)
+                            let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData)
                             |> deliverOnMainQueue).start(next: { next in
                                 if case let .result(resultTheme) = next {
                                     let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
@@ -359,7 +378,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                 context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                                             }
                                             
-                                            let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: nil))
+                                            let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
                                             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                             if let theme = theme {
                                                 themeSpecificChatWallpapers[themeReference.index] = theme.chat.defaultWallpaper
@@ -368,7 +387,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             return PresentationThemeSettings(chatWallpaper: theme?.chat.defaultWallpaper ?? current.chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                         })
                                     } |> deliverOnMainQueue).start(completed: {
-                                        if !custom {
+                                        if !hasCustomFile {
                                             saveThemeTemplateFile(state.title, themeResource, {
                                                 dismissImpl?()
                                             })
@@ -403,7 +422,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                                         }
                                         
-                                        let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: nil))
+                                        let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
                                         var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                                         if let theme = theme {
                                             themeSpecificChatWallpapers[themeReference.index] = theme.chat.defaultWallpaper
@@ -412,7 +431,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                         return PresentationThemeSettings(chatWallpaper: theme?.chat.defaultWallpaper ?? current.chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     })
                                 } |> deliverOnMainQueue).start(completed: {
-                                    if let themeResource = themeResource, !custom {
+                                    if let themeResource = themeResource, !hasCustomFile {
                                         saveThemeTemplateFile(state.title, themeResource, {
                                             dismissImpl?()
                                         })

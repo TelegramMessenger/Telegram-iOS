@@ -150,6 +150,12 @@ public final class ThemePreviewController: ViewController {
                     }
                 }
                 
+//                let resolvedWallpaper: TelegramWallpaper?
+//                if let theme = theme, case let .file(file) = theme.chat.defaultWallpaper, file.id != 0 {
+//                    resolvedWallpaper = theme.chat.defaultWallpaper
+//                    updateCachedWallpaper(account: context.account, wallpaper: theme.chat.defaultWallpaper)
+//                }
+                
                 let _ = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.dismiss()

@@ -114,10 +114,10 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             panelHeight = 45.0
         }
         
-        transition.updateFrame(node: self.downButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 48.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.upButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 48.0 - 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight)))
-        transition.updateFrame(node: self.calendarButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
-        transition.updateFrame(node: self.membersButton, frame: CGRect(origin: CGPoint(x: leftInset + 43.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight)))
+        self.downButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 48.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight))
+        self.upButton.frame = CGRect(origin: CGPoint(x: width - rightInset - 48.0 - 43.0, y: 0.0), size: CGSize(width: 40.0, height: panelHeight))
+        self.calendarButton.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 60.0, height: panelHeight))
+        self.membersButton.frame = CGRect(origin: CGPoint(x: leftInset + 43.0, y: 0.0), size: CGSize(width: 60.0, height: panelHeight))
         
         var resultIndex: Int?
         var resultCount: Int?
@@ -155,7 +155,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         let makeLabelLayout = TextNode.asyncLayout(self.resultsLabel)
         let (labelSize, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: resultsText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - 50.0, height: 100.0), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
         let _ = labelApply()
-        self.resultsLabel.frame = CGRect(origin: CGPoint(x: leftInset + 105.0, y: floor((panelHeight - labelSize.size.height) / 2.0)), size: labelSize.size)
+        self.resultsLabel.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: floor((panelHeight - labelSize.size.height) / 2.0)), size: labelSize.size)
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 22.0, height: 22.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - 41.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)

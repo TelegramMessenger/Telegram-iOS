@@ -633,6 +633,86 @@ private func generateBackArrowImage(color: UIColor) -> UIImage? {
     })
 }
 
+public func drawThemeImage(context c: CGContext, theme: PresentationTheme, size: CGSize) {
+    let drawingRect = CGRect(origin: CGPoint(), size: size)
+    
+    switch theme.chat.defaultWallpaper {
+        case .builtin:
+            if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath), let cgImage = image.cgImage {
+                let size = image.size.aspectFilled(drawingRect.size)
+                c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
+            }
+        case let .color(value):
+            c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
+            c.fill(drawingRect)
+        case let .file(file):
+            c.setFillColor(theme.chatList.backgroundColor.cgColor)
+            c.fill(drawingRect)
+        default:
+            break
+    }
+    
+    c.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
+    c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 42.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+    
+    c.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
+    c.fill(CGRect(origin: CGPoint(x: 1.0, y: drawingRect.height - 43.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    
+    c.setFillColor(theme.rootController.navigationBar.secondaryTextColor.cgColor)
+    c.fillEllipse(in: CGRect(origin: CGPoint(x: drawingRect.width - 28.0 - 7.0, y: drawingRect.height - 7.0 - 28.0 - UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
+    
+    if let arrow = generateBackArrowImage(color: theme.rootController.navigationBar.buttonColor), let image = arrow.cgImage {
+        c.draw(image, in: CGRect(x: 9.0, y: drawingRect.height - 11.0 - 22.0 + UIScreenPixel, width: 13.0, height: 22.0))
+    }
+    c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
+    c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
+    
+    c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
+    c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
+    
+    c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
+    c.setStrokeColor(theme.chat.inputPanel.inputStrokeColor.cgColor)
+    
+    c.setLineWidth(1.0)
+    let path = UIBezierPath(roundedRect: CGRect(x: 34.0, y: 6.0, width: drawingRect.width - 34.0 * 2.0, height: 31.0), cornerRadius: 15.5)
+    c.addPath(path.cgPath)
+    c.drawPath(using: .fillStroke)
+    
+    if let attachment = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor), let image = attachment.cgImage {
+        c.draw(image, in: CGRect(origin: CGPoint(x: 3.0, y: 6.0 + UIScreenPixel), size: attachment.size.fitted(CGSize(width: 30.0, height: 30.0))))
+    }
+    
+    if let microphone = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: theme.chat.inputPanel.panelControlColor), let image = microphone.cgImage {
+        c.draw(image, in: CGRect(origin: CGPoint(x: drawingRect.width - 3.0 - 29.0, y: 7.0 + UIScreenPixel), size: microphone.size.fitted(CGSize(width: 30.0, height: 30.0))))
+    }
+    
+    c.saveGState()
+    c.setFillColor(theme.chat.message.incoming.bubble.withoutWallpaper.fill.cgColor)
+    c.setStrokeColor(theme.chat.message.incoming.bubble.withoutWallpaper.stroke.cgColor)
+    c.translateBy(x: 5.0, y: 65.0)
+    c.translateBy(x: 114.0, y: 32.0)
+    c.scaleBy(x: 1.0, y: -1.0)
+    c.translateBy(x: -114.0, y: -32.0)
+    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+    c.strokePath()
+    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+    c.fillPath()
+    c.restoreGState()
+    
+    c.saveGState()
+    c.setFillColor(theme.chat.message.outgoing.bubble.withoutWallpaper.fill.cgColor)
+    c.setStrokeColor(theme.chat.message.outgoing.bubble.withoutWallpaper.stroke.cgColor)
+    c.translateBy(x: drawingRect.width - 114.0 - 5.0, y: 25.0)
+    c.translateBy(x: 114.0, y: 32.0)
+    c.scaleBy(x: -1.0, y: -1.0)
+    c.translateBy(x: 0, y: -32.0)
+    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+    c.strokePath()
+    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 ")
+    c.fillPath()
+    c.restoreGState()
+}
+
 public func themeImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return telegramThemeData(account: account, accountManager: accountManager, resource: fileReference.media.resource, synchronousLoad: synchronousLoad)
     |> map { data in
@@ -648,74 +728,7 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
             context.withFlippedContext { c in
                 c.setBlendMode(.normal)
                 if let theme = theme {
-                    switch theme.chat.defaultWallpaper {
-                        case .builtin:
-                            if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath), let cgImage = image.cgImage {
-                                c.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: drawingRect.width, height: drawingRect.height))
-                            }
-                        case let .color(value):
-                            c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
-                            c.fill(drawingRect)
-                        case let .file(file):
-                            c.setFillColor(theme.chatList.backgroundColor.cgColor)
-                            c.fill(drawingRect)
-                        default:
-                            break
-                    }
-                    
-                    c.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
-                    c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 42.0), size: CGSize(width: drawingRect.width, height: 42.0)))
-                    
-                    c.setFillColor(theme.rootController.navigationBar.separatorColor.cgColor)
-                    c.fill(CGRect(origin: CGPoint(x: 1.0, y: drawingRect.height - 43.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
-                    
-                    c.setFillColor(theme.rootController.navigationBar.secondaryTextColor.cgColor)
-                    c.fillEllipse(in: CGRect(origin: CGPoint(x: drawingRect.width - 28.0 - 7.0, y: drawingRect.height - 7.0 - 28.0 - UIScreenPixel), size: CGSize(width: 28.0, height: 28.0)))
-                    
-                    if let arrow = generateBackArrowImage(color: theme.rootController.navigationBar.buttonColor), let image = arrow.cgImage {
-                        c.draw(image, in: CGRect(x: 9.0, y: drawingRect.height - 11.0 - 22.0 + UIScreenPixel, width: 13.0, height: 22.0))
-                    }
-                    c.setFillColor(theme.chat.inputPanel.panelBackgroundColor.cgColor)
-                    c.fill(CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: drawingRect.width, height: 42.0)))
-                    
-                    c.setFillColor(theme.chat.inputPanel.panelSeparatorColor.cgColor)
-                    c.fill(CGRect(origin: CGPoint(x: 1.0, y: 42.0), size: CGSize(width: drawingRect.width - 2.0, height: 1.0)))
-                    
-                    c.setFillColor(theme.chat.inputPanel.inputBackgroundColor.cgColor)
-                    c.setStrokeColor(theme.chat.inputPanel.inputStrokeColor.cgColor)
-                    
-                    c.setLineWidth(1.0)
-                    let path = UIBezierPath(roundedRect: CGRect(x: 34.0, y: 6.0, width: drawingRect.width - 34.0 * 2.0, height: 31.0), cornerRadius: 15.5)
-                    c.addPath(path.cgPath)
-                    c.drawPath(using: .fillStroke)
-                    
-                    if let attachment = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconAttachment"), color: theme.chat.inputPanel.panelControlColor), let image = attachment.cgImage {
-                        c.draw(image, in: CGRect(origin: CGPoint(x: 3.0, y: 6.0 + UIScreenPixel), size: attachment.size.fitted(CGSize(width: 30.0, height: 30.0))))
-                    }
-                    
-                    if let microphone = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/IconMicrophone"), color: theme.chat.inputPanel.panelControlColor), let image = microphone.cgImage {
-                        c.draw(image, in: CGRect(origin: CGPoint(x: drawingRect.width - 3.0 - 29.0, y: 7.0 + UIScreenPixel), size: microphone.size.fitted(CGSize(width: 30.0, height: 30.0))))
-                    }
-                    
-                    c.saveGState()
-                    c.setFillColor(theme.chat.message.incoming.bubble.withoutWallpaper.fill.cgColor)
-                    c.setStrokeColor(theme.chat.message.incoming.bubble.withoutWallpaper.stroke.cgColor)
-                    c.translateBy(x: 5.0, y: 65.0)
-                    c.translateBy(x: 114.0, y: 32.0)
-                    c.scaleBy(x: 1.0, y: -1.0)
-                    c.translateBy(x: -114.0, y: -32.0)
-                    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 Z")
-                    c.restoreGState()
-                    
-                    c.saveGState()
-                    c.setFillColor(theme.chat.message.outgoing.bubble.withoutWallpaper.fill.cgColor)
-                    c.setStrokeColor(theme.chat.message.outgoing.bubble.withoutWallpaper.stroke.cgColor)
-                    c.translateBy(x: drawingRect.width - 114.0 - 5.0, y: 25.0)
-                    c.translateBy(x: 114.0, y: 32.0)
-                    c.scaleBy(x: -1.0, y: -1.0)
-                    c.translateBy(x: 0, y: -32.0)
-                    let _ = try? drawSvgPath(c, path: "M98.0061174,0 C106.734138,0 113.82927,6.99200411 113.996965,15.6850616 L114,16 C114,24.836556 106.830179,32 98.0061174,32 L21.9938826,32 C18.2292665,32 14.7684355,30.699197 12.0362474,28.5221601 C8.56516444,32.1765452 -1.77635684e-15,31.9985981 -1.77635684e-15,31.9985981 C5.69252399,28.6991366 5.98604874,24.4421608 5.99940747,24.1573436 L6,24.1422468 L6,16 C6,7.163444 13.1698213,0 21.9938826,0 L98.0061174,0 Z")
-                    c.restoreGState()
+                    drawThemeImage(context: c, theme: theme, size: arguments.drawingSize)
                     
                     c.setStrokeColor(theme.rootController.navigationBar.separatorColor.cgColor)
                     c.setLineWidth(2.0)
