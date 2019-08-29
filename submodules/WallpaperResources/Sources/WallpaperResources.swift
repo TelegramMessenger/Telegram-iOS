@@ -11,7 +11,7 @@ import PhotoResources
 import LocalMediaResources
 import TelegramPresentationData
 
-private func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+private func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
         
         let maybeFullSize: Signal<MediaResourceData, NoError>
@@ -143,10 +143,15 @@ private func wallpaperDatas(account: Account, accountManager: AccountManager, fi
                         }
                     }
                 } else {
-                
-                    return thumbnailData |> mapToSignal { thumbnailData in
+                    if onlyFullSize {
                         return fullSizeData |> map { (fullSizeData, complete) in
-                            return (thumbnailData, fullSizeData, complete)
+                            return (nil, fullSizeData, complete)
+                        }
+                    } else {
+                        return thumbnailData |> mapToSignal { thumbnailData in
+                            return fullSizeData |> map { (fullSizeData, complete) in
+                                return (thumbnailData, fullSizeData, complete)
+                            }
                         }
                     }
                 }
@@ -158,11 +163,14 @@ private func wallpaperDatas(account: Account, accountManager: AccountManager, fi
     }
 }
 
-public func wallpaperImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal = wallpaperDatas(account: account, accountManager: accountManager, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, thumbnail: thumbnail, autoFetchFullSize: autoFetchFullSize, synchronousLoad: synchronousLoad)
+public func wallpaperImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal = wallpaperDatas(account: account, accountManager: accountManager, fileReference: fileReference, representations: representations, alwaysShowThumbnailFirst: alwaysShowThumbnailFirst, thumbnail: thumbnail, onlyFullSize: onlyFullSize, autoFetchFullSize: autoFetchFullSize, synchronousLoad: synchronousLoad)
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
+        if let fullSizeData = fullSizeData, let fileReference = fileReference {
+            accountManager.mediaBox.storeResourceData(fileReference.media.resource.id, data: fullSizeData)
+        }
         return { arguments in
             let drawingRect = arguments.drawingRect
             var fittedSize = arguments.imageSize
@@ -633,7 +641,7 @@ private func generateBackArrowImage(color: UIColor) -> UIImage? {
     })
 }
 
-public func drawThemeImage(context c: CGContext, theme: PresentationTheme, size: CGSize) {
+public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallpaperImage: UIImage? = nil, size: CGSize) {
     let drawingRect = CGRect(origin: CGPoint(), size: size)
     
     switch theme.chat.defaultWallpaper {
@@ -648,6 +656,11 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, size:
         case let .file(file):
             c.setFillColor(theme.chatList.backgroundColor.cgColor)
             c.fill(drawingRect)
+        
+            if let image = wallpaperImage, let cgImage = image.cgImage {
+                let size = image.size.aspectFilled(drawingRect.size)
+                c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
+            }
         default:
             break
     }
@@ -714,30 +727,162 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, size:
 }
 
 public func themeImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    return telegramThemeData(account: account, accountManager: accountManager, resource: fileReference.media.resource, synchronousLoad: synchronousLoad)
-    |> map { data in
-        let theme: PresentationTheme?
-        if let data = data {
-            theme = makePresentationTheme(data: data)
+    let maybeFetched = accountManager.mediaBox.resourceData(fileReference.media.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
+    let data = maybeFetched
+    |> take(1)
+    |> mapToSignal { maybeData -> Signal<(Data?, Data?), NoError> in
+        if maybeData.complete {
+            let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+            return .single((loadedData, nil))
         } else {
-            theme = nil
+            let decodedThumbnailData = fileReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail)
+            
+            let previewRepresentation = fileReference.media.previewRepresentations.first
+            let fetchedThumbnail: Signal<FetchResourceSourceType, FetchResourceError>
+            if let previewRepresentation = previewRepresentation {
+                fetchedThumbnail = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(previewRepresentation.resource))
+            } else {
+                fetchedThumbnail = .complete()
+            }
+            
+            let thumbnailData: Signal<Data?, NoError>
+            if let previewRepresentation = previewRepresentation {
+                thumbnailData = Signal<Data?, NoError> { subscriber in
+                    let fetchedDisposable = fetchedThumbnail.start()
+                    let thumbnailDisposable = account.postbox.mediaBox.resourceData(previewRepresentation.resource).start(next: { next in
+                        let data = next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                        if let data = data, data.count > 0 {
+                            subscriber.putNext(data)
+                        } else {
+                            subscriber.putNext(decodedThumbnailData)
+                        }
+                    }, error: subscriber.putError, completed: subscriber.putCompletion)
+                    
+                    return ActionDisposable {
+                        fetchedDisposable.dispose()
+                        thumbnailDisposable.dispose()
+                    }
+                }
+            } else {
+                thumbnailData = .single(decodedThumbnailData)
+            }
+            
+            let reference = fileReference.resourceReference(fileReference.media.resource)
+            let fullSizeData = Signal<Data?, NoError> { subscriber in
+                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                    |> map { data -> Data? in
+                        return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
+                    }).start(next: { next in
+                        if let data = next {
+                            accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
+                        }
+                        subscriber.putNext(next)
+                    }, error: { error in
+                        subscriber.putError(error)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                return ActionDisposable {
+                    fetch.dispose()
+                    disposable.dispose()
+                }
+            }
+            
+            return thumbnailData |> mapToSignal { thumbnailData in
+                return fullSizeData |> map { fullSizeData in
+                    return (fullSizeData, thumbnailData)
+                }
+            }
         }
+    }
+    |> mapToSignal { (fullSizeData, thumbnailData) -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
+        if let fullSizeData = fullSizeData, let theme = makePresentationTheme(data: fullSizeData) {
+            if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+                return cachedWallpaper(account: account, slug: file.slug)
+                |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
+                    if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
+                        var convertedRepresentations: [ImageRepresentationWithReference] = []
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
+                        return wallpaperImage(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                        |> map { _ -> (PresentationTheme?, UIImage?, Data?) in
+                            if let path = accountManager.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let image = UIImage(data: data) {
+                                return (theme, image, thumbnailData)
+                            } else {
+                                return (theme, nil, thumbnailData)
+                            }
+                        }
+                    } else {
+                        return .single((theme, nil, thumbnailData))
+                    }
+                }
+            } else {
+                return .single((theme, nil, thumbnailData))
+            }
+        } else {
+            return .single((nil, nil, thumbnailData))
+        }
+    }
+    return data
+    |> map { theme, wallpaperImage, thumbnailData in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: 0.0, clear: true)
+            var thumbnailImage: CGImage?
+            if let thumbnailData = thumbnailData, let imageSource = CGImageSourceCreateWithData(thumbnailData as CFData, nil), let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) {
+                thumbnailImage = image
+            }
+            
+            var blurredThumbnailImage: UIImage?
+            if let thumbnailImage = thumbnailImage {
+                let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
+                if thumbnailSize.width > 200.0 {
+                    blurredThumbnailImage = UIImage(cgImage: thumbnailImage)
+                } else {
+                    let initialThumbnailContextFittingSize = arguments.imageSize.fitted(CGSize(width: 90.0, height: 90.0))
+                    
+                    let thumbnailContextSize = thumbnailSize.aspectFitted(initialThumbnailContextFittingSize)
+                    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                    thumbnailContext.withFlippedContext { c in
+                        c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                    }
+                    telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    var thumbnailContextFittingSize = CGSize(width: floor(arguments.drawingSize.width * 0.5), height: floor(arguments.drawingSize.width * 0.5))
+                    if thumbnailContextFittingSize.width < 150.0 || thumbnailContextFittingSize.height < 150.0 {
+                        thumbnailContextFittingSize = thumbnailContextFittingSize.aspectFilled(CGSize(width: 150.0, height: 150.0))
+                    }
+                    
+                    blurredThumbnailImage = thumbnailContext.generateImage()
+                }
+            }
+            
             let drawingRect = arguments.drawingRect
-            context.withFlippedContext { c in
-                c.setBlendMode(.normal)
-                if let theme = theme {
-                    drawThemeImage(context: c, theme: theme, size: arguments.drawingSize)
+            if let blurredThumbnailImage = blurredThumbnailImage, theme == nil {
+                let context = DrawingContext(size: arguments.drawingSize, scale: 0.0, clear: true)
+                context.withFlippedContext { c in
+                    c.setBlendMode(.copy)
+                    if let cgImage = blurredThumbnailImage.cgImage {
+                        c.interpolationQuality = .none
+                        let fittedSize = blurredThumbnailImage.size.aspectFilled(arguments.drawingSize)
+                        drawImage(context: c, image: cgImage, orientation: .up, in: CGRect(origin: CGPoint(x: (drawingRect.width - fittedSize.width) / 2.0, y: (drawingRect.height - fittedSize.height) / 2.0), size: fittedSize))
+                        c.setBlendMode(.normal)
+                    }
+                }
+                addCorners(context, arguments: arguments)
+                return context
+            }
+            
+            let context = DrawingContext(size: arguments.drawingSize, scale: 0.0, clear: true)
+            if let theme = theme {
+                context.withFlippedContext { c in
+                    c.setBlendMode(.normal)
+                    
+                    drawThemeImage(context: c, theme: theme, wallpaperImage: wallpaperImage, size: arguments.drawingSize)
                     
                     c.setStrokeColor(theme.rootController.navigationBar.separatorColor.cgColor)
                     c.setLineWidth(2.0)
                     let borderPath = UIBezierPath(roundedRect: drawingRect, cornerRadius: 4.0)
                     c.addPath(borderPath.cgPath)
                     c.drawPath(using: .stroke)
-                } else if let emptyColor = arguments.emptyColor {
-                    c.setFillColor(emptyColor.cgColor)
-                    c.fill(drawingRect)
                 }
             }
             addCorners(context, arguments: arguments)

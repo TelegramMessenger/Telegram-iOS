@@ -1075,27 +1075,43 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     }
     
     public func scrollScreenToTop() {
-        var currentMessage: Message?
-        if let historyView = self.historyView {
-            if let visibleRange = self.displayedItemRange.loadedRange {
-                var index = historyView.filteredEntries.count - 1
-                loop: for entry in historyView.filteredEntries {
-                    if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
-                        if case let .MessageEntry(message, _, _, _, _, _) = entry {
-                            currentMessage = message
-                            break loop
-                        } else if case let .MessageGroupEntry(_, messages, _) = entry {
-                            currentMessage = messages.first?.0
-                            break loop
-                        }
+        if let subject = self.subject, case .scheduledMessages = subject {
+            if let historyView = self.historyView {
+                if let entry = historyView.filteredEntries.first {
+                    var currentMessage: Message?
+                    if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                        currentMessage = message
+                    } else if case let .MessageGroupEntry(_, messages, _) = entry {
+                        currentMessage = messages.first?.0
                     }
-                    index -= 1
+                    if let message = currentMessage, let anchorMessage = self.anchorMessageInCurrentHistoryView() {
+                        self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .message(message.index), anchorIndex: .message(message.index), sourceIndex: .upperBound, scrollPosition: .bottom(0.0), animated: true), id: self.takeNextHistoryLocationId())
+                    }
                 }
             }
-        }
-        
-        if let currentMessage = currentMessage {
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .message(currentMessage.index), anchorIndex: .message(currentMessage.index), sourceIndex: .upperBound, scrollPosition: .top(0.0), animated: true), id: self.takeNextHistoryLocationId())
+        } else {
+            var currentMessage: Message?
+            if let historyView = self.historyView {
+                if let visibleRange = self.displayedItemRange.loadedRange {
+                    var index = historyView.filteredEntries.count - 1
+                    loop: for entry in historyView.filteredEntries {
+                        if index >= visibleRange.firstIndex && index <= visibleRange.lastIndex {
+                            if case let .MessageEntry(message, _, _, _, _, _) = entry {
+                                currentMessage = message
+                                break loop
+                            } else if case let .MessageGroupEntry(_, messages, _) = entry {
+                                currentMessage = messages.first?.0
+                                break loop
+                            }
+                        }
+                        index -= 1
+                    }
+                }
+            }
+            
+            if let currentMessage = currentMessage {
+                self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Scroll(index: .message(currentMessage.index), anchorIndex: .message(currentMessage.index), sourceIndex: .upperBound, scrollPosition: .top(0.0), animated: true), id: self.takeNextHistoryLocationId())
+            }
         }
     }
     

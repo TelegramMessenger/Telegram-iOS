@@ -8,6 +8,7 @@ import LocalMediaResources
 import WebSearchUI
 import InstantPageCache
 import SettingsUI
+import WallpaperResources
 
 private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InAppNotificationSettings.self, f: { InAppNotificationSettings(decoder: $0) })
@@ -40,6 +41,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(InstantPageStoredState.self, f: { InstantPageStoredState(decoder: $0) })
     declareEncodable(InstantPageStoredDetailsState.self, f: { InstantPageStoredDetailsState(decoder: $0) })
     declareEncodable(CachedInstantPage.self, f: { CachedInstantPage(decoder: $0) })
+    declareEncodable(CachedWallpaper.self, f: { CachedWallpaper(decoder: $0) })
     declareEncodable(WatchPresetSettings.self, f: { WatchPresetSettings(decoder: $0) })
     declareEncodable(WebSearchSettings.self, f: { WebSearchSettings(decoder: $0) })
     declareEncodable(RecentWebSearchQueryItem.self, f: { RecentWebSearchQueryItem(decoder: $0) })

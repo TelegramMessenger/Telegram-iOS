@@ -562,7 +562,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
         
         var availableThemes = defaultThemes
-        if !defaultThemes.contains(settings.theme) && !cloudThemes.contains(settings.theme) {
+        if defaultThemes.first(where: { $0.index == settings.theme.index }) == nil && cloudThemes.first(where: { $0.index == settings.theme.index }) == nil {
             availableThemes.append(settings.theme)
         }
         availableThemes.append(contentsOf: cloudThemes)

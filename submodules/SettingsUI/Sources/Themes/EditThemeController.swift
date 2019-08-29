@@ -176,12 +176,11 @@ private struct EditThemeControllerState: Equatable {
     var mode: EditThemeControllerMode
     var title: String
     var slug: String
-    var previewTheme: PresentationTheme
     var updatedTheme: PresentationTheme?
     var updating: Bool
 }
 
-private func editThemeControllerEntries(presentationData: PresentationData, state: EditThemeControllerState) -> [EditThemeControllerEntry] {
+private func editThemeControllerEntries(presentationData: PresentationData, state: EditThemeControllerState, previewTheme: PresentationTheme) -> [EditThemeControllerEntry] {
     var entries: [EditThemeControllerEntry] = []
     
     var isCreate = false
@@ -196,7 +195,7 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
     }
     
     entries.append(.chatPreviewHeader(presentationData.theme, presentationData.strings.EditTheme_Preview.uppercased()))
-    entries.append(.chatPreview(presentationData.theme, state.previewTheme, state.previewTheme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder))
+    entries.append(.chatPreview(presentationData.theme, previewTheme, previewTheme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder))
     
     let uploadText: String
     let uploadInfo: String
@@ -221,18 +220,30 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
 
 public func editThemeController(context: AccountContext, mode: EditThemeControllerMode, navigateToChat: ((PeerId) -> Void)? = nil) -> ViewController {
     let initialState: EditThemeControllerState
+    let previewThemePromise = Promise<PresentationTheme>()
     switch mode {
         case .create:
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            initialState = EditThemeControllerState(mode: mode, title: "", slug: "", previewTheme: presentationData.theme.withUpdated(name: "", author: nil, defaultWallpaper: presentationData.chatWallpaper), updatedTheme: nil, updating: false)
-        case let .edit(theme):
-            let previewTheme: PresentationTheme
-            if let file = theme.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: theme.resolvedWallpaper) {
-                previewTheme = theme
+            initialState = EditThemeControllerState(mode: mode, title: "", slug: "", updatedTheme: nil, updating: false)
+            previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", author: nil, defaultWallpaper: presentationData.chatWallpaper)))
+        case let .edit(info):
+            if let file = info.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
+                if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+                    previewThemePromise.set(cachedWallpaper(account: context.account, slug: file.slug)
+                    |> map ({ wallpaper -> PresentationTheme in
+                        if let wallpaper = wallpaper {
+                            return theme.withUpdated(name: nil, author: nil, defaultWallpaper: wallpaper.wallpaper)
+                        } else {
+                            return theme.withUpdated(name: nil, author: nil, defaultWallpaper: .color(Int32(bitPattern: theme.chatList.backgroundColor.rgb)))
+                        }
+                    }))
+                } else {
+                    previewThemePromise.set(.single(theme.withUpdated(name: nil, author: nil, defaultWallpaper: info.resolvedWallpaper)))
+                }
             } else {
-                previewTheme = context.sharedContext.currentPresentationData.with { $0 }.theme
+                previewThemePromise.set(.single(context.sharedContext.currentPresentationData.with { $0 }.theme))
             }
-            initialState = EditThemeControllerState(mode: mode, title: theme.theme.title, slug: theme.theme.slug, previewTheme: previewTheme, updatedTheme: nil, updating: false)
+            initialState = EditThemeControllerState(mode: mode, title: info.theme.title, slug: info.theme.slug, updatedTheme: nil, updating: false)
     }
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -249,22 +260,50 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     }, openFile: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let controller = legacyICloudFilePicker(theme: presentationData.theme, mode: .import, documentTypes: ["org.telegram.Telegram-iOS.theme"], completion: { urls in
-            if let url = urls.first, let data = try? Data(contentsOf: url), let theme = makePresentationTheme(data: data) {
-                updateState { current in
-                    var state = current
-                    state.previewTheme = theme
-                    state.updatedTheme = theme
-                    return state
+            if let url = urls.first{
+                if let data = try? Data(contentsOf: url), let theme = makePresentationTheme(data: data) {
+                    if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
+                        let _ = (cachedWallpaper(account: context.account, slug: file.slug)
+                        |> mapToSignal { wallpaper -> Signal<TelegramWallpaper?, NoError> in
+                            if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
+                                var convertedRepresentations: [ImageRepresentationWithReference] = []
+                                convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
+                                return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                                |> map { _ -> TelegramWallpaper? in
+                                    return wallpaper.wallpaper
+                                }
+                            } else {
+                                return .single(nil)
+                            }
+                        }
+                        |> deliverOnMainQueue).start(next: { wallpaper in
+                            let updatedTheme = theme.withUpdated(name: nil, author: nil, defaultWallpaper: wallpaper)
+                            updateState { current in
+                                var state = current
+                                previewThemePromise.set(.single(updatedTheme))
+                                state.updatedTheme = updatedTheme
+                                return state
+                            }
+                        })
+                    } else {
+                        updateState { current in
+                            var state = current
+                            previewThemePromise.set(.single(theme))
+                            state.updatedTheme = theme
+                            return state
+                        }
+                    }
                 }
-            } else {
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_FileReadError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                else {
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_FileReadError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                }
             }
         })
         presentControllerImpl?(controller, nil)
     })
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<EditThemeControllerEntry>, EditThemeControllerEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), previewThemePromise.get())
+    |> map { presentationData, state, previewTheme -> (ItemListControllerState, (ItemListNodeState<EditThemeControllerEntry>, EditThemeControllerEntry.ItemGenerationArguments)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
@@ -293,75 +332,122 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     return state
                 }
                 
-                let saveThemeTemplateFile: (String, LocalFileMediaResource, @escaping () -> Void) -> Void = { title, resource, completion in
-                    let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: resource.fileId), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/x-tgtheme-ios", size: nil, attributes: [.FileName(fileName: "\(title).tgios-theme")])
-                    let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
+                let _ = (previewThemePromise.get()
+                |> deliverOnMainQueue).start(next: { previewTheme in
+                    let saveThemeTemplateFile: (String, LocalFileMediaResource, @escaping () -> Void) -> Void = { title, resource, completion in
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: resource.fileId), partialReference: nil, resource: resource, previewRepresentations: [], immediateThumbnailData: nil, mimeType: "application/x-tgtheme-ios", size: nil, attributes: [.FileName(fileName: "\(title).tgios-theme")])
+                        let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil)
 
-                    let _ = enqueueMessages(account: context.account, peerId: context.account.peerId, messages: [message]).start()
+                        let _ = enqueueMessages(account: context.account, peerId: context.account.peerId, messages: [message]).start()
 
-                    if let navigateToChat = navigateToChat {
-                        presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_ThemeTemplateAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
+                        if let navigateToChat = navigateToChat {
+                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_ThemeTemplateAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
+                                completion()
+                                navigateToChat(context.account.peerId)
+                            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
+                                completion()
+                            })], actionLayout: .vertical), nil)
+                        } else {
                             completion()
-                            navigateToChat(context.account.peerId)
-                        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
-                            completion()
-                        })], actionLayout: .vertical), nil)
-                    } else {
-                        completion()
+                        }
                     }
-                }
-                
-                let theme: PresentationTheme?
-                let hasCustomFile: Bool
-                if let updatedTheme = state.updatedTheme {
-                    theme = updatedTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
-                    hasCustomFile = true
-                } else {
-                    if case let .edit(info) = mode, let _ = info.theme.file {
-                        theme = nil
+                    
+                    let theme: PresentationTheme?
+                    let hasCustomFile: Bool
+                    if let updatedTheme = state.updatedTheme {
+                        theme = updatedTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
                         hasCustomFile = true
                     } else {
-                        theme = state.previewTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
-                        hasCustomFile = false
-                    }
-                }
-                
-                let themeResource: LocalFileMediaResource?
-                let themeData: Data?
-                let themeThumbnailData: Data?
-                if let theme = theme, let themeString = encodePresentationTheme(theme), let data = themeString.data(using: .utf8) {
-                    let resource = LocalFileMediaResource(fileId: arc4random64())
-                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
-                    themeResource = resource
-                    themeData = data
-                    
-                    let themeThumbnail = generateImage(CGSize(width: 213, height: 320.0), contextGenerator: { size, context in
-                        if let image = generateImage(CGSize(width: 194.0, height: 291.0), contextGenerator: { size, c in
-                            drawThemeImage(context: c, theme: theme, size: size)
-                        })?.cgImage {
-                            context.draw(image, in: CGRect(origin: CGPoint(), size: size))
+                        if case let .edit(info) = mode, let _ = info.theme.file {
+                            theme = nil
+                            hasCustomFile = true
+                        } else {
+                            theme = previewTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
+                            hasCustomFile = false
                         }
-                    }, scale: 1.0)
-                    themeThumbnailData = themeThumbnail?.jpegData(compressionQuality: 0.6)
-                } else {
-                    themeResource = nil
-                    themeData = nil
-                    themeThumbnailData = nil
-                }
-                
-                let resolvedWallpaper: TelegramWallpaper?
-                if let theme = theme, case let .file(file) = theme.chat.defaultWallpaper, file.id != 0 {
-                    resolvedWallpaper = theme.chat.defaultWallpaper
-                    updateCachedWallpaper(account: context.account, wallpaper: theme.chat.defaultWallpaper)
-                } else {
-                    resolvedWallpaper = nil
-                }
-                
-                switch mode {
-                    case .create:
-                        if let themeResource = themeResource {
-                            let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData)
+                    }
+                    
+                    let themeResource: LocalFileMediaResource?
+                    let themeData: Data?
+                    let themeThumbnailData: Data?
+                    if let theme = theme, let themeString = encodePresentationTheme(theme), let data = themeString.data(using: .utf8) {
+                        let resource = LocalFileMediaResource(fileId: arc4random64())
+                        context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                        context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                        themeResource = resource
+                        themeData = data
+                        
+                        var wallpaperImage: UIImage?
+                        if case .file = theme.chat.defaultWallpaper {
+                            wallpaperImage = chatControllerBackgroundImage(theme: theme, wallpaper: theme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
+                        }
+                        let themeThumbnail = generateImage(CGSize(width: 213, height: 320.0), contextGenerator: { size, context in
+                            if let image = generateImage(CGSize(width: 194.0, height: 291.0), contextGenerator: { size, c in
+                                drawThemeImage(context: c, theme: theme, wallpaperImage: wallpaperImage, size: size)
+                            })?.cgImage {
+                                context.draw(image, in: CGRect(origin: CGPoint(), size: size))
+                            }
+                        }, scale: 1.0)
+                        themeThumbnailData = themeThumbnail?.jpegData(compressionQuality: 0.6)
+                    } else {
+                        themeResource = nil
+                        themeData = nil
+                        themeThumbnailData = nil
+                    }
+                    
+                    let resolvedWallpaper: TelegramWallpaper?
+                    if let theme = theme, case let .file(file) = theme.chat.defaultWallpaper, file.id != 0 {
+                        resolvedWallpaper = theme.chat.defaultWallpaper
+                        updateCachedWallpaper(account: context.account, wallpaper: theme.chat.defaultWallpaper)
+                    } else {
+                        resolvedWallpaper = nil
+                    }
+                    
+                    switch mode {
+                        case .create:
+                            if let themeResource = themeResource {
+                                let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData)
+                                |> deliverOnMainQueue).start(next: { next in
+                                    if case let .result(resultTheme) = next {
+                                        let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
+                                        let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
+                                            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                                                let current: PresentationThemeSettings
+                                                if let entry = entry as? PresentationThemeSettings {
+                                                    current = entry
+                                                } else {
+                                                    current = PresentationThemeSettings.defaultSettings
+                                                }
+                                                if let resource = resultTheme.file?.resource, let data = themeData {
+                                                    context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                                                }
+                                                let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
+                                                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                                if let theme = theme {
+                                                    themeSpecificChatWallpapers[themeReference.index] = theme.chat.defaultWallpaper
+                                                }
+                                                return PresentationThemeSettings(chatWallpaper: theme?.chat.defaultWallpaper ?? current.chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                            })
+                                        } |> deliverOnMainQueue).start(completed: {
+                                            if !hasCustomFile {
+                                                saveThemeTemplateFile(state.title, themeResource, {
+                                                    dismissImpl?()
+                                                })
+                                            } else {
+                                                dismissImpl?()
+                                            }
+                                        })
+                                    }
+                                }, error: { error in
+                                    arguments.updateState { current in
+                                        var state = current
+                                        state.updating = false
+                                        return state
+                                    }
+                                })
+                            }
+                        case let .edit(info):
+                            let _ = (updateTheme(account: context.account, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource)
                             |> deliverOnMainQueue).start(next: { next in
                                 if case let .result(resultTheme) = next {
                                     let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
@@ -387,7 +473,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             return PresentationThemeSettings(chatWallpaper: theme?.chat.defaultWallpaper ?? current.chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                         })
                                     } |> deliverOnMainQueue).start(completed: {
-                                        if !hasCustomFile {
+                                        if let themeResource = themeResource, !hasCustomFile {
                                             saveThemeTemplateFile(state.title, themeResource, {
                                                 dismissImpl?()
                                             })
@@ -403,51 +489,8 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                     return state
                                 }
                             })
-                        }
-                    case let .edit(info):
-                        let _ = (updateTheme(account: context.account, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource)
-                        |> deliverOnMainQueue).start(next: { next in
-                            if case let .result(resultTheme) = next {
-                                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
-                                let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
-                                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                                        let current: PresentationThemeSettings
-                                        if let entry = entry as? PresentationThemeSettings {
-                                            current = entry
-                                        } else {
-                                            current = PresentationThemeSettings.defaultSettings
-                                        }
-                                        
-                                        if let resource = resultTheme.file?.resource, let data = themeData {
-                                            context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
-                                        }
-                                        
-                                        let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
-                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-                                        if let theme = theme {
-                                            themeSpecificChatWallpapers[themeReference.index] = theme.chat.defaultWallpaper
-                                        }
-                                        
-                                        return PresentationThemeSettings(chatWallpaper: theme?.chat.defaultWallpaper ?? current.chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                                    })
-                                } |> deliverOnMainQueue).start(completed: {
-                                    if let themeResource = themeResource, !hasCustomFile {
-                                        saveThemeTemplateFile(state.title, themeResource, {
-                                            dismissImpl?()
-                                        })
-                                    } else {
-                                        dismissImpl?()
-                                    }
-                                })
-                            }
-                        }, error: { error in
-                            arguments.updateState { current in
-                                var state = current
-                                state.updating = false
-                                return state
-                            }
-                        })
-                }
+                    }
+                })
             })
         }
         
@@ -463,7 +506,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                 }
         }
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: editThemeControllerEntries(presentationData: presentationData, state: state), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(entries: editThemeControllerEntries(presentationData: presentationData, state: state, previewTheme: previewTheme), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

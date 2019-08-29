@@ -412,7 +412,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             updated = true
                         }
 
-                        let selected = theme == item.currentTheme
+                        let selected = theme.index == item.currentTheme.index
                         if selected {
                             selectedNode = imageNode
                         }

@@ -5561,7 +5561,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let _ = (enqueueMessages(account: self.context.account, peerId: peerId, messages: self.transformEnqueueMessages(messages))
             |> deliverOnMainQueue).start(next: { [weak self] _ in
-                self?.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages {
+                    strongSelf.chatDisplayNode.historyNode.scrollToEndOfHistory()
+                }
             })
             
             self.donateIntent()

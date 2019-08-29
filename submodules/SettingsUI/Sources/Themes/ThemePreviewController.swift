@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import ShareController
 import CounterContollerTitleView
+import WallpaperResources
 
 public enum ThemePreviewSource {
     case theme(TelegramTheme)
@@ -112,11 +113,14 @@ public final class ThemePreviewController: ViewController {
                 
                 switch strongSelf.source {
                     case .theme, .slug:
-                        theme = strongSelf.theme.get()
-                        |> take(1)
-                        |> map { theme in
+                        theme = combineLatest(strongSelf.theme.get() |> take(1), strongSelf.controllerNode.wallpaperPromise.get() |> take(1))
+                        |> map { theme, wallpaper in
                             if let theme = theme {
-                                return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil))
+                                if case let .file(file) = wallpaper, file.id != 0 {
+                                    return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper))
+                                } else {
+                                    return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil))
+                                }
                             } else {
                                 return nil
                             }
@@ -164,6 +168,16 @@ public final class ThemePreviewController: ViewController {
             }
         })
         self.displayNodeDidLoad()
+        
+        let previewTheme = self.previewTheme
+        if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
+            self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug)
+            |> mapToSignal { wallpaper in
+                return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
+            })
+        } else {
+            self.controllerNode.wallpaperPromise.set(.single(previewTheme.chat.defaultWallpaper))
+        }
     }
     
     private func updateStrings() {

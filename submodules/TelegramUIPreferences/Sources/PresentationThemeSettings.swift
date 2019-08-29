@@ -98,9 +98,17 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case 0:
                 self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
             case 1:
-                self = .local(decoder.decodeObjectForKey("localTheme", decoder: { PresentationLocalTheme(decoder: $0) }) as! PresentationLocalTheme)
+                if let localTheme = decoder.decodeObjectForKey("localTheme", decoder: { PresentationLocalTheme(decoder: $0) }) as? PresentationLocalTheme {
+                    self = .local(localTheme)
+                } else {
+                    self = .builtin(.dayClassic)
+                }
             case 2:
-                self = .cloud(decoder.decodeObjectForKey("cloudTheme", decoder: { PresentationCloudTheme(decoder: $0) }) as! PresentationCloudTheme)
+                if let cloudTheme = decoder.decodeObjectForKey("cloudTheme", decoder: { PresentationCloudTheme(decoder: $0) }) as? PresentationCloudTheme {
+                    self = .cloud(cloudTheme)
+                } else {
+                    self = .builtin(.dayClassic)
+                }
             default:
                 assertionFailure()
                 self = .builtin(.dayClassic)
@@ -438,7 +446,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public init(decoder: PostboxDecoder) {
         self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin(WallpaperSettings())
-        self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as! PresentationThemeReference
+        self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as? PresentationThemeReference ?? .builtin(.dayClassic)
 
         self.themeSpecificChatWallpapers = decoder.decodeObjectDictionaryForKey("themeSpecificChatWallpapers", keyDecoder: { decoder in
             return decoder.decodeInt64ForKey("k", orElse: 0)

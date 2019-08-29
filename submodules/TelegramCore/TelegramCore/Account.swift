@@ -1305,6 +1305,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedPendingPeerNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizeAppLogEventsOperations(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedNotificationSettingsBehaviors(postbox: self.postbox).start())
+        self.managedOperationsDisposable.add(managedThemesUpdates(accountManager: accountManager, postbox: self.postbox, network: self.network).start())
         
         if !self.supplementary {
             self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())

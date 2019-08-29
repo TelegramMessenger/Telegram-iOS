@@ -115,18 +115,18 @@ public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, Ge
     }
 }
 
-public enum CheckThemeUpdatedResult {
+public enum ThemeUpdatedResult {
     case updated(TelegramTheme)
     case notModified
 }
 
-public func checkThemeUpdated(account: Account, theme: TelegramTheme) -> Signal<CheckThemeUpdatedResult, GetThemeError> {
+private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal<ThemeUpdatedResult, GetThemeError> {
     guard let file = theme.file, let fileId = file.id?.id else {
         return .fail(.generic)
     }
-    return account.network.request(Api.functions.account.getTheme(format: themeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: fileId))
+    return network.request(Api.functions.account.getTheme(format: themeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: fileId))
     |> mapError { _ -> GetThemeError in return .generic }
-    |> map { theme -> CheckThemeUpdatedResult in
+    |> map { theme -> ThemeUpdatedResult in
         if let theme = TelegramTheme(apiTheme: theme) {
             return .updated(theme)
         } else {
@@ -264,6 +264,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
 
 public enum CreateThemeError {
     case generic
+    case slugInvalid
 }
 
 public enum CreateThemeResult {
@@ -279,7 +280,12 @@ public func createTheme(account: Account, title: String, resource: MediaResource
             case let .complete(file):
                 if let resource = file.resource as? CloudDocumentMediaResource {
                     return account.network.request(Api.functions.account.createTheme(slug: "", title: title, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))))
-                    |> mapError { _ in return CreateThemeError.generic }
+                    |> mapError { error in
+                        if error.errorDescription == "THEME_SLUG_INVALID" {
+                            return .slugInvalid
+                        }
+                        return .generic
+                    }
                     |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
                         if let theme = TelegramTheme(apiTheme: apiTheme) {
                             return account.postbox.transaction { transaction -> CreateThemeResult in
@@ -318,7 +324,7 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
     if let _ = title {
         flags |= 1 << 1
     }
-    if let _ = slug {
+    if let slug = slug, !slug.isEmpty {
         flags |= 1 << 0
     }
     if let _ = resource {
@@ -352,8 +358,13 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
             inputDocument = nil
         }
         
-        return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
-        |> mapError { _ in return CreateThemeError.generic }
+        return account.network.request(Api.functions.account.updateTheme(flags: flags, format: themeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
+        |> mapError { error in
+            if error.errorDescription == "THEME_SLUG_INVALID" {
+                return .slugInvalid
+            }
+            return .generic
+        }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
             if let result = TelegramTheme(apiTheme: apiTheme) {
                 return account.postbox.transaction { transaction -> CreateThemeResult in
@@ -436,4 +447,49 @@ public func applyTheme(accountManager: AccountManager, account: Account, theme: 
         }
     }
     |> switchToLatest
+}
+
+func managedThemesUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
+    |> mapToSignal { sharedData -> Signal<Void, NoError> in
+        let themeSettings = (sharedData.entries[SharedDataKeys.themeSettings] as? ThemeSettings) ?? ThemeSettings(currentTheme: nil)
+        if let currentTheme = themeSettings.currentTheme {
+            let poll = Signal<Void, NoError> { subscriber in
+                return checkThemeUpdated(network: network, theme: currentTheme).start(next: { result in
+                    if case let .updated(updatedTheme) = result {
+                        let _ = accountManager.transaction { transaction in
+                            transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
+                                return ThemeSettings(currentTheme: updatedTheme)
+                            })
+                        }.start()
+                        let _ = postbox.transaction { transaction in
+                            
+                        }
+                    }
+                    subscriber.putCompletion()
+                })
+            }
+            return ((.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue())) |> then(poll)) |> restart
+        } else {
+            return .complete()
+        }
+    }
+}
+
+public func actualizedTheme(accountManager: AccountManager, theme: TelegramTheme) -> Signal<TelegramTheme, NoError> {
+    var currentTheme = theme
+    return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
+    |> map { sharedData -> TelegramTheme in
+        let themeSettings = (sharedData.entries[SharedDataKeys.themeSettings] as? ThemeSettings) ?? ThemeSettings(currentTheme: nil)
+        if let updatedTheme = themeSettings.currentTheme, updatedTheme.id == currentTheme.id {
+            if updatedTheme != currentTheme {
+                currentTheme = updatedTheme
+                return updatedTheme
+            } else {
+                return currentTheme
+            }
+        } else {
+            return theme
+        }
+    }
 }
