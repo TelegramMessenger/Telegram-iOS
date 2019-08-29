@@ -317,6 +317,9 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
     if let _ = slug {
         flags |= 1 << 0
     }
+    if let _ = resource {
+        flags |= 1 << 2
+    }
     let uploadSignal: Signal<UploadThemeResult?, UploadThemeError>
     if let resource = resource {
         uploadSignal = uploadTheme(account: account, resource: resource, thumbnailData: thumbnailData)
