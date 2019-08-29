@@ -10,6 +10,28 @@ import ItemListUI
 import AlertUI
 import AccountContext
 
+func themeDisplayName(strings: PresentationStrings, reference: PresentationThemeReference) -> String {
+    let name: String
+    switch reference {
+        case let .builtin(theme):
+            switch theme {
+                case .dayClassic:
+                    name = strings.Appearance_ThemeCarouselClassic
+                case .day:
+                    name = strings.Appearance_ThemeCarouselDay
+                case .night:
+                    name = strings.Appearance_ThemeCarouselNewNight
+                case .nightAccent:
+                    name = strings.Appearance_ThemeCarouselTintedNight
+            }
+        case let .local(theme):
+            name = theme.title
+        case let .cloud(theme):
+            name = theme.title
+    }
+    return name
+}
+
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext
     let selectTheme: (PresentationThemeReference) -> Void
@@ -21,9 +43,9 @@ private final class ThemeSettingsControllerArguments {
     let toggleLargeEmoji: (Bool) -> Void
     let disableAnimations: (Bool) -> Void
     let selectAppIcon: (String) -> Void
-    let presentThemeMenu: (PresentationThemeReference) -> Void
+    let presentThemeMenu: (PresentationThemeReference, Bool) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, PresentationThemeAccentColor?) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, presentThemeMenu: @escaping (PresentationThemeReference) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, PresentationThemeAccentColor?) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, presentThemeMenu: @escaping (PresentationThemeReference, Bool) -> Void) {
         self.context = context
         self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
@@ -268,7 +290,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.selectTheme(theme)
                 }, longTapped: { theme in
-                    
+                    arguments.presentThemeMenu(theme, theme == currentTheme)
                 })
             case let .iconHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -351,6 +373,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
+    var selectThemeImpl: ((PresentationThemeReference) -> Void)?
     var moreImpl: (() -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
@@ -366,6 +389,10 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let availableAppIcons: Signal<[PresentationAppIcon], NoError> = .single(appIcons)
     let currentAppIconName = ValuePromise<String?>()
     currentAppIconName.set(currentAppIcon?.name ?? "Blue")
+    
+    let cloudThemes = Promise<[TelegramTheme]>()
+    let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network)
+    cloudThemes.set(updatedCloudThemes)
     
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
         let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
@@ -429,17 +456,52 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         currentAppIconName.set(name)
         context.sharedContext.applicationBindings.requestSetAlternateIconName(name, { _ in
         })
-    }, presentThemeMenu: { theme in
-        
+    }, presentThemeMenu: { themeReference, isCurrent in
+        guard case let .cloud(theme) = themeReference else {
+            return
+        }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
+        var items: [ActionSheetItem] = []
+        items.append(ActionSheetTextItem(title: theme.title))
+        items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_EditTheme, color: .accent, action: { [weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            
+            let controller = editThemeController(context: context, theme: theme)
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }))
+        items.append(ActionSheetButtonItem(title: presentationData.strings.Appearance_RemoveTheme, color: .destructive, action: { [weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            
+            let _ = (cloudThemes.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { themes in
+                if isCurrent, let themeIndex = themes.firstIndex(where: { $0.id == theme.id }) {
+                    let newTheme: PresentationThemeReference
+                    if themeIndex > 0 {
+                        newTheme = .cloud(themes[themeIndex - 1])
+                    } else {
+                        newTheme = .builtin(.nightAccent)
+                    }
+                    selectThemeImpl?(newTheme)
+                }
+                
+                let updatedThemes = themes.filter { $0.id != theme.id }
+                cloudThemes.set(.single(updatedThemes) |> then(updatedCloudThemes))
+                
+                let _ = (deleteTheme(account: context.account, theme: theme)).start()
+            })
+        }))
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+            })
+        ])])
+        presentControllerImpl?(actionSheet, nil)
     })
     
-    let savedThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network)
-    |> map { themes -> [PresentationThemeReference] in
-        return themes.map { .cloud($0) }
-    }
-    
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), savedThemes, availableAppIcons, currentAppIconName.get(), statePromise.get())
-    |> map { presentationData, sharedData, savedThemes, availableAppIcons, currentAppIconName, state -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), statePromise.get())
+    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, state -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let fontSize = settings.fontSize
@@ -462,11 +524,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         })
         
         let defaultThemes: [PresentationThemeReference] = [.builtin(.dayClassic), .builtin(.day), .builtin(.night), .builtin(.nightAccent)]
+        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud($0) }
+        
         var availableThemes = defaultThemes
-        if !defaultThemes.contains(settings.theme) && !savedThemes.contains(settings.theme) {
+        if !defaultThemes.contains(settings.theme) && !cloudThemes.contains(settings.theme) {
             availableThemes.append(settings.theme)
         }
-        availableThemes.append(contentsOf: savedThemes)
+        availableThemes.append(contentsOf: cloudThemes)
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Appearance_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(entries: themeSettingsControllerEntries(presentationData: presentationData, theme: theme, themeReference: settings.theme,  themeSpecificAccentColors: settings.themeSpecificAccentColors, availableThemes: availableThemes, autoNightSettings: settings.automaticThemeSwitchSetting, strings: presentationData.strings, wallpaper: wallpaper, fontSize: fontSize, dateTimeFormat: dateTimeFormat, largeEmoji: largeEmoji, disableAnimations: disableAnimations, availableAppIcons: availableAppIcons, currentAppIconName: currentAppIconName), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
@@ -481,6 +545,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    selectThemeImpl = { theme in
+        arguments.selectTheme(theme)
     }
     moreImpl = { [weak controller] in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -509,7 +576,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 }
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], actionLayout: .vertical), nil)
         }))
-        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             })

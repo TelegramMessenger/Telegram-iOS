@@ -296,9 +296,9 @@ public class PeerMediaCollectionController: TelegramBaseController {
         
         self.controllerInteraction = controllerInteraction
         
-        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _ in
-        }, setupEditMessage: { _ in
-        }, beginMessageSelection: { _ in
+        self.interfaceInteraction = ChatPanelInterfaceInteraction(setupReplyMessage: { _, _ in
+        }, setupEditMessage: { _, _ in
+        }, beginMessageSelection: { _, _ in
         }, deleteSelectedMessages: { [weak self] in
             if let strongSelf = self, let messageIds = strongSelf.interfaceState.selectionState?.selectedIds {
                 strongSelf.deleteMessages(messageIds)

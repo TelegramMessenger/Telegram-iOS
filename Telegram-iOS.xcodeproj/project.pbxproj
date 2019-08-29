@@ -901,8 +901,6 @@
 		D00859B71B28189D00EAF753 /* Telegram_iOSTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telegram_iOSTests.swift; sourceTree = "<group>"; };
 		D00ED7591FE94630001F38BD /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = en; path = en.lproj/AppIntentVocabulary.plist; sourceTree = "<group>"; };
 		D00ED75C1FE95287001F38BD /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		D015E010225CCEB300CB9E8A /* ReadBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadBuffer.swift; sourceTree = "<group>"; };
-		D015E01E225CDF5000CB9E8A /* Api0.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Api0.swift; sourceTree = "<group>"; };
 		D015E04C225D2D8F00CB9E8A /* WebP.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebP.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D01A47521F4DBEB100383CC1 /* libHockeySDK.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libHockeySDK.a; path = "../../build/HockeySDK-iOS/Support/build/Debug-iphoneos/libHockeySDK.a"; sourceTree = "<group>"; };
 		D01A47541F4DBED700383CC1 /* HockeySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = HockeySDK.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -937,7 +935,6 @@
 		D03B0E951D637A0500955575 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03BCCC91C6EBD670097A291 /* ListViewTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListViewTests.swift; sourceTree = "<group>"; };
 		D0400ED81D5B8F97007931CE /* TelegramUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = TelegramUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0400EE41D5B912E007931CE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		D0400EE61D5B912E007931CE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D04DCC0B1F71C80000B021D7 /* 0.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = 0.m4a; sourceTree = "<group>"; };
 		D04DCC0C1F71C80000B021D7 /* 1.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = 1.m4a; sourceTree = "<group>"; };
@@ -1014,7 +1011,6 @@
 		D06706601D51185400DED3E3 /* TelegramCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D073E51E21FF7CE900742DDD /* Crypto.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Crypto.h; sourceTree = "<group>"; };
 		D073E51F21FF7CE900742DDD /* Crypto.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Crypto.m; sourceTree = "<group>"; };
-		D073E52122003E1E00742DDD /* Data.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Data.swift; sourceTree = "<group>"; };
 		D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-AppStore.entitlements"; sourceTree = "<group>"; };
 		D08410471FABDC7A008FFE92 /* SSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D08410491FABDCF2008FFE92 /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1114,7 +1110,6 @@
 		D0D268881D79A70A00C422DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0D268971D79AF1B00C422DA /* SiriIntents-AppStore.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SiriIntents-AppStore.entitlements"; sourceTree = "<group>"; };
 		D0D268981D79AF3900C422DA /* SiriIntentsUI.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SiriIntentsUI.entitlements; sourceTree = "<group>"; };
-		D0E2CE632227F0680084E3DD /* ManagedFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManagedFile.swift; sourceTree = "<group>"; };
 		D0E3A7071B285B5000A402D9 /* Telegram-iOS-Hockeyapp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Telegram-iOS-Hockeyapp.entitlements"; sourceTree = "<group>"; };
 		D0E41A381D65A69C00FBFC00 /* NotificationCenter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NotificationCenter.framework; path = System/Library/Frameworks/NotificationCenter.framework; sourceTree = SDKROOT; };
 		D0E41A3B1D65A69C00FBFC00 /* TodayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayViewController.swift; sourceTree = "<group>"; };
@@ -1133,10 +1128,7 @@
 		D0ECCB7E1FE9C38500609802 /* Telegram_iOS_UITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Telegram_iOS_UITests.swift; sourceTree = "<group>"; };
 		D0ECCB801FE9C38500609802 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0ECCB891FE9C4AC00609802 /* SnapshotHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SnapshotHelper.swift; sourceTree = "<group>"; };
-		D0ED633921FF3EDF001D4648 /* AccountData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountData.swift; sourceTree = "<group>"; };
 		D0ED633C21FF3F28001D4648 /* NotificationService-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NotificationService-Bridging-Header.h"; sourceTree = "<group>"; };
-		D0ED633E21FF46E4001D4648 /* ImageData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageData.swift; sourceTree = "<group>"; };
-		D0ED634021FF4786001D4648 /* Serialization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Serialization.swift; sourceTree = "<group>"; };
 		D0F575122083B96B00F1C1E1 /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
 		D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "SFCompactRounded-Semibold.otf"; path = "Telegram-iOS/Resources/SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -2177,22 +2169,14 @@
 				D0BAAA232310302300AFC473 /* FetchImage.m */,
 				D0BAAA252310326200AFC473 /* Serialization.h */,
 				D0BAAA262310326200AFC473 /* Serialization.m */,
-				D015E01E225CDF5000CB9E8A /* Api0.swift */,
 				D000CAC221FB6E170011B15D /* NotificationService-AppStore.entitlements */,
 				D000CAC321FB6E170011B15D /* NotificationService-AppStoreLLC.entitlements */,
 				D000CAC121FB6E160011B15D /* NotificationService-Fork.entitlements */,
 				D000CAC021FB6E160011B15D /* NotificationService-HockeyApp.entitlements */,
-				D0400EE41D5B912E007931CE /* NotificationService.swift */,
-				D0ED633921FF3EDF001D4648 /* AccountData.swift */,
-				D0ED633E21FF46E4001D4648 /* ImageData.swift */,
 				D0400EE61D5B912E007931CE /* Info.plist */,
 				D0ED633C21FF3F28001D4648 /* NotificationService-Bridging-Header.h */,
-				D0ED634021FF4786001D4648 /* Serialization.swift */,
 				D073E51E21FF7CE900742DDD /* Crypto.h */,
 				D073E51F21FF7CE900742DDD /* Crypto.m */,
-				D073E52122003E1E00742DDD /* Data.swift */,
-				D0E2CE632227F0680084E3DD /* ManagedFile.swift */,
-				D015E010225CCEB300CB9E8A /* ReadBuffer.swift */,
 			);
 			path = NotificationService;
 			sourceTree = "<group>";

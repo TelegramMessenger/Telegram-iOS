@@ -305,7 +305,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 UIPasteboard.general.string = mention
                             }))
                         }
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })

@@ -40,7 +40,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
     
-    private let chatBackgroundNode: ASDisplayNode
+    private let chatBackgroundNode: WallpaperBackgroundNode
     private var messageNodes: [ListViewItemNode]?
 
     private let toolbarNode: WallpaperGalleryToolbarNode
@@ -70,7 +70,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.pageControlNode = PageControlNode(dotColor: previewTheme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: previewTheme.list.pageIndicatorInactiveColor)
     
         self.chatListBackgroundNode = ASDisplayNode()
-        self.chatBackgroundNode = ASDisplayNode()
+        self.chatBackgroundNode = WallpaperBackgroundNode()
+        self.chatBackgroundNode.displaysAsynchronously = false
+        self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        self.chatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
         
@@ -225,7 +228,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 })
                 itemNode!.isUserInteractionEnabled = false
                 chatNodes.append(itemNode!)
-                self.chatListBackgroundNode.addSubnode(itemNode!)
+                self.chatListBackgroundNode.insertSubnode(itemNode!, belowSubnode: self.maskNode)
             }
             self.chatNodes = chatNodes
         }

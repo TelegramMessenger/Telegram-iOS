@@ -30,7 +30,7 @@ public func makePresentationTheme(mediaBox: MediaBox, themeReference: Presentati
                 theme = makeDefaultPresentationTheme(reference: .dayClassic, accentColor: nil, serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, preview: preview)
             }
         case let .cloud(info):
-            if let path = mediaBox.completedResourcePath(info.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let loadedTheme = makePresentationTheme(data: data) {
+            if let file = info.file, let path = mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let loadedTheme = makePresentationTheme(data: data) {
                 theme = loadedTheme
             } else {
                 theme = makeDefaultPresentationTheme(reference: .dayClassic, accentColor: nil, serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, preview: preview)

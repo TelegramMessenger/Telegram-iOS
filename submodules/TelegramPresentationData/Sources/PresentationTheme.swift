@@ -541,8 +541,10 @@ public final class PresentationThemePartedColors {
     public let actionButtonsFillColor: PresentationThemeVariableColor
     public let actionButtonsStrokeColor: PresentationThemeVariableColor
     public let actionButtonsTextColor: PresentationThemeVariableColor
+    public let textSelectionColor: UIColor
+    public let textSelectionKnobColor: UIColor
     
-    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor) {
+    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
         self.bubble = bubble
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
@@ -563,6 +565,8 @@ public final class PresentationThemePartedColors {
         self.actionButtonsFillColor = actionButtonsFillColor
         self.actionButtonsStrokeColor = actionButtonsStrokeColor
         self.actionButtonsTextColor = actionButtonsTextColor
+        self.textSelectionColor = textSelectionColor
+        self.textSelectionKnobColor = textSelectionKnobColor
     }
 }
 
