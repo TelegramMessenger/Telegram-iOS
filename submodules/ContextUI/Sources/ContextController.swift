@@ -717,9 +717,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
         }
         let mappedPoint = self.view.convert(point, to: self.scrollNode.view)
-        if self.actionsContainerNode.frame.contains(mappedPoint) {
-            return self.actionsContainerNode.hitTest(self.view.convert(point, to: self.actionsContainerNode.view), with: event)
-        }
         if let contentParentNode = self.contentParentNode {
             let contentPoint = self.view.convert(point, to: contentParentNode.contentNode.view)
             if let result = contentParentNode.contentNode.hitTest(contentPoint, with: event) {
@@ -729,6 +726,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     return contentParentNode.contentNode.view
                 }
             }
+        }
+        
+        if self.actionsContainerNode.frame.contains(mappedPoint) {
+            return self.actionsContainerNode.hitTest(self.view.convert(point, to: self.actionsContainerNode.view), with: event)
         }
         
         return self.dismissNode.view

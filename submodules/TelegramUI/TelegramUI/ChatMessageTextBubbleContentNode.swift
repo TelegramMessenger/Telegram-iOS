@@ -370,6 +370,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 adjustedTextFrame.origin.x = floor((boundingWidth - adjustedTextFrame.width) / 2.0)
                             }
                             strongSelf.textNode.frame = adjustedTextFrame
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != adjustedTextFrame.size
+                                textSelectionNode.frame = adjustedTextFrame
+                                textSelectionNode.highlightAreaNode.frame = adjustedTextFrame
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
+                                }
+                            }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                         }
@@ -544,7 +552,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
                 }
                 
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), textNode: self.textNode, updateIsActive: { [weak self] value in
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
                     self?.updateIsTextSelectionActive?(value)
                 }, present: { [weak self] c, a in
                     self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
