@@ -382,7 +382,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
             
             var needShareButton = false
-            if isFailed {
+            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
                 needShareButton = false
             } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {

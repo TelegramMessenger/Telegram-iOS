@@ -144,8 +144,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
+            let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+            
             var needShareButton = false
-            if item.message.id.peerId == item.context.account.peerId {
+            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
+                needShareButton = false
+            }
+            else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
                     if let _ = attribute as? SourceReferenceMessageAttribute {
                         needShareButton = true
@@ -189,7 +194,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
             }
             
             var deliveryFailedInset: CGFloat = 0.0
-            if item.content.firstMessage.flags.contains(.Failed) {
+            if isFailed {
                 deliveryFailedInset += 24.0
             }
             
@@ -474,7 +479,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if item.content.firstMessage.flags.contains(.Failed) {
+                    if isFailed {
                         let deliveryFailedNode: ChatMessageDeliveryFailedNode
                         var isAppearing = false
                         if let current = strongSelf.deliveryFailedNode {

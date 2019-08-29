@@ -165,7 +165,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             }))
             
             multiplexedNode.fileSelected = { [weak self] fileReference, sourceNode, sourceRect in
-                self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
+                let _ = self?.controllerInteraction.sendGif(fileReference, sourceNode, sourceRect)
             }
             
             multiplexedNode.didScroll = { [weak self] offset, height in
