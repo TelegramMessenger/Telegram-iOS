@@ -92,7 +92,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     func item(_ arguments: UsernameSetupControllerArguments) -> ListViewItem {
         switch self {
             case let .editablePublicLink(theme, strings, prefix, currentText, text):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearButton: true, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: .always, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
                     arguments.updatePublicLinkText(currentText, updatedText)
                 }, action: {
                 })

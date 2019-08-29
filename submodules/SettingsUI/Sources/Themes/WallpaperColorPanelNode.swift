@@ -104,7 +104,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         
         self.textFieldNode.textField.font = Font.regular(17.0)
         self.textFieldNode.textField.textColor = self.theme.chat.inputPanel.inputTextColor
-        self.textFieldNode.textField.keyboardAppearance = self.theme.chat.inputPanel.keyboardColor.keyboardAppearance
+        self.textFieldNode.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.textFieldNode.textField.autocorrectionType = .no
         self.textFieldNode.textField.autocapitalizationType = .allCharacters
         self.textFieldNode.textField.keyboardType = .asciiCapable
@@ -123,7 +123,7 @@ final class WallpaperColorPanelNode: ASDisplayNode, UITextFieldDelegate {
         self.textBackgroundNode.image = textInputBackgroundImage(fieldColor: self.theme.chat.inputPanel.inputBackgroundColor, strokeColor: self.theme.chat.inputPanel.inputStrokeColor, diameter: 33.0)
         
         self.textFieldNode.textField.textColor = self.theme.chat.inputPanel.inputTextColor
-        self.textFieldNode.textField.keyboardAppearance = self.theme.chat.inputPanel.keyboardColor.keyboardAppearance
+        self.textFieldNode.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.textFieldNode.textField.tintColor = self.theme.list.itemAccentColor
     }
     

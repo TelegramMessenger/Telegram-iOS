@@ -41,6 +41,31 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
 }
 
+private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    return .single(theme)
+    |> map { theme -> (TransformImageArguments) -> DrawingContext? in
+        return { arguments in
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
+            let drawingRect = arguments.drawingRect
+            
+            context.withContext { c in
+                c.setFillColor(theme.list.itemBlocksBackgroundColor.cgColor)
+                c.fill(drawingRect)
+                
+                c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                c.scaleBy(x: 1.0, y: -1.0)
+                c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                
+                if let icon = generateTintedImage(image: UIImage(bundleImageName: "Settings/CreateThemeIcon"), color: theme.list.itemAccentColor) {
+                    c.draw(icon.cgImage!, in: CGRect(origin: CGPoint(x: floor((drawingRect.width - icon.size.width) / 2.0) - 3.0, y: floor((drawingRect.height - icon.size.height) / 2.0)), size: icon.size))
+                }
+            }
+            
+            return context
+        }
+    }
+}
+
 private func themeIconImage(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     let signal: Signal<(UIColor, UIColor, UIColor), NoError>
     if case let .builtin(theme) = theme {
@@ -60,7 +85,7 @@ private func themeIconImage(context: AccountContext, theme: PresentationThemeRef
         if case let .local(theme) = theme {
             resource = theme.resource
         } else if case let .cloud(theme) = theme {
-            resource = theme.file?.resource
+            resource = theme.theme.file?.resource
         }
         if let resource = resource {
             signal = telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: resource, synchronousLoad: false)
@@ -202,7 +227,11 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     }
     
     func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
-        self.imageNode.setSignal(themeIconImage(context: context, theme: theme, accentColor: accentColor))
+        if case let .cloud(theme) = theme, theme.theme.file == nil {
+            self.imageNode.setSignal(createThemeImage(theme: currentTheme))
+        } else {
+            self.imageNode.setSignal(themeIconImage(context: context, theme: theme, accentColor: accentColor))
+        }
         self.textNode.attributedText = title
         self.overlayNode.image = generateBorderImage(theme: currentTheme, bordered: bordered, selected: selected)
         self.action = {
@@ -395,7 +424,7 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                                 self?.scrollToNode(imageNode, animated: true)
                             }
                         }, longTapAction: {
-                                item.longTapped(theme)
+                            item.longTapped(theme)
                         })
                         
                         imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)

@@ -62,7 +62,6 @@
 		09FFBCD72281BB2D00C33B4B /* ChatTextLinkEditController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FFBCD62281BB2D00C33B4B /* ChatTextLinkEditController.swift */; };
 		D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
-		D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */; };
 		D007019E2029EFDD006B9E34 /* ICloudResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D007019D2029EFDD006B9E34 /* ICloudResources.swift */; };
 		D008178222B47464008A895F /* NotificationContentContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = D008178122B47464008A895F /* NotificationContentContext.swift */; };
 		D00817D022B47A14008A895F /* WakeupManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00817B622B47A12008A895F /* WakeupManager.swift */; };
@@ -634,7 +633,6 @@
 		D002A0DA1E9C190700A81812 /* SoftwareVideoThumbnailLayer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SoftwareVideoThumbnailLayer.swift; sourceTree = "<group>"; };
 		D002A0DC1E9CD52A00A81812 /* ChatMediaInputRecentGifsItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputRecentGifsItem.swift; sourceTree = "<group>"; };
 		D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreDownloadedMedia.swift; sourceTree = "<group>"; };
-		D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyICloudFileController.swift; sourceTree = "<group>"; };
 		D007019D2029EFDD006B9E34 /* ICloudResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudResources.swift; sourceTree = "<group>"; };
 		D008178122B47464008A895F /* NotificationContentContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationContentContext.swift; sourceTree = "<group>"; };
 		D00817B622B47A12008A895F /* WakeupManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WakeupManager.swift; sourceTree = "<group>"; };
@@ -1740,7 +1738,6 @@
 			children = (
 				D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */,
 				D06BB8811F58994B0084FC30 /* LegacyInstantVideoController.swift */,
-				D007019B2029E8F2006B9E34 /* LegacyICloudFileController.swift */,
 				D0380DAC204ED434000414AB /* LegacyLiveUploadInterface.swift */,
 				D0B21B1E22156D92003F741D /* LegacyCache.swift */,
 			);
@@ -3064,7 +3061,6 @@
 				090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */,
 				09F2158D225CF5BC00AEDF6D /* Pasteboard.swift in Sources */,
 				D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */,
-				D007019C2029E8F2006B9E34 /* LegacyICloudFileController.swift in Sources */,
 				D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */,
 				D08BDF641FA37BEA009D08E1 /* ChatRecordingPreviewInputPanelNode.swift in Sources */,
 				D0943B071FDEC529001522CC /* InstantVideoRadialStatusNode.swift in Sources */,

@@ -2939,8 +2939,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
     }
     
     if !updatedThemes.isEmpty {
-        let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
-        let themes = items.map { entry -> TelegramTheme in
+        let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
+        let themes = entries.map { entry -> TelegramTheme in
             let theme = entry.contents as! TelegramTheme
             if let updatedTheme = updatedThemes[theme.id] {
                 return updatedTheme
@@ -2948,13 +2948,13 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 return theme
             }
         }
-        var entries: [OrderedItemListEntry] = []
+        var updatedEntries: [OrderedItemListEntry] = []
         for theme in themes {
-            var intValue = Int32(entries.count)
+            var intValue = Int32(updatedEntries.count)
             let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
-            entries.append(OrderedItemListEntry(id: id, contents: theme))
+            updatedEntries.append(OrderedItemListEntry(id: id, contents: theme))
         }
-        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: entries)
+        transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
     }
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)

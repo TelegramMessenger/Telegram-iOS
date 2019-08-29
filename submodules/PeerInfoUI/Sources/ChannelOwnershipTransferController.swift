@@ -80,7 +80,7 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
         self.textInputNode.textField.textColor = self.theme.list.itemPrimaryTextColor
         self.textInputNode.textField.isSecureTextEntry = true
         self.textInputNode.textField.returnKeyType = .done
-        self.textInputNode.textField.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.clipsToBounds = true
         self.textInputNode.textField.delegate = self
         self.textInputNode.textField.addTarget(self, action: #selector(self.textFieldTextChanged(_:)), for: .editingChanged)
@@ -92,7 +92,7 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
         self.theme = theme
         
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 16.0, color: theme.actionSheet.inputHollowBackgroundColor, strokeColor: theme.actionSheet.inputBorderColor, strokeWidth: UIScreenPixel)
-        self.textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.textField.textColor = theme.list.itemPrimaryTextColor
         self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(14.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
         self.textInputNode.textField.tintColor = theme.list.itemAccentColor

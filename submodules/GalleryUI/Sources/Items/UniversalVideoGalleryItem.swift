@@ -473,7 +473,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                 }
                         }
-                        seekable = value.duration >= 45.0
+                        seekable = value.duration >= 30.0
                     }
                     
                     var fetching = false

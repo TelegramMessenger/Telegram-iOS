@@ -161,7 +161,7 @@ public final class SearchBarNodeTheme: Equatable {
         self.inputIcon = theme.rootController.navigationSearchBar.inputIconColor
         self.inputClear = theme.rootController.navigationSearchBar.inputClearButtonColor
         self.accent = theme.rootController.navigationSearchBar.accentColor
-        self.keyboard = theme.chatList.searchBarKeyboardColor
+        self.keyboard = theme.rootController.keyboardColor
     }
     
     public static func ==(lhs: SearchBarNodeTheme, rhs: SearchBarNodeTheme) -> Bool {

@@ -672,7 +672,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         if strongSelf.inputSeparator == nil {
                             animateIn = true
                         }
-                        let keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                        let keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
                         switch editingName {
                             case let .personName(firstName, lastName):
                                 if strongSelf.inputSeparator == nil {

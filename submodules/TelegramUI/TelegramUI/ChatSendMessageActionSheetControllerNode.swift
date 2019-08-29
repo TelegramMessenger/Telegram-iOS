@@ -186,7 +186,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.effectView = UIVisualEffectView()
         if #available(iOS 9.0, *) {
         } else {
-            if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+            if self.presentationData.theme.rootController.keyboardColor == .dark {
                 self.effectView.effect = UIBlurEffect(style: .dark)
             } else {
                 self.effectView.effect = UIBlurEffect(style: .light)
@@ -310,7 +310,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         if #available(iOS 9.0, *) {
         } else {
-            if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+            if self.presentationData.theme.rootController.keyboardColor == .dark {
                 self.effectView.effect = UIBlurEffect(style: .dark)
             } else {
                 self.effectView.effect = UIBlurEffect(style: .light)

@@ -268,6 +268,7 @@ private enum SharedDataKeyValues: Int32 {
     case localizationSettings = 3
     case proxySettings = 4
     case autodownloadSettings = 5
+    case themeSettings = 6
 }
 
 public struct SharedDataKeys {
@@ -298,6 +299,12 @@ public struct SharedDataKeys {
     public static let autodownloadSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: SharedDataKeyValues.autodownloadSettings.rawValue)
+        return key
+    }()
+    
+    public static let themeSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: SharedDataKeyValues.themeSettings.rawValue)
         return key
     }()
 }

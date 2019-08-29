@@ -50,7 +50,7 @@ final class ShareInputFieldNodeTheme: Equatable {
 
 extension ShareInputFieldNodeTheme {
     convenience init(presentationTheme theme: PresentationTheme) {
-        self.init(backgroundColor: theme.actionSheet.inputBackgroundColor, textColor: theme.actionSheet.inputTextColor, placeholderColor: theme.actionSheet.inputPlaceholderColor, clearButtonColor: theme.actionSheet.inputClearButtonColor, accentColor: theme.actionSheet.controlAccentColor, keyboard: theme.chatList.searchBarKeyboardColor)
+        self.init(backgroundColor: theme.actionSheet.inputBackgroundColor, textColor: theme.actionSheet.inputTextColor, placeholderColor: theme.actionSheet.inputPlaceholderColor, clearButtonColor: theme.actionSheet.inputClearButtonColor, accentColor: theme.actionSheet.controlAccentColor, keyboard: theme.rootController.keyboardColor)
     }
 }
 

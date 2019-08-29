@@ -4662,19 +4662,27 @@ Any member of this group will be able to see messages in the channel.";
 
 "Appearance.CreateTheme" = "Create New Theme";
 "Appearance.EditTheme" = "Edit Theme";
+"Appearance.ShareTheme" = "Share";
 "Appearance.RemoveTheme" = "Remove";
-"Appearance.CreateThemeInfo" = "A new theme template has been created from your current theme and added to your Saved Messages.";
+"Appearance.RemoveThemeConfirmation" = "Remove Theme";
 
 "Conversation.Theme" = "Color Theme";
 "Conversation.ViewTheme" = "VIEW THEME";
 
 "Message.Theme" = "Color Theme";
 
-"EditTheme.Title" = "Edit Theme";
-"EditTheme.Preview" = "PREVIEW";
-"EditTheme.Title" = "Title";
-"EditTheme.ShortLink" = "Short Link";
-"EditTheme.ShortLinkInfo" = "Short Link";
+"EditTheme.CreateTitle" = "Create Theme";
+"EditTheme.EditTitle" = "Edit Theme";
+"EditTheme.Title" = "Theme Name";
+"EditTheme.ShortLink" = "link";
+"EditTheme.ShortLinkInfo" = "Short Link Info";
+"EditTheme.Preview" = "CHAT PREVIEW";
+"EditTheme.UploadNewTheme" = "Select a File...";
+"EditTheme.UploadEditedTheme" = "Select Updated File...";
+"EditTheme.UploadNewInfo" = "This theme will be based on your current theme and wallpaper. Otherwise, you can use a custom theme file if you already have one.";
+"EditTheme.UploadEditedInfo" = "You can select a new file to update the theme. It will be updated for all users.";
+"EditTheme.ThemeTemplateAlert" = "A copy of your theme template has been added to your Saved Messages.";
+"EditTheme.FileReadError" = "Invalid theme file";
 
 "Wallpaper.ErrorNotFound" = "Sorry, this chat background doesn't seem to exist.";
 "Theme.ErrorNotFound" = "Sorry, this color theme doesn't seem to exist.";
