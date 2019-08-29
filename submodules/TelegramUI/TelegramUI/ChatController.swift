@@ -6550,7 +6550,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.dismissInput()
         
         if let peer = peer as? TelegramChannel, let username = peer.username, !username.isEmpty {
-            self.present(peerReportOptionsController(context: self.context, subject: .peer(peer.id), present: { [weak self] c, a in
+            let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+            
+            var items: [ActionSheetItem] = []
+            items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ReportSpamAndLeave, color: .destructive, action: { [weak self, weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                if let strongSelf = self {
+                    strongSelf.deleteChat(reportChatSpam: true)
+                }
+            }))
+            actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])])
+            
+            self.present(actionSheet, in: .window(.root))
+            
+            /*self.present(peerReportOptionsController(context: self.context, subject: .peer(peer.id), present: { [weak self] c, a in
                 self?.present(c, in: .window(.root))
             }, completion: { [weak self] success in
                 guard let strongSelf = self, success else {
@@ -6558,7 +6575,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: false).start()
                 (strongSelf.navigationController as? NavigationController)?.filterController(strongSelf, animated: true)
-            }), in: .window(.root))
+            }), in: .window(.root))*/
         } else if let _ = peer as? TelegramUser {
             let presentationData = self.presentationData
             let controller = ActionSheetController(presentationTheme: presentationData.theme)
