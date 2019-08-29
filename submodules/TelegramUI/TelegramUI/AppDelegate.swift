@@ -57,7 +57,11 @@ private class ApplicationStatusBarHost: StatusBarHost {
         return self.application.statusBarFrame
     }
     var statusBarStyle: UIStatusBarStyle {
-        return self.application.statusBarStyle
+        get {
+            return self.application.statusBarStyle
+        } set(value) {
+            self.setStatusBarStyle(value, animated: false)
+        }
     }
     
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {

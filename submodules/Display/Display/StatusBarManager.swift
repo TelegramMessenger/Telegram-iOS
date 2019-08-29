@@ -76,7 +76,7 @@ class StatusBarManager {
     private let volumeControlStatusBarNode: VolumeControlStatusBarNode
     
     private var surfaces: [StatusBarSurface] = []
-    private var validParams: (withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, UIStatusBarStyle?)?
+    private var validParams: (withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool)?
     
     var inCallNavigate: (() -> Void)?
     
@@ -111,8 +111,8 @@ class StatusBarManager {
                 self?.volumeControlStatusBarNode.allowsGroupOpacity = false
             })
         }
-        if let (withSafeInsets, forceInCallStatusBarText, forceHiddenBySystemWindows, forceAppearance) = self.validParams {
-            self.updateSurfaces(self.surfaces, withSafeInsets: withSafeInsets, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: false, forceAppearance: forceAppearance, alphaTransition: .animated(duration: 0.2, curve: .easeInOut))
+        if let (withSafeInsets, forceInCallStatusBarText, forceHiddenBySystemWindows) = self.validParams {
+            self.updateSurfaces(self.surfaces, withSafeInsets: withSafeInsets, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: false, alphaTransition: .animated(duration: 0.2, curve: .easeInOut))
         }
     }
     
@@ -126,24 +126,24 @@ class StatusBarManager {
             }
         })
         self.volumeTimer = nil
-        if let (withSafeInsets, forceInCallStatusBarText, forceHiddenBySystemWindows, forceAppearance) = self.validParams {
-            self.updateSurfaces(self.surfaces, withSafeInsets: withSafeInsets, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: false, forceAppearance: forceAppearance, alphaTransition: .animated(duration: 0.2, curve: .easeInOut))
+        if let (withSafeInsets, forceInCallStatusBarText, forceHiddenBySystemWindows) = self.validParams {
+            self.updateSurfaces(self.surfaces, withSafeInsets: withSafeInsets, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: false, alphaTransition: .animated(duration: 0.2, curve: .easeInOut))
         }
     }
     
-    func updateState(surfaces: [StatusBarSurface], withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, forceAppearance: UIStatusBarStyle?, animated: Bool) {
+    func updateState(surfaces: [StatusBarSurface], withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool) {
         let previousSurfaces = self.surfaces
         self.surfaces = surfaces
-        self.updateSurfaces(previousSurfaces, withSafeInsets: withSafeInsets, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: animated, forceAppearance: forceAppearance, alphaTransition: .immediate)
+        self.updateSurfaces(previousSurfaces, withSafeInsets: withSafeInsets, forceInCallStatusBarText: forceInCallStatusBarText, forceHiddenBySystemWindows: forceHiddenBySystemWindows, animated: animated, alphaTransition: .immediate)
     }
     
-    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface], withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool, forceAppearance: UIStatusBarStyle?, alphaTransition: ContainedViewLayoutTransition) {
+    private func updateSurfaces(_ previousSurfaces: [StatusBarSurface], withSafeInsets: Bool, forceInCallStatusBarText: String?, forceHiddenBySystemWindows: Bool, animated: Bool, alphaTransition: ContainedViewLayoutTransition) {
         let statusBarFrame = self.host.statusBarFrame
         guard let statusBarView = self.host.statusBarView else {
             return
         }
         
-        self.validParams = (withSafeInsets, forceInCallStatusBarText, forceHiddenBySystemWindows, forceAppearance)
+        self.validParams = (withSafeInsets, forceInCallStatusBarText, forceHiddenBySystemWindows)
         
         if self.host.statusBarWindow?.isUserInteractionEnabled != (forceInCallStatusBarText == nil) {
             self.host.statusBarWindow?.isUserInteractionEnabled = (forceInCallStatusBarText == nil)
@@ -278,17 +278,6 @@ class StatusBarManager {
         }
         self.volumeControlStatusBarNode.isDark = isDark
         
-        if let forceAppearance = forceAppearance {
-            let style: StatusBarStyle
-            switch forceAppearance {
-            case .lightContent:
-                style = .White
-            default:
-                style = .Black
-            }
-            globalStatusBar = (style, 1.0, 0.0)
-        }
-        
         if let globalStatusBar = globalStatusBar, !forceHiddenBySystemWindows {
             let statusBarStyle: UIStatusBarStyle
             if forceInCallStatusBarText != nil {
@@ -297,7 +286,7 @@ class StatusBarManager {
                 statusBarStyle = globalStatusBar.0 == .Black ? .default : .lightContent
             }
             if self.host.statusBarStyle != statusBarStyle {
-                self.host.setStatusBarStyle(statusBarStyle, animated: animated)
+                self.host.statusBarStyle = statusBarStyle
             }
             if let statusBarWindow = self.host.statusBarWindow {
                 alphaTransition.updateAlpha(layer: statusBarView.layer, alpha: globalStatusBar.1)
