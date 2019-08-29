@@ -568,9 +568,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var immediatelyLayoutInputNodeAndAnimateAppearance = false
         var inputNodeHeightAndOverflow: (CGFloat, CGFloat)?
         if let inputNode = inputNodeForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentNode: self.inputNode, interfaceInteraction: self.interfaceInteraction, inputMediaNode: self.inputMediaNode, controllerInteraction: self.controllerInteraction, inputPanelNode: self.inputPanelNode) {
-            if let _ = self.inputPanelNode as? ChatTextInputPanelNode {
-                self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
-                //inputTextPanelNode.ensureUnfocused()
+            if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+                if inputPanelNode.isFocused {
+                    self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
+                    //inputTextPanelNode.ensureUnfocused()
+                }
             }
             if let inputMediaNode = inputNode as? ChatMediaInputNode, self.inputMediaNode == nil {
                 self.inputMediaNode = inputMediaNode
@@ -646,8 +648,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let inputPanelNode = inputPanelForChatPresentationIntefaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.inputPanelNode, textInputPanelNode: self.textInputPanelNode, interfaceInteraction: self.interfaceInteraction), !previewing {
             if inputPanelNode !== self.inputPanelNode {
                 if let inputTextPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
-                    self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
-                    //inputTextPanelNode.ensureUnfocused()
+                    if inputTextPanelNode.isFocused {
+                        self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
+                        //inputTextPanelNode.ensureUnfocused()
+                    }
                     let _ = inputTextPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, maxHeight: layout.size.height - insets.top - insets.bottom, transition: transition, interfaceState: self.chatPresentationInterfaceState, metrics: layout.metrics)
                 }
                 dismissedInputPanelNode = self.inputPanelNode
@@ -1037,6 +1041,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             apparentNavigateButtonsFrame.origin.y += verticalOffset
         }
         
+        let previousInputPanelBackgroundFrame = self.inputPanelBackgroundNode.frame
         transition.updateFrame(node: self.inputPanelBackgroundNode, frame: apparentInputBackgroundFrame)
         transition.updateFrame(node: self.inputPanelBackgroundSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: apparentInputBackgroundFrame.origin.y - UIScreenPixel), size: CGSize(width: apparentInputBackgroundFrame.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.navigateButtons, frame: apparentNavigateButtonsFrame)
@@ -1050,7 +1055,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let inputPanelNode = self.inputPanelNode, let apparentInputPanelFrame = apparentInputPanelFrame, !inputPanelNode.frame.equalTo(apparentInputPanelFrame) {
             if immediatelyLayoutInputPanelAndAnimateAppearance {
-                inputPanelNode.frame = apparentInputPanelFrame.offsetBy(dx: 0.0, dy: apparentInputPanelFrame.height)
+                inputPanelNode.frame = apparentInputPanelFrame.offsetBy(dx: 0.0, dy: apparentInputPanelFrame.height + previousInputPanelBackgroundFrame.maxY - apparentInputBackgroundFrame.maxY)
                 inputPanelNode.alpha = 0.0
             }
             
@@ -1427,9 +1432,11 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 if self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState) {
                     self.ensureInputViewFocused()
                 } else {
-                    if let _ = self.inputPanelNode as? ChatTextInputPanelNode {
-                        self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
-                        //inputTextPanelNode.ensureUnfocused()
+                    if let inputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
+                        if inputPanelNode.isFocused {
+                            self.context.sharedContext.mainWindow?.simulateKeyboardDismiss(transition: .animated(duration: 0.5, curve: .spring))
+                            //inputTextPanelNode.ensureUnfocused()
+                        }
                     }
                 }
             } else {
