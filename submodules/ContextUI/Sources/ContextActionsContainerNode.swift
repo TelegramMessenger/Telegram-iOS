@@ -114,6 +114,21 @@ final class ContextActionsContainerNode: ASDisplayNode {
         return CGSize(width: maxWidth, height: verticalOffset)
     }
     
+    func updateTheme(theme: PresentationTheme) {
+        for itemNode in self.itemNodes {
+            switch itemNode {
+            case let .action(action):
+                action.updateTheme(theme: theme)
+            case let .separator(separator):
+                separator.backgroundColor = theme.contextMenu.sectionSeparatorColor
+            case let .itemSeparator(itemSeparator):
+                itemSeparator.backgroundColor = theme.contextMenu.itemSeparatorColor
+            }
+        }
+        
+        self.backgroundColor = theme.contextMenu.backgroundColor
+    }
+    
     func actionNode(at point: CGPoint) -> ContextActionNode? {
         for itemNode in self.itemNodes {
             switch itemNode {
