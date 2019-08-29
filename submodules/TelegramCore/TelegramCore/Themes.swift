@@ -92,6 +92,7 @@ public func telegramThemes(postbox: Postbox, network: Network, forceUpdate: Bool
 public enum GetThemeError {
     case generic
     case unsupported
+    case slugInvalid
 }
 
 public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, GetThemeError> {
@@ -99,6 +100,9 @@ public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, Ge
     |> mapError { error -> GetThemeError in
         if error.errorDescription == "THEME_FORMAT_INVALID" {
             return .unsupported
+        }
+        if error.errorDescription == "THEME_SLUG_INVALID" {
+            return .slugInvalid
         }
         return .generic
     }
