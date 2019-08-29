@@ -36,4 +36,6 @@ void applyKeyboardAutocorrection();
 
 @interface AboveStatusBarWindow : UIWindow
 
+@property (nonatomic, copy) UIInterfaceOrientationMask (^ _Nullable supportedOrientations)(void);
+
 @end
