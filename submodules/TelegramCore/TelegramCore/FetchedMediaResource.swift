@@ -699,12 +699,7 @@ private final class MediaReferenceRevalidationContextImpl {
                         }
                     }
                 }
-            }, { [weak self] _ in
-                /*queue.async {
-                    guard let strongSelf = self else {
-                        return
-                    }
-                }*/
+            }, { _ in
             }))
         }
         
