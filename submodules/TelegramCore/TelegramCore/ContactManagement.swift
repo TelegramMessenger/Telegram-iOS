@@ -81,8 +81,8 @@ func syncContactsOnce(network: Network, postbox: Postbox, accountPeerId: PeerId)
                 
                 if wasEmpty {
                     var insertSignal: Signal<Void, NoError> = .complete()
-                    for s in stride(from: 0, to: peers.count, by: 100) {
-                        let partPeers = Array(peers[s ..< min(s + 100, peers.count)])
+                    for s in stride(from: 0, to: peers.count, by: 500) {
+                        let partPeers = Array(peers[s ..< min(s + 500, peers.count)])
                         let partSignal = postbox.transaction { transaction -> Void in
                             updatePeers(transaction: transaction, peers: partPeers, update: { return $1 })
                             var updatedIds = transaction.getContactPeerIds()

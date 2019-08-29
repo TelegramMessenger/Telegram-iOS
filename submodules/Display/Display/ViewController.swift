@@ -340,7 +340,7 @@ open class ViewControllerPresentationArguments {
         if !self.isViewLoaded {
             self.loadView()
         }
-        //transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
+        transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         if let _ = layout.statusBarHeight {
             self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
         }

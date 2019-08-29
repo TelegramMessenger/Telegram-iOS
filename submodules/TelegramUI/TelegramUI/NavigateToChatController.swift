@@ -41,9 +41,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 controller.activateInput()
             }
             if let botStart = params.botStart {
-                controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
+                controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                     return state.updatedBotStartPayload(botStart.payload)
-                }
+                })
             }
             found = true
             break
@@ -56,9 +56,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
         if let chatController = params.chatController as? ChatControllerImpl {
             controller = chatController
             if let botStart = params.botStart {
-                controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
+                controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                     return state.updatedBotStartPayload(botStart.payload)
-                }
+                })
             }
         } else {
             controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart)

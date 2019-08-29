@@ -715,7 +715,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.loadView()
         }
         self.validLayout = layout
-        //transition.updateFrame(view: self.view, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
+        transition.updateFrame(view: self.view, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         
         self.updateControllerLayouts(previousControllers: self._viewControllers, layout: layout, transition: transition)
         

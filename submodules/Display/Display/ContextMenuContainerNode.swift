@@ -27,7 +27,7 @@ public final class ContextMenuContainerNode: ASDisplayNode {
         
         super.init()
         
-        self.backgroundColor = UIColor(rgb: 0xeaecec)
+        self.backgroundColor = UIColor(rgb: 0x8c8e8e)
         //self.view.addSubview(self.effectView)
         //self.effectView.mask = self.maskView
         self.view.mask = self.maskView

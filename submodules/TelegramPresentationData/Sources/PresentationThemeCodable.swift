@@ -918,32 +918,37 @@ extension PresentationThemePartedColors: Codable {
         case actionButtonsBg
         case actionButtonsStroke
         case actionButtonsText
+        case textSelection
+        case textSelectionKnob
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(bubble: try values.decode(PresentationThemeBubbleColor.self, forKey: .bubble),
-                  primaryTextColor: try decodeColor(values, .primaryText),
-                  secondaryTextColor: try decodeColor(values, .secondaryText),
-                  linkTextColor: try decodeColor(values, .linkText),
-                  linkHighlightColor: try decodeColor(values, .linkHighlight),
-                  scamColor: try decodeColor(values, .scam),
-                  textHighlightColor: try decodeColor(values, .textHighlight),
-                  accentTextColor: try decodeColor(values, .accentText),
-                  accentControlColor: try decodeColor(values, .accentControl),
-                  mediaActiveControlColor: try decodeColor(values, .mediaActiveControl),
-                  mediaInactiveControlColor: try decodeColor(values, .mediaInactiveControl),
-                  pendingActivityColor: try decodeColor(values, .pendingActivity),
-                  fileTitleColor: try decodeColor(values, .fileTitle),
-                  fileDescriptionColor: try decodeColor(values, .fileDescription),
-                  fileDurationColor: try decodeColor(values, .fileDuration),
-                  mediaPlaceholderColor: try decodeColor(values, .mediaPlaceholder),
-                  polls: try values.decode(PresentationThemeChatBubblePolls.self, forKey: .polls),
-                  actionButtonsFillColor: try values.decode(PresentationThemeVariableColor.self, forKey: .actionButtonsBg),
-                  actionButtonsStrokeColor: try values.decode(PresentationThemeVariableColor.self, forKey: .actionButtonsStroke),
-                  actionButtonsTextColor: try values.decode(PresentationThemeVariableColor.self, forKey: .actionButtonsText))
+        self.init(
+            bubble: try values.decode(PresentationThemeBubbleColor.self, forKey: .bubble),
+            primaryTextColor: try decodeColor(values, .primaryText),
+            secondaryTextColor: try decodeColor(values, .secondaryText),
+            linkTextColor: try decodeColor(values, .linkText),
+            linkHighlightColor: try decodeColor(values, .linkHighlight),
+            scamColor: try decodeColor(values, .scam),
+            textHighlightColor: try decodeColor(values, .textHighlight),
+            accentTextColor: try decodeColor(values, .accentText),
+            accentControlColor: try decodeColor(values, .accentControl),
+            mediaActiveControlColor: try decodeColor(values, .mediaActiveControl),
+            mediaInactiveControlColor: try decodeColor(values, .mediaInactiveControl),
+            pendingActivityColor: try decodeColor(values, .pendingActivity),
+            fileTitleColor: try decodeColor(values, .fileTitle),
+            fileDescriptionColor: try decodeColor(values, .fileDescription),
+            fileDurationColor: try decodeColor(values, .fileDuration),
+            mediaPlaceholderColor: try decodeColor(values, .mediaPlaceholder),
+            polls: try values.decode(PresentationThemeChatBubblePolls.self, forKey: .polls),
+            actionButtonsFillColor: try values.decode(PresentationThemeVariableColor.self, forKey: .actionButtonsBg),
+            actionButtonsStrokeColor: try values.decode(PresentationThemeVariableColor.self, forKey: .actionButtonsStroke),
+            actionButtonsTextColor: try values.decode(PresentationThemeVariableColor.self, forKey: .actionButtonsText),
+            textSelectionColor: try decodeColor(values, .textSelection),
+            textSelectionKnobColor: try decodeColor(values, .textSelectionKnob)
+        )
     }
-    
     
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
@@ -967,6 +972,8 @@ extension PresentationThemePartedColors: Codable {
         try values.encode(self.actionButtonsFillColor, forKey: .actionButtonsBg)
         try values.encode(self.actionButtonsStrokeColor, forKey: .actionButtonsStroke)
         try values.encode(self.actionButtonsTextColor, forKey: .actionButtonsText)
+        try encodeColor(&values, self.textSelectionColor, .textSelection)
+        try encodeColor(&values, self.textSelectionKnobColor, .textSelectionKnob)
     }
 }
 
