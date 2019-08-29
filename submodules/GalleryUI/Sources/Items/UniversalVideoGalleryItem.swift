@@ -922,7 +922,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     videoNode.continuePlayingWithoutSound()
                 }
             }
-        } else if let _ = node.0 as? GalleryItemTransitionNode, videoNode.hasAttachedContext {
+        } else if let instantNode = node.0 as? GalleryItemTransitionNode, instantNode.isAvailableForInstantPageTransition(), videoNode.hasAttachedContext {
             copyView.removeFromSuperview()
             
             let previousFrame = videoNode.frame
