@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import ShareController
 import CounterContollerTitleView
+import WallpaperResources
 
 public enum ThemePreviewSource {
     case theme(TelegramTheme)
@@ -22,6 +23,7 @@ public final class ThemePreviewController: ViewController {
     private let previewTheme: PresentationTheme
     private let source: ThemePreviewSource
     private let theme = Promise<TelegramTheme?>()
+    private let wallpaper = Promise<TelegramWallpaper>()
     
     private var controllerNode: ThemePreviewControllerNode {
         return self.displayNode as! ThemePreviewControllerNode
@@ -55,6 +57,15 @@ public final class ThemePreviewController: ViewController {
         } else {
             self.theme.set(.single(nil))
             themeName = previewTheme.name.string
+        }
+        
+        if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
+            self.wallpaper.set(cachedWallpaper(account: context.account, slug: file.slug)
+            |> mapToSignal { wallpaper in
+                return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
+            })
+        } else {
+            self.wallpaper.set(.single(previewTheme.chat.defaultWallpaper))
         }
         
         if let author = previewTheme.author {

@@ -53,7 +53,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                     type = .Generic(type: .UpdateVisible)
                 }
             } else {
-                type = .Generic(type: updateType)
+                type = .Generic(type: .Generic)
             }
             return .HistoryView(view: view, type: type, scrollPosition: scrollPosition, flashIndicators: false, originalScrollPosition: chatScrollPosition, initialData: ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData), id: location.id)
         }
