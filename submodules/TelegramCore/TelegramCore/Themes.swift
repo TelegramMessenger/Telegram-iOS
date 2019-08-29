@@ -264,6 +264,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
 
 public enum CreateThemeError {
     case generic
+    case slugInvalid
 }
 
 public enum CreateThemeResult {
@@ -279,7 +280,12 @@ public func createTheme(account: Account, title: String, resource: MediaResource
             case let .complete(file):
                 if let resource = file.resource as? CloudDocumentMediaResource {
                     return account.network.request(Api.functions.account.createTheme(slug: "", title: title, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))))
-                    |> mapError { _ in return CreateThemeError.generic }
+                    |> mapError { error in
+                        if error.errorDescription == "THEME_SLUG_INVALID" {
+                            return .slugInvalid
+                        }
+                        return CreateThemeError.generic
+                    }
                     |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
                         if let theme = TelegramTheme(apiTheme: apiTheme) {
                             return account.postbox.transaction { transaction -> CreateThemeResult in
@@ -318,7 +324,7 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
     if let _ = title {
         flags |= 1 << 1
     }
-    if let _ = slug {
+    if let slug = slug, !slug.isEmpty {
         flags |= 1 << 0
     }
     if let _ = resource {
@@ -353,7 +359,12 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
         }
         
         return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
-        |> mapError { _ in return CreateThemeError.generic }
+        |> mapError { error in
+                if error.errorDescription == "THEME_SLUG_INVALID" {
+                    return .slugInvalid
+                }
+                return CreateThemeError.generic
+            }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
             if let result = TelegramTheme(apiTheme: apiTheme) {
                 return account.postbox.transaction { transaction -> CreateThemeResult in
