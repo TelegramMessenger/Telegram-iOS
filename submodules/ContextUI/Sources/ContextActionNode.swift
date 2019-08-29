@@ -149,6 +149,29 @@ final class ContextActionNode: ASDisplayNode {
         }
     }
     
+    func updateTheme(theme: PresentationTheme) {
+        self.backgroundNode.backgroundColor = theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode.backgroundColor = theme.contextMenu.itemHighlightedBackgroundColor
+        
+        let textColor: UIColor
+        switch action.textColor {
+        case .primary:
+            textColor = theme.contextMenu.primaryColor
+        case .destructive:
+            textColor = theme.contextMenu.destructiveColor
+        }
+        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: textFont, textColor: textColor)
+        
+        switch self.action.textLayout {
+        case let .secondLineWithValue(value):
+            self.statusNode?.attributedText = NSAttributedString(string: value, font: textFont, textColor: theme.contextMenu.secondaryColor)
+        default:
+            break
+        }
+        
+        self.iconNode.image = self.action.icon(theme)
+    }
+    
     @objc private func buttonPressed() {
         self.performAction()
     }

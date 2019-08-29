@@ -1890,7 +1890,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: transition)
             } else {
                 strongSelf.backgroundNode.frame = backgroundFrame
-                strongSelf.backgroundWallpaperNode.frame = backgroundFrame
+                strongSelf.backgroundWallpaperNode.frame = backgroundFrame//.insetBy(dx: 1.0, dy: 1.0)
             }
             if let (rect, size) = strongSelf.absoluteRect {
                 strongSelf.updateAbsoluteRect(rect, within: size)
@@ -2081,7 +2081,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         if let backgroundFrameTransition = self.backgroundFrameTransition {
             let backgroundFrame = CGRect.interpolator()(backgroundFrameTransition.0, backgroundFrameTransition.1, progress) as! CGRect
             self.backgroundNode.frame = backgroundFrame
-            self.backgroundWallpaperNode.frame = backgroundFrame
+            self.backgroundWallpaperNode.frame = backgroundFrame//.insetBy(dx: 1.0, dy: 1.0)
             
             if let type = self.backgroundNode.type {
                 var incomingOffset: CGFloat = 0.0
