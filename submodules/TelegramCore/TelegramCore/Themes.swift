@@ -321,11 +321,11 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
         return .complete()
     }
     var flags: Int32 = 0
-    if let _ = title {
-        flags |= 1 << 1
-    }
     if let slug = slug, !slug.isEmpty {
         flags |= 1 << 0
+    }
+    if let _ = title {
+        flags |= 1 << 1
     }
     if let _ = resource {
         flags |= 1 << 2
