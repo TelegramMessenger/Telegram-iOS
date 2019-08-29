@@ -287,7 +287,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             guard let strongSelf = self else {
                 return
             }
-            if let result = result {
+            if let result = result, strongSelf.scrubbingFrames {
                 switch result {
                 case .waitingForData:
                     strongSelf.footerContentNode.setFramePreviewImageIsLoading()
