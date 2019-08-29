@@ -153,6 +153,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         return self.automaticPlayback ?? false
     }
     
+    func isAvailableForInstantPageTransition() -> Bool {
+        return false
+    }
+    
     override func didLoad() {
         super.didLoad()
         

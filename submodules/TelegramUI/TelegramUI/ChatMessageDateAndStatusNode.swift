@@ -145,7 +145,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
-            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
             let offset: CGFloat = -UIScreenPixel
             
             switch type {

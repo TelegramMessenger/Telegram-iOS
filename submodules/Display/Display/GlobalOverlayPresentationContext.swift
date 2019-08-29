@@ -80,7 +80,7 @@ final class GlobalOverlayPresentationContext {
                 }
                 
                 if updateTrackingNode {
-                    self.currentTrackingNode?.removeFromSupernode()
+                    /*self.currentTrackingNode?.removeFromSupernode()
                     let trackingNode = HierarchyTrackingNode({ [weak self] value in
                         guard let strongSelf = self else {
                             return
@@ -91,7 +91,7 @@ final class GlobalOverlayPresentationContext {
                     })
                     
                     self.currentTrackingNode = trackingNode
-                    keyboardView.layer.addSublayer(trackingNode.layer)
+                    keyboardView.layer.addSublayer(trackingNode.layer)*/
                 }
                 return keyboardWindow
             } else {

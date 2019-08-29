@@ -276,7 +276,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         if let subnodes = self.subnodes {
             for node in subnodes {
-                if node !== self.accessoryItemNode {
+                if let contextNode = node as? ContextContentContainingNode {
+                    if let contextSubnodes = contextNode.contentNode.subnodes {
+                        for contextSubnode in contextSubnodes {
+                            if contextSubnode !== self.accessoryItemNode {
+                                contextSubnode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                            }
+                        }
+                    }
+                } else if node !== self.accessoryItemNode {
                     node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 }
             }
@@ -1493,7 +1501,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         let layout = ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets)
         
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, gradientBubbles: item.context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
         
         var updatedMergedTop = mergedBottom
         var updatedMergedBottom = mergedTop
@@ -2686,7 +2694,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         if self.highlightedState != highlighted {
             self.highlightedState = highlighted
             if let backgroundType = self.backgroundType {
-                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
+                let graphics = PresentationResourcesChat.principalGraphics(mediaBox: item.context.account.postbox.mediaBox, knockoutWallpaper: item.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, gradientBubbles: item.context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
                 
                 if highlighted {
                     self.backgroundNode.setType(type: backgroundType, highlighted: true, graphics: graphics, maskMode: self.contextSourceNode.isExtractedToContextPreview, transition: .immediate)

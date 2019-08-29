@@ -143,7 +143,7 @@ public final class PrincipalThemeEssentialGraphics {
     public let incomingBubbleGradientImage: UIImage?
     public let outgoingBubbleGradientImage: UIImage?
     
-    init(mediaBox: MediaBox, presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, knockoutMode: Bool) {
+    init(mediaBox: MediaBox, presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, knockoutMode: Bool, gradientBubbles: Bool) {
         let theme = presentationTheme.chat
         var wallpaper = initialWallpaper
         
@@ -173,7 +173,7 @@ public final class PrincipalThemeEssentialGraphics {
                     }
                     
                     var outgoingGradientColors: (UIColor, UIColor)?
-                    if false, let baseColor = presentationTheme.baseColor {
+                    if gradientBubbles, let baseColor = presentationTheme.baseColor {
                         if presentationTheme.baseColor == .custom {
                             
                         } else {

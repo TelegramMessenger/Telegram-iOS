@@ -231,6 +231,8 @@
 		D033FEB41E61F3C000644997 /* ReportPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEB21E61F3C000644997 /* ReportPeer.swift */; };
 		D033FEB61E61F3F900644997 /* BlockedPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEB51E61F3F900644997 /* BlockedPeers.swift */; };
 		D033FEB71E61F3F900644997 /* BlockedPeers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D033FEB51E61F3F900644997 /* BlockedPeers.swift */; };
+		D03413F1231323CE00B555F3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B5230FBB2B005C2E08 /* Theme.swift */; };
+		D03413F3231325B300B555F3 /* Themes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B3230FB70B005C2E08 /* Themes.swift */; };
 		D035732F22B5C24F00F0920D /* TelegramApi.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D035732E22B5C24F00F0920D /* TelegramApi.framework */; };
 		D0380DBA204EF306000414AB /* MessageMediaPreuploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DB9204EF306000414AB /* MessageMediaPreuploadManager.swift */; };
 		D0380DBB204EF306000414AB /* MessageMediaPreuploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0380DB9204EF306000414AB /* MessageMediaPreuploadManager.swift */; };
@@ -2530,6 +2532,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D03413F3231325B300B555F3 /* Themes.swift in Sources */,
+				D03413F1231323CE00B555F3 /* Theme.swift in Sources */,
 				D04D21382306ECF600609388 /* FormatPhoneNumber.m in Sources */,
 				D021E7E82306EC03002F8BD1 /* OutgoingScheduleInfoMessageAttribute.swift in Sources */,
 				D021E7E92306EC03002F8BD1 /* ScheduledMessages.swift in Sources */,

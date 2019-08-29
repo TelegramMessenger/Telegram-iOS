@@ -28,7 +28,13 @@ public func setSecretChatMessageAutoremoveTimeoutInteractively(account: Account,
 
 public func addSecretChatMessageScreenshot(account: Account, peerId: PeerId) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Void in
-        if let peer = transaction.getPeer(peerId) as? TelegramSecretChat, let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+        if let _ = transaction.getPeer(peerId) as? TelegramSecretChat, let state = transaction.getPeerChatState(peerId) as? SecretChatState {
+            switch state.embeddedState {
+            case .handshake, .terminated:
+                return
+            default:
+                break
+            }
             let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: [(true, .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaAction(action: TelegramMediaActionType.historyScreenshot)), replyToMessageId: nil, localGroupingKey: nil))])
         }
     }

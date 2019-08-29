@@ -92,6 +92,7 @@ public func telegramThemes(postbox: Postbox, network: Network, forceUpdate: Bool
 public enum GetThemeError {
     case generic
     case unsupported
+    case slugInvalid
 }
 
 public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, GetThemeError> {
@@ -99,6 +100,9 @@ public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, Ge
     |> mapError { error -> GetThemeError in
         if error.errorDescription == "THEME_FORMAT_INVALID" {
             return .unsupported
+        }
+        if error.errorDescription == "THEME_SLUG_INVALID" {
+            return .slugInvalid
         }
         return .generic
     }
@@ -260,7 +264,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
 
 public enum CreateThemeError {
     case generic
-    case slugOccupied
+    case slugInvalid
 }
 
 public enum CreateThemeResult {
@@ -276,7 +280,12 @@ public func createTheme(account: Account, title: String, resource: MediaResource
             case let .complete(file):
                 if let resource = file.resource as? CloudDocumentMediaResource {
                     return account.network.request(Api.functions.account.createTheme(slug: "", title: title, document: .inputDocument(id: resource.fileId, accessHash: resource.accessHash, fileReference: Buffer(data: resource.fileReference))))
-                    |> mapError { _ in return CreateThemeError.generic }
+                    |> mapError { error in
+                        if error.errorDescription == "THEME_SLUG_INVALID" {
+                            return .slugInvalid
+                        }
+                        return .generic
+                    }
                     |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
                         if let theme = TelegramTheme(apiTheme: apiTheme) {
                             return account.postbox.transaction { transaction -> CreateThemeResult in
@@ -315,8 +324,11 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
     if let _ = title {
         flags |= 1 << 1
     }
-    if let _ = slug {
+    if let slug = slug, !slug.isEmpty {
         flags |= 1 << 0
+    }
+    if let _ = resource {
+        flags |= 1 << 2
     }
     let uploadSignal: Signal<UploadThemeResult?, UploadThemeError>
     if let resource = resource {
@@ -348,9 +360,9 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
         }
         
         return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
-        |> mapError { error -> CreateThemeError in
-            if error.errorDescription.hasPrefix("THEME_SLUG_OCCUPIED") {
-                return .slugOccupied
+        |> mapError { error in
+            if error.errorDescription == "THEME_SLUG_INVALID" {
+                return .slugInvalid
             }
             return .generic
         }

@@ -120,7 +120,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         
         self.transform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
         
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
@@ -173,7 +173,7 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     }
     
     func updatePresentationData(_ presentationData: ChatPresentationData, context: AccountContext) {
-        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+        let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
         
         self.backgroundNode.image = graphics.dateStaticBackground
         self.stickBackgroundNode.image = graphics.dateFloatingBackground

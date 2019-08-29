@@ -155,22 +155,26 @@ static void setNilField(CustomBlurEffect *object, NSString *name) {
 }
 
 UIBlurEffect *makeCustomZoomBlurEffect() {
-    NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
-    CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
-    
-    setField(result, encodeText(@"tfuCmvsSbejvt;", -1), 10.0);
-    setField(result, encodeText(@"tfu[ppn;", -1), 0.015);
-    setNilField(result, encodeText(@"tfuDpmpsUjou;", -1));
-    setField(result, encodeText(@"tfuDpmpsUjouBmqib;", -1), 0.0);
-    setField(result, encodeText(@"tfuEbslfojohUjouBmqib;", -1), 0.0);
-    setField(result, encodeText(@"tfuHsbztdbmfUjouBmqib;", -1), 0.0);
-    setField(result, encodeText(@"tfuTbuvsbujpoEfmubGbdups;", -1), 1.0);
-    
-    if ([UIScreen mainScreen].scale > 2.5f) {
-        setField(result, encodeText(@"setScale:", 0), 0.3);
+    if (@available(iOS 11.0, *)) {
+        NSString *string = [@[@"_", @"UI", @"Custom", @"BlurEffect"] componentsJoinedByString:@""];
+        CustomBlurEffect *result = (CustomBlurEffect *)[NSClassFromString(string) effectWithStyle:0];
+        
+        setField(result, encodeText(@"tfuCmvsSbejvt;", -1), 10.0);
+        setField(result, encodeText(@"tfu[ppn;", -1), 0.015);
+        setNilField(result, encodeText(@"tfuDpmpsUjou;", -1));
+        setField(result, encodeText(@"tfuDpmpsUjouBmqib;", -1), 0.0);
+        setField(result, encodeText(@"tfuEbslfojohUjouBmqib;", -1), 0.0);
+        setField(result, encodeText(@"tfuHsbztdbmfUjouBmqib;", -1), 0.0);
+        setField(result, encodeText(@"tfuTbuvsbujpoEfmubGbdups;", -1), 1.0);
+        
+        if ([UIScreen mainScreen].scale > 2.5f) {
+            setField(result, encodeText(@"setScale:", 0), 0.3);
+        } else {
+            setField(result, encodeText(@"setScale:", 0), 0.5);
+        }
+        
+        return result;
     } else {
-        setField(result, encodeText(@"setScale:", 0), 0.5);
+        return [UIBlurEffect effectWithStyle:UIBlurEffectStyleRegular];
     }
-    
-    return result;
 }

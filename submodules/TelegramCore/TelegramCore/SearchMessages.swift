@@ -413,7 +413,9 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
         return .single(nil)
     }
     let signal: Signal<Api.messages.Messages, MTRpcError>
-    if id.peerId.namespace == Namespaces.Peer.CloudChannel {
+    if id.namespace == Namespaces.Message.ScheduledCloud {
+        signal = source.request(Api.functions.messages.getScheduledMessages(peer: peer.inputPeer, id: [id.id]))
+    } else if id.peerId.namespace == Namespaces.Peer.CloudChannel {
         if let channel = peer.inputChannel {
             signal = source.request(Api.functions.channels.getMessages(channel: channel, id: [Api.InputMessage.inputMessageID(id: id.id)]))
         } else {
