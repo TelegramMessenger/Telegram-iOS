@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import ChatListUI
+import WallpaperResources
 
 private func generateMaskImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 60.0), opaque: false, rotatedContext: { size, context in
@@ -42,6 +43,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
     
+    private let chatContainerNode: ASDisplayNode
     private let instantChatBackgroundNode: WallpaperBackgroundNode
     private let remoteChatBackgroundNode: TransformImageNode
     private var messageNodes: [ListViewItemNode]?
@@ -52,6 +54,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var wallpaperDisposable: Disposable?
     private var colorDisposable: Disposable?
+    private var statusDisposable: Disposable?
     
     init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
         self.context = context
@@ -75,14 +78,24 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.pageControlNode = PageControlNode(dotColor: previewTheme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: previewTheme.list.pageIndicatorInactiveColor)
     
         self.chatListBackgroundNode = ASDisplayNode()
+        
+        self.chatContainerNode = ASDisplayNode()
         self.instantChatBackgroundNode = WallpaperBackgroundNode()
         self.instantChatBackgroundNode.displaysAsynchronously = false
         self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
         self.instantChatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
         
         self.remoteChatBackgroundNode = TransformImageNode()
+        self.remoteChatBackgroundNode.backgroundColor = previewTheme.chatList.backgroundColor
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
+        
+        if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
+            self.remoteChatBackgroundNode.isHidden = false
+            self.toolbarNode.setDoneEnabled(false)
+        } else {
+            self.remoteChatBackgroundNode.isHidden = true
+        }
         
         self.maskNode = ASImageNode()
         self.maskNode.displaysAsynchronously = false
@@ -114,8 +127,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.toolbarNode)
         
         self.scrollNode.addSubnode(self.chatListBackgroundNode)
-        self.scrollNode.addSubnode(self.instantChatBackgroundNode)
-        self.scrollNode.addSubnode(self.remoteChatBackgroundNode)
+        self.scrollNode.addSubnode(self.chatContainerNode)
+        
+        self.chatContainerNode.addSubnode(self.instantChatBackgroundNode)
+        self.chatContainerNode.addSubnode(self.remoteChatBackgroundNode)
         
         self.toolbarNode.cancel = {
             dismiss()
@@ -137,10 +152,53 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             }
         })
+        
+        self.wallpaperDisposable = (self.wallpaperPromise.get()
+        |> deliverOnMainQueue).start(next: { [weak self] wallpaper in
+            guard let strongSelf = self else {
+                return
+            }
+            if case let .file(file) = wallpaper {
+                let dimensions = file.file.dimensions ?? CGSize(width: 100.0, height: 100.0)
+                let displaySize = dimensions.dividedByScreenScale().integralFloor
+                
+                var convertedRepresentations: [ImageRepresentationWithReference] = []
+                for representation in file.file.previewRepresentations {
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(resource: representation.resource)))
+                }
+                convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
+                
+                let fileReference = FileMediaReference.standalone(media: file.file)
+                let signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: true, autoFetchFullSize: false)
+                strongSelf.remoteChatBackgroundNode.setSignal(signal)
+                
+                let account = strongSelf.context.account
+                let statusSignal = strongSelf.context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)
+                |> take(1)
+                |> mapToSignal { status -> Signal<MediaResourceStatus, NoError> in
+                    if case .Local = status {
+                        return .single(status)
+                    } else {
+                        return account.postbox.mediaBox.resourceStatus(file.file.resource)
+                    }
+                }
+                
+                strongSelf.statusDisposable = (statusSignal
+                |> deliverOnMainQueue).start(next: { [weak self] status in
+                    if let strongSelf = self, case .Local = status {
+                        strongSelf.toolbarNode.setDoneEnabled(true)
+                    }
+                })
+                
+                strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))()
+            }
+        })
     }
     
     deinit {
         self.colorDisposable?.dispose()
+        self.wallpaperDisposable?.dispose()
+        self.statusDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -305,7 +363,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
                 itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
-                self.instantChatBackgroundNode.addSubnode(itemNode!)
+                self.chatContainerNode.addSubnode(itemNode!)
             }
             self.messageNodes = messageNodes
         }
@@ -326,8 +384,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
         self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
-        self.instantChatBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
-        self.remoteChatBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+        self.chatContainerNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+        self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
+        self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
     
         self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
         
