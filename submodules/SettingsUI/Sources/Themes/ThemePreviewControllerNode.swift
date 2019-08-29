@@ -30,6 +30,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let previewTheme: PresentationTheme
     private var presentationData: PresentationData
     
+    public let wallpaperPromise = Promise<TelegramWallpaper>()
+    
     private let referenceTimestamp: Int32
     
     private let scrollNode: ASScrollNode
@@ -40,13 +42,15 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
     
-    private let chatBackgroundNode: WallpaperBackgroundNode
+    private let instantChatBackgroundNode: WallpaperBackgroundNode
+    private let remoteChatBackgroundNode: TransformImageNode
     private var messageNodes: [ListViewItemNode]?
 
     private let toolbarNode: WallpaperGalleryToolbarNode
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
+    private var wallpaperDisposable: Disposable?
     private var colorDisposable: Disposable?
     
     init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
@@ -63,17 +67,20 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.referenceTimestamp = Int32(calendar.date(from: components)?.timeIntervalSince1970 ?? 0.0)
         
         self.scrollNode = ASScrollNode()
+        
         self.pageControlBackgroundNode = ASDisplayNode()
         self.pageControlBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
-        self.pageControlBackgroundNode.cornerRadius = 6.0
+        self.pageControlBackgroundNode.cornerRadius = 8.0
         
         self.pageControlNode = PageControlNode(dotColor: previewTheme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: previewTheme.list.pageIndicatorInactiveColor)
     
         self.chatListBackgroundNode = ASDisplayNode()
-        self.chatBackgroundNode = WallpaperBackgroundNode()
-        self.chatBackgroundNode.displaysAsynchronously = false
-        self.chatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-        self.chatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
+        self.instantChatBackgroundNode = WallpaperBackgroundNode()
+        self.instantChatBackgroundNode.displaysAsynchronously = false
+        self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
+        self.instantChatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
+        
+        self.remoteChatBackgroundNode = TransformImageNode()
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
         
@@ -94,7 +101,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
         
         if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
-            self.chatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
         }
         
         self.pageControlNode.isUserInteractionEnabled = false
@@ -107,7 +114,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.addSubnode(self.toolbarNode)
         
         self.scrollNode.addSubnode(self.chatListBackgroundNode)
-        self.scrollNode.addSubnode(self.chatBackgroundNode)
+        self.scrollNode.addSubnode(self.instantChatBackgroundNode)
+        self.scrollNode.addSubnode(self.remoteChatBackgroundNode)
         
         self.toolbarNode.cancel = {
             dismiss()
@@ -116,7 +124,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             apply()
         }
         
-        self.colorDisposable = (chatServiceBackgroundColor(wallpaper: self.previewTheme.chat.defaultWallpaper, mediaBox: context.account.postbox.mediaBox)
+        self.colorDisposable = (self.wallpaperPromise.get()
+        |> mapToSignal { wallpaper in
+            return chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.account.postbox.mediaBox)
+        }
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
                 if strongSelf.previewTheme.chat.defaultWallpaper.hasWallpaper {
@@ -294,7 +305,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 itemNode!.subnodeTransform = CATransform3DMakeRotation(CGFloat.pi, 0.0, 0.0, 1.0)
                 itemNode!.isUserInteractionEnabled = false
                 messageNodes.append(itemNode!)
-                self.chatBackgroundNode.addSubnode(itemNode!)
+                self.instantChatBackgroundNode.addSubnode(itemNode!)
             }
             self.messageNodes = messageNodes
         }
@@ -315,7 +326,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
         self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
-        self.chatBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+        self.instantChatBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+        self.remoteChatBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
     
         self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
         

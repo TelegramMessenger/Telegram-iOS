@@ -75,7 +75,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.scrollNode = ASScrollNode()
         self.pageControlBackgroundNode = ASDisplayNode()
         self.pageControlBackgroundNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
-        self.pageControlBackgroundNode.cornerRadius = 6.0
+        self.pageControlBackgroundNode.cornerRadius = 8.0
         
         self.pageControlNode = PageControlNode(dotColor: self.theme.chatList.unreadBadgeActiveBackgroundColor, inactiveDotColor: self.presentationData.theme.list.pageIndicatorInactiveColor)
         
@@ -168,10 +168,10 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             }
         })
         
-        self.serviceColorDisposable = (chatServiceBackgroundColor(wallpaper: self.presentationData.theme.chat.defaultWallpaper, mediaBox: context.account.postbox.mediaBox)
+        self.serviceColorDisposable = (chatServiceBackgroundColor(wallpaper: self.presentationData.chatWallpaper, mediaBox: context.account.postbox.mediaBox)
         |> deliverOnMainQueue).start(next: { [weak self] color in
             if let strongSelf = self {
-                if strongSelf.presentationData.theme.chat.defaultWallpaper.hasWallpaper {
+                if strongSelf.presentationData.chatWallpaper.hasWallpaper {
                     strongSelf.pageControlBackgroundNode.backgroundColor = color
                 } else {
                     strongSelf.pageControlBackgroundNode.backgroundColor = .clear

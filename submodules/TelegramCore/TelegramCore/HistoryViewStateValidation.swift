@@ -138,6 +138,8 @@ final class HistoryViewStateValidationContexts {
     
     private var contexts: [Int32: HistoryStateValidationContext] = [:]
     
+    private var previousPeerValidationTimestamps: [PeerId: Double] = [:]
+    
     init(queue: Queue, postbox: Postbox, network: Network, accountPeerId: PeerId) {
         self.queue = queue
         self.postbox = postbox
@@ -264,21 +266,27 @@ final class HistoryViewStateValidationContexts {
         } else if view.namespaces.contains(Namespaces.Message.ScheduledCloud) {
             if let _ = self.contexts[id] {
             } else if let location = location, case let .peer(peerId) = location {
-                let context = HistoryStateValidationContext()
-                self.contexts[id] = context
-        
-                let disposable = MetaDisposable()
-                let batch = HistoryStateValidationBatch(disposable: disposable)
-                context.batch = batch
-                
-                let messages: [Message] = view.entries.map { $0.message }.filter { $0.id.namespace == Namespaces.Message.ScheduledCloud }
+                let timestamp = self.network.context.globalTime()
+                if let previousTimestamp = self.previousPeerValidationTimestamps[peerId], timestamp < previousTimestamp + 60  {
+                } else {
+                    self.previousPeerValidationTimestamps[peerId] = timestamp
+                    
+                    let context = HistoryStateValidationContext()
+                    self.contexts[id] = context
             
-                disposable.set((validateScheduledMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: peerId, tag: nil, messages: messages, historyState: .scheduledMessages(peerId))
-                |> deliverOn(self.queue)).start(completed: { [weak self] in
-                    if let strongSelf = self, let context = strongSelf.contexts[id] {
-                        context.batch = nil
-                    }
-                }))
+                    let disposable = MetaDisposable()
+                    let batch = HistoryStateValidationBatch(disposable: disposable)
+                    context.batch = batch
+                    
+                    let messages: [Message] = view.entries.map { $0.message }.filter { $0.id.namespace == Namespaces.Message.ScheduledCloud }
+                
+                    disposable.set((validateScheduledMessagesBatch(postbox: self.postbox, network: self.network, accountPeerId: peerId, tag: nil, messages: messages, historyState: .scheduledMessages(peerId))
+                    |> deliverOn(self.queue)).start(completed: { [weak self] in
+                        if let strongSelf = self, let context = strongSelf.contexts[id] {
+                            context.batch = nil
+                        }
+                    }))
+                }
             }
         }
     }

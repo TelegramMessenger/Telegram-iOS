@@ -284,7 +284,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                         if error.errorDescription == "THEME_SLUG_INVALID" {
                             return .slugInvalid
                         }
-                        return CreateThemeError.generic
+                        return .generic
                     }
                     |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
                         if let theme = TelegramTheme(apiTheme: apiTheme) {
@@ -332,6 +332,7 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
     }
     let uploadSignal: Signal<UploadThemeResult?, UploadThemeError>
     if let resource = resource {
+        flags |= 1 << 2
         uploadSignal = uploadTheme(account: account, resource: resource, thumbnailData: thumbnailData)
         |> map(Optional.init)
     } else {
@@ -360,11 +361,11 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
         
         return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
         |> mapError { error in
-                if error.errorDescription == "THEME_SLUG_INVALID" {
-                    return .slugInvalid
-                }
-                return CreateThemeError.generic
+            if error.errorDescription == "THEME_SLUG_INVALID" {
+                return .slugInvalid
             }
+            return .generic
+        }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
             if let result = TelegramTheme(apiTheme: apiTheme) {
                 return account.postbox.transaction { transaction -> CreateThemeResult in
