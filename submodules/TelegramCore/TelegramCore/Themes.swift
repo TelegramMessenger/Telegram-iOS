@@ -260,6 +260,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
 
 public enum CreateThemeError {
     case generic
+    case slugOccupied
 }
 
 public enum CreateThemeResult {
@@ -319,6 +320,7 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
     }
     let uploadSignal: Signal<UploadThemeResult?, UploadThemeError>
     if let resource = resource {
+        flags |= 1 << 2
         uploadSignal = uploadTheme(account: account, resource: resource, thumbnailData: thumbnailData)
         |> map(Optional.init)
     } else {
@@ -346,7 +348,12 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
         }
         
         return account.network.request(Api.functions.account.updateTheme(flags: flags, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
-        |> mapError { _ in return CreateThemeError.generic }
+        |> mapError { error -> CreateThemeError in
+            if error.errorDescription.hasPrefix("THEME_SLUG_OCCUPIED") {
+                return .slugOccupied
+            }
+            return .generic
+        }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
             if let result = TelegramTheme(apiTheme: apiTheme) {
                 return account.postbox.transaction { transaction -> CreateThemeResult in
