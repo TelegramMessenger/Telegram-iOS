@@ -173,7 +173,7 @@ public final class PrincipalThemeEssentialGraphics {
                     }
                     
                     var outgoingGradientColors: (UIColor, UIColor)?
-                    if let baseColor = presentationTheme.baseColor {
+                    if false, let baseColor = presentationTheme.baseColor {
                         if presentationTheme.baseColor == .custom {
                             
                         } else {

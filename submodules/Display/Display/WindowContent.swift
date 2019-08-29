@@ -1054,6 +1054,14 @@ public class Window1 {
         }
     }
     
+    public func simulateKeyboardDismiss(transition: ContainedViewLayoutTransition) {
+        if self.windowLayout.inputHeight != nil {
+            self.updateLayout {
+                $0.update(upperKeyboardInputPositionBound: self.windowLayout.size.height, transition: transition, overrideTransition: false)
+            }
+        }
+    }
+    
     private func panGestureEnded(location: CGPoint, velocity: CGPoint?) {
         if self.keyboardGestureBeginLocation == nil {
             return

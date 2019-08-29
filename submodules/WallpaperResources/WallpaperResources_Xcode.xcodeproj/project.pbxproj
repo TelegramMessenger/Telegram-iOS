@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		095214ED2317EF76008CDD87 /* WallpaperCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 095214EC2317EF76008CDD87 /* WallpaperCache.swift */; };
 		D03E484A23076B4A0049C28B /* WallpaperResources.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E484823076B4A0049C28B /* WallpaperResources.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E485523076BB70049C28B /* WallpaperResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E485423076BB70049C28B /* WallpaperResources.swift */; };
 		D03E485823076BCB0049C28B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E485723076BCB0049C28B /* Foundation.framework */; };
@@ -24,6 +25,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		095214EC2317EF76008CDD87 /* WallpaperCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperCache.swift; sourceTree = "<group>"; };
 		D03E484523076B4A0049C28B /* WallpaperResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = WallpaperResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E484823076B4A0049C28B /* WallpaperResources.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WallpaperResources.h; sourceTree = "<group>"; };
 		D03E484923076B4A0049C28B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -88,6 +90,7 @@
 				D03E485423076BB70049C28B /* WallpaperResources.swift */,
 				D03E487123076CF10049C28B /* FrameworkBundle.swift */,
 				D03E484823076B4A0049C28B /* WallpaperResources.h */,
+				095214EC2317EF76008CDD87 /* WallpaperCache.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -191,6 +194,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D03E487223076CF10049C28B /* FrameworkBundle.swift in Sources */,
+				095214ED2317EF76008CDD87 /* WallpaperCache.swift in Sources */,
 				D03E485523076BB70049C28B /* WallpaperResources.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

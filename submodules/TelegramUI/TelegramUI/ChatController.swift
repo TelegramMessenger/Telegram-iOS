@@ -2315,6 +2315,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             state = state.updatedChatWallpaper(self.presentationData.chatWallpaper)
             return state
         })
+        
+        self.currentContextController?.updateTheme(theme: self.presentationData.theme)
     }
     
     override public func loadDisplayNode() {
