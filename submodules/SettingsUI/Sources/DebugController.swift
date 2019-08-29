@@ -69,6 +69,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
+    case gradientBubbles(PresentationTheme, Bool)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -81,7 +82,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
             return DebugControllerSection.experiments.rawValue
         case .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -132,8 +133,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 19
         case .knockoutWallpaper:
             return 20
-        case .versionInfo:
+        case .gradientBubbles:
             return 21
+        case .versionInfo:
+            return 22
         }
     }
     
@@ -501,6 +504,16 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .gradientBubbles(theme, value):
+            return ItemListSwitchItem(theme: theme, title: "Gradient", value: value, sectionId: self.section, style: .blocks, updated: { value in
+                let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
+                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
+                        var settings = settings as? ExperimentalUISettings ?? ExperimentalUISettings.defaultSettings
+                        settings.gradientBubbles = value
+                        return settings
+                    })
+                }).start()
+            })
         case let .versionInfo(theme):
             let bundle = Bundle.main
             let bundleId = bundle.bundleIdentifier ?? ""
@@ -540,6 +553,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
+    entries.append(.gradientBubbles(presentationData.theme, experimentalSettings.gradientBubbles))
 
     entries.append(.versionInfo(presentationData.theme))
     
