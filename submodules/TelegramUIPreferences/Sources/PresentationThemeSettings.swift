@@ -56,10 +56,42 @@ public struct PresentationLocalTheme: PostboxCoding, Equatable {
     }
 }
 
+public struct PresentationCloudTheme: PostboxCoding, Equatable {
+    public let theme: TelegramTheme
+    public let resolvedWallpaper: TelegramWallpaper?
+    
+    public init(theme: TelegramTheme, resolvedWallpaper: TelegramWallpaper?) {
+        self.theme = theme
+        self.resolvedWallpaper = resolvedWallpaper
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.theme = decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
+        self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.theme, forKey: "theme")
+        if let resolvedWallpaper = self.resolvedWallpaper {
+            encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
+        }
+    }
+    
+    public static func ==(lhs: PresentationCloudTheme, rhs: PresentationCloudTheme) -> Bool {
+        if lhs.theme != rhs.theme {
+            return false
+        }
+        if lhs.resolvedWallpaper != rhs.resolvedWallpaper {
+            return false
+        }
+        return true
+    }
+}
+
 public enum PresentationThemeReference: PostboxCoding, Equatable {
     case builtin(PresentationBuiltinThemeReference)
     case local(PresentationLocalTheme)
-    case cloud(TelegramTheme)
+    case cloud(PresentationCloudTheme)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -68,7 +100,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case 1:
                 self = .local(decoder.decodeObjectForKey("localTheme", decoder: { PresentationLocalTheme(decoder: $0) }) as! PresentationLocalTheme)
             case 2:
-                self = .cloud(decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme)
+                self = .cloud(decoder.decodeObjectForKey("cloudTheme", decoder: { PresentationCloudTheme(decoder: $0) }) as! PresentationCloudTheme)
             default:
                 assertionFailure()
                 self = .builtin(.dayClassic)
@@ -85,7 +117,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                 encoder.encodeObject(theme, forKey: "localTheme")
             case let .cloud(theme):
                 encoder.encodeInt32(2, forKey: "v")
-                encoder.encodeObject(theme, forKey: "theme")
+                encoder.encodeObject(theme, forKey: "cloudTheme")
         }
     }
     
@@ -135,7 +167,7 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                 id = themeId(for: theme.resource.fileId)
             case let .cloud(theme):
                 namespace = 2
-                id = themeId(for: theme.id)
+                id = themeId(for: theme.theme.id)
         }
         
         return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
@@ -379,8 +411,11 @@ public struct PresentationThemeSettings: PreferencesEntry {
             case let .local(theme):
                 resources.append(theme.resource.id)
             case let .cloud(theme):
-                if let file = theme.file {
+                if let file = theme.theme.file {
                     resources.append(file.resource.id)
+                }
+                if let chatWallpaper = theme.resolvedWallpaper {
+                    resources.append(contentsOf: wallpaperResources(chatWallpaper))
                 }
         }
         return resources

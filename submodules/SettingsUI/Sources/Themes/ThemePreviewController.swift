@@ -116,7 +116,7 @@ public final class ThemePreviewController: ViewController {
                         |> take(1)
                         |> map { theme in
                             if let theme = theme {
-                                return .cloud(theme)
+                                return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil))
                             } else {
                                 return nil
                             }

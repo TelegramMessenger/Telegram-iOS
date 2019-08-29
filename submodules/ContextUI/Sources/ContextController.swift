@@ -93,7 +93,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.effectView = UIVisualEffectView()
         if #available(iOS 9.0, *) {
         } else {
-            if theme.chatList.searchBarKeyboardColor == .dark {
+            if theme.rootController.keyboardColor == .dark {
                 self.effectView.effect = UIBlurEffect(style: .dark)
             } else {
                 self.effectView.effect = UIBlurEffect(style: .light)

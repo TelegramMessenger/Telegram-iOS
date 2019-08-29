@@ -93,7 +93,8 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         statusBarStyle: .black,
         tabBar: rootTabBar,
         navigationBar: rootNavigationBar,
-        navigationSearchBar: navigationSearchBar
+        navigationSearchBar: navigationSearchBar,
+        keyboardColor: .light
     )
     
     let switchColors = PresentationThemeSwitch(
@@ -180,7 +181,6 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         regularSearchBarColor: UIColor(rgb: 0xe9e9e9),
         sectionHeaderFillColor: UIColor(rgb: 0xf7f7f7),
         sectionHeaderTextColor: UIColor(rgb: 0x8e8e93),
-        searchBarKeyboardColor: .light,
         verifiedIconFillColor: accentColor,
         verifiedIconForegroundColor: .white,
         secretIconColor: secretColor,
@@ -264,7 +264,6 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         primaryTextColor: .black,
         secondaryTextColor: UIColor(rgb: 0x8e8e93),
         mediaRecordingDotColor: UIColor(rgb: 0xed2521),
-        keyboardColor: .light,
         mediaRecordingControl: inputPanelMediaRecordingControl
     )
     

@@ -1,4 +1,5 @@
 import Foundation
+import TelegramCore
 
 public func encodePresentationTheme(_ theme: PresentationTheme) -> String? {
     let encoding = PresentationThemeEncoding()
@@ -321,7 +322,7 @@ private class PresentationThemeDecodingLevel {
     }
 }
 
-public func makePresentationTheme(data: Data) -> PresentationTheme? {
+public func makePresentationTheme(data: Data, resolvedWallpaper: TelegramWallpaper? = nil) -> PresentationTheme? {
     guard let string = String(data: data, encoding: .utf8) else {
         return nil
     }
@@ -378,6 +379,7 @@ public func makePresentationTheme(data: Data) -> PresentationTheme? {
     }
     
     let decoder = PresentationThemeDecoding(referencing: topLevel.data)
+    decoder.resolvedWallpaper = resolvedWallpaper
     if let value = try? decoder.unbox(topLevel.data, as: PresentationTheme.self) {
         return value
     }
@@ -392,10 +394,11 @@ class PresentationThemeDecoding: Decoder {
     public var userInfo: [CodingUserInfoKey : Any] {
         return [:]
     }
-
+    
     var referenceTheme: PresentationTheme?
     var serviceBackgroundColor: UIColor?
-    
+    var resolvedWallpaper: TelegramWallpaper?
+
     private var _referenceCoding: PresentationThemeEncoding?
     fileprivate var referenceCoding: PresentationThemeEncoding? {
         if let referenceCoding = self._referenceCoding {

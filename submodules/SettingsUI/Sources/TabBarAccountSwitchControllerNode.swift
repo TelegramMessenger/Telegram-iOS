@@ -234,7 +234,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         self.effectView = UIVisualEffectView()
         if #available(iOS 9.0, *) {
         } else {
-            if presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+            if presentationData.theme.rootController.keyboardColor == .dark {
                 self.effectView.effect = UIBlurEffect(style: .dark)
             } else {
                 self.effectView.effect = UIBlurEffect(style: .light)
@@ -244,7 +244,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         
         self.dimNode = ASDisplayNode()
         self.dimNode.alpha = 1.0
-        if presentationData.theme.chatList.searchBarKeyboardColor == .light {
+        if presentationData.theme.rootController.keyboardColor == .light {
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.04)
         } else {
             self.dimNode.backgroundColor = presentationData.theme.chatList.backgroundColor.withAlphaComponent(0.2)
@@ -287,7 +287,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
     func animateIn() {
         UIView.animate(withDuration: 0.3, animations: {
             if #available(iOS 9.0, *) {
-                if self.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+                if self.presentationData.theme.rootController.keyboardColor == .dark {
                     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                         self.effectView.effect = UIBlurEffect(style: .regular)
                         if self.effectView.subviews.count == 2 {
@@ -310,7 +310,7 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.presentationData.theme.chatList.searchBarKeyboardColor == .dark {
+            if strongSelf.presentationData.theme.rootController.keyboardColor == .dark {
                 if strongSelf.effectView.subviews.count == 2 {
                     strongSelf.effectView.subviews[1].isHidden = true
                 }

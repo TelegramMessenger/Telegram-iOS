@@ -30,7 +30,21 @@ private final class LegacyICloudFileController: LegacyController, UIDocumentPick
     }
 }
 
-func legacyICloudFileController(theme: PresentationTheme, completion: @escaping ([URL]) -> Void) -> ViewController {
+public enum LegacyICloudFilePickerMode {
+    case `default`
+    case `import`
+    
+    var documentPickerMode: UIDocumentPickerMode {
+        switch self {
+            case .default:
+                return .open
+            case .import:
+                return .import
+        }
+    }
+}
+
+public func legacyICloudFilePicker(theme: PresentationTheme, mode: LegacyICloudFilePickerMode = .default, documentTypes: [String] = ["public.item"], completion: @escaping ([URL]) -> Void) -> ViewController {
     var dismissImpl: (() -> Void)?
     let legacyController = LegacyICloudFileController(presentation: .modal(animateIn: true), theme: theme, completion: { urls in
         dismissImpl?()
@@ -38,25 +52,9 @@ func legacyICloudFileController(theme: PresentationTheme, completion: @escaping 
     })
     legacyController.statusBar.statusBarStyle = .Black
     
-    let documentTypes: [String] = [
-        "public.item"
-//        "public.composite-content",
-//        "public.text",
-//        "public.image",
-//        "public.audio",
-//        "public.video",
-//        "public.movie",
-//        "public.font",
-//        "public.data",
-//        "org.telegram.Telegram.webp",
-//        "com.apple.iwork.pages.pages",
-//        "com.apple.iwork.numbers.numbers",
-//        "com.apple.iwork.keynote.key"
-    ]
-    
-    let controller = UIDocumentPickerViewController(documentTypes: documentTypes, in: .open)
+    let controller = UIDocumentPickerViewController(documentTypes: documentTypes, in: mode.documentPickerMode)
     controller.delegate = legacyController
-    if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+    if #available(iOSApplicationExtension 11.0, iOS 11.0, *), case .default = mode {
         controller.allowsMultipleSelection = true
     }
     

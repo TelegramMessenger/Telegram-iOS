@@ -140,12 +140,12 @@ private func saveUnsaveTheme(account: Account, theme: TelegramTheme, unsave: Boo
     }
 }
 
-public func installTheme(account: Account, theme: TelegramTheme) -> Signal<Void, NoError> {
+private func installTheme(account: Account, theme: TelegramTheme) -> Signal<Never, NoError> {
     return account.network.request(Api.functions.account.installTheme(format: themeFormat, theme: Api.InputTheme.inputTheme(id: theme.id, accessHash: theme.accessHash)))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
     }
-    |> mapToSignal { _ -> Signal<Void, NoError> in
+    |> mapToSignal { _ -> Signal<Never, NoError> in
         return .complete()
     }
 }
@@ -233,7 +233,11 @@ public func createTheme(account: Account, resource: MediaResource, title: String
                     |> mapError { _ in return CreateThemeError.generic }
                     |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
                         if let theme = TelegramTheme(apiTheme: apiTheme) {
-                            return .single(.result(theme))
+                            return account.postbox.transaction { transaction -> CreateThemeResult in
+                                
+                                return .result(theme)
+                            }
+                            |> introduceError(CreateThemeError.self)
                         } else {
                             return .fail(.generic)
                         }
@@ -298,4 +302,51 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
             }
         }
     }
+}
+
+public final class ThemeSettings: PreferencesEntry, Equatable {
+    public let currentTheme: TelegramTheme?
+ 
+    public init(currentTheme: TelegramTheme?) {
+        self.currentTheme = currentTheme
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.currentTheme = decoder.decodeObjectForKey("t", decoder: { TelegramTheme(decoder: $0) }) as? TelegramTheme
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        if let currentTheme = currentTheme {
+            encoder.encodeObject(currentTheme, forKey: "t")
+        } else {
+            encoder.encodeNil(forKey: "t")
+        }
+    }
+    
+    public func isEqual(to: PreferencesEntry) -> Bool {
+        if let to = to as? ThemeSettings {
+            return self == to
+        } else {
+            return false
+        }
+    }
+    
+    public static func ==(lhs: ThemeSettings, rhs: ThemeSettings) -> Bool {
+        return lhs.currentTheme == rhs.currentTheme
+    }
+}
+
+public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?) -> Signal<Never, NoError> {
+    return accountManager.transaction { transaction -> Signal<Never, NoError> in
+        transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
+            return ThemeSettings(currentTheme: theme)
+        })
+        
+        if let theme = theme {
+            return installTheme(account: account, theme: theme)
+        } else {
+            return .complete()
+        }
+    }
+    |> switchToLatest
 }

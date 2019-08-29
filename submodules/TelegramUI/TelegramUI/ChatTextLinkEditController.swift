@@ -52,7 +52,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.textInputNode.clipsToBounds = true
         self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         self.textInputNode.textContainerInset = UIEdgeInsets(top: self.inputInsets.top, left: 0.0, bottom: self.inputInsets.bottom, right: 0.0)
-        self.textInputNode.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.keyboardType = .URL
         self.textInputNode.autocapitalizationType = .none
         self.textInputNode.returnKeyType = .done
@@ -77,7 +77,7 @@ private final class ChatTextLinkEditInputFieldNode: ASDisplayNode, ASEditableTex
         self.theme = theme
         
         self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 33.0, color: self.theme.actionSheet.inputHollowBackgroundColor, strokeColor: self.theme.actionSheet.inputBorderColor, strokeWidth: 1.0)
-        self.textInputNode.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         self.textInputNode.tintColor = self.theme.actionSheet.controlAccentColor
     }

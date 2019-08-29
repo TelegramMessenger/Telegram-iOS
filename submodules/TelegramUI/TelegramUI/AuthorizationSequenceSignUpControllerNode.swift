@@ -108,7 +108,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.firstNameField.textField.textContentType = .givenName
         }
-        self.firstNameField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.firstNameField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.firstNameField.textField.tintColor = theme.list.itemAccentColor
         
         self.lastNameField = TextFieldNode()
@@ -122,7 +122,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.lastNameField.textField.textContentType = .familyName
         }
-        self.lastNameField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.lastNameField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.lastNameField.textField.tintColor = theme.list.itemAccentColor
         
         self.currentPhotoNode = ASImageNode()

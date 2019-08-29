@@ -48,7 +48,7 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textInputNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
         self.textInputNode.textField.keyboardAppearance = keyboardAppearance
         self.textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)
-        self.textInputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.textInputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
         
         super.init()

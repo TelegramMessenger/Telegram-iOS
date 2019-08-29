@@ -90,7 +90,7 @@ final class ChannelStatsControllerNode: ViewControllerTracingNode, WKNavigationD
                         }
                     }
                 }
-                self.refreshDisposable.set((channelStatsUrl(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peerId, params: params, darkTheme: self.presentationData.theme.chatList.searchBarKeyboardColor.keyboardAppearance == .dark)
+                self.refreshDisposable.set((channelStatsUrl(postbox: self.context.account.postbox, network: self.context.account.network, peerId: self.peerId, params: params, darkTheme: self.presentationData.theme.rootController.keyboardColor.keyboardAppearance == .dark)
                 |> deliverOnMainQueue).start(next: { [weak self] url in
                     guard let strongSelf = self else {
                         return

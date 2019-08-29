@@ -60,7 +60,7 @@ private func themeIconImage(context: AccountContext, theme: PresentationThemeRef
         if case let .local(theme) = theme {
             resource = theme.resource
         } else if case let .cloud(theme) = theme {
-            resource = theme.file?.resource
+            resource = theme.theme.file?.resource
         }
         if let resource = resource {
             signal = telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: resource, synchronousLoad: false)
