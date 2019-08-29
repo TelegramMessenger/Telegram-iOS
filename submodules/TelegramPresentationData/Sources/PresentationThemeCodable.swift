@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Postbox
 import TelegramCore
 import TelegramUIPreferences
 
@@ -35,7 +36,7 @@ extension TelegramWallpaper: Codable {
                     if let color = UIColor(hexString: value) {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
-                        throw PresentationThemeDecodingError.generic
+                        self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: false, isDark: false, slug: value, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: false, motion: false, color: nil, intensity: nil))
                     }
             }
         } else {
@@ -50,6 +51,8 @@ extension TelegramWallpaper: Codable {
                 try container.encode("builtin")
             case let .color(value):
                 try container.encode(String(format: "%06x", value))
+            case let .file(file):
+                try container.encode(file.slug)
             default:
                 break
         }
@@ -354,6 +357,7 @@ extension PresentationThemeRootController: Codable {
         case tabBar
         case navBar
         case searchBar
+        case keyboard
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -361,7 +365,8 @@ extension PresentationThemeRootController: Codable {
         self.init(statusBarStyle: try values.decode(PresentationThemeStatusBarStyle.self, forKey: .statusBar),
                   tabBar: try values.decode(PresentationThemeRootTabBar.self, forKey: .tabBar),
                   navigationBar: try values.decode(PresentationThemeRootNavigationBar.self, forKey: .navBar),
-                  navigationSearchBar: try values.decode(PresentationThemeNavigationSearchBar.self, forKey: .searchBar))
+                  navigationSearchBar: try values.decode(PresentationThemeNavigationSearchBar.self, forKey: .searchBar),
+                  keyboardColor: try values.decode(PresentationThemeKeyboardColor.self, forKey: .keyboard))
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -370,6 +375,7 @@ extension PresentationThemeRootController: Codable {
         try values.encode(self.tabBar, forKey: .tabBar)
         try values.encode(self.navigationBar, forKey: .navBar)
         try values.encode(self.navigationSearchBar, forKey: .searchBar)
+        try values.encode(self.keyboardColor, forKey: .keyboard)
     }
 }
 
@@ -721,7 +727,6 @@ extension PresentationThemeChatList: Codable {
         case regularSearchBar
         case sectionHeaderBg
         case sectionHeaderText
-        case searchBarKeyboard
         case verifiedIconBg
         case verifiedIconFg
         case secretIcon
@@ -758,7 +763,6 @@ extension PresentationThemeChatList: Codable {
                   regularSearchBarColor: try decodeColor(values, .regularSearchBar),
                   sectionHeaderFillColor: try decodeColor(values, .sectionHeaderBg),
                   sectionHeaderTextColor: try decodeColor(values, .sectionHeaderText),
-                  searchBarKeyboardColor: try values.decode(PresentationThemeKeyboardColor.self, forKey: .searchBarKeyboard),
                   verifiedIconFillColor: try decodeColor(values, .verifiedIconBg),
                   verifiedIconForegroundColor: try decodeColor(values, .verifiedIconFg),
                   secretIconColor: try decodeColor(values, .secretIcon),
@@ -795,7 +799,6 @@ extension PresentationThemeChatList: Codable {
         try encodeColor(&values, self.regularSearchBarColor, .regularSearchBar)
         try encodeColor(&values, self.sectionHeaderFillColor, .sectionHeaderBg)
         try encodeColor(&values, self.sectionHeaderTextColor, .sectionHeaderText)
-        try values.encode(self.searchBarKeyboardColor, forKey: .searchBarKeyboard)
         try encodeColor(&values, self.verifiedIconFillColor, .verifiedIconBg)
         try encodeColor(&values, self.verifiedIconForegroundColor, .verifiedIconFg)
         try encodeColor(&values, self.secretIconColor, .secretIcon)
@@ -1150,7 +1153,6 @@ extension PresentationThemeChatInputPanel: Codable {
         case primaryText
         case secondaryText
         case mediaRecordDot
-        case keyboard
         case mediaRecordControl
     }
     
@@ -1172,7 +1174,6 @@ extension PresentationThemeChatInputPanel: Codable {
                   primaryTextColor: try decodeColor(values, .primaryText),
                   secondaryTextColor: try decodeColor(values, .secondaryText),
                   mediaRecordingDotColor: try decodeColor(values, .mediaRecordDot),
-                  keyboardColor: try values.decode(PresentationThemeKeyboardColor.self, forKey: .keyboard),
                   mediaRecordingControl: try values.decode(PresentationThemeChatInputPanelMediaRecordingControl.self, forKey: .mediaRecordControl))
     }
     
@@ -1194,7 +1195,6 @@ extension PresentationThemeChatInputPanel: Codable {
         try encodeColor(&values, self.primaryTextColor, .primaryText)
         try encodeColor(&values, self.secondaryTextColor, .secondaryText)
         try encodeColor(&values, self.mediaRecordingDotColor, .mediaRecordDot)
-        try values.encode(self.keyboardColor, forKey: .keyboard)
         try values.encode(self.mediaRecordingControl, forKey: .mediaRecordControl)
     }
 }
@@ -1320,7 +1320,15 @@ extension PresentationThemeChat: Codable {
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(defaultWallpaper: try values.decode(TelegramWallpaper.self, forKey: .defaultWallpaper),
+        
+        var wallpaper = try values.decode(TelegramWallpaper.self, forKey: .defaultWallpaper)
+        if let decoder = decoder as? PresentationThemeDecoding {
+            if case .file = wallpaper, let resolvedWallpaper = decoder.resolvedWallpaper {
+                wallpaper = resolvedWallpaper
+            }
+        }
+    
+        self.init(defaultWallpaper: wallpaper,
                   message: try values.decode(PresentationThemeChatMessage.self, forKey: .message),
                   serviceMessage: try values.decode(PresentationThemeServiceMessage.self, forKey: .serviceMessage),
                   inputPanel: try values.decode(PresentationThemeChatInputPanel.self, forKey: .inputPanel),

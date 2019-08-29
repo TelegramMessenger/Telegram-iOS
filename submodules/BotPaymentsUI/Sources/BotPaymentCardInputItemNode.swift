@@ -42,7 +42,7 @@ final class BotPaymentCardInputItemNode: BotPaymentItemNode, STPPaymentCardTextF
             self.cardField.textColor = theme.list.itemPrimaryTextColor
             self.cardField.textErrorColor = theme.list.itemDestructiveColor
             self.cardField.placeholderColor = theme.list.itemPlaceholderTextColor
-            self.cardField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.cardField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         }
         
         self.cardField.frame = CGRect(origin: CGPoint(x: 5.0, y: 0.0), size: CGSize(width: width - 10.0, height: 44.0))

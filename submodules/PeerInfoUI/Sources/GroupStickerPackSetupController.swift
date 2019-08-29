@@ -209,7 +209,7 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
     func item(_ arguments: GroupStickerPackSetupControllerArguments) -> ListViewItem {
         switch self {
             case let .search(theme, strings, prefix, placeholder, value):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearButton: true, tag: nil, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { value in
                     arguments.updateSearchText(value)
                 }, processPaste: { text in
                     if let url = (URL(string: text) ?? URL(string: "http://" + text)), url.host == "t.me" || url.host == "telegram.me" {

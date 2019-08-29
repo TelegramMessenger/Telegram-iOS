@@ -130,6 +130,7 @@ private var declaredEncodables: Void = {
     declareEncodable(CachedStickerQueryResult.self, f: { CachedStickerQueryResult(decoder: $0) })
     declareEncodable(TelegramWallpaper.self, f: { TelegramWallpaper(decoder: $0) })
     declareEncodable(TelegramTheme.self, f: { TelegramTheme(decoder: $0) })
+    declareEncodable(ThemeSettings.self, f: { ThemeSettings(decoder: $0) })
     declareEncodable(SynchronizeMarkAllUnseenPersonalMessagesOperation.self, f: { SynchronizeMarkAllUnseenPersonalMessagesOperation(decoder: $0) })
     declareEncodable(SynchronizeAppLogEventsOperation.self, f: { SynchronizeAppLogEventsOperation(decoder: $0) })
     declareEncodable(CachedRecentPeers.self, f: { CachedRecentPeers(decoder: $0) })

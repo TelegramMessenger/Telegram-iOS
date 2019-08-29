@@ -502,7 +502,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
             tintColor = presentationInterfaceState.theme.list.itemAccentColor
             baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
-            keyboardAppearance = presentationInterfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
+            keyboardAppearance = presentationInterfaceState.theme.rootController.keyboardColor.keyboardAppearance
         }
         
         let paragraphStyle = NSMutableParagraphStyle()
@@ -691,7 +691,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 }
                 
-                let keyboardAppearance = interfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
+                let keyboardAppearance = interfaceState.theme.rootController.keyboardColor.keyboardAppearance
                 if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
                     if textInputNode.isCurrentlyEmoji() {
                         textInputNode.initialPrimaryLanguage = "emoji"

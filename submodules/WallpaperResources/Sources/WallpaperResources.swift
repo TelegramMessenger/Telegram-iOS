@@ -634,7 +634,6 @@ private func generateBackArrowImage(color: UIColor) -> UIImage? {
 }
 
 public func themeImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-
     return telegramThemeData(account: account, accountManager: accountManager, resource: fileReference.media.resource, synchronousLoad: synchronousLoad)
     |> map { data in
         let theme: PresentationTheme?
@@ -649,12 +648,20 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
             context.withFlippedContext { c in
                 c.setBlendMode(.normal)
                 if let theme = theme {
-                    if case let .color(value) = theme.chat.defaultWallpaper {
-                        c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
-                    } else {
-                        c.setFillColor(theme.chatList.backgroundColor.cgColor)
+                    switch theme.chat.defaultWallpaper {
+                        case .builtin:
+                            if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath), let cgImage = image.cgImage {
+                                c.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: drawingRect.width, height: drawingRect.height))
+                            }
+                        case let .color(value):
+                            c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
+                            c.fill(drawingRect)
+                        case let .file(file):
+                            c.setFillColor(theme.chatList.backgroundColor.cgColor)
+                            c.fill(drawingRect)
+                        default:
+                            break
                     }
-                    c.fill(drawingRect)
                     
                     c.setFillColor(theme.rootController.navigationBar.backgroundColor.cgColor)
                     c.fill(CGRect(origin: CGPoint(x: 0.0, y: drawingRect.height - 42.0), size: CGSize(width: drawingRect.width, height: 42.0)))

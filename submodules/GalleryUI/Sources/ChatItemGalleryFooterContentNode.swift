@@ -17,8 +17,8 @@ import OpenInExternalAppUI
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
 
-private let backwardImage = UIImage(bundleImageName: "Media Gallery/BackwardButton")
-private let forwardImage = UIImage(bundleImageName: "Media Gallery/ForwardButton")
+private let backwardImage = generateTintedImage(image:  UIImage(bundleImageName: "Media Gallery/BackwardButton"), color: .white)
+private let forwardImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/ForwardButton"), color: .white)
 private let pauseImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PauseButton"), color: .white)
 private let playImage = generateTintedImage(image: UIImage(bundleImageName: "Media Gallery/PlayButton"), color: .white)
 
@@ -600,8 +600,13 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.actionButton.frame = CGRect(origin: CGPoint(x: leftInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         self.deleteButton.frame = CGRect(origin: CGPoint(x: width - 44.0 - rightInset, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
 
-        self.backwardButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0) - 66.0, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
-        self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
+        if let image = self.backwardButton.image(for: .normal) {
+            self.backwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) - 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
+        
+        }
+        if let image = self.forwardButton.image(for: .normal) {
+            self.forwardButton.frame = CGRect(origin: CGPoint(x: floor((width - image.size.width) / 2.0) + 66.0, y: panelHeight - bottomInset - 44.0 + 7.0), size: image.size)
+        }
         
         self.playbackControlButton.frame = CGRect(origin: CGPoint(x: floor((width - 44.0) / 2.0), y: panelHeight - bottomInset - 44.0), size: CGSize(width: 44.0, height: 44.0))
         

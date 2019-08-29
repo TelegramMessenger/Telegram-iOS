@@ -2772,7 +2772,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
-            if let strongSelf = self, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil {
+            if let strongSelf = self, strongSelf.presentationInterfaceState.interfaceState.editMessage == nil && !strongSelf.presentationInterfaceState.isScheduledMessages {
                 if value {
                     strongSelf.typingActivityPromise.set(Signal<Bool, NoError>.single(true)
                     |> then(
@@ -5171,7 +5171,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             ActionSheetButtonItem(title: self.presentationData.strings.Conversation_FileICloudDrive, action: { [weak self, weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 if let strongSelf = self {
-                    strongSelf.present(legacyICloudFileController(theme: strongSelf.presentationData.theme, completion: { urls in
+                    strongSelf.present(legacyICloudFilePicker(theme: strongSelf.presentationData.theme, completion: { urls in
                         if let strongSelf = self, !urls.isEmpty {
                             var signals: [Signal<ICloudFileDescription?, NoError>] = []
                             for url in urls {

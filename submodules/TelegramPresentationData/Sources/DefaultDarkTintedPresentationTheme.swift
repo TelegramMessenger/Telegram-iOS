@@ -81,7 +81,8 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         statusBarStyle: .white,
         tabBar: rootTabBar,
         navigationBar: rootNavigationBar,
-        navigationSearchBar: navigationSearchBar
+        navigationSearchBar: navigationSearchBar,
+        keyboardColor: .dark
     )
 
     let switchColors = PresentationThemeSwitch(
@@ -168,7 +169,6 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         regularSearchBarColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.12),
         sectionHeaderFillColor: mainBackgroundColor,
         sectionHeaderTextColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-        searchBarKeyboardColor: .dark,
         verifiedIconFillColor: accentColor,
         verifiedIconForegroundColor: .white,
         secretIconColor: secretColor,
@@ -228,7 +228,6 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         primaryTextColor: UIColor(rgb: 0xffffff),
         secondaryTextColor: UIColor(rgb: 0xffffff, alpha: 0.5),
         mediaRecordingDotColor: accentColor,
-        keyboardColor: .dark,
         mediaRecordingControl: inputPanelMediaRecordingControl
     )
 

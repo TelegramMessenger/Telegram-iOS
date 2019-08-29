@@ -321,7 +321,7 @@ class CreatePollOptionItemNode: ItemListRevealOptionsItemNode, ItemListItemNode,
                         strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText
                     }
                     
-                    strongSelf.textNode.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                    strongSelf.textNode.keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
                     
                     strongSelf.textClippingNode.frame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: textTopInset), size: CGSize(width: params.width - leftInset - params.rightInset, height: textLayout.size.height))
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width - leftInset - rightInset, height: textLayout.size.height + 1.0))

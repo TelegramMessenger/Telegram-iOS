@@ -103,8 +103,8 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.addSubnode(self.countryButton)
         self.addSubnode(self.phoneInputNode)
         
-        self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
-        self.phoneInputNode.numberField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.phoneInputNode.countryCodeField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.phoneInputNode.numberField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.phoneInputNode.countryCodeField.textField.textColor = theme.list.itemPrimaryTextColor
         self.phoneInputNode.numberField.textField.textColor = theme.list.itemPrimaryTextColor
         self.phoneInputNode.countryCodeField.textField.tintColor = theme.list.itemAccentColor
