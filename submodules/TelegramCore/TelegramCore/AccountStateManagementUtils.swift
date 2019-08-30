@@ -2955,6 +2955,14 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
             updatedEntries.append(OrderedItemListEntry(id: id, contents: theme))
         }
         transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
+        let _ = accountManager.transaction { transaction in
+            transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
+                if let current = current as? ThemeSettings, let theme = current.currentTheme, let updatedTheme = updatedThemes[theme.id] {
+                    return ThemeSettings(currentTheme: updatedTheme)
+                }
+                return current
+            })
+        }.start()
     }
     
     addedIncomingMessageIds.append(contentsOf: addedSecretMessageIds)

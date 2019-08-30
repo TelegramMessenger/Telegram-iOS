@@ -45,7 +45,6 @@ public final class TelegramRootController: NavigationController {
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
-                
                 if presentationData.chatWallpaper != strongSelf.presentationData.chatWallpaper {
                     let navigationDetailsBackgroundMode: NavigationEmptyDetailsBackgoundMode?
                     switch presentationData.chatWallpaper {

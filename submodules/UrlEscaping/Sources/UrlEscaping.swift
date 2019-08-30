@@ -1,10 +1,8 @@
 import Foundation
 
-public func doesUrlMatchText(url: String, text: String) -> Bool {
-    for c in url {
-        if !c.isASCII {
-            return false
-        }
+public func doesUrlMatchText(url: String, text: String, fullText: String) -> Bool {
+    if fullText.range(of: "\u{202e}") != nil {
+        return false
     }
     if url == text {
         return true

@@ -29,20 +29,28 @@ public struct WallpaperPresentationOptions: OptionSet {
 public struct PresentationLocalTheme: PostboxCoding, Equatable {
     public let title: String
     public let resource: LocalFileMediaResource
+    public let resolvedWallpaper: TelegramWallpaper?
     
-    public init(title: String, resource: LocalFileMediaResource) {
+    public init(title: String, resource: LocalFileMediaResource, resolvedWallpaper: TelegramWallpaper?) {
         self.title = title
         self.resource = resource
+        self.resolvedWallpaper = resolvedWallpaper
     }
     
     public init(decoder: PostboxDecoder) {
         self.title = decoder.decodeStringForKey("title", orElse: "")
         self.resource = decoder.decodeObjectForKey("resource", decoder: { LocalFileMediaResource(decoder: $0) }) as! LocalFileMediaResource
+        self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.title, forKey: "title")
         encoder.encodeObject(self.resource, forKey: "resource")
+        if let resolvedWallpaper = self.resolvedWallpaper {
+            encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
+        } else {
+            encoder.encodeNil(forKey: "wallpaper")
+        }
     }
     
     public static func ==(lhs: PresentationLocalTheme, rhs: PresentationLocalTheme) -> Bool {
@@ -50,6 +58,9 @@ public struct PresentationLocalTheme: PostboxCoding, Equatable {
             return false
         }
         if !lhs.resource.isEqual(to: rhs.resource) {
+            return false
+        }
+        if lhs.resolvedWallpaper != rhs.resolvedWallpaper {
             return false
         }
         return true
@@ -74,6 +85,8 @@ public struct PresentationCloudTheme: PostboxCoding, Equatable {
         encoder.encodeObject(self.theme, forKey: "theme")
         if let resolvedWallpaper = self.resolvedWallpaper {
             encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
+        } else {
+            encoder.encodeNil(forKey: "wallpaper")
         }
     }
     

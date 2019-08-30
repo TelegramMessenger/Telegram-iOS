@@ -465,14 +465,12 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
                 }
             } else {
                 return Signal<UIColor, NoError> { subscriber in
-                    let fetch = mediaBox.fetchedResource(file.file.resource, parameters: nil).start()
                     let data = serviceColor(for: mediaBox.resourceData(file.file.resource)).start(next: { next in
                         subscriber.putNext(next)
                     }, completed: {
                         subscriber.putCompletion()
                     })
                     return ActionDisposable {
-                        fetch.dispose()
                         data.dispose()
                     }
                 }

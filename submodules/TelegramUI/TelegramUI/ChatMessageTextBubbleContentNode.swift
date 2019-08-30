@@ -370,6 +370,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 adjustedTextFrame.origin.x = floor((boundingWidth - adjustedTextFrame.width) / 2.0)
                             }
                             strongSelf.textNode.frame = adjustedTextFrame
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != adjustedTextFrame.size
+                                textSelectionNode.frame = adjustedTextFrame
+                                textSelectionNode.highlightAreaNode.frame = adjustedTextFrame
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
+                                }
+                            }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                         }
@@ -399,8 +407,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
-                if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                    concealed = !doesUrlMatchText(url: url, text: attributeText)
+                if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                    concealed = !doesUrlMatchText(url: url, text: attributeText, fullText: fullText)
                 }
                 return .url(url: url, concealed: concealed)
             } else if let peerMention = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerMention)] as? TelegramPeerMention {
@@ -478,8 +486,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             rect = rect.union(rects[i])
                         }
                         var concealed = true
-                        if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
-                            concealed = !doesUrlMatchText(url: value, text: attributeText)
+                        if let (attributeText, fullText) = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
+                            concealed = !doesUrlMatchText(url: value, text: attributeText, fullText: fullText)
                         }
                         return (item.message, .url(self, rect, value, concealed))
                     }
@@ -544,7 +552,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
                 }
                 
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), textNode: self.textNode, updateIsActive: { [weak self] value in
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
                     self?.updateIsTextSelectionActive?(value)
                 }, present: { [weak self] c, a in
                     self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)

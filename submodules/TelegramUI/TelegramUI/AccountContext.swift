@@ -111,6 +111,7 @@ public final class AccountContextImpl: AccountContext {
     
     public let liveLocationManager: LiveLocationManager?
     public let wallpaperUploadManager: WallpaperUploadManager?
+    private let themeUpdateManager: ThemeUpdateManager?
     
     public let peerChannelMemberCategoriesContextsManager = PeerChannelMemberCategoriesContextsManager()
     
@@ -143,9 +144,11 @@ public final class AccountContextImpl: AccountContext {
         if sharedContext.applicationBindings.isMainApp {
             self.prefetchManager = PrefetchManager(sharedContext: sharedContext, account: account, fetchManager: self.fetchManager)
             self.wallpaperUploadManager = WallpaperUploadManagerImpl(sharedContext: sharedContext, account: account, presentationData: sharedContext.presentationData)
+            self.themeUpdateManager = ThemeUpdateManagerImpl(sharedContext: sharedContext, account: account)
         } else {
             self.prefetchManager = nil
             self.wallpaperUploadManager = nil
+            self.themeUpdateManager = nil
         }
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])

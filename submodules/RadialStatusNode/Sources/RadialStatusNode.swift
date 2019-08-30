@@ -187,7 +187,7 @@ public enum RadialStatusNodeState: Equatable {
 public final class RadialStatusNode: ASControlNode {
     public var backgroundNodeColor: UIColor {
         didSet {
-            self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: false, completion: {})
+            self.transitionToBackgroundColor(self.state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: false, synchronous: false, completion: {})
         }
     }
     
@@ -215,16 +215,16 @@ public final class RadialStatusNode: ASControlNode {
             
             let contentNode = state.contentNode(current: self.contentNode, synchronous: synchronous)
             if contentNode !== self.contentNode {
-                self.transitionToContentNode(contentNode, state: state, fromState: fromState, backgroundColor: state.backgroundColor(color: self.backgroundNodeColor), animated: animated, completion: completion)
+                self.transitionToContentNode(contentNode, state: state, fromState: fromState, backgroundColor: state.backgroundColor(color: self.backgroundNodeColor), animated: animated, synchronous: synchronous, completion: completion)
             } else {
-                self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: animated, completion: completion)
+                self.transitionToBackgroundColor(state.backgroundColor(color: self.backgroundNodeColor), previousContentNode: nil, animated: animated, synchronous: synchronous, completion: completion)
             }
         } else {
             completion()
         }
     }
     
-    private func transitionToContentNode(_ node: RadialStatusContentNode?, state: RadialStatusNodeState, fromState: RadialStatusNodeState, backgroundColor: UIColor?, animated: Bool, completion: @escaping () -> Void) {
+    private func transitionToContentNode(_ node: RadialStatusContentNode?, state: RadialStatusNodeState, fromState: RadialStatusNodeState, backgroundColor: UIColor?, animated: Bool, synchronous: Bool = false, completion: @escaping () -> Void) {
         if let contentNode = self.contentNode {
             self.nextContentNode = node
             contentNode.enqueueReadyForTransition { [weak contentNode, weak self] in
@@ -242,7 +242,7 @@ public final class RadialStatusNode: ASControlNode {
                                     contentNode.animateIn(from: fromState, delay: delay)
                                 }
                             }
-                            strongSelf.transitionToBackgroundColor(strongSelf.contentNode != nil ? backgroundColor : nil, previousContentNode: previousContentNode, animated: animated, completion: completion)
+                            strongSelf.transitionToBackgroundColor(strongSelf.contentNode != nil ? backgroundColor : nil, previousContentNode: previousContentNode, animated: animated, synchronous: synchronous, completion: completion)
                         })
                         previousContentNode.animateOut(to: state, completion: { [weak contentNode] in
                             if let strongSelf = self, let contentNode = contentNode {
@@ -262,7 +262,7 @@ public final class RadialStatusNode: ASControlNode {
                                 contentNode.layout()
                             }
                         }
-                        strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, completion: completion)
+                        strongSelf.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, synchronous: synchronous, completion: completion)
                     }
                 }
             }
@@ -282,11 +282,11 @@ public final class RadialStatusNode: ASControlNode {
                     }
                 }
             }
-            self.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, completion: completion)
+            self.transitionToBackgroundColor(backgroundColor, previousContentNode: nil, animated: animated, synchronous: synchronous, completion: completion)
         }
     }
     
-    private func transitionToBackgroundColor(_ color: UIColor?, previousContentNode: RadialStatusContentNode?, animated: Bool, completion: @escaping () -> Void) {
+    private func transitionToBackgroundColor(_ color: UIColor?, previousContentNode: RadialStatusContentNode?, animated: Bool, synchronous: Bool, completion: @escaping () -> Void) {
         let currentColor = self.backgroundNode?.color
         
         var updated = false
@@ -302,7 +302,7 @@ public final class RadialStatusNode: ASControlNode {
                     backgroundNode.color = color
                     completion()
                 } else {
-                    let backgroundNode = RadialStatusBackgroundNode(color: color)
+                    let backgroundNode = RadialStatusBackgroundNode(color: color, synchronous: synchronous)
                     backgroundNode.frame = self.bounds
                     self.backgroundNode = backgroundNode
                     self.insertSubnode(backgroundNode, at: 0)

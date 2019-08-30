@@ -1003,6 +1003,7 @@
 "Notification.Mute1h" = "Mute for 1 hour";
 "Notification.Mute1hMin" = "Mute for 1h";
 "Conversation.ContextMenuShare" = "Share";
+"Conversation.ContextMenuLookUp" = "Look Up";
 
 "SharedMedia.TitleAll" = "Shared Media";
 
@@ -4636,7 +4637,7 @@ Any member of this group will be able to see messages in the channel.";
 "AccentColor.Title" = "Accent Color";
 
 "Appearance.ThemePreview.ChatList.1.Name" = "Alicia Torreaux";
-"Appearance.ThemePreview.ChatList.1.Text" = "Bob says hi.";
+"Appearance.ThemePreview.ChatList.1.Text" = "Bob says hi. 😊 ❤️ 😱";
 "Appearance.ThemePreview.ChatList.2.Name" = "Roberto";
 "Appearance.ThemePreview.ChatList.2.Text" = "Say hello to Alice 👋";
 "Appearance.ThemePreview.ChatList.3.Name" = "Campus Public Chat";
