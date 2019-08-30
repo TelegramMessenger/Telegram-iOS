@@ -299,7 +299,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                         arguments.selectTheme(theme)
                     }
                 }, longTapped: { theme in
-                    arguments.presentThemeMenu(theme, theme == currentTheme)
+                    arguments.presentThemeMenu(theme, theme.index == currentTheme.index)
                 })
             case let .iconHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)

@@ -225,13 +225,13 @@ public final class PrincipalThemeEssentialGraphics {
             self.checkBubblePartialImage = generateCheckImage(partial: true, color: theme.message.outgoingCheckColor)!
             self.chatMessageBackgroundIncomingHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopMaskImage = emptyImage
-            self.chatMessageBackgroundIncomingMergedTopImage = emptyImage
+            self.chatMessageBackgroundIncomingMergedTopImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .top(side: false), theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingMergedTopHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopSideMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopSideImage = emptyImage
             self.chatMessageBackgroundIncomingMergedTopSideHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedBottomMaskImage = emptyImage
-            self.chatMessageBackgroundIncomingMergedBottomImage = emptyImage
+            self.chatMessageBackgroundIncomingMergedBottomImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .bottom, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundIncomingMergedBottomHighlightedImage = emptyImage
             self.chatMessageBackgroundIncomingMergedBothMaskImage = emptyImage
             self.chatMessageBackgroundIncomingMergedBothImage = emptyImage

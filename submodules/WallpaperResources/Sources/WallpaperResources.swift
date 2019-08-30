@@ -168,7 +168,7 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
-        if let fullSizeData = fullSizeData, let fileReference = fileReference {
+        if let fullSizeData = fullSizeData, let fileReference = fileReference, fullSizeComplete {
             accountManager.mediaBox.storeResourceData(fileReference.media.resource.id, data: fullSizeData)
         }
         return { arguments in
@@ -803,7 +803,7 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                 |> mapToSignal { wallpaper -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
                     if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
-                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .wallpaper(resource: file.file.resource)))
+                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                         return wallpaperImage(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
                         |> map { _ -> (PresentationTheme?, UIImage?, Data?) in
                             if let path = accountManager.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let image = UIImage(data: data) {

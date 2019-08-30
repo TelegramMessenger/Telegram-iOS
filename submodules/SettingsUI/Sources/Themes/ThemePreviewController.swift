@@ -11,6 +11,7 @@ import AccountContext
 import ShareController
 import CounterContollerTitleView
 import WallpaperResources
+import OverlayStatusController
 
 public enum ThemePreviewSource {
     case theme(TelegramTheme)
@@ -32,6 +33,8 @@ public final class ThemePreviewController: ViewController {
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
+    
+    private var applyDisposable = MetaDisposable()
 
     public init(context: AccountContext, previewTheme: PresentationTheme, source: ThemePreviewSource) {
         self.context = context
@@ -75,7 +78,6 @@ public final class ThemePreviewController: ViewController {
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {
                 strongSelf.presentationData = presentationData
-                strongSelf.updateStrings()
             }
         })
     }
@@ -86,6 +88,7 @@ public final class ThemePreviewController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.applyDisposable.dispose()
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -108,63 +111,7 @@ public final class ThemePreviewController: ViewController {
             }
         }, apply: { [weak self] in
             if let strongSelf = self {
-                let previewTheme = strongSelf.previewTheme
-                let theme: Signal<PresentationThemeReference?, NoError>
-                
-                switch strongSelf.source {
-                    case .theme, .slug:
-                        theme = combineLatest(strongSelf.theme.get() |> take(1), strongSelf.controllerNode.wallpaperPromise.get() |> take(1))
-                        |> map { theme, wallpaper in
-                            if let theme = theme {
-                                if case let .file(file) = wallpaper, file.id != 0 {
-                                    return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper))
-                                } else {
-                                    return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil))
-                                }
-                            } else {
-                                return nil
-                            }
-                        }
-                    case .media:
-                        if let strings = encodePresentationTheme(previewTheme), let data = strings.data(using: .utf8) {
-                            let resource = LocalFileMediaResource(fileId: arc4random64())
-                            strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
-
-                            theme = .single(.local(PresentationLocalTheme(title: previewTheme.name.string, resource: resource)))
-                        } else {
-                            theme = .single(.builtin(.dayClassic))
-                        }
-                }
-                
-                let signal = theme
-                |> mapToSignal { theme -> Signal<Void, NoError> in
-                    guard let theme = theme else {
-                        return .complete()
-                    }
-                    return strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                            let current: PresentationThemeSettings
-                            if let entry = entry as? PresentationThemeSettings {
-                                current = entry
-                            } else {
-                                current = PresentationThemeSettings.defaultSettings
-                            }
-                            return PresentationThemeSettings(chatWallpaper: previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                        })
-                    }
-                }
-                
-//                let resolvedWallpaper: TelegramWallpaper?
-//                if let theme = theme, case let .file(file) = theme.chat.defaultWallpaper, file.id != 0 {
-//                    resolvedWallpaper = theme.chat.defaultWallpaper
-//                    updateCachedWallpaper(account: context.account, wallpaper: theme.chat.defaultWallpaper)
-//                }
-                
-                let _ = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.dismiss()
-                    }
-                })
+                strongSelf.apply()
             }
         })
         self.displayNodeDidLoad()
@@ -180,8 +127,162 @@ public final class ThemePreviewController: ViewController {
         }
     }
     
-    private func updateStrings() {
-    
+    private func apply() {
+        let previewTheme = self.previewTheme
+        let theme: Signal<PresentationThemeReference?, NoError>
+        let context = self.context
+        let wallpaperPromise = self.controllerNode.wallpaperPromise
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let disposable = self.applyDisposable
+        
+        switch self.source {
+            case .theme, .slug:
+                theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
+                |> map { theme, wallpaper in
+                    if let theme = theme {
+                        if case let .file(file) = wallpaper, file.id != 0 {
+                            return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper))
+                        } else {
+                            return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil))
+                        }
+                    } else {
+                        return nil
+                    }
+                }
+            case .media:
+                if let strings = encodePresentationTheme(previewTheme), let data = strings.data(using: .utf8) {
+                    let resource = LocalFileMediaResource(fileId: arc4random64())
+                    context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
+                    context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+                    theme = .single(.local(PresentationLocalTheme(title: previewTheme.name.string, resource: resource, resolvedWallpaper: nil)))
+                } else {
+                    theme = .single(.builtin(.dayClassic))
+                }
+        }
+        
+        var resolvedWallpaper: TelegramWallpaper?
+        
+        let signal = theme
+        |> mapToSignal { theme -> Signal<PresentationThemeReference, NoError> in
+            guard let theme = theme else {
+                return .complete()
+            }
+            switch theme {
+                case .cloud:
+                    return .single(theme)
+                case let .local(info):
+                    return wallpaperPromise.get()
+                        |> take(1)
+                        |> mapToSignal { currentWallpaper -> Signal<PresentationThemeReference, NoError> in
+                            if case let .file(file) = currentWallpaper, file.id != 0 {
+                                resolvedWallpaper = currentWallpaper
+                            }
+                            
+                            var wallpaperImage: UIImage?
+                            if case .file = currentWallpaper {
+                                wallpaperImage = chatControllerBackgroundImage(theme: previewTheme, wallpaper: currentWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
+                            }
+                            let themeThumbnail = generateImage(CGSize(width: 213, height: 320.0), contextGenerator: { size, context in
+                                if let image = generateImage(CGSize(width: 194.0, height: 291.0), contextGenerator: { size, c in
+                                    drawThemeImage(context: c, theme: previewTheme, wallpaperImage: wallpaperImage, size: size)
+                                })?.cgImage {
+                                    context.draw(image, in: CGRect(origin: CGPoint(), size: size))
+                                }
+                            }, scale: 1.0)
+                            let themeThumbnailData = themeThumbnail?.jpegData(compressionQuality: 0.6)
+                            
+                            return telegramThemes(postbox: context.account.postbox, network: context.account.network)
+                                |> take(1)
+                                |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
+                                    let similarTheme = themes.filter { $0.isCreator && $0.title == info.title }.first
+                                    if let similarTheme = similarTheme {
+                                        return updateTheme(account: context.account, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
+                                            |> map(Optional.init)
+                                            |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
+                                                return .single(nil)
+                                            }
+                                            |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
+                                                guard let result = result else {
+                                                    let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
+                                                    return .single(.local(updatedTheme))
+                                                }
+                                                if case let .result(theme) = result, let file = theme.file {
+                                                    context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
+                                                    return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: resolvedWallpaper)))
+                                                } else {
+                                                    return .complete()
+                                                }
+                                        }
+                                        
+                                    } else {
+                                        return createTheme(account: context.account, title: info.title, resource: info.resource, thumbnailData: themeThumbnailData)
+                                            |> map(Optional.init)
+                                            |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
+                                                return .single(nil)
+                                            }
+                                            |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
+                                                guard let result = result else {
+                                                    let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
+                                                    return .single(.local(updatedTheme))
+                                                }
+                                                if case let .result(updatedTheme) = result, let file = updatedTheme.file {
+                                                    context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
+                                                    return .single(.cloud(PresentationCloudTheme(theme: updatedTheme, resolvedWallpaper: resolvedWallpaper)))
+                                                } else {
+                                                    return .complete()
+                                                }
+                                        }
+                                    }
+                            }
+                    }
+                case .builtin:
+                    return .single(theme)
+            }
+        }
+        |> mapToSignal { theme -> Signal<Void, NoError> in
+            if case let .cloud(info) = theme {
+                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
+                let _ = saveThemeInteractively(account: context.account, theme: info.theme).start()
+            }
+            return context.sharedContext.accountManager.transaction { transaction -> Void in
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                    let current = entry as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
+                    return PresentationThemeSettings(chatWallpaper: resolvedWallpaper ?? previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                })
+            }
+        }
+        
+        var cancelImpl: (() -> Void)?
+        let progressSignal = Signal<Never, NoError> { [weak self] subscriber in
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                cancelImpl?()
+            }))
+            self?.present(controller, in: .window(.root))
+            return ActionDisposable { [weak controller] in
+                Queue.mainQueue().async() {
+                    controller?.dismiss()
+                }
+            }
+        }
+        |> runOn(Queue.mainQueue())
+        |> delay(0.7, queue: Queue.mainQueue())
+        
+        let progressDisposable = progressSignal.start()
+        cancelImpl = {
+            disposable.set(nil)
+        }
+        disposable.set((signal
+        |> afterDisposed {
+            Queue.mainQueue().async {
+                progressDisposable.dispose()
+            }
+        }
+        |> deliverOnMainQueue).start(completed: {[weak self] in
+            if let strongSelf = self {
+                strongSelf.dismiss()
+            }
+        }))
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
