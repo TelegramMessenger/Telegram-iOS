@@ -198,7 +198,7 @@ public final class ThemePreviewController: ViewController {
                         |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
                             let similarTheme = themes.filter { $0.isCreator && $0.title == info.title }.first
                             if let similarTheme = similarTheme {
-                                return updateTheme(account: context.account, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
+                                return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)

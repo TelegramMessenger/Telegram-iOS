@@ -329,7 +329,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
     }
 }
 
-public func updateTheme(account: Account, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil) -> Signal<CreateThemeResult, CreateThemeError> {
+public func updateTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
@@ -379,13 +379,22 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
             return .generic
         }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
-            if let result = TelegramTheme(apiTheme: apiTheme) {
+            if let updatedTheme = TelegramTheme(apiTheme: apiTheme) {
+                let _ = accountManager.transaction { transaction in
+                    transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
+                        var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
+                        if updatedTheme.id == updated.currentTheme?.id {
+                            updated = ThemeSettings(currentTheme: updatedTheme)
+                        }
+                        return updated
+                    })
+                }.start()
                 return account.postbox.transaction { transaction -> CreateThemeResult in
                     let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
                     let items = entries.map { entry -> TelegramTheme in
                         let theme = entry.contents as! TelegramTheme
-                        if theme.id == result.id {
-                            return result
+                        if theme.id == updatedTheme.id {
+                            return updatedTheme
                         } else {
                             return theme
                         }
@@ -397,7 +406,7 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
                         updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
                     }
                     transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
-                    return .result(result)
+                    return .result(updatedTheme)
                 }
                 |> introduceError(CreateThemeError.self)
             } else {

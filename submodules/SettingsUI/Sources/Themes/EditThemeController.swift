@@ -451,7 +451,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                 })
                             }
                         case let .edit(info):
-                            let _ = (updateTheme(account: context.account, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource)
+                            let _ = (updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme, title: state.title, slug: state.slug, resource: themeResource)
                             |> deliverOnMainQueue).start(next: { next in
                                 if case let .result(resultTheme) = next {
                                     let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
