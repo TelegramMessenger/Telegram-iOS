@@ -11,6 +11,7 @@ import OverlayStatusController
 import AccountContext
 import ContextUI
 import LegacyUI
+import AppBundle
 
 private struct MessageContextMenuData {
     let starStatus: Bool?

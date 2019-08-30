@@ -19,6 +19,7 @@ ui_tests = [
 
 static_library_dependencies = [
 ]
+
 framework_dependencies = [
     "//submodules/MtProtoKit:MtProtoKit",
     "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -27,6 +28,18 @@ framework_dependencies = [
     "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     "//submodules/Display:Display",
     "//submodules/TelegramUI:TelegramUI",
+]
+
+resource_dependencies = [
+    "//submodules/LegacyComponents:LegacyComponentsResources",
+    "//submodules/TelegramUI:TelegramUIAssets",
+    "//submodules/TelegramUI:TelegramUIResources",
+    "//:AppResources",
+    "//:AppStringResources",
+    "//:Icons",
+    "//:AppIcons",
+    "//:AdditionalIcons",
+    "//:LaunchScreen",
 ]
 
 build_phase_scripts = [
@@ -56,7 +69,7 @@ apple_binary(
         "//App:",
         "//App/...",
     ],
-    configs = app_binary_configs("App"),
+    configs = app_binary_configs("Telegram"),
     swift_version = native.read_config("swift", "version"),
     srcs = [
         "SupportFiles/Empty.swift",
@@ -64,32 +77,32 @@ apple_binary(
     deps = [
         ":AppLibrary",
     ]
+    + resource_dependencies,
 )
 
 xcode_workspace_config(
     name = "workspace",
-    workspace_name = "App",
-    src_target = ":App",
+    workspace_name = "Telegram_Buck",
+    src_target = ":Telegram",
 )
 
 apple_bundle(
-    name = "App",
+    name = "Telegram",
     visibility = [
         "//App:",
     ],
     extension = "app",
     binary = ":AppBinary",
-    product_name = "App",
+    product_name = "Telegram",
     info_plist = "Info.plist",
-    info_plist_substitutions = app_info_plist_substitutions("App"),
+    info_plist_substitutions = app_info_plist_substitutions("Telegram"),
     deps = [
-        #"//submodules/Emoji:EmojiFiles",
     ]
     + framework_bundle_dependencies(framework_dependencies),
 )
 
 apple_package(
     name = "AppPackage",
-    bundle = ":App",
+    bundle = ":Telegram",
 )
 

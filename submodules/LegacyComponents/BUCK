@@ -5,6 +5,7 @@ apple_resource(
     dirs = [
         "LegacyComponents/Resources/LegacyComponentsResources.bundle",
     ],
+    visibility = ["PUBLIC"],
 )
 
 static_library(
@@ -357,8 +358,8 @@ static_library(
         "LegacyComponents/TGMediaAssetsUtils.h",
     ],
     deps = [
-        ":LegacyComponentsResources",
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

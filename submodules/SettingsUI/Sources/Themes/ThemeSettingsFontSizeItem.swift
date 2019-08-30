@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import LegacyComponents
 import ItemListUI
+import AppBundle
 
 class ThemeSettingsFontSizeItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

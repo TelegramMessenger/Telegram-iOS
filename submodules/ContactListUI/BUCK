@@ -24,6 +24,7 @@ static_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/AlertUI:AlertUI",
         "//submodules/ShareController:ShareController",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

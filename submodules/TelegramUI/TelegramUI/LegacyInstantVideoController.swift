@@ -11,6 +11,7 @@ import AccountContext
 import LegacyUI
 import ImageCompression
 import LocalMediaResources
+import AppBundle
 
 final class InstantVideoControllerRecordingStatus {
     let micLevel: Signal<Float, NoError>

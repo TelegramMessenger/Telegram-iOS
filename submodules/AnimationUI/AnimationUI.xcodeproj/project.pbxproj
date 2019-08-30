@@ -68,17 +68,6 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
-		<key>1DD70E291289FAA500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>FrameworkBundle.swift</string>
-			<key>path</key>
-			<string>Sources/FrameworkBundle.swift</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-		</dict>
 		<key>1DD70E2968DC800500000000</key>
 		<dict>
 			<key>isa</key>
@@ -104,7 +93,6 @@
 				<string>1DD70E29F846183C00000000</string>
 				<string>1DD70E29D847F9AB00000000</string>
 				<string>1DD70E291FD1D5AC00000000</string>
-				<string>1DD70E291289FAA500000000</string>
 				<string>1DD70E2968DC800500000000</string>
 			</array>
 		</dict>
@@ -397,13 +385,6 @@
 			<key>fileRef</key>
 			<string>1DD70E291FD1D5AC00000000</string>
 		</dict>
-		<key>E7A30F041289FAA500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E291289FAA500000000</string>
-		</dict>
 		<key>E7A30F0468DC800500000000</key>
 		<dict>
 			<key>isa</key>
@@ -421,7 +402,6 @@
 				<string>E7A30F04F846183C00000000</string>
 				<string>E7A30F04D847F9AB00000000</string>
 				<string>E7A30F041FD1D5AC00000000</string>
-				<string>E7A30F041289FAA500000000</string>
 				<string>E7A30F0468DC800500000000</string>
 			</array>
 		</dict>

@@ -18,7 +18,7 @@
 		D03E42DE230571DD0049C28B /* ItemListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42DD230571DD0049C28B /* ItemListUI.framework */; };
 		D03E42E0230571E20049C28B /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42DF230571E20049C28B /* AccountContext.framework */; };
 		D03E42E2230571E60049C28B /* TextFormat.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42E1230571E60049C28B /* TextFormat.framework */; };
-		D03E42E8230572780049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E42E7230572780049C28B /* FrameworkBundle.swift */; };
+		D0EFF2562319811E00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2552319811E00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,7 +35,7 @@
 		D03E42DD230571DD0049C28B /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E42DF230571E20049C28B /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E42E1230571E60049C28B /* TextFormat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TextFormat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E42E7230572780049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF2552319811E00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF2562319811E00CF5164 /* AppBundle.framework in Frameworks */,
 				D03E42E2230571E60049C28B /* TextFormat.framework in Frameworks */,
 				D03E42E0230571E20049C28B /* AccountContext.framework in Frameworks */,
 				D03E42DE230571DD0049C28B /* ItemListUI.framework in Frameworks */,
@@ -80,7 +81,6 @@
 			isa = PBXGroup;
 			children = (
 				D03E42CA230571700049C28B /* ItemListAddressItem.swift */,
-				D03E42E7230572780049C28B /* FrameworkBundle.swift */,
 				D03E42C2230571620049C28B /* ItemListAddressItem.h */,
 			);
 			path = Sources;
@@ -89,6 +89,7 @@
 		D03E42D0230571C20049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2552319811E00CF5164 /* AppBundle.framework */,
 				D03E42E1230571E60049C28B /* TextFormat.framework */,
 				D03E42DF230571E20049C28B /* AccountContext.framework */,
 				D03E42DD230571DD0049C28B /* ItemListUI.framework */,
@@ -182,7 +183,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E42E8230572780049C28B /* FrameworkBundle.swift in Sources */,
 				D03E42CB230571710049C28B /* ItemListAddressItem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

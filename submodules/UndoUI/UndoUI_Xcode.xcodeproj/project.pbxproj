@@ -21,7 +21,7 @@
 		D0C9C07722FE3B5300FAB518 /* TextFormat.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C07622FE3B5300FAB518 /* TextFormat.framework */; };
 		D0C9C07922FE3B5700FAB518 /* RadialStatusNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C07822FE3B5700FAB518 /* RadialStatusNode.framework */; };
 		D0C9C07B22FE3B5D00FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C07A22FE3B5D00FAB518 /* AsyncDisplayKit.framework */; };
-		D0C9C07F22FE3BA400FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C07E22FE3BA400FAB518 /* FrameworkBundle.swift */; };
+		D0EFF25E2319817900CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF25D2319817900CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,7 +41,7 @@
 		D0C9C07622FE3B5300FAB518 /* TextFormat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TextFormat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C07822FE3B5700FAB518 /* RadialStatusNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RadialStatusNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C07A22FE3B5D00FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C07E22FE3BA400FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF25D2319817900CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +49,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF25E2319817900CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C07B22FE3B5D00FAB518 /* AsyncDisplayKit.framework in Frameworks */,
 				D0C9C07922FE3B5700FAB518 /* RadialStatusNode.framework in Frameworks */,
 				D0C9C07722FE3B5300FAB518 /* TextFormat.framework in Frameworks */,
@@ -89,7 +90,6 @@
 			children = (
 				D0C9C06222FE3B0500FAB518 /* UndoOverlayController.swift */,
 				D0C9C06122FE3B0500FAB518 /* UndoOverlayControllerNode.swift */,
-				D0C9C07E22FE3BA400FAB518 /* FrameworkBundle.swift */,
 				D0C9C05522FE3AAA00FAB518 /* UndoUI.h */,
 			);
 			path = Sources;
@@ -98,6 +98,7 @@
 		D0C9C06522FE3B2700FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF25D2319817900CF5164 /* AppBundle.framework */,
 				D0C9C07A22FE3B5D00FAB518 /* AsyncDisplayKit.framework */,
 				D0C9C07822FE3B5700FAB518 /* RadialStatusNode.framework */,
 				D0C9C07622FE3B5300FAB518 /* TextFormat.framework */,
@@ -195,7 +196,6 @@
 			files = (
 				D0C9C06422FE3B0500FAB518 /* UndoOverlayController.swift in Sources */,
 				D0C9C06322FE3B0500FAB518 /* UndoOverlayControllerNode.swift in Sources */,
-				D0C9C07F22FE3BA400FAB518 /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

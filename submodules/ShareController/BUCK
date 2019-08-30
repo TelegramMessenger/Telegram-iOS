@@ -20,6 +20,7 @@ static_library(
     	"//submodules/SelectablePeerNode:SelectablePeerNode",
     	"//submodules/RadialStatusNode:RadialStatusNode",
     	"//submodules/ActivityIndicator:ActivityIndicator",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import UniversalMediaPlayer
 import LegacyComponents
+import AppBundle
 
 private let leaveImage = UIImage(bundleImageName: "Media Gallery/PictureInPictureLeave")?.precomposed()
 private let pauseImage = UIImage(bundleImageName: "Media Gallery/PictureInPicturePause")?.precomposed()

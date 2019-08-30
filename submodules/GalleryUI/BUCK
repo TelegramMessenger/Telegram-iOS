@@ -21,6 +21,7 @@ static_library(
         "//submodules/ShareController:ShareController",
         "//submodules/SwipeToDismissGesture:SwipeToDismissGesture",
         "//submodules/CheckNode:CheckNode",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

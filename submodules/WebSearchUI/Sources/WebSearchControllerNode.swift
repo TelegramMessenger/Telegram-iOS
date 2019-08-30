@@ -12,6 +12,7 @@ import MergeLists
 import AccountContext
 import GalleryUI
 import ChatListSearchItemHeader
+import AppBundle
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult

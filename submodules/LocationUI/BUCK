@@ -17,6 +17,7 @@ static_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
         "//submodules/LegacyUI:LegacyUI",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

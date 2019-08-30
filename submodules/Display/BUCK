@@ -15,6 +15,7 @@ framework(
     deps = [
     	"//submodules/AsyncDisplayKit:AsyncDisplayKit#dynamic",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

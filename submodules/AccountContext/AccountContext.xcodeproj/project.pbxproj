@@ -288,6 +288,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E297819F1E000000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>ThemeUpdateManager.swift</string>
+			<key>path</key>
+			<string>Sources/ThemeUpdateManager.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E29A055C05700000000</key>
 		<dict>
 			<key>isa</key>
@@ -355,6 +366,7 @@
 				<string>1DD70E29BEA4BC8700000000</string>
 				<string>1DD70E29A82E88C500000000</string>
 				<string>1DD70E290F2FA2FD00000000</string>
+				<string>1DD70E297819F1E000000000</string>
 				<string>1DD70E29A055C05700000000</string>
 				<string>1DD70E29900C6ACF00000000</string>
 				<string>1DD70E29CEBFB42300000000</string>
@@ -873,6 +885,13 @@
 			<key>fileRef</key>
 			<string>1DD70E290F2FA2FD00000000</string>
 		</dict>
+		<key>E7A30F047819F1E000000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E297819F1E000000000</string>
+		</dict>
 		<key>E7A30F04A055C05700000000</key>
 		<dict>
 			<key>isa</key>
@@ -924,6 +943,7 @@
 				<string>E7A30F04BEA4BC8700000000</string>
 				<string>E7A30F04A82E88C500000000</string>
 				<string>E7A30F040F2FA2FD00000000</string>
+				<string>E7A30F047819F1E000000000</string>
 				<string>E7A30F04A055C05700000000</string>
 				<string>E7A30F04900C6ACF00000000</string>
 				<string>E7A30F04CEBFB42300000000</string>

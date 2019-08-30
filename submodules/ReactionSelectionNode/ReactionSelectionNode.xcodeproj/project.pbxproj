@@ -182,6 +182,19 @@
 			<key>explicitFileType</key>
 			<string>compiled.mach-o.dylib</string>
 		</dict>
+		<key>1DD70E2984A59C1D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libTelegramPresentationData.a</string>
+			<key>path</key>
+			<string>libTelegramPresentationData.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E292395015100000000</key>
 		<dict>
 			<key>isa</key>
@@ -226,6 +239,7 @@
 				<string>1DD70E293594DCC000000000</string>
 				<string>1DD70E29D65BA68200000000</string>
 				<string>1DD70E29119CDA0700000000</string>
+				<string>1DD70E2984A59C1D00000000</string>
 				<string>1DD70E292395015100000000</string>
 				<string>1DD70E29CD296A8300000000</string>
 			</array>
@@ -268,6 +282,17 @@
 			<string>SOURCE_ROOT</string>
 			<key>explicitFileType</key>
 			<string>text.script.python</string>
+		</dict>
+		<key>1DD70E29CCCE0EED00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>ReactionContextNode.swift</string>
+			<key>path</key>
+			<string>Sources/ReactionContextNode.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
 		</dict>
 		<key>1DD70E2930A5FA5800000000</key>
 		<dict>
@@ -323,6 +348,7 @@
 			<string><![CDATA[<group>]]></string>
 			<key>children</key>
 			<array>
+				<string>1DD70E29CCCE0EED00000000</string>
 				<string>1DD70E2930A5FA5800000000</string>
 				<string>1DD70E29691388CA00000000</string>
 				<string>1DD70E29962E1AD400000000</string>
@@ -359,6 +385,13 @@
 				<string>B401C979E09F1DE500000000</string>
 			</array>
 		</dict>
+		<key>E7A30F04CCCE0EED00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29CCCE0EED00000000</string>
+		</dict>
 		<key>E7A30F0430A5FA5800000000</key>
 		<dict>
 			<key>isa</key>
@@ -393,6 +426,7 @@
 			<string>PBXSourcesBuildPhase</string>
 			<key>files</key>
 			<array>
+				<string>E7A30F04CCCE0EED00000000</string>
 				<string>E7A30F0430A5FA5800000000</string>
 				<string>E7A30F04691388CA00000000</string>
 				<string>E7A30F04962E1AD400000000</string>
@@ -469,6 +503,13 @@
 			<key>fileRef</key>
 			<string>1DD70E292420028600000000</string>
 		</dict>
+		<key>E7A30F0484A59C1D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2984A59C1D00000000</string>
+		</dict>
 		<key>FAF5FAC90000000000000000</key>
 		<dict>
 			<key>isa</key>
@@ -485,6 +526,7 @@
 				<string>E7A30F04CD296A8300000000</string>
 				<string>E7A30F043594DCC000000000</string>
 				<string>E7A30F042420028600000000</string>
+				<string>E7A30F0484A59C1D00000000</string>
 			</array>
 			<key>name</key>
 			<string>Fake Swift Dependencies (Copy Files Phase)</string>

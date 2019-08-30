@@ -36,6 +36,7 @@ static_library(
         "//submodules/ContactsPeerItem:ContactsPeerItem",
         "//submodules/ContactListUI:ContactListUI",
         "//submodules/PhotoResources:PhotoResources",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

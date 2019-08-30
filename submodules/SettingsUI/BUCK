@@ -74,6 +74,7 @@ static_library(
         "//submodules/CounterContollerTitleView:CounterContollerTitleView",
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
         "//submodules/InstantPageCache:InstantPageCache",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

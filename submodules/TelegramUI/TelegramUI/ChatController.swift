@@ -45,6 +45,7 @@ import RaiseToListen
 import UrlHandling
 import ReactionSelectionNode
 import MessageReactionListUI
+import AppBundle
 
 public enum ChatControllerPeekActions {
     case standard
@@ -555,7 +556,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     var reactionItems: [ReactionContextItem] = []
                     /*for (value, text, name) in reactions {
-                        if let path = frameworkBundle.path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
+                        if let path = getAppBundle().path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
                             reactionItems.append(ReactionContextItem(value: value, text: text, path: path))
                         }
                     }*/

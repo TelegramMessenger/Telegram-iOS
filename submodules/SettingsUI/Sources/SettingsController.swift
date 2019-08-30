@@ -32,6 +32,7 @@ import ItemListPeerActionItem
 import WebSearchUI
 import PeerAvatarGalleryUI
 import MapResourceToAvatarSizes
+import AppBundle
 
 private let maximumNumberOfAccounts = 3
 

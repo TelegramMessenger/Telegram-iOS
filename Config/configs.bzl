@@ -1,4 +1,5 @@
 load("//Config:utils.bzl", "config_with_updated_linker_flags", "configs_with_config")
+load("//Config:app_configuration.bzl", "appConfig")
 
 DEVELOPMENT_LANGUAGE = "en"
 
@@ -94,6 +95,7 @@ def app_binary_configs(name):
         "CODE_SIGN_ENTITLEMENTS": "Telegram-iOS.entitlements",
         "DEVELOPMENT_TEAM": "X834Q8SBVP",
         "PROVISIONING_PROFILE_SPECIFIER": "match Development org.telegram.Telegram-iOS",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
     }
     binary_config = merge_dict(SHARED_CONFIGS, binary_specific_config)
     binary_config = merge_dict(binary_config, optimization_config())
@@ -116,7 +118,10 @@ def app_info_plist_substitutions(name):
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
         "PRODUCT_NAME": name,
+        "APP_NAME": name,
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
+        "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
+        "BUILD_NUMBER": appConfig()["buildNumber"],
     }
     return substitutions

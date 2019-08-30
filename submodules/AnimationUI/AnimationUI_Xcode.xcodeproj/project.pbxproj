@@ -29,7 +29,7 @@
 		D06018A922F361F900796784 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018A822F361F800796784 /* UIKit.framework */; };
 		D06018AB22F361FC00796784 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018AA22F361FC00796784 /* AsyncDisplayKit.framework */; };
 		D06018AD22F361FF00796784 /* Lottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018AC22F361FF00796784 /* Lottie.framework */; };
-		D06018AF22F3641F00796784 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06018AE22F3641F00796784 /* FrameworkBundle.swift */; };
+		D0EFF2442319802E00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2432319802E00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,7 +57,7 @@
 		D06018A822F361F800796784 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D06018AA22F361FC00796784 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06018AC22F361FF00796784 /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D06018AE22F3641F00796784 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF2432319802E00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF2442319802E00CF5164 /* AppBundle.framework in Frameworks */,
 				D03E3E8E2304B6EC0049C28B /* YuvConversion.framework in Frameworks */,
 				D03E3E642304B5640049C28B /* MobileCoreServices.framework in Frameworks */,
 				D03E3E622304B55F0049C28B /* SwiftSignalKit.framework in Frameworks */,
@@ -114,7 +115,6 @@
 				D03E3E4E2304B50A0049C28B /* AnimatedStickerUtils.swift */,
 				D06018A322F361E800796784 /* AnimationNode.swift */,
 				D060186F22F35FCD00796784 /* AnimationUI.h */,
-				D06018AE22F3641F00796784 /* FrameworkBundle.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -122,6 +122,7 @@
 		D06018A522F361F400796784 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2432319802E00CF5164 /* AppBundle.framework */,
 				D03E3E8D2304B6EC0049C28B /* YuvConversion.framework */,
 				D03E3E632304B5640049C28B /* MobileCoreServices.framework */,
 				D03E3E612304B55F0049C28B /* SwiftSignalKit.framework */,
@@ -224,7 +225,6 @@
 			files = (
 				D03E3E672304B61A0049C28B /* AnimationRenderer.swift in Sources */,
 				D03E3E4F2304B50A0049C28B /* AnimatedStickerNode.swift in Sources */,
-				D06018AF22F3641F00796784 /* FrameworkBundle.swift in Sources */,
 				D03E3E502304B50A0049C28B /* AnimatedStickerUtils.swift in Sources */,
 				D03E3E682304B61A0049C28B /* SoftwareAnimationRenderer.swift in Sources */,
 				D06018A422F361E800796784 /* AnimationNode.swift in Sources */,

@@ -1,5 +1,5 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
-load("//Config:app_configuration.bzl", "AppConfig")
+load("//Config:app_configuration.bzl", "appConfig")
 
 static_library(
     name = "BuildConfig",
@@ -7,14 +7,13 @@ static_library(
         "Sources/*.m",
     ]),
     compiler_flags = [
-        '-DAPP_CONFIG_API_ID=' + AppConfig["apiId"],
-        '-DAPP_CONFIG_API_HASH="' + AppConfig["apiHash"] + '"',
-        '-DAPP_CONFIG_HOCKEYAPP_ID="' + AppConfig["hockeyAppId"] + '"',
-        '-DAPP_CONFIG_IS_INTERNAL_BUILD=' + AppConfig["isInternalBuild"],
-        '-DAPP_CONFIG_IS_APPSTORE_BUILD=' + AppConfig["isAppStoreBuild"],
-        '-DAPP_CONFIG_APPSTORE_ID=' + AppConfig["appstoreId"],
-        '-DAPP_SPECIFIC_URL_SCHEME="' + AppConfig["appSpecificUrlScheme"] + '"',
-
+        '-DAPP_CONFIG_API_ID=' + appConfig()["apiId"],
+        '-DAPP_CONFIG_API_HASH="' + appConfig()["apiHash"] + '"',
+        '-DAPP_CONFIG_HOCKEYAPP_ID="' + appConfig()["hockeyAppId"] + '"',
+        '-DAPP_CONFIG_IS_INTERNAL_BUILD=' + appConfig()["isInternalBuild"],
+        '-DAPP_CONFIG_IS_APPSTORE_BUILD=' + appConfig()["isAppStoreBuild"],
+        '-DAPP_CONFIG_APPSTORE_ID=' + appConfig()["appStoreId"],
+        '-DAPP_SPECIFIC_URL_SCHEME="' + appConfig()["appSpecificUrlScheme"] + '"',
     ],
     headers = glob([
         "Sources/*.h",

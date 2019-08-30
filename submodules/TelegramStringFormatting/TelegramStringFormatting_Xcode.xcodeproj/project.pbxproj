@@ -28,8 +28,8 @@
 		D0C9C35C2300AEBA00FAB518 /* LocalizedPeerData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */; };
 		D0C9C35E2300AEF100FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C35D2300AEF100FAB518 /* Display.framework */; };
 		D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */; };
-		D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */; };
 		D0C9CA3823022A8300FAB518 /* NumberFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA3723022A8300FAB518 /* NumberFormat.swift */; };
+		D0EFF23C23197F7700CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF23B23197F7700CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,8 +56,8 @@
 		D0C9C35B2300AEBA00FAB518 /* LocalizedPeerData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalizedPeerData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C35D2300AEF100FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C3612300AFCB00FAB518 /* CurrencyFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CurrencyFormat.swift; sourceTree = "<group>"; };
-		D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9CA3723022A8300FAB518 /* NumberFormat.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NumberFormat.swift; sourceTree = "<group>"; };
+		D0EFF23B23197F7700CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF23C23197F7700CF5164 /* AppBundle.framework in Frameworks */,
 				D03E41722304D6B80049C28B /* Contacts.framework in Frameworks */,
 				D03E41702304D6970049C28B /* AddressBook.framework in Frameworks */,
 				D03E3D4F23045E510049C28B /* PlatformRestrictionMatching.framework in Frameworks */,
@@ -114,7 +115,6 @@
 				D0879AC922F7063300C4D6B3 /* DateFormat.swift */,
 				D0879ABC22F705AE00C4D6B3 /* PresenceStrings.swift */,
 				D0879AB022F7021000C4D6B3 /* TelegramStringFormatting.h */,
-				D0C9C3632300AFE800FAB518 /* FrameworkBundle.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -122,6 +122,7 @@
 		D0879ABE22F705B700C4D6B3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF23B23197F7700CF5164 /* AppBundle.framework */,
 				D03E41712304D6B80049C28B /* Contacts.framework */,
 				D03E416F2304D6970049C28B /* AddressBook.framework */,
 				D03E3D4E23045E510049C28B /* PlatformRestrictionMatching.framework */,
@@ -217,7 +218,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C9C3642300AFE800FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C3622300AFCC00FAB518 /* CurrencyFormat.swift in Sources */,
 				D03E41982304D7D60049C28B /* PeerNotificationSoundStrings.swift in Sources */,
 				D0C9C3562300AD9900FAB518 /* MessageContentKind.swift in Sources */,

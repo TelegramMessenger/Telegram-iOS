@@ -19,6 +19,7 @@ import ChatListSearchItemNode
 import ChatListSearchItemHeader
 import SearchUI
 import TelegramPermissionsUI
+import AppBundle
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)

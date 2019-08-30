@@ -30,7 +30,6 @@
 		D0C9CA7C23022DCC00FAB518 /* TelegramUIPreferences.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA7B23022DCC00FAB518 /* TelegramUIPreferences.framework */; };
 		D0C9CA7E23022DD900FAB518 /* TelegramNotices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA7D23022DD900FAB518 /* TelegramNotices.framework */; };
 		D0C9CA8023022E1F00FAB518 /* MergeLists.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA7F23022E1F00FAB518 /* MergeLists.framework */; };
-		D0C9CA8423022E6600FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA8323022E6600FAB518 /* FrameworkBundle.swift */; };
 		D0C9CA8623022FCD00FAB518 /* CallListHoleItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA8523022FCD00FAB518 /* CallListHoleItem.swift */; };
 /* End PBXBuildFile section */
 
@@ -60,7 +59,6 @@
 		D0C9CA7B23022DCC00FAB518 /* TelegramUIPreferences.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramUIPreferences.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CA7D23022DD900FAB518 /* TelegramNotices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramNotices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CA7F23022E1F00FAB518 /* MergeLists.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MergeLists.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9CA8323022E6600FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9CA8523022FCD00FAB518 /* CallListHoleItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallListHoleItem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -119,7 +117,6 @@
 				D0C9CA5523022D5E00FAB518 /* CallListNodeEntries.swift */,
 				D0C9CA5623022D5E00FAB518 /* CallListNodeLocation.swift */,
 				D0C9CA5723022D5E00FAB518 /* CallListViewTransition.swift */,
-				D0C9CA8323022E6600FAB518 /* FrameworkBundle.swift */,
 				D0C9CA4823022CEB00FAB518 /* CallListUI.h */,
 			);
 			path = Sources;
@@ -234,7 +231,6 @@
 				D0C9CA5B23022D5F00FAB518 /* CallListNodeEntries.swift in Sources */,
 				D0C9CA5F23022D5F00FAB518 /* CallListController.swift in Sources */,
 				D0C9CA5E23022D5F00FAB518 /* CallListControllerNode.swift in Sources */,
-				D0C9CA8423022E6600FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9CA5A23022D5F00FAB518 /* CallListCallItem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramPresentationData
 import ActivityIndicator
+import AppBundle
 
 enum ChatTitleProxyStatus {
     case connecting

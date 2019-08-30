@@ -14,23 +14,37 @@ def apple_lib(
         swift_version = None,
         modular = True,
         compiler_flags = None,
+        platform_compiler_flags = None,
         swift_compiler_flags = None,
         warning_as_error = False,
         suppress_warnings = False,
         has_cpp = False,
         framework = False):
     swift_version = swift_version or native.read_config('swift', 'version')
-    compiler_flags = compiler_flags or []
     swift_compiler_flags = swift_compiler_flags or []
 
     if native.read_config("xcode", "beta") == "True":
         warning_as_error = False
 
+    if platform_compiler_flags != None:
+        if compiler_flags != None:
+            fail("compiler_flags and platform_compiler_flags are mutually exclusive")
+        compiler_flags = []
+        for i in range(len(platform_compiler_flags)):
+            if warning_as_error:
+                platform_compiler_flags[i][1].append("-Werror")
+            elif suppress_warnings:
+                platform_compiler_flags[i][1].append("-w")
+    else:
+        compiler_flags = compiler_flags or []
+        if warning_as_error:
+            compiler_flags.append("-Werror")
+        elif suppress_warnings:
+            compiler_flags.append("-w")
+
     if warning_as_error:
-        compiler_flags.append("-Werror")
         swift_compiler_flags.append("-warnings-as-errors")
     elif suppress_warnings:
-        compiler_flags.append("-w")
         swift_compiler_flags.append("-suppress-warnings")
 
     if framework:
@@ -61,6 +75,7 @@ def apple_lib(
                 configs = framework_library_configs(name),
                 modular = modular,
                 compiler_flags = compiler_flags,
+                platform_compiler_flags = platform_compiler_flags,
                 swift_compiler_flags = swift_compiler_flags,
                 preferred_linkage = "shared",
                 link_style = "static",
@@ -84,6 +99,7 @@ def apple_lib(
                 configs = framework_library_configs(name),
                 modular = modular,
                 compiler_flags = compiler_flags,
+                platform_compiler_flags = platform_compiler_flags,
                 swift_compiler_flags = swift_compiler_flags,
                 preferred_linkage = "shared",
                 link_style = "static",
@@ -116,6 +132,7 @@ def apple_lib(
             configs = library_configs(),
             modular = modular,
             compiler_flags = compiler_flags,
+            platform_compiler_flags = platform_compiler_flags,
             swift_compiler_flags = swift_compiler_flags,
         )
 
@@ -134,6 +151,7 @@ def static_library(
         info_plist_substitutions = {},
         modular = True,
         compiler_flags = None,
+        platform_compiler_flags = None,
         swift_compiler_flags = None,
         warning_as_error = False,
         suppress_warnings = True):
@@ -145,6 +163,7 @@ def static_library(
         headers = headers,
         modular = modular,
         compiler_flags = compiler_flags,
+        platform_compiler_flags = platform_compiler_flags,
         swift_compiler_flags = swift_compiler_flags,
         extra_xcode_files = extra_xcode_files,
         deps = deps,
@@ -170,6 +189,7 @@ def framework(
         info_plist_substitutions = {},
         modular = True,
         compiler_flags = None,
+        platform_compiler_flags = None,
         swift_compiler_flags = None,
         warning_as_error = False,
         suppress_warnings = True):
@@ -181,6 +201,7 @@ def framework(
         headers = headers,
         modular = modular,
         compiler_flags = compiler_flags,
+        platform_compiler_flags = platform_compiler_flags,
         swift_compiler_flags = swift_compiler_flags,
         extra_xcode_files = extra_xcode_files,
         deps = deps,

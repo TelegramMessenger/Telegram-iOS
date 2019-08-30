@@ -15,6 +15,7 @@ static_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

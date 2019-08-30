@@ -56,7 +56,6 @@ public extension String {
     }
     
     var isSingleEmoji: Bool {
-        print(Bundle(for: FrameworkClass.self).bundlePath)
         return self.emojis.count == 1 && self.containsEmoji
     }
     

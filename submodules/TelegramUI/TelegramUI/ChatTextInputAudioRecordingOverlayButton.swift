@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import AppBundle
 
 private let innerCircleDiameter: CGFloat = 110.0
 private let outerCircleDiameter = innerCircleDiameter + 50.0

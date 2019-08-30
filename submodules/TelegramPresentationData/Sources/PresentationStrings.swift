@@ -1,4 +1,5 @@
 import Foundation
+import AppBundle
 
 private let fallbackDict: [String: String] = {
     guard let mainPath = Bundle.main.path(forResource: "en", ofType: "lproj"), let bundle = Bundle(path: mainPath) else {
@@ -139,7 +140,7 @@ private final class DataReader {
 }
         
 private func loadMapping() -> ([Int], [String], [Int], [Int], [String]) {
-    guard let filePath = Bundle(for: PresentationStrings.self).path(forResource: "PresentationStrings", ofType: "mapping") else {
+    guard let filePath = getAppBundle().path(forResource: "PresentationStrings", ofType: "mapping") else {
         fatalError()
     }
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {

@@ -18,6 +18,7 @@ static_library(
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/PeersNearbyIconNode:PeersNearbyIconNode",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

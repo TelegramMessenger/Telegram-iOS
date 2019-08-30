@@ -19,6 +19,7 @@ static_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/MediaResources:MediaResources",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

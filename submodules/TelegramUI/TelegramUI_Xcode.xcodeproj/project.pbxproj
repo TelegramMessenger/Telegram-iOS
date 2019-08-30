@@ -9,40 +9,16 @@
 /* Begin PBXBuildFile section */
 		090B48C82200BCA8005083FA /* WallpaperUploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */; };
 		090E63EE2196FE3A00E3C035 /* OpenAddContact.swift in Sources */ = {isa = PBXBuildFile; fileRef = 090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */; };
-		090E778C22AA842300CD99F5 /* anim_success.json in Resources */ = {isa = PBXBuildFile; fileRef = 090E778B22AA842200CD99F5 /* anim_success.json */; };
 		0910B0ED21FA178C00F8F87D /* WallpaperPreviewMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */; };
 		091BEAB3214552D9003AEA30 /* Vision.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02DADBE2138D76F00116225 /* Vision.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		0921F60E228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0921F60D228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift */; };
-		092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */; };
-		09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1A213BC5DE0020033A /* anim_ungroup.json */; };
-		09310D33213ED5FC0020033A /* anim_group.json in Resources */ = {isa = PBXBuildFile; fileRef = 09310D1B213BC5DE0020033A /* anim_group.json */; };
 		0940932422E73DFB003846A3 /* ChatSendMessageActionSheetController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0940932322E73DFB003846A3 /* ChatSendMessageActionSheetController.swift */; };
 		0940932622E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0940932522E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift */; };
-		0947350E2275D72100EA2312 /* anim_hide.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735042275D71F00EA2312 /* anim_hide.json */; };
-		0947350F2275D72100EA2312 /* anim_unread.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735052275D72000EA2312 /* anim_unread.json */; };
-		094735102275D72100EA2312 /* anim_read.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735062275D72000EA2312 /* anim_read.json */; };
-		094735112275D72100EA2312 /* anim_archive.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735072275D72000EA2312 /* anim_archive.json */; };
-		094735122275D72100EA2312 /* anim_mute.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735082275D72000EA2312 /* anim_mute.json */; };
-		094735132275D72100EA2312 /* anim_delete.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735092275D72000EA2312 /* anim_delete.json */; };
-		094735142275D72100EA2312 /* anim_unarchive.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350A2275D72000EA2312 /* anim_unarchive.json */; };
-		094735152275D72100EA2312 /* anim_unpin.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350B2275D72000EA2312 /* anim_unpin.json */; };
-		094735162275D72100EA2312 /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350C2275D72100EA2312 /* anim_unmute.json */; };
-		094735172275D72100EA2312 /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 0947350D2275D72100EA2312 /* anim_pin.json */; };
-		094735192277483C00EA2312 /* anim_infotip.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735182277483B00EA2312 /* anim_infotip.json */; };
 		09510B1322F96E5B0078CAB7 /* ChatScheduleTimeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09510B1222F96E5B0078CAB7 /* ChatScheduleTimeController.swift */; };
 		09510B1522F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09510B1422F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift */; };
 		095214EF2318D4D3008CDD87 /* ThemeUpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 095214EE2318D4D3008CDD87 /* ThemeUpdateManager.swift */; };
 		0962E67921B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67821B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift */; };
 		09749BC521F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC421F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift */; };
-		09874E4F21078FA100E190B8 /* Generic.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788321065F8C0077D77F /* Generic.html */; };
-		09874E5021078FA100E190B8 /* GenericUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788821065F8C0077D77F /* GenericUserScript.js */; };
-		09874E5121078FA100E190B8 /* Instagram.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788421065F8C0077D77F /* Instagram.html */; };
-		09874E5221078FA100E190B8 /* Twitch.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788521065F8C0077D77F /* Twitch.html */; };
-		09874E5321078FA100E190B8 /* TwitchUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788621065F8C0077D77F /* TwitchUserScript.js */; };
-		09874E5421078FA100E190B8 /* Vimeo.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788221065F8C0077D77F /* Vimeo.html */; };
-		09874E5521078FA100E190B8 /* VimeoUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788021065F8B0077D77F /* VimeoUserScript.js */; };
-		09874E5621078FA100E190B8 /* Youtube.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788721065F8C0077D77F /* Youtube.html */; };
-		09874E5721078FA100E190B8 /* YoutubeUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 0979788121065F8B0077D77F /* YoutubeUserScript.js */; };
 		099529B021D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */; };
 		099529B421D3E5D800805E13 /* CheckDiskSpace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 099529B321D3E5D800805E13 /* CheckDiskSpace.swift */; };
 		09A218D9229EE1B600DE6898 /* HorizontalStickerGridItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09A218D7229EE1B500DE6898 /* HorizontalStickerGridItem.swift */; };
@@ -53,13 +29,10 @@
 		09D304152173C0E900C00567 /* WatchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D304142173C0E900C00567 /* WatchManager.swift */; };
 		09D96899221DE92600B1458A /* ID3ArtworkReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09D96898221DE92600B1458A /* ID3ArtworkReader.swift */; };
 		09DD5D5021ECC3C400D7007A /* SuppressContactsWarning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */; };
-		09E2D9EF226F1AFA00EA0AA4 /* Emoji.mapping in Resources */ = {isa = PBXBuildFile; fileRef = 09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */; };
 		09E2D9F1226F214000EA0AA4 /* EmojiResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */; };
-		09E2DA132273367900EA0AA4 /* anim_archiveAvatar.json in Resources */ = {isa = PBXBuildFile; fileRef = 09E2DA122273367900EA0AA4 /* anim_archiveAvatar.json */; };
 		09EC0DED22CB583C00E7185B /* TextLinkHandling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EC0DEC22CB583C00E7185B /* TextLinkHandling.swift */; };
 		09EDAD2A220DA6A40012A50B /* VolumeButtons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09EDAD29220DA6A40012A50B /* VolumeButtons.swift */; };
 		09F2158D225CF5BC00AEDF6D /* Pasteboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09F2158C225CF5BC00AEDF6D /* Pasteboard.swift */; };
-		09FFBCD1227B7F9900C33B4B /* anim_archiveswipe.json in Resources */ = {isa = PBXBuildFile; fileRef = 09FFBCCF227B7F9000C33B4B /* anim_archiveswipe.json */; };
 		09FFBCD72281BB2D00C33B4B /* ChatTextLinkEditController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09FFBCD62281BB2D00C33B4B /* ChatTextLinkEditController.swift */; };
 		D000CABC21F158AD0011B15D /* PrepareSecretThumbnailData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */; };
 		D0068FA821760FA300D1B315 /* StoreDownloadedMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0068FA721760FA300D1B315 /* StoreDownloadedMedia.swift */; };
@@ -155,7 +128,6 @@
 		D04281FC200E61BC009DDE36 /* ChatRecentActionsInteraction.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FB200E61BC009DDE36 /* ChatRecentActionsInteraction.swift */; };
 		D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FD200E639A009DDE36 /* ChatRecentActionsTitleView.swift */; };
 		D0428200200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04281FF200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift */; };
-		D0471B541EFD8ECA0074D609 /* currencies.json in Resources */ = {isa = PBXBuildFile; fileRef = D0471B531EFD8ECA0074D609 /* currencies.json */; };
 		D048B339203C532800038D05 /* ChatMediaInputPane.swift in Sources */ = {isa = PBXBuildFile; fileRef = D048B338203C532800038D05 /* ChatMediaInputPane.swift */; };
 		D04B4D131EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04B4D121EEA0A6500711AF6 /* ChatMessageMapBubbleContentNode.swift */; };
 		D04ECD721FFBF22B00DE9029 /* OpenUrl.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04ECD711FFBF22B00DE9029 /* OpenUrl.swift */; };
@@ -211,8 +183,6 @@
 		D0943B001FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */; };
 		D0943B051FDDFDA0001522CC /* OverlayInstantVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943B041FDDFDA0001522CC /* OverlayInstantVideoNode.swift */; };
 		D0943B071FDEC529001522CC /* InstantVideoRadialStatusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0943B061FDEC528001522CC /* InstantVideoRadialStatusNode.swift */; };
-		D0955FB521912B6000F89427 /* PresentationStrings.mapping in Resources */ = {isa = PBXBuildFile; fileRef = D0955FB32191278C00F89427 /* PresentationStrings.mapping */; };
-		D095EF51230C7D2C00CB6167 /* BuiltinReactions in Resources */ = {isa = PBXBuildFile; fileRef = D095EF4F230C767D00CB6167 /* BuiltinReactions */; };
 		D099E220229405BB00561B75 /* Weak.swift in Sources */ = {isa = PBXBuildFile; fileRef = D099E21F229405BB00561B75 /* Weak.swift */; };
 		D09E637C1F0E7C28003444CD /* SharedMediaPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E637B1F0E7C28003444CD /* SharedMediaPlayer.swift */; };
 		D09E637F1F0E8C9F003444CD /* PeerMessagesMediaPlaylist.swift in Sources */ = {isa = PBXBuildFile; fileRef = D09E637E1F0E8C9F003444CD /* PeerMessagesMediaPlaylist.swift */; };
@@ -250,7 +220,6 @@
 		D0AEAE292080FD660013176E /* StickerPaneSearchGlobaltem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AEAE282080FD660013176E /* StickerPaneSearchGlobaltem.swift */; };
 		D0AF323A1FB1D8D60097362B /* ChatOverlayNavigationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32391FB1D8D60097362B /* ChatOverlayNavigationBar.swift */; };
 		D0B21B1F22156D92003F741D /* LegacyCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B21B1E22156D92003F741D /* LegacyCache.swift */; };
-		D0B4AF861EC111FA00D51FF6 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D0AB0BBA1D6719B5002C78E7 /* Images.xcassets */; };
 		D0B4AF881EC112EE00D51FF6 /* CallKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0B4AF871EC112ED00D51FF6 /* CallKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D0B69C3920EBB397003632C7 /* ChatMessageInteractiveInstantVideoNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B69C3820EBB397003632C7 /* ChatMessageInteractiveInstantVideoNode.swift */; };
 		D0B85C1C1FF6F76000E795B4 /* AuthorizationSequencePasswordRecoveryController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B85C1B1FF6F76000E795B4 /* AuthorizationSequencePasswordRecoveryController.swift */; };
@@ -265,7 +234,6 @@
 		D0C0B59B1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B59A1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift */; };
 		D0C0B59F1EE082F5000F4D2C /* ChatSearchInputPanelNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B59E1EE082F5000F4D2C /* ChatSearchInputPanelNode.swift */; };
 		D0C0B5B11EE1C421000F4D2C /* ChatDateSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C0B5B01EE1C421000F4D2C /* ChatDateSelectionSheet.swift */; };
-		D0C12A1D1F33A85600B3F66D /* ChatWallpaperBuiltin0.jpg in Resources */ = {isa = PBXBuildFile; fileRef = D0C12A1B1F33964900B3F66D /* ChatWallpaperBuiltin0.jpg */; };
 		D0C12EB01F9A8D1300600BB2 /* ListMessageDateHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C12EAF1F9A8D1300600BB2 /* ListMessageDateHeader.swift */; };
 		D0C26D571FDF2388004ABF18 /* OpenChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C26D561FDF2388004ABF18 /* OpenChatMessage.swift */; };
 		D0C45E9F213FFAFD00988156 /* Lottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C45E9E213FFAFD00988156 /* Lottie.framework */; };
@@ -336,48 +304,6 @@
 		D0E8175720122DAD00B82BBB /* ChatRecentActionsSearchNavigationContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8175620122DAD00B82BBB /* ChatRecentActionsSearchNavigationContentNode.swift */; };
 		D0E8175920122FE100B82BBB /* ChatRecentActionsFilterController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8175820122FE100B82BBB /* ChatRecentActionsFilterController.swift */; };
 		D0E8175B201254FA00B82BBB /* ChatRecentActionsEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E8175A201254FA00B82BBB /* ChatRecentActionsEmptyNode.swift */; };
-		D0E9B9EA1F00853C00F079A4 /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = D0E9B9E91F00853C00F079A4 /* PhoneCountries.txt */; };
-		D0E9BA911F056F4C00F079A4 /* stp_card_amex@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA691F056F4C00F079A4 /* stp_card_amex@2x.png */; };
-		D0E9BA921F056F4C00F079A4 /* stp_card_amex@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6A1F056F4C00F079A4 /* stp_card_amex@3x.png */; };
-		D0E9BA931F056F4C00F079A4 /* stp_card_amex_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6B1F056F4C00F079A4 /* stp_card_amex_template@2x.png */; };
-		D0E9BA941F056F4C00F079A4 /* stp_card_amex_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6C1F056F4C00F079A4 /* stp_card_amex_template@3x.png */; };
-		D0E9BA951F056F4C00F079A4 /* stp_card_applepay@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6D1F056F4C00F079A4 /* stp_card_applepay@2x.png */; };
-		D0E9BA961F056F4C00F079A4 /* stp_card_applepay@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6E1F056F4C00F079A4 /* stp_card_applepay@3x.png */; };
-		D0E9BA971F056F4C00F079A4 /* stp_card_applepay_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA6F1F056F4C00F079A4 /* stp_card_applepay_template@2x.png */; };
-		D0E9BA981F056F4C00F079A4 /* stp_card_applepay_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA701F056F4C00F079A4 /* stp_card_applepay_template@3x.png */; };
-		D0E9BA991F056F4C00F079A4 /* stp_card_cvc@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA711F056F4C00F079A4 /* stp_card_cvc@2x.png */; };
-		D0E9BA9A1F056F4C00F079A4 /* stp_card_cvc@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA721F056F4C00F079A4 /* stp_card_cvc@3x.png */; };
-		D0E9BA9B1F056F4C00F079A4 /* stp_card_cvc_amex@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA731F056F4C00F079A4 /* stp_card_cvc_amex@2x.png */; };
-		D0E9BA9C1F056F4C00F079A4 /* stp_card_cvc_amex@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA741F056F4C00F079A4 /* stp_card_cvc_amex@3x.png */; };
-		D0E9BA9D1F056F4C00F079A4 /* stp_card_diners@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA751F056F4C00F079A4 /* stp_card_diners@2x.png */; };
-		D0E9BA9E1F056F4C00F079A4 /* stp_card_diners@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA761F056F4C00F079A4 /* stp_card_diners@3x.png */; };
-		D0E9BA9F1F056F4C00F079A4 /* stp_card_diners_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA771F056F4C00F079A4 /* stp_card_diners_template@2x.png */; };
-		D0E9BAA01F056F4C00F079A4 /* stp_card_diners_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA781F056F4C00F079A4 /* stp_card_diners_template@3x.png */; };
-		D0E9BAA11F056F4C00F079A4 /* stp_card_discover@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA791F056F4C00F079A4 /* stp_card_discover@2x.png */; };
-		D0E9BAA21F056F4C00F079A4 /* stp_card_discover@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA7A1F056F4C00F079A4 /* stp_card_discover@3x.png */; };
-		D0E9BAA31F056F4C00F079A4 /* stp_card_discover_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA7B1F056F4C00F079A4 /* stp_card_discover_template@2x.png */; };
-		D0E9BAA41F056F4C00F079A4 /* stp_card_discover_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA7C1F056F4C00F079A4 /* stp_card_discover_template@3x.png */; };
-		D0E9BAA51F056F4C00F079A4 /* stp_card_form_applepay@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA7D1F056F4C00F079A4 /* stp_card_form_applepay@2x.png */; };
-		D0E9BAA61F056F4C00F079A4 /* stp_card_form_applepay@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA7E1F056F4C00F079A4 /* stp_card_form_applepay@3x.png */; };
-		D0E9BAA71F056F4C00F079A4 /* stp_card_form_back@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA7F1F056F4C00F079A4 /* stp_card_form_back@2x.png */; };
-		D0E9BAA81F056F4C00F079A4 /* stp_card_form_back@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA801F056F4C00F079A4 /* stp_card_form_back@3x.png */; };
-		D0E9BAA91F056F4C00F079A4 /* stp_card_form_front@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA811F056F4C00F079A4 /* stp_card_form_front@2x.png */; };
-		D0E9BAAA1F056F4C00F079A4 /* stp_card_form_front@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA821F056F4C00F079A4 /* stp_card_form_front@3x.png */; };
-		D0E9BAAB1F056F4C00F079A4 /* stp_card_jcb@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA831F056F4C00F079A4 /* stp_card_jcb@2x.png */; };
-		D0E9BAAC1F056F4C00F079A4 /* stp_card_jcb@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA841F056F4C00F079A4 /* stp_card_jcb@3x.png */; };
-		D0E9BAAD1F056F4C00F079A4 /* stp_card_jcb_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA851F056F4C00F079A4 /* stp_card_jcb_template@2x.png */; };
-		D0E9BAAE1F056F4C00F079A4 /* stp_card_jcb_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA861F056F4C00F079A4 /* stp_card_jcb_template@3x.png */; };
-		D0E9BAAF1F056F4C00F079A4 /* stp_card_mastercard@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA871F056F4C00F079A4 /* stp_card_mastercard@2x.png */; };
-		D0E9BAB01F056F4C00F079A4 /* stp_card_mastercard@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA881F056F4C00F079A4 /* stp_card_mastercard@3x.png */; };
-		D0E9BAB11F056F4C00F079A4 /* stp_card_mastercard_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA891F056F4C00F079A4 /* stp_card_mastercard_template@2x.png */; };
-		D0E9BAB21F056F4C00F079A4 /* stp_card_mastercard_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8A1F056F4C00F079A4 /* stp_card_mastercard_template@3x.png */; };
-		D0E9BAB31F056F4C00F079A4 /* stp_card_placeholder_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8B1F056F4C00F079A4 /* stp_card_placeholder_template@2x.png */; };
-		D0E9BAB41F056F4C00F079A4 /* stp_card_placeholder_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8C1F056F4C00F079A4 /* stp_card_placeholder_template@3x.png */; };
-		D0E9BAB51F056F4C00F079A4 /* stp_card_visa@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8D1F056F4C00F079A4 /* stp_card_visa@2x.png */; };
-		D0E9BAB61F056F4C00F079A4 /* stp_card_visa@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8E1F056F4C00F079A4 /* stp_card_visa@3x.png */; };
-		D0E9BAB71F056F4C00F079A4 /* stp_card_visa_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA8F1F056F4C00F079A4 /* stp_card_visa_template@2x.png */; };
-		D0E9BAB81F056F4C00F079A4 /* stp_card_visa_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0E9BA901F056F4C00F079A4 /* stp_card_visa_template@3x.png */; };
-		D0EB42051F3143AB00838FE6 /* LegacyComponentsResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = D0EB42041F3143AB00838FE6 /* LegacyComponentsResources.bundle */; };
 		D0EB5ADF1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EB5ADE1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift */; };
 		D0EC55A3210231D600D1992C /* SearchPeerMembers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EC55A2210231D600D1992C /* SearchPeerMembers.swift */; };
 		D0EC6CC11EB9F58800EBF1C3 /* LegacyCamera.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00E15251DDBD4E700ACF65C /* LegacyCamera.swift */; };
@@ -549,7 +475,6 @@
 		D0EC6E831EB9F58900EBF1C3 /* NotificationItemContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E3D1E93D09200F62E39 /* NotificationItemContainerNode.swift */; };
 		D0EC6E841EB9F58900EBF1C3 /* NotificationItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E3B1E93CC2600F62E39 /* NotificationItem.swift */; };
 		D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C50E3F1E93D3B000F62E39 /* ChatMessageNotificationItem.swift */; };
-		D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */; };
 		D0EC6E8F1EB9F5B200EBF1C3 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D45291D5E340300A7428A /* AsyncDisplayKit.framework */; };
 		D0EC6E901EB9F5B200EBF1C3 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452A1D5E340300A7428A /* Display.framework */; };
 		D0EC6E911EB9F5B200EBF1C3 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D08D452B1D5E340300A7428A /* Postbox.framework */; };
@@ -562,9 +487,8 @@
 		D0EC6EA61EB9FC2400EBF1C3 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D07551901DDA4FC70073E051 /* libc++.tbd */; };
 		D0EC6EBD1EBA100F00EBF1C3 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EC6EBC1EBA100F00EBF1C3 /* CoreAudio.framework */; };
 		D0EEE9A12165585F001292A6 /* DocumentPreviewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0EEE9A02165585F001292A6 /* DocumentPreviewController.swift */; };
+		D0EFF2482319806700CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2472319806700CF5164 /* AppBundle.framework */; };
 		D0F19F6420E5A15B00EEC860 /* ChatMediaInputPeerSpecificItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F19F6320E5A15B00EEC860 /* ChatMediaInputPeerSpecificItem.swift */; };
-		D0F9720F1FFE4BD5002595C8 /* notification.caf in Resources */ = {isa = PBXBuildFile; fileRef = D0C50E431E93FCD200F62E39 /* notification.caf */; };
-		D0F972101FFE4BD5002595C8 /* MessageSent.caf in Resources */ = {isa = PBXBuildFile; fileRef = D073CE621DCBBE5D007511FD /* MessageSent.caf */; };
 		D0FA08C8204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C7204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift */; };
 		D0FA08CA2049BEAC00DD23FC /* ChatEmptyNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FA08C92049BEAC00DD23FC /* ChatEmptyNode.swift */; };
 		D0FAB13E22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0FAB13D22EBC25300D8BED2 /* ChatMessageBubbleBackdrop.swift */; };
@@ -576,39 +500,15 @@
 /* Begin PBXFileReference section */
 		090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperUploadManager.swift; sourceTree = "<group>"; };
 		090E63ED2196FE3A00E3C035 /* OpenAddContact.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAddContact.swift; sourceTree = "<group>"; };
-		090E778B22AA842200CD99F5 /* anim_success.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_success.json; sourceTree = "<group>"; };
 		0910B0EC21FA178C00F8F87D /* WallpaperPreviewMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperPreviewMedia.swift; sourceTree = "<group>"; };
 		0921F60D228EE000001A13D7 /* ChatMessageActionUrlAuthController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageActionUrlAuthController.swift; sourceTree = "<group>"; };
-		092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
-		09310D1A213BC5DE0020033A /* anim_ungroup.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_ungroup.json; sourceTree = "<group>"; };
-		09310D1B213BC5DE0020033A /* anim_group.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_group.json; sourceTree = "<group>"; };
 		0940932322E73DFB003846A3 /* ChatSendMessageActionSheetController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSendMessageActionSheetController.swift; sourceTree = "<group>"; };
 		0940932522E73E12003846A3 /* ChatSendMessageActionSheetControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSendMessageActionSheetControllerNode.swift; sourceTree = "<group>"; };
-		094735042275D71F00EA2312 /* anim_hide.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_hide.json; sourceTree = "<group>"; };
-		094735052275D72000EA2312 /* anim_unread.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unread.json; sourceTree = "<group>"; };
-		094735062275D72000EA2312 /* anim_read.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_read.json; sourceTree = "<group>"; };
-		094735072275D72000EA2312 /* anim_archive.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_archive.json; sourceTree = "<group>"; };
-		094735082275D72000EA2312 /* anim_mute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_mute.json; sourceTree = "<group>"; };
-		094735092275D72000EA2312 /* anim_delete.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_delete.json; sourceTree = "<group>"; };
-		0947350A2275D72000EA2312 /* anim_unarchive.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unarchive.json; sourceTree = "<group>"; };
-		0947350B2275D72000EA2312 /* anim_unpin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unpin.json; sourceTree = "<group>"; };
-		0947350C2275D72100EA2312 /* anim_unmute.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_unmute.json; sourceTree = "<group>"; };
-		0947350D2275D72100EA2312 /* anim_pin.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_pin.json; sourceTree = "<group>"; };
-		094735182277483B00EA2312 /* anim_infotip.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_infotip.json; sourceTree = "<group>"; };
 		09510B1222F96E5B0078CAB7 /* ChatScheduleTimeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScheduleTimeController.swift; sourceTree = "<group>"; };
 		09510B1422F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScheduleTimeControllerNode.swift; sourceTree = "<group>"; };
 		095214EE2318D4D3008CDD87 /* ThemeUpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeUpdateManager.swift; sourceTree = "<group>"; };
 		0962E67821B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageAnimatedStickerItemNode.swift; sourceTree = "<group>"; };
 		09749BC421F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelItem.swift; sourceTree = "<group>"; };
-		0979788021065F8B0077D77F /* VimeoUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = VimeoUserScript.js; sourceTree = "<group>"; };
-		0979788121065F8B0077D77F /* YoutubeUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = YoutubeUserScript.js; sourceTree = "<group>"; };
-		0979788221065F8C0077D77F /* Vimeo.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Vimeo.html; sourceTree = "<group>"; };
-		0979788321065F8C0077D77F /* Generic.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Generic.html; sourceTree = "<group>"; };
-		0979788421065F8C0077D77F /* Instagram.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Instagram.html; sourceTree = "<group>"; };
-		0979788521065F8C0077D77F /* Twitch.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Twitch.html; sourceTree = "<group>"; };
-		0979788621065F8C0077D77F /* TwitchUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = TwitchUserScript.js; sourceTree = "<group>"; };
-		0979788721065F8C0077D77F /* Youtube.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Youtube.html; sourceTree = "<group>"; };
-		0979788821065F8C0077D77F /* GenericUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = GenericUserScript.js; sourceTree = "<group>"; };
 		099529AF21D2123E00805E13 /* ChatMessageUnsupportedBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageUnsupportedBubbleContentNode.swift; sourceTree = "<group>"; };
 		099529B321D3E5D800805E13 /* CheckDiskSpace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckDiskSpace.swift; sourceTree = "<group>"; };
 		09A218D7229EE1B500DE6898 /* HorizontalStickerGridItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalStickerGridItem.swift; sourceTree = "<group>"; };
@@ -619,13 +519,10 @@
 		09D304142173C0E900C00567 /* WatchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchManager.swift; sourceTree = "<group>"; };
 		09D96898221DE92600B1458A /* ID3ArtworkReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ID3ArtworkReader.swift; sourceTree = "<group>"; };
 		09DD5D4F21ECC3C400D7007A /* SuppressContactsWarning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuppressContactsWarning.swift; sourceTree = "<group>"; };
-		09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = Emoji.mapping; path = TelegramUI/Resources/Emoji.mapping; sourceTree = "<group>"; };
 		09E2D9F0226F214000EA0AA4 /* EmojiResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiResources.swift; sourceTree = "<group>"; };
-		09E2DA122273367900EA0AA4 /* anim_archiveAvatar.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_archiveAvatar.json; sourceTree = "<group>"; };
 		09EC0DEC22CB583C00E7185B /* TextLinkHandling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextLinkHandling.swift; sourceTree = "<group>"; };
 		09EDAD29220DA6A40012A50B /* VolumeButtons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeButtons.swift; sourceTree = "<group>"; };
 		09F2158C225CF5BC00AEDF6D /* Pasteboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pasteboard.swift; sourceTree = "<group>"; };
-		09FFBCCF227B7F9000C33B4B /* anim_archiveswipe.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_archiveswipe.json; sourceTree = "<group>"; };
 		09FFBCD62281BB2D00C33B4B /* ChatTextLinkEditController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTextLinkEditController.swift; sourceTree = "<group>"; };
 		D000CABB21F158AD0011B15D /* PrepareSecretThumbnailData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrepareSecretThumbnailData.swift; sourceTree = "<group>"; };
 		D002A0D21E9BBE6700A81812 /* MultiplexedSoftwareVideoSourceManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiplexedSoftwareVideoSourceManager.swift; sourceTree = "<group>"; };
@@ -767,7 +664,6 @@
 		D04281FF200E6A00009DDE36 /* ChatRecentActionsHistoryTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsHistoryTransition.swift; sourceTree = "<group>"; };
 		D045549921B2F173007A6DD9 /* libturbojpeg.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libturbojpeg.a; path = "third-party/libjpeg-turbo/libturbojpeg.a"; sourceTree = "<group>"; };
 		D04662801E68BA64006FAFC4 /* TransformOutgoingMessageMedia.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TransformOutgoingMessageMedia.swift; sourceTree = "<group>"; };
-		D0471B531EFD8ECA0074D609 /* currencies.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; name = currencies.json; path = TelegramUI/Resources/currencies.json; sourceTree = "<group>"; };
 		D048B338203C532800038D05 /* ChatMediaInputPane.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMediaInputPane.swift; sourceTree = "<group>"; };
 		D049EAE11E447AD500A2CD3A /* StickersChatInputContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D049EAE51E44AD5600A2CD3A /* ChatMediaInputMetaSectionItemNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputMetaSectionItemNode.swift; sourceTree = "<group>"; };
@@ -812,7 +708,6 @@
 		D06E0F8D1F79ABFB003CF3DD /* ChatLoadingNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatLoadingNode.swift; sourceTree = "<group>"; };
 		D06F1EA31F6C0A5D00FE8B74 /* ChatHistorySearchContainerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistorySearchContainerNode.swift; sourceTree = "<group>"; };
 		D072F38323155EAF0009E66F /* MessageReactionListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MessageReactionListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D073CE621DCBBE5D007511FD /* MessageSent.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = MessageSent.caf; path = TelegramUI/Sounds/MessageSent.caf; sourceTree = "<group>"; };
 		D073CE641DCBC26B007511FD /* ServiceSoundManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ServiceSoundManager.swift; sourceTree = "<group>"; };
 		D073CE701DCBF23F007511FD /* DeclareEncodables.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeclareEncodables.swift; sourceTree = "<group>"; };
 		D0750C7722B2A13300BE5F6E /* UniversalMediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UniversalMediaPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -868,8 +763,6 @@
 		D0943AFF1FDAE852001522CC /* ChatFeedNavigationInputPanelNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatFeedNavigationInputPanelNode.swift; sourceTree = "<group>"; };
 		D0943B041FDDFDA0001522CC /* OverlayInstantVideoNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayInstantVideoNode.swift; sourceTree = "<group>"; };
 		D0943B061FDEC528001522CC /* InstantVideoRadialStatusNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantVideoRadialStatusNode.swift; sourceTree = "<group>"; };
-		D0955FB32191278C00F89427 /* PresentationStrings.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = PresentationStrings.mapping; path = TelegramUI/Resources/PresentationStrings.mapping; sourceTree = "<group>"; };
-		D095EF4F230C767D00CB6167 /* BuiltinReactions */ = {isa = PBXFileReference; lastKnownFileType = folder; name = BuiltinReactions; path = TelegramUI/Resources/BuiltinReactions; sourceTree = "<group>"; };
 		D099E21F229405BB00561B75 /* Weak.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Weak.swift; sourceTree = "<group>"; };
 		D099EA1E1DE7450B001AF5A8 /* HorizontalListContextResultsChatInputContextPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalListContextResultsChatInputContextPanelNode.swift; sourceTree = "<group>"; };
 		D099EA201DE7451D001AF5A8 /* HorizontalListContextResultsChatInputPanelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HorizontalListContextResultsChatInputPanelItem.swift; sourceTree = "<group>"; };
@@ -901,7 +794,6 @@
 		D0AB0BB41D6718F1002C78E7 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
 		D0AB0BB61D67191C002C78E7 /* MtProtoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MtProtoKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/MtProtoKit.framework"; sourceTree = "<group>"; };
 		D0AB0BB71D67191C002C78E7 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphoneos/SSignalKit.framework"; sourceTree = "<group>"; };
-		D0AB0BBA1D6719B5002C78E7 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessagePollBubbleContentNode.swift; sourceTree = "<group>"; };
 		D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageCallBubbleContentNode.swift; sourceTree = "<group>"; };
 		D0AD02E91FFFEBEF00C1DCFF /* ChatMessageLiveLocationTextNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageLiveLocationTextNode.swift; sourceTree = "<group>"; };
@@ -939,7 +831,6 @@
 		D0C0B59A1EE019E5000F4D2C /* ChatSearchNavigationContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatSearchNavigationContentNode.swift; sourceTree = "<group>"; };
 		D0C0B59E1EE082F5000F4D2C /* ChatSearchInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatSearchInputPanelNode.swift; sourceTree = "<group>"; };
 		D0C0B5B01EE1C421000F4D2C /* ChatDateSelectionSheet.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatDateSelectionSheet.swift; sourceTree = "<group>"; };
-		D0C12A1B1F33964900B3F66D /* ChatWallpaperBuiltin0.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; name = ChatWallpaperBuiltin0.jpg; path = TelegramUI/Resources/ChatWallpaperBuiltin0.jpg; sourceTree = "<group>"; };
 		D0C12EAF1F9A8D1300600BB2 /* ListMessageDateHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListMessageDateHeader.swift; sourceTree = "<group>"; };
 		D0C26D561FDF2388004ABF18 /* OpenChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenChatMessage.swift; sourceTree = "<group>"; };
 		D0C45E9E213FFAFD00988156 /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -950,7 +841,6 @@
 		D0C50E3B1E93CC2600F62E39 /* NotificationItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationItem.swift; sourceTree = "<group>"; };
 		D0C50E3D1E93D09200F62E39 /* NotificationItemContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationItemContainerNode.swift; sourceTree = "<group>"; };
 		D0C50E3F1E93D3B000F62E39 /* ChatMessageNotificationItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMessageNotificationItem.swift; sourceTree = "<group>"; };
-		D0C50E431E93FCD200F62E39 /* notification.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = notification.caf; path = TelegramUI/Sounds/notification.caf; sourceTree = "<group>"; };
 		D0C932351E0988C60074F044 /* ChatButtonKeyboardInputNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatButtonKeyboardInputNode.swift; sourceTree = "<group>"; };
 		D0C932371E09E0EA0074F044 /* ChatBotInfoItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBotInfoItem.swift; sourceTree = "<group>"; };
 		D0C9BFAC22FE316E00FAB518 /* ComposePollUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ComposePollUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1053,48 +943,6 @@
 		D0E8175620122DAD00B82BBB /* ChatRecentActionsSearchNavigationContentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsSearchNavigationContentNode.swift; sourceTree = "<group>"; };
 		D0E8175820122FE100B82BBB /* ChatRecentActionsFilterController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsFilterController.swift; sourceTree = "<group>"; };
 		D0E8175A201254FA00B82BBB /* ChatRecentActionsEmptyNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatRecentActionsEmptyNode.swift; sourceTree = "<group>"; };
-		D0E9B9E91F00853C00F079A4 /* PhoneCountries.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PhoneCountries.txt; path = TelegramUI/Resources/PhoneCountries.txt; sourceTree = "<group>"; };
-		D0E9BA691F056F4C00F079A4 /* stp_card_amex@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_amex@2x.png"; sourceTree = "<group>"; };
-		D0E9BA6A1F056F4C00F079A4 /* stp_card_amex@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_amex@3x.png"; sourceTree = "<group>"; };
-		D0E9BA6B1F056F4C00F079A4 /* stp_card_amex_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_amex_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA6C1F056F4C00F079A4 /* stp_card_amex_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_amex_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BA6D1F056F4C00F079A4 /* stp_card_applepay@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_applepay@2x.png"; sourceTree = "<group>"; };
-		D0E9BA6E1F056F4C00F079A4 /* stp_card_applepay@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_applepay@3x.png"; sourceTree = "<group>"; };
-		D0E9BA6F1F056F4C00F079A4 /* stp_card_applepay_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_applepay_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA701F056F4C00F079A4 /* stp_card_applepay_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_applepay_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BA711F056F4C00F079A4 /* stp_card_cvc@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_cvc@2x.png"; sourceTree = "<group>"; };
-		D0E9BA721F056F4C00F079A4 /* stp_card_cvc@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_cvc@3x.png"; sourceTree = "<group>"; };
-		D0E9BA731F056F4C00F079A4 /* stp_card_cvc_amex@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_cvc_amex@2x.png"; sourceTree = "<group>"; };
-		D0E9BA741F056F4C00F079A4 /* stp_card_cvc_amex@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_cvc_amex@3x.png"; sourceTree = "<group>"; };
-		D0E9BA751F056F4C00F079A4 /* stp_card_diners@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_diners@2x.png"; sourceTree = "<group>"; };
-		D0E9BA761F056F4C00F079A4 /* stp_card_diners@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_diners@3x.png"; sourceTree = "<group>"; };
-		D0E9BA771F056F4C00F079A4 /* stp_card_diners_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_diners_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA781F056F4C00F079A4 /* stp_card_diners_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_diners_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BA791F056F4C00F079A4 /* stp_card_discover@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_discover@2x.png"; sourceTree = "<group>"; };
-		D0E9BA7A1F056F4C00F079A4 /* stp_card_discover@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_discover@3x.png"; sourceTree = "<group>"; };
-		D0E9BA7B1F056F4C00F079A4 /* stp_card_discover_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_discover_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA7C1F056F4C00F079A4 /* stp_card_discover_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_discover_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BA7D1F056F4C00F079A4 /* stp_card_form_applepay@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_form_applepay@2x.png"; sourceTree = "<group>"; };
-		D0E9BA7E1F056F4C00F079A4 /* stp_card_form_applepay@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_form_applepay@3x.png"; sourceTree = "<group>"; };
-		D0E9BA7F1F056F4C00F079A4 /* stp_card_form_back@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_form_back@2x.png"; sourceTree = "<group>"; };
-		D0E9BA801F056F4C00F079A4 /* stp_card_form_back@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_form_back@3x.png"; sourceTree = "<group>"; };
-		D0E9BA811F056F4C00F079A4 /* stp_card_form_front@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_form_front@2x.png"; sourceTree = "<group>"; };
-		D0E9BA821F056F4C00F079A4 /* stp_card_form_front@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_form_front@3x.png"; sourceTree = "<group>"; };
-		D0E9BA831F056F4C00F079A4 /* stp_card_jcb@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_jcb@2x.png"; sourceTree = "<group>"; };
-		D0E9BA841F056F4C00F079A4 /* stp_card_jcb@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_jcb@3x.png"; sourceTree = "<group>"; };
-		D0E9BA851F056F4C00F079A4 /* stp_card_jcb_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_jcb_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA861F056F4C00F079A4 /* stp_card_jcb_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_jcb_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BA871F056F4C00F079A4 /* stp_card_mastercard@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_mastercard@2x.png"; sourceTree = "<group>"; };
-		D0E9BA881F056F4C00F079A4 /* stp_card_mastercard@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_mastercard@3x.png"; sourceTree = "<group>"; };
-		D0E9BA891F056F4C00F079A4 /* stp_card_mastercard_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_mastercard_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA8A1F056F4C00F079A4 /* stp_card_mastercard_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_mastercard_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BA8B1F056F4C00F079A4 /* stp_card_placeholder_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_placeholder_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA8C1F056F4C00F079A4 /* stp_card_placeholder_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_placeholder_template@3x.png"; sourceTree = "<group>"; };
-		D0E9BA8D1F056F4C00F079A4 /* stp_card_visa@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_visa@2x.png"; sourceTree = "<group>"; };
-		D0E9BA8E1F056F4C00F079A4 /* stp_card_visa@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_visa@3x.png"; sourceTree = "<group>"; };
-		D0E9BA8F1F056F4C00F079A4 /* stp_card_visa_template@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_visa_template@2x.png"; sourceTree = "<group>"; };
-		D0E9BA901F056F4C00F079A4 /* stp_card_visa_template@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stp_card_visa_template@3x.png"; sourceTree = "<group>"; };
-		D0EB42041F3143AB00838FE6 /* LegacyComponentsResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = LegacyComponentsResources.bundle; path = ../LegacyComponents/LegacyComponents/Resources/LegacyComponentsResources.bundle; sourceTree = "<group>"; };
 		D0EB5ADE1F798033004E89B6 /* PeerMediaCollectionEmptyNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerMediaCollectionEmptyNode.swift; sourceTree = "<group>"; };
 		D0EC55A2210231D600D1992C /* SearchPeerMembers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPeerMembers.swift; sourceTree = "<group>"; };
 		D0EC6B401EB8F7D700EBF1C3 /* VoipDynamic.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VoipDynamic.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/VoipDynamic.framework"; sourceTree = "<group>"; };
@@ -1107,6 +955,7 @@
 		D0EE97191D88BCA0006C18E1 /* ChatInfo.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatInfo.swift; sourceTree = "<group>"; };
 		D0EEE9A02165585F001292A6 /* DocumentPreviewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentPreviewController.swift; sourceTree = "<group>"; };
 		D0EF40DE1E73100D000DFCD4 /* ChatHistoryNavigationStack.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryNavigationStack.swift; sourceTree = "<group>"; };
+		D0EFF2472319806700CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F02CCB1E96EF350065DEE2 /* ChatMediaInputStickerPane.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputStickerPane.swift; sourceTree = "<group>"; };
 		D0F02CCD1E96FACE0065DEE2 /* ChatMediaInputGifPane.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatMediaInputGifPane.swift; sourceTree = "<group>"; };
 		D0F19F6320E5A15B00EEC860 /* ChatMediaInputPeerSpecificItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMediaInputPeerSpecificItem.swift; sourceTree = "<group>"; };
@@ -1116,7 +965,6 @@
 		D0F53BF61E79593500117362 /* AuthorizationSequenceSignUpController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceSignUpController.swift; sourceTree = "<group>"; };
 		D0F53BF81E79593F00117362 /* AuthorizationSequenceSignUpControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceSignUpControllerNode.swift; sourceTree = "<group>"; };
 		D0F69CD61D6B87D30046BCD6 /* MediaManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
-		D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = TelegramUI.xcconfig; path = TelegramUI/Config/TelegramUI.xcconfig; sourceTree = "<group>"; };
 		D0F69DC41D6B89E10046BCD6 /* RadialProgressNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialProgressNode.swift; sourceTree = "<group>"; };
 		D0F69E0E1D6B8ACF0046BCD6 /* ChatController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatController.swift; sourceTree = "<group>"; };
 		D0F69E0F1D6B8ACF0046BCD6 /* ChatControllerInteraction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatControllerInteraction.swift; sourceTree = "<group>"; };
@@ -1144,7 +992,6 @@
 		D0F69E2C1D6B8B030046BCD6 /* ChatUnreadItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatUnreadItem.swift; sourceTree = "<group>"; };
 		D0F69E401D6B8B7E0046BCD6 /* ChatTextInputPanelNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatTextInputPanelNode.swift; sourceTree = "<group>"; };
 		D0F69E451D6B8B950046BCD6 /* ChatHistoryNavigationButtonNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatHistoryNavigationButtonNode.swift; sourceTree = "<group>"; };
-		D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0F69E941D6B8C9B0046BCD6 /* ConvertToWebP.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConvertToWebP.swift; sourceTree = "<group>"; };
 		D0F69EA61D6B9BBC0046BCD6 /* libwebp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwebp.a; path = "third-party/libwebp/lib/libwebp.a"; sourceTree = "<group>"; };
 		D0F69EA81D6B9BCB0046BCD6 /* libavcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavcodec.a; path = "third-party/FFmpeg-iOS/lib/libavcodec.a"; sourceTree = "<group>"; };
@@ -1169,6 +1016,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF2482319806700CF5164 /* AppBundle.framework in Frameworks */,
 				09B4A9BA231519CD005C2E08 /* VideoToolbox.framework in Frameworks */,
 				D072F38423155EAF0009E66F /* MessageReactionListUI.framework in Frameworks */,
 				D03E495D230868DF0049C28B /* PersistentStringHash.framework in Frameworks */,
@@ -1350,56 +1198,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		092F368B2154AAD6001A9F49 /* Fonts */ = {
-			isa = PBXGroup;
-			children = (
-				092F368C2154AAE9001A9F49 /* SFCompactRounded-Semibold.otf */,
-			);
-			name = Fonts;
-			path = TelegramUI/Resources/Fonts;
-			sourceTree = "<group>";
-		};
-		09310D13213BC5DE0020033A /* Animations */ = {
-			isa = PBXGroup;
-			children = (
-				090E778B22AA842200CD99F5 /* anim_success.json */,
-				09FFBCCF227B7F9000C33B4B /* anim_archiveswipe.json */,
-				094735182277483B00EA2312 /* anim_infotip.json */,
-				094735072275D72000EA2312 /* anim_archive.json */,
-				094735092275D72000EA2312 /* anim_delete.json */,
-				094735042275D71F00EA2312 /* anim_hide.json */,
-				094735082275D72000EA2312 /* anim_mute.json */,
-				0947350D2275D72100EA2312 /* anim_pin.json */,
-				094735062275D72000EA2312 /* anim_read.json */,
-				0947350A2275D72000EA2312 /* anim_unarchive.json */,
-				0947350C2275D72100EA2312 /* anim_unmute.json */,
-				0947350B2275D72000EA2312 /* anim_unpin.json */,
-				094735052275D72000EA2312 /* anim_unread.json */,
-				09E2DA122273367900EA0AA4 /* anim_archiveAvatar.json */,
-				09310D1A213BC5DE0020033A /* anim_ungroup.json */,
-				09310D1B213BC5DE0020033A /* anim_group.json */,
-			);
-			name = Animations;
-			path = TelegramUI/Resources/Animations;
-			sourceTree = "<group>";
-		};
-		0979787F21065EAA0077D77F /* Web Embed */ = {
-			isa = PBXGroup;
-			children = (
-				0979788321065F8C0077D77F /* Generic.html */,
-				0979788821065F8C0077D77F /* GenericUserScript.js */,
-				0979788421065F8C0077D77F /* Instagram.html */,
-				0979788521065F8C0077D77F /* Twitch.html */,
-				0979788621065F8C0077D77F /* TwitchUserScript.js */,
-				0979788221065F8C0077D77F /* Vimeo.html */,
-				0979788021065F8B0077D77F /* VimeoUserScript.js */,
-				0979788721065F8C0077D77F /* Youtube.html */,
-				0979788121065F8B0077D77F /* YoutubeUserScript.js */,
-			);
-			name = "Web Embed";
-			path = TelegramUI/Resources/WebEmbed;
-			sourceTree = "<group>";
-		};
 		09D9689B221F74AA00B1458A /* Title Activity Indicator */ = {
 			isa = PBXGroup;
 			children = (
@@ -1644,23 +1442,6 @@
 			name = "Chat Recent Actions";
 			sourceTree = "<group>";
 		};
-		D0471B521EFD8EBC0074D609 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				D095EF4F230C767D00CB6167 /* BuiltinReactions */,
-				09E2D9ED226F1AF300EA0AA4 /* Emoji.mapping */,
-				D0955FB32191278C00F89427 /* PresentationStrings.mapping */,
-				09310D13213BC5DE0020033A /* Animations */,
-				092F368B2154AAD6001A9F49 /* Fonts */,
-				D0C12A1B1F33964900B3F66D /* ChatWallpaperBuiltin0.jpg */,
-				D0E9BA681F056F4C00F079A4 /* Stripe */,
-				D0E9B9E91F00853C00F079A4 /* PhoneCountries.txt */,
-				D0471B531EFD8ECA0074D609 /* currencies.json */,
-				0979787F21065EAA0077D77F /* Web Embed */,
-			);
-			name = Resources;
-			sourceTree = "<group>";
-		};
 		D0477D191F617E4B00412B44 /* Video */ = {
 			isa = PBXGroup;
 			children = (
@@ -1726,15 +1507,6 @@
 			name = Root;
 			sourceTree = "<group>";
 		};
-		D073CE611DCBBE09007511FD /* Sounds */ = {
-			isa = PBXGroup;
-			children = (
-				D0C50E431E93FCD200F62E39 /* notification.caf */,
-				D073CE621DCBBE5D007511FD /* MessageSent.caf */,
-			);
-			name = Sounds;
-			sourceTree = "<group>";
-		};
 		D07551891DDA4C7C0073E051 /* Legacy Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -1774,6 +1546,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2472319806700CF5164 /* AppBundle.framework */,
 				09B4A9B9231519CD005C2E08 /* VideoToolbox.framework */,
 				D072F38323155EAF0009E66F /* MessageReactionListUI.framework */,
 				D03E495C230868DF0049C28B /* PersistentStringHash.framework */,
@@ -2225,54 +1998,6 @@
 			name = "Chat History Node";
 			sourceTree = "<group>";
 		};
-		D0E9BA681F056F4C00F079A4 /* Stripe */ = {
-			isa = PBXGroup;
-			children = (
-				D0E9BA691F056F4C00F079A4 /* stp_card_amex@2x.png */,
-				D0E9BA6A1F056F4C00F079A4 /* stp_card_amex@3x.png */,
-				D0E9BA6B1F056F4C00F079A4 /* stp_card_amex_template@2x.png */,
-				D0E9BA6C1F056F4C00F079A4 /* stp_card_amex_template@3x.png */,
-				D0E9BA6D1F056F4C00F079A4 /* stp_card_applepay@2x.png */,
-				D0E9BA6E1F056F4C00F079A4 /* stp_card_applepay@3x.png */,
-				D0E9BA6F1F056F4C00F079A4 /* stp_card_applepay_template@2x.png */,
-				D0E9BA701F056F4C00F079A4 /* stp_card_applepay_template@3x.png */,
-				D0E9BA711F056F4C00F079A4 /* stp_card_cvc@2x.png */,
-				D0E9BA721F056F4C00F079A4 /* stp_card_cvc@3x.png */,
-				D0E9BA731F056F4C00F079A4 /* stp_card_cvc_amex@2x.png */,
-				D0E9BA741F056F4C00F079A4 /* stp_card_cvc_amex@3x.png */,
-				D0E9BA751F056F4C00F079A4 /* stp_card_diners@2x.png */,
-				D0E9BA761F056F4C00F079A4 /* stp_card_diners@3x.png */,
-				D0E9BA771F056F4C00F079A4 /* stp_card_diners_template@2x.png */,
-				D0E9BA781F056F4C00F079A4 /* stp_card_diners_template@3x.png */,
-				D0E9BA791F056F4C00F079A4 /* stp_card_discover@2x.png */,
-				D0E9BA7A1F056F4C00F079A4 /* stp_card_discover@3x.png */,
-				D0E9BA7B1F056F4C00F079A4 /* stp_card_discover_template@2x.png */,
-				D0E9BA7C1F056F4C00F079A4 /* stp_card_discover_template@3x.png */,
-				D0E9BA7D1F056F4C00F079A4 /* stp_card_form_applepay@2x.png */,
-				D0E9BA7E1F056F4C00F079A4 /* stp_card_form_applepay@3x.png */,
-				D0E9BA7F1F056F4C00F079A4 /* stp_card_form_back@2x.png */,
-				D0E9BA801F056F4C00F079A4 /* stp_card_form_back@3x.png */,
-				D0E9BA811F056F4C00F079A4 /* stp_card_form_front@2x.png */,
-				D0E9BA821F056F4C00F079A4 /* stp_card_form_front@3x.png */,
-				D0E9BA831F056F4C00F079A4 /* stp_card_jcb@2x.png */,
-				D0E9BA841F056F4C00F079A4 /* stp_card_jcb@3x.png */,
-				D0E9BA851F056F4C00F079A4 /* stp_card_jcb_template@2x.png */,
-				D0E9BA861F056F4C00F079A4 /* stp_card_jcb_template@3x.png */,
-				D0E9BA871F056F4C00F079A4 /* stp_card_mastercard@2x.png */,
-				D0E9BA881F056F4C00F079A4 /* stp_card_mastercard@3x.png */,
-				D0E9BA891F056F4C00F079A4 /* stp_card_mastercard_template@2x.png */,
-				D0E9BA8A1F056F4C00F079A4 /* stp_card_mastercard_template@3x.png */,
-				D0E9BA8B1F056F4C00F079A4 /* stp_card_placeholder_template@2x.png */,
-				D0E9BA8C1F056F4C00F079A4 /* stp_card_placeholder_template@3x.png */,
-				D0E9BA8D1F056F4C00F079A4 /* stp_card_visa@2x.png */,
-				D0E9BA8E1F056F4C00F079A4 /* stp_card_visa@3x.png */,
-				D0E9BA8F1F056F4C00F079A4 /* stp_card_visa_template@2x.png */,
-				D0E9BA901F056F4C00F079A4 /* stp_card_visa_template@3x.png */,
-			);
-			name = Stripe;
-			path = TelegramUI/Resources/Stripe;
-			sourceTree = "<group>";
-		};
 		D0EEE99F2165583B001292A6 /* Document */ = {
 			isa = PBXGroup;
 			children = (
@@ -2521,7 +2246,6 @@
 		D0F69E7E1D6B8C500046BCD6 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				D0F69E831D6B8C850046BCD6 /* FrameworkBundle.swift */,
 			);
 			name = "Supporting Files";
 			sourceTree = "<group>";
@@ -2566,11 +2290,6 @@
 		D0FC40751D5B8E7400261D9D = {
 			isa = PBXGroup;
 			children = (
-				D0EB42041F3143AB00838FE6 /* LegacyComponentsResources.bundle */,
-				D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */,
-				D0AB0BBA1D6719B5002C78E7 /* Images.xcassets */,
-				D0471B521EFD8EBC0074D609 /* Resources */,
-				D073CE611DCBBE09007511FD /* Sounds */,
 				D0FC40811D5B8E7400261D9D /* TelegramUI */,
 				D0FC408C1D5B8E7500261D9D /* TelegramUITests */,
 				D0FC40801D5B8E7400261D9D /* Products */,
@@ -2709,81 +2428,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				09874E4F21078FA100E190B8 /* Generic.html in Resources */,
-				09874E5021078FA100E190B8 /* GenericUserScript.js in Resources */,
-				09874E5121078FA100E190B8 /* Instagram.html in Resources */,
-				09874E5221078FA100E190B8 /* Twitch.html in Resources */,
-				09874E5321078FA100E190B8 /* TwitchUserScript.js in Resources */,
-				094735122275D72100EA2312 /* anim_mute.json in Resources */,
-				09874E5421078FA100E190B8 /* Vimeo.html in Resources */,
-				09874E5521078FA100E190B8 /* VimeoUserScript.js in Resources */,
-				09874E5621078FA100E190B8 /* Youtube.html in Resources */,
-				09874E5721078FA100E190B8 /* YoutubeUserScript.js in Resources */,
-				094735172275D72100EA2312 /* anim_pin.json in Resources */,
-				094735112275D72100EA2312 /* anim_archive.json in Resources */,
-				090E778C22AA842300CD99F5 /* anim_success.json in Resources */,
-				D0EB42051F3143AB00838FE6 /* LegacyComponentsResources.bundle in Resources */,
-				D0E9BAA21F056F4C00F079A4 /* stp_card_discover@3x.png in Resources */,
-				D0E9BAB01F056F4C00F079A4 /* stp_card_mastercard@3x.png in Resources */,
-				09310D32213ED5FC0020033A /* anim_ungroup.json in Resources */,
-				09E2D9EF226F1AFA00EA0AA4 /* Emoji.mapping in Resources */,
-				D0955FB521912B6000F89427 /* PresentationStrings.mapping in Resources */,
-				0947350F2275D72100EA2312 /* anim_unread.json in Resources */,
-				D0E9BAA31F056F4C00F079A4 /* stp_card_discover_template@2x.png in Resources */,
-				D0E9BAB51F056F4C00F079A4 /* stp_card_visa@2x.png in Resources */,
-				D0E9BA941F056F4C00F079A4 /* stp_card_amex_template@3x.png in Resources */,
-				D0E9BA961F056F4C00F079A4 /* stp_card_applepay@3x.png in Resources */,
-				D0F9720F1FFE4BD5002595C8 /* notification.caf in Resources */,
-				09310D33213ED5FC0020033A /* anim_group.json in Resources */,
-				09FFBCD1227B7F9900C33B4B /* anim_archiveswipe.json in Resources */,
-				094735162275D72100EA2312 /* anim_unmute.json in Resources */,
-				094735102275D72100EA2312 /* anim_read.json in Resources */,
-				D0E9BA9A1F056F4C00F079A4 /* stp_card_cvc@3x.png in Resources */,
-				D0E9BA921F056F4C00F079A4 /* stp_card_amex@3x.png in Resources */,
-				D0E9BA9F1F056F4C00F079A4 /* stp_card_diners_template@2x.png in Resources */,
-				D0E9BA9E1F056F4C00F079A4 /* stp_card_diners@3x.png in Resources */,
-				D0B4AF861EC111FA00D51FF6 /* Images.xcassets in Resources */,
-				D0E9BAAD1F056F4C00F079A4 /* stp_card_jcb_template@2x.png in Resources */,
-				D0F972101FFE4BD5002595C8 /* MessageSent.caf in Resources */,
-				D0E9BAB71F056F4C00F079A4 /* stp_card_visa_template@2x.png in Resources */,
-				D0E9BA951F056F4C00F079A4 /* stp_card_applepay@2x.png in Resources */,
-				D0E9BAA01F056F4C00F079A4 /* stp_card_diners_template@3x.png in Resources */,
-				094735132275D72100EA2312 /* anim_delete.json in Resources */,
-				094735192277483C00EA2312 /* anim_infotip.json in Resources */,
-				094735142275D72100EA2312 /* anim_unarchive.json in Resources */,
-				D0E9BAAA1F056F4C00F079A4 /* stp_card_form_front@3x.png in Resources */,
-				D0E9BA971F056F4C00F079A4 /* stp_card_applepay_template@2x.png in Resources */,
-				D0E9BAB41F056F4C00F079A4 /* stp_card_placeholder_template@3x.png in Resources */,
-				D0E9BAA71F056F4C00F079A4 /* stp_card_form_back@2x.png in Resources */,
-				D0E9BAB11F056F4C00F079A4 /* stp_card_mastercard_template@2x.png in Resources */,
-				D0E9BA9D1F056F4C00F079A4 /* stp_card_diners@2x.png in Resources */,
-				D0E9BAAF1F056F4C00F079A4 /* stp_card_mastercard@2x.png in Resources */,
-				D0C12A1D1F33A85600B3F66D /* ChatWallpaperBuiltin0.jpg in Resources */,
-				D0E9BAAC1F056F4C00F079A4 /* stp_card_jcb@3x.png in Resources */,
-				D0E9BA911F056F4C00F079A4 /* stp_card_amex@2x.png in Resources */,
-				D095EF51230C7D2C00CB6167 /* BuiltinReactions in Resources */,
-				D0E9BA931F056F4C00F079A4 /* stp_card_amex_template@2x.png in Resources */,
-				D0E9BAA91F056F4C00F079A4 /* stp_card_form_front@2x.png in Resources */,
-				D0E9BAA41F056F4C00F079A4 /* stp_card_discover_template@3x.png in Resources */,
-				D0E9BAA81F056F4C00F079A4 /* stp_card_form_back@3x.png in Resources */,
-				D0E9BAA11F056F4C00F079A4 /* stp_card_discover@2x.png in Resources */,
-				D0E9B9EA1F00853C00F079A4 /* PhoneCountries.txt in Resources */,
-				094735152275D72100EA2312 /* anim_unpin.json in Resources */,
-				D0E9BAB31F056F4C00F079A4 /* stp_card_placeholder_template@2x.png in Resources */,
-				D0E9BAAE1F056F4C00F079A4 /* stp_card_jcb_template@3x.png in Resources */,
-				D0E9BAAB1F056F4C00F079A4 /* stp_card_jcb@2x.png in Resources */,
-				09E2DA132273367900EA0AA4 /* anim_archiveAvatar.json in Resources */,
-				D0E9BA9C1F056F4C00F079A4 /* stp_card_cvc_amex@3x.png in Resources */,
-				D0E9BA991F056F4C00F079A4 /* stp_card_cvc@2x.png in Resources */,
-				D0471B541EFD8ECA0074D609 /* currencies.json in Resources */,
-				0947350E2275D72100EA2312 /* anim_hide.json in Resources */,
-				D0E9BAB21F056F4C00F079A4 /* stp_card_mastercard_template@3x.png in Resources */,
-				D0E9BA981F056F4C00F079A4 /* stp_card_applepay_template@3x.png in Resources */,
-				D0E9BAA51F056F4C00F079A4 /* stp_card_form_applepay@2x.png in Resources */,
-				D0E9BAB81F056F4C00F079A4 /* stp_card_visa_template@3x.png in Resources */,
-				D0E9BA9B1F056F4C00F079A4 /* stp_card_cvc_amex@2x.png in Resources */,
-				D0E9BAB61F056F4C00F079A4 /* stp_card_visa@3x.png in Resources */,
-				D0E9BAA61F056F4C00F079A4 /* stp_card_form_applepay@3x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2791,7 +2435,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				092F368D2154AAEA001A9F49 /* SFCompactRounded-Semibold.otf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3117,7 +2760,6 @@
 				D0EC6E851EB9F58900EBF1C3 /* ChatMessageNotificationItem.swift in Sources */,
 				D04281FE200E639A009DDE36 /* ChatRecentActionsTitleView.swift in Sources */,
 				D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */,
-				D0EC6E891EB9F58900EBF1C3 /* FrameworkBundle.swift in Sources */,
 				D0FA08C8204982DC00DD23FC /* ChatTextInputActionButtonsNode.swift in Sources */,
 				D0BCC3D420404CC7008126C2 /* ChatMessageActionSheetController.swift in Sources */,
 			);
@@ -3136,7 +2778,6 @@
 /* Begin XCBuildConfiguration section */
 		D021D510219CB2240064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3183,7 +2824,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_SWIFT_FLAGS = "";
@@ -3199,7 +2840,6 @@
 		};
 		D021D511219CB2240064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -3263,7 +2903,6 @@
 		};
 		D0400EDB1D5B900A007931CE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3304,7 +2943,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_SWIFT_FLAGS = "";
 				SDKROOT = iphoneos;
@@ -3319,7 +2958,6 @@
 		};
 		D0400EDD1D5B900A007931CE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -3336,7 +2974,6 @@
 		};
 		D079FD261F06BEF70038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3383,7 +3020,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_SWIFT_FLAGS = "";
@@ -3399,7 +3036,6 @@
 		};
 		D079FD271F06BEF70038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -3463,7 +3099,6 @@
 		};
 		D0924FEE1FE52C29003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3504,7 +3139,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_SWIFT_FLAGS = "";
 				SDKROOT = iphoneos;
@@ -3519,7 +3154,6 @@
 		};
 		D0924FEF1FE52C29003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -3583,7 +3217,6 @@
 		};
 		D0ADF948212B3B0000310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3630,7 +3263,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_SWIFT_FLAGS = "";
@@ -3646,7 +3279,6 @@
 		};
 		D0ADF949212B3B0000310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -3710,7 +3342,6 @@
 		};
 		D0CE6F02213DC32300BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3751,7 +3382,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_SWIFT_FLAGS = "";
 				SDKROOT = iphoneos;
@@ -3766,7 +3397,6 @@
 		};
 		D0CE6F03213DC32300BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -3971,7 +3601,6 @@
 		};
 		D0FC40911D5B8E7500261D9D /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -4018,7 +3647,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_SWIFT_FLAGS = "";
@@ -4034,7 +3663,6 @@
 		};
 		D0FC40921D5B8E7500261D9D /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -4075,7 +3703,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_SWIFT_FLAGS = "";
 				SDKROOT = iphoneos;
@@ -4090,7 +3718,6 @@
 		};
 		D0FC40971D5B8E7500261D9D /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -4106,7 +3733,6 @@
 		};
 		D0FC40981D5B8E7500261D9D /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;

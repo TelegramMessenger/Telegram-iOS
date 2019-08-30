@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 import AccountContext
 import RadialStatusNode
 import TelegramUniversalVideoContent
+import AppBundle
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message)

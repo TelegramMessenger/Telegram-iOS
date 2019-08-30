@@ -14,6 +14,7 @@ static_library(
     	"//submodules/TextFormat:TextFormat",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -1,5 +1,22 @@
 load("//Config:buck_rule_macros.bzl", "framework")
 
+apple_asset_catalog(
+  name = 'TelegramUIAssets',
+  dirs = [
+    "Images.xcassets",
+  ],
+  visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "TelegramUIResources",
+    files = glob([
+        "TelegramUI/Sounds/**/*",
+        "TelegramUI/Resources/**/*",
+    ], exclude = ["TelegramUI/**/.*"]),
+    visibility = ["PUBLIC"],
+)
+
 framework(
     name = "TelegramUI",
     srcs = glob([
@@ -162,6 +179,8 @@ framework(
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/PersistentStringHash:PersistentStringHash",
+        "//submodules/MessageReactionListUI:MessageReactionListUI",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

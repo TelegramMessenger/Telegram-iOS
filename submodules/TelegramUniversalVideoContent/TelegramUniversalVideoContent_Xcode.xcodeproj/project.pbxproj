@@ -32,10 +32,10 @@
 		D0C9C3CF2300BA4400FAB518 /* TelegramAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C3CE2300BA4400FAB518 /* TelegramAudio.framework */; };
 		D0C9C3D12300BA4F00FAB518 /* RadialStatusNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C3D02300BA4F00FAB518 /* RadialStatusNode.framework */; };
 		D0C9C3D32300BA7000FAB518 /* PictureInPictureVideoControlsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3D22300BA6F00FAB518 /* PictureInPictureVideoControlsNode.swift */; };
-		D0C9C3D52300BA8B00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3D42300BA8B00FAB518 /* FrameworkBundle.swift */; };
 		D0C9C4442300DC2000FAB518 /* ChatBubbleVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4422300DC2000FAB518 /* ChatBubbleVideoDecoration.swift */; };
 		D0C9C4452300DC2000FAB518 /* ChatBubbleInstantVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4432300DC2000FAB518 /* ChatBubbleInstantVideoDecoration.swift */; };
 		D0C9C5362301CCC600FAB518 /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5352301CCC600FAB518 /* PhotoResources.framework */; };
+		D0EFF24C231980C300CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF24B231980C300CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,10 +67,10 @@
 		D0C9C3CE2300BA4400FAB518 /* TelegramAudio.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramAudio.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C3D02300BA4F00FAB518 /* RadialStatusNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RadialStatusNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C3D22300BA6F00FAB518 /* PictureInPictureVideoControlsNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PictureInPictureVideoControlsNode.swift; sourceTree = "<group>"; };
-		D0C9C3D42300BA8B00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C4422300DC2000FAB518 /* ChatBubbleVideoDecoration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBubbleVideoDecoration.swift; sourceTree = "<group>"; };
 		D0C9C4432300DC2000FAB518 /* ChatBubbleInstantVideoDecoration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatBubbleInstantVideoDecoration.swift; sourceTree = "<group>"; };
 		D0C9C5352301CCC600FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF24B231980C300CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -78,6 +78,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF24C231980C300CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C5362301CCC600FAB518 /* PhotoResources.framework in Frameworks */,
 				D0C9C3D12300BA4F00FAB518 /* RadialStatusNode.framework in Frameworks */,
 				D0C9C3CF2300BA4400FAB518 /* TelegramAudio.framework in Frameworks */,
@@ -132,7 +133,6 @@
 				D0C9C3802300B40E00FAB518 /* SystemVideoContent.swift */,
 				D0C9C37F2300B40E00FAB518 /* UniversalVideoContentManager.swift */,
 				D0C9C3822300B40E00FAB518 /* WebEmbedVideoContent.swift */,
-				D0C9C3D42300BA8B00FAB518 /* FrameworkBundle.swift */,
 				D0C9C3722300B0CF00FAB518 /* TelegramUniversalVideoContent.h */,
 			);
 			path = Sources;
@@ -141,6 +141,7 @@
 		D0C9C3882300B41900FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF24B231980C300CF5164 /* AppBundle.framework */,
 				D0C9C5352301CCC600FAB518 /* PhotoResources.framework */,
 				D0C9C3D02300BA4F00FAB518 /* RadialStatusNode.framework */,
 				D0C9C3CE2300BA4400FAB518 /* TelegramAudio.framework */,
@@ -248,7 +249,6 @@
 				D0C9C3A62300B4E300FAB518 /* VimeoEmbedImplementation.swift in Sources */,
 				D0C9C3C92300B9EB00FAB518 /* OverlayVideoDecoration.swift in Sources */,
 				D0C9C3D32300BA7000FAB518 /* PictureInPictureVideoControlsNode.swift in Sources */,
-				D0C9C3D52300BA8B00FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C3A42300B4E300FAB518 /* YoutubeEmbedImplementation.swift in Sources */,
 				D0C9C3852300B40E00FAB518 /* SystemVideoContent.swift in Sources */,
 				D0C9C3A52300B4E300FAB518 /* GenericEmbedImplementation.swift in Sources */,

@@ -5,9 +5,10 @@ import Display
 import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
+import AppBundle
 
 private func loadCountryCodes() -> [(String, Int)] {
-    guard let filePath = frameworkBundle.path(forResource: "PhoneCountries", ofType: "txt") else {
+    guard let filePath = getAppBundle().path(forResource: "PhoneCountries", ofType: "txt") else {
         return []
     }
     guard let stringData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {

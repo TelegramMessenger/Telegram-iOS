@@ -327,6 +327,7 @@
 		69F791582222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 69F791562222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.mm */; };
 		69F791592222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = 69F791572222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h */; };
 		69FB0B2D20F6860E00827817 /* MessageThread.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69FB0B2420F6860D00827817 /* MessageThread.cpp */; };
+		D01748C9231978B700AF3D3A /* libtgvoip.h in Headers */ = {isa = PBXBuildFile; fileRef = D01748C8231978B700AF3D3A /* libtgvoip.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03292E22314249D00338D35 /* OngoingCallThreadLocalContext.h in Headers */ = {isa = PBXBuildFile; fileRef = D03292E02314249C00338D35 /* OngoingCallThreadLocalContext.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03292E32314249D00338D35 /* OngoingCallThreadLocalContext.mm in Sources */ = {isa = PBXBuildFile; fileRef = D03292E12314249D00338D35 /* OngoingCallThreadLocalContext.mm */; };
 /* End PBXBuildFile section */
@@ -1054,6 +1055,7 @@
 		69FB0B2420F6860D00827817 /* MessageThread.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MessageThread.cpp; sourceTree = "<group>"; };
 		69FB0B2C20F6860D00827817 /* MessageThread.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MessageThread.h; sourceTree = "<group>"; };
 		D00ACA4D20222F5D0045D427 /* SetupLogging.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SetupLogging.h; sourceTree = "<group>"; };
+		D01748C8231978B700AF3D3A /* libtgvoip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libtgvoip.h; sourceTree = "<group>"; };
 		D03292E02314249C00338D35 /* OngoingCallThreadLocalContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OngoingCallThreadLocalContext.h; sourceTree = "<group>"; };
 		D03292E12314249D00338D35 /* OngoingCallThreadLocalContext.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OngoingCallThreadLocalContext.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -1124,6 +1126,7 @@
 				692AB8CA1E6759DD00706ACC /* VoIPServerConfig.h */,
 				69DD8CFC218CD400001E8140 /* video */,
 				69A6DCFE1E95EC7700000E69 /* webrtc_dsp */,
+				D01748C8231978B700AF3D3A /* libtgvoip.h */,
 			);
 			name = libtgvoip;
 			sourceTree = "<group>";
@@ -2376,6 +2379,7 @@
 				69F791552221F16C00FE53C4 /* VideoToolboxEncoderSource.h in Headers */,
 				69F7914C2220A41000FE53C4 /* TGVVideoSource.h in Headers */,
 				692AB9051E6759DD00706ACC /* VoIPServerConfig.h in Headers */,
+				D01748C9231978B700AF3D3A /* libtgvoip.h in Headers */,
 				692AB9031E6759DD00706ACC /* VoIPController.h in Headers */,
 				69F791592222AC2800FE53C4 /* SampleBufferDisplayLayerRenderer.h in Headers */,
 				69F791502220A76500FE53C4 /* TGVVideoRenderer.h in Headers */,

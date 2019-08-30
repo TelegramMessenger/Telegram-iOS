@@ -23,6 +23,7 @@ static_library(
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",
         "//submodules/PeersNearbyIconNode:PeersNearbyIconNode",
         "//submodules/Geocoding:Geocoding",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

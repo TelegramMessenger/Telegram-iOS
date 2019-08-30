@@ -11,6 +11,7 @@ import ActivityIndicator
 import AvatarNode
 import TelegramStringFormatting
 import PeerPresenceStatusManager
+import AppBundle
 
 private let updatingAvatarOverlayImage = generateFilledCircleImage(diameter: 66.0, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
 

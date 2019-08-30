@@ -22,8 +22,8 @@
 		D0C9C6B12301D8E500FAB518 /* ShareController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6B02301D8E500FAB518 /* ShareController.framework */; };
 		D0C9C6B32301D8EB00FAB518 /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6B22301D8EB00FAB518 /* AccountContext.framework */; };
 		D0C9C6B52301D8F000FAB518 /* OpenInExternalAppUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6B42301D8F000FAB518 /* OpenInExternalAppUI.framework */; };
-		D0C9C6B72301D8FE00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C6B62301D8FE00FAB518 /* FrameworkBundle.swift */; };
 		D0C9C6BD2301D94000FAB518 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6BC2301D94000FAB518 /* CoreLocation.framework */; };
+		D0EFF268231981E400CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF267231981E400CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,8 +44,8 @@
 		D0C9C6B02301D8E500FAB518 /* ShareController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ShareController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C6B22301D8EB00FAB518 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C6B42301D8F000FAB518 /* OpenInExternalAppUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OpenInExternalAppUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C6B62301D8FE00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C6BC2301D94000FAB518 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
+		D0EFF267231981E400CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -53,6 +53,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF268231981E400CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C6BD2301D94000FAB518 /* CoreLocation.framework in Frameworks */,
 				D0C9C6B52301D8F000FAB518 /* OpenInExternalAppUI.framework in Frameworks */,
 				D0C9C6B32301D8EB00FAB518 /* AccountContext.framework in Frameworks */,
@@ -95,7 +96,6 @@
 			children = (
 				D0C9C6A92301D8CB00FAB518 /* LegacyLocationController.swift */,
 				D0C9C6A82301D8CB00FAB518 /* LegacyLocationPicker.swift */,
-				D0C9C6B62301D8FE00FAB518 /* FrameworkBundle.swift */,
 				D0C9C68D2301D83500FAB518 /* LocationUI.h */,
 			);
 			path = Sources;
@@ -104,6 +104,7 @@
 		D0C9C6992301D89600FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF267231981E400CF5164 /* AppBundle.framework */,
 				D0C9C6BC2301D94000FAB518 /* CoreLocation.framework */,
 				D0C9C6B42301D8F000FAB518 /* OpenInExternalAppUI.framework */,
 				D0C9C6B22301D8EB00FAB518 /* AccountContext.framework */,
@@ -203,7 +204,6 @@
 			files = (
 				D0C9C6AA2301D8CB00FAB518 /* LegacyLocationPicker.swift in Sources */,
 				D0C9C6AB2301D8CB00FAB518 /* LegacyLocationController.swift in Sources */,
-				D0C9C6B72301D8FE00FAB518 /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

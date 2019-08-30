@@ -32,16 +32,25 @@ static_library(
     ]),
     exported_headers = glob([
         "OngoingCallThreadLocalContext.h"
-    ]),
-    
-    compiler_flags = [
-        "-DTGVOIP_USE_CUSTOM_CRYPTO",
-        "-DWEBRTC_APM_DEBUG_DUMP=0",
-        "-DWEBRTC_POSIX",
-        "-DTGVOIP_HAVE_TGLOG",
-        "-DWEBRTC_NS_FLOAT",
-        "-DWEBRTC_IOS",
-        "-DWEBRTC_HAS_NEON",
+    ], exclude = ["libtgvoip.h"]),
+    platform_compiler_flags = [
+        ('arm.*', [
+            '-DTGVOIP_USE_CUSTOM_CRYPTO',
+            '-DWEBRTC_APM_DEBUG_DUMP=0',
+            '-DWEBRTC_POSIX',
+            '-DTGVOIP_HAVE_TGLOG',
+            '-DWEBRTC_NS_FLOAT',
+            '-DWEBRTC_IOS',
+            '-DWEBRTC_HAS_NEON',
+        ]),
+        ('.*', [
+            '-DTGVOIP_USE_CUSTOM_CRYPTO',
+            '-DWEBRTC_APM_DEBUG_DUMP=0',
+            '-DWEBRTC_POSIX',
+            '-DTGVOIP_HAVE_TGLOG',
+            '-DWEBRTC_NS_FLOAT',
+            '-DWEBRTC_IOS',
+        ]),
     ],
     deps = [
         "//submodules/MtProtoKit:MtProtoKit#shared",

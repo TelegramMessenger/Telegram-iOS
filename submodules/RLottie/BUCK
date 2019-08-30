@@ -4,7 +4,7 @@ static_library(
     name = "RLottie",
     srcs = glob([
         "Sources/rlottie/src/**/*.cpp",
-    ]) + [
+    ], exclude = ["Sources/rlottie/src/vector/vdrawhelper_neon.cpp"]) + [
         "Sources/LottieInstance.mm"
     ],
     headers = glob([

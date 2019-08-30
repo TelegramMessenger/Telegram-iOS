@@ -803,17 +803,6 @@
 			<key>explicitFileType</key>
 			<string>text.script.python</string>
 		</dict>
-		<key>1DD70E291289FAA500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>FrameworkBundle.swift</string>
-			<key>path</key>
-			<string>Sources/FrameworkBundle.swift</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-		</dict>
 		<key>1DD70E293EE5EB7000000000</key>
 		<dict>
 			<key>isa</key>
@@ -1407,7 +1396,6 @@
 			<string><![CDATA[<group>]]></string>
 			<key>children</key>
 			<array>
-				<string>1DD70E291289FAA500000000</string>
 				<string>1DD70E293EE5EB7000000000</string>
 				<string>1DD70E29025B7C1D00000000</string>
 				<string>1DD70E298CDC0AFE00000000</string>
@@ -1518,13 +1506,6 @@
 				<string>B401C9793CC29A8400000000</string>
 				<string>B401C979C806358400000000</string>
 			</array>
-		</dict>
-		<key>E7A30F041289FAA500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E291289FAA500000000</string>
 		</dict>
 		<key>E7A30F043EE5EB7000000000</key>
 		<dict>
@@ -1903,7 +1884,6 @@
 			<string>PBXSourcesBuildPhase</string>
 			<key>files</key>
 			<array>
-				<string>E7A30F041289FAA500000000</string>
 				<string>E7A30F043EE5EB7000000000</string>
 				<string>E7A30F04025B7C1D00000000</string>
 				<string>E7A30F048CDC0AFE00000000</string>

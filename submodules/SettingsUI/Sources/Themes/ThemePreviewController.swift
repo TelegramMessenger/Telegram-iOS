@@ -12,6 +12,7 @@ import ShareController
 import CounterContollerTitleView
 import WallpaperResources
 import OverlayStatusController
+import AppBundle
 
 public enum ThemePreviewSource {
     case theme(TelegramTheme)

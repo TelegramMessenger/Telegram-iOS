@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import AVFoundation
 import PhotoResources
+import AppBundle
 
 final class ChatContextResultPeekContent: PeekControllerContent {
     let account: Account

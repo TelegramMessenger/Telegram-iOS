@@ -447,6 +447,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E291209BB0400000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>LegacyICloudFilePicker.swift</string>
+			<key>path</key>
+			<string>Sources/LegacyICloudFilePicker.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E293C87ECC500000000</key>
 		<dict>
 			<key>isa</key>
@@ -529,6 +540,7 @@
 			<array>
 				<string>1DD70E29B883E7D000000000</string>
 				<string>1DD70E29A10DBC7500000000</string>
+				<string>1DD70E291209BB0400000000</string>
 				<string>1DD70E293C87ECC500000000</string>
 				<string>1DD70E29F44A23ED00000000</string>
 				<string>1DD70E29F44A23F200000000</string>
@@ -607,6 +619,13 @@
 			<key>fileRef</key>
 			<string>1DD70E29A10DBC7500000000</string>
 		</dict>
+		<key>E7A30F041209BB0400000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E291209BB0400000000</string>
+		</dict>
 		<key>E7A30F043C87ECC500000000</key>
 		<dict>
 			<key>isa</key>
@@ -650,6 +669,7 @@
 			<array>
 				<string>E7A30F04B883E7D000000000</string>
 				<string>E7A30F04A10DBC7500000000</string>
+				<string>E7A30F041209BB0400000000</string>
 				<string>E7A30F043C87ECC500000000</string>
 				<string>E7A30F04F44A23F200000000</string>
 				<string>E7A30F047E812ACF00000000</string>

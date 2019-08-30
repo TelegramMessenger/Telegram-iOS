@@ -17,6 +17,7 @@ static_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/RadialStatusNode:RadialStatusNode",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

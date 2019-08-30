@@ -2,6 +2,7 @@ import Foundation
 import WebKit
 import SwiftSignalKit
 import UniversalMediaPlayer
+import AppBundle
 
 final class GenericEmbedImplementation: WebEmbedImplementation {
     private var evalImpl: ((String) -> Void)?
@@ -17,7 +18,7 @@ final class GenericEmbedImplementation: WebEmbedImplementation {
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
-        let bundle = Bundle(for: type(of: self))
+        let bundle = getAppBundle()
         guard let userScriptPath = bundle.path(forResource: "GenericUserScript", ofType: "js") else {
             return
         }

@@ -16,7 +16,7 @@
 		D0879B0D22F7088F00C4D6B3 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879B0C22F7088F00C4D6B3 /* Display.framework */; };
 		D0879B0F22F7089400C4D6B3 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879B0E22F7089400C4D6B3 /* TelegramPresentationData.framework */; };
 		D0879B1522F70BAF00C4D6B3 /* PeerAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B1422F70BAF00C4D6B3 /* PeerAvatar.swift */; };
-		D0879B1722F70BFB00C4D6B3 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879B1622F70BFB00C4D6B3 /* FrameworkBundle.swift */; };
+		D0EFF2582319812900CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2572319812900CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,7 +31,7 @@
 		D0879B0C22F7088F00C4D6B3 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879B0E22F7089400C4D6B3 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879B1422F70BAF00C4D6B3 /* PeerAvatar.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PeerAvatar.swift; sourceTree = "<group>"; };
-		D0879B1622F70BFB00C4D6B3 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF2572319812900CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +39,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF2582319812900CF5164 /* AppBundle.framework in Frameworks */,
 				D0879B0F22F7089400C4D6B3 /* TelegramPresentationData.framework in Frameworks */,
 				D0879B0D22F7088F00C4D6B3 /* Display.framework in Frameworks */,
 				D0879B0B22F7088B00C4D6B3 /* AsyncDisplayKit.framework in Frameworks */,
@@ -74,7 +75,6 @@
 			children = (
 				D0879B1422F70BAF00C4D6B3 /* PeerAvatar.swift */,
 				D0879B0122F7087800C4D6B3 /* AvatarNode.swift */,
-				D0879B1622F70BFB00C4D6B3 /* FrameworkBundle.swift */,
 				D0879AF522F7079F00C4D6B3 /* AvatarNode.h */,
 			);
 			path = Sources;
@@ -83,6 +83,7 @@
 		D0879B0322F7087F00C4D6B3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2572319812900CF5164 /* AppBundle.framework */,
 				D0879B0E22F7089400C4D6B3 /* TelegramPresentationData.framework */,
 				D0879B0C22F7088F00C4D6B3 /* Display.framework */,
 				D0879B0A22F7088B00C4D6B3 /* AsyncDisplayKit.framework */,
@@ -175,7 +176,6 @@
 			files = (
 				D0879B1522F70BAF00C4D6B3 /* PeerAvatar.swift in Sources */,
 				D0879B0222F7087800C4D6B3 /* AvatarNode.swift in Sources */,
-				D0879B1722F70BFB00C4D6B3 /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

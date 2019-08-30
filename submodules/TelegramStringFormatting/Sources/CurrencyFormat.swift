@@ -1,4 +1,5 @@
 import Foundation
+import AppBundle
 
 private final class CurrencyFormatterEntry {
     let symbol: String
@@ -19,7 +20,7 @@ private final class CurrencyFormatterEntry {
 }
 
 private func loadCurrencyFormatterEntries() -> [String: CurrencyFormatterEntry] {
-    guard let filePath = frameworkBundle.path(forResource: "currencies", ofType: "json") else {
+    guard let filePath = getAppBundle().path(forResource: "currencies", ofType: "json") else {
         return [:]
     }
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {

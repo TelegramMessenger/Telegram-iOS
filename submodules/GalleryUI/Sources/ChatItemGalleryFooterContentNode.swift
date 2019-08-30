@@ -13,6 +13,7 @@ import AccountContext
 import RadialStatusNode
 import ShareController
 import OpenInExternalAppUI
+import AppBundle
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)

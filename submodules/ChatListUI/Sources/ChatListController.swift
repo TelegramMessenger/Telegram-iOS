@@ -15,6 +15,7 @@ import TelegramNotices
 import SearchUI
 import DeleteChatPeerActionSheetItem
 import LanguageSuggestionUI
+import AppBundle
 
 public func useSpecialTabBarIcons() -> Bool {
     return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())

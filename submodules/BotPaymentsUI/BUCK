@@ -18,6 +18,7 @@ static_library(
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/Stripe:Stripe",
         "//submodules/CountrySelectionUI:CountrySelectionUI",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

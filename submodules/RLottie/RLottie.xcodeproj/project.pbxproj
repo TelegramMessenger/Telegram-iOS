@@ -1378,19 +1378,6 @@
 			<key>lastKnownFileType</key>
 			<string>sourcecode.c.h</string>
 		</dict>
-		<key>1DD70E297B64F10200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>vdrawhelper_neon.cpp</string>
-			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdrawhelper_neon.cpp</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.cpp.cpp</string>
-		</dict>
 		<key>1DD70E295304167900000000</key>
 		<dict>
 			<key>isa</key>
@@ -1761,7 +1748,6 @@
 				<string>1DD70E29B3093C0E00000000</string>
 				<string>1DD70E296402559D00000000</string>
 				<string>1DD70E298C398AE200000000</string>
-				<string>1DD70E297B64F10200000000</string>
 				<string>1DD70E295304167900000000</string>
 				<string>1DD70E29A69935F400000000</string>
 				<string>1DD70E29B6EA94F900000000</string>
@@ -2040,13 +2026,6 @@
 			<key>fileRef</key>
 			<string>1DD70E296402559D00000000</string>
 		</dict>
-		<key>E7A30F047B64F10200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E297B64F10200000000</string>
-		</dict>
 		<key>E7A30F045304167900000000</key>
 		<dict>
 			<key>isa</key>
@@ -2158,7 +2137,6 @@
 				<string>E7A30F048DF7C3D200000000</string>
 				<string>E7A30F0415AA6BC900000000</string>
 				<string>E7A30F046402559D00000000</string>
-				<string>E7A30F047B64F10200000000</string>
 				<string>E7A30F045304167900000000</string>
 				<string>E7A30F04A69935F400000000</string>
 				<string>E7A30F0447A291AD00000000</string>

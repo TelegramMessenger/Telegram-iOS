@@ -55,12 +55,12 @@
 		D0C9CB012302373000FAB518 /* PeerOnlineMarkerNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB002302373000FAB518 /* PeerOnlineMarkerNode.framework */; };
 		D0C9CB032302373000FAB518 /* PeerPresenceStatusManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB022302373000FAB518 /* PeerPresenceStatusManager.framework */; };
 		D0C9CB052302373000FAB518 /* TemporaryCachedPeerDataManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB042302373000FAB518 /* TemporaryCachedPeerDataManager.framework */; };
-		D0C9CB07230237D000FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CB06230237D000FAB518 /* FrameworkBundle.swift */; };
 		D0C9CB442302B15D00FAB518 /* ChatTitleActivityNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB432302B15D00FAB518 /* ChatTitleActivityNode.framework */; };
 		D0C9CB802302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */; };
 		D0C9CBB42302B64C00FAB518 /* LanguageSuggestionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */; };
 		D0C9CBE62303387E00FAB518 /* ContactsPeerItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */; };
 		D0C9CBE82303407100FAB518 /* ContactListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBE72303407100FAB518 /* ContactListUI.framework */; };
+		D0EFF272231982C700CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF271231982C700CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -114,12 +114,12 @@
 		D0C9CB002302373000FAB518 /* PeerOnlineMarkerNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerOnlineMarkerNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CB022302373000FAB518 /* PeerPresenceStatusManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerPresenceStatusManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CB042302373000FAB518 /* TemporaryCachedPeerDataManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TemporaryCachedPeerDataManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9CB06230237D000FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9CB432302B15D00FAB518 /* ChatTitleActivityNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatTitleActivityNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CB7F2302B37B00FAB518 /* DeleteChatPeerActionSheetItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeleteChatPeerActionSheetItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LanguageSuggestionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContactsPeerItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBE72303407100FAB518 /* ContactListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ContactListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF271231982C700CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -127,6 +127,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF272231982C700CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9CBE82303407100FAB518 /* ContactListUI.framework in Frameworks */,
 				D0C9CBE62303387E00FAB518 /* ContactsPeerItem.framework in Frameworks */,
 				D0C9CBB42302B64C00FAB518 /* LanguageSuggestionUI.framework in Frameworks */,
@@ -195,7 +196,6 @@
 				D0C9CAA9230235E400FAB518 /* ChatListTitleLockView.swift */,
 				D0C9CAA7230235E300FAB518 /* ChatListTitleProxyNode.swift */,
 				D0C9CAA8230235E400FAB518 /* ChatListTitleView.swift */,
-				D0C9CB06230237D000FAB518 /* FrameworkBundle.swift */,
 				D0C9CA98230234D400FAB518 /* ChatListUI.h */,
 			);
 			path = Sources;
@@ -204,6 +204,7 @@
 		D0C9CAB62302360600FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF271231982C700CF5164 /* AppBundle.framework */,
 				D0C9CBE72303407100FAB518 /* ContactListUI.framework */,
 				D0C9CBE52303387E00FAB518 /* ContactsPeerItem.framework */,
 				D0C9CBB32302B64C00FAB518 /* LanguageSuggestionUI.framework */,
@@ -346,7 +347,6 @@
 				D0C9CAAD230235E500FAB518 /* ChatListSearchContainerNode.swift in Sources */,
 				D0C9CAB1230235E500FAB518 /* ChatListTitleView.swift in Sources */,
 				D0C9CAF4230236F700FAB518 /* ChatListViewTransition.swift in Sources */,
-				D0C9CB07230237D000FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9CAF5230236F700FAB518 /* ChatListNodeEntries.swift in Sources */,
 				D0C9CAF1230236F700FAB518 /* ChatListBadgeNode.swift in Sources */,
 				D0C9CAB5230235E500FAB518 /* ChatListEmptyNode.swift in Sources */,

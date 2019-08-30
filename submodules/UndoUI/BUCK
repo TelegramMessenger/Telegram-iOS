@@ -16,6 +16,7 @@ static_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AnimationUI:AnimationUI",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

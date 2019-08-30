@@ -91,6 +91,84 @@
 			<key>explicitFileType</key>
 			<string>compiled.mach-o.dylib</string>
 		</dict>
+		<key>1DD70E2936DE2CF900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libMediaResources.a</string>
+			<key>path</key>
+			<string>libMediaResources.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29DB6520C800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libPostbox.dylib</string>
+			<key>path</key>
+			<string>libPostbox.dylib</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>compiled.mach-o.dylib</string>
+		</dict>
+		<key>1DD70E29D65BA68200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libSwiftSignalKit.dylib</string>
+			<key>path</key>
+			<string>libSwiftSignalKit.dylib</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>compiled.mach-o.dylib</string>
+		</dict>
+		<key>1DD70E29119CDA0700000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libTelegramCore.dylib</string>
+			<key>path</key>
+			<string>libTelegramCore.dylib</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>compiled.mach-o.dylib</string>
+		</dict>
+		<key>1DD70E2984A59C1D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libTelegramPresentationData.a</string>
+			<key>path</key>
+			<string>libTelegramPresentationData.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E292395015100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libTelegramUIPreferences.a</string>
+			<key>path</key>
+			<string>libTelegramUIPreferences.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>B401C97968022A5500000000</key>
 		<dict>
 			<key>isa</key>
@@ -102,6 +180,12 @@
 			<key>children</key>
 			<array>
 				<string>1DD70E29FF334B1F00000000</string>
+				<string>1DD70E2936DE2CF900000000</string>
+				<string>1DD70E29DB6520C800000000</string>
+				<string>1DD70E29D65BA68200000000</string>
+				<string>1DD70E29119CDA0700000000</string>
+				<string>1DD70E2984A59C1D00000000</string>
+				<string>1DD70E292395015100000000</string>
 			</array>
 		</dict>
 		<key>1DD70E29F40A586F00000000</key>
@@ -220,6 +304,48 @@
 			<key>fileRef</key>
 			<string>1DD70E29FF334B1F00000000</string>
 		</dict>
+		<key>E7A30F04DB6520C800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29DB6520C800000000</string>
+		</dict>
+		<key>E7A30F04D65BA68200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29D65BA68200000000</string>
+		</dict>
+		<key>E7A30F04119CDA0700000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29119CDA0700000000</string>
+		</dict>
+		<key>E7A30F0436DE2CF900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2936DE2CF900000000</string>
+		</dict>
+		<key>E7A30F042395015100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E292395015100000000</string>
+		</dict>
+		<key>E7A30F0484A59C1D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2984A59C1D00000000</string>
+		</dict>
 		<key>FAF5FAC90000000000000000</key>
 		<dict>
 			<key>isa</key>
@@ -227,6 +353,12 @@
 			<key>files</key>
 			<array>
 				<string>E7A30F04FF334B1F00000000</string>
+				<string>E7A30F04DB6520C800000000</string>
+				<string>E7A30F04D65BA68200000000</string>
+				<string>E7A30F04119CDA0700000000</string>
+				<string>E7A30F0436DE2CF900000000</string>
+				<string>E7A30F042395015100000000</string>
+				<string>E7A30F0484A59C1D00000000</string>
 			</array>
 			<key>name</key>
 			<string>Fake Swift Dependencies (Copy Files Phase)</string>

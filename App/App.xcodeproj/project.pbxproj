@@ -1,883 +1,1241 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>archiveVersion</key>
-	<string>1</string>
-	<key>classes</key>
-	<dict>
-	</dict>
-	<key>objectVersion</key>
-	<string>46</string>
-	<key>objects</key>
-	<dict>
-		<key>1DD70E29001F47FB00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>BUCK</string>
-			<key>path</key>
-			<string>BUCK</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.script.python</string>
-		</dict>
-		<key>1DD70E296ABF6A1200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>Empty.swift</string>
-			<key>path</key>
-			<string>SupportFiles/Empty.swift</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-		</dict>
-		<key>1DD70E2906C06BEE00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>Info.plist</string>
-			<key>path</key>
-			<string>Info.plist</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>explicitFileType</key>
-			<string>text.plist</string>
-		</dict>
-		<key>B401C979EAB5339800000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Sources</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>1DD70E296ABF6A1200000000</string>
-				<string>1DD70E2906C06BEE00000000</string>
-			</array>
-		</dict>
-		<key>B401C9790001020100000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>App</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>1DD70E29001F47FB00000000</string>
-				<string>B401C979EAB5339800000000</string>
-			</array>
-		</dict>
-		<key>1DD70E29001F47FB00000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>BUCK</string>
-			<key>path</key>
-			<string>BUCK</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.script.python</string>
-		</dict>
-		<key>1DD70E29988E33D500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>Application.swift</string>
-			<key>path</key>
-			<string>Sources/Application.swift</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-		</dict>
-		<key>1DD70E29BF88817800000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>main.m</string>
-			<key>path</key>
-			<string>Sources/main.m</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.c.objc</string>
-		</dict>
-		<key>B401C979EAB5339800000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Sources</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>1DD70E29988E33D500000000</string>
-				<string>1DD70E29BF88817800000000</string>
-			</array>
-		</dict>
-		<key>B401C979C43AA77A00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>AppLibrary</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>1DD70E29001F47FB00000001</string>
-				<string>B401C979EAB5339800000001</string>
-			</array>
-		</dict>
-		<key>1DD70E29898E549400000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>App-Debug.xcconfig</string>
-			<key>path</key>
-			<string>../buck-out/gen/App/App-Debug.xcconfig</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.xcconfig</string>
-		</dict>
-		<key>1DD70E29446E16FE00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>App-Profile.xcconfig</string>
-			<key>path</key>
-			<string>../buck-out/gen/App/App-Profile.xcconfig</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.xcconfig</string>
-		</dict>
-		<key>1DD70E29B804C26000000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>App-Release.xcconfig</string>
-			<key>path</key>
-			<string>../buck-out/gen/App/App-Release.xcconfig</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.xcconfig</string>
-		</dict>
-		<key>1DD70E294E27EDFB00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>AppLibrary-Debug.xcconfig</string>
-			<key>path</key>
-			<string>../buck-out/gen/App/AppLibrary-Debug.xcconfig</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.xcconfig</string>
-		</dict>
-		<key>1DD70E294906F2A500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>AppLibrary-Profile.xcconfig</string>
-			<key>path</key>
-			<string>../buck-out/gen/App/AppLibrary-Profile.xcconfig</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.xcconfig</string>
-		</dict>
-		<key>1DD70E29BC9D9E0700000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>AppLibrary-Release.xcconfig</string>
-			<key>path</key>
-			<string>../buck-out/gen/App/AppLibrary-Release.xcconfig</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>explicitFileType</key>
-			<string>text.xcconfig</string>
-		</dict>
-		<key>B401C9792F7F325000000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Buck (Do Not Modify)</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>1DD70E29898E549400000000</string>
-				<string>1DD70E29446E16FE00000000</string>
-				<string>1DD70E29B804C26000000000</string>
-				<string>1DD70E294E27EDFB00000000</string>
-				<string>1DD70E294906F2A500000000</string>
-				<string>1DD70E29BC9D9E0700000000</string>
-			</array>
-		</dict>
-		<key>B401C979B781F65D00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Configurations</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>B401C9792F7F325000000000</string>
-			</array>
-		</dict>
-		<key>1DD70E297ADFB9F200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libAppLibrary.a</string>
-			<key>path</key>
-			<string>libAppLibrary.a</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>archive.ar</string>
-		</dict>
-		<key>1DD70E296A98D72D00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libAsyncDisplayKit.dylib</string>
-			<key>path</key>
-			<string>libAsyncDisplayKit.dylib</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>compiled.mach-o.dylib</string>
-		</dict>
-		<key>1DD70E29FF334B1F00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libDisplay.dylib</string>
-			<key>path</key>
-			<string>libDisplay.dylib</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>compiled.mach-o.dylib</string>
-		</dict>
-		<key>1DD70E29B22505DC00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libMtProtoKit.dylib</string>
-			<key>path</key>
-			<string>libMtProtoKit.dylib</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>compiled.mach-o.dylib</string>
-		</dict>
-		<key>1DD70E29DB6520C800000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libPostbox.dylib</string>
-			<key>path</key>
-			<string>libPostbox.dylib</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>compiled.mach-o.dylib</string>
-		</dict>
-		<key>1DD70E29D65BA68200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libSwiftSignalKit.dylib</string>
-			<key>path</key>
-			<string>libSwiftSignalKit.dylib</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>compiled.mach-o.dylib</string>
-		</dict>
-		<key>1DD70E29119CDA0700000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libTelegramCore.dylib</string>
-			<key>path</key>
-			<string>libTelegramCore.dylib</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>compiled.mach-o.dylib</string>
-		</dict>
-		<key>1DD70E291E5A1E9C00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libTelegramUI.dylib</string>
-			<key>path</key>
-			<string>libTelegramUI.dylib</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>compiled.mach-o.dylib</string>
-		</dict>
-		<key>B401C97968022A5500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Frameworks</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>1DD70E297ADFB9F200000000</string>
-				<string>1DD70E296A98D72D00000000</string>
-				<string>1DD70E29FF334B1F00000000</string>
-				<string>1DD70E29B22505DC00000000</string>
-				<string>1DD70E29DB6520C800000000</string>
-				<string>1DD70E29D65BA68200000000</string>
-				<string>1DD70E29119CDA0700000000</string>
-				<string>1DD70E291E5A1E9C00000000</string>
-			</array>
-		</dict>
-		<key>1DD70E2933D47CB400000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>App.app</string>
-			<key>path</key>
-			<string>App.app</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>wrapper.application</string>
-		</dict>
-		<key>1DD70E297ADFB9F200000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>libAppLibrary.a</string>
-			<key>path</key>
-			<string>libAppLibrary.a</string>
-			<key>sourceTree</key>
-			<string>BUILT_PRODUCTS_DIR</string>
-			<key>explicitFileType</key>
-			<string>archive.ar</string>
-		</dict>
-		<key>B401C979C806358400000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>Products</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>1DD70E2933D47CB400000000</string>
-				<string>1DD70E297ADFB9F200000001</string>
-			</array>
-		</dict>
-		<key>B401C979EFB6AC4600000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXGroup</string>
-			<key>name</key>
-			<string>mainGroup</string>
-			<key>sourceTree</key>
-			<string><![CDATA[<group>]]></string>
-			<key>children</key>
-			<array>
-				<string>B401C9790001020100000000</string>
-				<string>B401C979C43AA77A00000000</string>
-				<string>B401C979B781F65D00000000</string>
-				<string>B401C97968022A5500000000</string>
-				<string>B401C979C806358400000000</string>
-			</array>
-		</dict>
-		<key>E7A30F046ABF6A1200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E296ABF6A1200000000</string>
-		</dict>
-		<key>1870857F0000000000000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXSourcesBuildPhase</string>
-			<key>files</key>
-			<array>
-				<string>E7A30F046ABF6A1200000000</string>
-			</array>
-		</dict>
-		<key>E7A30F047ADFB9F200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E297ADFB9F200000000</string>
-		</dict>
-		<key>E7A30F046A98D72D00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E296A98D72D00000000</string>
-		</dict>
-		<key>E7A30F04FF334B1F00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29FF334B1F00000000</string>
-		</dict>
-		<key>E7A30F04B22505DC00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29B22505DC00000000</string>
-		</dict>
-		<key>E7A30F04DB6520C800000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29DB6520C800000000</string>
-		</dict>
-		<key>E7A30F04D65BA68200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29D65BA68200000000</string>
-		</dict>
-		<key>E7A30F04119CDA0700000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29119CDA0700000000</string>
-		</dict>
-		<key>E7A30F041E5A1E9C00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E291E5A1E9C00000000</string>
-		</dict>
-		<key>4F426D880000000000000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFrameworksBuildPhase</string>
-			<key>files</key>
-			<array>
-				<string>E7A30F047ADFB9F200000000</string>
-				<string>E7A30F046A98D72D00000000</string>
-				<string>E7A30F04FF334B1F00000000</string>
-				<string>E7A30F04B22505DC00000000</string>
-				<string>E7A30F04DB6520C800000000</string>
-				<string>E7A30F04D65BA68200000000</string>
-				<string>E7A30F04119CDA0700000000</string>
-				<string>E7A30F041E5A1E9C00000000</string>
-			</array>
-		</dict>
-		<key>E7A30F046A98D72D00000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E296A98D72D00000000</string>
-		</dict>
-		<key>E7A30F04FF334B1F00000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29FF334B1F00000000</string>
-		</dict>
-		<key>E7A30F04B22505DC00000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29B22505DC00000000</string>
-		</dict>
-		<key>E7A30F04DB6520C800000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29DB6520C800000000</string>
-		</dict>
-		<key>E7A30F04D65BA68200000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29D65BA68200000000</string>
-		</dict>
-		<key>E7A30F04119CDA0700000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29119CDA0700000000</string>
-		</dict>
-		<key>E7A30F041E5A1E9C00000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E291E5A1E9C00000000</string>
-		</dict>
-		<key>FAF5FAC90000000000000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXCopyFilesBuildPhase</string>
-			<key>files</key>
-			<array>
-				<string>E7A30F046A98D72D00000001</string>
-				<string>E7A30F04FF334B1F00000001</string>
-				<string>E7A30F04B22505DC00000001</string>
-				<string>E7A30F04DB6520C800000001</string>
-				<string>E7A30F04D65BA68200000001</string>
-				<string>E7A30F04119CDA0700000001</string>
-				<string>E7A30F041E5A1E9C00000001</string>
-			</array>
-			<key>dstSubfolderSpec</key>
-			<integer>10</integer>
-			<key>dstPath</key>
-			<string></string>
-		</dict>
-		<key>4952437303EDA63300000000</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-			<key>baseConfigurationReference</key>
-			<string>1DD70E29898E549400000000</string>
-		</dict>
-		<key>4952437350C7218900000000</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Profile</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-			<key>baseConfigurationReference</key>
-			<string>1DD70E29446E16FE00000000</string>
-		</dict>
-		<key>49524373A439BFE700000000</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-			<key>baseConfigurationReference</key>
-			<string>1DD70E29B804C26000000000</string>
-		</dict>
-		<key>218C37090000000000000000</key>
-		<dict>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-			<key>buildConfigurations</key>
-			<array>
-				<string>4952437303EDA63300000000</string>
-				<string>4952437350C7218900000000</string>
-				<string>49524373A439BFE700000000</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<false/>
-		</dict>
-		<key>E66DC04E0001020100000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXNativeTarget</string>
-			<key>name</key>
-			<string>App</string>
-			<key>productName</key>
-			<string>App</string>
-			<key>productReference</key>
-			<string>1DD70E2933D47CB400000000</string>
-			<key>productType</key>
-			<string>com.apple.product-type.application</string>
-			<key>dependencies</key>
-			<array>
-			</array>
-			<key>buildPhases</key>
-			<array>
-				<string>1870857F0000000000000000</string>
-				<string>4F426D880000000000000000</string>
-				<string>FAF5FAC90000000000000000</string>
-			</array>
-			<key>buildConfigurationList</key>
-			<string>218C37090000000000000000</string>
-		</dict>
-		<key>E7A30F04988E33D500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29988E33D500000000</string>
-		</dict>
-		<key>E7A30F04BF88817800000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29BF88817800000000</string>
-		</dict>
-		<key>1870857F0000000000000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXSourcesBuildPhase</string>
-			<key>files</key>
-			<array>
-				<string>E7A30F04988E33D500000000</string>
-				<string>E7A30F04BF88817800000000</string>
-			</array>
-		</dict>
-		<key>E7A30F04FF334B1F00000002</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29FF334B1F00000000</string>
-		</dict>
-		<key>E7A30F04DB6520C800000002</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29DB6520C800000000</string>
-		</dict>
-		<key>E7A30F04D65BA68200000002</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29D65BA68200000000</string>
-		</dict>
-		<key>E7A30F04119CDA0700000002</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29119CDA0700000000</string>
-		</dict>
-		<key>E7A30F041E5A1E9C00000002</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E291E5A1E9C00000000</string>
-		</dict>
-		<key>FAF5FAC90000000000000001</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXCopyFilesBuildPhase</string>
-			<key>files</key>
-			<array>
-				<string>E7A30F04FF334B1F00000002</string>
-				<string>E7A30F04DB6520C800000002</string>
-				<string>E7A30F04D65BA68200000002</string>
-				<string>E7A30F04119CDA0700000002</string>
-				<string>E7A30F041E5A1E9C00000002</string>
-			</array>
-			<key>name</key>
-			<string>Fake Swift Dependencies (Copy Files Phase)</string>
-			<key>runOnlyForDeploymentPostprocessing</key>
-			<integer>1</integer>
-			<key>dstSubfolderSpec</key>
-			<integer>16</integer>
-			<key>dstPath</key>
-			<string></string>
-		</dict>
-		<key>4952437303EDA63300000001</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-			<key>baseConfigurationReference</key>
-			<string>1DD70E294E27EDFB00000000</string>
-		</dict>
-		<key>4952437350C7218900000001</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Profile</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-			<key>baseConfigurationReference</key>
-			<string>1DD70E294906F2A500000000</string>
-		</dict>
-		<key>49524373A439BFE700000001</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-			<key>baseConfigurationReference</key>
-			<string>1DD70E29BC9D9E0700000000</string>
-		</dict>
-		<key>218C37090000000000000001</key>
-		<dict>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-			<key>buildConfigurations</key>
-			<array>
-				<string>4952437303EDA63300000001</string>
-				<string>4952437350C7218900000001</string>
-				<string>49524373A439BFE700000001</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<false/>
-		</dict>
-		<key>E66DC04EC43AA77A00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXNativeTarget</string>
-			<key>name</key>
-			<string>AppLibrary</string>
-			<key>productName</key>
-			<string>AppLibrary</string>
-			<key>productReference</key>
-			<string>1DD70E297ADFB9F200000001</string>
-			<key>productType</key>
-			<string>com.apple.product-type.library.static</string>
-			<key>dependencies</key>
-			<array>
-			</array>
-			<key>buildPhases</key>
-			<array>
-				<string>1870857F0000000000000001</string>
-				<string>FAF5FAC90000000000000001</string>
-			</array>
-			<key>buildConfigurationList</key>
-			<string>218C37090000000000000001</string>
-		</dict>
-		<key>4952437303EDA63300000002</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Debug</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-		</dict>
-		<key>4952437350C7218900000002</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Profile</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-		</dict>
-		<key>49524373A439BFE700000002</key>
-		<dict>
-			<key>isa</key>
-			<string>XCBuildConfiguration</string>
-			<key>name</key>
-			<string>Release</string>
-			<key>buildSettings</key>
-			<dict>
-			</dict>
-		</dict>
-		<key>218C37090000000000000002</key>
-		<dict>
-			<key>isa</key>
-			<string>XCConfigurationList</string>
-			<key>buildConfigurations</key>
-			<array>
-				<string>4952437303EDA63300000002</string>
-				<string>4952437350C7218900000002</string>
-				<string>49524373A439BFE700000002</string>
-			</array>
-			<key>defaultConfigurationIsVisible</key>
-			<false/>
-		</dict>
-		<key>96C847930001020100000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXProject</string>
-			<key>mainGroup</key>
-			<string>B401C979EFB6AC4600000000</string>
-			<key>targets</key>
-			<array>
-				<string>E66DC04E0001020100000000</string>
-				<string>E66DC04EC43AA77A00000000</string>
-			</array>
-			<key>buildConfigurationList</key>
-			<string>218C37090000000000000002</string>
-			<key>compatibilityVersion</key>
-			<string>Xcode 3.2</string>
-			<key>attributes</key>
-			<dict>
-				<key>LastUpgradeCheck</key>
-				<string>9999</string>
-			</dict>
-		</dict>
-	</dict>
-	<key>rootObject</key>
-	<string>96C847930001020100000000</string>
-</dict>
-</plist>
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		E7A30F0400ACCBB200000000 /* stp_card_jcb_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2900ACCBB200000000 /* stp_card_jcb_template@2x.png */; };
+		E7A30F0400BF759200000000 /* anim_read.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2900BF759200000000 /* anim_read.json */; };
+		E7A30F040261A45100000000 /* stp_card_jcb_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E290261A45100000000 /* stp_card_jcb_template@3x.png */; };
+		E7A30F0402BAF11C00000000 /* 0.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2902BAF11C00000000 /* 0.m4a */; };
+		E7A30F0402C9089D00000000 /* 1.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2902C9089D00000000 /* 1.m4a */; };
+		E7A30F0402D7201E00000000 /* 2.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2902D7201E00000000 /* 2.m4a */; };
+		E7A30F0402E5379F00000000 /* 3.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2902E5379F00000000 /* 3.m4a */; };
+		E7A30F0402F34F2000000000 /* 4.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2902F34F2000000000 /* 4.m4a */; };
+		E7A30F04030166A100000000 /* 5.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29030166A100000000 /* 5.m4a */; };
+		E7A30F04030F7E2200000000 /* 6.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29030F7E2200000000 /* 6.m4a */; };
+		E7A30F04031D95A300000000 /* 7.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29031D95A300000000 /* 7.m4a */; };
+		E7A30F04032BAD2400000000 /* 8.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29032BAD2400000000 /* 8.m4a */; };
+		E7A30F040339C4A500000000 /* 9.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E290339C4A500000000 /* 9.m4a */; };
+		E7A30F04038EEE9000000000 /* BlueClassicIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29038EEE9000000000 /* BlueClassicIcon@2x.png */; };
+		E7A30F04039E80E800000000 /* BlackClassicIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29039E80E800000000 /* BlackClassicIconLargeIpad@2x.png */; };
+		E7A30F040543C72F00000000 /* BlueClassicIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E290543C72F00000000 /* BlueClassicIcon@3x.png */; };
+		E7A30F0405F13DFA00000000 /* BlueFilledIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2905F13DFA00000000 /* BlueFilledIconIpad.png */; };
+		E7A30F04061BC94A00000000 /* GenericUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29061BC94A00000000 /* GenericUserScript.js */; };
+		E7A30F040933E8F400000000 /* stp_card_form_front@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E290933E8F400000000 /* stp_card_form_front@2x.png */; };
+		E7A30F040AE8C19300000000 /* stp_card_form_front@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E290AE8C19300000000 /* stp_card_form_front@3x.png */; };
+		E7A30F040BE206B800000000 /* heart.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E290BE206B800000000 /* heart.tgs */; };
+		E7A30F041040865A00000000 /* PhotoEditorCaption@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291040865A00000000 /* PhotoEditorCaption@2x.png */; };
+		E7A30F04119CDA0700000000 /* libTelegramCore.dylib in Fake Swift Dependencies (Copy Files Phase) */ = {isa = PBXBuildFile; fileRef = 1DD70E29119CDA0700000000 /* libTelegramCore.dylib */; };
+		E7A30F04119CDA0700000001 /* libTelegramCore.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E29119CDA0700000000 /* libTelegramCore.dylib */; };
+		E7A30F04119CDA0700000002 /* libTelegramCore.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1DD70E29119CDA0700000000 /* libTelegramCore.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E7A30F0411F55EF900000000 /* PhotoEditorCaption@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2911F55EF900000000 /* PhotoEditorCaption@3x.png */; };
+		E7A30F041292048700000000 /* Instagram.html in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291292048700000000 /* Instagram.html */; };
+		E7A30F041493803B00000000 /* lol.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291493803B00000000 /* lol.tgs */; };
+		E7A30F041572F3F900000000 /* stp_card_mastercard_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291572F3F900000000 /* stp_card_mastercard_template@2x.png */; };
+		E7A30F0415A3422A00000000 /* thumbsup.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2915A3422A00000000 /* thumbsup.tgs */; };
+		E7A30F041727CC9800000000 /* stp_card_mastercard_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291727CC9800000000 /* stp_card_mastercard_template@3x.png */; };
+		E7A30F0417567CC800000000 /* powerful_infinity_white@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2917567CC800000000 /* powerful_infinity_white@2x.png */; };
+		E7A30F041882772900000000 /* PhotoEditorMute@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291882772900000000 /* PhotoEditorMute@2x.png */; };
+		E7A30F0418FC359D00000000 /* BlackFilledIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2918FC359D00000000 /* BlackFilledIconIpad@2x.png */; };
+		E7A30F04193BD71700000000 /* stp_card_jcb@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29193BD71700000000 /* stp_card_jcb@2x.png */; };
+		E7A30F041AF0AFB600000000 /* stp_card_jcb@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291AF0AFB600000000 /* stp_card_jcb@3x.png */; };
+		E7A30F041BA19CD900000000 /* BlueNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291BA19CD900000000 /* BlueNotificationIcon.png */; };
+		E7A30F041E5A1E9C00000000 /* libTelegramUI.dylib in Fake Swift Dependencies (Copy Files Phase) */ = {isa = PBXBuildFile; fileRef = 1DD70E291E5A1E9C00000000 /* libTelegramUI.dylib */; };
+		E7A30F041E5A1E9C00000001 /* libTelegramUI.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E291E5A1E9C00000000 /* libTelegramUI.dylib */; };
+		E7A30F041E5A1E9C00000002 /* libTelegramUI.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1DD70E291E5A1E9C00000000 /* libTelegramUI.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E7A30F041FC4F2F000000000 /* stp_card_mastercard@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E291FC4F2F000000000 /* stp_card_mastercard@2x.png */; };
+		E7A30F042179CB8F00000000 /* stp_card_mastercard@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E292179CB8F00000000 /* stp_card_mastercard@3x.png */; };
+		E7A30F04225D12D700000000 /* private_door@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29225D12D700000000 /* private_door@2x.png */; };
+		E7A30F0423B3C2EF00000000 /* ic_pencil@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2923B3C2EF00000000 /* ic_pencil@2x.png */; };
+		E7A30F042602319200000000 /* poop.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E292602319200000000 /* poop.tgs */; };
+		E7A30F0428A3C00D00000000 /* NavigationShadow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2928A3C00D00000000 /* NavigationShadow@2x.png */; };
+		E7A30F042925AEA200000000 /* Icons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E292925AEA200000000 /* Icons.xcassets */; };
+		E7A30F042D05879B00000000 /* anim_unarchive.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E292D05879B00000000 /* anim_unarchive.json */; };
+		E7A30F042DEB974300000000 /* PhotoEditorMuteActive@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E292DEB974300000000 /* PhotoEditorMuteActive@2x.png */; };
+		E7A30F042DF18A2400000000 /* BlueIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E292DF18A2400000000 /* BlueIconIpad@2x.png */; };
+		E7A30F042E63F3BE00000000 /* BlackNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E292E63F3BE00000000 /* BlackNotificationIcon.png */; };
+		E7A30F043453BAB500000000 /* BlackClassicIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293453BAB500000000 /* BlackClassicIcon@2x.png */; };
+		E7A30F043549D4C400000000 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293549D4C400000000 /* Images.xcassets */; };
+		E7A30F043608935400000000 /* BlackClassicIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293608935400000000 /* BlackClassicIcon@3x.png */; };
+		E7A30F0436B60A1F00000000 /* BlackFilledIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2936B60A1F00000000 /* BlackFilledIconIpad.png */; };
+		E7A30F043830E74200000000 /* meh.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293830E74200000000 /* meh.tgs */; };
+		E7A30F043AA15AF800000000 /* BlueIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293AA15AF800000000 /* BlueIconIpad.png */; };
+		E7A30F043C169B2E00000000 /* powerful_mask@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293C169B2E00000000 /* powerful_mask@2x.png */; };
+		E7A30F043C514E0100000000 /* begin_record.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293C514E0100000000 /* begin_record.caf */; };
+		E7A30F043E51265C00000000 /* cry.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293E51265C00000000 /* cry.tgs */; };
+		E7A30F043F61D17900000000 /* MessageSent.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E293F61D17900000000 /* MessageSent.caf */; };
+		E7A30F0440197DFD00000000 /* VimeoUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2940197DFD00000000 /* VimeoUserScript.js */; };
+		E7A30F04406BEF2900000000 /* anim_archiveAvatar.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29406BEF2900000000 /* anim_archiveAvatar.json */; };
+		E7A30F04443B21A300000000 /* stp_card_amex@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29443B21A300000000 /* stp_card_amex@2x.png */; };
+		E7A30F04453E9D0800000000 /* powerful_star@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29453E9D0800000000 /* powerful_star@2x.png */; };
+		E7A30F0445EFFA4200000000 /* stp_card_amex@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2945EFFA4200000000 /* stp_card_amex@3x.png */; };
+		E7A30F0445FD987A00000000 /* smile.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2945FD987A00000000 /* smile.tgs */; };
+		E7A30F0448ED794E00000000 /* telegram_plane1@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2948ED794E00000000 /* telegram_plane1@2x.png */; };
+		E7A30F044D77B07700000000 /* anim_infotip.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E294D77B07700000000 /* anim_infotip.json */; };
+		E7A30F044D95CA7700000000 /* stp_card_form_applepay@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E294D95CA7700000000 /* stp_card_form_applepay@2x.png */; };
+		E7A30F044F4AA31600000000 /* stp_card_form_applepay@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E294F4AA31600000000 /* stp_card_form_applepay@3x.png */; };
+		E7A30F04501FCBD600000000 /* telegram_sphere@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29501FCBD600000000 /* telegram_sphere@2x.png */; };
+		E7A30F0451A94A6400000000 /* start_arrow_ipad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2951A94A6400000000 /* start_arrow_ipad@2x.png */; };
+		E7A30F045283D1B900000000 /* celebrate.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E295283D1B900000000 /* celebrate.tgs */; };
+		E7A30F0456813D8800000000 /* PhoneCountries.txt in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2956813D8800000000 /* PhoneCountries.txt */; };
+		E7A30F0457CD649600000000 /* voip_end.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2957CD649600000000 /* voip_end.caf */; };
+		E7A30F045AFA9C2600000000 /* BlueClassicIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E295AFA9C2600000000 /* BlueClassicIconIpad@2x.png */; };
+		E7A30F045B2A553100000000 /* BlueFilledIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E295B2A553100000000 /* BlueFilledIconLargeIpad@2x.png */; };
+		E7A30F045B60B39500000000 /* start_arrow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E295B60B39500000000 /* start_arrow@2x.png */; };
+		E7A30F045D05708E00000000 /* TwitchUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E295D05708E00000000 /* TwitchUserScript.js */; };
+		E7A30F045FFC844500000000 /* notification.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E295FFC844500000000 /* notification.caf */; };
+		E7A30F046587237E00000000 /* YoutubeUserScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E296587237E00000000 /* YoutubeUserScript.js */; };
+		E7A30F0465E934B700000000 /* voip_fail.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2965E934B700000000 /* voip_fail.caf */; };
+		E7A30F0466DD7C1700000000 /* BlueClassicNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2966DD7C1700000000 /* BlueClassicNotificationIcon.png */; };
+		E7A30F0467C217F600000000 /* anim_unmute.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2967C217F600000000 /* anim_unmute.json */; };
+		E7A30F0468FBAA6A00000000 /* LegacyComponentsResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2968FBAA6A00000000 /* LegacyComponentsResources.bundle */; };
+		E7A30F046A98D72D00000000 /* libAsyncDisplayKit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E296A98D72D00000000 /* libAsyncDisplayKit.dylib */; };
+		E7A30F046A98D72D00000001 /* libAsyncDisplayKit.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1DD70E296A98D72D00000000 /* libAsyncDisplayKit.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E7A30F046ABF6A1200000000 /* Empty.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD70E296ABF6A1200000000 /* Empty.swift */; };
+		E7A30F046AD832AE00000000 /* ic_cam_lens@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E296AD832AE00000000 /* ic_cam_lens@2x.png */; };
+		E7A30F046C599FD900000000 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E296C599FD900000000 /* NavigationBackArrowLight@2x.png */; };
+		E7A30F046E8A8A4800000000 /* sad.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E296E8A8A4800000000 /* sad.tgs */; };
+		E7A30F046F409B3900000000 /* voip_connecting.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E296F409B3900000000 /* voip_connecting.mp3 */; };
+		E7A30F04705B110100000000 /* stp_card_visa@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29705B110100000000 /* stp_card_visa@2x.png */; };
+		E7A30F04720FE9A000000000 /* stp_card_visa@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29720FE9A000000000 /* stp_card_visa@3x.png */; };
+		E7A30F04748244C600000000 /* Twitch.html in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29748244C600000000 /* Twitch.html */; };
+		E7A30F0474B4E65D00000000 /* 100.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2974B4E65D00000000 /* 100.m4a */; };
+		E7A30F0474C2FDDE00000000 /* 101.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2974C2FDDE00000000 /* 101.m4a */; };
+		E7A30F0474D1155F00000000 /* 102.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2974D1155F00000000 /* 102.m4a */; };
+		E7A30F0474DF2CE000000000 /* 103.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2974DF2CE000000000 /* 103.m4a */; };
+		E7A30F0474ED446100000000 /* 104.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2974ED446100000000 /* 104.m4a */; };
+		E7A30F0474FB5BE200000000 /* 105.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2974FB5BE200000000 /* 105.m4a */; };
+		E7A30F047509736300000000 /* 106.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E297509736300000000 /* 106.m4a */; };
+		E7A30F0475178AE400000000 /* 107.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2975178AE400000000 /* 107.m4a */; };
+		E7A30F047525A26500000000 /* 108.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E297525A26500000000 /* 108.m4a */; };
+		E7A30F047533B9E600000000 /* 109.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E297533B9E600000000 /* 109.m4a */; };
+		E7A30F0475FF5D6600000000 /* anim_hide.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2975FF5D6600000000 /* anim_hide.json */; };
+		E7A30F047669BEFC00000000 /* 110.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E297669BEFC00000000 /* 110.m4a */; };
+		E7A30F047677D67D00000000 /* 111.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E297677D67D00000000 /* 111.m4a */; };
+		E7A30F0477E4942F00000000 /* BlueIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2977E4942F00000000 /* BlueIconLargeIpad@2x.png */; };
+		E7A30F047809716A00000000 /* ChatWallpaperBuiltin0.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E297809716A00000000 /* ChatWallpaperBuiltin0.jpg */; };
+		E7A30F04793765CC00000000 /* ic_smile_eye@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29793765CC00000000 /* ic_smile_eye@2x.png */; };
+		E7A30F04799DE7B600000000 /* Youtube.html in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29799DE7B600000000 /* Youtube.html */; };
+		E7A30F047ADFB9F200000000 /* libAppLibrary.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E297ADFB9F200000000 /* libAppLibrary.a */; };
+		E7A30F047E472C5600000000 /* BlackFilledIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E297E472C5600000000 /* BlackFilledIconLargeIpad@2x.png */; };
+		E7A30F0485169C9700000000 /* ic_cam@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2985169C9700000000 /* ic_cam@2x.png */; };
+		E7A30F04853D725600000000 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29853D725600000000 /* SFCompactRounded-Semibold.otf */; };
+		E7A30F04884756EF00000000 /* anim_mute.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29884756EF00000000 /* anim_mute.json */; };
+		E7A30F0488BEEF0900000000 /* BlackIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2988BEEF0900000000 /* BlackIcon@2x.png */; };
+		E7A30F048A46FE9000000000 /* ic_bubble@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298A46FE9000000000 /* ic_bubble@2x.png */; };
+		E7A30F048A73C7A800000000 /* BlackIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298A73C7A800000000 /* BlackIcon@3x.png */; };
+		E7A30F048AA6EB1400000000 /* BlackIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298AA6EB1400000000 /* BlackIconLargeIpad@2x.png */; };
+		E7A30F048CC42D1400000000 /* stp_card_applepay@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298CC42D1400000000 /* stp_card_applepay@2x.png */; };
+		E7A30F048DB231DC00000000 /* stp_card_placeholder_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298DB231DC00000000 /* stp_card_placeholder_template@2x.png */; };
+		E7A30F048E7905B300000000 /* stp_card_applepay@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298E7905B300000000 /* stp_card_applepay@3x.png */; };
+		E7A30F048E96E34200000000 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298E96E34200000000 /* LaunchScreen.xib */; };
+		E7A30F048F670A7B00000000 /* stp_card_placeholder_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E298F670A7B00000000 /* stp_card_placeholder_template@3x.png */; };
+		E7A30F0494DA3D4400000000 /* stp_card_diners_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2994DA3D4400000000 /* stp_card_diners_template@2x.png */; };
+		E7A30F04968F15E300000000 /* stp_card_diners_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29968F15E300000000 /* stp_card_diners_template@3x.png */; };
+		E7A30F04976A9EA600000000 /* stp_card_amex_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29976A9EA600000000 /* stp_card_amex_template@2x.png */; };
+		E7A30F04988E33D500000000 /* Application.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD70E29988E33D500000000 /* Application.swift */; };
+		E7A30F04991F774500000000 /* stp_card_amex_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29991F774500000000 /* stp_card_amex_template@3x.png */; };
+		E7A30F0499319B4600000000 /* ic_bubble_dot@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E2999319B4600000000 /* ic_bubble_dot@2x.png */; };
+		E7A30F049F00BA0200000000 /* anim_archive.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E299F00BA0200000000 /* anim_archive.json */; };
+		E7A30F049F5C287E00000000 /* stp_card_form_back@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E299F5C287E00000000 /* stp_card_form_back@2x.png */; };
+		E7A30F04A0160D3000000000 /* stp_card_discover_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A0160D3000000000 /* stp_card_discover_template@2x.png */; };
+		E7A30F04A111011D00000000 /* stp_card_form_back@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A111011D00000000 /* stp_card_form_back@3x.png */; };
+		E7A30F04A1CAE5CF00000000 /* stp_card_discover_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A1CAE5CF00000000 /* stp_card_discover_template@3x.png */; };
+		E7A30F04A28B5AB000000000 /* anim_archiveswipe.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A28B5AB000000000 /* anim_archiveswipe.json */; };
+		E7A30F04A4169AE300000000 /* AppIcons.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A4169AE300000000 /* AppIcons.xcassets */; };
+		E7A30F04A75B899200000000 /* BlackClassicNotificationIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A75B899200000000 /* BlackClassicNotificationIcon.png */; };
+		E7A30F04A86C10B100000000 /* BlackClassicIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A86C10B100000000 /* BlackClassicIconIpad.png */; };
+		E7A30F04A9DA63C800000000 /* fast_arrow_shadow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29A9DA63C800000000 /* fast_arrow_shadow@2x.png */; };
+		E7A30F04ABD35C0F00000000 /* anim_pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29ABD35C0F00000000 /* anim_pin.json */; };
+		E7A30F04B22505DC00000000 /* libMtProtoKit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E29B22505DC00000000 /* libMtProtoKit.dylib */; };
+		E7A30F04B22505DC00000001 /* libMtProtoKit.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1DD70E29B22505DC00000000 /* libMtProtoKit.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E7A30F04B308DE2800000000 /* anim_unpin.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29B308DE2800000000 /* anim_unpin.json */; };
+		E7A30F04B3538C4D00000000 /* fast_spiral@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29B3538C4D00000000 /* fast_spiral@2x.png */; };
+		E7A30F04B3A6F94500000000 /* stp_card_diners@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29B3A6F94500000000 /* stp_card_diners@2x.png */; };
+		E7A30F04B55BD1E400000000 /* stp_card_diners@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29B55BD1E400000000 /* stp_card_diners@3x.png */; };
+		E7A30F04B78460EB00000000 /* poker.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29B78460EB00000000 /* poker.tgs */; };
+		E7A30F04B9D1C16900000000 /* private_screw@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29B9D1C16900000000 /* private_screw@2x.png */; };
+		E7A30F04BA96313500000000 /* Vimeo.html in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29BA96313500000000 /* Vimeo.html */; };
+		E7A30F04BAE267F200000000 /* powerful_infinity@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29BAE267F200000000 /* powerful_infinity@2x.png */; };
+		E7A30F04BE69B5E500000000 /* anim_group.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29BE69B5E500000000 /* anim_group.json */; };
+		E7A30F04BF5CBB6200000000 /* knot_up1@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29BF5CBB6200000000 /* knot_up1@2x.png */; };
+		E7A30F04BF88817800000000 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 1DD70E29BF88817800000000 /* main.m */; };
+		E7A30F04C097583600000000 /* BlueClassicIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C097583600000000 /* BlueClassicIconIpad.png */; };
+		E7A30F04C320736D00000000 /* BlueClassicIconLargeIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C320736D00000000 /* BlueClassicIconLargeIpad@2x.png */; };
+		E7A30F04C364694E00000000 /* ok.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C364694E00000000 /* ok.tgs */; };
+		E7A30F04C3C271B400000000 /* stp_card_cvc_amex@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C3C271B400000000 /* stp_card_cvc_amex@2x.png */; };
+		E7A30F04C54DDB8700000000 /* BlackFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C54DDB8700000000 /* BlackFilledIcon@2x.png */; };
+		E7A30F04C5774A5300000000 /* stp_card_cvc_amex@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C5774A5300000000 /* stp_card_cvc_amex@3x.png */; };
+		E7A30F04C682CDCB00000000 /* BlackClassicIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C682CDCB00000000 /* BlackClassicIconIpad@2x.png */; };
+		E7A30F04C702B42600000000 /* BlackFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C702B42600000000 /* BlackFilledIcon@3x.png */; };
+		E7A30F04C78B98B000000000 /* voip_ringback.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29C78B98B000000000 /* voip_ringback.caf */; };
+		E7A30F04CAE3F0A300000000 /* BlueNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29CAE3F0A300000000 /* BlueNotificationIcon@2x.png */; };
+		E7A30F04CC98C94200000000 /* BlueNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29CC98C94200000000 /* BlueNotificationIcon@3x.png */; };
+		E7A30F04CE4715BE00000000 /* anim_ungroup.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29CE4715BE00000000 /* anim_ungroup.json */; };
+		E7A30F04CED3B81F00000000 /* BlackIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29CED3B81F00000000 /* BlackIconIpad@2x.png */; };
+		E7A30F04CFF88DE800000000 /* ic_videocam@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29CFF88DE800000000 /* ic_videocam@2x.png */; };
+		E7A30F04D061F39E00000000 /* BlackNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D061F39E00000000 /* BlackNotificationIcon@2x.png */; };
+		E7A30F04D216CC3D00000000 /* BlackNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D216CC3D00000000 /* BlackNotificationIcon@3x.png */; };
+		E7A30F04D373AFE200000000 /* BlueFilledIconIpad@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D373AFE200000000 /* BlueFilledIconIpad@2x.png */; };
+		E7A30F04D42F293000000000 /* stp_card_cvc@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D42F293000000000 /* stp_card_cvc@2x.png */; };
+		E7A30F04D43F404C00000000 /* BlueFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D43F404C00000000 /* BlueFilledIcon@2x.png */; };
+		E7A30F04D548E25500000000 /* stp_card_applepay_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D548E25500000000 /* stp_card_applepay_template@2x.png */; };
+		E7A30F04D5E401CF00000000 /* stp_card_cvc@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D5E401CF00000000 /* stp_card_cvc@3x.png */; };
+		E7A30F04D5F418EB00000000 /* BlueFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D5F418EB00000000 /* BlueFilledIcon@3x.png */; };
+		E7A30F04D64F57BC00000000 /* fast_body@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D64F57BC00000000 /* fast_body@2x.png */; };
+		E7A30F04D65BA68200000000 /* libSwiftSignalKit.dylib in Fake Swift Dependencies (Copy Files Phase) */ = {isa = PBXBuildFile; fileRef = 1DD70E29D65BA68200000000 /* libSwiftSignalKit.dylib */; };
+		E7A30F04D65BA68200000001 /* libSwiftSignalKit.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E29D65BA68200000000 /* libSwiftSignalKit.dylib */; };
+		E7A30F04D65BA68200000002 /* libSwiftSignalKit.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1DD70E29D65BA68200000000 /* libSwiftSignalKit.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E7A30F04D6FDBAF400000000 /* stp_card_applepay_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D6FDBAF400000000 /* stp_card_applepay_template@3x.png */; };
+		E7A30F04D743E0A500000000 /* BlueClassicNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D743E0A500000000 /* BlueClassicNotificationIcon@2x.png */; };
+		E7A30F04D8F8B94400000000 /* BlueClassicNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29D8F8B94400000000 /* BlueClassicNotificationIcon@3x.png */; };
+		E7A30F04DB6520C800000000 /* libPostbox.dylib in Fake Swift Dependencies (Copy Files Phase) */ = {isa = PBXBuildFile; fileRef = 1DD70E29DB6520C800000000 /* libPostbox.dylib */; };
+		E7A30F04DB6520C800000001 /* libPostbox.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E29DB6520C800000000 /* libPostbox.dylib */; };
+		E7A30F04DB6520C800000002 /* libPostbox.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1DD70E29DB6520C800000000 /* libPostbox.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		E7A30F04DBA6021D00000000 /* anim_delete.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29DBA6021D00000000 /* anim_delete.json */; };
+		E7A30F04DC82BB6100000000 /* anim_success.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29DC82BB6100000000 /* anim_success.json */; };
+		E7A30F04DCE9E9AA00000000 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = C73440C0DCE9E9AA00000000 /* Localizable.strings */; };
+		E7A30F04E03A369900000000 /* anim_unread.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E03A369900000000 /* anim_unread.json */; };
+		E7A30F04E0F809FE00000000 /* ic_smile@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E0F809FE00000000 /* ic_smile@2x.png */; };
+		E7A30F04E16766DD00000000 /* BlackIconIpad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E16766DD00000000 /* BlackIconIpad.png */; };
+		E7A30F04E1BF190800000000 /* stp_card_visa_template@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E1BF190800000000 /* stp_card_visa_template@2x.png */; };
+		E7A30F04E373F1A700000000 /* stp_card_visa_template@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E373F1A700000000 /* stp_card_visa_template@3x.png */; };
+		E7A30F04E4269D4A00000000 /* BlackClassicNotificationIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E4269D4A00000000 /* BlackClassicNotificationIcon@2x.png */; };
+		E7A30F04E5D6389D00000000 /* WhiteFilledIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E5D6389D00000000 /* WhiteFilledIcon@2x.png */; };
+		E7A30F04E5DB75E900000000 /* BlackClassicNotificationIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E5DB75E900000000 /* BlackClassicNotificationIcon@3x.png */; };
+		E7A30F04E78B113C00000000 /* WhiteFilledIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29E78B113C00000000 /* WhiteFilledIcon@3x.png */; };
+		E7A30F04EB14130700000000 /* currencies.json in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29EB14130700000000 /* currencies.json */; };
+		E7A30F04EE385A8D00000000 /* surprised.tgs in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29EE385A8D00000000 /* surprised.tgs */; };
+		E7A30F04EEB88B8E00000000 /* BlueIcon@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29EEB88B8E00000000 /* BlueIcon@2x.png */; };
+		E7A30F04EFAF72C800000000 /* PresentationStrings.mapping in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29EFAF72C800000000 /* PresentationStrings.mapping */; };
+		E7A30F04F06D642D00000000 /* BlueIcon@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29F06D642D00000000 /* BlueIcon@3x.png */; };
+		E7A30F04F1FA330600000000 /* Emoji.mapping in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29F1FA330600000000 /* Emoji.mapping */; };
+		E7A30F04F6D6001100000000 /* ic_pin@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29F6D6001100000000 /* ic_pin@2x.png */; };
+		E7A30F04F76B198200000000 /* Generic.html in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29F76B198200000000 /* Generic.html */; };
+		E7A30F04F8214FD900000000 /* stp_card_discover@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29F8214FD900000000 /* stp_card_discover@2x.png */; };
+		E7A30F04F9D6287800000000 /* stp_card_discover@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29F9D6287800000000 /* stp_card_discover@3x.png */; };
+		E7A30F04FA28CA1200000000 /* voip_busy.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29FA28CA1200000000 /* voip_busy.caf */; };
+		E7A30F04FABB82B800000000 /* start_arrow_ipad.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29FABB82B800000000 /* start_arrow_ipad.png */; };
+		E7A30F04FB06A0E800000000 /* knot_down@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29FB06A0E800000000 /* knot_down@2x.png */; };
+		E7A30F04FE6965DB00000000 /* fast_arrow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1DD70E29FE6965DB00000000 /* fast_arrow@2x.png */; };
+		E7A30F04FF334B1F00000000 /* libDisplay.dylib in Fake Swift Dependencies (Copy Files Phase) */ = {isa = PBXBuildFile; fileRef = 1DD70E29FF334B1F00000000 /* libDisplay.dylib */; };
+		E7A30F04FF334B1F00000001 /* libDisplay.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1DD70E29FF334B1F00000000 /* libDisplay.dylib */; };
+		E7A30F04FF334B1F00000002 /* libDisplay.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 1DD70E29FF334B1F00000000 /* libDisplay.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		FAF5FAC90000000000000000 /* Fake Swift Dependencies (Copy Files Phase) */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 0;
+			dstPath = "";
+			dstSubfolderSpec = 16;
+			files = (
+				E7A30F04FF334B1F00000000 /* libDisplay.dylib in Fake Swift Dependencies (Copy Files Phase) */,
+				E7A30F04DB6520C800000000 /* libPostbox.dylib in Fake Swift Dependencies (Copy Files Phase) */,
+				E7A30F04D65BA68200000000 /* libSwiftSignalKit.dylib in Fake Swift Dependencies (Copy Files Phase) */,
+				E7A30F04119CDA0700000000 /* libTelegramCore.dylib in Fake Swift Dependencies (Copy Files Phase) */,
+				E7A30F041E5A1E9C00000000 /* libTelegramUI.dylib in Fake Swift Dependencies (Copy Files Phase) */,
+			);
+			name = "Fake Swift Dependencies (Copy Files Phase)";
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		FAF5FAC90000000000000001 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 0;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				E7A30F046A98D72D00000001 /* libAsyncDisplayKit.dylib in CopyFiles */,
+				E7A30F04FF334B1F00000002 /* libDisplay.dylib in CopyFiles */,
+				E7A30F04B22505DC00000001 /* libMtProtoKit.dylib in CopyFiles */,
+				E7A30F04DB6520C800000002 /* libPostbox.dylib in CopyFiles */,
+				E7A30F04D65BA68200000002 /* libSwiftSignalKit.dylib in CopyFiles */,
+				E7A30F04119CDA0700000002 /* libTelegramCore.dylib in CopyFiles */,
+				E7A30F041E5A1E9C00000002 /* libTelegramUI.dylib in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		1DD70E2900000C3100000000 /* ar */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = ar; path = "../Telegram-iOS/ar.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000C5E00000000 /* ca */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = ca; path = "../Telegram-iOS/ca.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000C8100000000 /* de */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = de; path = "../Telegram-iOS/de.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000CA900000000 /* en */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = en; path = "../Telegram-iOS/en.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000CAE00000000 /* es */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = es; path = "../Telegram-iOS/es.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000CCC00000000 /* fr */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = fr; path = "../Telegram-iOS/fr.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000D1B00000000 /* id */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = id; path = "../Telegram-iOS/id.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000D2B00000000 /* it */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = it; path = "../Telegram-iOS/it.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000D6400000000 /* ko */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = ko; path = "../Telegram-iOS/ko.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000DA600000000 /* ms */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = ms; path = "../Telegram-iOS/ms.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000DBE00000000 /* nl */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = nl; path = "../Telegram-iOS/nl.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000E0400000000 /* pt */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = pt; path = "../Telegram-iOS/pt.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000E4300000000 /* ru */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = ru; path = "../Telegram-iOS/ru.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000E7E00000000 /* tr */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = tr; path = "../Telegram-iOS/tr.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900000E9600000000 /* uk */ = {isa = PBXFileReference; explicitFileType = text.plist.strings; name = uk; path = "../Telegram-iOS/uk.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
+		1DD70E29001F47FB00000000 /* BUCK */ = {isa = PBXFileReference; explicitFileType = text.script.python; path = BUCK; sourceTree = SOURCE_ROOT; };
+		1DD70E29001F47FB00000001 /* BUCK */ = {isa = PBXFileReference; explicitFileType = text.script.python; path = BUCK; sourceTree = SOURCE_ROOT; };
+		1DD70E2900ACCBB200000000 /* stp_card_jcb_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_jcb_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_jcb_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2900BF759200000000 /* anim_read.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_read.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_read.json; sourceTree = SOURCE_ROOT; };
+		1DD70E290261A45100000000 /* stp_card_jcb_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_jcb_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_jcb_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2902BAF11C00000000 /* 0.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 0.m4a; path = "../Telegram-iOS/Resources/notifications/0.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2902C9089D00000000 /* 1.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 1.m4a; path = "../Telegram-iOS/Resources/notifications/1.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2902D7201E00000000 /* 2.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 2.m4a; path = "../Telegram-iOS/Resources/notifications/2.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2902E5379F00000000 /* 3.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 3.m4a; path = "../Telegram-iOS/Resources/notifications/3.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2902F34F2000000000 /* 4.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 4.m4a; path = "../Telegram-iOS/Resources/notifications/4.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E29030166A100000000 /* 5.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 5.m4a; path = "../Telegram-iOS/Resources/notifications/5.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E29030F7E2200000000 /* 6.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 6.m4a; path = "../Telegram-iOS/Resources/notifications/6.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E29031D95A300000000 /* 7.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 7.m4a; path = "../Telegram-iOS/Resources/notifications/7.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E29032BAD2400000000 /* 8.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 8.m4a; path = "../Telegram-iOS/Resources/notifications/8.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E290339C4A500000000 /* 9.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 9.m4a; path = "../Telegram-iOS/Resources/notifications/9.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E29038EEE9000000000 /* BlueClassicIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueClassicIcon@2x.png"; path = "../Telegram-iOS/BlueClassicIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29039E80E800000000 /* BlackClassicIconLargeIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackClassicIconLargeIpad@2x.png"; path = "../Telegram-iOS/BlackClassicIconLargeIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E290543C72F00000000 /* BlueClassicIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueClassicIcon@3x.png"; path = "../Telegram-iOS/BlueClassicIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2905F13DFA00000000 /* BlueFilledIconIpad.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlueFilledIconIpad.png; path = "../Telegram-iOS/BlueFilledIconIpad.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29061BC94A00000000 /* GenericUserScript.js */ = {isa = PBXFileReference; explicitFileType = sourcecode.javascript; name = GenericUserScript.js; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/GenericUserScript.js; sourceTree = SOURCE_ROOT; };
+		1DD70E2906C06BEE00000000 /* Info.plist */ = {isa = PBXFileReference; explicitFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		1DD70E290933E8F400000000 /* stp_card_form_front@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_form_front@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_form_front@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E290AE8C19300000000 /* stp_card_form_front@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_form_front@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_form_front@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E290BE206B800000000 /* heart.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = heart.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/heart.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E291040865A00000000 /* PhotoEditorCaption@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "PhotoEditorCaption@2x.png"; path = "../Telegram-iOS/Resources/PhotoEditor/PhotoEditorCaption@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29119CDA0700000000 /* libTelegramCore.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libTelegramCore.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E2911F55EF900000000 /* PhotoEditorCaption@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "PhotoEditorCaption@3x.png"; path = "../Telegram-iOS/Resources/PhotoEditor/PhotoEditorCaption@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E291292048700000000 /* Instagram.html */ = {isa = PBXFileReference; explicitFileType = text.html; name = Instagram.html; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/Instagram.html; sourceTree = SOURCE_ROOT; };
+		1DD70E291493803B00000000 /* lol.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = lol.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/lol.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E291572F3F900000000 /* stp_card_mastercard_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_mastercard_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_mastercard_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2915A3422A00000000 /* thumbsup.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = thumbsup.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/thumbsup.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E291727CC9800000000 /* stp_card_mastercard_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_mastercard_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_mastercard_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2917567CC800000000 /* powerful_infinity_white@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "powerful_infinity_white@2x.png"; path = "../Telegram-iOS/Resources/intro/powerful_infinity_white@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E291882772900000000 /* PhotoEditorMute@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "PhotoEditorMute@2x.png"; path = "../Telegram-iOS/Resources/PhotoEditor/PhotoEditorMute@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2918FC359D00000000 /* BlackFilledIconIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackFilledIconIpad@2x.png"; path = "../Telegram-iOS/BlackFilledIconIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29193BD71700000000 /* stp_card_jcb@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_jcb@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_jcb@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E291AF0AFB600000000 /* stp_card_jcb@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_jcb@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_jcb@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E291BA19CD900000000 /* BlueNotificationIcon.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlueNotificationIcon.png; path = "../Telegram-iOS/BlueNotificationIcon.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E291E5A1E9C00000000 /* libTelegramUI.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libTelegramUI.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E291FC4F2F000000000 /* stp_card_mastercard@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_mastercard@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_mastercard@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E292179CB8F00000000 /* stp_card_mastercard@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_mastercard@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_mastercard@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29225D12D700000000 /* private_door@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "private_door@2x.png"; path = "../Telegram-iOS/Resources/intro/private_door@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2923B3C2EF00000000 /* ic_pencil@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_pencil@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_pencil@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E292602319200000000 /* poop.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = poop.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/poop.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E2928A3C00D00000000 /* NavigationShadow@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "NavigationShadow@2x.png"; path = "../Telegram-iOS/Resources/NavigationShadow@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E292925AEA200000000 /* Icons.xcassets */ = {isa = PBXFileReference; explicitFileType = folder.assetcatalog; name = Icons.xcassets; path = "../Telegram-iOS/Icons.xcassets"; sourceTree = SOURCE_ROOT; };
+		1DD70E292D05879B00000000 /* anim_unarchive.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_unarchive.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_unarchive.json; sourceTree = SOURCE_ROOT; };
+		1DD70E292DEB974300000000 /* PhotoEditorMuteActive@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "PhotoEditorMuteActive@2x.png"; path = "../Telegram-iOS/Resources/PhotoEditor/PhotoEditorMuteActive@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E292DF18A2400000000 /* BlueIconIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueIconIpad@2x.png"; path = "../Telegram-iOS/BlueIconIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E292E63F3BE00000000 /* BlackNotificationIcon.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlackNotificationIcon.png; path = "../Telegram-iOS/BlackNotificationIcon.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E293453BAB500000000 /* BlackClassicIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackClassicIcon@2x.png"; path = "../Telegram-iOS/BlackClassicIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E293549D4C400000000 /* Images.xcassets */ = {isa = PBXFileReference; explicitFileType = folder.assetcatalog; name = Images.xcassets; path = ../submodules/TelegramUI/Images.xcassets; sourceTree = SOURCE_ROOT; };
+		1DD70E293608935400000000 /* BlackClassicIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackClassicIcon@3x.png"; path = "../Telegram-iOS/BlackClassicIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2936B60A1F00000000 /* BlackFilledIconIpad.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlackFilledIconIpad.png; path = "../Telegram-iOS/BlackFilledIconIpad.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E293830E74200000000 /* meh.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = meh.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/meh.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E293AA15AF800000000 /* BlueIconIpad.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlueIconIpad.png; path = "../Telegram-iOS/BlueIconIpad.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E293C169B2E00000000 /* powerful_mask@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "powerful_mask@2x.png"; path = "../Telegram-iOS/Resources/intro/powerful_mask@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E293C514E0100000000 /* begin_record.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = begin_record.caf; path = "../Telegram-iOS/Resources/begin_record.caf"; sourceTree = SOURCE_ROOT; };
+		1DD70E293E51265C00000000 /* cry.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = cry.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/cry.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E293F61D17900000000 /* MessageSent.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = MessageSent.caf; path = ../submodules/TelegramUI/TelegramUI/Sounds/MessageSent.caf; sourceTree = SOURCE_ROOT; };
+		1DD70E2940197DFD00000000 /* VimeoUserScript.js */ = {isa = PBXFileReference; explicitFileType = sourcecode.javascript; name = VimeoUserScript.js; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/VimeoUserScript.js; sourceTree = SOURCE_ROOT; };
+		1DD70E29406BEF2900000000 /* anim_archiveAvatar.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_archiveAvatar.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_archiveAvatar.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29443B21A300000000 /* stp_card_amex@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_amex@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_amex@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29453E9D0800000000 /* powerful_star@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "powerful_star@2x.png"; path = "../Telegram-iOS/Resources/intro/powerful_star@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2945EFFA4200000000 /* stp_card_amex@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_amex@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_amex@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2945FD987A00000000 /* smile.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = smile.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/smile.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E2948ED794E00000000 /* telegram_plane1@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "telegram_plane1@2x.png"; path = "../Telegram-iOS/Resources/intro/telegram_plane1@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E294906F2A500000000 /* AppLibrary-Profile.xcconfig */ = {isa = PBXFileReference; explicitFileType = text.xcconfig; name = "AppLibrary-Profile.xcconfig"; path = "../buck-out/gen/App/AppLibrary-Profile.xcconfig"; sourceTree = SOURCE_ROOT; };
+		1DD70E294D77B07700000000 /* anim_infotip.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_infotip.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_infotip.json; sourceTree = SOURCE_ROOT; };
+		1DD70E294D95CA7700000000 /* stp_card_form_applepay@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_form_applepay@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_form_applepay@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E294E27EDFB00000000 /* AppLibrary-Debug.xcconfig */ = {isa = PBXFileReference; explicitFileType = text.xcconfig; name = "AppLibrary-Debug.xcconfig"; path = "../buck-out/gen/App/AppLibrary-Debug.xcconfig"; sourceTree = SOURCE_ROOT; };
+		1DD70E294F4AA31600000000 /* stp_card_form_applepay@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_form_applepay@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_form_applepay@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29501FCBD600000000 /* telegram_sphere@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "telegram_sphere@2x.png"; path = "../Telegram-iOS/Resources/intro/telegram_sphere@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2951A94A6400000000 /* start_arrow_ipad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "start_arrow_ipad@2x.png"; path = "../Telegram-iOS/Resources/intro/start_arrow_ipad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E295283D1B900000000 /* celebrate.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = celebrate.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/celebrate.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E2956813D8800000000 /* PhoneCountries.txt */ = {isa = PBXFileReference; explicitFileType = text; name = PhoneCountries.txt; path = ../submodules/TelegramUI/TelegramUI/Resources/PhoneCountries.txt; sourceTree = SOURCE_ROOT; };
+		1DD70E2957CD649600000000 /* voip_end.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = voip_end.caf; path = "../Telegram-iOS/Resources/voip_end.caf"; sourceTree = SOURCE_ROOT; };
+		1DD70E295AFA9C2600000000 /* BlueClassicIconIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueClassicIconIpad@2x.png"; path = "../Telegram-iOS/BlueClassicIconIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E295B2A553100000000 /* BlueFilledIconLargeIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueFilledIconLargeIpad@2x.png"; path = "../Telegram-iOS/BlueFilledIconLargeIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E295B60B39500000000 /* start_arrow@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "start_arrow@2x.png"; path = "../Telegram-iOS/Resources/intro/start_arrow@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E295D05708E00000000 /* TwitchUserScript.js */ = {isa = PBXFileReference; explicitFileType = sourcecode.javascript; name = TwitchUserScript.js; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/TwitchUserScript.js; sourceTree = SOURCE_ROOT; };
+		1DD70E295FFC844500000000 /* notification.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = notification.caf; path = ../submodules/TelegramUI/TelegramUI/Sounds/notification.caf; sourceTree = SOURCE_ROOT; };
+		1DD70E296587237E00000000 /* YoutubeUserScript.js */ = {isa = PBXFileReference; explicitFileType = sourcecode.javascript; name = YoutubeUserScript.js; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/YoutubeUserScript.js; sourceTree = SOURCE_ROOT; };
+		1DD70E2965E934B700000000 /* voip_fail.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = voip_fail.caf; path = "../Telegram-iOS/Resources/voip_fail.caf"; sourceTree = SOURCE_ROOT; };
+		1DD70E2966DD7C1700000000 /* BlueClassicNotificationIcon.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlueClassicNotificationIcon.png; path = "../Telegram-iOS/BlueClassicNotificationIcon.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2967C217F600000000 /* anim_unmute.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_unmute.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_unmute.json; sourceTree = SOURCE_ROOT; };
+		1DD70E2968FBAA6A00000000 /* LegacyComponentsResources.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; name = LegacyComponentsResources.bundle; path = ../submodules/LegacyComponents/LegacyComponents/Resources/LegacyComponentsResources.bundle; sourceTree = SOURCE_ROOT; };
+		1DD70E296A98D72D00000000 /* libAsyncDisplayKit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libAsyncDisplayKit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E296ABF6A1200000000 /* Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Empty.swift; path = SupportFiles/Empty.swift; sourceTree = SOURCE_ROOT; };
+		1DD70E296AD832AE00000000 /* ic_cam_lens@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_cam_lens@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_cam_lens@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E296C599FD900000000 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "NavigationBackArrowLight@2x.png"; path = "../Telegram-iOS/Resources/NavigationBackArrowLight@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E296E8A8A4800000000 /* sad.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = sad.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/sad.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E296F409B3900000000 /* voip_connecting.mp3 */ = {isa = PBXFileReference; explicitFileType = audio.mp3; name = voip_connecting.mp3; path = "../Telegram-iOS/Resources/voip_connecting.mp3"; sourceTree = SOURCE_ROOT; };
+		1DD70E29705B110100000000 /* stp_card_visa@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_visa@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_visa@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29720FE9A000000000 /* stp_card_visa@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_visa@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_visa@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29748244C600000000 /* Twitch.html */ = {isa = PBXFileReference; explicitFileType = text.html; name = Twitch.html; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/Twitch.html; sourceTree = SOURCE_ROOT; };
+		1DD70E2974B4E65D00000000 /* 100.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 100.m4a; path = "../Telegram-iOS/Resources/notifications/100.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2974C2FDDE00000000 /* 101.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 101.m4a; path = "../Telegram-iOS/Resources/notifications/101.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2974D1155F00000000 /* 102.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 102.m4a; path = "../Telegram-iOS/Resources/notifications/102.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2974DF2CE000000000 /* 103.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 103.m4a; path = "../Telegram-iOS/Resources/notifications/103.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2974ED446100000000 /* 104.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 104.m4a; path = "../Telegram-iOS/Resources/notifications/104.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2974FB5BE200000000 /* 105.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 105.m4a; path = "../Telegram-iOS/Resources/notifications/105.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E297509736300000000 /* 106.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 106.m4a; path = "../Telegram-iOS/Resources/notifications/106.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2975178AE400000000 /* 107.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 107.m4a; path = "../Telegram-iOS/Resources/notifications/107.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E297525A26500000000 /* 108.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 108.m4a; path = "../Telegram-iOS/Resources/notifications/108.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E297533B9E600000000 /* 109.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 109.m4a; path = "../Telegram-iOS/Resources/notifications/109.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2975FF5D6600000000 /* anim_hide.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_hide.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_hide.json; sourceTree = SOURCE_ROOT; };
+		1DD70E297669BEFC00000000 /* 110.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 110.m4a; path = "../Telegram-iOS/Resources/notifications/110.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E297677D67D00000000 /* 111.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; name = 111.m4a; path = "../Telegram-iOS/Resources/notifications/111.m4a"; sourceTree = SOURCE_ROOT; };
+		1DD70E2977E4942F00000000 /* BlueIconLargeIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueIconLargeIpad@2x.png"; path = "../Telegram-iOS/BlueIconLargeIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E297809716A00000000 /* ChatWallpaperBuiltin0.jpg */ = {isa = PBXFileReference; explicitFileType = image.jpeg; name = ChatWallpaperBuiltin0.jpg; path = ../submodules/TelegramUI/TelegramUI/Resources/ChatWallpaperBuiltin0.jpg; sourceTree = SOURCE_ROOT; };
+		1DD70E29793765CC00000000 /* ic_smile_eye@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_smile_eye@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_smile_eye@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29799DE7B600000000 /* Youtube.html */ = {isa = PBXFileReference; explicitFileType = text.html; name = Youtube.html; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/Youtube.html; sourceTree = SOURCE_ROOT; };
+		1DD70E297ADFB9F200000000 /* libAppLibrary.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libAppLibrary.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E297ADFB9F200000001 /* libAppLibrary.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libAppLibrary.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E297D676FDE00000000 /* Telegram-Profile.xcconfig */ = {isa = PBXFileReference; explicitFileType = text.xcconfig; name = "Telegram-Profile.xcconfig"; path = "../buck-out/gen/App/Telegram-Profile.xcconfig"; sourceTree = SOURCE_ROOT; };
+		1DD70E297E472C5600000000 /* BlackFilledIconLargeIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackFilledIconLargeIpad@2x.png"; path = "../Telegram-iOS/BlackFilledIconLargeIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2985169C9700000000 /* ic_cam@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_cam@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_cam@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29853D725600000000 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "SFCompactRounded-Semibold.otf"; path = "../submodules/TelegramUI/TelegramUI/Resources/Fonts/SFCompactRounded-Semibold.otf"; sourceTree = SOURCE_ROOT; };
+		1DD70E29884756EF00000000 /* anim_mute.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_mute.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_mute.json; sourceTree = SOURCE_ROOT; };
+		1DD70E2988BEEF0900000000 /* BlackIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackIcon@2x.png"; path = "../Telegram-iOS/BlackIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E298A46FE9000000000 /* ic_bubble@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_bubble@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_bubble@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E298A73C7A800000000 /* BlackIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackIcon@3x.png"; path = "../Telegram-iOS/BlackIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E298AA6EB1400000000 /* BlackIconLargeIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackIconLargeIpad@2x.png"; path = "../Telegram-iOS/BlackIconLargeIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E298CC42D1400000000 /* stp_card_applepay@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_applepay@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_applepay@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E298DB231DC00000000 /* stp_card_placeholder_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_placeholder_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_placeholder_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E298E7905B300000000 /* stp_card_applepay@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_applepay@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_applepay@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E298E96E34200000000 /* LaunchScreen.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = LaunchScreen.xib; path = "../Telegram-iOS/Base.lproj/LaunchScreen.xib"; sourceTree = SOURCE_ROOT; };
+		1DD70E298F670A7B00000000 /* stp_card_placeholder_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_placeholder_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_placeholder_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2994DA3D4400000000 /* stp_card_diners_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_diners_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_diners_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29968F15E300000000 /* stp_card_diners_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_diners_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_diners_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29976A9EA600000000 /* stp_card_amex_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_amex_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_amex_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29988E33D500000000 /* Application.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = Application.swift; path = Sources/Application.swift; sourceTree = SOURCE_ROOT; };
+		1DD70E29991F774500000000 /* stp_card_amex_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_amex_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_amex_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E2999319B4600000000 /* ic_bubble_dot@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_bubble_dot@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_bubble_dot@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E299F00BA0200000000 /* anim_archive.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_archive.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_archive.json; sourceTree = SOURCE_ROOT; };
+		1DD70E299F5C287E00000000 /* stp_card_form_back@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_form_back@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_form_back@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A0160D3000000000 /* stp_card_discover_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_discover_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_discover_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A111011D00000000 /* stp_card_form_back@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_form_back@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_form_back@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A1CAE5CF00000000 /* stp_card_discover_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_discover_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_discover_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A28B5AB000000000 /* anim_archiveswipe.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_archiveswipe.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_archiveswipe.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29A4169AE300000000 /* AppIcons.xcassets */ = {isa = PBXFileReference; explicitFileType = folder.assetcatalog; name = AppIcons.xcassets; path = "../Telegram-iOS/AppIcons.xcassets"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A75B899200000000 /* BlackClassicNotificationIcon.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlackClassicNotificationIcon.png; path = "../Telegram-iOS/BlackClassicNotificationIcon.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A86C10B100000000 /* BlackClassicIconIpad.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlackClassicIconIpad.png; path = "../Telegram-iOS/BlackClassicIconIpad.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A8C8657400000000 /* Telegram-Debug.xcconfig */ = {isa = PBXFileReference; explicitFileType = text.xcconfig; name = "Telegram-Debug.xcconfig"; path = "../buck-out/gen/App/Telegram-Debug.xcconfig"; sourceTree = SOURCE_ROOT; };
+		1DD70E29A9DA63C800000000 /* fast_arrow_shadow@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "fast_arrow_shadow@2x.png"; path = "../Telegram-iOS/Resources/intro/fast_arrow_shadow@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29ABD35C0F00000000 /* anim_pin.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_pin.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_pin.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29B22505DC00000000 /* libMtProtoKit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libMtProtoKit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E29B308DE2800000000 /* anim_unpin.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_unpin.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_unpin.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29B3538C4D00000000 /* fast_spiral@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "fast_spiral@2x.png"; path = "../Telegram-iOS/Resources/intro/fast_spiral@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29B3A6F94500000000 /* stp_card_diners@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_diners@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_diners@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29B55BD1E400000000 /* stp_card_diners@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_diners@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_diners@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29B78460EB00000000 /* poker.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = poker.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/poker.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E29B9D1C16900000000 /* private_screw@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "private_screw@2x.png"; path = "../Telegram-iOS/Resources/intro/private_screw@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29BA96313500000000 /* Vimeo.html */ = {isa = PBXFileReference; explicitFileType = text.html; name = Vimeo.html; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/Vimeo.html; sourceTree = SOURCE_ROOT; };
+		1DD70E29BAE267F200000000 /* powerful_infinity@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "powerful_infinity@2x.png"; path = "../Telegram-iOS/Resources/intro/powerful_infinity@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29BC9D9E0700000000 /* AppLibrary-Release.xcconfig */ = {isa = PBXFileReference; explicitFileType = text.xcconfig; name = "AppLibrary-Release.xcconfig"; path = "../buck-out/gen/App/AppLibrary-Release.xcconfig"; sourceTree = SOURCE_ROOT; };
+		1DD70E29BE69B5E500000000 /* anim_group.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_group.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_group.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29BF5CBB6200000000 /* knot_up1@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "knot_up1@2x.png"; path = "../Telegram-iOS/Resources/intro/knot_up1@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29BF88817800000000 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = main.m; path = Sources/main.m; sourceTree = SOURCE_ROOT; };
+		1DD70E29C097583600000000 /* BlueClassicIconIpad.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlueClassicIconIpad.png; path = "../Telegram-iOS/BlueClassicIconIpad.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29C320736D00000000 /* BlueClassicIconLargeIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueClassicIconLargeIpad@2x.png"; path = "../Telegram-iOS/BlueClassicIconLargeIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29C364694E00000000 /* ok.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = ok.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/ok.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E29C3C271B400000000 /* stp_card_cvc_amex@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_cvc_amex@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_cvc_amex@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29C54DDB8700000000 /* BlackFilledIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackFilledIcon@2x.png"; path = "../Telegram-iOS/BlackFilledIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29C5774A5300000000 /* stp_card_cvc_amex@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_cvc_amex@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_cvc_amex@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29C682CDCB00000000 /* BlackClassicIconIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackClassicIconIpad@2x.png"; path = "../Telegram-iOS/BlackClassicIconIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29C702B42600000000 /* BlackFilledIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackFilledIcon@3x.png"; path = "../Telegram-iOS/BlackFilledIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29C78B98B000000000 /* voip_ringback.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = voip_ringback.caf; path = "../Telegram-iOS/Resources/voip_ringback.caf"; sourceTree = SOURCE_ROOT; };
+		1DD70E29CAE3F0A300000000 /* BlueNotificationIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueNotificationIcon@2x.png"; path = "../Telegram-iOS/BlueNotificationIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29CC98C94200000000 /* BlueNotificationIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueNotificationIcon@3x.png"; path = "../Telegram-iOS/BlueNotificationIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29CE4715BE00000000 /* anim_ungroup.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_ungroup.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_ungroup.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29CED3B81F00000000 /* BlackIconIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackIconIpad@2x.png"; path = "../Telegram-iOS/BlackIconIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29CFF88DE800000000 /* ic_videocam@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_videocam@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_videocam@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D061F39E00000000 /* BlackNotificationIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackNotificationIcon@2x.png"; path = "../Telegram-iOS/BlackNotificationIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D216CC3D00000000 /* BlackNotificationIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackNotificationIcon@3x.png"; path = "../Telegram-iOS/BlackNotificationIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D373AFE200000000 /* BlueFilledIconIpad@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueFilledIconIpad@2x.png"; path = "../Telegram-iOS/BlueFilledIconIpad@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D42F293000000000 /* stp_card_cvc@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_cvc@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_cvc@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D43F404C00000000 /* BlueFilledIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueFilledIcon@2x.png"; path = "../Telegram-iOS/BlueFilledIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D548E25500000000 /* stp_card_applepay_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_applepay_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_applepay_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D5E401CF00000000 /* stp_card_cvc@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_cvc@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_cvc@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D5F418EB00000000 /* BlueFilledIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueFilledIcon@3x.png"; path = "../Telegram-iOS/BlueFilledIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D64F57BC00000000 /* fast_body@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "fast_body@2x.png"; path = "../Telegram-iOS/Resources/intro/fast_body@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D65BA68200000000 /* libSwiftSignalKit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libSwiftSignalKit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E29D6FDBAF400000000 /* stp_card_applepay_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_applepay_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_applepay_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D743E0A500000000 /* BlueClassicNotificationIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueClassicNotificationIcon@2x.png"; path = "../Telegram-iOS/BlueClassicNotificationIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29D83C37D400000000 /* Telegram.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Telegram.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E29D8F8B94400000000 /* BlueClassicNotificationIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueClassicNotificationIcon@3x.png"; path = "../Telegram-iOS/BlueClassicNotificationIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29DB6520C800000000 /* libPostbox.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libPostbox.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		1DD70E29DBA6021D00000000 /* anim_delete.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_delete.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_delete.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29DC82BB6100000000 /* anim_success.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_success.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_success.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29E03A369900000000 /* anim_unread.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = anim_unread.json; path = ../submodules/TelegramUI/TelegramUI/Resources/Animations/anim_unread.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29E0F809FE00000000 /* ic_smile@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_smile@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_smile@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29E16766DD00000000 /* BlackIconIpad.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = BlackIconIpad.png; path = "../Telegram-iOS/BlackIconIpad.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29E1BF190800000000 /* stp_card_visa_template@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_visa_template@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_visa_template@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29E373F1A700000000 /* stp_card_visa_template@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_visa_template@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_visa_template@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29E4269D4A00000000 /* BlackClassicNotificationIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackClassicNotificationIcon@2x.png"; path = "../Telegram-iOS/BlackClassicNotificationIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29E5D6389D00000000 /* WhiteFilledIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "WhiteFilledIcon@2x.png"; path = "../Telegram-iOS/WhiteFilledIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29E5DB75E900000000 /* BlackClassicNotificationIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlackClassicNotificationIcon@3x.png"; path = "../Telegram-iOS/BlackClassicNotificationIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29E78B113C00000000 /* WhiteFilledIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "WhiteFilledIcon@3x.png"; path = "../Telegram-iOS/WhiteFilledIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29EB14130700000000 /* currencies.json */ = {isa = PBXFileReference; explicitFileType = text.json; name = currencies.json; path = ../submodules/TelegramUI/TelegramUI/Resources/currencies.json; sourceTree = SOURCE_ROOT; };
+		1DD70E29EE385A8D00000000 /* surprised.tgs */ = {isa = PBXFileReference; lastKnownFileType = file; name = surprised.tgs; path = ../submodules/TelegramUI/TelegramUI/Resources/BuiltinReactions/surprised.tgs; sourceTree = SOURCE_ROOT; };
+		1DD70E29EEB88B8E00000000 /* BlueIcon@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueIcon@2x.png"; path = "../Telegram-iOS/BlueIcon@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29EFAF72C800000000 /* PresentationStrings.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = PresentationStrings.mapping; path = ../submodules/TelegramUI/TelegramUI/Resources/PresentationStrings.mapping; sourceTree = SOURCE_ROOT; };
+		1DD70E29F06D642D00000000 /* BlueIcon@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "BlueIcon@3x.png"; path = "../Telegram-iOS/BlueIcon@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29F0FE1B4000000000 /* Telegram-Release.xcconfig */ = {isa = PBXFileReference; explicitFileType = text.xcconfig; name = "Telegram-Release.xcconfig"; path = "../buck-out/gen/App/Telegram-Release.xcconfig"; sourceTree = SOURCE_ROOT; };
+		1DD70E29F1FA330600000000 /* Emoji.mapping */ = {isa = PBXFileReference; lastKnownFileType = file; name = Emoji.mapping; path = ../submodules/TelegramUI/TelegramUI/Resources/Emoji.mapping; sourceTree = SOURCE_ROOT; };
+		1DD70E29F6D6001100000000 /* ic_pin@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "ic_pin@2x.png"; path = "../Telegram-iOS/Resources/intro/ic_pin@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29F76B198200000000 /* Generic.html */ = {isa = PBXFileReference; explicitFileType = text.html; name = Generic.html; path = ../submodules/TelegramUI/TelegramUI/Resources/WebEmbed/Generic.html; sourceTree = SOURCE_ROOT; };
+		1DD70E29F8214FD900000000 /* stp_card_discover@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_discover@2x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_discover@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29F9D6287800000000 /* stp_card_discover@3x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "stp_card_discover@3x.png"; path = "../submodules/TelegramUI/TelegramUI/Resources/Stripe/stp_card_discover@3x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29FA28CA1200000000 /* voip_busy.caf */ = {isa = PBXFileReference; lastKnownFileType = file; name = voip_busy.caf; path = "../Telegram-iOS/Resources/voip_busy.caf"; sourceTree = SOURCE_ROOT; };
+		1DD70E29FABB82B800000000 /* start_arrow_ipad.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = start_arrow_ipad.png; path = "../Telegram-iOS/Resources/intro/start_arrow_ipad.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29FB06A0E800000000 /* knot_down@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "knot_down@2x.png"; path = "../Telegram-iOS/Resources/intro/knot_down@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29FE6965DB00000000 /* fast_arrow@2x.png */ = {isa = PBXFileReference; explicitFileType = image.png; name = "fast_arrow@2x.png"; path = "../Telegram-iOS/Resources/intro/fast_arrow@2x.png"; sourceTree = SOURCE_ROOT; };
+		1DD70E29FF334B1F00000000 /* libDisplay.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; path = libDisplay.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4F426D880000000000000000 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 0;
+			files = (
+				E7A30F047ADFB9F200000000 /* libAppLibrary.a in Frameworks */,
+				E7A30F046A98D72D00000000 /* libAsyncDisplayKit.dylib in Frameworks */,
+				E7A30F04FF334B1F00000001 /* libDisplay.dylib in Frameworks */,
+				E7A30F04B22505DC00000000 /* libMtProtoKit.dylib in Frameworks */,
+				E7A30F04DB6520C800000001 /* libPostbox.dylib in Frameworks */,
+				E7A30F04D65BA68200000001 /* libSwiftSignalKit.dylib in Frameworks */,
+				E7A30F04119CDA0700000001 /* libTelegramCore.dylib in Frameworks */,
+				E7A30F041E5A1E9C00000001 /* libTelegramUI.dylib in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		B401C979013EDE0500000000 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E2902BAF11C00000000 /* 0.m4a */,
+				1DD70E2902C9089D00000000 /* 1.m4a */,
+				1DD70E2974B4E65D00000000 /* 100.m4a */,
+				1DD70E2974C2FDDE00000000 /* 101.m4a */,
+				1DD70E2974D1155F00000000 /* 102.m4a */,
+				1DD70E2974DF2CE000000000 /* 103.m4a */,
+				1DD70E2974ED446100000000 /* 104.m4a */,
+				1DD70E2974FB5BE200000000 /* 105.m4a */,
+				1DD70E297509736300000000 /* 106.m4a */,
+				1DD70E2975178AE400000000 /* 107.m4a */,
+				1DD70E297525A26500000000 /* 108.m4a */,
+				1DD70E297533B9E600000000 /* 109.m4a */,
+				1DD70E297669BEFC00000000 /* 110.m4a */,
+				1DD70E297677D67D00000000 /* 111.m4a */,
+				1DD70E2902D7201E00000000 /* 2.m4a */,
+				1DD70E2902E5379F00000000 /* 3.m4a */,
+				1DD70E2902F34F2000000000 /* 4.m4a */,
+				1DD70E29030166A100000000 /* 5.m4a */,
+				1DD70E29030F7E2200000000 /* 6.m4a */,
+				1DD70E29031D95A300000000 /* 7.m4a */,
+				1DD70E29032BAD2400000000 /* 8.m4a */,
+				1DD70E290339C4A500000000 /* 9.m4a */,
+				1DD70E29A4169AE300000000 /* AppIcons.xcassets */,
+				1DD70E293453BAB500000000 /* BlackClassicIcon@2x.png */,
+				1DD70E293608935400000000 /* BlackClassicIcon@3x.png */,
+				1DD70E29A86C10B100000000 /* BlackClassicIconIpad.png */,
+				1DD70E29C682CDCB00000000 /* BlackClassicIconIpad@2x.png */,
+				1DD70E29039E80E800000000 /* BlackClassicIconLargeIpad@2x.png */,
+				1DD70E29A75B899200000000 /* BlackClassicNotificationIcon.png */,
+				1DD70E29E4269D4A00000000 /* BlackClassicNotificationIcon@2x.png */,
+				1DD70E29E5DB75E900000000 /* BlackClassicNotificationIcon@3x.png */,
+				1DD70E29C54DDB8700000000 /* BlackFilledIcon@2x.png */,
+				1DD70E29C702B42600000000 /* BlackFilledIcon@3x.png */,
+				1DD70E2936B60A1F00000000 /* BlackFilledIconIpad.png */,
+				1DD70E2918FC359D00000000 /* BlackFilledIconIpad@2x.png */,
+				1DD70E297E472C5600000000 /* BlackFilledIconLargeIpad@2x.png */,
+				1DD70E2988BEEF0900000000 /* BlackIcon@2x.png */,
+				1DD70E298A73C7A800000000 /* BlackIcon@3x.png */,
+				1DD70E29E16766DD00000000 /* BlackIconIpad.png */,
+				1DD70E29CED3B81F00000000 /* BlackIconIpad@2x.png */,
+				1DD70E298AA6EB1400000000 /* BlackIconLargeIpad@2x.png */,
+				1DD70E292E63F3BE00000000 /* BlackNotificationIcon.png */,
+				1DD70E29D061F39E00000000 /* BlackNotificationIcon@2x.png */,
+				1DD70E29D216CC3D00000000 /* BlackNotificationIcon@3x.png */,
+				1DD70E29038EEE9000000000 /* BlueClassicIcon@2x.png */,
+				1DD70E290543C72F00000000 /* BlueClassicIcon@3x.png */,
+				1DD70E29C097583600000000 /* BlueClassicIconIpad.png */,
+				1DD70E295AFA9C2600000000 /* BlueClassicIconIpad@2x.png */,
+				1DD70E29C320736D00000000 /* BlueClassicIconLargeIpad@2x.png */,
+				1DD70E2966DD7C1700000000 /* BlueClassicNotificationIcon.png */,
+				1DD70E29D743E0A500000000 /* BlueClassicNotificationIcon@2x.png */,
+				1DD70E29D8F8B94400000000 /* BlueClassicNotificationIcon@3x.png */,
+				1DD70E29D43F404C00000000 /* BlueFilledIcon@2x.png */,
+				1DD70E29D5F418EB00000000 /* BlueFilledIcon@3x.png */,
+				1DD70E2905F13DFA00000000 /* BlueFilledIconIpad.png */,
+				1DD70E29D373AFE200000000 /* BlueFilledIconIpad@2x.png */,
+				1DD70E295B2A553100000000 /* BlueFilledIconLargeIpad@2x.png */,
+				1DD70E29EEB88B8E00000000 /* BlueIcon@2x.png */,
+				1DD70E29F06D642D00000000 /* BlueIcon@3x.png */,
+				1DD70E293AA15AF800000000 /* BlueIconIpad.png */,
+				1DD70E292DF18A2400000000 /* BlueIconIpad@2x.png */,
+				1DD70E2977E4942F00000000 /* BlueIconLargeIpad@2x.png */,
+				1DD70E291BA19CD900000000 /* BlueNotificationIcon.png */,
+				1DD70E29CAE3F0A300000000 /* BlueNotificationIcon@2x.png */,
+				1DD70E29CC98C94200000000 /* BlueNotificationIcon@3x.png */,
+				1DD70E297809716A00000000 /* ChatWallpaperBuiltin0.jpg */,
+				1DD70E29F1FA330600000000 /* Emoji.mapping */,
+				1DD70E29F76B198200000000 /* Generic.html */,
+				1DD70E29061BC94A00000000 /* GenericUserScript.js */,
+				1DD70E292925AEA200000000 /* Icons.xcassets */,
+				1DD70E293549D4C400000000 /* Images.xcassets */,
+				1DD70E291292048700000000 /* Instagram.html */,
+				1DD70E298E96E34200000000 /* LaunchScreen.xib */,
+				1DD70E2968FBAA6A00000000 /* LegacyComponentsResources.bundle */,
+				C73440C0DCE9E9AA00000000 /* Localizable.strings */,
+				1DD70E293F61D17900000000 /* MessageSent.caf */,
+				1DD70E296C599FD900000000 /* NavigationBackArrowLight@2x.png */,
+				1DD70E2928A3C00D00000000 /* NavigationShadow@2x.png */,
+				1DD70E2956813D8800000000 /* PhoneCountries.txt */,
+				1DD70E291040865A00000000 /* PhotoEditorCaption@2x.png */,
+				1DD70E2911F55EF900000000 /* PhotoEditorCaption@3x.png */,
+				1DD70E291882772900000000 /* PhotoEditorMute@2x.png */,
+				1DD70E292DEB974300000000 /* PhotoEditorMuteActive@2x.png */,
+				1DD70E29EFAF72C800000000 /* PresentationStrings.mapping */,
+				1DD70E29853D725600000000 /* SFCompactRounded-Semibold.otf */,
+				1DD70E29748244C600000000 /* Twitch.html */,
+				1DD70E295D05708E00000000 /* TwitchUserScript.js */,
+				1DD70E29BA96313500000000 /* Vimeo.html */,
+				1DD70E2940197DFD00000000 /* VimeoUserScript.js */,
+				1DD70E29E5D6389D00000000 /* WhiteFilledIcon@2x.png */,
+				1DD70E29E78B113C00000000 /* WhiteFilledIcon@3x.png */,
+				1DD70E29799DE7B600000000 /* Youtube.html */,
+				1DD70E296587237E00000000 /* YoutubeUserScript.js */,
+				1DD70E299F00BA0200000000 /* anim_archive.json */,
+				1DD70E29406BEF2900000000 /* anim_archiveAvatar.json */,
+				1DD70E29A28B5AB000000000 /* anim_archiveswipe.json */,
+				1DD70E29DBA6021D00000000 /* anim_delete.json */,
+				1DD70E29BE69B5E500000000 /* anim_group.json */,
+				1DD70E2975FF5D6600000000 /* anim_hide.json */,
+				1DD70E294D77B07700000000 /* anim_infotip.json */,
+				1DD70E29884756EF00000000 /* anim_mute.json */,
+				1DD70E29ABD35C0F00000000 /* anim_pin.json */,
+				1DD70E2900BF759200000000 /* anim_read.json */,
+				1DD70E29DC82BB6100000000 /* anim_success.json */,
+				1DD70E292D05879B00000000 /* anim_unarchive.json */,
+				1DD70E29CE4715BE00000000 /* anim_ungroup.json */,
+				1DD70E2967C217F600000000 /* anim_unmute.json */,
+				1DD70E29B308DE2800000000 /* anim_unpin.json */,
+				1DD70E29E03A369900000000 /* anim_unread.json */,
+				1DD70E293C514E0100000000 /* begin_record.caf */,
+				1DD70E295283D1B900000000 /* celebrate.tgs */,
+				1DD70E293E51265C00000000 /* cry.tgs */,
+				1DD70E29EB14130700000000 /* currencies.json */,
+				1DD70E29FE6965DB00000000 /* fast_arrow@2x.png */,
+				1DD70E29A9DA63C800000000 /* fast_arrow_shadow@2x.png */,
+				1DD70E29D64F57BC00000000 /* fast_body@2x.png */,
+				1DD70E29B3538C4D00000000 /* fast_spiral@2x.png */,
+				1DD70E290BE206B800000000 /* heart.tgs */,
+				1DD70E298A46FE9000000000 /* ic_bubble@2x.png */,
+				1DD70E2999319B4600000000 /* ic_bubble_dot@2x.png */,
+				1DD70E2985169C9700000000 /* ic_cam@2x.png */,
+				1DD70E296AD832AE00000000 /* ic_cam_lens@2x.png */,
+				1DD70E2923B3C2EF00000000 /* ic_pencil@2x.png */,
+				1DD70E29F6D6001100000000 /* ic_pin@2x.png */,
+				1DD70E29E0F809FE00000000 /* ic_smile@2x.png */,
+				1DD70E29793765CC00000000 /* ic_smile_eye@2x.png */,
+				1DD70E29CFF88DE800000000 /* ic_videocam@2x.png */,
+				1DD70E29FB06A0E800000000 /* knot_down@2x.png */,
+				1DD70E29BF5CBB6200000000 /* knot_up1@2x.png */,
+				1DD70E291493803B00000000 /* lol.tgs */,
+				1DD70E293830E74200000000 /* meh.tgs */,
+				1DD70E295FFC844500000000 /* notification.caf */,
+				1DD70E29C364694E00000000 /* ok.tgs */,
+				1DD70E29B78460EB00000000 /* poker.tgs */,
+				1DD70E292602319200000000 /* poop.tgs */,
+				1DD70E29BAE267F200000000 /* powerful_infinity@2x.png */,
+				1DD70E2917567CC800000000 /* powerful_infinity_white@2x.png */,
+				1DD70E293C169B2E00000000 /* powerful_mask@2x.png */,
+				1DD70E29453E9D0800000000 /* powerful_star@2x.png */,
+				1DD70E29225D12D700000000 /* private_door@2x.png */,
+				1DD70E29B9D1C16900000000 /* private_screw@2x.png */,
+				1DD70E296E8A8A4800000000 /* sad.tgs */,
+				1DD70E2945FD987A00000000 /* smile.tgs */,
+				1DD70E295B60B39500000000 /* start_arrow@2x.png */,
+				1DD70E29FABB82B800000000 /* start_arrow_ipad.png */,
+				1DD70E2951A94A6400000000 /* start_arrow_ipad@2x.png */,
+				1DD70E29443B21A300000000 /* stp_card_amex@2x.png */,
+				1DD70E2945EFFA4200000000 /* stp_card_amex@3x.png */,
+				1DD70E29976A9EA600000000 /* stp_card_amex_template@2x.png */,
+				1DD70E29991F774500000000 /* stp_card_amex_template@3x.png */,
+				1DD70E298CC42D1400000000 /* stp_card_applepay@2x.png */,
+				1DD70E298E7905B300000000 /* stp_card_applepay@3x.png */,
+				1DD70E29D548E25500000000 /* stp_card_applepay_template@2x.png */,
+				1DD70E29D6FDBAF400000000 /* stp_card_applepay_template@3x.png */,
+				1DD70E29D42F293000000000 /* stp_card_cvc@2x.png */,
+				1DD70E29D5E401CF00000000 /* stp_card_cvc@3x.png */,
+				1DD70E29C3C271B400000000 /* stp_card_cvc_amex@2x.png */,
+				1DD70E29C5774A5300000000 /* stp_card_cvc_amex@3x.png */,
+				1DD70E29B3A6F94500000000 /* stp_card_diners@2x.png */,
+				1DD70E29B55BD1E400000000 /* stp_card_diners@3x.png */,
+				1DD70E2994DA3D4400000000 /* stp_card_diners_template@2x.png */,
+				1DD70E29968F15E300000000 /* stp_card_diners_template@3x.png */,
+				1DD70E29F8214FD900000000 /* stp_card_discover@2x.png */,
+				1DD70E29F9D6287800000000 /* stp_card_discover@3x.png */,
+				1DD70E29A0160D3000000000 /* stp_card_discover_template@2x.png */,
+				1DD70E29A1CAE5CF00000000 /* stp_card_discover_template@3x.png */,
+				1DD70E294D95CA7700000000 /* stp_card_form_applepay@2x.png */,
+				1DD70E294F4AA31600000000 /* stp_card_form_applepay@3x.png */,
+				1DD70E299F5C287E00000000 /* stp_card_form_back@2x.png */,
+				1DD70E29A111011D00000000 /* stp_card_form_back@3x.png */,
+				1DD70E290933E8F400000000 /* stp_card_form_front@2x.png */,
+				1DD70E290AE8C19300000000 /* stp_card_form_front@3x.png */,
+				1DD70E29193BD71700000000 /* stp_card_jcb@2x.png */,
+				1DD70E291AF0AFB600000000 /* stp_card_jcb@3x.png */,
+				1DD70E2900ACCBB200000000 /* stp_card_jcb_template@2x.png */,
+				1DD70E290261A45100000000 /* stp_card_jcb_template@3x.png */,
+				1DD70E291FC4F2F000000000 /* stp_card_mastercard@2x.png */,
+				1DD70E292179CB8F00000000 /* stp_card_mastercard@3x.png */,
+				1DD70E291572F3F900000000 /* stp_card_mastercard_template@2x.png */,
+				1DD70E291727CC9800000000 /* stp_card_mastercard_template@3x.png */,
+				1DD70E298DB231DC00000000 /* stp_card_placeholder_template@2x.png */,
+				1DD70E298F670A7B00000000 /* stp_card_placeholder_template@3x.png */,
+				1DD70E29705B110100000000 /* stp_card_visa@2x.png */,
+				1DD70E29720FE9A000000000 /* stp_card_visa@3x.png */,
+				1DD70E29E1BF190800000000 /* stp_card_visa_template@2x.png */,
+				1DD70E29E373F1A700000000 /* stp_card_visa_template@3x.png */,
+				1DD70E29EE385A8D00000000 /* surprised.tgs */,
+				1DD70E2948ED794E00000000 /* telegram_plane1@2x.png */,
+				1DD70E29501FCBD600000000 /* telegram_sphere@2x.png */,
+				1DD70E2915A3422A00000000 /* thumbsup.tgs */,
+				1DD70E29FA28CA1200000000 /* voip_busy.caf */,
+				1DD70E296F409B3900000000 /* voip_connecting.mp3 */,
+				1DD70E2957CD649600000000 /* voip_end.caf */,
+				1DD70E2965E934B700000000 /* voip_fail.caf */,
+				1DD70E29C78B98B000000000 /* voip_ringback.caf */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		B401C9792F7F325000000000 /* Buck (Do Not Modify) */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E294E27EDFB00000000 /* AppLibrary-Debug.xcconfig */,
+				1DD70E294906F2A500000000 /* AppLibrary-Profile.xcconfig */,
+				1DD70E29BC9D9E0700000000 /* AppLibrary-Release.xcconfig */,
+				1DD70E29A8C8657400000000 /* Telegram-Debug.xcconfig */,
+				1DD70E297D676FDE00000000 /* Telegram-Profile.xcconfig */,
+				1DD70E29F0FE1B4000000000 /* Telegram-Release.xcconfig */,
+			);
+			name = "Buck (Do Not Modify)";
+			sourceTree = "<group>";
+		};
+		B401C97968022A5500000000 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E297ADFB9F200000000 /* libAppLibrary.a */,
+				1DD70E296A98D72D00000000 /* libAsyncDisplayKit.dylib */,
+				1DD70E29FF334B1F00000000 /* libDisplay.dylib */,
+				1DD70E29B22505DC00000000 /* libMtProtoKit.dylib */,
+				1DD70E29DB6520C800000000 /* libPostbox.dylib */,
+				1DD70E29D65BA68200000000 /* libSwiftSignalKit.dylib */,
+				1DD70E29119CDA0700000000 /* libTelegramCore.dylib */,
+				1DD70E291E5A1E9C00000000 /* libTelegramUI.dylib */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		B401C979B2C34D2100000000 /* Telegram */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E29001F47FB00000001 /* BUCK */,
+				B401C979013EDE0500000000 /* Resources */,
+				B401C979EAB5339800000001 /* Sources */,
+			);
+			name = Telegram;
+			sourceTree = "<group>";
+		};
+		B401C979B781F65D00000000 /* Configurations */ = {
+			isa = PBXGroup;
+			children = (
+				B401C9792F7F325000000000 /* Buck (Do Not Modify) */,
+			);
+			name = Configurations;
+			sourceTree = "<group>";
+		};
+		B401C979C43AA77A00000000 /* AppLibrary */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E29001F47FB00000000 /* BUCK */,
+				B401C979EAB5339800000000 /* Sources */,
+			);
+			name = AppLibrary;
+			sourceTree = "<group>";
+		};
+		B401C979C806358400000000 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E29D83C37D400000000 /* Telegram.app */,
+				1DD70E297ADFB9F200000001 /* libAppLibrary.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		B401C979EAB5339800000000 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E29988E33D500000000 /* Application.swift */,
+				1DD70E29BF88817800000000 /* main.m */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		B401C979EAB5339800000001 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				1DD70E296ABF6A1200000000 /* Empty.swift */,
+				1DD70E2906C06BEE00000000 /* Info.plist */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		B401C979EFB6AC4600000000 /* mainGroup */ = {
+			isa = PBXGroup;
+			children = (
+				B401C979C43AA77A00000000 /* AppLibrary */,
+				B401C979B781F65D00000000 /* Configurations */,
+				B401C97968022A5500000000 /* Frameworks */,
+				B401C979C806358400000000 /* Products */,
+				B401C979B2C34D2100000000 /* Telegram */,
+			);
+			name = mainGroup;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E66DC04EB2C34D2100000000 /* Telegram */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 218C37090000000000000001 /* Build configuration list for PBXNativeTarget "Telegram" */;
+			buildPhases = (
+				1870857F0000000000000001 /* Sources */,
+				4F426D880000000000000000 /* Frameworks */,
+				8A032D2C0000000000000000 /* Resources */,
+				FAF5FAC90000000000000001 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Telegram;
+			productName = Telegram;
+			productReference = 1DD70E29D83C37D400000000 /* Telegram.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E66DC04EC43AA77A00000000 /* AppLibrary */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 218C37090000000000000000 /* Build configuration list for PBXNativeTarget "AppLibrary" */;
+			buildPhases = (
+				1870857F0000000000000000 /* Sources */,
+				FAF5FAC90000000000000000 /* Fake Swift Dependencies (Copy Files Phase) */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = AppLibrary;
+			productName = AppLibrary;
+			productReference = 1DD70E297ADFB9F200000001 /* libAppLibrary.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		96C847930001020100000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 9999;
+				TargetAttributes = {
+					E66DC04EB2C34D2100000000 = {
+						DevelopmentTeam = X834Q8SBVP;
+					};
+				};
+			};
+			buildConfigurationList = 218C37090000000000000002 /* Build configuration list for PBXProject "App" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				ar,
+				ca,
+				de,
+				es,
+				fr,
+				id,
+				it,
+				ko,
+				ms,
+				nl,
+				pt,
+				ru,
+				tr,
+				uk,
+			);
+			mainGroup = B401C979EFB6AC4600000000 /* mainGroup */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E66DC04EC43AA77A00000000 /* AppLibrary */,
+				E66DC04EB2C34D2100000000 /* Telegram */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		8A032D2C0000000000000000 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 0;
+			files = (
+				E7A30F049F00BA0200000000 /* anim_archive.json in Resources */,
+				E7A30F04406BEF2900000000 /* anim_archiveAvatar.json in Resources */,
+				E7A30F04A28B5AB000000000 /* anim_archiveswipe.json in Resources */,
+				E7A30F04DBA6021D00000000 /* anim_delete.json in Resources */,
+				E7A30F04BE69B5E500000000 /* anim_group.json in Resources */,
+				E7A30F0475FF5D6600000000 /* anim_hide.json in Resources */,
+				E7A30F044D77B07700000000 /* anim_infotip.json in Resources */,
+				E7A30F04884756EF00000000 /* anim_mute.json in Resources */,
+				E7A30F04ABD35C0F00000000 /* anim_pin.json in Resources */,
+				E7A30F0400BF759200000000 /* anim_read.json in Resources */,
+				E7A30F04DC82BB6100000000 /* anim_success.json in Resources */,
+				E7A30F042D05879B00000000 /* anim_unarchive.json in Resources */,
+				E7A30F04CE4715BE00000000 /* anim_ungroup.json in Resources */,
+				E7A30F0467C217F600000000 /* anim_unmute.json in Resources */,
+				E7A30F04B308DE2800000000 /* anim_unpin.json in Resources */,
+				E7A30F04E03A369900000000 /* anim_unread.json in Resources */,
+				E7A30F045283D1B900000000 /* celebrate.tgs in Resources */,
+				E7A30F043E51265C00000000 /* cry.tgs in Resources */,
+				E7A30F040BE206B800000000 /* heart.tgs in Resources */,
+				E7A30F041493803B00000000 /* lol.tgs in Resources */,
+				E7A30F043830E74200000000 /* meh.tgs in Resources */,
+				E7A30F04C364694E00000000 /* ok.tgs in Resources */,
+				E7A30F04B78460EB00000000 /* poker.tgs in Resources */,
+				E7A30F042602319200000000 /* poop.tgs in Resources */,
+				E7A30F046E8A8A4800000000 /* sad.tgs in Resources */,
+				E7A30F0445FD987A00000000 /* smile.tgs in Resources */,
+				E7A30F04EE385A8D00000000 /* surprised.tgs in Resources */,
+				E7A30F0415A3422A00000000 /* thumbsup.tgs in Resources */,
+				E7A30F047809716A00000000 /* ChatWallpaperBuiltin0.jpg in Resources */,
+				E7A30F04F1FA330600000000 /* Emoji.mapping in Resources */,
+				E7A30F04853D725600000000 /* SFCompactRounded-Semibold.otf in Resources */,
+				E7A30F0456813D8800000000 /* PhoneCountries.txt in Resources */,
+				E7A30F04EFAF72C800000000 /* PresentationStrings.mapping in Resources */,
+				E7A30F04443B21A300000000 /* stp_card_amex@2x.png in Resources */,
+				E7A30F0445EFFA4200000000 /* stp_card_amex@3x.png in Resources */,
+				E7A30F04976A9EA600000000 /* stp_card_amex_template@2x.png in Resources */,
+				E7A30F04991F774500000000 /* stp_card_amex_template@3x.png in Resources */,
+				E7A30F048CC42D1400000000 /* stp_card_applepay@2x.png in Resources */,
+				E7A30F048E7905B300000000 /* stp_card_applepay@3x.png in Resources */,
+				E7A30F04D548E25500000000 /* stp_card_applepay_template@2x.png in Resources */,
+				E7A30F04D6FDBAF400000000 /* stp_card_applepay_template@3x.png in Resources */,
+				E7A30F04D42F293000000000 /* stp_card_cvc@2x.png in Resources */,
+				E7A30F04D5E401CF00000000 /* stp_card_cvc@3x.png in Resources */,
+				E7A30F04C3C271B400000000 /* stp_card_cvc_amex@2x.png in Resources */,
+				E7A30F04C5774A5300000000 /* stp_card_cvc_amex@3x.png in Resources */,
+				E7A30F04B3A6F94500000000 /* stp_card_diners@2x.png in Resources */,
+				E7A30F04B55BD1E400000000 /* stp_card_diners@3x.png in Resources */,
+				E7A30F0494DA3D4400000000 /* stp_card_diners_template@2x.png in Resources */,
+				E7A30F04968F15E300000000 /* stp_card_diners_template@3x.png in Resources */,
+				E7A30F04F8214FD900000000 /* stp_card_discover@2x.png in Resources */,
+				E7A30F04F9D6287800000000 /* stp_card_discover@3x.png in Resources */,
+				E7A30F04A0160D3000000000 /* stp_card_discover_template@2x.png in Resources */,
+				E7A30F04A1CAE5CF00000000 /* stp_card_discover_template@3x.png in Resources */,
+				E7A30F044D95CA7700000000 /* stp_card_form_applepay@2x.png in Resources */,
+				E7A30F044F4AA31600000000 /* stp_card_form_applepay@3x.png in Resources */,
+				E7A30F049F5C287E00000000 /* stp_card_form_back@2x.png in Resources */,
+				E7A30F04A111011D00000000 /* stp_card_form_back@3x.png in Resources */,
+				E7A30F040933E8F400000000 /* stp_card_form_front@2x.png in Resources */,
+				E7A30F040AE8C19300000000 /* stp_card_form_front@3x.png in Resources */,
+				E7A30F04193BD71700000000 /* stp_card_jcb@2x.png in Resources */,
+				E7A30F041AF0AFB600000000 /* stp_card_jcb@3x.png in Resources */,
+				E7A30F0400ACCBB200000000 /* stp_card_jcb_template@2x.png in Resources */,
+				E7A30F040261A45100000000 /* stp_card_jcb_template@3x.png in Resources */,
+				E7A30F041FC4F2F000000000 /* stp_card_mastercard@2x.png in Resources */,
+				E7A30F042179CB8F00000000 /* stp_card_mastercard@3x.png in Resources */,
+				E7A30F041572F3F900000000 /* stp_card_mastercard_template@2x.png in Resources */,
+				E7A30F041727CC9800000000 /* stp_card_mastercard_template@3x.png in Resources */,
+				E7A30F048DB231DC00000000 /* stp_card_placeholder_template@2x.png in Resources */,
+				E7A30F048F670A7B00000000 /* stp_card_placeholder_template@3x.png in Resources */,
+				E7A30F04705B110100000000 /* stp_card_visa@2x.png in Resources */,
+				E7A30F04720FE9A000000000 /* stp_card_visa@3x.png in Resources */,
+				E7A30F04E1BF190800000000 /* stp_card_visa_template@2x.png in Resources */,
+				E7A30F04E373F1A700000000 /* stp_card_visa_template@3x.png in Resources */,
+				E7A30F04F76B198200000000 /* Generic.html in Resources */,
+				E7A30F04061BC94A00000000 /* GenericUserScript.js in Resources */,
+				E7A30F041292048700000000 /* Instagram.html in Resources */,
+				E7A30F04748244C600000000 /* Twitch.html in Resources */,
+				E7A30F045D05708E00000000 /* TwitchUserScript.js in Resources */,
+				E7A30F04BA96313500000000 /* Vimeo.html in Resources */,
+				E7A30F0440197DFD00000000 /* VimeoUserScript.js in Resources */,
+				E7A30F04799DE7B600000000 /* Youtube.html in Resources */,
+				E7A30F046587237E00000000 /* YoutubeUserScript.js in Resources */,
+				E7A30F04EB14130700000000 /* currencies.json in Resources */,
+				E7A30F043F61D17900000000 /* MessageSent.caf in Resources */,
+				E7A30F045FFC844500000000 /* notification.caf in Resources */,
+				E7A30F046C599FD900000000 /* NavigationBackArrowLight@2x.png in Resources */,
+				E7A30F0428A3C00D00000000 /* NavigationShadow@2x.png in Resources */,
+				E7A30F041040865A00000000 /* PhotoEditorCaption@2x.png in Resources */,
+				E7A30F0411F55EF900000000 /* PhotoEditorCaption@3x.png in Resources */,
+				E7A30F041882772900000000 /* PhotoEditorMute@2x.png in Resources */,
+				E7A30F042DEB974300000000 /* PhotoEditorMuteActive@2x.png in Resources */,
+				E7A30F043C514E0100000000 /* begin_record.caf in Resources */,
+				E7A30F04FE6965DB00000000 /* fast_arrow@2x.png in Resources */,
+				E7A30F04A9DA63C800000000 /* fast_arrow_shadow@2x.png in Resources */,
+				E7A30F04D64F57BC00000000 /* fast_body@2x.png in Resources */,
+				E7A30F04B3538C4D00000000 /* fast_spiral@2x.png in Resources */,
+				E7A30F048A46FE9000000000 /* ic_bubble@2x.png in Resources */,
+				E7A30F0499319B4600000000 /* ic_bubble_dot@2x.png in Resources */,
+				E7A30F0485169C9700000000 /* ic_cam@2x.png in Resources */,
+				E7A30F046AD832AE00000000 /* ic_cam_lens@2x.png in Resources */,
+				E7A30F0423B3C2EF00000000 /* ic_pencil@2x.png in Resources */,
+				E7A30F04F6D6001100000000 /* ic_pin@2x.png in Resources */,
+				E7A30F04E0F809FE00000000 /* ic_smile@2x.png in Resources */,
+				E7A30F04793765CC00000000 /* ic_smile_eye@2x.png in Resources */,
+				E7A30F04CFF88DE800000000 /* ic_videocam@2x.png in Resources */,
+				E7A30F04FB06A0E800000000 /* knot_down@2x.png in Resources */,
+				E7A30F04BF5CBB6200000000 /* knot_up1@2x.png in Resources */,
+				E7A30F04BAE267F200000000 /* powerful_infinity@2x.png in Resources */,
+				E7A30F0417567CC800000000 /* powerful_infinity_white@2x.png in Resources */,
+				E7A30F043C169B2E00000000 /* powerful_mask@2x.png in Resources */,
+				E7A30F04453E9D0800000000 /* powerful_star@2x.png in Resources */,
+				E7A30F04225D12D700000000 /* private_door@2x.png in Resources */,
+				E7A30F04B9D1C16900000000 /* private_screw@2x.png in Resources */,
+				E7A30F045B60B39500000000 /* start_arrow@2x.png in Resources */,
+				E7A30F04FABB82B800000000 /* start_arrow_ipad.png in Resources */,
+				E7A30F0451A94A6400000000 /* start_arrow_ipad@2x.png in Resources */,
+				E7A30F0448ED794E00000000 /* telegram_plane1@2x.png in Resources */,
+				E7A30F04501FCBD600000000 /* telegram_sphere@2x.png in Resources */,
+				E7A30F0402BAF11C00000000 /* 0.m4a in Resources */,
+				E7A30F0402C9089D00000000 /* 1.m4a in Resources */,
+				E7A30F0474B4E65D00000000 /* 100.m4a in Resources */,
+				E7A30F0474C2FDDE00000000 /* 101.m4a in Resources */,
+				E7A30F0474D1155F00000000 /* 102.m4a in Resources */,
+				E7A30F0474DF2CE000000000 /* 103.m4a in Resources */,
+				E7A30F0474ED446100000000 /* 104.m4a in Resources */,
+				E7A30F0474FB5BE200000000 /* 105.m4a in Resources */,
+				E7A30F047509736300000000 /* 106.m4a in Resources */,
+				E7A30F0475178AE400000000 /* 107.m4a in Resources */,
+				E7A30F047525A26500000000 /* 108.m4a in Resources */,
+				E7A30F047533B9E600000000 /* 109.m4a in Resources */,
+				E7A30F047669BEFC00000000 /* 110.m4a in Resources */,
+				E7A30F047677D67D00000000 /* 111.m4a in Resources */,
+				E7A30F0402D7201E00000000 /* 2.m4a in Resources */,
+				E7A30F0402E5379F00000000 /* 3.m4a in Resources */,
+				E7A30F0402F34F2000000000 /* 4.m4a in Resources */,
+				E7A30F04030166A100000000 /* 5.m4a in Resources */,
+				E7A30F04030F7E2200000000 /* 6.m4a in Resources */,
+				E7A30F04031D95A300000000 /* 7.m4a in Resources */,
+				E7A30F04032BAD2400000000 /* 8.m4a in Resources */,
+				E7A30F040339C4A500000000 /* 9.m4a in Resources */,
+				E7A30F04FA28CA1200000000 /* voip_busy.caf in Resources */,
+				E7A30F046F409B3900000000 /* voip_connecting.mp3 in Resources */,
+				E7A30F0457CD649600000000 /* voip_end.caf in Resources */,
+				E7A30F0465E934B700000000 /* voip_fail.caf in Resources */,
+				E7A30F04C78B98B000000000 /* voip_ringback.caf in Resources */,
+				E7A30F043453BAB500000000 /* BlackClassicIcon@2x.png in Resources */,
+				E7A30F043608935400000000 /* BlackClassicIcon@3x.png in Resources */,
+				E7A30F04A86C10B100000000 /* BlackClassicIconIpad.png in Resources */,
+				E7A30F04C682CDCB00000000 /* BlackClassicIconIpad@2x.png in Resources */,
+				E7A30F04039E80E800000000 /* BlackClassicIconLargeIpad@2x.png in Resources */,
+				E7A30F04A75B899200000000 /* BlackClassicNotificationIcon.png in Resources */,
+				E7A30F04E4269D4A00000000 /* BlackClassicNotificationIcon@2x.png in Resources */,
+				E7A30F04E5DB75E900000000 /* BlackClassicNotificationIcon@3x.png in Resources */,
+				E7A30F04C54DDB8700000000 /* BlackFilledIcon@2x.png in Resources */,
+				E7A30F04C702B42600000000 /* BlackFilledIcon@3x.png in Resources */,
+				E7A30F0436B60A1F00000000 /* BlackFilledIconIpad.png in Resources */,
+				E7A30F0418FC359D00000000 /* BlackFilledIconIpad@2x.png in Resources */,
+				E7A30F047E472C5600000000 /* BlackFilledIconLargeIpad@2x.png in Resources */,
+				E7A30F0488BEEF0900000000 /* BlackIcon@2x.png in Resources */,
+				E7A30F048A73C7A800000000 /* BlackIcon@3x.png in Resources */,
+				E7A30F04E16766DD00000000 /* BlackIconIpad.png in Resources */,
+				E7A30F04CED3B81F00000000 /* BlackIconIpad@2x.png in Resources */,
+				E7A30F048AA6EB1400000000 /* BlackIconLargeIpad@2x.png in Resources */,
+				E7A30F042E63F3BE00000000 /* BlackNotificationIcon.png in Resources */,
+				E7A30F04D061F39E00000000 /* BlackNotificationIcon@2x.png in Resources */,
+				E7A30F04D216CC3D00000000 /* BlackNotificationIcon@3x.png in Resources */,
+				E7A30F04038EEE9000000000 /* BlueClassicIcon@2x.png in Resources */,
+				E7A30F040543C72F00000000 /* BlueClassicIcon@3x.png in Resources */,
+				E7A30F04C097583600000000 /* BlueClassicIconIpad.png in Resources */,
+				E7A30F045AFA9C2600000000 /* BlueClassicIconIpad@2x.png in Resources */,
+				E7A30F04C320736D00000000 /* BlueClassicIconLargeIpad@2x.png in Resources */,
+				E7A30F0466DD7C1700000000 /* BlueClassicNotificationIcon.png in Resources */,
+				E7A30F04D743E0A500000000 /* BlueClassicNotificationIcon@2x.png in Resources */,
+				E7A30F04D8F8B94400000000 /* BlueClassicNotificationIcon@3x.png in Resources */,
+				E7A30F04D43F404C00000000 /* BlueFilledIcon@2x.png in Resources */,
+				E7A30F04D5F418EB00000000 /* BlueFilledIcon@3x.png in Resources */,
+				E7A30F0405F13DFA00000000 /* BlueFilledIconIpad.png in Resources */,
+				E7A30F04D373AFE200000000 /* BlueFilledIconIpad@2x.png in Resources */,
+				E7A30F045B2A553100000000 /* BlueFilledIconLargeIpad@2x.png in Resources */,
+				E7A30F04EEB88B8E00000000 /* BlueIcon@2x.png in Resources */,
+				E7A30F04F06D642D00000000 /* BlueIcon@3x.png in Resources */,
+				E7A30F043AA15AF800000000 /* BlueIconIpad.png in Resources */,
+				E7A30F042DF18A2400000000 /* BlueIconIpad@2x.png in Resources */,
+				E7A30F0477E4942F00000000 /* BlueIconLargeIpad@2x.png in Resources */,
+				E7A30F041BA19CD900000000 /* BlueNotificationIcon.png in Resources */,
+				E7A30F04CAE3F0A300000000 /* BlueNotificationIcon@2x.png in Resources */,
+				E7A30F04CC98C94200000000 /* BlueNotificationIcon@3x.png in Resources */,
+				E7A30F04E5D6389D00000000 /* WhiteFilledIcon@2x.png in Resources */,
+				E7A30F04E78B113C00000000 /* WhiteFilledIcon@3x.png in Resources */,
+				E7A30F048E96E34200000000 /* LaunchScreen.xib in Resources */,
+				E7A30F0468FBAA6A00000000 /* LegacyComponentsResources.bundle in Resources */,
+				E7A30F04A4169AE300000000 /* AppIcons.xcassets in Resources */,
+				E7A30F042925AEA200000000 /* Icons.xcassets in Resources */,
+				E7A30F043549D4C400000000 /* Images.xcassets in Resources */,
+				E7A30F04DCE9E9AA00000000 /* Localizable.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1870857F0000000000000000 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 0;
+			files = (
+				E7A30F04988E33D500000000 /* Application.swift in Sources */,
+				E7A30F04BF88817800000000 /* main.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1870857F0000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 0;
+			files = (
+				E7A30F046ABF6A1200000000 /* Empty.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		C73440C0DCE9E9AA00000000 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1DD70E2900000C3100000000 /* ar */,
+				1DD70E2900000C5E00000000 /* ca */,
+				1DD70E2900000C8100000000 /* de */,
+				1DD70E2900000CA900000000 /* en */,
+				1DD70E2900000CAE00000000 /* es */,
+				1DD70E2900000CCC00000000 /* fr */,
+				1DD70E2900000D1B00000000 /* id */,
+				1DD70E2900000D2B00000000 /* it */,
+				1DD70E2900000D6400000000 /* ko */,
+				1DD70E2900000DA600000000 /* ms */,
+				1DD70E2900000DBE00000000 /* nl */,
+				1DD70E2900000E0400000000 /* pt */,
+				1DD70E2900000E4300000000 /* ru */,
+				1DD70E2900000E7E00000000 /* tr */,
+				1DD70E2900000E9600000000 /* uk */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		4952437303EDA63300000000 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1DD70E294E27EDFB00000000 /* AppLibrary-Debug.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		4952437303EDA63300000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1DD70E29A8C8657400000000 /* Telegram-Debug.xcconfig */;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		4952437303EDA63300000002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Debug;
+		};
+		4952437350C7218900000000 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1DD70E294906F2A500000000 /* AppLibrary-Profile.xcconfig */;
+			buildSettings = {
+			};
+			name = Profile;
+		};
+		4952437350C7218900000001 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1DD70E297D676FDE00000000 /* Telegram-Profile.xcconfig */;
+			buildSettings = {
+			};
+			name = Profile;
+		};
+		4952437350C7218900000002 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Profile;
+		};
+		49524373A439BFE700000000 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1DD70E29BC9D9E0700000000 /* AppLibrary-Release.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		49524373A439BFE700000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1DD70E29F0FE1B4000000000 /* Telegram-Release.xcconfig */;
+			buildSettings = {
+			};
+			name = Release;
+		};
+		49524373A439BFE700000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		218C37090000000000000000 /* Build configuration list for PBXNativeTarget "AppLibrary" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4952437303EDA63300000000 /* Debug */,
+				4952437350C7218900000000 /* Profile */,
+				49524373A439BFE700000000 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		218C37090000000000000001 /* Build configuration list for PBXNativeTarget "Telegram" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4952437303EDA63300000001 /* Debug */,
+				4952437350C7218900000001 /* Profile */,
+				49524373A439BFE700000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		218C37090000000000000002 /* Build configuration list for PBXProject "App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4952437303EDA63300000002 /* Debug */,
+				4952437350C7218900000002 /* Profile */,
+				49524373A439BFE700000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 96C847930001020100000000 /* Project object */;
+}

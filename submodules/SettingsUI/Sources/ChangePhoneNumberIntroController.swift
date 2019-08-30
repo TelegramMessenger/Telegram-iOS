@@ -7,6 +7,7 @@ import TelegramPresentationData
 import TextFormat
 import AccountContext
 import AlertUI
+import AppBundle
 
 private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
     var presentationData: PresentationData

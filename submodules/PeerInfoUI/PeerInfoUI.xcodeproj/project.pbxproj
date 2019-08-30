@@ -767,6 +767,19 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E29AD66967300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libReactionSelectionNode.a</string>
+			<key>path</key>
+			<string>libReactionSelectionNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E291D58331200000000</key>
 		<dict>
 			<key>isa</key>
@@ -1246,6 +1259,7 @@
 				<string>1DD70E29DB6520C800000000</string>
 				<string>1DD70E29CBE117ED00000000</string>
 				<string>1DD70E293E4DE92B00000000</string>
+				<string>1DD70E29AD66967300000000</string>
 				<string>1DD70E291D58331200000000</string>
 				<string>1DD70E29CF967D4300000000</string>
 				<string>1DD70E29EA9CBB5B00000000</string>
@@ -1535,17 +1549,6 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
-		<key>1DD70E291289FAA500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>FrameworkBundle.swift</string>
-			<key>path</key>
-			<string>Sources/FrameworkBundle.swift</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-		</dict>
 		<key>1DD70E295B494B0E00000000</key>
 		<dict>
 			<key>isa</key>
@@ -1776,7 +1779,6 @@
 				<string>1DD70E29A3981B5400000000</string>
 				<string>1DD70E29F670175300000000</string>
 				<string>1DD70E29013401F900000000</string>
-				<string>1DD70E291289FAA500000000</string>
 				<string>1DD70E295B494B0E00000000</string>
 				<string>1DD70E294A7BFD0D00000000</string>
 				<string>1DD70E295DDA07D700000000</string>
@@ -2007,13 +2009,6 @@
 			<key>fileRef</key>
 			<string>1DD70E29013401F900000000</string>
 		</dict>
-		<key>E7A30F041289FAA500000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E291289FAA500000000</string>
-		</dict>
 		<key>E7A30F045B494B0E00000000</key>
 		<dict>
 			<key>isa</key>
@@ -2168,7 +2163,6 @@
 				<string>E7A30F04A3981B5400000000</string>
 				<string>E7A30F04F670175300000000</string>
 				<string>E7A30F04013401F900000000</string>
-				<string>E7A30F041289FAA500000000</string>
 				<string>E7A30F045B494B0E00000000</string>
 				<string>E7A30F044A7BFD0D00000000</string>
 				<string>E7A30F045DDA07D700000000</string>
@@ -2553,6 +2547,13 @@
 			<key>fileRef</key>
 			<string>1DD70E292F91702000000000</string>
 		</dict>
+		<key>E7A30F04AD66967300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29AD66967300000000</string>
+		</dict>
 		<key>E7A30F04F40A586F00000000</key>
 		<dict>
 			<key>isa</key>
@@ -2842,6 +2843,7 @@
 				<string>E7A30F04524F478E00000000</string>
 				<string>E7A30F04DF758A8500000000</string>
 				<string>E7A30F042F91702000000000</string>
+				<string>E7A30F04AD66967300000000</string>
 				<string>E7A30F04F40A586F00000000</string>
 				<string>E7A30F046C9831F100000000</string>
 				<string>E7A30F04A59C927400000000</string>

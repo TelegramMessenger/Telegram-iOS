@@ -24,6 +24,7 @@ static_library(
         "//submodules/SearchBarNode:SearchBarNode",
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

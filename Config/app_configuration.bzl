@@ -1,9 +1,20 @@
-AppConfig = {
-  "apiId": "8",
-  "apiHash": "7245de8e747a0d6fbe11f7cc14fcc0bb",
-  "hockeyAppId": "ad8831329ffc8f8aff9a2b0b86558b24",
-  "isInternalBuild": "true",
-  "isAppStoreBuild": "false",
-  "appstoreId": "686449807",
-  "appSpecificUrlScheme": "tgapp",
-}
+
+def appConfig():
+    apiId = native.read_config("custom", "apiId")
+    apiHash = native.read_config("custom", "apiHash")
+    hockeyAppId = native.read_config("custom", "hockeyAppId")
+    isInternalBuild = native.read_config("custom", "isInternalBuild")
+    isAppStoreBuild = native.read_config("custom", "isAppStoreBuild")
+    appStoreId = native.read_config("custom", "appStoreId")
+    appSpecificUrlScheme = native.read_config("custom", "appSpecificUrlScheme")
+    buildNumber = native.read_config("custom", "buildNumber")
+    return {
+        "apiId": apiId,
+        "apiHash": apiHash,
+        "hockeyAppId": hockeyAppId,
+        "isInternalBuild": isInternalBuild,
+        "isAppStoreBuild": isAppStoreBuild,
+        "appStoreId": appStoreId,
+        "appSpecificUrlScheme": appSpecificUrlScheme,
+        "buildNumber": buildNumber,
+    }

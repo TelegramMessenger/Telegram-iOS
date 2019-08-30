@@ -11,6 +11,7 @@ static_library(
         "//submodules/Display:Display#shared",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/ActivityIndicator:ActivityIndicator",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
