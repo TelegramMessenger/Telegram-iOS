@@ -2,7 +2,7 @@ import Foundation
 import AppBundle
 
 private let fallbackDict: [String: String] = {
-    guard let mainPath = Bundle.main.path(forResource: "en", ofType: "lproj"), let bundle = Bundle(path: mainPath) else {
+    guard let mainPath = getAppBundle().path(forResource: "en", ofType: "lproj"), let bundle = Bundle(path: mainPath) else {
         return [:]
     }
     guard let path = bundle.path(forResource: "Localizable", ofType: "strings") else {

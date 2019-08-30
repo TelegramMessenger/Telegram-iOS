@@ -92,10 +92,31 @@ def app_binary_configs(name):
         "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
-        "CODE_SIGN_ENTITLEMENTS": "Telegram-iOS.entitlements",
+        "CODE_SIGN_ENTITLEMENTS": "Telegram-iOS/Telegram-iOS-Hockeyapp.entitlements",
         "DEVELOPMENT_TEAM": "X834Q8SBVP",
         "PROVISIONING_PROFILE_SPECIFIER": "match Development org.telegram.Telegram-iOS",
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+        "BUILD_NUMBER": appConfig()["buildNumber"],
+        "APP_NAME": "Telegram",
+        "PRODUCT_NAME": "Telegram",
+    }
+    binary_config = merge_dict(SHARED_CONFIGS, binary_specific_config)
+    binary_config = merge_dict(binary_config, optimization_config())
+    binary_config = config_with_updated_linker_flags(binary_config, ALL_LOAD_LINKER_FLAG)
+    return configs_with_config(binary_config)
+
+def share_extension_configs(name):
+    binary_specific_config = {
+        "ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES": "NO",
+        "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
+        "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS." + name,
+        "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
+        "CODE_SIGN_ENTITLEMENTS": "Share/Share-HockeyApp.entitlements",
+        "DEVELOPMENT_TEAM": "X834Q8SBVP",
+        "PROVISIONING_PROFILE_SPECIFIER": "match Development org.telegram.Telegram-iOS.Share",
+        "BUILD_NUMBER": appConfig()["buildNumber"],
+        "APP_NAME": "Telegram",
+        "PRODUCT_NAME": "ShareExtension",
     }
     binary_config = merge_dict(SHARED_CONFIGS, binary_specific_config)
     binary_config = merge_dict(binary_config, optimization_config())
@@ -119,6 +140,19 @@ def app_info_plist_substitutions(name):
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
         "PRODUCT_NAME": name,
         "APP_NAME": name,
+        "CURRENT_PROJECT_VERSION": "1",
+        "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
+        "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
+        "BUILD_NUMBER": appConfig()["buildNumber"],
+    }
+    return substitutions
+
+def share_extension_info_plist_substitutions(name):
+    substitutions = {
+        "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
+        "EXECUTABLE_NAME": name,
+        "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.Share",
+        "PRODUCT_NAME": name,
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],

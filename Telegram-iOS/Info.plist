@@ -223,7 +223,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>${BUILD_NUMBER}</string>
+	<string>99999</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSApplicationQueriesSchemes</key>

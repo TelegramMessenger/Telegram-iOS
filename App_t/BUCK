@@ -1,21 +1,5 @@
-load("//Config:configs.bzl", "app_binary_configs", "library_configs", "pretty", "info_plist_substitutions", "app_info_plist_substitutions", "DEVELOPMENT_LANGUAGE")
+load("//Config:configs.bzl", "app_binary_configs", "share_extension_configs", "library_configs", "pretty", "info_plist_substitutions", "app_info_plist_substitutions", "share_extension_info_plist_substitutions", "DEVELOPMENT_LANGUAGE")
 load("//Config:buck_rule_macros.bzl", "apple_lib", "framework_binary_dependencies", "framework_bundle_dependencies")
-
-'''apple_asset_catalog(
-    name = "ExampleAppAssets",
-    visibility = ["//App:"],
-    app_icon = "AppIcon",
-    dirs = ["Assets.xcassets"],
-)
-
-app_tests = [
-    ":UnitTests",
-    ":UnitTestsWithHostApp",
-]
-
-ui_tests = [
-    ":XCUITests",
-]'''
 
 static_library_dependencies = [
 ]
@@ -44,6 +28,55 @@ resource_dependencies = [
 
 build_phase_scripts = [
 ]
+
+apple_resource(
+    name = "AppResources",
+    files = glob([
+        "Telegram-iOS/Resources/**/*",
+    ], exclude = ["Telegram-iOS/Resources/**/.*"]),
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "AppStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/Localizable.strings",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
+apple_asset_catalog(
+  name = 'Icons',
+  dirs = [
+    "Telegram-iOS/Icons.xcassets",
+  ],
+  visibility = ["PUBLIC"],
+)
+
+apple_asset_catalog(
+  name = 'AppIcons',
+  dirs = [
+    "Telegram-iOS/AppIcons.xcassets",
+  ],
+  visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "AdditionalIcons",
+    files = glob([
+        "Telegram-iOS/*.png",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = 'LaunchScreen',
+    files = [
+        'Telegram-iOS/Base.lproj/LaunchScreen.xib',
+    ],
+    visibility = ["PUBLIC"],
+)
 
 apple_library(
     name = "AppLibrary",
@@ -97,12 +130,42 @@ apple_bundle(
     info_plist = "Info.plist",
     info_plist_substitutions = app_info_plist_substitutions("Telegram"),
     deps = [
+        ":ShareExtension",
     ]
     + framework_bundle_dependencies(framework_dependencies),
+)
+
+apple_binary(
+    name = "ShareBinary",
+    srcs = glob([
+        "Share/**/*.swift",
+    ]),
+    configs = share_extension_configs("Share"),
+    linker_flags = [
+        "-e",
+        "_NSExtensionMain",
+        "-Xlinker",
+        "-rpath",
+        "-Xlinker",
+        "@executable_path/../../Frameworks",
+    ],
+    deps = [
+        "//submodules/TelegramUI:TelegramUI#shared",
+    ],
+)
+
+apple_bundle(
+    name = "ShareExtension",
+    binary = ":ShareBinary",
+    extension = "appex",
+    info_plist = "Share/Info.plist",
+    info_plist_substitutions = share_extension_info_plist_substitutions("Share"),
+    deps = [
+    ],
+    xcode_product_type = "com.apple.product-type.app-extension",
 )
 
 apple_package(
     name = "AppPackage",
     bundle = ":Telegram",
 )
-

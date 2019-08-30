@@ -489,7 +489,6 @@
 		D0EFF33023198D3200CF5164 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0EFF32E23198D3200CF5164 /* NavigationBackArrowLight@2x.png */; };
 		D0EFF33123198D3200CF5164 /* NavigationShadow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D0EFF32F23198D3200CF5164 /* NavigationShadow@2x.png */; };
 		D0F575132083B96B00F1C1E1 /* CloudKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0F575122083B96B00F1C1E1 /* CloudKit.framework */; };
-		D0FC1948201D2DA800FEDBB2 /* SFCompactRounded-Semibold.otf in Resources */ = {isa = PBXBuildFile; fileRef = D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -1306,7 +1305,6 @@
 		D0EFF32E23198D3200CF5164 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "NavigationBackArrowLight@2x.png"; path = "Telegram-iOS/Resources/NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D0EFF32F23198D3200CF5164 /* NavigationShadow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = "NavigationShadow@2x.png"; path = "Telegram-iOS/Resources/NavigationShadow@2x.png"; sourceTree = "<group>"; };
 		D0F575122083B96B00F1C1E1 /* CloudKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CloudKit.framework; path = System/Library/Frameworks/CloudKit.framework; sourceTree = SDKROOT; };
-		D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "SFCompactRounded-Semibold.otf"; path = "Telegram-iOS/Resources/SFCompactRounded-Semibold.otf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -2281,7 +2279,6 @@
 				D0E8B8A92044496C00605593 /* voip_end.caf */,
 				D0E8B8AA2044496C00605593 /* voip_fail.caf */,
 				D0E8B8AB2044496C00605593 /* voip_ringback.caf */,
-				D0FC1947201D2DA700FEDBB2 /* SFCompactRounded-Semibold.otf */,
 				D0CFBB921FD88C2900B65C0D /* begin_record.caf */,
 				D04DCC0A1F71C80000B021D7 /* notifications */,
 				D050F21B1E49DEDE00988324 /* intro */,
@@ -3353,7 +3350,6 @@
 				D0CE6F5D213EDA4400BCD44B /* AppIntentVocabulary.plist in Resources */,
 				D0CE6F61213EDA4400BCD44B /* Localizable.strings in Resources */,
 				D04DCC311F71C80000B021D7 /* 4.m4a in Resources */,
-				D0FC1948201D2DA800FEDBB2 /* SFCompactRounded-Semibold.otf in Resources */,
 				D0EFF31C2319838800CF5164 /* anim_mute.json in Resources */,
 				D04DCC331F71C80000B021D7 /* 6.m4a in Resources */,
 				D04DCC251F71C80000B021D7 /* 102.m4a in Resources */,
