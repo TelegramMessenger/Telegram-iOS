@@ -246,7 +246,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mainMedia = webpage.file ?? webpage.image
                 }
                 
-                if let file = mainMedia as? TelegramMediaFile {
+                if let file = mainMedia as? TelegramMediaFile, webpage.type != "telegram_theme" {
                     if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
                         if automaticPlayback {
                             mediaAndFlags = (file, [.preferMediaBeforeText])
@@ -293,9 +293,18 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                                 mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                             }
                         }
-                    } else if type == "telegram_theme", let files = webpage.files, let file = files.first {
-                        let media = WallpaperPreviewMedia(content: .file(file, nil, true))
-                        mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                    } else if type == "telegram_theme" {
+                        var file: TelegramMediaFile?
+                        let mimeType = "application/x-tgtheme-ios"
+                        if let contentFiles = webpage.files, let filteredFile = contentFiles.filter({ $0.mimeType == mimeType }).first {
+                            file = filteredFile
+                        } else if let contentFile = webpage.file, contentFile.mimeType == mimeType {
+                            file = contentFile
+                        }
+                        if let file = file {
+                            let media = WallpaperPreviewMedia(content: .file(file, nil, true))
+                            mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
+                        }
                     }
                 }
                 
@@ -323,7 +332,9 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         case "telegram_theme":
                             title = item.presentationData.strings.Conversation_Theme
                             text = nil
-                            actionTitle = item.presentationData.strings.Conversation_ViewTheme
+                            if mediaAndFlags != nil {
+                                actionTitle = item.presentationData.strings.Conversation_ViewTheme
+                            }
                         default:
                             break
                     }

@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 import AlertUI
+import WallpaperResources
 import ShareController
 import AccountContext
 
@@ -401,31 +402,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     currentAppIconName.set(currentAppIcon?.name ?? "Blue")
     
     let cloudThemes = Promise<[TelegramTheme]>()
-    let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network)
+    let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
     cloudThemes.set(updatedCloudThemes)
     
     let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
-        let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
-            transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                let current: PresentationThemeSettings
-                if let entry = entry as? PresentationThemeSettings {
-                    current = entry
-                } else {
-                    current = PresentationThemeSettings.defaultSettings
-                }
-                
-                let chatWallpaper: TelegramWallpaper
-                if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[theme.index] {
-                    chatWallpaper = themeSpecificWallpaper
-                } else {
-                    let accentColor = current.themeSpecificAccentColors[theme.index]?.color
-                    let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: current.themeSpecificAccentColors[theme.index]?.baseColor ?? .blue)
-                    chatWallpaper = theme.chat.defaultWallpaper
-                }
-                
-                return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-            })
-        }).start()
+        selectThemeImpl?(theme)
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
@@ -510,7 +491,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         selectThemeImpl?(newTheme)
                     }
                     
-                    let _ = deleteThemeInteractively(account: context.account, theme: theme.theme).start()
+                    let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
                 })
             }))
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
@@ -585,7 +566,52 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         return controller?.navigationController as? NavigationController
     }
     selectThemeImpl = { theme in
-        arguments.selectTheme(theme)
+        let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil)
+        
+        let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
+        if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
+            resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug)
+            |> map { wallpaper -> TelegramWallpaper? in
+                return wallpaper?.wallpaper
+            }
+        } else {
+            resolvedWallpaper = .single(nil)
+        }
+        
+        var cloudTheme: TelegramTheme?
+        if case let .cloud(theme) = theme {
+            cloudTheme = theme.theme
+        }
+        let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: cloudTheme).start()
+        
+        let _ = (resolvedWallpaper
+        |> mapToSignal { resolvedWallpaper -> Signal<Void, NoError> in
+            var updatedTheme = theme
+            if case let .cloud(info) = theme {
+                updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper))
+            }
+            
+            return (context.sharedContext.accountManager.transaction { transaction -> Void in
+                transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                    let current: PresentationThemeSettings
+                    if let entry = entry as? PresentationThemeSettings {
+                        current = entry
+                    } else {
+                        current = PresentationThemeSettings.defaultSettings
+                    }
+                    
+                    let chatWallpaper: TelegramWallpaper
+                    if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[updatedTheme.index] {
+                        chatWallpaper = themeSpecificWallpaper
+                    } else {
+                        let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: updatedTheme, accentColor: current.themeSpecificAccentColors[updatedTheme.index]?.color, serviceBackgroundColor: .black, baseColor: nil)
+                        chatWallpaper = resolvedWallpaper ?? presentationTheme.chat.defaultWallpaper
+                    }
+                    
+                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: updatedTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                })
+            })
+        }).start()
     }
     moreImpl = {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -615,7 +641,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
     private let snapshotView: UIView?
     
     public init() {
-        self.snapshotView = UIScreen.main.snapshotView(afterScreenUpdates: false)
+        self.snapshotView = UIScreen.main.snapshotView(afterScreenUpdates: true)
         
         super.init(navigationBarPresentationData: nil)
         
@@ -631,6 +657,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
         
         self.displayNode.backgroundColor = nil
         self.displayNode.isOpaque = false
+        self.displayNode.isUserInteractionEnabled = false
         if let snapshotView = self.snapshotView {
             self.displayNode.view.addSubview(snapshotView)
         }
@@ -639,7 +666,7 @@ public final class ThemeSettingsCrossfadeController: ViewController {
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
+        self.displayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak self] _ in
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         })
     }

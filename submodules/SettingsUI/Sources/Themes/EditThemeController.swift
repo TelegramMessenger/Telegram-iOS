@@ -132,7 +132,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
     func item(_ arguments: EditThemeControllerArguments) -> ListViewItem {
         switch self {
             case let .title(theme, strings, title, text, done):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: title, type: .regular(capitalization: true, autocorrection: false), returnKeyType: done ? .done : .next, clearType: .onFocus, tag: EditThemeEntryTag.title, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: title, type: .regular(capitalization: true, autocorrection: false), returnKeyType: .default, clearType: .onFocus, tag: EditThemeEntryTag.title, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.title = value
@@ -268,9 +268,13 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                             if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                                 var convertedRepresentations: [ImageRepresentationWithReference] = []
                                 convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
-                                return wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
-                                |> map { _ -> TelegramWallpaper? in
-                                    return wallpaper.wallpaper
+                                return wallpaperDatas(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                                |> mapToSignal { _, fullSizeData, complete -> Signal<TelegramWallpaper?, NoError> in
+                                    guard complete, let fullSizeData = fullSizeData else {
+                                        return .complete()
+                                    }
+                                    context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
+                                    return .single(wallpaper.wallpaper)
                                 }
                             } else {
                                 return .single(nil)
@@ -422,11 +426,11 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                                     context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                                                 }
                                                 let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
-                                                var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                                var chatWallpaper = current.chatWallpaper
                                                 if let theme = theme {
-                                                    themeSpecificChatWallpapers[themeReference.index] = theme.chat.defaultWallpaper
+                                                    chatWallpaper = resolvedWallpaper ?? theme.chat.defaultWallpaper
                                                 }
-                                                return PresentationThemeSettings(chatWallpaper: theme?.chat.defaultWallpaper ?? current.chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                                return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                             })
                                         } |> deliverOnMainQueue).start(completed: {
                                             if !hasCustomFile {
@@ -459,18 +463,15 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                             } else {
                                                 current = PresentationThemeSettings.defaultSettings
                                             }
-                                            
                                             if let resource = resultTheme.file?.resource, let data = themeData {
                                                 context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
                                             }
-                                            
                                             let themeReference: PresentationThemeReference = .cloud(PresentationCloudTheme(theme: resultTheme, resolvedWallpaper: resolvedWallpaper))
-                                            var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                            var chatWallpaper = current.chatWallpaper
                                             if let theme = theme {
-                                                themeSpecificChatWallpapers[themeReference.index] = theme.chat.defaultWallpaper
+                                                chatWallpaper = resolvedWallpaper ?? theme.chat.defaultWallpaper
                                             }
-                                            
-                                            return PresentationThemeSettings(chatWallpaper: theme?.chat.defaultWallpaper ?? current.chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                            return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: themeReference, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                         })
                                     } |> deliverOnMainQueue).start(completed: {
                                         if let themeResource = themeResource, !hasCustomFile {

@@ -10,8 +10,9 @@ import TinyThumbnail
 import PhotoResources
 import LocalMediaResources
 import TelegramPresentationData
+import TelegramUIPreferences
 
-private func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
+public func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
         
         let maybeFullSize: Signal<MediaResourceData, NoError>
@@ -51,7 +52,13 @@ private func wallpaperDatas(account: Account, accountManager: AccountManager, fi
             } else {
                 maybeFullSize = combineLatest(accountManager.mediaBox.resourceData(largestRepresentation.resource), account.postbox.mediaBox.resourceData(largestRepresentation.resource))
                 |> map { sharedData, data -> MediaResourceData in
-                    if sharedData.complete {
+                    if sharedData.complete && data.complete {
+                        if sharedData.size > data.size {
+                            return sharedData
+                        } else {
+                            return data
+                        }
+                    } else if sharedData.complete {
                         return sharedData
                     } else {
                         return data
@@ -168,9 +175,6 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
     
     return signal
     |> map { (thumbnailData, fullSizeData, fullSizeComplete) in
-        if let fullSizeData = fullSizeData, let fileReference = fileReference, fullSizeComplete {
-            accountManager.mediaBox.storeResourceData(fileReference.media.resource.id, data: fullSizeData)
-        }
         return { arguments in
             let drawingRect = arguments.drawingRect
             var fittedSize = arguments.imageSize
@@ -259,7 +263,6 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
             }
             
             let context = DrawingContext(size: arguments.drawingSize, clear: true)
-            
             context.withFlippedContext { c in
                 c.setBlendMode(.copy)
                 if arguments.imageSize.width < arguments.boundingSize.width || arguments.imageSize.height < arguments.boundingSize.height {
@@ -278,9 +281,7 @@ public func wallpaperImage(account: Account, accountManager: AccountManager, fil
                     drawImage(context: c, image: fullSizeImage, orientation: imageOrientation, in: fittedRect)
                 }
             }
-            
             addCorners(context, arguments: arguments)
-            
             return context
         }
     }
@@ -596,7 +597,7 @@ public func photoWallpaper(postbox: Postbox, photoLibraryResource: PhotoLibraryM
     }
 }
 
-public func telegramThemeData(account: Account, accountManager: AccountManager, resource: MediaResource, synchronousLoad: Bool) -> Signal<Data?, NoError> {
+public func telegramThemeData(account: Account, accountManager: AccountManager, resource: MediaResource, synchronousLoad: Bool = false) -> Signal<Data?, NoError> {
     let maybeFetched = accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
     return maybeFetched
     |> take(1)
@@ -653,7 +654,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
         case let .color(value):
             c.setFillColor(UIColor(rgb: UInt32(bitPattern: value)).cgColor)
             c.fill(drawingRect)
-        case let .file(file):
+        case .file:
             c.setFillColor(theme.chatList.backgroundColor.cgColor)
             c.fill(drawingRect)
         
@@ -804,12 +805,17 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
                     if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                         var convertedRepresentations: [ImageRepresentationWithReference] = []
                         convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
-                        return wallpaperImage(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
-                        |> map { _ -> (PresentationTheme?, UIImage?, Data?) in
-                            if let path = accountManager.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let image = UIImage(data: data) {
-                                return (theme, image, thumbnailData)
+                        return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                        |> mapToSignal { _, fullSizeData, complete -> Signal<(PresentationTheme?, UIImage?, Data?), NoError> in
+                            guard complete, let fullSizeData = fullSizeData else {
+                                return .complete()
+                            }
+                            accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
+                            
+                            if let image = UIImage(data: fullSizeData) {
+                                return .single((theme, image, thumbnailData))
                             } else {
-                                return (theme, nil, thumbnailData)
+                                return .single((theme, nil, thumbnailData))
                             }
                         }
                     } else {
@@ -888,5 +894,126 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
             addCorners(context, arguments: arguments)
             return context
         }
+    }
+}
+
+public func themeIconImage(account: Account, accountManager: AccountManager, theme: PresentationThemeReference, accentColor: UIColor?) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let signal: Signal<(UIColor, UIColor, UIColor, UIImage?), NoError>
+    if case let .builtin(theme) = theme {
+        switch theme {
+        case .dayClassic:
+            signal = .single((UIColor(rgb: 0xd6e2ee), UIColor(rgb: 0xffffff), UIColor(rgb: 0xe1ffc7), nil))
+        case .day:
+            signal = .single((.white, UIColor(rgb: 0xd5dde6), accentColor ?? UIColor(rgb: 0x007aff), nil))
+        case .night:
+            signal = .single((.black, UIColor(rgb: 0x1f1f1f), accentColor ?? UIColor(rgb: 0x313131), nil))
+        case .nightAccent:
+            let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
+            signal = .single((accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18), accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25), accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59), nil))
+        }
+    } else {
+        var resource: MediaResource?
+        if case let .local(theme) = theme {
+            resource = theme.resource
+        } else if case let .cloud(theme) = theme {
+            resource = theme.theme.file?.resource
+        }
+        if let resource = resource {
+            signal = telegramThemeData(account: account, accountManager: accountManager, resource: resource, synchronousLoad: false)
+                |> mapToSignal { data -> Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> in
+                    if let data = data, let theme = makePresentationTheme(data: data) {
+                        var wallpaperSignal: Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> = .complete()
+                        let backgroundColor: UIColor
+                        let incomingColor = theme.chat.message.incoming.bubble.withoutWallpaper.fill
+                        let outgoingColor = theme.chat.message.outgoing.bubble.withoutWallpaper.fill
+                        switch theme.chat.defaultWallpaper {
+                        case .builtin:
+                            backgroundColor = UIColor(rgb: 0xd6e2ee)
+                        case let .color(color):
+                            backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
+                        case .image:
+                            backgroundColor = .black
+                        case let .file(file):
+                            backgroundColor = theme.chatList.backgroundColor
+                            wallpaperSignal = cachedWallpaper(account: account, slug: file.slug)
+                            |> mapToSignal { wallpaper in
+                                if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
+                                    var convertedRepresentations: [ImageRepresentationWithReference] = []
+                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                                    return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                                    |> mapToSignal { _, fullSizeData, complete -> Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> in
+                                        guard complete, let fullSizeData = fullSizeData else {
+                                            return .complete()
+                                        }
+                                        accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
+                                        
+                                        if let image = UIImage(data: fullSizeData) {
+                                            return .single((backgroundColor, incomingColor, outgoingColor, image))
+                                        } else {
+                                            return .complete()
+                                        }
+                                    }
+                                } else {
+                                    return .complete()
+                                }
+                            }
+                        }
+                        return .single((backgroundColor, incomingColor, outgoingColor, nil))
+                            |> then(wallpaperSignal)
+                    } else {
+                        return .complete()
+                    }
+            }
+        } else {
+            signal = .never()
+        }
+    }
+    return signal
+        |> map { colors in
+            return { arguments in
+                let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
+                let drawingRect = arguments.drawingRect
+                
+                context.withContext { c in
+                    c.setFillColor(colors.0.cgColor)
+                    c.fill(drawingRect)
+                    
+                    if let image = colors.3 {
+                        let initialThumbnailContextFittingSize = arguments.imageSize.fitted(CGSize(width: 90.0, height: 90.0))
+                        let thumbnailContextSize = image.size.aspectFilled(initialThumbnailContextFittingSize)
+                        let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
+                        thumbnailContext.withFlippedContext { c in
+                            c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                        }
+                        telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                        if let blurredThumbnailImage = thumbnailContext.generateImage(), let cgImage = blurredThumbnailImage.cgImage {
+                            let fittedSize = thumbnailContext.size.aspectFilled(CGSize(width: drawingRect.size.width + 1.0, height: drawingRect.size.height + 1.0))
+                            c.saveGState()
+                            c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                            c.scaleBy(x: 1.0, y: -1.0)
+                            c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                            c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - fittedSize.width) / 2.0, y: (drawingRect.size.height - fittedSize.height) / 2.0), size: fittedSize))
+                            c.restoreGState()
+                        }
+                    }
+                    
+                    let incoming = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: colors.1)
+                    let outgoing = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: colors.2)
+                    
+                    c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                    c.scaleBy(x: 1.0, y: -1.0)
+                    c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                    
+                    c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
+                    
+                    c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
+                    c.scaleBy(x: -1.0, y: 1.0)
+                    c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
+                    c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
+                }
+                
+                return context
+            }
     }
 }

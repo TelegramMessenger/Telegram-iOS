@@ -139,15 +139,15 @@ public final class ThemePreviewController: ViewController {
         switch self.source {
             case .theme, .slug:
                 theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
-                |> map { theme, wallpaper in
+                |> mapToSignal { theme, wallpaper -> Signal<PresentationThemeReference?, NoError> in
                     if let theme = theme {
                         if case let .file(file) = wallpaper, file.id != 0 {
-                            return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper))
+                            return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper)))
                         } else {
-                            return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil))
+                            return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil)))
                         }
                     } else {
-                        return nil
+                        return .complete()
                     }
                 }
             case .media:
@@ -169,72 +169,73 @@ public final class ThemePreviewController: ViewController {
                 return .complete()
             }
             switch theme {
-                case .cloud:
+                case let .cloud(info):
+                    resolvedWallpaper = info.resolvedWallpaper
                     return .single(theme)
                 case let .local(info):
                     return wallpaperPromise.get()
+                    |> take(1)
+                    |> mapToSignal { currentWallpaper -> Signal<PresentationThemeReference, NoError> in
+                        if case let .file(file) = currentWallpaper, file.id != 0 {
+                            resolvedWallpaper = currentWallpaper
+                        }
+                        
+                        var wallpaperImage: UIImage?
+                        if case .file = currentWallpaper {
+                            wallpaperImage = chatControllerBackgroundImage(theme: previewTheme, wallpaper: currentWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
+                        }
+                        let themeThumbnail = generateImage(CGSize(width: 213, height: 320.0), contextGenerator: { size, context in
+                            if let image = generateImage(CGSize(width: 194.0, height: 291.0), contextGenerator: { size, c in
+                                drawThemeImage(context: c, theme: previewTheme, wallpaperImage: wallpaperImage, size: size)
+                            })?.cgImage {
+                                context.draw(image, in: CGRect(origin: CGPoint(), size: size))
+                            }
+                        }, scale: 1.0)
+                        let themeThumbnailData = themeThumbnail?.jpegData(compressionQuality: 0.6)
+                        
+                        return telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
                         |> take(1)
-                        |> mapToSignal { currentWallpaper -> Signal<PresentationThemeReference, NoError> in
-                            if case let .file(file) = currentWallpaper, file.id != 0 {
-                                resolvedWallpaper = currentWallpaper
-                            }
-                            
-                            var wallpaperImage: UIImage?
-                            if case .file = currentWallpaper {
-                                wallpaperImage = chatControllerBackgroundImage(theme: previewTheme, wallpaper: currentWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: false)
-                            }
-                            let themeThumbnail = generateImage(CGSize(width: 213, height: 320.0), contextGenerator: { size, context in
-                                if let image = generateImage(CGSize(width: 194.0, height: 291.0), contextGenerator: { size, c in
-                                    drawThemeImage(context: c, theme: previewTheme, wallpaperImage: wallpaperImage, size: size)
-                                })?.cgImage {
-                                    context.draw(image, in: CGRect(origin: CGPoint(), size: size))
+                        |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
+                            let similarTheme = themes.filter { $0.isCreator && $0.title == info.title }.first
+                            if let similarTheme = similarTheme {
+                                return updateTheme(account: context.account, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
+                                    return .single(nil)
                                 }
-                            }, scale: 1.0)
-                            let themeThumbnailData = themeThumbnail?.jpegData(compressionQuality: 0.6)
-                            
-                            return telegramThemes(postbox: context.account.postbox, network: context.account.network)
-                                |> take(1)
-                                |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
-                                    let similarTheme = themes.filter { $0.isCreator && $0.title == info.title }.first
-                                    if let similarTheme = similarTheme {
-                                        return updateTheme(account: context.account, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
-                                            |> map(Optional.init)
-                                            |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
-                                                return .single(nil)
-                                            }
-                                            |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
-                                                guard let result = result else {
-                                                    let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
-                                                    return .single(.local(updatedTheme))
-                                                }
-                                                if case let .result(theme) = result, let file = theme.file {
-                                                    context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
-                                                    return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: resolvedWallpaper)))
-                                                } else {
-                                                    return .complete()
-                                                }
-                                        }
-                                        
-                                    } else {
-                                        return createTheme(account: context.account, title: info.title, resource: info.resource, thumbnailData: themeThumbnailData)
-                                            |> map(Optional.init)
-                                            |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
-                                                return .single(nil)
-                                            }
-                                            |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
-                                                guard let result = result else {
-                                                    let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
-                                                    return .single(.local(updatedTheme))
-                                                }
-                                                if case let .result(updatedTheme) = result, let file = updatedTheme.file {
-                                                    context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
-                                                    return .single(.cloud(PresentationCloudTheme(theme: updatedTheme, resolvedWallpaper: resolvedWallpaper)))
-                                                } else {
-                                                    return .complete()
-                                                }
-                                        }
+                                |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
+                                    guard let result = result else {
+                                        let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
+                                        return .single(.local(updatedTheme))
                                     }
+                                    if case let .result(theme) = result, let file = theme.file {
+                                        context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
+                                        return .single(.cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: resolvedWallpaper)))
+                                    } else {
+                                        return .complete()
+                                    }
+                                }
+                                
+                            } else {
+                                return createTheme(account: context.account, title: info.title, resource: info.resource, thumbnailData: themeThumbnailData)
+                                |> map(Optional.init)
+                                |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
+                                    return .single(nil)
+                                }
+                                |> mapToSignal { result -> Signal<PresentationThemeReference, NoError> in
+                                    guard let result = result else {
+                                        let updatedTheme = PresentationLocalTheme(title: info.title, resource: info.resource, resolvedWallpaper: resolvedWallpaper)
+                                        return .single(.local(updatedTheme))
+                                    }
+                                    if case let .result(updatedTheme) = result, let file = updatedTheme.file {
+                                        context.sharedContext.accountManager.mediaBox.moveResourceData(from: info.resource.id, to: file.resource.id)
+                                        return .single(.cloud(PresentationCloudTheme(theme: updatedTheme, resolvedWallpaper: resolvedWallpaper)))
+                                    } else {
+                                        return .complete()
+                                    }
+                                }
                             }
+                        }
                     }
                 case .builtin:
                     return .single(theme)
@@ -243,7 +244,7 @@ public final class ThemePreviewController: ViewController {
         |> mapToSignal { theme -> Signal<Void, NoError> in
             if case let .cloud(info) = theme {
                 let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
-                let _ = saveThemeInteractively(account: context.account, theme: info.theme).start()
+                let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
             return context.sharedContext.accountManager.transaction { transaction -> Void in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in

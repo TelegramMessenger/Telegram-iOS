@@ -11,34 +11,43 @@ import ItemListUI
 import WallpaperResources
 import AccountContext
 
+private var borderImages: [String: UIImage] = [:]
+
 private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selected: Bool) -> UIImage? {
-    return generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
-        let bounds = CGRect(origin: CGPoint(), size: size)
-        context.setFillColor(theme.list.itemBlocksBackgroundColor.cgColor)
-        context.fill(bounds)
-        
-        context.setBlendMode(.clear)
-        context.fillEllipse(in: bounds)
-        context.setBlendMode(.normal)
-        
-        let lineWidth: CGFloat
-        if selected {
-            var accentColor = theme.list.itemAccentColor
-            if accentColor.rgb == 0xffffff {
-                accentColor = UIColor(rgb: 0x999999)
+    let key = "\(theme.list.itemBlocksBackgroundColor.hexString)_\(selected ? "s" + theme.list.itemAccentColor.hexString : theme.list.disclosureArrowColor.hexString)"
+    if let image = borderImages[key] {
+        return image
+    } else {
+        let image = generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
+            let bounds = CGRect(origin: CGPoint(), size: size)
+            context.setFillColor(theme.list.itemBlocksBackgroundColor.cgColor)
+            context.fill(bounds)
+            
+            context.setBlendMode(.clear)
+            context.fillEllipse(in: bounds)
+            context.setBlendMode(.normal)
+            
+            let lineWidth: CGFloat
+            if selected {
+                var accentColor = theme.list.itemAccentColor
+                if accentColor.rgb == 0xffffff {
+                    accentColor = UIColor(rgb: 0x999999)
+                }
+                context.setStrokeColor(accentColor.cgColor)
+                lineWidth = 2.0
+            } else {
+                context.setStrokeColor(theme.list.disclosureArrowColor.withAlphaComponent(0.4).cgColor)
+                lineWidth = 1.0
             }
-            context.setStrokeColor(accentColor.cgColor)
-            lineWidth = 2.0
-        } else {
-            context.setStrokeColor(theme.list.disclosureArrowColor.withAlphaComponent(0.4).cgColor)
-            lineWidth = 1.0
-        }
-        
-        if bordered || selected {
-            context.setLineWidth(lineWidth)
-            context.strokeEllipse(in: bounds.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0))
-        }
-    })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
+            
+            if bordered || selected {
+                context.setLineWidth(lineWidth)
+                context.strokeEllipse(in: bounds.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0))
+            }
+        })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
+        borderImages[key] = image
+        return image
+    }
 }
 
 private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
@@ -66,78 +75,6 @@ private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImag
     }
 }
 
-private func themeIconImage(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
-    let signal: Signal<(UIColor, UIColor, UIColor), NoError>
-    if case let .builtin(theme) = theme {
-        switch theme {
-            case .dayClassic:
-                signal = .single((UIColor(rgb: 0xd6e2ee), UIColor(rgb: 0xffffff), UIColor(rgb: 0xe1ffc7)))
-            case .day:
-                signal = .single((.white, UIColor(rgb: 0xd5dde6), accentColor ?? UIColor(rgb: 0x007aff)))
-            case .night:
-                signal = .single((.black, UIColor(rgb: 0x1f1f1f), accentColor ?? UIColor(rgb: 0x313131)))
-            case .nightAccent:
-                let accentColor = accentColor ?? UIColor(rgb: 0x007aff)
-                signal = .single((accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18), accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25), accentColor.withMultiplied(hue: 1.019, saturation: 0.731, brightness: 0.59)))
-        }
-    } else {
-        var resource: MediaResource?
-        if case let .local(theme) = theme {
-            resource = theme.resource
-        } else if case let .cloud(theme) = theme {
-            resource = theme.theme.file?.resource
-        }
-        if let resource = resource {
-            signal = telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: resource, synchronousLoad: false)
-            |> mapToSignal { data -> Signal<(UIColor, UIColor, UIColor), NoError> in
-                if let data = data, let theme = makePresentationTheme(data: data) {
-                    let backgroundColor: UIColor
-                    switch theme.chat.defaultWallpaper {
-                        case .builtin:
-                            backgroundColor = UIColor(rgb: 0xd6e2ee)
-                        case let .color(color):
-                            backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
-                        default:
-                            backgroundColor = theme.chatList.backgroundColor
-                    }
-                    return .single((backgroundColor, theme.chat.message.incoming.bubble.withoutWallpaper.fill ,theme.chat.message.outgoing.bubble.withoutWallpaper.fill))
-                } else {
-                    return .complete()
-                }
-            }
-        } else {
-            signal = .never()
-        }
-    }
-    return signal
-    |> map { colors in
-        return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
-            let drawingRect = arguments.drawingRect
-            
-            context.withContext { c in
-                c.setFillColor(colors.0.cgColor)
-                c.fill(drawingRect)
-                
-                let incoming = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: colors.1)
-                let outgoing = generateTintedImage(image: UIImage(bundleImageName: "Settings/ThemeBubble"), color: colors.2)
-                
-                c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                c.scaleBy(x: 1.0, y: -1.0)
-                c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                
-                c.draw(incoming!.cgImage!, in: CGRect(x: 9.0, y: 34.0, width: 57.0, height: 16.0))
-                
-                c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
-                c.scaleBy(x: -1.0, y: 1.0)
-                c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
-                c.draw(outgoing!.cgImage!, in: CGRect(x: 9.0, y: 12.0, width: 57.0, height: 16.0))
-            }
-            
-            return context
-        }
-    }
-}
 
 class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     var sectionId: ItemListSectionId
@@ -206,6 +143,11 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     private var action: (() -> Void)?
     private var longTapAction: (() -> Void)?
     
+    private var theme: PresentationThemeReference?
+    private var currentTheme: PresentationTheme?
+    private var bordered: Bool?
+    private var selected: Bool?
+    
     override init() {
         self.imageNode = TransformImageNode()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 98.0, height: 62.0))
@@ -228,12 +170,23 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     
     func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
         if case let .cloud(theme) = theme, theme.theme.file == nil {
-            self.imageNode.setSignal(createThemeImage(theme: currentTheme))
+            if self.currentTheme == nil || currentTheme !== self.currentTheme! {
+                self.imageNode.setSignal(createThemeImage(theme: currentTheme))
+                self.currentTheme = currentTheme
+            }
         } else {
-            self.imageNode.setSignal(themeIconImage(context: context, theme: theme, accentColor: accentColor))
+            if theme != self.theme {
+                self.imageNode.setSignal(themeIconImage(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, accentColor: accentColor))
+                self.theme = theme
+            }
+        }
+        if self.currentTheme == nil || currentTheme !== self.currentTheme! || bordered != self.bordered || selected != self.selected {
+            self.overlayNode.image = generateBorderImage(theme: currentTheme, bordered: bordered, selected: selected)
+            self.currentTheme = currentTheme
+            self.bordered = bordered
+            self.selected = selected
         }
         self.textNode.attributedText = title
-        self.overlayNode.image = generateBorderImage(theme: currentTheme, bordered: bordered, selected: selected)
         self.action = {
             action()
         }
