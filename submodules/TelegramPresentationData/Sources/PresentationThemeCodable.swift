@@ -33,7 +33,7 @@ extension TelegramWallpaper: Codable {
                 case "builtin":
                     self = .builtin(WallpaperSettings())
                 default:
-                    if value.count == 6, let color = UIColor(hexString: value) {
+                    if [6,7].contains(value.count), let color = UIColor(hexString: value) {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
                         self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: false, isDark: false, slug: value, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: false, motion: false, color: nil, intensity: nil))

@@ -33,7 +33,7 @@ private let themeFormat = "ios"
 private let themeFileExtension = "tgios-theme"
 #endif
 
-public func telegramThemes(postbox: Postbox, network: Network, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
+public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
     let fetch: ([TelegramTheme]?, Int32?) -> Signal<[TelegramTheme], NoError> = { current, hash in
         network.request(Api.functions.account.getThemes(format: themeFormat, hash: hash ?? 0))
         |> retryRequest
@@ -51,6 +51,19 @@ public func telegramThemes(postbox: Postbox, network: Network, forceUpdate: Bool
             }
         }
         |> mapToSignal { items, hash -> Signal<[TelegramTheme], NoError> in
+            let _ = accountManager.transaction { transaction in
+                transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
+                    var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
+                    for theme in items {
+                        if theme.id == updated.currentTheme?.id {
+                            updated = ThemeSettings(currentTheme: theme)
+                            break
+                        }
+                    }
+                    return updated
+                })
+            }.start()
+            
             return postbox.transaction { transaction -> [TelegramTheme] in
                 var entries: [OrderedItemListEntry] = []
                 for item in items {
@@ -135,7 +148,7 @@ private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal
     }
 }
 
-private func saveUnsaveTheme(account: Account, theme: TelegramTheme, unsave: Bool) -> Signal<Void, NoError> {
+private func saveUnsaveTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme, unsave: Bool) -> Signal<Void, NoError> {
     return account.postbox.transaction { transaction -> Signal<Void, NoError> in
         let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
         var items = entries.map { $0.contents as! TelegramTheme }
@@ -156,7 +169,7 @@ private func saveUnsaveTheme(account: Account, theme: TelegramTheme, unsave: Boo
             return .complete()
         }
         |> mapToSignal { _ -> Signal<Void, NoError> in
-            return telegramThemes(postbox: account.postbox, network: account.network, forceUpdate: true)
+            return telegramThemes(postbox: account.postbox, network: account.network, accountManager: accountManager, forceUpdate: true)
             |> take(1)
             |> mapToSignal { _ -> Signal<Void, NoError> in
                 return .complete()
@@ -316,7 +329,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
     }
 }
 
-public func updateTheme(account: Account, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil) -> Signal<CreateThemeResult, CreateThemeError> {
+public func updateTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme, title: String?, slug: String?, resource: MediaResource?, thumbnailData: Data? = nil) -> Signal<CreateThemeResult, CreateThemeError> {
     guard title != nil || slug != nil || resource != nil else {
         return .complete()
     }
@@ -366,13 +379,22 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
             return .generic
         }
         |> mapToSignal { apiTheme -> Signal<CreateThemeResult, CreateThemeError> in
-            if let result = TelegramTheme(apiTheme: apiTheme) {
+            if let updatedTheme = TelegramTheme(apiTheme: apiTheme) {
+                let _ = accountManager.transaction { transaction in
+                    transaction.updateSharedData(SharedDataKeys.themeSettings, { current in
+                        var updated = current as? ThemeSettings ?? ThemeSettings(currentTheme: nil)
+                        if updatedTheme.id == updated.currentTheme?.id {
+                            updated = ThemeSettings(currentTheme: updatedTheme)
+                        }
+                        return updated
+                    })
+                }.start()
                 return account.postbox.transaction { transaction -> CreateThemeResult in
                     let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
                     let items = entries.map { entry -> TelegramTheme in
                         let theme = entry.contents as! TelegramTheme
-                        if theme.id == result.id {
-                            return result
+                        if theme.id == updatedTheme.id {
+                            return updatedTheme
                         } else {
                             return theme
                         }
@@ -384,7 +406,7 @@ public func updateTheme(account: Account, theme: TelegramTheme, title: String?, 
                         updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
                     }
                     transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
-                    return .result(result)
+                    return .result(updatedTheme)
                 }
                 |> introduceError(CreateThemeError.self)
             } else {
@@ -426,12 +448,12 @@ public final class ThemeSettings: PreferencesEntry, Equatable {
     }
 }
 
-public func saveThemeInteractively(account: Account, theme: TelegramTheme) -> Signal<Void, NoError> {
-    return saveUnsaveTheme(account: account, theme: theme, unsave: false)
+public func saveThemeInteractively(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<Void, NoError> {
+    return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: false)
 }
 
-public func deleteThemeInteractively(account: Account, theme: TelegramTheme) -> Signal<Void, NoError> {
-    return saveUnsaveTheme(account: account, theme: theme, unsave: true)
+public func deleteThemeInteractively(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<Void, NoError> {
+    return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: true)
 }
 
 public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?) -> Signal<Never, NoError> {
@@ -450,46 +472,104 @@ public func applyTheme(accountManager: AccountManager, account: Account, theme: 
 }
 
 func managedThemesUpdates(accountManager: AccountManager, postbox: Postbox, network: Network) -> Signal<Void, NoError> {
+    let currentTheme = Atomic<TelegramTheme?>(value: nil)
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
-    |> mapToSignal { sharedData -> Signal<Void, NoError> in
+    |> map { sharedData -> TelegramTheme? in
         let themeSettings = (sharedData.entries[SharedDataKeys.themeSettings] as? ThemeSettings) ?? ThemeSettings(currentTheme: nil)
-        if let currentTheme = themeSettings.currentTheme {
+        return themeSettings.currentTheme
+    }
+    |> filter { theme in
+        return theme?.id != currentTheme.with({ $0 })?.id
+    }
+    |> mapToSignal { theme -> Signal<Void, NoError> in
+        let _ = currentTheme.swap(theme)
+        if let theme = theme {
             let poll = Signal<Void, NoError> { subscriber in
-                return checkThemeUpdated(network: network, theme: currentTheme).start(next: { result in
+                let actualTheme = currentTheme.with { $0 } ?? theme
+                return checkThemeUpdated(network: network, theme: actualTheme).start(next: { result in
                     if case let .updated(updatedTheme) = result {
+                        let _ = currentTheme.swap(theme)
                         let _ = accountManager.transaction { transaction in
                             transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
                                 return ThemeSettings(currentTheme: updatedTheme)
                             })
                         }.start()
                         let _ = postbox.transaction { transaction in
-                            
-                        }
+                            let entries = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudThemes)
+                            let items = entries.map { entry -> TelegramTheme in
+                                let theme = entry.contents as! TelegramTheme
+                                if theme.id == updatedTheme.id {
+                                    return updatedTheme
+                                } else {
+                                    return theme
+                                }
+                            }
+                            var updatedEntries: [OrderedItemListEntry] = []
+                            for item in items {
+                                var intValue = Int32(updatedEntries.count)
+                                let id = MemoryBuffer(data: Data(bytes: &intValue, count: 4))
+                                updatedEntries.append(OrderedItemListEntry(id: id, contents: item))
+                            }
+                            transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
+                        }.start()
                     }
                     subscriber.putCompletion()
                 })
             }
-            return ((.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue())) |> then(poll)) |> restart
+            return (poll |> then(.complete() |> suspendAwareDelay(1.0 * 60.0 * 60.0, queue: Queue.concurrentDefaultQueue()))) |> restart
         } else {
             return .complete()
         }
     }
 }
 
-public func actualizedTheme(accountManager: AccountManager, theme: TelegramTheme) -> Signal<TelegramTheme, NoError> {
+private func areThemesEqual(_ lhs: TelegramTheme, _ rhs: TelegramTheme) -> Bool {
+    if lhs.title != rhs.title {
+        return false
+    }
+    if lhs.slug != rhs.slug {
+        return false
+    }
+    if lhs.file?.id != rhs.file?.id {
+        return false
+    }
+    return true
+}
+
+public func actualizedTheme(account: Account, accountManager: AccountManager, theme: TelegramTheme) -> Signal<TelegramTheme, NoError> {
     var currentTheme = theme
     return accountManager.sharedData(keys: [SharedDataKeys.themeSettings])
-    |> map { sharedData -> TelegramTheme in
+    |> mapToSignal { sharedData -> Signal<TelegramTheme, NoError> in
         let themeSettings = (sharedData.entries[SharedDataKeys.themeSettings] as? ThemeSettings) ?? ThemeSettings(currentTheme: nil)
-        if let updatedTheme = themeSettings.currentTheme, updatedTheme.id == currentTheme.id {
-            if updatedTheme != currentTheme {
+        if let updatedTheme = themeSettings.currentTheme, updatedTheme.id == theme.id {
+            if !areThemesEqual(updatedTheme, currentTheme) {
                 currentTheme = updatedTheme
-                return updatedTheme
+                return .single(updatedTheme)
             } else {
-                return currentTheme
+                return .single(currentTheme)
             }
         } else {
-            return theme
+            return account.postbox.combinedView(keys: [PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudThemes)])
+            |> map { view -> [TelegramTheme] in
+                if let view = view.views[.orderedItemList(id: Namespaces.OrderedItemList.CloudThemes)] as? OrderedItemListView {
+                    return view.items.compactMap { $0.contents as? TelegramTheme }
+                } else {
+                    return []
+                }
+            }
+            |> map { themes -> TelegramTheme in
+                let updatedTheme = themes.filter { $0.id == theme.id }.first
+                if let updatedTheme = updatedTheme {
+                    if !areThemesEqual(updatedTheme, currentTheme) {
+                        currentTheme = updatedTheme
+                        return updatedTheme
+                    } else {
+                        return currentTheme
+                    }
+                } else {
+                    return currentTheme
+                }
+            }
         }
     }
 }

@@ -1428,6 +1428,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let strongSelf = self {
                             let _ = deleteMessagesInteractively(postbox: strongSelf.context.account.postbox, messageIds: [id], type: .forLocalPeer).start()
                         }
+                        f(.dismissWithoutContent)
                     })))
                     
                     let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: [], recognizer: nil)
@@ -6875,11 +6876,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if concealed, let parsedUrlValue = parsedUrlValue, (parsedUrlValue.scheme == "http" || parsedUrlValue.scheme == "https"), !isConcealedUrlWhitelisted(parsedUrlValue) {
-            var displayUrl = url
+            var rawDisplayUrl = url
             let maxLength = 180
-            if displayUrl.count > maxLength {
-                displayUrl = String(displayUrl[..<displayUrl.index(displayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
+            if rawDisplayUrl.count > maxLength {
+                rawDisplayUrl = String(rawDisplayUrl[..<rawDisplayUrl.index(rawDisplayUrl.startIndex, offsetBy: maxLength - 2)]) + "..."
             }
+            var displayUrl = rawDisplayUrl
+            displayUrl.replacingOccurrences(of: "\u{202e}", with: "")
             self.present(textAlertController(context: self.context, title: nil, text: self.presentationData.strings.Generic_OpenHiddenLinkAlert(displayUrl).0, actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_No, action: {}), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_Yes, action: {
                 openImpl()
             })]), in: .window(.root))

@@ -108,6 +108,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case phoneDiscoveryHeader(PresentationTheme, String)
     case phoneDiscoveryEverybody(PresentationTheme, String, Bool)
     case phoneDiscoveryMyContacts(PresentationTheme, String, Bool)
+    case phoneDiscoveryInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -123,7 +124,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return SelectivePrivacySettingsSection.callsP2PPeers.rawValue
             case .callsIntegrationEnabled, .callsIntegrationInfo:
                 return SelectivePrivacySettingsSection.callsIntegrationEnabled.rawValue
-            case .phoneDiscoveryHeader, .phoneDiscoveryEverybody, .phoneDiscoveryMyContacts:
+            case .phoneDiscoveryHeader, .phoneDiscoveryEverybody, .phoneDiscoveryMyContacts, .phoneDiscoveryInfo:
                 return SelectivePrivacySettingsSection.phoneDiscovery.rawValue
         }
     }
@@ -150,34 +151,36 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return 8
             case .phoneDiscoveryMyContacts:
                 return 9
-            case .exceptionsHeader:
+            case .phoneDiscoveryInfo:
                 return 10
-            case .disableFor:
+            case .exceptionsHeader:
                 return 11
-            case .enableFor:
+            case .disableFor:
                 return 12
-            case .peersInfo:
+            case .enableFor:
                 return 13
-            case .callsP2PHeader:
+            case .peersInfo:
                 return 14
-            case .callsP2PAlways:
+            case .callsP2PHeader:
                 return 15
-            case .callsP2PContacts:
+            case .callsP2PAlways:
                 return 16
-            case .callsP2PNever:
+            case .callsP2PContacts:
                 return 17
-            case .callsP2PInfo:
+            case .callsP2PNever:
                 return 18
-            case .callsP2PDisableFor:
+            case .callsP2PInfo:
                 return 19
-            case .callsP2PEnableFor:
+            case .callsP2PDisableFor:
                 return 20
-            case .callsP2PPeersInfo:
+            case .callsP2PEnableFor:
                 return 21
-            case .callsIntegrationEnabled:
+            case .callsP2PPeersInfo:
                 return 22
-            case .callsIntegrationInfo:
+            case .callsIntegrationEnabled:
                 return 23
+            case .callsIntegrationInfo:
+                return 24
         }
     }
     
@@ -327,6 +330,12 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .phoneDiscoveryInfo(lhsTheme, lhsText):
+                if case let .phoneDiscoveryInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -383,7 +392,7 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                     arguments.updateCallP2PMode?(.nobody)
                 })
             case let .callsP2PInfo(theme, text):
-                    return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .callsP2PDisableFor(theme, title, value):
                 return ItemListDisclosureItem(theme: theme, title: title, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openSelective(.callP2P, false)
@@ -410,6 +419,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
                     arguments.updatePhoneDiscovery?(false)
                 })
+            case let .phoneDiscoveryInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -522,7 +533,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     var entries: [SelectivePrivacySettingsEntry] = []
     
     let settingTitle: String
-    let settingInfoText: String
+    let settingInfoText: String?
     let disableForText: String
     let enableForText: String
     switch kind {
@@ -554,7 +565,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         case .phoneNumber:
             settingTitle = presentationData.strings.PrivacyPhoneNumberSettings_WhoCanSeeMyPhoneNumber
             if state.setting == .nobody, state.phoneDiscoveryEnabled == false {
-                settingInfoText = presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp
+                settingInfoText = nil
             } else {
                 settingInfoText = presentationData.strings.PrivacyPhoneNumberSettings_CustomHelp
             }
@@ -590,12 +601,15 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         case .groupInvitations, .profilePhoto:
             break
     }
-    entries.append(.settingInfo(presentationData.theme, settingInfoText))
+    if let settingInfoText = settingInfoText {
+        entries.append(.settingInfo(presentationData.theme, settingInfoText))
+    }
     
     if case .phoneNumber = kind, state.setting == .nobody {
         entries.append(.phoneDiscoveryHeader(presentationData.theme, presentationData.strings.PrivacyPhoneNumberSettings_DiscoveryHeader))
         entries.append(.phoneDiscoveryEverybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.phoneDiscoveryEnabled != false))
         entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
+        entries.append(.phoneDiscoveryInfo(presentationData.theme, presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp))
     }
     
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))

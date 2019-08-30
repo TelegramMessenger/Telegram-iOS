@@ -11,6 +11,14 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     let hsv = accentColor.hsv
     accentColor = UIColor(hue: hsv.0, saturation: hsv.1, brightness: max(hsv.2, 0.18), alpha: 1.0)
     
+    let secondaryBadgeTextColor: UIColor
+    let lightness = accentColor.lightness
+    if lightness > 0.7 {
+        secondaryBadgeTextColor = .black
+    } else {
+        secondaryBadgeTextColor = .white
+    }
+    
     let mainBackgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.585, brightness: 0.25)
     let mainSelectionColor = accentColor.withMultiplied(hue: 1.03, saturation: 0.585, brightness: 0.12)
     let additionalBackgroundColor = accentColor.withMultiplied(hue: 1.024, saturation: 0.573, brightness: 0.18)
@@ -126,7 +134,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         itemCheckColors: PresentationThemeFillStrokeForeground(
             fillColor: accentColor,
             strokeColor: mainSecondaryTextColor.withAlphaComponent(0.5),
-            foregroundColor: .white
+            foregroundColor: secondaryBadgeTextColor
         ),
         controlSecondaryColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         freeInputField: PresentationInputFieldTheme(
@@ -161,7 +169,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         failedForegroundColor: .white,
         muteIconColor: mainSecondaryTextColor.withAlphaComponent(0.4),
         unreadBadgeActiveBackgroundColor: accentColor,
-        unreadBadgeActiveTextColor: UIColor(rgb: 0xffffff),
+        unreadBadgeActiveTextColor: secondaryBadgeTextColor,
         unreadBadgeInactiveBackgroundColor: mainSecondaryTextColor.withAlphaComponent(0.4),
         unreadBadgeInactiveTextColor: additionalBackgroundColor,
         pinnedBadgeColor: mainSecondaryTextColor.withAlphaComponent(0.5),
@@ -293,7 +301,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         inputPlaceholderColor: mainSecondaryColor,
         inputTextColor: .white,
         inputClearButtonColor: mainSecondaryColor,
-        checkContentColor: .white
+        checkContentColor: secondaryBadgeTextColor
     )
     
     let contextMenu = PresentationThemeContextMenu(

@@ -17,11 +17,12 @@ final class RadialStatusBackgroundNode: ASDisplayNode {
         }
     }
     
-    init(color: UIColor) {
+    init(color: UIColor, synchronous: Bool) {
         self.color = color
         
         super.init()
         
+        self.displaysAsynchronously = !synchronous
         self.isLayerBacked = true
         self.isOpaque = false
     }

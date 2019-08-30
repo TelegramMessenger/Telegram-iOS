@@ -495,12 +495,12 @@ public final class TextNodeLayout: NSObject {
         return result
     }
     
-    public func attributeSubstring(name: String, index: Int) -> String? {
+    public func attributeSubstring(name: String, index: Int) -> (String, String)? {
         if let attributedString = self.attributedString {
             var range = NSRange()
             let _ = attributedString.attribute(NSAttributedString.Key(rawValue: name), at: index, effectiveRange: &range)
             if range.length != 0 {
-                return (attributedString.string as NSString).substring(with: range)
+                return ((attributedString.string as NSString).substring(with: range), attributedString.string)
             }
         }
         return nil
@@ -755,7 +755,7 @@ public class TextNode: ASDisplayNode {
         return self.cachedLayout?.textRangesRects(text: text) ?? []
     }
     
-    public func attributeSubstring(name: String, index: Int) -> String? {
+    public func attributeSubstring(name: String, index: Int) -> (String, String)? {
         return self.cachedLayout?.attributeSubstring(name: name, index: index)
     }
     
