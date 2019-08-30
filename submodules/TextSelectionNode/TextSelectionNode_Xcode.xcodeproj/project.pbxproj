@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D009FD0F23187E16006264F6 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D009FD0E23187E16006264F6 /* TelegramPresentationData.framework */; };
 		D0C9CBCC2302C00600FAB518 /* TextSelectionNode.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9CBCA2302C00600FAB518 /* TextSelectionNode.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0C9CBD92302C2E600FAB518 /* TextSelectionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CBD82302C2E600FAB518 /* TextSelectionNode.swift */; };
 		D0C9CBDC2302C31100FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CBDB2302C31100FAB518 /* Foundation.framework */; };
@@ -16,6 +17,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		D009FD0E23187E16006264F6 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBC72302C00600FAB518 /* TextSelectionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TextSelectionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CBCA2302C00600FAB518 /* TextSelectionNode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TextSelectionNode.h; sourceTree = "<group>"; };
 		D0C9CBCB2302C00600FAB518 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -31,6 +33,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D009FD0F23187E16006264F6 /* TelegramPresentationData.framework in Frameworks */,
 				D0C9CBE22302C31D00FAB518 /* Display.framework in Frameworks */,
 				D0C9CBE02302C31800FAB518 /* AsyncDisplayKit.framework in Frameworks */,
 				D0C9CBDE2302C31500FAB518 /* UIKit.framework in Frameworks */,
@@ -71,6 +74,7 @@
 		D0C9CBDA2302C30E00FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D009FD0E23187E16006264F6 /* TelegramPresentationData.framework */,
 				D0C9CBE12302C31D00FAB518 /* Display.framework */,
 				D0C9CBDF2302C31800FAB518 /* AsyncDisplayKit.framework */,
 				D0C9CBDD2302C31500FAB518 /* UIKit.framework */,

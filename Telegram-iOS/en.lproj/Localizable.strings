@@ -1003,6 +1003,7 @@
 "Notification.Mute1h" = "Mute for 1 hour";
 "Notification.Mute1hMin" = "Mute for 1h";
 "Conversation.ContextMenuShare" = "Share";
+"Conversation.ContextMenuLookUp" = "Look Up";
 
 "SharedMedia.TitleAll" = "Shared Media";
 
