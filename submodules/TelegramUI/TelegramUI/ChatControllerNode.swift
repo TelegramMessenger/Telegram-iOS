@@ -2086,13 +2086,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var messages: [EnqueueMessage] = []
                 
-                var inputText = convertMarkdownToAttributes(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
-                
-                let tempString = NSMutableAttributedString()
-                let s = "\u{202e}"
-                tempString.append(NSAttributedString(string: s))
-                tempString.append(inputText)
-                inputText = tempString
+                let inputText = convertMarkdownToAttributes(effectivePresentationInterfaceState.interfaceState.composeInputState.inputText)
                 
                 for text in breakChatInputText(trimChatInputText(inputText)) {
                     if text.length != 0 {
