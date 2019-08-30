@@ -249,7 +249,9 @@ public final class ThemePreviewController: ViewController {
             return context.sharedContext.accountManager.transaction { transaction -> Void in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                     let current = entry as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
-                    return PresentationThemeSettings(chatWallpaper: resolvedWallpaper ?? previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                    themeSpecificChatWallpapers[theme.index] = nil
+                    return PresentationThemeSettings(chatWallpaper: resolvedWallpaper ?? previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                 })
             }
         }
