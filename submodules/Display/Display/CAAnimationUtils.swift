@@ -156,7 +156,7 @@ public extension CALayer {
         self.add(animation, forKey: keyPath)
     }
 
-    public func animateSpring(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, initialVelocity: CGFloat = 0.0, damping: CGFloat = 88.0, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    public func animateSpring(from: AnyObject, to: AnyObject, keyPath: String, duration: Double, delay: Double = 0.0, initialVelocity: CGFloat = 0.0, damping: CGFloat = 88.0, removeOnCompletion: Bool = true, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         let animation: CABasicAnimation
         if #available(iOS 9.0, *) {
             animation = makeSpringBounceAnimation(keyPath, initialVelocity, damping)
@@ -175,6 +175,11 @@ public extension CALayer {
         var speed: Float = 1.0
         if k != 0 && k != 1 {
             speed = Float(1.0) / k
+        }
+        
+        if !delay.isZero {
+            animation.beginTime = CACurrentMediaTime() + delay
+            animation.fillMode = .both
         }
         
         animation.speed = speed * Float(animation.duration / duration)

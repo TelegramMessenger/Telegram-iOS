@@ -2,7 +2,6 @@
 
 #import "LegacyComponentsInternal.h"
 
-#import "TGMediaAssetsMomentsController.h"
 #import "TGMediaGroupsController.h"
 
 #import <LegacyComponents/TGMediaAssetMomentList.h>
@@ -122,6 +121,8 @@
         pickerController.hasTimer = strongController.hasTimer;
         pickerController.onlyCrop = strongController.onlyCrop;
         pickerController.hasSilentPosting = strongController.hasSilentPosting;
+        pickerController.hasSchedule = strongController.hasSchedule;
+        pickerController.presentScheduleController = strongController.presentScheduleController;
         [strongController pushViewController:pickerController animated:true];
     };
     [groupsController loadViewIfNeeded];
@@ -205,6 +206,17 @@
 {
     _hasSilentPosting = hasSilentPosting;
     self.pickerController.hasSilentPosting = hasSilentPosting;
+}
+
+- (void)setHasSchedule:(bool)hasSchedule
+{
+    _hasSchedule = hasSchedule;
+    self.pickerController.hasSchedule = hasSchedule;
+}
+
+- (void)setPresentScheduleController:(void (^)(void (^)(int32_t)))presentScheduleController {
+    _presentScheduleController = [presentScheduleController copy];
+    self.pickerController.presentScheduleController = presentScheduleController;
 }
 
 - (void)setOnlyCrop:(bool)onlyCrop
@@ -451,7 +463,7 @@
     {
         __strong TGMediaAssetsController *strongSelf = weakSelf;
         if (strongSelf != nil)
-            [strongSelf completeWithCurrentItem:nil silentPosting:false];
+            [strongSelf completeWithCurrentItem:nil silentPosting:false scheduleTime:0];
     };
 }
 
@@ -532,12 +544,12 @@
         self.avatarCompletionBlock(image);
 }
 
-- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting
+- (void)completeWithCurrentItem:(TGMediaAsset *)currentItem silentPosting:(bool)silentPosting scheduleTime:(int32_t)scheduleTime
 {
     if (self.completionBlock != nil)
     {
         NSArray *signals = [self resultSignalsWithCurrentItem:currentItem descriptionGenerator:self.descriptionGenerator];
-        self.completionBlock(signals, silentPosting);
+        self.completionBlock(signals, silentPosting, scheduleTime);
     }
     else if (self.singleCompletionBlock != nil)
     {

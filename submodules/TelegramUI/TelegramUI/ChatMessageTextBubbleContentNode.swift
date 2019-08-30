@@ -65,6 +65,13 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         self.textAccessibilityOverlayNode.openUrl = { [weak self] url in
             self?.item?.controllerInteraction.openUrl(url, false, false)
         }
+        
+        self.statusNode.openReactions = { [weak self] in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.controllerInteraction.openMessageReactions(item.message.id)
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -87,7 +94,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 var maxTextWidth = CGFloat.greatestFiniteMagnitude
                 for media in item.message.media {
-                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" {
+                    if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, content.type == "telegram_background" || content.type == "telegram_theme" {
                         maxTextWidth = layoutConstants.wallpapers.maxTextWidth
                         break
                     }
@@ -333,6 +340,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 }
                             }
                             
+                            strongSelf.textNode.displaysAsynchronously = !item.presentationData.isPreview
                             let _ = textApply()
                             
                             if let statusApply = statusApply, let adjustedStatusFrame = adjustedStatusFrame {
@@ -362,6 +370,14 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                                 adjustedTextFrame.origin.x = floor((boundingWidth - adjustedTextFrame.width) / 2.0)
                             }
                             strongSelf.textNode.frame = adjustedTextFrame
+                            if let textSelectionNode = strongSelf.textSelectionNode {
+                                let shouldUpdateLayout = textSelectionNode.frame.size != adjustedTextFrame.size
+                                textSelectionNode.frame = adjustedTextFrame
+                                textSelectionNode.highlightAreaNode.frame = adjustedTextFrame
+                                if shouldUpdateLayout {
+                                    textSelectionNode.updateLayout()
+                                }
+                            }
                             strongSelf.textAccessibilityOverlayNode.frame = textFrame
                             strongSelf.textAccessibilityOverlayNode.cachedLayout = textLayout
                         }
@@ -388,7 +404,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func tapActionAtPoint(_ point: CGPoint, gesture: TapLongTapOrDoubleTapGesture) -> ChatMessageBubbleContentTapAction {
         let textNodeFrame = self.textNode.frame
-            if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
+        if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
             if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
                 var concealed = true
                 if let attributeText = self.textNode.attributeSubstring(name: TelegramTextAttributes.URL, index: index) {
@@ -409,6 +425,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .none
             }
         } else {
+            if let _ = self.statusNode.hitTest(self.view.convert(point, to: self.statusNode.view), with: nil) {
+                return .ignore
+            }
             return .none
         }
     }
@@ -511,7 +530,9 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         if !value {
             if let textSelectionNode = self.textSelectionNode {
                 self.textSelectionNode = nil
+                textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                 textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                    textSelectionNode?.highlightAreaNode.removeFromSupernode()
                     textSelectionNode?.removeFromSupernode()
                 })
             }
@@ -521,7 +542,19 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
     override func updateIsExtractedToContextPreview(_ value: Bool) {
         if value {
             if self.textSelectionNode == nil, let item = self.item, let rootNode = item.controllerInteraction.chatControllerNode() {
-                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: item.presentationData.theme.theme.list.itemAccentColor.withAlphaComponent(0.5), knob: item.presentationData.theme.theme.list.itemAccentColor), textNode: self.textNode, present: { [weak self] c, a in
+                let selectionColor: UIColor
+                let knobColor: UIColor
+                if item.message.effectivelyIncoming(item.context.account.peerId) {
+                    selectionColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.incoming.textSelectionKnobColor
+                } else {
+                    selectionColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionColor
+                    knobColor = item.presentationData.theme.theme.chat.message.outgoing.textSelectionKnobColor
+                }
+                
+                let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: selectionColor, knob: knobColor), strings: item.presentationData.strings, textNode: self.textNode, updateIsActive: { [weak self] value in
+                    self?.updateIsTextSelectionActive?(value)
+                }, present: { [weak self] c, a in
                     self?.item?.controllerInteraction.presentGlobalOverlayController(c, a)
                 }, rootNode: rootNode, performAction: { [weak self] text, action in
                     guard let strongSelf = self, let item = strongSelf.item else {
@@ -531,11 +564,16 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 })
                 self.textSelectionNode = textSelectionNode
                 self.addSubnode(textSelectionNode)
+                self.insertSubnode(textSelectionNode.highlightAreaNode, belowSubnode: self.textNode)
                 textSelectionNode.frame = self.textNode.frame
+                textSelectionNode.highlightAreaNode.frame = self.textNode.frame
             }
         } else if let textSelectionNode = self.textSelectionNode {
             self.textSelectionNode = nil
+            self.updateIsTextSelectionActive?(false)
+            textSelectionNode.highlightAreaNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
             textSelectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak textSelectionNode] _ in
+                textSelectionNode?.highlightAreaNode.removeFromSupernode()
                 textSelectionNode?.removeFromSupernode()
             })
         }

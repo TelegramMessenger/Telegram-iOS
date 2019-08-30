@@ -53,21 +53,25 @@ public struct ApplicationSpecificSharedDataKeys {
 private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case instantPageStoredState = 0
     case cachedInstantPages = 1
+    case cachedWallpapers = 2
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
     public static let instantPageStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.instantPageStoredState.rawValue)
     public static let cachedInstantPages = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedInstantPages.rawValue)
+    public static let cachedWallpapers = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedWallpapers.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {
     case webSearchRecentQueries = 0
     case wallpaperSearchRecentQueries = 1
     case settingsSearchRecentItems = 2
+    case localThemes = 3
 }
 
 public struct ApplicationSpecificOrderedItemListCollectionId {
     public static let webSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.webSearchRecentQueries.rawValue)
     public static let wallpaperSearchRecentQueries = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.wallpaperSearchRecentQueries.rawValue)
     public static let settingsSearchRecentItems = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.settingsSearchRecentItems.rawValue)
+    public static let localThemes = applicationSpecificOrderedItemListCollectionId(ApplicationSpecificOrderedItemListCollectionIdValues.localThemes.rawValue)
 }

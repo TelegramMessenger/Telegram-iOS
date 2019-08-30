@@ -78,7 +78,7 @@ public struct ReplyMarkupButton: PostboxCoding, Equatable {
     public let titleWhenForwarded: String?
     public let action: ReplyMarkupButtonAction
     
-    init(title: String, titleWhenForwarded: String?, action: ReplyMarkupButtonAction) {
+    public init(title: String, titleWhenForwarded: String?, action: ReplyMarkupButtonAction) {
         self.title = title
         self.titleWhenForwarded = titleWhenForwarded
         self.action = action
@@ -108,7 +108,7 @@ public struct ReplyMarkupButton: PostboxCoding, Equatable {
 public struct ReplyMarkupRow: PostboxCoding, Equatable {
     public let buttons: [ReplyMarkupButton]
     
-    init(buttons: [ReplyMarkupButton]) {
+    public init(buttons: [ReplyMarkupButton]) {
         self.buttons = buttons
     }
     

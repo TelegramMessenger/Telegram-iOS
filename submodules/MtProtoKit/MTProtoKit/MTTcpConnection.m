@@ -23,6 +23,99 @@
 #import "MTSignal.h"
 #import "MTDNS.h"
 
+#import <openssl/bn.h>
+
+static BIGNUM *get_y2(BIGNUM *x, const BIGNUM *mod, BN_CTX *big_num_context) {
+    // returns y^2 = x^3 + 486662 * x^2 + x
+    BIGNUM *y = BN_dup(x);
+    assert(y != NULL);
+    BIGNUM *coef = BN_new();
+    BN_set_word(coef, 486662);
+    BN_mod_add(y, y, coef, mod, big_num_context);
+    BN_mod_mul(y, y, x, mod, big_num_context);
+    BN_one(coef);
+    BN_mod_add(y, y, coef, mod, big_num_context);
+    BN_mod_mul(y, y, x, mod, big_num_context);
+    BN_clear_free(coef);
+    return y;
+}
+
+static BIGNUM *get_double_x(BIGNUM *x, const BIGNUM *mod, BN_CTX *big_num_context) {
+    // returns x_2 =(x^2 - 1)^2/(4*y^2)
+    BIGNUM *denominator = get_y2(x, mod, big_num_context);
+    assert(denominator != NULL);
+    BIGNUM *coef = BN_new();
+    BN_set_word(coef, 4);
+    BN_mod_mul(denominator, denominator, coef, mod, big_num_context);
+    
+    BIGNUM *numerator = BN_new();
+    assert(numerator != NULL);
+    BN_mod_mul(numerator, x, x, mod, big_num_context);
+    BN_one(coef);
+    BN_mod_sub(numerator, numerator, coef, mod, big_num_context);
+    BN_mod_mul(numerator, numerator, numerator, mod, big_num_context);
+    
+    BN_mod_inverse(denominator, denominator, mod, big_num_context);
+    BN_mod_mul(numerator, numerator, denominator, mod, big_num_context);
+    
+    BN_clear_free(coef);
+    BN_clear_free(denominator);
+    return numerator;
+}
+
+static void generate_public_key(unsigned char key[32]) {
+    BIGNUM *mod = NULL;
+    BN_hex2bn(&mod, "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed");
+    BIGNUM *pow = NULL;
+    BN_hex2bn(&pow, "3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6");
+    BN_CTX *big_num_context = BN_CTX_new();
+    assert(big_num_context != NULL);
+    
+    BIGNUM *x = BN_new();
+    while (1) {
+        int randomResult = SecRandomCopyBytes(kSecRandomDefault, 32, key);
+        assert(randomResult == errSecSuccess);
+        
+        key[31] &= 127;
+        BN_bin2bn(key, 32, x);
+        assert(x != NULL);
+        BN_mod_mul(x, x, x, mod, big_num_context);
+        
+        BIGNUM *y = get_y2(x, mod, big_num_context);
+        
+        BIGNUM *r = BN_new();
+        BN_mod_exp(r, y, pow, mod, big_num_context);
+        BN_clear_free(y);
+        if (BN_is_one(r)) {
+            BN_clear_free(r);
+            break;
+        }
+        BN_clear_free(r);
+    }
+    
+    int i;
+    for (i = 0; i < 3; i++) {
+        BIGNUM *x2 = get_double_x(x, mod, big_num_context);
+        BN_clear_free(x);
+        x = x2;
+    }
+    
+    int num_size = BN_num_bytes(x);
+    assert(num_size <= 32);
+    memset(key, '\0', 32 - num_size);
+    BN_bn2bin(x, key + (32 - num_size));
+    for (i = 0; i < 16; i++) {
+        unsigned char t = key[i];
+        key[i] = key[31 - i];
+        key[31 - i] = t;
+    }
+    
+    BN_clear_free(x);
+    BN_CTX_free(big_num_context);
+    BN_clear_free(pow);
+    BN_clear_free(mod);
+}
+
 @interface MTTcpConnectionData : NSObject
 
 @property (nonatomic, strong, readonly) NSString *ip;
@@ -497,8 +590,8 @@ struct ctr_state {
                             [helloData appendBytes:s6 length:117];
                             
                             uint8_t r2[32];
-                            result = SecRandomCopyBytes(nil, 32, r2);
-                            assert(result == errSecSuccess);
+                            generate_public_key(r2);
+                            
                             [helloData appendBytes:r2 length:32];
                             
                             uint8_t s9[35] = { 0x00, 0x2d, 0x00, 0x02, 0x01, 0x01, 0x00, 0x2b, 0x00, 0x09, 0x08, 0x03, 0x04, 0x03, 0x03, 0x03, 0x02, 0x03, 0x01, 0x00, 0x0a, 0x00, 0x0a, 0x00, 0x08, 0x00, 0x1d, 0x00, 0x17, 0x00, 0x18, 0x00, 0x19, 0x00, 0x15 };

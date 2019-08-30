@@ -20,7 +20,7 @@ import ItemListPeerActionItem
 import TelegramStringFormatting
 
 private final class NotificationExceptionState : Equatable {
-    let mode:NotificationExceptionMode
+    let mode: NotificationExceptionMode
     let isSearchMode: Bool
     let revealedPeerId: PeerId?
     let editing: Bool
@@ -93,7 +93,15 @@ public struct NotificationExceptionWrapper : Equatable {
     }
 }
 
+
+
 public enum NotificationExceptionMode : Equatable {
+    fileprivate enum Mode {
+        case users
+        case groups
+        case channels
+    }
+    
     public static func == (lhs: NotificationExceptionMode, rhs: NotificationExceptionMode) -> Bool {
         switch lhs {
             case let .users(lhsValue):
@@ -114,6 +122,17 @@ public enum NotificationExceptionMode : Equatable {
                 } else {
                     return false
                 }
+        }
+    }
+    
+    fileprivate var mode: Mode {
+        switch self {
+            case .users:
+                return .users
+            case .groups:
+                return .groups
+            case .channels:
+                return .channels
         }
     }
     
@@ -271,7 +290,7 @@ private func notificationsExceptionEntries(presentationData: PresentationData, s
     var entries: [NotificationExceptionEntry] = []
     
     if !state.isSearchMode {
-        entries.append(.addException(presentationData.theme, presentationData.strings, state.editing))
+        entries.append(.addException(presentationData.theme, presentationData.strings, state.mode.mode, state.editing))
     }
     
     var existingPeerIds = Set<PeerId>()
@@ -486,7 +505,7 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     case search(PresentationTheme, PresentationStrings)
     case peer(index: Int, peer: Peer, theme: PresentationTheme, strings: PresentationStrings, dateFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, description: String, notificationSettings: TelegramPeerNotificationSettings, revealed: Bool, editing: Bool, isSearching: Bool)
     case addPeer(index: Int, peer: Peer, theme: PresentationTheme, strings: PresentationStrings, dateFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder)
-    case addException(PresentationTheme, PresentationStrings, Bool)
+    case addException(PresentationTheme, PresentationStrings, NotificationExceptionMode.Mode, Bool)
     case removeAll(PresentationTheme, PresentationStrings)
     
     func item(_ arguments: NotificationExceptionArguments) -> ListViewItem {
@@ -495,8 +514,17 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                 return NotificationSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {
                     arguments.activateSearch()
                 })
-            case let .addException(theme, strings, editing):
-                return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addExceptionIcon(theme), title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
+            case let .addException(theme, strings, mode, editing):
+                let icon: UIImage?
+                switch mode {
+                    case .users:
+                        icon = PresentationResourcesItemList.addPersonIcon(theme)
+                    case .groups:
+                        icon = PresentationResourcesItemList.createGroupIcon(theme)
+                    case .channels:
+                        icon = PresentationResourcesItemList.addChannelIcon(theme)
+                }
+                return ItemListPeerActionItem(theme: theme, icon: icon, title: strings.Notification_Exceptions_AddException, alwaysPlain: true, sectionId: self.section, editing: editing, action: {
                     arguments.selectPeer()
                 })
             case let .peer(_, peer, theme, strings, dateTimeFormat, nameDisplayOrder, value, _, revealed, editing, isSearching):
@@ -543,10 +571,10 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
                     default:
                         return false
                 }
-            case let .addException(lhsTheme, lhsStrings, lhsEditing):
+            case let .addException(lhsTheme, lhsStrings, lhsMode, lhsEditing):
                 switch rhs {
-                    case let .addException(rhsTheme, rhsStrings, rhsEditing):
-                        return lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsEditing == rhsEditing
+                    case let .addException(rhsTheme, rhsStrings, rhsMode, rhsEditing):
+                        return lhsTheme === rhsTheme && lhsStrings === rhsStrings && lhsMode == rhsMode && lhsEditing == rhsEditing
                     default:
                         return false
                 }

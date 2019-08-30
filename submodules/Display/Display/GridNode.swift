@@ -763,7 +763,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         var lowestHeaderNode: ASDisplayNode?
         var lowestHeaderNodeIndex: Int?
         for (_, headerNode) in self.sectionNodes {
-            if let index = self.subnodes?.index(of: headerNode) {
+            if let index = self.subnodes?.firstIndex(of: headerNode) {
                 if lowestHeaderNodeIndex == nil || index < lowestHeaderNodeIndex! {
                     lowestHeaderNodeIndex = index
                     lowestHeaderNode = headerNode

@@ -1,16 +1,10 @@
-//
-//  WallpaperBackgroundNode.swift
-//  Display
-//
-//  Created by Mikhail Filimonov on 13/06/2019.
-//  Copyright © 2019 Telegram. All rights reserved.
-//
-
+import Foundation
 import UIKit
+import AsyncDisplayKit
 
 private let motionAmount: CGFloat = 32.0
 
-public final class WallpaperbackgroundNode: ASDisplayNode {
+public final class WallpaperBackgroundNode: ASDisplayNode {
     let contentNode: ASDisplayNode
     
     public var motionEnabled: Bool = false {

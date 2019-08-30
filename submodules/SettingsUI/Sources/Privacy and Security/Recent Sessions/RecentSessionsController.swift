@@ -344,7 +344,7 @@ private func recentSessionsControllerEntries(presentationData: PresentationData,
     if !sessionsState.sessions.isEmpty {
         var existingSessionIds = Set<Int64>()
         entries.append(.currentSessionHeader(presentationData.theme, presentationData.strings.AuthSessions_CurrentSession))
-        if let index = sessionsState.sessions.index(where: { $0.hash == 0 }) {
+        if let index = sessionsState.sessions.firstIndex(where: { $0.hash == 0 }) {
             existingSessionIds.insert(sessionsState.sessions[index].hash)
             entries.append(.currentSession(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, sessionsState.sessions[index]))
         }

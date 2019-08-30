@@ -111,7 +111,7 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
 
 func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
     switch messsage {
-        case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _, _):
             switch toId {
                 case let .peerUser(userId):
                     return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
@@ -136,7 +136,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
                 case let .peerUser(userId):
@@ -240,7 +240,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _):
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
@@ -382,7 +382,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, reactions, restrictionReason):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -501,7 +501,7 @@ extension StoreMessage {
                     attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)))
                 }
                 
-                if let views = views {
+                if let views = views, namespace != Namespaces.Message.ScheduledCloud {
                     attributes.append(ViewCountMessageAttribute(count: Int(views)))
                 }
                 
@@ -537,18 +537,12 @@ extension StoreMessage {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
-                if let reactions = reactions {
+                /*if let reactions = reactions {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
-                }
+                }*/
                 
-                if let restrictionReason = restrictionReason, let range = restrictionReason.range(of: ":") {
-                    let space = restrictionReason[restrictionReason.startIndex ..< range.lowerBound]
-                    if let platformRange = space.range(of: "-") {
-                        let category = space[space.startIndex ..< platformRange.lowerBound]
-                        let platformSelector = space[space.endIndex...]
-                        
-                        attributes.append(RestrictedContentMessageAttribute(platformSelector: String(platformSelector), category: String(category), text: String(restrictionReason[range.upperBound...])))
-                    }
+                if let restrictionReason = restrictionReason {
+                    attributes.append(RestrictedContentMessageAttribute(rules: restrictionReason.map(RestrictionRule.init(apiReason:))))
                 }
                 
                 var storeFlags = StoreMessageFlags()
@@ -563,6 +557,10 @@ extension StoreMessage {
                 
                 if (flags & (1 << 1)) == 0 {
                     storeFlags.insert(.Incoming)
+                }
+                
+                if (flags & (1 << 18)) != 0 {
+                    storeFlags.insert(.WasScheduled)
                 }
                 
                 if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {
@@ -621,6 +619,7 @@ extension StoreMessage {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
+                
                 var storeFlags = StoreMessageFlags()
                 if (flags & 2) == 0 {
                     let _ = storeFlags.insert(.Incoming)
@@ -645,6 +644,10 @@ extension StoreMessage {
                 let (tags, globalTags) = tagsForStoreMessage(incoming: storeFlags.contains(.Incoming), attributes: attributes, media: media, textEntities: nil)
                 
                 storeFlags.insert(.CanBeGroupedIntoFeed)
+                
+                if (flags & (1 << 18)) != 0 {
+                    storeFlags.insert(.WasScheduled)
+                }
                 
                 self.init(id: MessageId(peerId: peerId, namespace: namespace, id: id), globallyUniqueId: nil, groupingKey: nil, timestamp: date, flags: storeFlags, tags: tags, globalTags: globalTags, localTags: [], forwardInfo: nil, authorId: authorId, text: "", attributes: attributes, media: media)
             }

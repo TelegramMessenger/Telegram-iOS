@@ -32,14 +32,16 @@ final class EditableTokenListNodeTheme {
     let placeholderTextColor: UIColor
     let primaryTextColor: UIColor
     let selectedTextColor: UIColor
+    let accentColor: UIColor
     let keyboardColor: PresentationThemeKeyboardColor
     
-    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, selectedTextColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
+    init(backgroundColor: UIColor, separatorColor: UIColor, placeholderTextColor: UIColor, primaryTextColor: UIColor, selectedTextColor: UIColor, accentColor: UIColor, keyboardColor: PresentationThemeKeyboardColor) {
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
         self.placeholderTextColor = placeholderTextColor
         self.primaryTextColor = primaryTextColor
         self.selectedTextColor = selectedTextColor
+        self.accentColor = accentColor
         self.keyboardColor = keyboardColor
     }
 }
@@ -123,12 +125,8 @@ final class EditableTokenListNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.textColor = theme.primaryTextColor
         self.textFieldNode.textField.autocorrectionType = .no
         self.textFieldNode.textField.returnKeyType = .done
-        switch theme.keyboardColor {
-            case .light:
-                self.textFieldNode.textField.keyboardAppearance = .default
-            case .dark:
-                self.textFieldNode.textField.keyboardAppearance = .dark
-        }
+        self.textFieldNode.textField.keyboardAppearance = theme.keyboardColor.keyboardAppearance
+        self.textFieldNode.textField.tintColor = theme.accentColor
         
         self.caretIndicatorNode = CaretIndicatorNode()
         self.caretIndicatorNode.isLayerBacked = true

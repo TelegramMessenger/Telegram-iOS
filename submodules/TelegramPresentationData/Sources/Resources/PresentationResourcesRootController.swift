@@ -1,7 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import TelegramPresentationData
 
 private func generateShareButtonImage(theme: PresentationTheme) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Chat List/NavigationShare"), color: theme.rootController.navigationBar.accentTextColor)
@@ -49,7 +48,7 @@ public struct PresentationResourcesRootController {
     
     public static func navigationCallIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationCallIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/CallButton"), color: theme.rootController.navigationBar.accentTextColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Call List/CallIcon"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }
     
@@ -67,14 +66,15 @@ public struct PresentationResourcesRootController {
     
     public static func navigationCompactSearchIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationCompactSearchIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/SearchIcon"), color: theme.rootController.navigationBar.accentTextColor).flatMap({ image in
-                let factor: CGFloat = 0.8
-                let size = CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor))
-                return generateImage(size, contextGenerator: { size, context in
-                    context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
-                })
-            })
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/SearchIcon"), color: theme.rootController.navigationBar.accentTextColor)
+//            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/SearchIcon"), color: theme.rootController.navigationBar.accentTextColor).flatMap({ image in
+//                let factor: CGFloat = 0.8
+//                let size = CGSize(width: floor(image.size.width * factor), height: floor(image.size.height * factor))
+//                return generateImage(size, contextGenerator: { size, context in
+//                    context.clear(CGRect(origin: CGPoint(), size: size))
+//                    context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
+//                })
+//            })
         })
     }
     

@@ -378,7 +378,7 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
-    func updateAlpha(node: ASDisplayNode, alpha: CGFloat, completion: ((Bool) -> Void)? = nil) {
+    func updateAlpha(node: ASDisplayNode, alpha: CGFloat, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if node.alpha.isEqual(to: alpha) {
             if let completion = completion {
                 completion(true)
@@ -393,7 +393,12 @@ public extension ContainedViewLayoutTransition {
                 completion(true)
             }
         case let .animated(duration, curve):
-            let previousAlpha = node.alpha
+            let previousAlpha: CGFloat
+            if beginWithCurrentState, let presentation = node.layer.presentation() {
+                previousAlpha = CGFloat(presentation.opacity)
+            } else {
+                previousAlpha = node.alpha
+            }
             node.alpha = alpha
             node.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, completion: { result in
                 if let completion = completion {

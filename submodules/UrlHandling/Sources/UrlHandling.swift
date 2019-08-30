@@ -31,6 +31,7 @@ public enum ParsedInternalUrl {
     case cancelAccountReset(phone: String, hash: String)
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
+    case theme(String)
 }
 
 private enum ParsedUrl {
@@ -202,6 +203,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         parameter = .slug(component, options, color, intensity)
                     }
                     return .wallpaper(parameter)
+                } else if pathComponents[0] == "addtheme" {
+                    return .theme(pathComponents[1])
                 } else if pathComponents.count == 3 && pathComponents[0] == "c" {
                     if let channelId = Int32(pathComponents[1]), let messageId = Int32(pathComponents[2]) {
                         return .privateMessage(MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: channelId), namespace: Namespaces.Message.Cloud, id: messageId))
@@ -248,9 +251,9 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
                         }
                     } else {
                         if let peer = peer as? TelegramUser, peer.botInfo == nil {
-                            return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
+                            return .peer(peer.id, .chat(textInputState: nil, subject: nil))
                         } else {
-                            return .peer(peer.id, .chat(textInputState: nil, messageId: nil))
+                            return .peer(peer.id, .chat(textInputState: nil, subject: nil))
                         }
                     }
                 } else {
@@ -263,7 +266,7 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.peer(peer.id, .chat(textInputState: nil, messageId: nil)))
+                    return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil)))
                 } else {
                     return .single(.inaccessiblePeer)
                 }
@@ -274,12 +277,12 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             }
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.peer(peer.id, .chat(textInputState: nil, messageId: messageId)))
+                    return .single(.peer(peer.id, .chat(textInputState: nil, subject: .message(messageId))))
                 } else {
                     return findChannelById(postbox: account.postbox, network: account.network, channelId: messageId.peerId.id)
                     |> map { foundPeer -> ResolvedUrl? in
                         if let foundPeer = foundPeer {
-                            return .peer(foundPeer.id, .chat(textInputState: nil, messageId: messageId))
+                            return .peer(foundPeer.id, .chat(textInputState: nil, subject: .message(messageId)))
                         } else {
                             return .inaccessiblePeer
                         }
@@ -305,6 +308,8 @@ private func resolveInternalUrl(account: Account, url: ParsedInternalUrl) -> Sig
             return .single(.share(url: url, text: text, to: to))
         case let .wallpaper(parameter):
             return .single(.wallpaper(parameter))
+        case let .theme(slug):
+            return .single(.theme(slug))
     }
 }
 

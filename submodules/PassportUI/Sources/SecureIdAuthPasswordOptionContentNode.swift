@@ -46,7 +46,7 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputField = TextFieldNode()
         
         self.inputButtonNode = HighlightableButtonNode()
-        self.inputActivityNode = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 18.0, 1.5, false))
+        self.inputActivityNode = ActivityIndicator(type: .custom(theme.list.freeInputField.controlColor, 18.0, 1.5, false))
        
         if let image = generateTintedImage(image: UIImage(bundleImageName: "Secure ID/PasswordHelpIcon"), color: theme.list.freeInputField.controlColor) {
             self.inputButtonNode.setImage(image, for: [])
@@ -59,7 +59,8 @@ final class SecureIdAuthPasswordOptionContentNode: ASDisplayNode, SecureIdAuthCo
         self.inputField.textField.font = passwordFont
         self.inputField.textField.textColor = theme.list.freeInputField.primaryColor
         self.inputField.textField.attributedPlaceholder = NSAttributedString(string: hint.isEmpty ? strings.LoginPassword_PasswordPlaceholder : hint, font: passwordFont, textColor: theme.list.freeInputField.placeholderColor)
-        self.inputField.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.inputField.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.inputField.textField.tintColor = theme.list.itemAccentColor
         
         self.buttonNode = HighlightableButtonNode()
         

@@ -181,8 +181,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 avatarInset = 0.0
             }
             
+            let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
+            
             var needShareButton = false
-            if item.message.flags.contains(.Failed) {
+            if isFailed || Namespaces.Message.allScheduled.contains(item.message.id.namespace) {
                 needShareButton = false
             } else if item.message.id.peerId == item.context.account.peerId {
                 for attribute in item.content.firstMessage.attributes {
@@ -228,7 +230,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             var deliveryFailedInset: CGFloat = 0.0
-            if item.content.firstMessage.flags.contains(.Failed) {
+            if isFailed {
                 deliveryFailedInset += 24.0
             }
             
@@ -246,7 +248,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             if item.message.effectivelyIncoming(item.context.account.peerId) {
                 statusType = .FreeIncoming
             } else {
-                if item.message.flags.contains(.Failed) {
+                if isFailed {
                     statusType = .FreeOutgoing(.Failed)
                 } else if item.message.flags.isSending && !item.message.isSentOrAcknowledged {
                     statusType = .FreeOutgoing(.Sending)
@@ -503,7 +505,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         strongSelf.replyInfoNode = nil
                     }
                     
-                    if item.content.firstMessage.flags.contains(.Failed) {
+                    
+                    if isFailed {
                         let deliveryFailedNode: ChatMessageDeliveryFailedNode
                         var isAppearing = false
                         if let current = strongSelf.deliveryFailedNode {
@@ -584,7 +587,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     var navigate: ChatControllerInteractionNavigateToPeer
                                     
                                     if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                        navigate = .chat(textInputState: nil, messageId: nil)
+                                        navigate = .chat(textInputState: nil, subject: nil)
                                     } else {
                                         navigate = .info
                                     }
@@ -592,7 +595,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                                     for attribute in item.content.firstMessage.attributes {
                                         if let attribute = attribute as? SourceReferenceMessageAttribute {
                                             openPeerId = attribute.messageId.peerId
-                                            navigate = .chat(textInputState: nil, messageId: attribute.messageId)
+                                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                                         }
                                     }
                                     
@@ -787,12 +790,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DMakeTranslation(offset, 0.0, 0.0);
                 if animated {
-                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4)
+                    selectionNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2)
                     
                     if !incoming {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+                        selectionNode.layer.animatePosition(from: CGPoint(x: position.x - 42.0, y: position.y), to: position, duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue)
                     }
                 }
             }
@@ -813,13 +816,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 let previousSubnodeTransform = self.subnodeTransform
                 self.subnodeTransform = CATransform3DIdentity
                 if animated {
-                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.4, completion: { [weak selectionNode]_ in
+                    self.layer.animate(from: NSValue(caTransform3D: previousSubnodeTransform), to: NSValue(caTransform3D: self.subnodeTransform), keyPath: "sublayerTransform", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, completion: { [weak selectionNode]_ in
                         selectionNode?.removeFromSupernode()
                     })
-                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+                    selectionNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                     if CGFloat(0.0).isLessThanOrEqualTo(selectionNode.frame.origin.x) {
                         let position = selectionNode.layer.position
-                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                        selectionNode.layer.animatePosition(from: position, to: CGPoint(x: position.x - 42.0, y: position.y), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, removeOnCompletion: false)
                     }
                 } else {
                     selectionNode.removeFromSupernode()

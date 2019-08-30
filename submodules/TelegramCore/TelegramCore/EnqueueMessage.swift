@@ -101,6 +101,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
                 return true
             case _ as NotificationInfoMessageAttribute:
                 return true
+            case _ as OutgoingScheduleInfoMessageAttribute:
+                return true
             default:
                 return false
         }
@@ -327,17 +329,6 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             attributes.append(ConsumableContentMessageAttribute(consumed: false))
                         }
                     }
-                    if let peer = peer as? TelegramChannel {
-                        switch peer.info {
-                            case let .broadcast(info):
-                                attributes.append(ViewCountMessageAttribute(count: 1))
-                                if info.flags.contains(.messagesShouldHaveSignatures) {
-                                    attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
-                                }
-                            case .group:
-                                break
-                        }
-                    }
                     
                     var entitiesAttribute: TextEntitiesMessageAttribute?
                     for attribute in attributes {
@@ -396,6 +387,19 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                     }
                     
+                    if let peer = peer as? TelegramChannel {
+                        switch peer.info {
+                            case let .broadcast(info):
+                                if messageNamespace != Namespaces.Message.ScheduledLocal {
+                                    attributes.append(ViewCountMessageAttribute(count: 1))
+                                }
+                                if info.flags.contains(.messagesShouldHaveSignatures) {
+                                    attributes.append(AuthorSignatureMessageAttribute(signature: accountPeer.debugDisplayTitle))
+                                }
+                            case .group:
+                                break
+                        }
+                    }
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
                 case let .forward(source, grouping, requestedAttributes):

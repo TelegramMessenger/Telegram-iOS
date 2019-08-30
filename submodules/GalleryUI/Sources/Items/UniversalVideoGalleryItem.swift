@@ -287,7 +287,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             guard let strongSelf = self else {
                 return
             }
-            if let result = result {
+            if let result = result, strongSelf.scrubbingFrames {
                 switch result {
                 case .waitingForData:
                     strongSelf.footerContentNode.setFramePreviewImageIsLoading()
@@ -473,7 +473,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                                     }
                                 }
                         }
-                        seekable = value.duration >= 45.0
+                        seekable = value.duration >= 30.0
                     }
                     
                     var fetching = false
@@ -922,7 +922,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     videoNode.continuePlayingWithoutSound()
                 }
             }
-        } else if let _ = node.0 as? GalleryItemTransitionNode, videoNode.hasAttachedContext {
+        } else if let instantNode = node.0 as? GalleryItemTransitionNode, instantNode.isAvailableForInstantPageTransition(), videoNode.hasAttachedContext {
             copyView.removeFromSuperview()
             
             let previousFrame = videoNode.frame

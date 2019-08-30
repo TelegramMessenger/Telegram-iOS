@@ -81,6 +81,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, sendBotCommand: { _, _ in
         }, openInstantPage: { _, _ in
         }, openWallpaper: { _ in
+        }, openTheme: {_ in 
         }, openHashtag: { _, _ in
         }, updateInputState: { _ in
         }, updateInputMode: { _ in
@@ -113,6 +114,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageReaction: { _, _ in
+        }, openMessageReactions: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))

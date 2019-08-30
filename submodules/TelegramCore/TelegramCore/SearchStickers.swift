@@ -132,7 +132,7 @@ public func searchStickers(account: Account, query: String, scope: SearchSticker
             
             var searchQuery: ItemCollectionSearchQuery = .exact(ValueBoxKey(query))
             if query == "\u{2764}" {
-                searchQuery = .matching([ValueBoxKey("\u{2764}"), ValueBoxKey("\u{2764}\u{fe0f}")])
+                searchQuery = .any([ValueBoxKey("\u{2764}"), ValueBoxKey("\u{2764}\u{FE0F}")])
             }
             
             var installedItems: [FoundStickerItem] = []

@@ -3,12 +3,14 @@ import UIKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AccountContext
 
 enum ChatNavigationButtonAction {
     case openChatInfo
     case clearHistory
     case cancelMessageSelection
     case search
+    case dismiss
 }
 
 struct ChatNavigationButton: Equatable {
@@ -20,7 +22,7 @@ struct ChatNavigationButton: Equatable {
     }
 }
 
-func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
+func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: ChatPresentationInterfaceState, subject: ChatControllerSubject?, strings: PresentationStrings, currentButton: ChatNavigationButton?, target: Any?, selector: Selector?) -> ChatNavigationButton? {
     if let _ = presentationInterfaceState.interfaceState.selectionState {
         if let currentButton = currentButton, currentButton.action == .clearHistory {
             return currentButton
@@ -45,6 +47,13 @@ func leftNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Cha
             }
         }
     }
+    /*if let subject = subject, case .scheduledMessages = subject {
+        if let currentButton = currentButton, currentButton.action == .dismiss {
+            return currentButton
+        } else {
+            return ChatNavigationButton(action: .dismiss, buttonItem: UIBarButtonItem(title: strings.Common_Done, style: .plain, target: target, action: selector))
+        }
+    }*/
     return nil
 }
 

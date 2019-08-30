@@ -140,7 +140,7 @@ private enum NavigatedMessageFromViewPosition {
 }
 
 private func aroundMessagesFromView(view: MessageHistoryView, centralIndex: MessageIndex) -> [Message] {
-    guard let index = view.entries.index(where: { $0.index.id == centralIndex.id }) else {
+    guard let index = view.entries.firstIndex(where: { $0.index.id == centralIndex.id }) else {
         return []
     }
     var result: [Message] = []
@@ -283,7 +283,7 @@ private struct PlaybackStack {
     
     mutating func resetToId(_ id: MessageId) {
         if self.set.contains(id) {
-            if let index = self.ids.index(of: id) {
+            if let index = self.ids.firstIndex(of: id) {
                 for i in (index + 1) ..< self.ids.count {
                     self.set.remove(self.ids[i])
                 }
@@ -301,7 +301,7 @@ private struct PlaybackStack {
     
     mutating func push(_ id: MessageId) {
         if self.set.contains(id) {
-            if let index = self.ids.index(of: id) {
+            if let index = self.ids.firstIndex(of: id) {
                 self.ids.remove(at: index)
             }
         }
@@ -487,7 +487,7 @@ final class PeerMessagesMediaPlaylist: SharedMediaPlaylist {
         self.loadingItem = true
         self.updateState()
         
-        let namespaces: HistoryViewNamespaces
+        let namespaces: MessageIdNamespaces
         if Namespaces.Message.allScheduled.contains(anchor.id.namespace) {
             namespaces = .just(Namespaces.Message.allScheduled)
         } else {

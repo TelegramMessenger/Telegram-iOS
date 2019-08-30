@@ -455,8 +455,8 @@ final class ChatEmptyNode: ASDisplayNode {
         }
         
         let contentType: ChatEmptyNodeContentType
-        if let peer = interfaceState.renderedPeer?.peer {
-            if peer.id == self.accountPeerId && !interfaceState.isScheduledMessages {
+        if let peer = interfaceState.renderedPeer?.peer, !interfaceState.isScheduledMessages {
+            if peer.id == self.accountPeerId {
                 contentType = .cloud
             } else if let _ = peer as? TelegramSecretChat {
                 contentType = .secret

@@ -13,6 +13,21 @@ public enum ItemListSingleLineInputItemType: Equatable {
     case username
 }
 
+public enum ItemListSingleLineInputClearType: Equatable {
+    case none
+    case always
+    case onFocus
+    
+    var hasButton: Bool {
+        switch self {
+            case .none:
+                return false
+            case .always, .onFocus:
+                return true
+        }
+    }
+}
+
 public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
@@ -22,7 +37,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let type: ItemListSingleLineInputItemType
     let returnKeyType: UIReturnKeyType
     let spacing: CGFloat
-    let clearButton: Bool
+    let clearType: ItemListSingleLineInputClearType
     let enabled: Bool
     public let sectionId: ItemListSectionId
     let action: () -> Void
@@ -32,7 +47,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
     let updatedFocus: ((Bool) -> Void)?
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearButton: Bool = false, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, title: NSAttributedString, text: String, placeholder: String, type: ItemListSingleLineInputItemType = .regular(capitalization: true, autocorrection: true), returnKeyType: UIReturnKeyType = .`default`, spacing: CGFloat = 0.0, clearType: ItemListSingleLineInputClearType = .none, enabled: Bool = true, tag: ItemListItemTag? = nil, sectionId: ItemListSectionId, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> String)? = nil, updatedFocus: ((Bool) -> Void)? = nil, action: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.title = title
@@ -41,7 +56,7 @@ public class ItemListSingleLineInputItem: ListViewItem, ItemListItem {
         self.type = type
         self.returnKeyType = returnKeyType
         self.spacing = spacing
-        self.clearButton = clearButton
+        self.clearType = clearType
         self.enabled = enabled
         self.tag = tag
         self.sectionId = sectionId
@@ -153,7 +168,8 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
         self.textNode.textField.font = Font.regular(17.0)
         if let item = self.item {
             self.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
-            self.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+            self.textNode.textField.keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
+            self.textNode.textField.tintColor = item.theme.list.itemAccentColor
             self.textNode.textField.accessibilityHint = item.placeholder
         }
         self.textNode.clipsToBounds = true
@@ -179,7 +195,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
             let leftInset: CGFloat = 16.0 + params.leftInset
             var rightInset: CGFloat = 16.0 + params.rightInset
             
-            if item.clearButton {
+            if item.clearType.hasButton {
                 rightInset += 32.0
             }
             
@@ -209,7 +225,8 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                         strongSelf.backgroundNode.backgroundColor = item.theme.list.itemBlocksBackgroundColor
                         
                         strongSelf.textNode.textField.textColor = item.theme.list.itemPrimaryTextColor
-                        strongSelf.textNode.textField.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                        strongSelf.textNode.textField.keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
+                        strongSelf.textNode.textField.tintColor = item.theme.list.itemAccentColor
                     }
                     
                     let _ = titleApply()
@@ -288,9 +305,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                         strongSelf.clearIconNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - buttonSize.width + floor((buttonSize.width - image.size.width) / 2.0), y: floor((layout.contentSize.height - image.size.height) / 2.0)), size: image.size)
                     }
                     
-                    strongSelf.clearIconNode.isHidden = !item.clearButton || item.text.isEmpty
-                    strongSelf.clearButtonNode.isHidden = !item.clearButton || item.text.isEmpty
-                    strongSelf.clearButtonNode.isAccessibilityElement = !strongSelf.clearButtonNode.isHidden
+                    strongSelf.updateClearButtonVisibility()
                     
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -330,6 +345,24 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                 }
             })
         }
+    }
+    
+    private func updateClearButtonVisibility() {
+        guard let item = self.item else {
+            return
+        }
+        let isHidden: Bool
+        switch item.clearType {
+            case .none:
+                isHidden = true
+            case .always:
+                isHidden = item.text.isEmpty
+            case .onFocus:
+                isHidden = !self.textNode.textField.isFirstResponder || item.text.isEmpty
+        }
+        self.clearIconNode.isHidden = isHidden
+        self.clearButtonNode.isHidden = isHidden
+        self.clearButtonNode.isAccessibilityElement = isHidden
     }
     
     override public func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -390,10 +423,12 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     
     @objc public func textFieldDidBeginEditing(_ textField: UITextField) {
         self.item?.updatedFocus?(true)
+        self.updateClearButtonVisibility()
     }
     
     @objc public func textFieldDidEndEditing(_ textField: UITextField) {
         self.item?.updatedFocus?(false)
+        self.updateClearButtonVisibility()
     }
     
     public func animateError() {

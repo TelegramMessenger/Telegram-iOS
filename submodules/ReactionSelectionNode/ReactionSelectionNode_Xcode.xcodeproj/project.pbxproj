@@ -19,6 +19,8 @@
 		D03E46082305EEDD0049C28B /* ReactionSelectionParentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46072305EEDD0049C28B /* ReactionSelectionParentNode.swift */; };
 		D03E460A2305EF900049C28B /* ReactionSwipeGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E46092305EF900049C28B /* ReactionSwipeGestureRecognizer.swift */; };
 		D03E460C2305EFD80049C28B /* ReactionGestureItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E460B2305EFD80049C28B /* ReactionGestureItem.swift */; };
+		D0624F8F230C0316000FC2BD /* ReactionContextNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0624F8E230C0316000FC2BD /* ReactionContextNode.swift */; };
+		D0624F91230C0472000FC2BD /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0624F90230C0472000FC2BD /* TelegramPresentationData.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +38,8 @@
 		D03E46072305EEDD0049C28B /* ReactionSelectionParentNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionSelectionParentNode.swift; sourceTree = "<group>"; };
 		D03E46092305EF900049C28B /* ReactionSwipeGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionSwipeGestureRecognizer.swift; sourceTree = "<group>"; };
 		D03E460B2305EFD80049C28B /* ReactionGestureItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionGestureItem.swift; sourceTree = "<group>"; };
+		D0624F8E230C0316000FC2BD /* ReactionContextNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReactionContextNode.swift; sourceTree = "<group>"; };
+		D0624F90230C0472000FC2BD /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,6 +47,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0624F91230C0472000FC2BD /* TelegramPresentationData.framework in Frameworks */,
 				D03E46042305EE790049C28B /* TelegramCore.framework in Frameworks */,
 				D03E46022305EE750049C28B /* Postbox.framework in Frameworks */,
 				D03E46002305EE710049C28B /* AnimationUI.framework in Frameworks */,
@@ -78,10 +83,11 @@
 			isa = PBXGroup;
 			children = (
 				D03E45F42305EB7C0049C28B /* ReactionSelectionNode.swift */,
-				D03E45E82305E3F30049C28B /* ReactionSelectionNode.h */,
+				D0624F8E230C0316000FC2BD /* ReactionContextNode.swift */,
 				D03E46072305EEDD0049C28B /* ReactionSelectionParentNode.swift */,
 				D03E46092305EF900049C28B /* ReactionSwipeGestureRecognizer.swift */,
 				D03E460B2305EFD80049C28B /* ReactionGestureItem.swift */,
+				D03E45E82305E3F30049C28B /* ReactionSelectionNode.h */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -89,6 +95,7 @@
 		D03E45F62305EB870049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0624F90230C0472000FC2BD /* TelegramPresentationData.framework */,
 				D03E46032305EE790049C28B /* TelegramCore.framework */,
 				D03E46012305EE750049C28B /* Postbox.framework */,
 				D03E45FF2305EE710049C28B /* AnimationUI.framework */,
@@ -183,6 +190,7 @@
 				D03E460A2305EF900049C28B /* ReactionSwipeGestureRecognizer.swift in Sources */,
 				D03E46082305EEDD0049C28B /* ReactionSelectionParentNode.swift in Sources */,
 				D03E460C2305EFD80049C28B /* ReactionGestureItem.swift in Sources */,
+				D0624F8F230C0316000FC2BD /* ReactionContextNode.swift in Sources */,
 				D03E45F52305EB7C0049C28B /* ReactionSelectionNode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

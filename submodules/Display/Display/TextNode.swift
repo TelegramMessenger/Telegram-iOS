@@ -60,9 +60,9 @@ private func displayLineFrame(frame: CGRect, isRTL: Bool, boundingRect: CGRect, 
         return frame
     }
     var lineFrame = frame
-    let intersectionFrame = lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height)
     if isRTL {
         lineFrame.origin.x = max(0.0, floor(boundingRect.width - lineFrame.size.width))
+        let intersectionFrame = lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height / 4.5)
         if let topRight = cutout?.topRight {
             let topRightRect = CGRect(origin: CGPoint(x: boundingRect.width - topRight.width, y: 0.0), size: topRight)
             if intersectionFrame.intersects(topRightRect) {
@@ -120,6 +120,7 @@ public final class TextNodeLayout: NSObject {
     fileprivate let cutout: TextNodeCutout?
     fileprivate let insets: UIEdgeInsets
     public let size: CGSize
+    public let rawTextSize: CGSize
     public let truncated: Bool
     fileprivate let firstLineOffset: CGFloat
     fileprivate let lines: [TextNodeLine]
@@ -128,7 +129,7 @@ public final class TextNodeLayout: NSObject {
     fileprivate let textShadowColor: UIColor?
     public let hasRTL: Bool
     
-    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?) {
+    fileprivate init(attributedString: NSAttributedString?, maximumNumberOfLines: Int, truncationType: CTLineTruncationType, constrainedSize: CGSize, alignment: NSTextAlignment, lineSpacing: CGFloat, cutout: TextNodeCutout?, insets: UIEdgeInsets, size: CGSize, rawTextSize: CGSize, truncated: Bool, firstLineOffset: CGFloat, lines: [TextNodeLine], blockQuotes: [TextNodeBlockQuote], backgroundColor: UIColor?, lineColor: UIColor?, textShadowColor: UIColor?) {
         self.attributedString = attributedString
         self.maximumNumberOfLines = maximumNumberOfLines
         self.truncationType = truncationType
@@ -138,6 +139,7 @@ public final class TextNodeLayout: NSObject {
         self.cutout = cutout
         self.insets = insets
         self.size = size
+        self.rawTextSize = rawTextSize
         self.truncated = truncated
         self.firstLineOffset = firstLineOffset
         self.lines = lines
@@ -223,9 +225,6 @@ public final class TextNodeLayout: NSObject {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
-                        if line.isRTL {
-                            lineFrame.origin.x = self.size.width - lineFrame.size.width
-                        }
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
@@ -294,9 +293,6 @@ public final class TextNodeLayout: NSObject {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
-                        if line.isRTL {
-                            lineFrame.origin.x = self.size.width - lineFrame.size.width
-                        }
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
@@ -372,9 +368,6 @@ public final class TextNodeLayout: NSObject {
                     case .center:
                         lineFrame.origin.x = floor((self.size.width - lineFrame.size.width) / 2.0)
                     case .natural:
-                        if line.isRTL {
-                            lineFrame.origin.x = floor(self.size.width - lineFrame.size.width)
-                        }
                         lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     default:
                         break
@@ -816,7 +809,7 @@ public class TextNode: ASDisplayNode {
             var maybeTypesetter: CTTypesetter?
             maybeTypesetter = CTTypesetterCreateWithAttributedString(attributedString as CFAttributedString)
             if maybeTypesetter == nil {
-                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
+                return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
             }
             
             let typesetter = maybeTypesetter!
@@ -997,6 +990,7 @@ public class TextNode: ASDisplayNode {
                 }
             }
             
+            let rawLayoutSize = layoutSize
             if !lines.isEmpty && bottomCutoutEnabled {
                 let proposedWidth = lines[lines.count - 1].frame.width + bottomCutoutSize.width
                 if proposedWidth > layoutSize.width {
@@ -1008,9 +1002,9 @@ public class TextNode: ASDisplayNode {
                 }
             }
             
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(width: ceil(layoutSize.width) + insets.left + insets.right, height: ceil(layoutSize.height) + insets.top + insets.bottom), rawTextSize: CGSize(width: ceil(rawLayoutSize.width) + insets.left + insets.right, height: ceil(rawLayoutSize.height) + insets.top + insets.bottom), truncated: truncated, firstLineOffset: firstLineOffset, lines: lines, blockQuotes: blockQuotes, backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
         } else {
-            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
+            return TextNodeLayout(attributedString: attributedString, maximumNumberOfLines: maximumNumberOfLines, truncationType: truncationType, constrainedSize: constrainedSize, alignment: alignment, lineSpacing: lineSpacingFactor, cutout: cutout, insets: insets, size: CGSize(), rawTextSize: CGSize(), truncated: false, firstLineOffset: 0.0, lines: [], blockQuotes: [], backgroundColor: backgroundColor, lineColor: lineColor, textShadowColor: textShadowColor)
         }
     }
     

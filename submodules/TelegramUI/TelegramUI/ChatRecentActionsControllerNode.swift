@@ -204,6 +204,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                     self?.presentController(c, a)
                 })
             }
+        }, openTheme: { _ in      
         }, openHashtag: { [weak self] peerName, hashtag in
             guard let strongSelf = self else {
                 return
@@ -304,7 +305,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                                 UIPasteboard.general.string = mention
                             }))
                         }
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })
@@ -411,6 +412,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, editScheduledMessagesTime: { _ in
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageReaction: { _, _ in
+        }, openMessageReactions: { _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
@@ -785,12 +787,11 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         strongSelf.controllerInteraction.presentController(textAlertController(context: strongSelf.context, title: nil, text: strongSelf.presentationData.strings.Conversation_ErrorInaccessibleMessage, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), nil)
                     case .botStart:
                         break
-                        //strongSelf.openPeer(peerId: peerId, navigation: .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)), fromMessage: nil)
                     case .groupBotStart:
                         break
                     case let .channelMessage(peerId, messageId):
                         if let navigationController = strongSelf.getNavigationController() {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), messageId: messageId))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: .message(messageId)))
                         }
                     case let .stickerPack(name):
                         strongSelf.presentController(StickerPackPreviewController(context: strongSelf.context, stickerPack: .name(name), parentNavigationController: strongSelf.getNavigationController()), nil)
@@ -817,6 +818,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                             self?.view.endEditing(true)
                         })
                     case .wallpaper:
+                        break
+                    case .theme:
                         break
                 }
             }

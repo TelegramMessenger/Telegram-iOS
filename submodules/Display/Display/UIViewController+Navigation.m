@@ -311,6 +311,8 @@ void applyKeyboardAutocorrection() {
 
 @interface AboveStatusBarWindowController : UIViewController
 
+@property (nonatomic, copy) UIInterfaceOrientationMask (^ _Nullable supportedOrientations)(void);
+
 @end
 
 @implementation AboveStatusBarWindowController
@@ -330,6 +332,10 @@ void applyKeyboardAutocorrection() {
     [self viewDidLoad];
 }
 
+- (UIInterfaceOrientationMask)supportedInterfaceOrientations {
+    return UIInterfaceOrientationMaskPortrait;
+}
+
 @end
 
 @implementation AboveStatusBarWindow
@@ -346,6 +352,11 @@ void applyKeyboardAutocorrection() {
         }
     }
     return self;
+}
+
+- (void)setSupportedOrientations:(UIInterfaceOrientationMask (^)(void))supportedOrientations {
+    _supportedOrientations = [supportedOrientations copy];
+    ((AboveStatusBarWindowController *)self.rootViewController).supportedOrientations = _supportedOrientations;
 }
 
 - (BOOL)shouldAffectStatusBarAppearance {

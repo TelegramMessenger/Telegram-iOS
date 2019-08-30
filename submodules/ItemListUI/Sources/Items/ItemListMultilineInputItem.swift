@@ -208,6 +208,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         
                         if strongSelf.isNodeLoaded {
                             strongSelf.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
+                            strongSelf.textNode.tintColor = item.theme.list.itemAccentColor
                         }
                     }
                     
@@ -250,7 +251,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         strongSelf.textNode.attributedPlaceholderText = attributedPlaceholderText
                     }
                     
-                    strongSelf.textNode.keyboardAppearance = item.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+                    strongSelf.textNode.keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
                     
                     strongSelf.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: params.width - leftInset - params.rightInset, height: textLayout.size.height))
                     strongSelf.textNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: params.width - leftInset - 16.0 - rightInset, height: textLayout.size.height + 1.0))

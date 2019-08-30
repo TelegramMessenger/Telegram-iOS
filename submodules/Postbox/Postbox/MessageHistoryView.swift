@@ -224,27 +224,10 @@ public enum HistoryViewInputAnchor: Equatable {
     case unread
 }
 
-public enum HistoryViewNamespaces {
-    case all
-    case just(Set<MessageId.Namespace>)
-    case not(Set<MessageId.Namespace>)
-    
-    public func contains(_ namespace: MessageId.Namespace) -> Bool {
-        switch self {
-            case .all:
-                return true
-            case let .just(namespaces):
-                return namespaces.contains(namespace)
-            case let .not(namespaces):
-                return !namespaces.contains(namespace)
-        }
-    }
-}
-
 final class MutableMessageHistoryView {
     private(set) var peerIds: MessageHistoryViewPeerIds
     let tag: MessageTags?
-    let namespaces: HistoryViewNamespaces
+    let namespaces: MessageIdNamespaces
     private let orderStatistics: MessageHistoryViewOrderStatistics
     private let anchor: HistoryViewInputAnchor
     
@@ -259,7 +242,7 @@ final class MutableMessageHistoryView {
     
     fileprivate(set) var sampledState: HistoryViewSample
     
-    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: HistoryViewNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
+    init(postbox: Postbox, orderStatistics: MessageHistoryViewOrderStatistics, peerIds: MessageHistoryViewPeerIds, anchor inputAnchor: HistoryViewInputAnchor, combinedReadStates: MessageHistoryViewReadState?, transientReadStates: MessageHistoryViewReadState?, tag: MessageTags?, namespaces: MessageIdNamespaces, count: Int, topTaggedMessages: [MessageId.Namespace: MessageHistoryTopTaggedMessage?], additionalDatas: [AdditionalMessageHistoryViewDataEntry], getMessageCountInRange: (MessageIndex, MessageIndex) -> Int32) {
         self.anchor = inputAnchor
         
         self.orderStatistics = orderStatistics
@@ -689,7 +672,7 @@ final class MutableMessageHistoryView {
 
 public final class MessageHistoryView {
     public let tagMask: MessageTags?
-    public let namespaces: HistoryViewNamespaces
+    public let namespaces: MessageIdNamespaces
     public let anchorIndex: MessageHistoryAnchorIndex
     public let earlierId: MessageIndex?
     public let laterId: MessageIndex?

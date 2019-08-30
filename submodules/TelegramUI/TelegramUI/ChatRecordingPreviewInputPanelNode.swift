@@ -39,7 +39,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     init(theme: PresentationTheme) {
         self.deleteButton = HighlightableButtonNode()
         self.deleteButton.displaysAsynchronously = false
-        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionThrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [])
+        self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [])
         
         self.sendButton = HighlightableButtonNode()
         self.sendButton.displaysAsynchronously = false
@@ -149,7 +149,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         transition.updateFrame(node: self.deleteButton, frame: CGRect(origin: CGPoint(x: leftInset, y: -1.0), size: CGSize(width: 48.0, height: panelHeight)))
         transition.updateFrame(node: self.sendButton, frame: CGRect(origin: CGPoint(x: width - rightInset - 43.0 - UIScreenPixel, y: -UIScreenPixel), size: CGSize(width: 44.0, height: panelHeight)))
         
-        if let slowmodeState = interfaceState.slowmodeState {
+        if let slowmodeState = interfaceState.slowmodeState, !interfaceState.isScheduledMessages {
             let sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode
             if let current = self.sendButtonRadialStatusNode {
                 sendButtonRadialStatusNode = current

@@ -195,7 +195,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         let titleFrame = titleContentRect
         self.titleNode.frame = titleFrame
         
-        let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 16.0 - self.proxyNode.bounds.width, y: 1.0 + floor((size.height - proxyNode.bounds.height) / 2.0)), size: proxyNode.bounds.size)
+        let proxyFrame = CGRect(origin: CGPoint(x: clearBounds.maxX - 9.0 - self.proxyNode.bounds.width, y: floor((size.height - proxyNode.bounds.height) / 2.0)), size: proxyNode.bounds.size)
         self.proxyNode.frame = proxyFrame
         self.proxyButton.frame = proxyFrame.insetBy(dx: -2.0, dy: -2.0)
         

@@ -341,7 +341,7 @@ open class TabBarController: ViewController {
     public func setControllers(_ controllers: [ViewController], selectedIndex: Int?) {
         var updatedSelectedIndex: Int? = selectedIndex
         if updatedSelectedIndex == nil, let selectedIndex = self._selectedIndex, selectedIndex < self.controllers.count {
-            if let index = controllers.index(where: { $0 === self.controllers[selectedIndex] }) {
+            if let index = controllers.firstIndex(where: { $0 === self.controllers[selectedIndex] }) {
                 updatedSelectedIndex = index
             } else {
                 updatedSelectedIndex = 0

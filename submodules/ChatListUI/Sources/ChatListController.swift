@@ -570,7 +570,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 return
                             }
                             
-                            let beginClear: (InteractiveMessagesDeletionType) -> Void = { type in
+                            let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -741,14 +741,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
-                            
                             var scrollToEndIfExists = false
                             if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                                 scrollToEndIfExists = true
                             }
-                            
-                            
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), messageId: messageId, purposefulAction: {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeerId), subject: .message(messageId), purposefulAction: {
                                 self?.deactivateSearch(animated: false)
                             }, scrollToEndIfExists: scrollToEndIfExists, options:  strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : []))
                             strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
@@ -772,12 +769,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         if dismissSearch {
                             strongSelf.deactivateSearch(animated: true)
                         }
-                        
                         var scrollToEndIfExists = false
                         if let layout = strongSelf.validLayout, case .regular = layout.metrics.widthClass {
                             scrollToEndIfExists = true
                         }
-                        
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer.id), purposefulAction: { [weak self] in
                                 self?.deactivateSearch(animated: false)
@@ -853,7 +848,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
         
         self.chatListDisplayNode.isEmptyUpdated = { [weak self] isEmpty in
-            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let validLayout = strongSelf.validLayout {
+            if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode, let _ = strongSelf.validLayout {
                 if isEmpty {
                     searchContentNode.updateListVisibleContentOffset(.known(0.0))
                 }

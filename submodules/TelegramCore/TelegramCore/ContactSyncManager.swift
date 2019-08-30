@@ -308,7 +308,7 @@ private func pushDeviceContacts(postbox: Postbox, network: Network, importableCo
     |> switchToLatest
 }
 
-private let importBatchCount: Int = 100
+private let importBatchCount: Int = 500
 
 private func pushDeviceContactData(postbox: Postbox, network: Network, contacts: [(DeviceContactNormalizedPhoneNumber, ImportableDeviceContactData)]) -> Signal<PushDeviceContactsResult, NoError> {
     var batches: Signal<PushDeviceContactsResult, NoError> = .single(PushDeviceContactsResult(addedReimportAttempts: [:]))

@@ -10,11 +10,19 @@ import TelegramUIPreferences
 import AccountContext
 import ShareController
 import CounterContollerTitleView
+import WallpaperResources
+
+public enum ThemePreviewSource {
+    case theme(TelegramTheme)
+    case slug(String, TelegramMediaFile)
+    case media(AnyMediaReference)
+}
 
 public final class ThemePreviewController: ViewController {
     private let context: AccountContext
     private let previewTheme: PresentationTheme
-    private let media: AnyMediaReference
+    private let source: ThemePreviewSource
+    private let theme = Promise<TelegramTheme?>()
     
     private var controllerNode: ThemePreviewControllerNode {
         return self.displayNode as! ThemePreviewControllerNode
@@ -25,22 +33,39 @@ public final class ThemePreviewController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
 
-    public init(context: AccountContext, previewTheme: PresentationTheme, media: AnyMediaReference) {
+    public init(context: AccountContext, previewTheme: PresentationTheme, source: ThemePreviewSource) {
         self.context = context
         self.previewTheme = previewTheme
-        self.media = media
+        self.source = source
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
+        let themeName: String
+        if case let .theme(theme) = source {
+            themeName = theme.title
+            self.theme.set(.single(theme))
+        } else if case let .slug(slug, _) = source {
+            self.theme.set(getTheme(account: context.account, slug: slug)
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<TelegramTheme?, NoError> in
+                return .single(nil)
+            })
+            themeName = previewTheme.name.string
+        } else {
+            self.theme.set(.single(nil))
+            themeName = previewTheme.name.string
+        }
+        
         if let author = previewTheme.author {
             let titleView = CounterContollerTitleView(theme: self.previewTheme)
-            titleView.title = CounterContollerTitle(title: self.previewTheme.name.string, counter: author)
+            titleView.title = CounterContollerTitle(title: themeName, counter: author)
             self.navigationItem.titleView = titleView
         } else {
-            self.title = previewTheme.name.string
+            self.title = themeName
         }
+        
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -83,18 +108,59 @@ public final class ThemePreviewController: ViewController {
             }
         }, apply: { [weak self] in
             if let strongSelf = self {
-                let _ = (strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
-                    transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
-                        let current: PresentationThemeSettings
-                        if let entry = entry as? PresentationThemeSettings {
-                            current = entry
-                        } else {
-                            current = PresentationThemeSettings.defaultSettings
+                let previewTheme = strongSelf.previewTheme
+                let theme: Signal<PresentationThemeReference?, NoError>
+                
+                switch strongSelf.source {
+                    case .theme, .slug:
+                        theme = combineLatest(strongSelf.theme.get() |> take(1), strongSelf.controllerNode.wallpaperPromise.get() |> take(1))
+                        |> map { theme, wallpaper in
+                            if let theme = theme {
+                                if case let .file(file) = wallpaper, file.id != 0 {
+                                    return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: wallpaper))
+                                } else {
+                                    return .cloud(PresentationCloudTheme(theme: theme, resolvedWallpaper: nil))
+                                }
+                            } else {
+                                return nil
+                            }
                         }
-                        
-                        return PresentationThemeSettings(chatWallpaper: .color(0xffffff), theme: .builtin(.day), themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
-                    })
-                }).start(completed: { [weak self] in
+                    case .media:
+                        if let strings = encodePresentationTheme(previewTheme), let data = strings.data(using: .utf8) {
+                            let resource = LocalFileMediaResource(fileId: arc4random64())
+                            strongSelf.context.sharedContext.accountManager.mediaBox.storeResourceData(resource.id, data: data)
+
+                            theme = .single(.local(PresentationLocalTheme(title: previewTheme.name.string, resource: resource)))
+                        } else {
+                            theme = .single(.builtin(.dayClassic))
+                        }
+                }
+                
+                let signal = theme
+                |> mapToSignal { theme -> Signal<Void, NoError> in
+                    guard let theme = theme else {
+                        return .complete()
+                    }
+                    return strongSelf.context.sharedContext.accountManager.transaction { transaction -> Void in
+                        transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
+                            let current: PresentationThemeSettings
+                            if let entry = entry as? PresentationThemeSettings {
+                                current = entry
+                            } else {
+                                current = PresentationThemeSettings.defaultSettings
+                            }
+                            return PresentationThemeSettings(chatWallpaper: previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                        })
+                    }
+                }
+                
+//                let resolvedWallpaper: TelegramWallpaper?
+//                if let theme = theme, case let .file(file) = theme.chat.defaultWallpaper, file.id != 0 {
+//                    resolvedWallpaper = theme.chat.defaultWallpaper
+//                    updateCachedWallpaper(account: context.account, wallpaper: theme.chat.defaultWallpaper)
+//                }
+                
+                let _ = (signal |> deliverOnMainQueue).start(completed: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.dismiss()
                     }
@@ -102,6 +168,16 @@ public final class ThemePreviewController: ViewController {
             }
         })
         self.displayNodeDidLoad()
+        
+        let previewTheme = self.previewTheme
+        if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
+            self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug)
+            |> mapToSignal { wallpaper in
+                return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
+            })
+        } else {
+            self.controllerNode.wallpaperPromise.set(.single(previewTheme.chat.defaultWallpaper))
+        }
     }
     
     private func updateStrings() {
@@ -122,7 +198,20 @@ public final class ThemePreviewController: ViewController {
     }
 
     @objc private func actionPressed() {
-        let controller = ShareController(context: self.context, subject: .media(self.media))
+        let subject: ShareControllerSubject
+        let preferredAction: ShareControllerPreferredAction
+        switch self.source {
+            case let .theme(theme):
+                subject = .url("https://t.me/addtheme/\(theme.slug)")
+                preferredAction = .default
+            case let .slug(slug, _):
+                subject = .url("https://t.me/addtheme/\(slug)")
+                preferredAction = .default
+            case let .media(media):
+                subject = .media(media)
+                preferredAction = .default
+        }
+        let controller = ShareController(context: self.context, subject: subject, preferredAction: preferredAction)
         self.present(controller, in: .window(.root), blockInteraction: true)
     }
 }

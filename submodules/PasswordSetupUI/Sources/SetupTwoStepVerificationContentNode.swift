@@ -59,7 +59,8 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
         self.inputNode.textField.font = Font.regular(22.0)
         self.inputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(22.0), textColor: theme.list.itemPlaceholderTextColor)
         self.inputNode.textField.textAlignment = .center
-        self.inputNode.textField.keyboardAppearance = theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.inputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.inputNode.textField.tintColor = theme.list.itemAccentColor
         switch inputType {
             case .password:
                 self.inputNode.textField.isSecureTextEntry = true
@@ -125,8 +126,9 @@ final class SetupTwoStepVerificationContentNode: ASDisplayNode, UITextFieldDeleg
     
     func updatePresentationData(_ presentationData: PresentationData) {
         self.theme = presentationData.theme
-        self.inputNode.textField.keyboardAppearance = self.theme.chatList.searchBarKeyboardColor.keyboardAppearance
+        self.inputNode.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.inputSeparator.backgroundColor = self.theme.list.itemPlainSeparatorColor
+        self.inputNode.textField.tintColor = self.theme.list.itemAccentColor
     }
     
     func updateIsEnabled(_ isEnabled: Bool) {

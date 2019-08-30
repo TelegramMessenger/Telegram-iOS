@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 
 private let dateFont = UIFont.italicSystemFont(ofSize: 11.0)
+private let reactionCountFont = Font.semiboldItalic(11.0)
 
 private func maybeAddRotationAnimation(_ layer: CALayer, duration: Double) {
     if let _ = layer.animation(forKey: "clockFrameAnimation") {
@@ -62,50 +63,10 @@ enum ChatMessageDateAndStatusType: Equatable {
     case ImageOutgoing(ChatMessageDateAndStatusOutgoingType)
     case FreeIncoming
     case FreeOutgoing(ChatMessageDateAndStatusOutgoingType)
-    
-    static func ==(lhs: ChatMessageDateAndStatusType, rhs: ChatMessageDateAndStatusType) -> Bool {
-        switch lhs {
-            case .BubbleIncoming:
-                if case .BubbleIncoming = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .BubbleOutgoing(type):
-                if case .BubbleOutgoing(type) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .ImageIncoming:
-                if case .ImageIncoming = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .ImageOutgoing(type):
-                if case .ImageOutgoing(type) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .FreeIncoming:
-                if case .FreeIncoming = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .FreeOutgoing(type):
-                if case .FreeOutgoing(type) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-        }
-    }
 }
 
-private let reactionSize: CGFloat = 18.0
+private let reactionSize: CGFloat = 19.0
+private let reactionFont = Font.regular(12.0)
 
 private final class StatusReactionNode: ASImageNode {
     let value: String
@@ -120,7 +81,7 @@ private final class StatusReactionNode: ASImageNode {
         self.image = generateImage(CGSize(width: reactionSize, height: reactionSize), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
             UIGraphicsPushContext(context)
-            let string = NSAttributedString(string: value, font: Font.regular(11.0), textColor: .black)
+            let string = NSAttributedString(string: value, font: reactionFont, textColor: .black)
             string.draw(at: CGPoint(x: 1.0, y: 3.0))
             UIGraphicsPopContext()
         })
@@ -136,9 +97,13 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     private let dateNode: TextNode
     private var impressionIcon: ASImageNode?
     private var reactionNodes: [StatusReactionNode] = []
+    private var reactionCountNode: TextNode?
+    private var reactionButtonNode: HighlightTrackingButtonNode?
     
     private var type: ChatMessageDateAndStatusType?
     private var theme: ChatPresentationThemeData?
+    
+    var openReactions: (() -> Void)?
     
     override init() {
         self.dateNode = TextNode()
@@ -146,8 +111,6 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         self.dateNode.displaysAsynchronously = true
         
         super.init()
-        
-        self.isUserInteractionEnabled = false
         
         self.addSubnode(self.dateNode)
     }
@@ -166,6 +129,8 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         let currentType = self.type
         let currentTheme = self.theme
         
+        let makeReactionCountLayout = TextNode.asyncLayout(self.reactionCountNode)
+        
         return { context, presentationData, edited, impressionCount, dateText, type, constrainedSize, reactions in
             let dateColor: UIColor
             var backgroundImage: UIImage?
@@ -180,7 +145,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             
             let themeUpdated = presentationData.theme != currentTheme || type != currentType
             
-            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+            let graphics = PresentationResourcesChat.principalGraphics(mediaBox: context.account.postbox.mediaBox, knockoutWallpaper: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper, theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper, gradientBubbles: context.sharedContext.immediateExperimentalUISettings.gradientBubbles)
             let offset: CGFloat = -UIScreenPixel
             
             switch type {
@@ -396,9 +361,20 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                 backgroundInsets = UIEdgeInsets(top: 2.0, left: 7.0, bottom: 2.0, right: 7.0)
             }
             
+            var reactionCountLayoutAndApply: (TextNodeLayout, () -> TextNode)?
+            
             var reactionInset: CGFloat = 0.0
             if !reactions.isEmpty {
-                reactionInset = 1.0 + CGFloat(reactions.count) * reactionSize
+                reactionInset = 5.0 + CGFloat(reactions.count) * reactionSize
+                
+                var count = 0
+                for reaction in reactions {
+                    count += Int(reaction.count)
+                }
+                
+                let layoutAndApply = makeReactionCountLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(count)", font: reactionCountFont, textColor: dateColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 100.0, height: 100.0)))
+                reactionInset += layoutAndApply.0.size.width + 2.0
+                reactionCountLayoutAndApply = layoutAndApply
             }
             leftInset += reactionInset
             
@@ -427,6 +403,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                     }
                     
+                    strongSelf.dateNode.displaysAsynchronously = !presentationData.isPreview
                     let _ = dateApply()
                     
                     if let currentImpressionIcon = currentImpressionIcon {
@@ -542,7 +519,14 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         } else {
                             node = StatusReactionNode(value: reactions[i].value, count: Int(reactions[i].count))
                             if strongSelf.reactionNodes.count > i {
-                                strongSelf.reactionNodes[i].removeFromSupernode()
+                                let previousNode = strongSelf.reactionNodes[i]
+                                if animated {
+                                    previousNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak previousNode] _ in
+                                        previousNode?.removeFromSupernode()
+                                    })
+                                } else {
+                                    previousNode.removeFromSupernode()
+                                }
                                 strongSelf.reactionNodes[i] = node
                             } else {
                                 strongSelf.reactionNodes.append(node)
@@ -550,12 +534,73 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                         }
                         if node.supernode == nil {
                             strongSelf.addSubnode(node)
+                            if animated {
+                                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                            }
                         }
-                        node.frame = CGRect(origin: CGPoint(x: reactionOffset, y: backgroundInsets.top + 1.0 + offset - 3.0), size: CGSize(width: reactionSize, height: reactionSize))
+                        node.frame = CGRect(origin: CGPoint(x: reactionOffset, y: backgroundInsets.top + offset - 3.0), size: CGSize(width: reactionSize, height: reactionSize))
                         reactionOffset += reactionSize
                     }
                     for _ in reactions.count ..< strongSelf.reactionNodes.count {
-                        strongSelf.reactionNodes.removeLast().removeFromSupernode()
+                        let node = strongSelf.reactionNodes.removeLast()
+                        if animated {
+                            node.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
+                                node?.removeFromSupernode()
+                            })
+                        } else {
+                            node.removeFromSupernode()
+                        }
+                    }
+                    
+                    if let (layout, apply) = reactionCountLayoutAndApply {
+                        let node = apply()
+                        if strongSelf.reactionCountNode !== node {
+                            strongSelf.reactionCountNode?.removeFromSupernode()
+                            strongSelf.addSubnode(node)
+                            strongSelf.reactionCountNode = node
+                            if animated {
+                                node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                            }
+                        }
+                        node.frame = CGRect(origin: CGPoint(x: reactionOffset + 1.0, y: backgroundInsets.top + 1.0 + offset), size: layout.size)
+                        reactionOffset += 1.0 + layout.size.width
+                    } else if let reactionCountNode = strongSelf.reactionCountNode {
+                        strongSelf.reactionCountNode = nil
+                        if animated {
+                            reactionCountNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionCountNode] _ in
+                                reactionCountNode?.removeFromSupernode()
+                            })
+                        } else {
+                            reactionCountNode.removeFromSupernode()
+                        }
+                    }
+                    
+                    if !strongSelf.reactionNodes.isEmpty {
+                        if strongSelf.reactionButtonNode == nil {
+                            let reactionButtonNode = HighlightTrackingButtonNode()
+                            strongSelf.reactionButtonNode = reactionButtonNode
+                            strongSelf.addSubnode(reactionButtonNode)
+                            reactionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.reactionButtonPressed), forControlEvents: .touchUpInside)
+                            reactionButtonNode.highligthedChanged = { [weak strongSelf] highlighted in
+                                guard let strongSelf = strongSelf else {
+                                    return
+                                }
+                                if highlighted {
+                                    for itemNode in strongSelf.reactionNodes {
+                                        itemNode.alpha = 0.4
+                                    }
+                                } else {
+                                    for itemNode in strongSelf.reactionNodes {
+                                        itemNode.alpha = 1.0
+                                        itemNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.3)
+                                    }
+                                }
+                            }
+                        }
+                        strongSelf.reactionButtonNode?.frame = CGRect(origin: CGPoint(x: leftInset - reactionInset + backgroundInsets.left - 5.0, y: backgroundInsets.top + 1.0 + offset - 5.0), size: CGSize(width: reactionOffset + 5.0 * 2.0, height: 20.0))
+                    } else if let reactionButtonNode = strongSelf.reactionButtonNode {
+                        strongSelf.reactionButtonNode = nil
+                        reactionButtonNode.removeFromSupernode()
                     }
                 }
             })
@@ -586,6 +631,19 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         for node in self.reactionNodes {
             if node.value == value {
                 return (node, node.count)
+            }
+        }
+        return nil
+    }
+    
+    @objc private func reactionButtonPressed() {
+        self.openReactions?()
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let reactionButtonNode = self.reactionButtonNode {
+            if reactionButtonNode.frame.contains(point) {
+                return reactionButtonNode.view
             }
         }
         return nil

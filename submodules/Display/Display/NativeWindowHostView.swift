@@ -347,6 +347,13 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView, UI
     rootViewController.viewDidAppear(false)
     
     let aboveStatusbarWindow = AboveStatusBarWindow(frame: UIScreen.main.bounds)
+    aboveStatusbarWindow.supportedOrientations = { [weak rootViewController] in
+        if let rootViewController = rootViewController {
+            return rootViewController.supportedInterfaceOrientations
+        } else {
+            return .portrait
+        }
+    }
     
     let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, aboveStatusBarView: rootViewController.view, isRotating: {
         return window.isRotating()

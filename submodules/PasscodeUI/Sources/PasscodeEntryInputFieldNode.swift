@@ -185,6 +185,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.textFieldNode.textField.tintColor = self.accentColor
         self.textFieldNode.textField.keyboardAppearance = self.keyboardAppearance
         self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
+        self.textFieldNode.textField.tintColor = self.accentColor
         
         if self.useCustomNumpad {
             switch self.fieldType {

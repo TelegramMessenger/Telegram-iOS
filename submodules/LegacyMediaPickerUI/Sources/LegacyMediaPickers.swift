@@ -17,7 +17,7 @@ public func guessMimeTypeByFileExtension(_ ext: String) -> String {
     return TGMimeTypeMap.mimeType(forExtension: ext) ?? "application/binary"
 }
 
-public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void) {
+public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, context: AccountContext, peer: Peer, captionsEnabled: Bool = true, storeCreatedAssets: Bool = true, showFileTooltip: Bool = false, initialCaption: String, hasSchedule: Bool, presentWebSearch: (() -> Void)?, presentSelectionLimitExceeded: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void) {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     controller.captionsEnabled = captionsEnabled
@@ -25,9 +25,15 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
-            controller.hasTimer = true
+            controller.hasTimer = hasSchedule
         }
         controller.hasSilentPosting = !isSecretChat
+    }
+    controller.hasSchedule = hasSchedule
+    controller.presentScheduleController = { done in
+        presentSchedulePicker { time in
+            done?(time)
+        }
     }
     controller.dismissalBlock = {
     }
@@ -182,7 +188,7 @@ public func legacyAssetPickerItemGenerator() -> ((Any?, String?, [Any]?, String?
                 return result
             }
         } else if (dict["type"] as! NSString) == "video" {
-            var thumbnail = dict["previewImage"] as? UIImage
+            let thumbnail = dict["previewImage"] as? UIImage
             var asFile = false
             if let document = dict["document"] as? NSNumber, document.boolValue {
                 asFile = true

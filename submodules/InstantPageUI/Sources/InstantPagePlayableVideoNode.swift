@@ -86,6 +86,10 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
         return true
     }
     
+    func isAvailableForInstantPageTransition() -> Bool {
+        return true
+    }
+    
     override func didLoad() {
         super.didLoad()
         

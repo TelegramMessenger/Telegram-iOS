@@ -20,7 +20,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
             }
         }
     }
-    
+
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes)] = []
     loop: for entry in view.entries {
         for media in entry.message.media {
@@ -40,7 +40,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         }
         
         var contentTypeHint: ChatMessageEntryContentType = .generic
-        if presentationData.largeEmoji {
+        if presentationData.largeEmoji, entry.message.media.isEmpty {
             let messageText = entry.message.text
             if messageText.count == 1, let _ = associatedData.animatedEmojiStickers[messageText.basicEmoji.0] {
                 contentTypeHint = .animatedEmoji

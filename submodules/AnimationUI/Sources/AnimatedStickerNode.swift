@@ -301,6 +301,11 @@ public struct AnimatedStickerStatus: Equatable {
     }
 }
 
+public enum AnimatedStickerNodeResource {
+    case resource(MediaResource)
+    case localFile(String)
+}
+
 public final class AnimatedStickerNode: ASDisplayNode {
     private let queue: Queue
     private var account: Account?
@@ -381,28 +386,38 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.addSubnode(self.renderer!)
     }
 
-    public func setup(account: Account, resource: MediaResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
+    public func setup(account: Account, resource: AnimatedStickerNodeResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
         if width < 2 || height < 2 {
             return
         }
         self.playbackMode = playbackMode
         switch mode {
-            case .direct:
+        case .direct:
+            let f: (MediaResourceData) -> Void = { [weak self] data in
+                guard let strongSelf = self, data.complete else {
+                    return
+                }
+                if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
+                    strongSelf.directData = Tuple(directData, data.path, width, height)
+                }
+                if strongSelf.isPlaying {
+                    strongSelf.play()
+                } else if strongSelf.canDisplayFirstFrame {
+                    strongSelf.play(firstFrame: true)
+                }
+            }
+            switch resource {
+            case let .resource(resource):
                 self.disposable.set((account.postbox.mediaBox.resourceData(resource)
-                |> deliverOnMainQueue).start(next: { [weak self] data in
-                    guard let strongSelf = self, data.complete else {
-                        return
-                    }
-                    if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
-                        strongSelf.directData = Tuple(directData, data.path, width, height)
-                    }
-                    if strongSelf.isPlaying {
-                        strongSelf.play()
-                    } else if strongSelf.canDisplayFirstFrame {
-                        strongSelf.play(firstFrame: true)
-                    }
+                |> deliverOnMainQueue).start(next: { data in
+                    f(data)
                 }))
-            case .cached:
+            case let .localFile(path):
+                f(MediaResourceData(path: path, offset: 0, size: Int(Int32.max - 1), complete: true))
+            }
+        case .cached:
+            switch resource {
+            case let .resource(resource):
                 self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, fitzModifier: fitzModifier, width: width, height: height, synchronousLoad: false)
                 |> deliverOnMainQueue).start(next: { [weak self] data in
                     if let strongSelf = self, data.complete {
@@ -414,6 +429,9 @@ public final class AnimatedStickerNode: ASDisplayNode {
                         }
                     }
                 }))
+            case .localFile:
+                break
+            }
         }
     }
     

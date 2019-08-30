@@ -103,7 +103,7 @@ final class ContextActionNode: ASDisplayNode {
     
     func updateLayout(constrainedWidth: CGFloat, previous: ContextActionSibling, next: ContextActionSibling) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
         let sideInset: CGFloat = 16.0
-        let iconSideInset: CGFloat = 8.0
+        let iconSideInset: CGFloat = 12.0
         let verticalInset: CGFloat = 12.0
         
         let iconSize = self.iconNode.image.flatMap({ $0.size }) ?? CGSize()
@@ -147,6 +147,29 @@ final class ContextActionNode: ASDisplayNode {
                 transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
             })
         }
+    }
+    
+    func updateTheme(theme: PresentationTheme) {
+        self.backgroundNode.backgroundColor = theme.contextMenu.itemBackgroundColor
+        self.highlightedBackgroundNode.backgroundColor = theme.contextMenu.itemHighlightedBackgroundColor
+        
+        let textColor: UIColor
+        switch action.textColor {
+        case .primary:
+            textColor = theme.contextMenu.primaryColor
+        case .destructive:
+            textColor = theme.contextMenu.destructiveColor
+        }
+        self.textNode.attributedText = NSAttributedString(string: self.action.text, font: textFont, textColor: textColor)
+        
+        switch self.action.textLayout {
+        case let .secondLineWithValue(value):
+            self.statusNode?.attributedText = NSAttributedString(string: value, font: textFont, textColor: theme.contextMenu.secondaryColor)
+        default:
+            break
+        }
+        
+        self.iconNode.image = self.action.icon(theme)
     }
     
     @objc private func buttonPressed() {

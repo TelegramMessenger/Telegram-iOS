@@ -166,6 +166,7 @@ public enum ResolvedUrl {
     case cancelAccountReset(phone: String, hash: String)
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
+    case theme(String)
 }
 
 public enum NavigateToChatKeepStack {
@@ -179,7 +180,7 @@ public final class NavigateToChatControllerParams {
     public let chatController: ChatController?
     public let context: AccountContext
     public let chatLocation: ChatLocation
-    public let messageId: MessageId?
+    public let subject: ChatControllerSubject?
     public let botStart: ChatControllerInitialBotStart?
     public let updateTextInputState: ChatTextInputState?
     public let activateInput: Bool
@@ -191,12 +192,12 @@ public final class NavigateToChatControllerParams {
     public let parentGroupId: PeerGroupId?
     public let completion: () -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, messageId: MessageId? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, completion: @escaping () -> Void = {}) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.context = context
         self.chatLocation = chatLocation
-        self.messageId = messageId
+        self.subject = subject
         self.botStart = botStart
         self.updateTextInputState = updateTextInputState
         self.activateInput = activateInput

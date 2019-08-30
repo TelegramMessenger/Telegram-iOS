@@ -161,7 +161,7 @@ public final class SearchBarNodeTheme: Equatable {
         self.inputIcon = theme.rootController.navigationSearchBar.inputIconColor
         self.inputClear = theme.rootController.navigationSearchBar.inputClearButtonColor
         self.accent = theme.rootController.navigationSearchBar.accentColor
-        self.keyboard = theme.chatList.searchBarKeyboardColor
+        self.keyboard = theme.rootController.keyboardColor
     }
     
     public static func ==(lhs: SearchBarNodeTheme, rhs: SearchBarNodeTheme) -> Bool {
@@ -398,6 +398,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             self.clearButton.setImage(generateClearIcon(color: theme.inputClear), for: [])
             self.iconNode.image = generateLoupeIcon(color: theme.inputIcon)
             self.textField.keyboardAppearance = theme.keyboard.keyboardAppearance
+            self.textField.tintColor = theme.accent
             
             if let activityIndicator = self.activityIndicator {
                 activityIndicator.type = .custom(theme.inputIcon, 13.0, 1.0, false)

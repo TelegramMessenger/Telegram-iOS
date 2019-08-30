@@ -3,17 +3,20 @@ import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
+import TelegramPresentationData
 
 public final class ReactionSelectionParentNode: ASDisplayNode {
     private let account: Account
+    private let theme: PresentationTheme
     
     private var currentNode: ReactionSelectionNode?
     private var currentLocation: (CGPoint, CGFloat)?
     
     private var validLayout: (size: CGSize, insets: UIEdgeInsets)?
     
-    public init(account: Account) {
+    public init(account: Account, theme: PresentationTheme) {
         self.account = account
+        self.theme = theme
         
         super.init()
     }
@@ -24,7 +27,7 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
             self.currentNode = nil
         }
         
-        let reactionNode = ReactionSelectionNode(account: self.account, reactions: reactions)
+        let reactionNode = ReactionSelectionNode(account: self.account, theme: self.theme, reactions: reactions)
         self.addSubnode(reactionNode)
         self.currentNode = reactionNode
         self.currentLocation = (point, point.x)

@@ -353,6 +353,8 @@ static_library(
         "LegacyComponents/TGMessageEntityCashtag.h",
         "LegacyComponents/TGPIPAblePlayerView.h",
         "LegacyComponents/TGEmbedPlayerControls.h",
+
+        "LegacyComponents/TGMediaAssetsUtils.h",
     ],
     deps = [
         ":LegacyComponentsResources",

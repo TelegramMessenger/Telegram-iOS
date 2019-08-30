@@ -12,6 +12,7 @@ public final class ContextContentContainingNode: ASDisplayNode {
     public var applyAbsoluteOffset: ((CGFloat, ContainedViewLayoutTransitionCurve, Double) -> Void)?
     public var applyAbsoluteOffsetSpring: ((CGFloat, Double, CGFloat) -> Void)?
     public var layoutUpdated: ((CGSize) -> Void)?
+    public var updateDistractionFreeMode: ((Bool) -> Void)?
     
     public override init() {
         self.contentNode = ContextContentNode()

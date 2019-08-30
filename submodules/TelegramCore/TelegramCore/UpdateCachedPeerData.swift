@@ -425,7 +425,9 @@ func fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPeerId: PeerI
                                         })
                                     
                                         if let minAvailableMessageId = minAvailableMessageId, minAvailableMessageIdUpdated {
-                                            transaction.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id)
+                                            transaction.deleteMessagesInRange(peerId: peerId, namespace: minAvailableMessageId.namespace, minId: 1, maxId: minAvailableMessageId.id, forEachMedia: { media in
+                                                processRemovedMedia(postbox.mediaBox, media)
+                                            })
                                         }
                                     case .chatFull:
                                         break

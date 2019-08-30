@@ -10,6 +10,7 @@ static_library(
         "//submodules/Display:Display#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TextSelectionNode:TextSelectionNode",
+        "//submodules/ReactionSelectionNode:ReactionSelectionNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

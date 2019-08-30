@@ -136,7 +136,7 @@ final class AuthorizedApplicationContext {
         self.notificationController = NotificationContainerController(context: context)
         
         self.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-        self.mainWindow.previewThemeDarkBlur = presentationData.theme.chatList.searchBarKeyboardColor == .dark
+        self.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
         self.mainWindow.setupVolumeControlStatusBarGraphics(presentationData.volumeControlStatusBarIcons.images)
         
         self.rootController = TelegramRootController(context: context)
@@ -740,7 +740,7 @@ final class AuthorizedApplicationContext {
             if let strongSelf = self {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
                     strongSelf.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                    strongSelf.mainWindow.previewThemeDarkBlur = presentationData.theme.chatList.searchBarKeyboardColor == .dark
+                    strongSelf.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
                     strongSelf.lockedCoveringView.updateTheme(presentationData.theme)
                     strongSelf.rootController.updateTheme(NavigationControllerTheme(presentationTheme: presentationData.theme))
                 }
@@ -788,7 +788,7 @@ final class AuthorizedApplicationContext {
                         }
                         
                         let navigateToMessage = {
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), messageId: messageId))
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId)))
                         }
                         
                         if chatIsVisible {
@@ -833,7 +833,7 @@ final class AuthorizedApplicationContext {
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), messageId: messageId, activateInput: activateInput))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(peerId), subject: messageId.flatMap { .message($0) }, activateInput: activateInput))
             } else {
                 self.scheduledOperChatWithPeerId = (peerId, messageId, activateInput)
             }

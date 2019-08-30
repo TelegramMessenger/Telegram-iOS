@@ -502,7 +502,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             textColor = presentationInterfaceState.theme.chat.inputPanel.inputTextColor
             tintColor = presentationInterfaceState.theme.list.itemAccentColor
             baseFontSize = max(17.0, presentationInterfaceState.fontSize.baseDisplaySize)
-            keyboardAppearance = presentationInterfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
+            keyboardAppearance = presentationInterfaceState.theme.rootController.keyboardColor.keyboardAppearance
         }
         
         let paragraphStyle = NSMutableParagraphStyle()
@@ -654,7 +654,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         var isSlowmodeActive = false
-        if interfaceState.slowmodeState != nil {
+        if interfaceState.slowmodeState != nil && !interfaceState.isScheduledMessages {
             isSlowmodeActive = true
             if !isEditingMedia {
                 isMediaEnabled = false
@@ -691,7 +691,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     }
                 }
                 
-                let keyboardAppearance = interfaceState.theme.chat.inputPanel.keyboardColor.keyboardAppearance
+                let keyboardAppearance = interfaceState.theme.rootController.keyboardColor.keyboardAppearance
                 if let textInputNode = self.textInputNode, textInputNode.keyboardAppearance != keyboardAppearance, textInputNode.isFirstResponder() {
                     if textInputNode.isCurrentlyEmoji() {
                         textInputNode.initialPrimaryLanguage = "emoji"
@@ -1098,7 +1098,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
         }
         
-        if interfaceState.slowmodeState == nil, let contextPlaceholder = interfaceState.inputTextPanelState.contextPlaceholder {
+        if interfaceState.slowmodeState == nil || interfaceState.isScheduledMessages, let contextPlaceholder = interfaceState.inputTextPanelState.contextPlaceholder {
             let placeholderLayout = TextNode.asyncLayout(self.contextPlaceholderNode)
             let (placeholderSize, placeholderApply) = placeholderLayout(TextNodeLayoutArguments(attributedString: contextPlaceholder, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - textFieldInsets.left - textFieldInsets.right - self.textInputViewInternalInsets.left - self.textInputViewInternalInsets.right - accessoryButtonsWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let contextPlaceholderNode = placeholderApply()
@@ -1123,7 +1123,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.textPlaceholderNode.alpha = 1.0
         }
         
-        if let slowmodeState = interfaceState.slowmodeState {
+        if let slowmodeState = interfaceState.slowmodeState, !interfaceState.isScheduledMessages {
             let slowmodePlaceholderNode: ChatTextInputSlowmodePlaceholderNode
             if let current = self.slowmodePlaceholderNode {
                 slowmodePlaceholderNode = current
@@ -1146,7 +1146,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             inputHasText = true
         }
         
-        if (interfaceState.slowmodeState != nil && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
+        if (interfaceState.slowmodeState != nil && !interfaceState.isScheduledMessages && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
             self.textPlaceholderNode.isHidden = true
             self.slowmodePlaceholderNode?.isHidden = inputHasText
         } else {
@@ -1237,7 +1237,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         
         if let interfaceState = self.presentationInterfaceState {
-            if (interfaceState.slowmodeState != nil && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
+            if (interfaceState.slowmodeState != nil && !interfaceState.isScheduledMessages && interfaceState.editMessageState == nil) || interfaceState.inputTextPanelState.contextPlaceholder != nil {
                 self.textPlaceholderNode.isHidden = true
                 self.slowmodePlaceholderNode?.isHidden = inputHasText
             } else {

@@ -618,20 +618,15 @@ class WebSearchControllerNode: ASDisplayNode {
     }
     
     private func dequeueTransition() {
-        if let (transition, firstTime) = self.enqueuedTransitions.first {
+        if let (transition, _) = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
-            
-            let completion: (GridNodeDisplayedItemRange) -> Void = { [weak self] visibleRange in
-                if let strongSelf = self {
-                }
-            }
             
             if let state = self.webSearchInterfaceState.state {
                 self.recentQueriesNode.isHidden = !state.query.isEmpty
             }
             
             self.hasMore = transition.hasMore
-            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: nil, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: true), completion: completion)
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deleteItems, insertItems: transition.insertItems, updateItems: transition.updateItems, scrollToItem: nil, updateLayout: nil, itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: true), completion: { _ in })
         }
     }
     

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		096C16E62317412A0047887D /* LegacyICloudFilePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096C16E5231741290047887D /* LegacyICloudFilePicker.swift */; };
 		D03E3F6E2304C4840049C28B /* LegacyMediaPickerUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E3F6C2304C4840049C28B /* LegacyMediaPickerUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E3F802304C50E0049C28B /* LegacyMediaPickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3F782304C50D0049C28B /* LegacyMediaPickers.swift */; };
 		D03E3F812304C50E0049C28B /* LegacyImageProcessors.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E3F792304C50D0049C28B /* LegacyImageProcessors.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -32,6 +33,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		096C16E5231741290047887D /* LegacyICloudFilePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyICloudFilePicker.swift; sourceTree = "<group>"; };
 		D03E3F692304C4840049C28B /* LegacyMediaPickerUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LegacyMediaPickerUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E3F6C2304C4840049C28B /* LegacyMediaPickerUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = LegacyMediaPickerUI.h; sourceTree = "<group>"; };
 		D03E3F6D2304C4840049C28B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -111,6 +113,7 @@
 				D03E3F782304C50D0049C28B /* LegacyMediaPickers.swift */,
 				D03E3F7B2304C50D0049C28B /* LegacySuggestionContext.swift */,
 				D03E3F7F2304C50D0049C28B /* LegacyWallpaperPicker.swift */,
+				096C16E5231741290047887D /* LegacyICloudFilePicker.swift */,
 				D03E3F6C2304C4840049C28B /* LegacyMediaPickerUI.h */,
 			);
 			path = Sources;
@@ -219,6 +222,7 @@
 			files = (
 				D03E3F872304C50E0049C28B /* LegacyWallpaperPicker.swift in Sources */,
 				D03E3F842304C50E0049C28B /* LegacyImagePicker.swift in Sources */,
+				096C16E62317412A0047887D /* LegacyICloudFilePicker.swift in Sources */,
 				D03E3F822304C50E0049C28B /* LegacyAttachmentMenu.swift in Sources */,
 				D03E3F852304C50E0049C28B /* LegacyImageProcessors.m in Sources */,
 				D03E3F802304C50E0049C28B /* LegacyMediaPickers.swift in Sources */,

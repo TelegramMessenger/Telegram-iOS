@@ -1,20 +1,6 @@
 import Foundation
 import UIKit
 import Display
-import TelegramPresentationData
-
-private func generateArrowImage(_ theme: PresentationTheme) -> UIImage? {
-    return generateImage(CGSize(width: 7.0, height: 13.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setStrokeColor(theme.list.disclosureArrowColor.cgColor)
-        context.setLineWidth(1.98)
-        context.setLineCap(.round)
-        context.setLineJoin(.round)
-        context.translateBy(x: 1.0, y: 1.0)
-        
-        let _ = try? drawSvgPath(context, path: "M0,0 L4.79819816,5.27801798 L4.79819816,5.27801798 C4.91262453,5.40388698 4.91262453,5.59611302 4.79819816,5.72198202 L0,11 S ")
-    })
-}
 
 public func generateItemListCheckIcon(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 12.0, height: 10.0), rotatedContext: { size, context in
@@ -30,19 +16,14 @@ public func generateItemListCheckIcon(color: UIColor) -> UIImage? {
 }
 
 public func generateItemListPlusIcon(_ color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 18.0, height: 18.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(color.cgColor)
-        context.setLineCap(.round)
-        let lineWidth: CGFloat = 2.0
-        context.fill(CGRect(x: floorToScreenPixels((18.0 - lineWidth) / 2.0), y: 0.0, width: lineWidth, height: 18.0))
-        context.fill(CGRect(x: 0.0, y: floorToScreenPixels((18.0 - lineWidth) / 2.0), width: 18.0, height: lineWidth))
-    })
+    return generateTintedImage(image: UIImage(bundleImageName: "Chat List/AddIcon"), color: color)
 }
 
 public struct PresentationResourcesItemList {
     public static func disclosureArrowImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.itemListDisclosureArrow.rawValue, generateArrowImage)
+        return theme.image(PresentationResourceKey.itemListDisclosureArrow.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: theme.list.disclosureArrowColor)
+        })
     }
     
     public static func checkIconImage(_ theme: PresentationTheme) -> UIImage? {
@@ -114,9 +95,9 @@ public struct PresentationResourcesItemList {
         })
     }
     
-    public static func addExceptionIcon(_ theme: PresentationTheme) -> UIImage? {
+    public static func addChannelIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListAddExceptionIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Item List/AddExceptionIcon"), color: theme.list.itemAccentColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/AddChannelIcon"), color: theme.list.itemAccentColor)
         })
     }
     

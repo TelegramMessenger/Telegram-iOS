@@ -96,10 +96,11 @@ public struct AccountPrivacySettings: Equatable {
     public let profilePhoto: SelectivePrivacySettings
     public let forwards: SelectivePrivacySettings
     public let phoneNumber: SelectivePrivacySettings
+    public let phoneDiscoveryEnabled: Bool
     
     public let accountRemovalTimeout: Int32
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, accountRemovalTimeout: Int32) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, accountRemovalTimeout: Int32) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -107,6 +108,7 @@ public struct AccountPrivacySettings: Equatable {
         self.profilePhoto = profilePhoto
         self.forwards = forwards
         self.phoneNumber = phoneNumber
+        self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
         self.accountRemovalTimeout = accountRemovalTimeout
     }
     
@@ -130,6 +132,9 @@ public struct AccountPrivacySettings: Equatable {
             return false
         }
         if lhs.phoneNumber != rhs.phoneNumber {
+            return false
+        }
+        if lhs.phoneDiscoveryEnabled != rhs.phoneDiscoveryEnabled {
             return false
         }
         if lhs.accountRemovalTimeout != rhs.accountRemovalTimeout {

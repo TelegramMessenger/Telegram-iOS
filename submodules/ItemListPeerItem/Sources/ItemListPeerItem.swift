@@ -35,9 +35,14 @@ public enum ItemListPeerItemText {
     case none
 }
 
+public enum ItemListPeerItemLabelFont {
+    case standard
+    case custom(UIFont)
+}
+
 public enum ItemListPeerItemLabel {
     case none
-    case text(String)
+    case text(String, ItemListPeerItemLabelFont)
     case disclosure(String)
     case badge(String)
 }
@@ -497,8 +502,15 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             switch item.label {
                 case .none:
                     break
-                case let .text(text):
-                    labelAttributedString = NSAttributedString(string: text, font: labelFont, textColor: item.theme.list.itemSecondaryTextColor)
+                case let .text(text, font):
+                    let selectedFont: UIFont
+                    switch font {
+                    case .standard:
+                        selectedFont = labelFont
+                    case let .custom(value):
+                        selectedFont = value
+                    }
+                    labelAttributedString = NSAttributedString(string: text, font: selectedFont, textColor: item.theme.list.itemSecondaryTextColor)
                     labelInset += 15.0
                 case let .disclosure(text):
                     if let currentLabelArrowNode = currentLabelArrowNode {
@@ -859,7 +871,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         if let labelArrowNode = self.labelArrowNode {
             if let image = labelArrowNode.image {
-                let labelArrowNodeFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - image.size.width, y: labelArrowNode.frame.minY), size: image.size)
+                let labelArrowNodeFrame = CGRect(origin: CGPoint(x: revealOffset + params.width - rightLabelInset - image.size.width + 8.0, y: labelArrowNode.frame.minY), size: image.size)
                 transition.updateFrame(node: labelArrowNode, frame: labelArrowNodeFrame)
                 rightLabelInset += 19.0
             }

@@ -143,7 +143,7 @@ public final class PrincipalThemeEssentialGraphics {
     public let incomingBubbleGradientImage: UIImage?
     public let outgoingBubbleGradientImage: UIImage?
     
-    init(mediaBox: MediaBox, presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, knockoutMode: Bool) {
+    init(mediaBox: MediaBox, presentationTheme: PresentationTheme, wallpaper initialWallpaper: TelegramWallpaper, preview: Bool = false, knockoutMode: Bool, gradientBubbles: Bool) {
         let theme = presentationTheme.chat
         var wallpaper = initialWallpaper
         
@@ -173,7 +173,7 @@ public final class PrincipalThemeEssentialGraphics {
                     }
                     
                     var outgoingGradientColors: (UIColor, UIColor)?
-                    if let baseColor = presentationTheme.baseColor {
+                    if gradientBubbles, let baseColor = presentationTheme.baseColor {
                         if presentationTheme.baseColor == .custom {
                             
                         } else {
@@ -216,7 +216,7 @@ public final class PrincipalThemeEssentialGraphics {
         let outgoingKnockout = self.outgoingBubbleGradientImage != nil
         
         let emptyImage = UIImage()
-        if false && preview {
+        if preview {
             self.chatMessageBackgroundIncomingMaskImage = messageBubbleImage(incoming: true, fillColor: UIColor.black, strokeColor: UIColor.clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
             self.chatMessageBackgroundIncomingImage = messageBubbleImage(incoming: true, fillColor: incoming.fill, strokeColor: incoming.stroke, neighbors: .none, theme: theme, wallpaper: wallpaper, knockout: incomingKnockout)
             self.chatMessageBackgroundOutgoingMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .none, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
@@ -240,17 +240,17 @@ public final class PrincipalThemeEssentialGraphics {
             self.chatMessageBackgroundIncomingMergedSideImage = emptyImage
             self.chatMessageBackgroundIncomingMergedSideHighlightedImage = emptyImage
             self.chatMessageBackgroundOutgoingHighlightedImage = emptyImage
-            self.chatMessageBackgroundOutgoingMergedTopMaskImage = emptyImage
-            self.chatMessageBackgroundOutgoingMergedTopImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedTopMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .top(side: false), theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
+            self.chatMessageBackgroundOutgoingMergedTopImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .top(side: false), theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedTopHighlightedImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopSideMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopSideImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedTopSideHighlightedImage = emptyImage
-            self.chatMessageBackgroundOutgoingMergedBottomMaskImage = emptyImage
-            self.chatMessageBackgroundOutgoingMergedBottomImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedBottomMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .white, neighbors: .bottom, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
+            self.chatMessageBackgroundOutgoingMergedBottomImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .bottom, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedBottomHighlightedImage = emptyImage
-            self.chatMessageBackgroundOutgoingMergedBothMaskImage = emptyImage
-            self.chatMessageBackgroundOutgoingMergedBothImage = emptyImage
+            self.chatMessageBackgroundOutgoingMergedBothMaskImage = messageBubbleImage(incoming: false, fillColor: .black, strokeColor: .clear, neighbors: .both, theme: theme, wallpaper: .color(0xffffff), knockout: true, mask: true)
+            self.chatMessageBackgroundOutgoingMergedBothImage = messageBubbleImage(incoming: false, fillColor: outgoing.fill, strokeColor: outgoing.stroke, neighbors: .both, theme: theme, wallpaper: wallpaper, knockout: outgoingKnockout)
             self.chatMessageBackgroundOutgoingMergedBothHighlightedImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideMaskImage = emptyImage
             self.chatMessageBackgroundOutgoingMergedSideImage = emptyImage
@@ -360,8 +360,8 @@ public final class PrincipalThemeEssentialGraphics {
                 context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
             })!.stretchableImage(withLeftCapWidth: Int(chatDateSize) / 2, topCapHeight: Int(chatDateSize) / 2)
             
-            self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: incoming.fill)!
-            self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocumentIncoming"), color: outgoing.fill)!
+            self.radialIndicatorFileIconIncoming = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: incoming.fill)!
+            self.radialIndicatorFileIconOutgoing = generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/RadialProgressIconDocument"), color: outgoing.fill)!
         }
     }
 }

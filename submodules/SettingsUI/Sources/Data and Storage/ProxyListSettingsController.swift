@@ -39,6 +39,7 @@ private final class ProxySettingsControllerArguments {
 private enum ProxySettingsControllerSection: Int32 {
     case enabled
     case servers
+    case share
     case calls
 }
 
@@ -72,8 +73,10 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
         switch self {
             case .enabled:
                 return ProxySettingsControllerSection.enabled.rawValue
-            case .serversHeader, .addServer, .server, .shareProxyList:
+            case .serversHeader, .addServer, .server:
                 return ProxySettingsControllerSection.servers.rawValue
+            case .shareProxyList:
+                return ProxySettingsControllerSection.share.rawValue
             case .useForCalls, .useForCallsInfo:
                 return ProxySettingsControllerSection.calls.rawValue
         }
@@ -344,7 +347,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
             if current.activeServer != server {
-                if let _ = current.servers.index(of: server) {
+                if let _ = current.servers.firstIndex(of: server) {
                     current.activeServer = server
                     current.enabled = true
                 }
@@ -356,7 +359,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
     }, removeServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
-            if let index = current.servers.index(of: server) {
+            if let index = current.servers.firstIndex(of: server) {
                 current.servers.remove(at: index)
                 if current.activeServer == server {
                     current.activeServer = nil
@@ -466,7 +469,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
 
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
-            if let index = current.servers.index(of: fromServer) {
+            if let index = current.servers.firstIndex(of: fromServer) {
                 current.servers.remove(at: index)
             }
             if let referenceServer = referenceServer {

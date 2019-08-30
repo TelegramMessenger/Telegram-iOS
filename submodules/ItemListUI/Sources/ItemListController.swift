@@ -25,6 +25,7 @@ public enum ItemListNavigationButtonStyle {
 public enum ItemListNavigationButtonContentIcon {
     case search
     case add
+    case action
 }
 
 public enum ItemListNavigationButtonContent: Equatable {
@@ -229,6 +230,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.isOpaqueWhenInOverlay = true
+        //self.isModalWhenInOverlay = true
         self.blocksBackgroundWhenInOverlay = true
         
         self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
@@ -294,7 +296,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                     }
                     strongSelf.navigationButtonActions = (left: controllerState.leftNavigationButton?.action, right: controllerState.rightNavigationButton?.action, secondaryRight: controllerState.secondaryRightNavigationButton?.action)
                     
-                    if strongSelf.leftNavigationButtonTitleAndStyle?.0 != controllerState.leftNavigationButton?.content || strongSelf.leftNavigationButtonTitleAndStyle?.1 != controllerState.leftNavigationButton?.style {
+                    let themeUpdated = strongSelf.theme !== controllerState.theme
+                    if strongSelf.leftNavigationButtonTitleAndStyle?.0 != controllerState.leftNavigationButton?.content || strongSelf.leftNavigationButtonTitleAndStyle?.1 != controllerState.leftNavigationButton?.style || themeUpdated {
                         if let leftNavigationButton = controllerState.leftNavigationButton {
                             let item: UIBarButtonItem
                             switch leftNavigationButton.content {
@@ -309,6 +312,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                                             image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
                                         case .add:
                                             image = PresentationResourcesRootController.navigationAddIcon(controllerState.theme)
+                                        case .action:
+                                            image = PresentationResourcesRootController.navigationShareIcon(controllerState.theme)
                                     }
                                     item = UIBarButtonItem(image: image, style: leftNavigationButton.style.barButtonItemStyle, target: strongSelf, action: #selector(strongSelf.leftNavigationButtonPressed))
                             }
@@ -342,7 +347,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                         }
                     }
                     
-                    if updateRightButtonItems {
+                    if updateRightButtonItems || themeUpdated {
                         strongSelf.rightNavigationButtonTitleAndStyle = rightNavigationButtonTitleAndStyle.map { ($0.0, $0.1) }
                         var items: [UIBarButtonItem] = []
                         var index = 0
@@ -364,6 +369,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                                                 image = PresentationResourcesRootController.navigationCompactSearchIcon(controllerState.theme)
                                             case .add:
                                                 image = PresentationResourcesRootController.navigationAddIcon(controllerState.theme)
+                                            case .action:
+                                                image = PresentationResourcesRootController.navigationShareIcon(controllerState.theme)
                                         }
                                         item = UIBarButtonItem(image: image, style: style.barButtonItemStyle, target: strongSelf, action: action)
                                 }
@@ -473,6 +480,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                     presentationArguments.completion?()
                     completion()
                 })
+                self.updateTransitionWhenPresentedAsModal?(1.0, .animated(duration: 0.5, curve: .spring))
             } else {
                 completion()
             }
@@ -501,6 +509,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         if !self.isDismissed {
             self.isDismissed = true
             (self.displayNode as! ItemListControllerNode<Entry>).animateOut(completion: completion)
+            self.updateTransitionWhenPresentedAsModal?(0.0, .animated(duration: 0.2, curve: .easeInOut))
         }
     }
     

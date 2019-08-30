@@ -264,7 +264,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 if (strongSelf->_selectionContext.allowGrouping)
                     [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-                strongSelf.sendPressed(nil, false, false);
+                strongSelf.sendPressed(nil, false, false, 0);
             }
         }];
         [_sendMediaItemView setHidden:true animated:false];
@@ -276,7 +276,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
             {
                 __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
                 if (strongSelf != nil && strongSelf.sendPressed != nil)
-                    strongSelf.sendPressed(nil, true, false);
+                    strongSelf.sendPressed(nil, true, false, 0);
             }];
             _sendFileItemView.requiresDivider = false;
             [_sendFileItemView setHidden:true animated:false];
@@ -774,14 +774,14 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         strongSelf->_galleryMixin = nil;
     };
     
-    mixin.completeWithItem = ^(TGMediaPickerGalleryItem *item, bool silentPosting)
+    mixin.completeWithItem = ^(TGMediaPickerGalleryItem *item, bool silentPosting, int32_t scheduleTime)
     {
         __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
         if (strongSelf != nil && strongSelf.sendPressed != nil)
         {
             if (strongSelf->_selectionContext.allowGrouping)
                 [[NSUserDefaults standardUserDefaults] setObject:@(!strongSelf->_selectionContext.grouping) forKey:@"TG_mediaGroupingDisabled_v0"];
-            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting);
+            strongSelf.sendPressed(item.asset, strongSelf.asFile, silentPosting, scheduleTime);
         }
     };
     
@@ -801,8 +801,8 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
     if ([cell isKindOfClass:[TGAttachmentAssetCell class]])
         thumbnailImage = cell.imageView.image;
     
-    TGMediaPickerModernGalleryMixin *mixin = [[TGMediaPickerModernGalleryMixin alloc] initWithContext:_context item:asset fetchResult:_fetchResult parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext hasCaptions:(_allowCaptions && !_forProfilePhoto) allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:_inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:self.asFile itemsLimit:TGAttachmentDisplayedAssetLimit recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting];
-    
+    TGMediaPickerModernGalleryMixin *mixin = [[TGMediaPickerModernGalleryMixin alloc] initWithContext:_context item:asset fetchResult:_fetchResult parentController:self.parentController thumbnailImage:thumbnailImage selectionContext:_selectionContext editingContext:_editingContext suggestionContext:self.suggestionContext hasCaptions:(_allowCaptions && !_forProfilePhoto) allowCaptionEntities:self.allowCaptionEntities hasTimer:self.hasTimer onlyCrop:self.onlyCrop inhibitDocumentCaptions:_inhibitDocumentCaptions inhibitMute:self.inhibitMute asFile:self.asFile itemsLimit:TGAttachmentDisplayedAssetLimit recipientName:self.recipientName hasSilentPosting:self.hasSilentPosting hasSchedule:self.hasSchedule];
+    mixin.presentScheduleController = self.presentScheduleController;
     __weak TGAttachmentCarouselItemView *weakSelf = self;
     mixin.thumbnailSignalForItem = ^SSignal *(id item)
     {

@@ -67,11 +67,11 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper) -> PrincipalThemeEssentialGraphics {
+    public static func principalGraphics(mediaBox: MediaBox, knockoutWallpaper: Bool, theme: PresentationTheme, wallpaper: TelegramWallpaper, gradientBubbles: Bool) -> PrincipalThemeEssentialGraphics {
         let hasWallpaper = !wallpaper.isEmpty
         let key: PresentationResourceKey = !hasWallpaper ? PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithoutWallpaper : PresentationResourceKey.chatPrincipalThemeEssentialGraphicsWithWallpaper
         return theme.object(key.rawValue, { theme in
-            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper)
+            return PrincipalThemeEssentialGraphics(mediaBox: mediaBox, presentationTheme: theme, wallpaper: wallpaper, preview: theme.preview, knockoutMode: knockoutWallpaper, gradientBubbles: gradientBubbles)
         }) as! PrincipalThemeEssentialGraphics
     }
     
@@ -715,13 +715,13 @@ public struct PresentationResourcesChat {
     
     public static func chatTitlePanelMuteImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatTitlePanelMuteImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionMuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/MuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
         })
     }
     
     public static func chatTitlePanelUnmuteImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatTitlePanelUnmuteImage.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/RevealActionUnmuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Title Panels/UnmuteIcon"), color: theme.chat.inputPanel.panelControlAccentColor)
         })
     }
     

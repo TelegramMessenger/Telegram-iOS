@@ -64,6 +64,7 @@ public enum PendingMessageFailureReason {
     case publicBan
     case mediaRestricted
     case slowmodeActive
+    case tooMuchScheduled
 }
 
 private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
@@ -75,6 +76,8 @@ private func reasonForError(_ error: String) -> PendingMessageFailureReason? {
         return .mediaRestricted
     } else if error.hasPrefix("SLOWMODE_WAIT") {
         return .slowmodeActive
+    } else if error.hasPrefix("SCHEDULE_TOO_MUCH") {
+        return .tooMuchScheduled
     } else {
         return nil
     }
@@ -667,7 +670,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, scheduleDate: nil), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, scheduleDate: scheduleTime), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))

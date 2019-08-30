@@ -138,7 +138,9 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
             if let file = galleryMedia as? TelegramMediaFile {
                 if let fileName = file.fileName {
                     let ext = (fileName as NSString).pathExtension.lowercased()
-                    if ext == "wav" || ext == "opus" {
+                    if ext == "tgios-theme" {
+                        return .theme(file)
+                    } else if ext == "wav" || ext == "opus" {
                         return .audio(file)
                     } else if ext == "json", let fileSize = file.size, fileSize < 1024 * 1024 {
                         if let path = context.account.postbox.mediaBox.completedResourcePath(file.resource), let _ = LOTComposition(filePath: path) {
@@ -156,6 +158,13 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                         return .gallery(gallery)
                     }
                     #endif
+                }
+                
+                if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
+                    let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                        navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                        }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
+                    return .gallery(gallery)
                 }
                 
                 if !file.isVideo {
@@ -358,7 +367,19 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     return nil
                 }))
             case let .theme(media):
-                let controller = ThemePreviewController(context: params.context, previewTheme: makeDefaultDayPresentationTheme(accentColor: nil, serviceBackgroundColor: .black, baseColor: nil, day: true, preview: false), media: .message(message: MessageReference(params.message), media: media))
+                params.dismissInput()
+                let path = params.context.account.postbox.mediaBox.completedResourcePath(media.resource)
+                var previewTheme: PresentationTheme?
+                if let path = path, let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe) {
+                    let startTime = CACurrentMediaTime()
+                    previewTheme = makePresentationTheme(data: data)
+                    print("time \(CACurrentMediaTime() - startTime)")
+                }
+                
+                guard let theme = previewTheme else {
+                    return false
+                }
+                let controller = ThemePreviewController(context: params.context, previewTheme: theme, source: .media(.message(message: MessageReference(params.message), media: media)))
                 params.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         }
     }
@@ -431,6 +452,22 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
                     
                     let controller = WallpaperGalleryController(context: context, source: source)
                     present(controller, nil)
+                }
+            })
+        }
+    }
+}
+
+func openChatTheme(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+    for media in message.media {
+        if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
+            let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
+            |> deliverOnMainQueue).start(next: { resolvedUrl in
+                if case let .theme(slug) = resolvedUrl, let files = content.files {
+                    if let file = files.filter({ $0.mimeType == "application/x-tgtheme-ios" }).first, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let theme = makePresentationTheme(data: data) {
+                        let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
+                        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }
                 }
             })
         }

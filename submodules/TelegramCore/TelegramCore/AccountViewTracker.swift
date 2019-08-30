@@ -76,12 +76,17 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
     |> take(1)
     |> mapToSignal { peer in
         if let inputPeer = apiInputPeer(peer) {
+            let isScheduledMessage = Namespaces.Message.allScheduled.contains(messageId.namespace)
             let messages: Signal<Api.messages.Messages, MTRpcError>
-            switch inputPeer {
-                case let .inputPeerChannel(channelId, accessHash):
-                    messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
-                default:
-                    messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+            if isScheduledMessage {
+                messages = account.network.request(Api.functions.messages.getScheduledMessages(peer: inputPeer, id: [messageId.id]))
+            } else {
+                switch inputPeer {
+                    case let .inputPeerChannel(channelId, accessHash):
+                        messages = account.network.request(Api.functions.channels.getMessages(channel: Api.InputChannel.inputChannel(channelId: channelId, accessHash: accessHash), id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+                    default:
+                        messages = account.network.request(Api.functions.messages.getMessages(id: [Api.InputMessage.inputMessageID(id: messageId.id)]))
+                }
             }
             return messages
             |> retryRequest
@@ -125,7 +130,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     }
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message) {
+                        if let storeMessage = StoreMessage(apiMessage: message, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
                             var webpage: TelegramMediaWebpage?
                             for media in storeMessage.media {
                                 if let media = media as? TelegramMediaWebpage {
@@ -617,11 +622,15 @@ public final class AccountViewTracker {
                                 return .complete()
                             }
                             var fetchSignal: Signal<Api.messages.Messages, MTRpcError>?
-                            if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
-                                fetchSignal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                            if let messageId = messageIds.first, messageId.namespace == Namespaces.Message.ScheduledCloud {
+                                if let inputPeer = apiInputPeer(peer) {
+                                    fetchSignal = account.network.request(Api.functions.messages.getScheduledMessages(peer: inputPeer, id: messageIds.map { $0.id }))
+                                }
+                            } else if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                                fetchSignal = account.network.request(Api.functions.messages.getMessages(id: messageIds.map { Api.InputMessage.inputMessageID(id: $0.id) }))
                             } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                                 if let inputChannel = apiInputChannel(peer) {
-                                    fetchSignal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map({ Api.InputMessage.inputMessageID(id: $0.id) })))
+                                    fetchSignal = account.network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.map { Api.InputMessage.inputMessageID(id: $0.id) }))
                                 }
                             }
                             guard let signal = fetchSignal else {
@@ -910,9 +919,9 @@ public final class AccountViewTracker {
         }
     }
     
-    public func scheduledMessagesViewForLocation(_ chatLocation: ChatLocation) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    public func scheduledMessagesViewForLocation(_ chatLocation: ChatLocation, additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
-            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: nil, namespaces: .just(Namespaces.Message.allScheduled), orderStatistics: [], additionalData: [])
+            let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: .upperBound, count: 200, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: [], tagMask: nil, namespaces: .just(Namespaces.Message.allScheduled), orderStatistics: [], additionalData: additionalData)
             return withState(signal, { [weak self] () -> Int32 in
                 if let strongSelf = self {
                     return OSAtomicIncrement32(&strongSelf.nextViewId)

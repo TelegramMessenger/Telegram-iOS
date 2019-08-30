@@ -5,6 +5,7 @@ import Postbox
 import Display
 import SwiftSignalKit
 import TelegramUIPreferences
+import TelegramPresentationData
 import AccountContext
 import OverlayStatusController
 import AlertUI
@@ -19,9 +20,9 @@ private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatContr
     if case .default = navigation {
         if let peerId = peerId {
             if peerId.namespace == Namespaces.Peer.CloudUser {
-                return .chat(textInputState: nil, messageId: nil)
+                return .chat(textInputState: nil, subject: nil)
             } else {
-                return .chat(textInputState: nil, messageId: nil)
+                return .chat(textInputState: nil, subject: nil)
             }
         } else {
             return .info
@@ -82,7 +83,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             present(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
         case let .channelMessage(peerId, messageId):
-            openPeer(peerId, .chat(textInputState: nil, messageId: messageId))
+            openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
             dismissInput()
             let controller = StickerPackPreviewController(context: context, stickerPack: .name(name), parentNavigationController: navigationController)
@@ -93,7 +94,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .join(link):
             dismissInput()
             present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId in
-                openPeer(peerId, .chat(textInputState: nil, messageId: nil))
+                openPeer(peerId, .chat(textInputState: nil, subject: nil))
             }), nil)
         case let .localization(identifier):
             dismissInput()
@@ -232,6 +233,60 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 controller?.dismiss()
                 let galleryController = WallpaperGalleryController(context: context, source: .wallpaper(wallpaper, options, color, intensity, nil))
                 present(galleryController, nil)
+            }, error: { [weak controller] error in
+                controller?.dismiss()
+            })
+            dismissInput()
+        case let .theme(slug):
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let signal = getTheme(account: context.account, slug: slug)
+            |> mapToSignal { themeInfo -> Signal<(Data, TelegramTheme), GetThemeError> in
+                return Signal<(Data, TelegramTheme), GetThemeError> { subscriber in
+                    let disposables = DisposableSet()
+                    let mediaBox = context.sharedContext.accountManager.mediaBox
+                    let resource = themeInfo.file?.resource
+                    
+                    if let resource = resource {
+                        disposables.add(fetchedMediaResource(mediaBox: mediaBox, reference: .standalone(resource: resource)).start())
+                        
+                        let maybeFetched = mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                        |> take(1)
+                        |> mapToSignal { maybeData -> Signal<Data?, NoError> in
+                            if maybeData.complete {
+                                let loadedData = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
+                                return .single(loadedData)
+                            } else {
+                                return mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                                |> map { next -> Data? in
+                                    return next.size == 0 ? nil : try? Data(contentsOf: URL(fileURLWithPath: next.path), options: [])
+                                }
+                            }
+                        }
+                   
+                        disposables.add(maybeFetched.start(next: { data in
+                            if let data = data {
+                                subscriber.putNext((data, themeInfo))
+                                subscriber.putCompletion()
+                            }
+                        }))
+                    } else {
+                        subscriber.putError(.generic)
+                    }
+                    
+                    return disposables
+                }
+            }
+            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            present(controller, nil)
+            
+            let _ = (signal
+            |> deliverOnMainQueue).start(next: { [weak controller] dataAndTheme in
+                controller?.dismiss()
+                
+                if let theme = makePresentationTheme(data: dataAndTheme.0) {
+                    let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
+                    present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }
             }, error: { [weak controller] error in
                 controller?.dismiss()
             })

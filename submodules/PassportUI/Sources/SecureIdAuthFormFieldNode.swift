@@ -1005,7 +1005,7 @@ final class SecureIdAuthFormFieldNode: ASDisplayNode {
         transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -(hasPrevious ? UIScreenPixel : 0.0)), size: CGSize(width: width, height: height + (hasPrevious ? UIScreenPixel : 0.0))))
         
         if let image = self.disclosureNode.image {
-            self.disclosureNode.frame = CGRect(origin: CGPoint(x: width - 15.0 - image.size.width, y: floor((height - image.size.height) / 2.0)), size: image.size)
+            self.disclosureNode.frame = CGRect(origin: CGPoint(x: width - 7.0 - image.size.width, y: floor((height - image.size.height) / 2.0)), size: image.size)
         }
         
         if let image = self.checkNode.image {

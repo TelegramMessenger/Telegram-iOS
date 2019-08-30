@@ -103,4 +103,5 @@ public protocol ItemCollectionItem: PostboxCoding {
 public enum ItemCollectionSearchQuery {
     case exact(ValueBoxKey)
     case matching([ValueBoxKey])
+    case any([ValueBoxKey])
 }

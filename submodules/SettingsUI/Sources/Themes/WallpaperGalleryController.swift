@@ -179,7 +179,7 @@ public class WallpaperGalleryController: ViewController {
         switch source {
             case let .list(wallpapers, central, type):
                 entries = wallpapers.map { .wallpaper($0, nil) }
-                centralEntryIndex = wallpapers.index(of: central)!
+                centralEntryIndex = wallpapers.firstIndex(of: central)!
                 
                 if case let .wallpapers(wallpaperOptions) = type, let options = wallpaperOptions {
                     self.initialOptions = options

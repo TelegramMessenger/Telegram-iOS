@@ -105,7 +105,7 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         
         let restrictionInfo: PeerAccessRestrictionInfo?
         if let restrictionReason = restrictionReason {
-            restrictionInfo = PeerAccessRestrictionInfo(reason: restrictionReason)
+            restrictionInfo = PeerAccessRestrictionInfo(apiReasons: restrictionReason)
         } else {
             restrictionInfo = nil
         }

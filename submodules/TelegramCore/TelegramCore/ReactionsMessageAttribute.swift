@@ -46,7 +46,7 @@ public final class ReactionsMessageAttribute: MessageAttribute {
         encoder.encodeObjectArray(self.reactions, forKey: "r")
     }
     
-    func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
+    /*func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
         case let .messageReactions(flags, results):
             let min = (flags & (1 << 0)) != 0
@@ -74,7 +74,7 @@ public final class ReactionsMessageAttribute: MessageAttribute {
             }
             return ReactionsMessageAttribute(reactions: reactions)
         }
-    }
+    }*/
 }
 
 public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
@@ -90,7 +90,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
     
     if let pending = pending {
         var reactions = current?.reactions ?? []
-        for value in pending.values {
+        if let value = pending.value {
             var found = false
             for i in 0 ..< reactions.count {
                 if reactions[i].value == value {
@@ -106,7 +106,7 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
             }
         }
         for i in (0 ..< reactions.count).reversed() {
-            if reactions[i].isSelected, !pending.values.contains(reactions[i].value) {
+            if reactions[i].isSelected, pending.value != reactions[i].value {
                 if reactions[i].count == 1 {
                     reactions.remove(at: i)
                 } else {
@@ -128,22 +128,26 @@ public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsM
 }
 
 public final class PendingReactionsMessageAttribute: MessageAttribute {
-    public let values: [String]
+    public let value: String?
     
-    init(values: [String]) {
-        self.values = values
+    init(value: String?) {
+        self.value = value
     }
     
     required public init(decoder: PostboxDecoder) {
-        self.values = decoder.decodeStringArrayForKey("v")
+        self.value = decoder.decodeOptionalStringForKey("v")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
-        encoder.encodeStringArray(self.values, forKey: "v")
+        if let value = self.value {
+            encoder.encodeString(value, forKey: "v")
+        } else {
+            encoder.encodeNil(forKey: "v")
+        }
     }
 }
 
-extension ReactionsMessageAttribute {
+/*extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
         case let .messageReactions(_, results):
@@ -155,4 +159,4 @@ extension ReactionsMessageAttribute {
             })
         }
     }
-}
+}*/

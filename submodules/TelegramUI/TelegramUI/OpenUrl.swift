@@ -199,10 +199,10 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                     navigationController?.pushViewController(infoController)
                                 }
                             })
-                        case let .chat(_, messageId):
+                        case let .chat(_, subject):
                             context.sharedContext.applicationBindings.dismissNativeController()
                             if let navigationController = navigationController {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), messageId: messageId))
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId), subject: subject))
                             }
                         case let .withBotStartPayload(payload):
                             context.sharedContext.applicationBindings.dismissNativeController()
@@ -536,6 +536,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     }
                     if let parameter = parameter {
                         convertedUrl = "https://t.me/bg/\(parameter)\(mode)"
+                    }
+                }
+            } else if parsedUrl.host == "addtheme" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var parameter: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "slug" {
+                                    parameter = value
+                                }
+                            }
+                        }
+                    }
+                    if let parameter = parameter {
+                        convertedUrl = "https://t.me/addtheme/\(parameter)"
                     }
                 }
             }

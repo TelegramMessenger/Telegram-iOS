@@ -787,12 +787,12 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
     }
     
     if requiresScroll {
-        textItem.frame = textItem.frame.offsetBy(dx: 0.0, dy: fabs(topInset))
+        textItem.frame = textItem.frame.offsetBy(dx: 0.0, dy: abs(topInset))
         for var item in additionalItems {
-            item.frame = item.frame.offsetBy(dx: 0.0, dy: fabs(topInset))
+            item.frame = item.frame.offsetBy(dx: 0.0, dy: abs(topInset))
         }
         
-        let scrollableItem = InstantPageScrollableTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth + horizontalInset * 2.0, height: height + fabs(topInset) + bottomInset), item: textItem, additionalItems: additionalItems, totalWidth: textWidth, horizontalInset: horizontalInset, rtl: textItem.containsRTL)
+        let scrollableItem = InstantPageScrollableTextItem(frame: CGRect(x: 0.0, y: 0.0, width: boundingWidth + horizontalInset * 2.0, height: height + abs(topInset) + bottomInset), item: textItem, additionalItems: additionalItems, totalWidth: textWidth, horizontalInset: horizontalInset, rtl: textItem.containsRTL)
         items.append(scrollableItem)
     } else {
         items.append(contentsOf: additionalItems)

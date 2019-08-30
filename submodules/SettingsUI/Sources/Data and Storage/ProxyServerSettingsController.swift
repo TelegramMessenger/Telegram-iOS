@@ -343,7 +343,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
                 let _ = (updateProxySettingsInteractively(accountManager: accountManager, { settings in
                     var settings = settings
                     if let currentSettings = currentSettings {
-                        if let index = settings.servers.index(of: currentSettings) {
+                        if let index = settings.servers.firstIndex(of: currentSettings) {
                             settings.servers[index] = proxyServerSettings
                             if settings.activeServer == currentSettings {
                                 settings.activeServer = proxyServerSettings
@@ -375,7 +375,6 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()
     }
-    
     shareImpl = { [weak controller] in
         let state = stateValue.with { $0 }
         guard let server = proxyServerSettings(with: state), let strongController = controller else {
@@ -383,6 +382,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         }
         
         let link = shareLink(for: server)
+        controller?.view.endEditing(true)
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             let controller = ShareProxyServerActionSheetController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, link: link)
             presentImpl?(controller, nil)

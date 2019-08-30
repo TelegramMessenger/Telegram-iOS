@@ -14,11 +14,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     var found = false
     var isFirst = true
     for controller in params.navigationController.viewControllers.reversed() {
-        if let controller = controller as? ChatControllerImpl, controller.chatLocation == params.chatLocation && controller.subject != .scheduledMessages {
+        if let controller = controller as? ChatControllerImpl, controller.chatLocation == params.chatLocation && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
             if let updateTextInputState = params.updateTextInputState {
                 controller.updateTextInputState(updateTextInputState)
             }
-            if let messageId = params.messageId {
+            if let subject = params.subject, case let .message(messageId) = subject {
                 let navigationController = params.navigationController
                 let animated = params.animated
                 controller.navigateToMessage(messageLocation: .id(messageId), animated: isFirst, completion: { [weak navigationController, weak controller] in
@@ -41,9 +41,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
                 controller.activateInput()
             }
             if let botStart = params.botStart {
-                controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
+                controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                     return state.updatedBotStartPayload(botStart.payload)
-                }
+                })
             }
             found = true
             break
@@ -56,12 +56,12 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
         if let chatController = params.chatController as? ChatControllerImpl {
             controller = chatController
             if let botStart = params.botStart {
-                controller.updateChatPresentationInterfaceState(interactive: false) { state -> ChatPresentationInterfaceState in
+                controller.updateChatPresentationInterfaceState(interactive: false, { state -> ChatPresentationInterfaceState in
                     return state.updatedBotStartPayload(botStart.payload)
-                }
+                })
             }
         } else {
-            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.messageId.flatMap({ .message($0) }), botStart: params.botStart)
+            controller = ChatControllerImpl(context: params.context, chatLocation: params.chatLocation, subject: params.subject, botStart: params.botStart)
         }
         controller.purposefulAction = params.purposefulAction
         let resolvedKeepStack: Bool

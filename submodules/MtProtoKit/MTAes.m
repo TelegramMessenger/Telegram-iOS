@@ -107,6 +107,9 @@ void MyAesIgeEncrypt(const void *inBytes, int length, void *outBytes, const void
 }
 
 void MyAesIgeDecrypt(const void *inBytes, int length, void *outBytes, const void *key, int keyLength, void *iv) {
+    assert(length % 16 == 0);
+    assert(length >= 0);
+    
     unsigned char aesIv[AES_BLOCK_SIZE];
     memcpy(aesIv, iv, AES_BLOCK_SIZE);
     unsigned char ccIv[AES_BLOCK_SIZE];

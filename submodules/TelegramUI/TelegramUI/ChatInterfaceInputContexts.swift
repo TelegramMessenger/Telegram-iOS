@@ -258,7 +258,8 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                         accessoryItems.append(.messageAutoremoveTimeout(peer.messageAutoremoveTimeout))
                     }
                 }
-                if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 {
+                
+                if chatPresentationInterfaceState.interfaceState.composeInputState.inputText.length == 0 && chatPresentationInterfaceState.interfaceState.forwardMessageIds == nil {
                     if chatPresentationInterfaceState.hasScheduledMessages {
                         accessoryItems.append(.scheduledMessages)
                     }

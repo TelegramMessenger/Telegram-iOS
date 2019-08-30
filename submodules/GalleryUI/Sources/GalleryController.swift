@@ -368,7 +368,7 @@ public class GalleryController: ViewController {
             switch source {
                 case .peerMessagesAtId:
                     if let tags = tagsForMessage(message!) {
-                        let namespaces: HistoryViewNamespaces
+                        let namespaces: MessageIdNamespaces
                         if Namespaces.Message.allScheduled.contains(message!.id.namespace) {
                             namespaces = .just(Namespaces.Message.allScheduled)
                         } else {
@@ -643,7 +643,7 @@ public class GalleryController: ViewController {
                                 UIPasteboard.general.string = mention
                             }))
                         }
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items:items), ActionSheetItemGroup(items: [
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
                                 actionSheet?.dismissAnimated()
                             })

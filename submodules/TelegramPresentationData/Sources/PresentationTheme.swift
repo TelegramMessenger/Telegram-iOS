@@ -140,12 +140,14 @@ public final class PresentationThemeRootController {
     public let tabBar: PresentationThemeRootTabBar
     public let navigationBar: PresentationThemeRootNavigationBar
     public let navigationSearchBar: PresentationThemeNavigationSearchBar
+    public let keyboardColor: PresentationThemeKeyboardColor
     
-    public init(statusBarStyle: PresentationThemeStatusBarStyle, tabBar: PresentationThemeRootTabBar, navigationBar: PresentationThemeRootNavigationBar, navigationSearchBar: PresentationThemeNavigationSearchBar) {
+    public init(statusBarStyle: PresentationThemeStatusBarStyle, tabBar: PresentationThemeRootTabBar, navigationBar: PresentationThemeRootNavigationBar, navigationSearchBar: PresentationThemeNavigationSearchBar, keyboardColor: PresentationThemeKeyboardColor) {
         self.statusBarStyle = statusBarStyle
         self.tabBar = tabBar
         self.navigationBar = navigationBar
         self.navigationSearchBar = navigationSearchBar
+        self.keyboardColor = keyboardColor
     }
 }
 
@@ -397,7 +399,6 @@ public final class PresentationThemeChatList {
     public let regularSearchBarColor: UIColor
     public let sectionHeaderFillColor: UIColor
     public let sectionHeaderTextColor: UIColor
-    public let searchBarKeyboardColor: PresentationThemeKeyboardColor
     public let verifiedIconFillColor: UIColor
     public let verifiedIconForegroundColor: UIColor
     public let secretIconColor: UIColor
@@ -405,7 +406,7 @@ public final class PresentationThemeChatList {
     public let unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors
     public let onlineDotColor: UIColor
     
-    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, failedFillColor: UIColor, failedForegroundColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, searchBarKeyboardColor: PresentationThemeKeyboardColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, onlineDotColor: UIColor) {
+    init(backgroundColor: UIColor, itemSeparatorColor: UIColor, itemBackgroundColor: UIColor, pinnedItemBackgroundColor: UIColor, itemHighlightedBackgroundColor: UIColor, itemSelectedBackgroundColor: UIColor, titleColor: UIColor, secretTitleColor: UIColor, dateTextColor: UIColor, authorNameColor: UIColor, messageTextColor: UIColor, messageDraftTextColor: UIColor, checkmarkColor: UIColor, pendingIndicatorColor: UIColor, failedFillColor: UIColor, failedForegroundColor: UIColor, muteIconColor: UIColor, unreadBadgeActiveBackgroundColor: UIColor, unreadBadgeActiveTextColor: UIColor, unreadBadgeInactiveBackgroundColor: UIColor, unreadBadgeInactiveTextColor: UIColor, pinnedBadgeColor: UIColor, pinnedSearchBarColor: UIColor, regularSearchBarColor: UIColor, sectionHeaderFillColor: UIColor, sectionHeaderTextColor: UIColor, verifiedIconFillColor: UIColor, verifiedIconForegroundColor: UIColor, secretIconColor: UIColor, pinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, unpinnedArchiveAvatarColor: PresentationThemeArchiveAvatarColors, onlineDotColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.itemSeparatorColor = itemSeparatorColor
         self.itemBackgroundColor = itemBackgroundColor
@@ -432,7 +433,6 @@ public final class PresentationThemeChatList {
         self.regularSearchBarColor = regularSearchBarColor
         self.sectionHeaderFillColor = sectionHeaderFillColor
         self.sectionHeaderTextColor = sectionHeaderTextColor
-        self.searchBarKeyboardColor = searchBarKeyboardColor
         self.verifiedIconFillColor = verifiedIconFillColor
         self.verifiedIconForegroundColor = verifiedIconForegroundColor
         self.secretIconColor = secretIconColor
@@ -541,8 +541,10 @@ public final class PresentationThemePartedColors {
     public let actionButtonsFillColor: PresentationThemeVariableColor
     public let actionButtonsStrokeColor: PresentationThemeVariableColor
     public let actionButtonsTextColor: PresentationThemeVariableColor
+    public let textSelectionColor: UIColor
+    public let textSelectionKnobColor: UIColor
     
-    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor) {
+    public init(bubble: PresentationThemeBubbleColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, linkTextColor: UIColor, linkHighlightColor: UIColor, scamColor: UIColor, textHighlightColor: UIColor, accentTextColor: UIColor, accentControlColor: UIColor, mediaActiveControlColor: UIColor, mediaInactiveControlColor: UIColor, pendingActivityColor: UIColor, fileTitleColor: UIColor, fileDescriptionColor: UIColor, fileDurationColor: UIColor, mediaPlaceholderColor: UIColor, polls: PresentationThemeChatBubblePolls, actionButtonsFillColor: PresentationThemeVariableColor, actionButtonsStrokeColor: PresentationThemeVariableColor, actionButtonsTextColor: PresentationThemeVariableColor, textSelectionColor: UIColor, textSelectionKnobColor: UIColor) {
         self.bubble = bubble
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
@@ -563,6 +565,8 @@ public final class PresentationThemePartedColors {
         self.actionButtonsFillColor = actionButtonsFillColor
         self.actionButtonsStrokeColor = actionButtonsStrokeColor
         self.actionButtonsTextColor = actionButtonsTextColor
+        self.textSelectionColor = textSelectionColor
+        self.textSelectionKnobColor = textSelectionKnobColor
     }
 }
 
@@ -715,10 +719,9 @@ public final class PresentationThemeChatInputPanel {
     public let primaryTextColor: UIColor
     public let secondaryTextColor: UIColor
     public let mediaRecordingDotColor: UIColor
-    public let keyboardColor: PresentationThemeKeyboardColor
     public let mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl
     
-    public init(panelBackgroundColor: UIColor, panelSeparatorColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, keyboardColor: PresentationThemeKeyboardColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
+    public init(panelBackgroundColor: UIColor, panelSeparatorColor: UIColor, panelControlAccentColor: UIColor, panelControlColor: UIColor, panelControlDisabledColor: UIColor, panelControlDestructiveColor: UIColor, inputBackgroundColor: UIColor, inputStrokeColor: UIColor, inputPlaceholderColor: UIColor, inputTextColor: UIColor, inputControlColor: UIColor, actionControlFillColor: UIColor, actionControlForegroundColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, mediaRecordingDotColor: UIColor, mediaRecordingControl: PresentationThemeChatInputPanelMediaRecordingControl) {
         self.panelBackgroundColor = panelBackgroundColor
         self.panelSeparatorColor = panelSeparatorColor
         self.panelControlAccentColor = panelControlAccentColor
@@ -735,7 +738,6 @@ public final class PresentationThemeChatInputPanel {
         self.primaryTextColor = primaryTextColor
         self.secondaryTextColor = secondaryTextColor
         self.mediaRecordingDotColor = mediaRecordingDotColor
-        self.keyboardColor = keyboardColor
         self.mediaRecordingControl = mediaRecordingControl
     }
 }
@@ -821,6 +823,10 @@ public final class PresentationThemeChat {
         self.inputMediaPanel = inputMediaPanel
         self.inputButtonPanel = inputButtonPanel
         self.historyNavigation = historyNavigation
+    }
+    
+    public func withUpdatedDefaultWallpaper(_ defaultWallpaper: TelegramWallpaper?) -> PresentationThemeChat {
+        return PresentationThemeChat(defaultWallpaper: defaultWallpaper ?? self.defaultWallpaper, message: self.message, serviceMessage: self.serviceMessage, inputPanel: self.inputPanel, inputMediaPanel: self.inputMediaPanel, inputButtonPanel: self.inputButtonPanel, historyNavigation: self.historyNavigation)
     }
 }
 
@@ -918,7 +924,7 @@ public enum PresentationThemeName: Equatable {
                     case .night:
                         return "Night"
                     case .nightAccent:
-                        return "Night"
+                        return "Tinted Night"
                 }
             case let .custom(name):
                 return name
@@ -929,6 +935,7 @@ public enum PresentationThemeName: Equatable {
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
     public let author: String?
+    public let referenceTheme: PresentationBuiltinThemeReference
     public let overallDarkAppearance: Bool
     public let baseColor: PresentationThemeBaseColor?
     public let intro: PresentationThemeIntro
@@ -944,9 +951,10 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, author: String?, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, author: String?, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
         self.author = author
+        self.referenceTheme = referenceTheme
         self.overallDarkAppearance = overallDarkAppearance
         self.baseColor = baseColor
         self.intro = intro
@@ -971,5 +979,22 @@ public final class PresentationTheme: Equatable {
     
     public static func ==(lhs: PresentationTheme, rhs: PresentationTheme) -> Bool {
         return lhs === rhs
+    }
+    
+    public func withUpdated(name: String?, author: String?, defaultWallpaper: TelegramWallpaper?) -> PresentationTheme {
+        var defaultWallpaper = defaultWallpaper
+        if let wallpaper = defaultWallpaper {
+            switch wallpaper {
+                case .image:
+                    defaultWallpaper = nil
+                case let .file(file):
+                    if file.isPattern {
+                        defaultWallpaper = nil
+                    }
+                default:
+                    break
+            }
+        }
+        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), author: author ?? self.author, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, baseColor: nil, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdatedDefaultWallpaper(defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
     }
 }

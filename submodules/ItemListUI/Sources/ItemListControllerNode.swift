@@ -523,13 +523,11 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
                     }
                     if updatedFocusItemTag {
                         if let focusItemTag = focusItemTag {
-                            var applied = false
                             strongSelf.listNode.forEachItemNode { itemNode in
                                 if let itemNode = itemNode as? ItemListItemNode {
                                     if let itemTag = itemNode.tag {
                                         if itemTag.isEqual(to: focusItemTag) {
                                             if let focusableNode = itemNode as? ItemListItemFocusableNode {
-                                                applied = true
                                                 focusableNode.focus()
                                             }
                                         }

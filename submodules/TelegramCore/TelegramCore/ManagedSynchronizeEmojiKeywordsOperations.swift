@@ -151,7 +151,7 @@ private func synchronizeEmojiKeywords(postbox: Postbox, transaction: Transaction
                         let info = EmojiKeywordCollectionInfo(languageCode: langCode, inputLanguageCode: operation.inputLanguageCode, version: version, timestamp: Int32(CFAbsoluteTimeGetCurrent()))
                         return postbox.transaction { transaction -> Void in
                             var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! EmojiKeywordCollectionInfo }
-                            if let index = updatedInfos.index(where: { $0.id == info.id }) {
+                            if let index = updatedInfos.firstIndex(where: { $0.id == info.id }) {
                                 updatedInfos.remove(at: index)
                             }
                             updatedInfos.append(info)
@@ -218,7 +218,7 @@ private func synchronizeEmojiKeywords(postbox: Postbox, transaction: Transaction
                     let info = EmojiKeywordCollectionInfo(languageCode: langCode, inputLanguageCode: operation.inputLanguageCode, version: version, timestamp: Int32(CFAbsoluteTimeGetCurrent()))
                     return postbox.transaction { transaction -> Void in
                         var updatedInfos = transaction.getItemCollectionsInfos(namespace: info.id.namespace).map { $0.1 as! EmojiKeywordCollectionInfo }
-                        if let index = updatedInfos.index(where: { $0.id == info.id }) {
+                        if let index = updatedInfos.firstIndex(where: { $0.id == info.id }) {
                             updatedInfos.remove(at: index)
                         }
                         updatedInfos.append(info)

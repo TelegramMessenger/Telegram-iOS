@@ -9,7 +9,7 @@ import TelegramPresentationData
 import AnimationUI
 
 private let deletedIcon = UIImage(bundleImageName: "Avatar/DeletedIcon")?.precomposed()
-private let savedMessagesIcon = UIImage(bundleImageName: "Avatar/SavedMessagesIcon")?.precomposed()
+private let savedMessagesIcon = generateTintedImage(image: UIImage(bundleImageName: "Avatar/SavedMessagesIcon"), color: .white)
 private let archivedChatsIcon = UIImage(bundleImageName: "Avatar/ArchiveAvatarIcon")?.precomposed()
 
 public enum AvatarNodeClipStyle {
@@ -300,7 +300,7 @@ public final class AvatarNode: ASDisplayNode {
                     representation = nil
                     icon = .deletedIcon
             }
-        } else if peer?.restrictionText == nil {
+        } else if peer?.restrictionText(platform: "ios") == nil {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? PeerId(namespace: 0, id: 0), peer?.displayLetters ?? [], representation)
@@ -344,6 +344,9 @@ public final class AvatarNode: ASDisplayNode {
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters
                 self.setNeedsDisplay()
+                if synchronousLoad {
+                    self.recursivelyEnsureDisplaySynchronously(true)
+                }
             }
         }
     }

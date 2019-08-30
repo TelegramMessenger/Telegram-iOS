@@ -20,7 +20,7 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
         let lineWidth: CGFloat
         if selected {
             var accentColor = theme.list.itemAccentColor
-            if accentColor.rgb == UIColor.white.rgb {
+            if accentColor.rgb == 0xffffff {
                 accentColor = UIColor(rgb: 0x999999)
             }
             context.setStrokeColor(accentColor.cgColor)

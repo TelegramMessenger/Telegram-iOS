@@ -26,13 +26,89 @@ public struct WallpaperPresentationOptions: OptionSet {
     public static let blur = WallpaperPresentationOptions(rawValue: 1 << 1)
 }
 
+public struct PresentationLocalTheme: PostboxCoding, Equatable {
+    public let title: String
+    public let resource: LocalFileMediaResource
+    
+    public init(title: String, resource: LocalFileMediaResource) {
+        self.title = title
+        self.resource = resource
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.title = decoder.decodeStringForKey("title", orElse: "")
+        self.resource = decoder.decodeObjectForKey("resource", decoder: { LocalFileMediaResource(decoder: $0) }) as! LocalFileMediaResource
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeString(self.title, forKey: "title")
+        encoder.encodeObject(self.resource, forKey: "resource")
+    }
+    
+    public static func ==(lhs: PresentationLocalTheme, rhs: PresentationLocalTheme) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if !lhs.resource.isEqual(to: rhs.resource) {
+            return false
+        }
+        return true
+    }
+}
+
+public struct PresentationCloudTheme: PostboxCoding, Equatable {
+    public let theme: TelegramTheme
+    public let resolvedWallpaper: TelegramWallpaper?
+    
+    public init(theme: TelegramTheme, resolvedWallpaper: TelegramWallpaper?) {
+        self.theme = theme
+        self.resolvedWallpaper = resolvedWallpaper
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.theme = decoder.decodeObjectForKey("theme", decoder: { TelegramTheme(decoder: $0) }) as! TelegramTheme
+        self.resolvedWallpaper = decoder.decodeObjectForKey("wallpaper", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(self.theme, forKey: "theme")
+        if let resolvedWallpaper = self.resolvedWallpaper {
+            encoder.encodeObject(resolvedWallpaper, forKey: "wallpaper")
+        }
+    }
+    
+    public static func ==(lhs: PresentationCloudTheme, rhs: PresentationCloudTheme) -> Bool {
+        if lhs.theme != rhs.theme {
+            return false
+        }
+        if lhs.resolvedWallpaper != rhs.resolvedWallpaper {
+            return false
+        }
+        return true
+    }
+}
+
 public enum PresentationThemeReference: PostboxCoding, Equatable {
     case builtin(PresentationBuiltinThemeReference)
+    case local(PresentationLocalTheme)
+    case cloud(PresentationCloudTheme)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
             case 0:
                 self = .builtin(PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("t", orElse: 0))!)
+            case 1:
+                if let localTheme = decoder.decodeObjectForKey("localTheme", decoder: { PresentationLocalTheme(decoder: $0) }) as? PresentationLocalTheme {
+                    self = .local(localTheme)
+                } else {
+                    self = .builtin(.dayClassic)
+                }
+            case 2:
+                if let cloudTheme = decoder.decodeObjectForKey("cloudTheme", decoder: { PresentationCloudTheme(decoder: $0) }) as? PresentationCloudTheme {
+                    self = .cloud(cloudTheme)
+                } else {
+                    self = .builtin(.dayClassic)
+                }
             default:
                 assertionFailure()
                 self = .builtin(.dayClassic)
@@ -44,6 +120,12 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
             case let .builtin(reference):
                 encoder.encodeInt32(0, forKey: "v")
                 encoder.encodeInt32(reference.rawValue, forKey: "t")
+            case let .local(theme):
+                encoder.encodeInt32(1, forKey: "v")
+                encoder.encodeObject(theme, forKey: "localTheme")
+            case let .cloud(theme):
+                encoder.encodeInt32(2, forKey: "v")
+                encoder.encodeObject(theme, forKey: "cloudTheme")
         }
     }
     
@@ -55,16 +137,45 @@ public enum PresentationThemeReference: PostboxCoding, Equatable {
                 } else {
                     return false
                 }
+            case let .local(lhsTheme):
+                if case let .local(rhsTheme) = rhs, lhsTheme == rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
+            case let .cloud(lhsTheme):
+                if case let .cloud(rhsTheme) = rhs, lhsTheme == rhsTheme {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
     public var index: Int64 {
         let namespace: Int32
         let id: Int32
+        
+        func themeId(for id: Int64) -> Int32 {
+            var acc: UInt32 = 0
+            let low = UInt32(UInt64(bitPattern: id) & (0xffffffff as UInt64))
+            let high = UInt32((UInt64(bitPattern: id) >> 32) & (0xffffffff as UInt64))
+            acc = (acc &* 20261) &+ high
+            acc = (acc &* 20261) &+ low
+            
+            return Int32(bitPattern: acc & UInt32(0x7FFFFFFF))
+        }
+        
         switch self {
             case let .builtin(reference):
                 namespace = 0
                 id = reference.rawValue
+            case let .local(theme):
+                namespace = 1
+                id = themeId(for: theme.resource.fileId)
+            case let .cloud(theme):
+                namespace = 2
+                id = themeId(for: theme.theme.id)
         }
         
         return (Int64(namespace) << 32) | Int64(bitPattern: UInt64(UInt32(bitPattern: id)))
@@ -302,6 +413,19 @@ public struct PresentationThemeSettings: PreferencesEntry {
         for (_, chatWallpaper) in self.themeSpecificChatWallpapers {
             resources.append(contentsOf: wallpaperResources(chatWallpaper))
         }
+        switch self.theme {
+            case .builtin:
+                break
+            case let .local(theme):
+                resources.append(theme.resource.id)
+            case let .cloud(theme):
+                if let file = theme.theme.file {
+                    resources.append(file.resource.id)
+                }
+                if let chatWallpaper = theme.resolvedWallpaper {
+                    resources.append(contentsOf: wallpaperResources(chatWallpaper))
+                }
+        }
         return resources
     }
     
@@ -322,7 +446,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     
     public init(decoder: PostboxDecoder) {
         self.chatWallpaper = (decoder.decodeObjectForKey("w", decoder: { TelegramWallpaper(decoder: $0) }) as? TelegramWallpaper) ?? .builtin(WallpaperSettings())
-        self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as! PresentationThemeReference
+        self.theme = decoder.decodeObjectForKey("t", decoder: { PresentationThemeReference(decoder: $0) }) as? PresentationThemeReference ?? .builtin(.dayClassic)
 
         self.themeSpecificChatWallpapers = decoder.decodeObjectDictionaryForKey("themeSpecificChatWallpapers", keyDecoder: { decoder in
             return decoder.decodeInt64ForKey("k", orElse: 0)

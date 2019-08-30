@@ -1059,7 +1059,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if self.stackFromBottom {
                     topOffset = self.visibleSize.height
                 } else {
-                    topOffset = 0.0
+                    topOffset = self.insets.top
                 }
             }
         }
@@ -1155,52 +1155,51 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private func updateScroller(transition: ContainedViewLayoutTransition) {
         self.updateOverlayHighlight(transition: transition)
         
-        if self.itemNodes.count == 0 {
-            return
-        }
-        
         var topItemFound: Bool = false
         var bottomItemFound: Bool = false
         var topItemEdge: CGFloat = 0.0
         var bottomItemEdge: CGFloat = 0.0
+        var completeHeight: CGFloat = 0.0
         
-        for i in 0 ..< self.itemNodes.count {
-            if let index = self.itemNodes[i].index {
-                if index == 0 {
-                    topItemFound = true
-                    topItemEdge = self.itemNodes[0].apparentFrame.origin.y
-                    break
+        if !self.itemNodes.isEmpty {
+            for i in 0 ..< self.itemNodes.count {
+                if let index = self.itemNodes[i].index {
+                    if index == 0 {
+                        topItemFound = true
+                        topItemEdge = self.itemNodes[0].apparentFrame.origin.y
+                        break
+                    }
                 }
             }
-        }
-        
-        var effectiveInsets = self.insets
-        if topItemFound && !self.stackFromBottomInsetItemFactor.isZero {
-            let additionalInverseTopInset = self.calculateAdditionalTopInverseInset()
-            effectiveInsets.top = max(effectiveInsets.top, self.visibleSize.height - additionalInverseTopInset)
-        }
-        
-        var completeHeight = effectiveInsets.top + effectiveInsets.bottom
-        
-        if let index = self.itemNodes[self.itemNodes.count - 1].index, index == self.items.count - 1 {
-            bottomItemFound = true
-            bottomItemEdge = self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY
-        }
-        
-        topItemEdge -= effectiveInsets.top
-        bottomItemEdge += effectiveInsets.bottom
-        
-        if topItemFound && bottomItemFound {
-            for itemNode in self.itemNodes {
-                completeHeight += itemNode.apparentBounds.height
+            
+            var effectiveInsets = self.insets
+            if topItemFound && !self.stackFromBottomInsetItemFactor.isZero {
+                let additionalInverseTopInset = self.calculateAdditionalTopInverseInset()
+                effectiveInsets.top = max(effectiveInsets.top, self.visibleSize.height - additionalInverseTopInset)
             }
             
-            if self.stackFromBottom {
-                let updatedCompleteHeight = max(completeHeight, self.visibleSize.height)
-                let deltaCompleteHeight = updatedCompleteHeight - completeHeight
-                topItemEdge -= deltaCompleteHeight
-                bottomItemEdge -= deltaCompleteHeight
-                completeHeight = updatedCompleteHeight
+            completeHeight = effectiveInsets.top + effectiveInsets.bottom
+            
+            if let index = self.itemNodes[self.itemNodes.count - 1].index, index == self.items.count - 1 {
+                bottomItemFound = true
+                bottomItemEdge = self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY
+            }
+            
+            topItemEdge -= effectiveInsets.top
+            bottomItemEdge += effectiveInsets.bottom
+            
+            if topItemFound && bottomItemFound {
+                for itemNode in self.itemNodes {
+                    completeHeight += itemNode.apparentBounds.height
+                }
+                
+                if self.stackFromBottom {
+                    let updatedCompleteHeight = max(completeHeight, self.visibleSize.height)
+                    let deltaCompleteHeight = updatedCompleteHeight - completeHeight
+                    topItemEdge -= deltaCompleteHeight
+                    bottomItemEdge -= deltaCompleteHeight
+                    completeHeight = updatedCompleteHeight
+                }
             }
         }
         
@@ -2015,7 +2014,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         lowestHeaderNode = self.verticalScrollIndicator
         var lowestHeaderNodeIndex: Int?
         for (_, headerNode) in self.itemHeaderNodes {
-            if let index = self.view.subviews.index(of: headerNode.view) {
+            if let index = self.view.subviews.firstIndex(of: headerNode.view) {
                 if lowestHeaderNodeIndex == nil || index < lowestHeaderNodeIndex! {
                     lowestHeaderNodeIndex = index
                     lowestHeaderNode = headerNode

@@ -178,7 +178,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 }
                 self.imageNode.setSignal(chatAvatarGalleryPhoto(account: self.context.account, representations: representations), dispatchOnDisplayLink: false)
                 self.zoomableContent = (largestSize.dimensions, self.imageNode)
-                if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
+                if let largestIndex = representations.firstIndex(where: { $0.representation == largestSize }) {
                     self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                 }
                 
@@ -192,7 +192,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                                 strongSelf.statusNode.isHidden = false
                                 strongSelf.statusNodeContainer.isUserInteractionEnabled = true
                                 strongSelf.statusNode.transitionToState(.download(.white), completion: {})
-                            case let .Fetching(isActive, progress):
+                            case let .Fetching(_, progress):
                                 strongSelf.statusNode.isHidden = false
                                 strongSelf.statusNodeContainer.isUserInteractionEnabled = true
                                 let adjustedProgress = max(progress, 0.027)
@@ -345,7 +345,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                             representations = imageRepresentations
                     }
                     
-                    if let largestIndex = representations.index(where: { $0.representation == largestSize }) {
+                    if let largestIndex = representations.firstIndex(where: { $0.representation == largestSize }) {
                         self.fetchDisposable.set(fetchedMediaResource(mediaBox: self.context.account.postbox.mediaBox, reference: representations[largestIndex].reference).start())
                     }
                 default:

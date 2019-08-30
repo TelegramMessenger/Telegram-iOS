@@ -20,7 +20,7 @@ public struct LegacyAttachmentMenuMediaEditing: OptionSet {
     public static let imageOrVideo = LegacyAttachmentMenuMediaEditing(rawValue: 1 << 0)
 }
 
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -72,11 +72,17 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
         }
         if peer.id != context.account.peerId {
             if peer is TelegramUser {
-                carouselItem.hasTimer = true
+                carouselItem.hasTimer = hasSchedule
             }
             carouselItem.hasSilentPosting = !isSecretChat
         }
-        carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles, silentPosting in
+        carouselItem.hasSchedule = hasSchedule
+        carouselItem.presentScheduleController = { done in
+            presentSchedulePicker { time in
+                done?(time)
+            }
+        }
+        carouselItem.sendPressed = { [weak controller, weak carouselItem] currentItem, asFiles, silentPosting, scheduleTime in
             if let controller = controller, let carouselItem = carouselItem {
                 let intent: TGMediaAssetsControllerIntent = asFiles ? TGMediaAssetsControllerSendFileIntent : TGMediaAssetsControllerSendMediaIntent
                 let signals = TGMediaAssetsController.resultSignals(for: carouselItem.selectionContext, editingContext: carouselItem.editingContext, intent: intent, currentItem: currentItem, storeAssets: true, useMediaCache: false, descriptionGenerator: legacyAssetPickerItemGenerator(), saveEditedPhotos: saveEditedPhotos)
@@ -84,7 +90,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
                     presentCantSendMultipleFiles()
                 } else {
                     controller.dismiss(animated: true)
-                    sendMessagesWithSignals(signals, silentPosting)
+                    sendMessagesWithSignals(signals, silentPosting, scheduleTime)
                 }
             }
         };

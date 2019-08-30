@@ -8,6 +8,7 @@ static_library(
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

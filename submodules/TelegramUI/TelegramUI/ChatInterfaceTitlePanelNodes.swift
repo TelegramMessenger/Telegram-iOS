@@ -7,14 +7,14 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     if case .overlay = chatPresentationInterfaceState.mode {
         return nil
     }
-    if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText != nil {
+    if chatPresentationInterfaceState.renderedPeer?.peer?.restrictionText(platform: "ios") != nil {
         return nil
     }
     if chatPresentationInterfaceState.search != nil {
         return nil
     }
     var selectedContext: ChatTitlePanelContext?
-    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty {
+    if !chatPresentationInterfaceState.titlePanelContexts.isEmpty && !chatPresentationInterfaceState.isScheduledMessages {
         loop: for context in chatPresentationInterfaceState.titlePanelContexts.reversed() {
             switch context {
                 case .pinnedMessage:
