@@ -16,6 +16,7 @@ import StickerPackPreviewUI
 import PeerAvatarGalleryUI
 import PeerInfoUI
 import SettingsUI
+import AlertUI
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -475,6 +476,9 @@ func openChatTheme(context: AccountContext, message: Message, present: @escaping
                         let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
                         present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
+                } else {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    present(textAlertController(context: context, title: nil, text: presentationData.strings.Theme_Unsupported, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 }
             })
         }

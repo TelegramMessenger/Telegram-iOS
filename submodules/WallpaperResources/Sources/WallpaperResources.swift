@@ -728,11 +728,12 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
 }
 
 public func themeImage(account: Account, accountManager: AccountManager, fileReference: FileMediaReference, synchronousLoad: Bool = false) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+    let isSupportedTheme = fileReference.media.mimeType == "application/x-tgtheme-ios"
     let maybeFetched = accountManager.mediaBox.resourceData(fileReference.media.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: synchronousLoad)
     let data = maybeFetched
     |> take(1)
     |> mapToSignal { maybeData -> Signal<(Data?, Data?), NoError> in
-        if maybeData.complete {
+        if maybeData.complete && isSupportedTheme {
             let loadedData: Data? = try? Data(contentsOf: URL(fileURLWithPath: maybeData.path), options: [])
             return .single((loadedData, nil))
         } else {
@@ -769,25 +770,30 @@ public func themeImage(account: Account, accountManager: AccountManager, fileRef
             }
             
             let reference = fileReference.resourceReference(fileReference.media.resource)
-            let fullSizeData = Signal<Data?, NoError> { subscriber in
-                let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
-                let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
-                    |> map { data -> Data? in
-                        return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
-                    }).start(next: { next in
-                        if let data = next {
-                            accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
-                        }
-                        subscriber.putNext(next)
-                    }, error: { error in
-                        subscriber.putError(error)
-                    }, completed: {
-                        subscriber.putCompletion()
-                    })
-                return ActionDisposable {
-                    fetch.dispose()
-                    disposable.dispose()
+            let fullSizeData: Signal<Data?, NoError>
+            if isSupportedTheme {
+                fullSizeData = Signal { subscriber in
+                    let fetch = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                    let disposable = (account.postbox.mediaBox.resourceData(reference.resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
+                        |> map { data -> Data? in
+                            return data.complete ? try? Data(contentsOf: URL(fileURLWithPath: data.path)) : nil
+                        }).start(next: { next in
+                            if let data = next {
+                                accountManager.mediaBox.storeResourceData(reference.resource.id, data: data)
+                            }
+                            subscriber.putNext(next)
+                        }, error: { error in
+                            subscriber.putError(error)
+                        }, completed: {
+                            subscriber.putCompletion()
+                        })
+                    return ActionDisposable {
+                        fetch.dispose()
+                        disposable.dispose()
+                    }
                 }
+            } else {
+                 fullSizeData = .single(nil)
             }
             
             return thumbnailData |> mapToSignal { thumbnailData in
