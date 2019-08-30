@@ -31,6 +31,7 @@
 		094735192277483C00EA2312 /* anim_infotip.json in Resources */ = {isa = PBXBuildFile; fileRef = 094735182277483B00EA2312 /* anim_infotip.json */; };
 		09510B1322F96E5B0078CAB7 /* ChatScheduleTimeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09510B1222F96E5B0078CAB7 /* ChatScheduleTimeController.swift */; };
 		09510B1522F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09510B1422F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift */; };
+		095214EF2318D4D3008CDD87 /* ThemeUpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 095214EE2318D4D3008CDD87 /* ThemeUpdateManager.swift */; };
 		0962E67921B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0962E67821B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift */; };
 		09749BC521F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09749BC421F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift */; };
 		09874E4F21078FA100E190B8 /* Generic.html in Resources */ = {isa = PBXBuildFile; fileRef = 0979788321065F8C0077D77F /* Generic.html */; };
@@ -596,6 +597,7 @@
 		094735182277483B00EA2312 /* anim_infotip.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = anim_infotip.json; sourceTree = "<group>"; };
 		09510B1222F96E5B0078CAB7 /* ChatScheduleTimeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScheduleTimeController.swift; sourceTree = "<group>"; };
 		09510B1422F96E6C0078CAB7 /* ChatScheduleTimeControllerNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatScheduleTimeControllerNode.swift; sourceTree = "<group>"; };
+		095214EE2318D4D3008CDD87 /* ThemeUpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeUpdateManager.swift; sourceTree = "<group>"; };
 		0962E67821B67A9800245FD9 /* ChatMessageAnimatedStickerItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageAnimatedStickerItemNode.swift; sourceTree = "<group>"; };
 		09749BC421F0E024008FDDE9 /* StickersChatInputContextPanelItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickersChatInputContextPanelItem.swift; sourceTree = "<group>"; };
 		0979788021065F8B0077D77F /* VimeoUserScript.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = VimeoUserScript.js; sourceTree = "<group>"; };
@@ -2540,6 +2542,7 @@
 				D0F3A8AA1E82D83E00B4C64C /* TelegramAccountAuxiliaryMethods.swift */,
 				D01DBA9A209CC6AD00C64E64 /* ChatLinkPreview.swift */,
 				090B48C72200BCA8005083FA /* WallpaperUploadManager.swift */,
+				095214EE2318D4D3008CDD87 /* ThemeUpdateManager.swift */,
 				09D96898221DE92600B1458A /* ID3ArtworkReader.swift */,
 				D099E21F229405BB00561B75 /* Weak.swift */,
 			);
@@ -3053,6 +3056,7 @@
 				D0EC6DEC1EB9F58900EBF1C3 /* ChatToastAlertPanelNode.swift in Sources */,
 				D0EC6DED1EB9F58900EBF1C3 /* ChatHistoryNavigationButtonNode.swift in Sources */,
 				D0EC6DF51EB9F58900EBF1C3 /* PeerMediaCollectionController.swift in Sources */,
+				095214EF2318D4D3008CDD87 /* ThemeUpdateManager.swift in Sources */,
 				D0EC6DF61EB9F58900EBF1C3 /* PeerMediaCollectionControllerNode.swift in Sources */,
 				D0EC6DF81EB9F58900EBF1C3 /* PeerMediaCollectionInterfaceState.swift in Sources */,
 				D0EC6DF91EB9F58900EBF1C3 /* PeerMediaCollectionInterfaceStateButtons.swift in Sources */,

@@ -463,8 +463,15 @@ func openChatTheme(context: AccountContext, message: Message, present: @escaping
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
             |> deliverOnMainQueue).start(next: { resolvedUrl in
-                if case let .theme(slug) = resolvedUrl, let files = content.files {
-                    if let file = files.filter({ $0.mimeType == "application/x-tgtheme-ios" }).first, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let theme = makePresentationTheme(data: data) {
+                var file: TelegramMediaFile?
+                let mimeType = "application/x-tgtheme-ios"
+                if let contentFiles = content.files, let filteredFile = contentFiles.filter({ $0.mimeType == mimeType }).first {
+                    file = filteredFile
+                } else if let contentFile = content.file, contentFile.mimeType == mimeType {
+                    file = contentFile
+                }
+                if case let .theme(slug) = resolvedUrl, let file = file {
+                    if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let theme = makePresentationTheme(data: data) {
                         let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
                         present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }

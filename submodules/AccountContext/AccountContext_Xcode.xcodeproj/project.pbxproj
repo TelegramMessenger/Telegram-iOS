@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		095214F12318D4F5008CDD87 /* ThemeUpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 095214F02318D4F5008CDD87 /* ThemeUpdateManager.swift */; };
 		D03E4228230565790049C28B /* ChatListController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4227230565790049C28B /* ChatListController.swift */; };
 		D03E422A230567900049C28B /* ContactMultiselectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E4229230567900049C28B /* ContactMultiselectionController.swift */; };
 		D03E487C230770000049C28B /* PeerSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E487B230770000049C28B /* PeerSelectionController.swift */; };
@@ -49,6 +50,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		095214F02318D4F5008CDD87 /* ThemeUpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeUpdateManager.swift; sourceTree = "<group>"; };
 		D03E4227230565790049C28B /* ChatListController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatListController.swift; sourceTree = "<group>"; };
 		D03E4229230567900049C28B /* ContactMultiselectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactMultiselectionController.swift; sourceTree = "<group>"; };
 		D03E487B230770000049C28B /* PeerSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerSelectionController.swift; sourceTree = "<group>"; };
@@ -155,6 +157,7 @@
 				D0879B6A22F7B04400C4D6B3 /* DeviceContactData.swift */,
 				D0879B6E22F83F6600C4D6B3 /* DownloadedMediaStoreManager.swift */,
 				D0879B7022F8425B00C4D6B3 /* WallpaperUploadManager.swift */,
+				095214F02318D4F5008CDD87 /* ThemeUpdateManager.swift */,
 				D0879B7222F842FF00C4D6B3 /* WatchManager.swift */,
 				D0C9C12222FE414700FAB518 /* PresentationSurfaceLevels.swift */,
 				D0C9C3D62300CC2400FAB518 /* FetchMediaUtils.swift */,
@@ -271,6 +274,7 @@
 				D0879B6122F7A7A600C4D6B3 /* UniversalVideoNode.swift in Sources */,
 				D0879A4E22F65B2A00C4D6B3 /* MediaManager.swift in Sources */,
 				D0879A4A22F6584B00C4D6B3 /* SharedMediaPlayer.swift in Sources */,
+				095214F12318D4F5008CDD87 /* ThemeUpdateManager.swift in Sources */,
 				D0879B7122F8425B00C4D6B3 /* WallpaperUploadManager.swift in Sources */,
 				D03E422A230567900049C28B /* ContactMultiselectionController.swift in Sources */,
 				D03E487C230770000049C28B /* PeerSelectionController.swift in Sources */,

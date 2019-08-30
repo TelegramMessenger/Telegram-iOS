@@ -627,6 +627,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 }))
                             }
                             
+                            strongSelf.waveformNode.displaysAsynchronously = !presentationData.isPreview
                             strongSelf.statusNode?.frame = progressFrame
                             strongSelf.progressFrame = progressFrame
                             strongSelf.streamingCacheStatusFrame = streamingCacheStatusFrame
