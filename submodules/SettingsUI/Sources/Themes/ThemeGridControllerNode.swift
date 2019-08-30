@@ -366,6 +366,16 @@ final class ThemeGridControllerNode: ASDisplayNode {
             
             entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, selected: true), at: 0)
             
+            var defaultWallpaper: TelegramWallpaper?
+            if !areWallpapersEqual(presentationData.chatWallpaper, presentationData.theme.chat.defaultWallpaper) {
+                if case .builtin = presentationData.theme.chat.defaultWallpaper {
+                } else {
+                    defaultWallpaper = presentationData.theme.chat.defaultWallpaper
+                    entries.insert(ThemeGridControllerEntry(index: 1, wallpaper: presentationData.theme.chat.defaultWallpaper, selected: false), at: 1)
+                    index += 1
+                }
+            }
+            
             var sortedWallpapers: [TelegramWallpaper] = []
             if presentationData.theme.overallDarkAppearance {
                 var darkWallpapers: [TelegramWallpaper] = []
@@ -386,7 +396,11 @@ final class ThemeGridControllerNode: ASDisplayNode {
                     continue
                 }
                 let selected = areWallpapersEqual(presentationData.chatWallpaper, wallpaper)
-                if !selected {
+                var isDefault = false
+                if let defaultWallpaper = defaultWallpaper, areWallpapersEqual(defaultWallpaper, wallpaper) {
+                    isDefault = true
+                }
+                if !selected && !isDefault {
                     entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: false))
                 }
                 index += 1

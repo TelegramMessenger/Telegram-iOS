@@ -198,7 +198,7 @@ public final class ThemePreviewController: ViewController {
                         |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
                             let similarTheme = themes.filter { $0.isCreator && $0.title == info.title }.first
                             if let similarTheme = similarTheme {
-                                return updateTheme(account: context.account, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
+                                return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
                                 |> map(Optional.init)
                                 |> `catch` { _ -> Signal<CreateThemeResult?, NoError> in
                                     return .single(nil)
@@ -249,7 +249,9 @@ public final class ThemePreviewController: ViewController {
             return context.sharedContext.accountManager.transaction { transaction -> Void in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                     let current = entry as? PresentationThemeSettings ?? PresentationThemeSettings.defaultSettings
-                    return PresentationThemeSettings(chatWallpaper: resolvedWallpaper ?? previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                    var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                    themeSpecificChatWallpapers[theme.index] = nil
+                    return PresentationThemeSettings(chatWallpaper: resolvedWallpaper ?? previewTheme.chat.defaultWallpaper, theme: theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                 })
             }
         }
