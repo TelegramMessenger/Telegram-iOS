@@ -1,1 +1,2532 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?><Scheme LastUpgradeVersion="9999" version="1.7"><BuildAction buildImplicitDependencies="YES" parallelizeBuildables="YES"><BuildActionEntries><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E3341061800000000" BlueprintName="AsyncDisplayKit" BuildableIdentifier="primary" BuildableName="libAsyncDisplayKit.dylib" ReferencedContainer="container:submodules/AsyncDisplayKit/AsyncDisplayKit.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB3E1D9E300000000" BlueprintName="AppBundle" BuildableIdentifier="primary" BuildableName="libAppBundle.a" ReferencedContainer="container:submodules/AppBundle/AppBundle.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E89A74F8D00000000" BlueprintName="SwiftSignalKit" BuildableIdentifier="primary" BuildableName="libSwiftSignalKit.dylib" ReferencedContainer="container:submodules/SSignalKit/SwiftSignalKit/SwiftSignalKit.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EC7797B6600000000" BlueprintName="Display" BuildableIdentifier="primary" BuildableName="libDisplay.dylib" ReferencedContainer="container:submodules/Display/Display.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB4B57B8200000000" BlueprintName="openssl" BuildableIdentifier="primary" BuildableName="libopenssl.a" ReferencedContainer="container:submodules/MtProtoKit/MtProtoKit.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E123A55F300000000" BlueprintName="MtProtoKit" BuildableIdentifier="primary" BuildableName="libMtProtoKit.dylib" ReferencedContainer="container:submodules/MtProtoKit/MtProtoKit.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E03E5731300000000" BlueprintName="Crc32" BuildableIdentifier="primary" BuildableName="libCrc32.a" ReferencedContainer="container:submodules/Crc32/Crc32.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E752F915900000000" BlueprintName="sqlcipher" BuildableIdentifier="primary" BuildableName="libsqlcipher.a" ReferencedContainer="container:submodules/sqlcipher/sqlcipher.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E71825ADD00000000" BlueprintName="Postbox" BuildableIdentifier="primary" BuildableName="libPostbox.dylib" ReferencedContainer="container:submodules/Postbox/Postbox.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ED56D953900000000" BlueprintName="TelegramApi" BuildableIdentifier="primary" BuildableName="libTelegramApi.a" ReferencedContainer="container:submodules/TelegramApi/TelegramApi.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EFECFD69200000000" BlueprintName="libphonenumber" BuildableIdentifier="primary" BuildableName="liblibphonenumber.a" ReferencedContainer="container:submodules/libphonenumber/libphonenumber.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E5DA2A1E800000000" BlueprintName="TelegramCore" BuildableIdentifier="primary" BuildableName="libTelegramCore.dylib" ReferencedContainer="container:submodules/TelegramCore/TelegramCore.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E468F94E200000000" BlueprintName="DeviceLocationManager" BuildableIdentifier="primary" BuildableName="libDeviceLocationManager.a" ReferencedContainer="container:submodules/DeviceLocationManager/DeviceLocationManager.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EFD84C28500000000" BlueprintName="opus_lib" BuildableIdentifier="primary" BuildableName="libopus_lib.a" ReferencedContainer="container:submodules/Opus/Opus.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0034283F00000000" BlueprintName="opus" BuildableIdentifier="primary" BuildableName="libopus.a" ReferencedContainer="container:submodules/Opus/Opus.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E1C3BD50A00000000" BlueprintName="libffmpeg" BuildableIdentifier="primary" BuildableName="liblibffmpeg.a" ReferencedContainer="container:submodules/FFMpeg/FFMpeg.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E7B725A6500000000" BlueprintName="FFMpeg" BuildableIdentifier="primary" BuildableName="libFFMpeg.a" ReferencedContainer="container:submodules/FFMpeg/FFMpeg.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E305F6B3500000000" BlueprintName="TelegramAudio" BuildableIdentifier="primary" BuildableName="libTelegramAudio.a" ReferencedContainer="container:submodules/TelegramAudio/TelegramAudio.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E77490CBA00000000" BlueprintName="UniversalMediaPlayer" BuildableIdentifier="primary" BuildableName="libUniversalMediaPlayer.a" ReferencedContainer="container:submodules/MediaPlayer/MediaPlayer.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EADABDAC100000000" BlueprintName="MediaResources" BuildableIdentifier="primary" BuildableName="libMediaResources.a" ReferencedContainer="container:submodules/MediaResources/MediaResources.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E3286A84300000000" BlueprintName="TelegramUIPreferences" BuildableIdentifier="primary" BuildableName="libTelegramUIPreferences.a" ReferencedContainer="container:submodules/TelegramUIPreferences/TelegramUIPreferences.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E77B5752500000000" BlueprintName="TelegramPresentationData" BuildableIdentifier="primary" BuildableName="libTelegramPresentationData.a" ReferencedContainer="container:submodules/TelegramPresentationData/TelegramPresentationData.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E255A10A700000000" BlueprintName="LocalizedPeerData" BuildableIdentifier="primary" BuildableName="libLocalizedPeerData.a" ReferencedContainer="container:submodules/LocalizedPeerData/LocalizedPeerData.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E21C52C5600000000" BlueprintName="PlatformRestrictionMatching" BuildableIdentifier="primary" BuildableName="libPlatformRestrictionMatching.a" ReferencedContainer="container:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ECEBDAFA400000000" BlueprintName="TextFormat" BuildableIdentifier="primary" BuildableName="libTextFormat.a" ReferencedContainer="container:submodules/TextFormat/TextFormat.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E4D2DC19700000000" BlueprintName="TelegramStringFormatting" BuildableIdentifier="primary" BuildableName="libTelegramStringFormatting.a" ReferencedContainer="container:submodules/TelegramStringFormatting/TelegramStringFormatting.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E418E82AE00000000" BlueprintName="TemporaryCachedPeerDataManager" BuildableIdentifier="primary" BuildableName="libTemporaryCachedPeerDataManager.a" ReferencedContainer="container:submodules/TemporaryCachedPeerDataManager/TemporaryCachedPeerDataManager.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E27C8B2E200000000" BlueprintName="AccountContext" BuildableIdentifier="primary" BuildableName="libAccountContext.a" ReferencedContainer="container:submodules/AccountContext/AccountContext.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0021A55A00000000" BlueprintName="GZip" BuildableIdentifier="primary" BuildableName="libGZip.a" ReferencedContainer="container:submodules/GZip/GZip.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E79C1F69100000000" BlueprintName="RLottie" BuildableIdentifier="primary" BuildableName="libRLottie.a" ReferencedContainer="container:submodules/RLottie/RLottie.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E4312484200000000" BlueprintName="ImageBlur" BuildableIdentifier="primary" BuildableName="libImageBlur.a" ReferencedContainer="container:submodules/ImageBlur/ImageBlur.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E95FC5DCB00000000" BlueprintName="Tuples" BuildableIdentifier="primary" BuildableName="libTuples.a" ReferencedContainer="container:submodules/Tuples/Tuples.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ED82AB76200000000" BlueprintName="WebP_lib" BuildableIdentifier="primary" BuildableName="libWebP_lib.a" ReferencedContainer="container:submodules/WebP/WebP.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E2BF6871F00000000" BlueprintName="WebPImage" BuildableIdentifier="primary" BuildableName="libWebPImage.a" ReferencedContainer="container:submodules/WebP/WebP.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E79C82D8800000000" BlueprintName="StickerResources" BuildableIdentifier="primary" BuildableName="libStickerResources.a" ReferencedContainer="container:submodules/StickerResources/StickerResources.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E01C35D7000000000" BlueprintName="YuvConversion" BuildableIdentifier="primary" BuildableName="libYuvConversion.a" ReferencedContainer="container:submodules/YuvConversion/YuvConversion.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E8802FBBF00000000" BlueprintName="Lottie" BuildableIdentifier="primary" BuildableName="libLottie.a" ReferencedContainer="container:submodules/lottie-ios/lottie-ios.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EA7BBFCF800000000" BlueprintName="AnimationUI" BuildableIdentifier="primary" BuildableName="libAnimationUI.a" ReferencedContainer="container:submodules/AnimationUI/AnimationUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E5EC76B1B00000000" BlueprintName="AvatarNode" BuildableIdentifier="primary" BuildableName="libAvatarNode.a" ReferencedContainer="container:submodules/AvatarNode/AvatarNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E1CBC935E00000000" BlueprintName="ActionSheetPeerItem" BuildableIdentifier="primary" BuildableName="libActionSheetPeerItem.a" ReferencedContainer="container:submodules/ActionSheetPeerItem/ActionSheetPeerItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E65892BA000000000" BlueprintName="ActivityIndicator" BuildableIdentifier="primary" BuildableName="libActivityIndicator.a" ReferencedContainer="container:submodules/ActivityIndicator/ActivityIndicator.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E2C8544D000000000" BlueprintName="AlertUI" BuildableIdentifier="primary" BuildableName="libAlertUI.a" ReferencedContainer="container:submodules/AlertUI/AlertUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EBF0668AD00000000" BlueprintName="AuthorizationUI" BuildableIdentifier="primary" BuildableName="libAuthorizationUI.a" ReferencedContainer="container:submodules/AuthorizationUI/AuthorizationUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6A2B91CD00000000" BlueprintName="SearchBarNode" BuildableIdentifier="primary" BuildableName="libSearchBarNode.a" ReferencedContainer="container:submodules/SearchBarNode/SearchBarNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EC262DBCA00000000" BlueprintName="CountrySelectionUI" BuildableIdentifier="primary" BuildableName="libCountrySelectionUI.a" ReferencedContainer="container:submodules/CountrySelectionUI/CountrySelectionUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EEB3B23FB00000000" BlueprintName="SSignalKit" BuildableIdentifier="primary" BuildableName="libSSignalKit.a" ReferencedContainer="container:submodules/SSignalKit/SSignalKit/SSignalKit.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E60B22FDF00000000" BlueprintName="LegacyComponents" BuildableIdentifier="primary" BuildableName="libLegacyComponents.a" ReferencedContainer="container:submodules/LegacyComponents/LegacyComponents.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E8F31630A00000000" BlueprintName="CheckNode" BuildableIdentifier="primary" BuildableName="libCheckNode.a" ReferencedContainer="container:submodules/CheckNode/CheckNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E34B88E5D00000000" BlueprintName="MergeLists" BuildableIdentifier="primary" BuildableName="libMergeLists.a" ReferencedContainer="container:submodules/MergeLists/MergeLists.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6174EF7500000000" BlueprintName="ProgressNavigationButtonNode" BuildableIdentifier="primary" BuildableName="libProgressNavigationButtonNode.a" ReferencedContainer="container:submodules/ProgressNavigationButtonNode/ProgressNavigationButtonNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E621BFB7600000000" BlueprintName="SwitchNode" BuildableIdentifier="primary" BuildableName="libSwitchNode.a" ReferencedContainer="container:submodules/SwitchNode/SwitchNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE17F74C500000000" BlueprintName="ItemListUI" BuildableIdentifier="primary" BuildableName="libItemListUI.a" ReferencedContainer="container:submodules/ItemListUI/ItemListUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E2F93A39300000000" BlueprintName="LocalAuth" BuildableIdentifier="primary" BuildableName="libLocalAuth.a" ReferencedContainer="container:submodules/LocalAuth/LocalAuth.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ED9721A9600000000" BlueprintName="PasswordSetupUI" BuildableIdentifier="primary" BuildableName="libPasswordSetupUI.a" ReferencedContainer="container:submodules/PasswordSetupUI/PasswordSetupUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EA5D7583300000000" BlueprintName="ImageTransparency" BuildableIdentifier="primary" BuildableName="libImageTransparency.a" ReferencedContainer="container:submodules/ImageTransparency/ImageTransparency.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EA296ADAC00000000" BlueprintName="TinyThumbnail" BuildableIdentifier="primary" BuildableName="libTinyThumbnail.a" ReferencedContainer="container:submodules/TinyThumbnail/TinyThumbnail.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E3548443300000000" BlueprintName="PhotoResources" BuildableIdentifier="primary" BuildableName="libPhotoResources.a" ReferencedContainer="container:submodules/PhotoResources/PhotoResources.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E943A4C6D00000000" BlueprintName="Stripe" BuildableIdentifier="primary" BuildableName="libStripe.a" ReferencedContainer="container:submodules/Stripe/Stripe.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB2CC7B7A00000000" BlueprintName="DeviceAccess" BuildableIdentifier="primary" BuildableName="libDeviceAccess.a" ReferencedContainer="container:submodules/DeviceAccess/DeviceAccess.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E18FD80A300000000" BlueprintName="TelegramPermissions" BuildableIdentifier="primary" BuildableName="libTelegramPermissions.a" ReferencedContainer="container:submodules/TelegramPermissions/TelegramPermissions.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E3C86B83A00000000" BlueprintName="TelegramNotices" BuildableIdentifier="primary" BuildableName="libTelegramNotices.a" ReferencedContainer="container:submodules/TelegramNotices/TelegramNotices.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E22643F8800000000" BlueprintName="BotPaymentsUI" BuildableIdentifier="primary" BuildableName="libBotPaymentsUI.a" ReferencedContainer="container:submodules/BotPaymentsUI/BotPaymentsUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ECE2AD33000000000" BlueprintName="BuildConfig" BuildableIdentifier="primary" BuildableName="libBuildConfig.a" ReferencedContainer="container:submodules/BuildConfig/BuildConfig.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EC8F48FD000000000" BlueprintName="CallListUI" BuildableIdentifier="primary" BuildableName="libCallListUI.a" ReferencedContainer="container:submodules/CallListUI/CallListUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E831E25D600000000" BlueprintName="ListSectionHeaderNode" BuildableIdentifier="primary" BuildableName="libListSectionHeaderNode.a" ReferencedContainer="container:submodules/ListSectionHeaderNode/ListSectionHeaderNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E723D879E00000000" BlueprintName="ChatListSearchItemHeader" BuildableIdentifier="primary" BuildableName="libChatListSearchItemHeader.a" ReferencedContainer="container:submodules/ChatListSearchItemHeader/ChatListSearchItemHeader.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E5094635300000000" BlueprintName="ChatListSearchItemNode" BuildableIdentifier="primary" BuildableName="libChatListSearchItemNode.a" ReferencedContainer="container:submodules/ChatListSearchItemNode/ChatListSearchItemNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E1B72F5B100000000" BlueprintName="PeerOnlineMarkerNode" BuildableIdentifier="primary" BuildableName="libPeerOnlineMarkerNode.a" ReferencedContainer="container:submodules/PeerOnlineMarkerNode/PeerOnlineMarkerNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E175F691A00000000" BlueprintName="SelectablePeerNode" BuildableIdentifier="primary" BuildableName="libSelectablePeerNode.a" ReferencedContainer="container:submodules/SelectablePeerNode/SelectablePeerNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E89C327F900000000" BlueprintName="HorizontalPeerItem" BuildableIdentifier="primary" BuildableName="libHorizontalPeerItem.a" ReferencedContainer="container:submodules/HorizontalPeerItem/HorizontalPeerItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EA9F0E77A00000000" BlueprintName="ChatListSearchRecentPeersNode" BuildableIdentifier="primary" BuildableName="libChatListSearchRecentPeersNode.a" ReferencedContainer="container:submodules/ChatListSearchRecentPeersNode/ChatListSearchRecentPeersNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE78EBF9100000000" BlueprintName="ChatTitleActivityNode" BuildableIdentifier="primary" BuildableName="libChatTitleActivityNode.a" ReferencedContainer="container:submodules/ChatTitleActivityNode/ChatTitleActivityNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EFBD875BE00000000" BlueprintName="PeerPresenceStatusManager" BuildableIdentifier="primary" BuildableName="libPeerPresenceStatusManager.a" ReferencedContainer="container:submodules/PeerPresenceStatusManager/PeerPresenceStatusManager.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E02CF852600000000" BlueprintName="ItemListPeerItem" BuildableIdentifier="primary" BuildableName="libItemListPeerItem.a" ReferencedContainer="container:submodules/ItemListPeerItem/ItemListPeerItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EF2B7E52800000000" BlueprintName="ContactsPeerItem" BuildableIdentifier="primary" BuildableName="libContactsPeerItem.a" ReferencedContainer="container:submodules/ContactsPeerItem/ContactsPeerItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E38D20A5C00000000" BlueprintName="SearchUI" BuildableIdentifier="primary" BuildableName="libSearchUI.a" ReferencedContainer="container:submodules/SearchUI/SearchUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E9B9F58B300000000" BlueprintName="RadialStatusNode" BuildableIdentifier="primary" BuildableName="libRadialStatusNode.a" ReferencedContainer="container:submodules/RadialStatusNode/RadialStatusNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E78B0F05A00000000" BlueprintName="SaveToCameraRoll" BuildableIdentifier="primary" BuildableName="libSaveToCameraRoll.a" ReferencedContainer="container:submodules/SaveToCameraRoll/SaveToCameraRoll.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E371B736D00000000" BlueprintName="UrlEscaping" BuildableIdentifier="primary" BuildableName="libUrlEscaping.a" ReferencedContainer="container:submodules/UrlEscaping/UrlEscaping.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0C093CBB00000000" BlueprintName="ShareController" BuildableIdentifier="primary" BuildableName="libShareController.a" ReferencedContainer="container:submodules/ShareController/ShareController.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0A14C74B00000000" BlueprintName="PeersNearbyIconNode" BuildableIdentifier="primary" BuildableName="libPeersNearbyIconNode.a" ReferencedContainer="container:submodules/PeersNearbyIconNode/PeersNearbyIconNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E9CD82B9600000000" BlueprintName="SolidRoundedButtonNode" BuildableIdentifier="primary" BuildableName="libSolidRoundedButtonNode.a" ReferencedContainer="container:submodules/SolidRoundedButtonNode/SolidRoundedButtonNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ECF9FEE7700000000" BlueprintName="TelegramPermissionsUI" BuildableIdentifier="primary" BuildableName="libTelegramPermissionsUI.a" ReferencedContainer="container:submodules/TelegramPermissionsUI/TelegramPermissionsUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E47E0B3D200000000" BlueprintName="ContactListUI" BuildableIdentifier="primary" BuildableName="libContactListUI.a" ReferencedContainer="container:submodules/ContactListUI/ContactListUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EDF4E70F700000000" BlueprintName="DeleteChatPeerActionSheetItem" BuildableIdentifier="primary" BuildableName="libDeleteChatPeerActionSheetItem.a" ReferencedContainer="container:submodules/DeleteChatPeerActionSheetItem/DeleteChatPeerActionSheetItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EC1C23B3000000000" BlueprintName="LanguageSuggestionUI" BuildableIdentifier="primary" BuildableName="libLanguageSuggestionUI.a" ReferencedContainer="container:submodules/LanguageSuggestionUI/LanguageSuggestionUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EEAAB097E00000000" BlueprintName="OverlayStatusController" BuildableIdentifier="primary" BuildableName="libOverlayStatusController.a" ReferencedContainer="container:submodules/OverlayStatusController/OverlayStatusController.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6B01AF0600000000" BlueprintName="LiveLocationTimerNode" BuildableIdentifier="primary" BuildableName="libLiveLocationTimerNode.a" ReferencedContainer="container:submodules/LiveLocationTimerNode/LiveLocationTimerNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E206CC0CE00000000" BlueprintName="TelegramBaseController" BuildableIdentifier="primary" BuildableName="libTelegramBaseController.a" ReferencedContainer="container:submodules/TelegramBaseController/TelegramBaseController.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E9749269800000000" BlueprintName="UndoUI" BuildableIdentifier="primary" BuildableName="libUndoUI.a" ReferencedContainer="container:submodules/UndoUI/UndoUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0758854A00000000" BlueprintName="ChatListUI" BuildableIdentifier="primary" BuildableName="libChatListUI.a" ReferencedContainer="container:submodules/ChatListUI/ChatListUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E694E46A500000000" BlueprintName="ComposePollUI" BuildableIdentifier="primary" BuildableName="libComposePollUI.a" ReferencedContainer="container:submodules/ComposePollUI/ComposePollUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE09F1DE500000000" BlueprintName="ReactionSelectionNode" BuildableIdentifier="primary" BuildableName="libReactionSelectionNode.a" ReferencedContainer="container:submodules/ReactionSelectionNode/ReactionSelectionNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E5B33A96100000000" BlueprintName="TextSelectionNode" BuildableIdentifier="primary" BuildableName="libTextSelectionNode.a" ReferencedContainer="container:submodules/TextSelectionNode/TextSelectionNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E5F32B06300000000" BlueprintName="ContextUI" BuildableIdentifier="primary" BuildableName="libContextUI.a" ReferencedContainer="container:submodules/ContextUI/ContextUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E9DE1740F00000000" BlueprintName="CounterContollerTitleView" BuildableIdentifier="primary" BuildableName="libCounterContollerTitleView.a" ReferencedContainer="container:submodules/CounterContollerTitleView/CounterContollerTitleView.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0092C07200000000" BlueprintName="DateSelectionUI" BuildableIdentifier="primary" BuildableName="libDateSelectionUI.a" ReferencedContainer="container:submodules/DateSelectionUI/DateSelectionUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E62B20AA900000000" BlueprintName="DeviceProximity" BuildableIdentifier="primary" BuildableName="libDeviceProximity.a" ReferencedContainer="container:submodules/DeviceProximity/DeviceProximity.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6CDBC95600000000" BlueprintName="DirectionalPanGesture" BuildableIdentifier="primary" BuildableName="libDirectionalPanGesture.a" ReferencedContainer="container:submodules/DirectionalPanGesture/DirectionalPanGesture.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E03FF902600000000" BlueprintName="Emoji" BuildableIdentifier="primary" BuildableName="libEmoji.a" ReferencedContainer="container:submodules/Emoji/Emoji.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EBC0242C800000000" BlueprintName="EncryptionKeyVisualization" BuildableIdentifier="primary" BuildableName="libEncryptionKeyVisualization.a" ReferencedContainer="container:submodules/EncryptionKeyVisualization/EncryptionKeyVisualization.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E11B2F67B00000000" BlueprintName="OpenInExternalAppUI" BuildableIdentifier="primary" BuildableName="libOpenInExternalAppUI.a" ReferencedContainer="container:submodules/OpenInExternalAppUI/OpenInExternalAppUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E326B4A8B00000000" BlueprintName="ScreenCaptureDetection" BuildableIdentifier="primary" BuildableName="libScreenCaptureDetection.a" ReferencedContainer="container:submodules/ScreenCaptureDetection/ScreenCaptureDetection.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6C23B9F400000000" BlueprintName="SwipeToDismissGesture" BuildableIdentifier="primary" BuildableName="libSwipeToDismissGesture.a" ReferencedContainer="container:submodules/SwipeToDismissGesture/SwipeToDismissGesture.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E038732C800000000" BlueprintName="TelegramUniversalVideoContent" BuildableIdentifier="primary" BuildableName="libTelegramUniversalVideoContent.a" ReferencedContainer="container:submodules/TelegramUniversalVideoContent/TelegramUniversalVideoContent.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE523C65500000000" BlueprintName="WebsiteType" BuildableIdentifier="primary" BuildableName="libWebsiteType.a" ReferencedContainer="container:submodules/WebsiteType/WebsiteType.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E8A7E154600000000" BlueprintName="GalleryUI" BuildableIdentifier="primary" BuildableName="libGalleryUI.a" ReferencedContainer="container:submodules/GalleryUI/GalleryUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E7EB20E2600000000" BlueprintName="GameUI" BuildableIdentifier="primary" BuildableName="libGameUI.a" ReferencedContainer="container:submodules/GameUI/GameUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB9E031DB00000000" BlueprintName="Geocoding" BuildableIdentifier="primary" BuildableName="libGeocoding.a" ReferencedContainer="container:submodules/Geocoding/Geocoding.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E8A7A256D00000000" BlueprintName="GridMessageSelectionNode" BuildableIdentifier="primary" BuildableName="libGridMessageSelectionNode.a" ReferencedContainer="container:submodules/GridMessageSelectionNode/GridMessageSelectionNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0795F20800000000" BlueprintName="HashtagSearchUI" BuildableIdentifier="primary" BuildableName="libHashtagSearchUI.a" ReferencedContainer="container:submodules/HashtagSearchUI/HashtagSearchUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE6D3C92800000000" BlueprintName="HexColor" BuildableIdentifier="primary" BuildableName="libHexColor.a" ReferencedContainer="container:submodules/HexColor/HexColor.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EEF48A87700000000" BlueprintName="HockeySDK" BuildableIdentifier="primary" BuildableName="libHockeySDK.a" ReferencedContainer="container:submodules/HockeySDK-iOS/HockeySDK-iOS.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE29FC52B00000000" BlueprintName="ImageCompression" BuildableIdentifier="primary" BuildableName="libImageCompression.a" ReferencedContainer="container:submodules/ImageCompression/ImageCompression.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E7FA5B2D600000000" BlueprintName="PersistentStringHash" BuildableIdentifier="primary" BuildableName="libPersistentStringHash.a" ReferencedContainer="container:submodules/PersistentStringHash/PersistentStringHash.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB949E97200000000" BlueprintName="InstantPageCache" BuildableIdentifier="primary" BuildableName="libInstantPageCache.a" ReferencedContainer="container:submodules/InstantPageCache/InstantPageCache.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E46DD664C00000000" BlueprintName="LiveLocationPositionNode" BuildableIdentifier="primary" BuildableName="libLiveLocationPositionNode.a" ReferencedContainer="container:submodules/LiveLocationPositionNode/LiveLocationPositionNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6AF7943D00000000" BlueprintName="LegacyUI" BuildableIdentifier="primary" BuildableName="libLegacyUI.a" ReferencedContainer="container:submodules/LegacyUI/LegacyUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ED2B86D2900000000" BlueprintName="LocationUI" BuildableIdentifier="primary" BuildableName="libLocationUI.a" ReferencedContainer="container:submodules/LocationUI/LocationUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6228587400000000" BlueprintName="MosaicLayout" BuildableIdentifier="primary" BuildableName="libMosaicLayout.a" ReferencedContainer="container:submodules/MosaicLayout/MosaicLayout.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6C6A738C00000000" BlueprintName="MusicAlbumArtResources" BuildableIdentifier="primary" BuildableName="libMusicAlbumArtResources.a" ReferencedContainer="container:submodules/MusicAlbumArtResources/MusicAlbumArtResources.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E3CC29A8400000000" BlueprintName="InstantPageUI" BuildableIdentifier="primary" BuildableName="libInstantPageUI.a" ReferencedContainer="container:submodules/InstantPageUI/InstantPageUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E999395F600000000" BlueprintName="ItemListAddressItem" BuildableIdentifier="primary" BuildableName="libItemListAddressItem.a" ReferencedContainer="container:submodules/ItemListAddressItem/ItemListAddressItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E87F7DB7900000000" BlueprintName="ItemListAvatarAndNameInfoItem" BuildableIdentifier="primary" BuildableName="libItemListAvatarAndNameInfoItem.a" ReferencedContainer="container:submodules/ItemListAvatarAndNameInfoItem/ItemListAvatarAndNameInfoItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6DE1523C00000000" BlueprintName="ItemListPeerActionItem" BuildableIdentifier="primary" BuildableName="libItemListPeerActionItem.a" ReferencedContainer="container:submodules/ItemListPeerActionItem/ItemListPeerActionItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EF17EA27800000000" BlueprintName="ItemListStickerPackItem" BuildableIdentifier="primary" BuildableName="libItemListStickerPackItem.a" ReferencedContainer="container:submodules/ItemListStickerPackItem/ItemListStickerPackItem.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E592FAC5800000000" BlueprintName="JoinLinkPreviewUI" BuildableIdentifier="primary" BuildableName="libJoinLinkPreviewUI.a" ReferencedContainer="container:submodules/JoinLinkPreviewUI/JoinLinkPreviewUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE2DE00EA00000000" BlueprintName="LanguageLinkPreviewUI" BuildableIdentifier="primary" BuildableName="libLanguageLinkPreviewUI.a" ReferencedContainer="container:submodules/LanguageLinkPreviewUI/LanguageLinkPreviewUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB60714B800000000" BlueprintName="LegacyDataImport" BuildableIdentifier="primary" BuildableName="libLegacyDataImport.a" ReferencedContainer="container:submodules/LegacyDataImport/LegacyDataImport.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E8A08AACC00000000" BlueprintName="LocalMediaResources" BuildableIdentifier="primary" BuildableName="libLocalMediaResources.a" ReferencedContainer="container:submodules/LocalMediaResources/LocalMediaResources.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6B29E48500000000" BlueprintName="MimeTypes" BuildableIdentifier="primary" BuildableName="libMimeTypes.a" ReferencedContainer="container:submodules/MimeTypes/MimeTypes.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E32210A3D00000000" BlueprintName="LegacyMediaPickerUI" BuildableIdentifier="primary" BuildableName="libLegacyMediaPickerUI.a" ReferencedContainer="container:submodules/LegacyMediaPickerUI/LegacyMediaPickerUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E1D593FA900000000" BlueprintName="LightweightAccountData" BuildableIdentifier="primary" BuildableName="libLightweightAccountData.a" ReferencedContainer="container:submodules/LightweightAccountData/LightweightAccountData.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EC9BC3B8C00000000" BlueprintName="LiveLocationManager" BuildableIdentifier="primary" BuildableName="libLiveLocationManager.a" ReferencedContainer="container:submodules/LiveLocationManager/LiveLocationManager.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0EC89FF400000000" BlueprintName="MapResourceToAvatarSizes" BuildableIdentifier="primary" BuildableName="libMapResourceToAvatarSizes.a" ReferencedContainer="container:submodules/MapResourceToAvatarSizes/MapResourceToAvatarSizes.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E639FD30200000000" BlueprintName="MessageReactionListUI" BuildableIdentifier="primary" BuildableName="libMessageReactionListUI.a" ReferencedContainer="container:submodules/MessageReactionListUI/MessageReactionListUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EFA93E6DB00000000" BlueprintName="NotificationMuteSettingsUI" BuildableIdentifier="primary" BuildableName="libNotificationMuteSettingsUI.a" ReferencedContainer="container:submodules/NotificationMuteSettingsUI/NotificationMuteSettingsUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E6080E3BC00000000" BlueprintName="NotificationSoundSelectionUI" BuildableIdentifier="primary" BuildableName="libNotificationSoundSelectionUI.a" ReferencedContainer="container:submodules/NotificationSoundSelectionUI/NotificationSoundSelectionUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E9CE7D12600000000" BlueprintName="OpusBinding" BuildableIdentifier="primary" BuildableName="libOpusBinding.a" ReferencedContainer="container:submodules/OpusBinding/OpusBinding.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EA1B020B200000000" BlueprintName="PasscodeUI" BuildableIdentifier="primary" BuildableName="libPasscodeUI.a" ReferencedContainer="container:submodules/PasscodeUI/PasscodeUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E08FC6F3E00000000" BlueprintName="PhoneInputNode" BuildableIdentifier="primary" BuildableName="libPhoneInputNode.a" ReferencedContainer="container:submodules/PhoneInputNode/PhoneInputNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB7E5B64600000000" BlueprintName="PassportUI" BuildableIdentifier="primary" BuildableName="libPassportUI.a" ReferencedContainer="container:submodules/PassportUI/PassportUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E000138D200000000" BlueprintName="Pdf" BuildableIdentifier="primary" BuildableName="libPdf.a" ReferencedContainer="container:submodules/Pdf/Pdf.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E9FB5A62B00000000" BlueprintName="PeerAvatarGalleryUI" BuildableIdentifier="primary" BuildableName="libPeerAvatarGalleryUI.a" ReferencedContainer="container:submodules/PeerAvatarGalleryUI/PeerAvatarGalleryUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E057909A600000000" BlueprintName="SinglePhoneInputNode" BuildableIdentifier="primary" BuildableName="libSinglePhoneInputNode.a" ReferencedContainer="container:submodules/SinglePhoneInputNode/SinglePhoneInputNode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ED4B62C2600000000" BlueprintName="StickerPackPreviewUI" BuildableIdentifier="primary" BuildableName="libStickerPackPreviewUI.a" ReferencedContainer="container:submodules/StickerPackPreviewUI/StickerPackPreviewUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EF5B6E99000000000" BlueprintName="WebSearchUI" BuildableIdentifier="primary" BuildableName="libWebSearchUI.a" ReferencedContainer="container:submodules/WebSearchUI/WebSearchUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE32023E400000000" BlueprintName="PeerInfoUI" BuildableIdentifier="primary" BuildableName="libPeerInfoUI.a" ReferencedContainer="container:submodules/PeerInfoUI/PeerInfoUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE520FFA400000000" BlueprintName="PeersNearbyUI" BuildableIdentifier="primary" BuildableName="libPeersNearbyUI.a" ReferencedContainer="container:submodules/PeersNearbyUI/PeersNearbyUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E909F23CE00000000" BlueprintName="QrCode" BuildableIdentifier="primary" BuildableName="libQrCode.a" ReferencedContainer="container:submodules/QrCode/QrCode.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E795C98F100000000" BlueprintName="RMIntro" BuildableIdentifier="primary" BuildableName="libRMIntro.a" ReferencedContainer="container:submodules/RMIntro/RMIntro.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E2B77100E00000000" BlueprintName="RaiseToListen" BuildableIdentifier="primary" BuildableName="libRaiseToListen.a" ReferencedContainer="container:submodules/RaiseToListen/RaiseToListen.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E3431D95800000000" BlueprintName="libtgvoip" BuildableIdentifier="primary" BuildableName="liblibtgvoip.a" ReferencedContainer="container:submodules/libtgvoip/libtgvoip.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04ED84E9A6100000000" BlueprintName="TelegramVoip" BuildableIdentifier="primary" BuildableName="libTelegramVoip.a" ReferencedContainer="container:submodules/TelegramVoip/TelegramVoip.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EDE4F2EC800000000" BlueprintName="TelegramCallsUI" BuildableIdentifier="primary" BuildableName="libTelegramCallsUI.a" ReferencedContainer="container:submodules/TelegramCallsUI/TelegramCallsUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EC97C935400000000" BlueprintName="UrlHandling" BuildableIdentifier="primary" BuildableName="libUrlHandling.a" ReferencedContainer="container:submodules/UrlHandling/UrlHandling.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E869F2E6300000000" BlueprintName="WallpaperResources" BuildableIdentifier="primary" BuildableName="libWallpaperResources.a" ReferencedContainer="container:submodules/WallpaperResources/WallpaperResources.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E7696261700000000" BlueprintName="SettingsUI" BuildableIdentifier="primary" BuildableName="libSettingsUI.a" ReferencedContainer="container:submodules/SettingsUI/SettingsUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E0B09974100000000" BlueprintName="ShareItems" BuildableIdentifier="primary" BuildableName="libShareItems.a" ReferencedContainer="container:submodules/ShareItems/ShareItems.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E44A8355E00000000" BlueprintName="TelegramUpdateUI" BuildableIdentifier="primary" BuildableName="libTelegramUpdateUI.a" ReferencedContainer="container:submodules/TelegramUpdateUI/TelegramUpdateUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EF71B15A800000000" BlueprintName="TouchDownGesture" BuildableIdentifier="primary" BuildableName="libTouchDownGesture.a" ReferencedContainer="container:submodules/TouchDownGesture/TouchDownGesture.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EF283359E00000000" BlueprintName="WatchBridgeAudio" BuildableIdentifier="primary" BuildableName="libWatchBridgeAudio.a" ReferencedContainer="container:submodules/WatchBridgeAudio/WatchBridgeAudio.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E7ACF6B7A00000000" BlueprintName="WatchCommon" BuildableIdentifier="primary" BuildableName="libWatchCommon.a" ReferencedContainer="container:submodules/WatchCommon/WatchCommon.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E7942E51800000000" BlueprintName="WatchBridge" BuildableIdentifier="primary" BuildableName="libWatchBridge.a" ReferencedContainer="container:submodules/WatchBridge/WatchBridge.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E04F960C800000000" BlueprintName="WebUI" BuildableIdentifier="primary" BuildableName="libWebUI.a" ReferencedContainer="container:submodules/WebUI/WebUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04E2CA8553300000000" BlueprintName="TelegramUI" BuildableIdentifier="primary" BuildableName="libTelegramUI.dylib" ReferencedContainer="container:submodules/TelegramUI/TelegramUI.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EC43AA77A00000000" BlueprintName="AppLibrary" BuildableIdentifier="primary" BuildableName="libAppLibrary.a" ReferencedContainer="container:Project.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EE64F555800000000" BlueprintName="ShareExtension" BuildableIdentifier="primary" BuildableName="ShareExtension.appex" ReferencedContainer="container:Project.xcodeproj"/></BuildActionEntry><BuildActionEntry buildForAnalyzing="YES" buildForArchiving="YES" buildForProfiling="YES" buildForRunning="YES" buildForTesting="YES"><BuildableReference BlueprintIdentifier="E66DC04EB2C34D2100000000" BlueprintName="Telegram" BuildableIdentifier="primary" BuildableName="Telegram.app" ReferencedContainer="container:Project.xcodeproj"/></BuildActionEntry></BuildActionEntries></BuildAction><TestAction buildConfiguration="Debug" shouldUseLaunchSchemeArgsEnv="YES"><Testables/></TestAction><LaunchAction buildConfiguration="Debug" launchStyle="0"><BuildableProductRunnable><BuildableReference BlueprintIdentifier="E66DC04EB2C34D2100000000" BlueprintName="Telegram" BuildableIdentifier="primary" BuildableName="Telegram.app" ReferencedContainer="container:Project.xcodeproj"/></BuildableProductRunnable></LaunchAction><ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES"><BuildableProductRunnable><BuildableReference BlueprintIdentifier="E66DC04EB2C34D2100000000" BlueprintName="Telegram" BuildableIdentifier="primary" BuildableName="Telegram.app" ReferencedContainer="container:Project.xcodeproj"/></BuildableProductRunnable></ProfileAction><AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/></Scheme>
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "9999"
+   version = "1.3">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E3341061800000000"
+               BuildableName = "libAsyncDisplayKit.dylib"
+               BlueprintName = "AsyncDisplayKit#shared"
+               ReferencedContainer = "container:submodules/AsyncDisplayKit/AsyncDisplayKit.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB3E1D9E300000000"
+               BuildableName = "libAppBundle.a"
+               BlueprintName = "AppBundle"
+               ReferencedContainer = "container:submodules/AppBundle/AppBundle.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E89A74F8D00000000"
+               BuildableName = "libSwiftSignalKit.dylib"
+               BlueprintName = "SwiftSignalKit#shared"
+               ReferencedContainer = "container:submodules/SSignalKit/SwiftSignalKit/SwiftSignalKit.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC7797B6600000000"
+               BuildableName = "libDisplay.dylib"
+               BlueprintName = "Display#shared"
+               ReferencedContainer = "container:submodules/Display/Display.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB4B57B8200000000"
+               BuildableName = "libopenssl.a"
+               BlueprintName = "openssl"
+               ReferencedContainer = "container:submodules/MtProtoKit/MtProtoKit.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E123A55F300000000"
+               BuildableName = "libMtProtoKit.dylib"
+               BlueprintName = "MtProtoKit#shared"
+               ReferencedContainer = "container:submodules/MtProtoKit/MtProtoKit.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E03E5731300000000"
+               BuildableName = "libCrc32.a"
+               BlueprintName = "Crc32"
+               ReferencedContainer = "container:submodules/Crc32/Crc32.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E752F915900000000"
+               BuildableName = "libsqlcipher.a"
+               BlueprintName = "sqlcipher"
+               ReferencedContainer = "container:submodules/sqlcipher/sqlcipher.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E71825ADD00000000"
+               BuildableName = "libPostbox.dylib"
+               BlueprintName = "Postbox#shared"
+               ReferencedContainer = "container:submodules/Postbox/Postbox.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ED56D953900000000"
+               BuildableName = "libTelegramApi.a"
+               BlueprintName = "TelegramApi"
+               ReferencedContainer = "container:submodules/TelegramApi/TelegramApi.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EFECFD69200000000"
+               BuildableName = "liblibphonenumber.a"
+               BlueprintName = "libphonenumber"
+               ReferencedContainer = "container:submodules/libphonenumber/libphonenumber.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5DA2A1E800000000"
+               BuildableName = "libTelegramCore.dylib"
+               BlueprintName = "TelegramCore#shared"
+               ReferencedContainer = "container:submodules/TelegramCore/TelegramCore.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E468F94E200000000"
+               BuildableName = "libDeviceLocationManager.a"
+               BlueprintName = "DeviceLocationManager"
+               ReferencedContainer = "container:submodules/DeviceLocationManager/DeviceLocationManager.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EFD84C28500000000"
+               BuildableName = "libopus_lib.a"
+               BlueprintName = "opus_lib"
+               ReferencedContainer = "container:submodules/Opus/Opus.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0034283F00000000"
+               BuildableName = "libopus.a"
+               BlueprintName = "opus"
+               ReferencedContainer = "container:submodules/Opus/Opus.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E1C3BD50A00000000"
+               BuildableName = "liblibffmpeg.a"
+               BlueprintName = "libffmpeg"
+               ReferencedContainer = "container:submodules/FFMpeg/FFMpeg.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E7B725A6500000000"
+               BuildableName = "libFFMpeg.a"
+               BlueprintName = "FFMpeg"
+               ReferencedContainer = "container:submodules/FFMpeg/FFMpeg.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E305F6B3500000000"
+               BuildableName = "libTelegramAudio.a"
+               BlueprintName = "TelegramAudio"
+               ReferencedContainer = "container:submodules/TelegramAudio/TelegramAudio.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E77490CBA00000000"
+               BuildableName = "libUniversalMediaPlayer.a"
+               BlueprintName = "UniversalMediaPlayer"
+               ReferencedContainer = "container:submodules/MediaPlayer/MediaPlayer.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EADABDAC100000000"
+               BuildableName = "libMediaResources.a"
+               BlueprintName = "MediaResources"
+               ReferencedContainer = "container:submodules/MediaResources/MediaResources.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E3286A84300000000"
+               BuildableName = "libTelegramUIPreferences.a"
+               BlueprintName = "TelegramUIPreferences"
+               ReferencedContainer = "container:submodules/TelegramUIPreferences/TelegramUIPreferences.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E77B5752500000000"
+               BuildableName = "libTelegramPresentationData.a"
+               BlueprintName = "TelegramPresentationData"
+               ReferencedContainer = "container:submodules/TelegramPresentationData/TelegramPresentationData.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E255A10A700000000"
+               BuildableName = "libLocalizedPeerData.a"
+               BlueprintName = "LocalizedPeerData"
+               ReferencedContainer = "container:submodules/LocalizedPeerData/LocalizedPeerData.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E21C52C5600000000"
+               BuildableName = "libPlatformRestrictionMatching.a"
+               BlueprintName = "PlatformRestrictionMatching"
+               ReferencedContainer = "container:submodules/PlatformRestrictionMatching/PlatformRestrictionMatching.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ECEBDAFA400000000"
+               BuildableName = "libTextFormat.a"
+               BlueprintName = "TextFormat"
+               ReferencedContainer = "container:submodules/TextFormat/TextFormat.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E4D2DC19700000000"
+               BuildableName = "libTelegramStringFormatting.a"
+               BlueprintName = "TelegramStringFormatting"
+               ReferencedContainer = "container:submodules/TelegramStringFormatting/TelegramStringFormatting.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E418E82AE00000000"
+               BuildableName = "libTemporaryCachedPeerDataManager.a"
+               BlueprintName = "TemporaryCachedPeerDataManager"
+               ReferencedContainer = "container:submodules/TemporaryCachedPeerDataManager/TemporaryCachedPeerDataManager.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E27C8B2E200000000"
+               BuildableName = "libAccountContext.a"
+               BlueprintName = "AccountContext"
+               ReferencedContainer = "container:submodules/AccountContext/AccountContext.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0021A55A00000000"
+               BuildableName = "libGZip.a"
+               BlueprintName = "GZip"
+               ReferencedContainer = "container:submodules/GZip/GZip.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E79C1F69100000000"
+               BuildableName = "libRLottie.a"
+               BlueprintName = "RLottie"
+               ReferencedContainer = "container:submodules/RLottie/RLottie.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E4312484200000000"
+               BuildableName = "libImageBlur.a"
+               BlueprintName = "ImageBlur"
+               ReferencedContainer = "container:submodules/ImageBlur/ImageBlur.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E95FC5DCB00000000"
+               BuildableName = "libTuples.a"
+               BlueprintName = "Tuples"
+               ReferencedContainer = "container:submodules/Tuples/Tuples.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ED82AB76200000000"
+               BuildableName = "libWebP_lib.a"
+               BlueprintName = "WebP_lib"
+               ReferencedContainer = "container:submodules/WebP/WebP.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E2BF6871F00000000"
+               BuildableName = "libWebPImage.a"
+               BlueprintName = "WebPImage"
+               ReferencedContainer = "container:submodules/WebP/WebP.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E79C82D8800000000"
+               BuildableName = "libStickerResources.a"
+               BlueprintName = "StickerResources"
+               ReferencedContainer = "container:submodules/StickerResources/StickerResources.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E01C35D7000000000"
+               BuildableName = "libYuvConversion.a"
+               BlueprintName = "YuvConversion"
+               ReferencedContainer = "container:submodules/YuvConversion/YuvConversion.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E8802FBBF00000000"
+               BuildableName = "libLottie.a"
+               BlueprintName = "Lottie"
+               ReferencedContainer = "container:submodules/lottie-ios/lottie-ios.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EA7BBFCF800000000"
+               BuildableName = "libAnimationUI.a"
+               BlueprintName = "AnimationUI"
+               ReferencedContainer = "container:submodules/AnimationUI/AnimationUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5EC76B1B00000000"
+               BuildableName = "libAvatarNode.a"
+               BlueprintName = "AvatarNode"
+               ReferencedContainer = "container:submodules/AvatarNode/AvatarNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E1CBC935E00000000"
+               BuildableName = "libActionSheetPeerItem.a"
+               BlueprintName = "ActionSheetPeerItem"
+               ReferencedContainer = "container:submodules/ActionSheetPeerItem/ActionSheetPeerItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E65892BA000000000"
+               BuildableName = "libActivityIndicator.a"
+               BlueprintName = "ActivityIndicator"
+               ReferencedContainer = "container:submodules/ActivityIndicator/ActivityIndicator.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E2C8544D000000000"
+               BuildableName = "libAlertUI.a"
+               BlueprintName = "AlertUI"
+               ReferencedContainer = "container:submodules/AlertUI/AlertUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EBF0668AD00000000"
+               BuildableName = "libAuthorizationUI.a"
+               BlueprintName = "AuthorizationUI"
+               ReferencedContainer = "container:submodules/AuthorizationUI/AuthorizationUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6A2B91CD00000000"
+               BuildableName = "libSearchBarNode.a"
+               BlueprintName = "SearchBarNode"
+               ReferencedContainer = "container:submodules/SearchBarNode/SearchBarNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC262DBCA00000000"
+               BuildableName = "libCountrySelectionUI.a"
+               BlueprintName = "CountrySelectionUI"
+               ReferencedContainer = "container:submodules/CountrySelectionUI/CountrySelectionUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EEB3B23FB00000000"
+               BuildableName = "libSSignalKit.a"
+               BlueprintName = "SSignalKit"
+               ReferencedContainer = "container:submodules/SSignalKit/SSignalKit/SSignalKit.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E60B22FDF00000000"
+               BuildableName = "libLegacyComponents.a"
+               BlueprintName = "LegacyComponents"
+               ReferencedContainer = "container:submodules/LegacyComponents/LegacyComponents.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E8F31630A00000000"
+               BuildableName = "libCheckNode.a"
+               BlueprintName = "CheckNode"
+               ReferencedContainer = "container:submodules/CheckNode/CheckNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E34B88E5D00000000"
+               BuildableName = "libMergeLists.a"
+               BlueprintName = "MergeLists"
+               ReferencedContainer = "container:submodules/MergeLists/MergeLists.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6174EF7500000000"
+               BuildableName = "libProgressNavigationButtonNode.a"
+               BlueprintName = "ProgressNavigationButtonNode"
+               ReferencedContainer = "container:submodules/ProgressNavigationButtonNode/ProgressNavigationButtonNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E621BFB7600000000"
+               BuildableName = "libSwitchNode.a"
+               BlueprintName = "SwitchNode"
+               ReferencedContainer = "container:submodules/SwitchNode/SwitchNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE17F74C500000000"
+               BuildableName = "libItemListUI.a"
+               BlueprintName = "ItemListUI"
+               ReferencedContainer = "container:submodules/ItemListUI/ItemListUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E2F93A39300000000"
+               BuildableName = "libLocalAuth.a"
+               BlueprintName = "LocalAuth"
+               ReferencedContainer = "container:submodules/LocalAuth/LocalAuth.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ED9721A9600000000"
+               BuildableName = "libPasswordSetupUI.a"
+               BlueprintName = "PasswordSetupUI"
+               ReferencedContainer = "container:submodules/PasswordSetupUI/PasswordSetupUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EA5D7583300000000"
+               BuildableName = "libImageTransparency.a"
+               BlueprintName = "ImageTransparency"
+               ReferencedContainer = "container:submodules/ImageTransparency/ImageTransparency.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EA296ADAC00000000"
+               BuildableName = "libTinyThumbnail.a"
+               BlueprintName = "TinyThumbnail"
+               ReferencedContainer = "container:submodules/TinyThumbnail/TinyThumbnail.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E3548443300000000"
+               BuildableName = "libPhotoResources.a"
+               BlueprintName = "PhotoResources"
+               ReferencedContainer = "container:submodules/PhotoResources/PhotoResources.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E943A4C6D00000000"
+               BuildableName = "libStripe.a"
+               BlueprintName = "Stripe"
+               ReferencedContainer = "container:submodules/Stripe/Stripe.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB2CC7B7A00000000"
+               BuildableName = "libDeviceAccess.a"
+               BlueprintName = "DeviceAccess"
+               ReferencedContainer = "container:submodules/DeviceAccess/DeviceAccess.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E18FD80A300000000"
+               BuildableName = "libTelegramPermissions.a"
+               BlueprintName = "TelegramPermissions"
+               ReferencedContainer = "container:submodules/TelegramPermissions/TelegramPermissions.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E3C86B83A00000000"
+               BuildableName = "libTelegramNotices.a"
+               BlueprintName = "TelegramNotices"
+               ReferencedContainer = "container:submodules/TelegramNotices/TelegramNotices.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E22643F8800000000"
+               BuildableName = "libBotPaymentsUI.a"
+               BlueprintName = "BotPaymentsUI"
+               ReferencedContainer = "container:submodules/BotPaymentsUI/BotPaymentsUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ECE2AD33000000000"
+               BuildableName = "libBuildConfig.a"
+               BlueprintName = "BuildConfig"
+               ReferencedContainer = "container:submodules/BuildConfig/BuildConfig.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC8F48FD000000000"
+               BuildableName = "libCallListUI.a"
+               BlueprintName = "CallListUI"
+               ReferencedContainer = "container:submodules/CallListUI/CallListUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E831E25D600000000"
+               BuildableName = "libListSectionHeaderNode.a"
+               BlueprintName = "ListSectionHeaderNode"
+               ReferencedContainer = "container:submodules/ListSectionHeaderNode/ListSectionHeaderNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E723D879E00000000"
+               BuildableName = "libChatListSearchItemHeader.a"
+               BlueprintName = "ChatListSearchItemHeader"
+               ReferencedContainer = "container:submodules/ChatListSearchItemHeader/ChatListSearchItemHeader.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5094635300000000"
+               BuildableName = "libChatListSearchItemNode.a"
+               BlueprintName = "ChatListSearchItemNode"
+               ReferencedContainer = "container:submodules/ChatListSearchItemNode/ChatListSearchItemNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E1B72F5B100000000"
+               BuildableName = "libPeerOnlineMarkerNode.a"
+               BlueprintName = "PeerOnlineMarkerNode"
+               ReferencedContainer = "container:submodules/PeerOnlineMarkerNode/PeerOnlineMarkerNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E175F691A00000000"
+               BuildableName = "libSelectablePeerNode.a"
+               BlueprintName = "SelectablePeerNode"
+               ReferencedContainer = "container:submodules/SelectablePeerNode/SelectablePeerNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E89C327F900000000"
+               BuildableName = "libHorizontalPeerItem.a"
+               BlueprintName = "HorizontalPeerItem"
+               ReferencedContainer = "container:submodules/HorizontalPeerItem/HorizontalPeerItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EA9F0E77A00000000"
+               BuildableName = "libChatListSearchRecentPeersNode.a"
+               BlueprintName = "ChatListSearchRecentPeersNode"
+               ReferencedContainer = "container:submodules/ChatListSearchRecentPeersNode/ChatListSearchRecentPeersNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE78EBF9100000000"
+               BuildableName = "libChatTitleActivityNode.a"
+               BlueprintName = "ChatTitleActivityNode"
+               ReferencedContainer = "container:submodules/ChatTitleActivityNode/ChatTitleActivityNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EFBD875BE00000000"
+               BuildableName = "libPeerPresenceStatusManager.a"
+               BlueprintName = "PeerPresenceStatusManager"
+               ReferencedContainer = "container:submodules/PeerPresenceStatusManager/PeerPresenceStatusManager.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E02CF852600000000"
+               BuildableName = "libItemListPeerItem.a"
+               BlueprintName = "ItemListPeerItem"
+               ReferencedContainer = "container:submodules/ItemListPeerItem/ItemListPeerItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EF2B7E52800000000"
+               BuildableName = "libContactsPeerItem.a"
+               BlueprintName = "ContactsPeerItem"
+               ReferencedContainer = "container:submodules/ContactsPeerItem/ContactsPeerItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E38D20A5C00000000"
+               BuildableName = "libSearchUI.a"
+               BlueprintName = "SearchUI"
+               ReferencedContainer = "container:submodules/SearchUI/SearchUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E9B9F58B300000000"
+               BuildableName = "libRadialStatusNode.a"
+               BlueprintName = "RadialStatusNode"
+               ReferencedContainer = "container:submodules/RadialStatusNode/RadialStatusNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E78B0F05A00000000"
+               BuildableName = "libSaveToCameraRoll.a"
+               BlueprintName = "SaveToCameraRoll"
+               ReferencedContainer = "container:submodules/SaveToCameraRoll/SaveToCameraRoll.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E371B736D00000000"
+               BuildableName = "libUrlEscaping.a"
+               BlueprintName = "UrlEscaping"
+               ReferencedContainer = "container:submodules/UrlEscaping/UrlEscaping.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0C093CBB00000000"
+               BuildableName = "libShareController.a"
+               BlueprintName = "ShareController"
+               ReferencedContainer = "container:submodules/ShareController/ShareController.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0A14C74B00000000"
+               BuildableName = "libPeersNearbyIconNode.a"
+               BlueprintName = "PeersNearbyIconNode"
+               ReferencedContainer = "container:submodules/PeersNearbyIconNode/PeersNearbyIconNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E9CD82B9600000000"
+               BuildableName = "libSolidRoundedButtonNode.a"
+               BlueprintName = "SolidRoundedButtonNode"
+               ReferencedContainer = "container:submodules/SolidRoundedButtonNode/SolidRoundedButtonNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ECF9FEE7700000000"
+               BuildableName = "libTelegramPermissionsUI.a"
+               BlueprintName = "TelegramPermissionsUI"
+               ReferencedContainer = "container:submodules/TelegramPermissionsUI/TelegramPermissionsUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E47E0B3D200000000"
+               BuildableName = "libContactListUI.a"
+               BlueprintName = "ContactListUI"
+               ReferencedContainer = "container:submodules/ContactListUI/ContactListUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EDF4E70F700000000"
+               BuildableName = "libDeleteChatPeerActionSheetItem.a"
+               BlueprintName = "DeleteChatPeerActionSheetItem"
+               ReferencedContainer = "container:submodules/DeleteChatPeerActionSheetItem/DeleteChatPeerActionSheetItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC1C23B3000000000"
+               BuildableName = "libLanguageSuggestionUI.a"
+               BlueprintName = "LanguageSuggestionUI"
+               ReferencedContainer = "container:submodules/LanguageSuggestionUI/LanguageSuggestionUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EEAAB097E00000000"
+               BuildableName = "libOverlayStatusController.a"
+               BlueprintName = "OverlayStatusController"
+               ReferencedContainer = "container:submodules/OverlayStatusController/OverlayStatusController.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6B01AF0600000000"
+               BuildableName = "libLiveLocationTimerNode.a"
+               BlueprintName = "LiveLocationTimerNode"
+               ReferencedContainer = "container:submodules/LiveLocationTimerNode/LiveLocationTimerNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E206CC0CE00000000"
+               BuildableName = "libTelegramBaseController.a"
+               BlueprintName = "TelegramBaseController"
+               ReferencedContainer = "container:submodules/TelegramBaseController/TelegramBaseController.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E9749269800000000"
+               BuildableName = "libUndoUI.a"
+               BlueprintName = "UndoUI"
+               ReferencedContainer = "container:submodules/UndoUI/UndoUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0758854A00000000"
+               BuildableName = "libChatListUI.a"
+               BlueprintName = "ChatListUI"
+               ReferencedContainer = "container:submodules/ChatListUI/ChatListUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E694E46A500000000"
+               BuildableName = "libComposePollUI.a"
+               BlueprintName = "ComposePollUI"
+               ReferencedContainer = "container:submodules/ComposePollUI/ComposePollUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE09F1DE500000000"
+               BuildableName = "libReactionSelectionNode.a"
+               BlueprintName = "ReactionSelectionNode"
+               ReferencedContainer = "container:submodules/ReactionSelectionNode/ReactionSelectionNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5B33A96100000000"
+               BuildableName = "libTextSelectionNode.a"
+               BlueprintName = "TextSelectionNode"
+               ReferencedContainer = "container:submodules/TextSelectionNode/TextSelectionNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5F32B06300000000"
+               BuildableName = "libContextUI.a"
+               BlueprintName = "ContextUI"
+               ReferencedContainer = "container:submodules/ContextUI/ContextUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E9DE1740F00000000"
+               BuildableName = "libCounterContollerTitleView.a"
+               BlueprintName = "CounterContollerTitleView"
+               ReferencedContainer = "container:submodules/CounterContollerTitleView/CounterContollerTitleView.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0092C07200000000"
+               BuildableName = "libDateSelectionUI.a"
+               BlueprintName = "DateSelectionUI"
+               ReferencedContainer = "container:submodules/DateSelectionUI/DateSelectionUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E62B20AA900000000"
+               BuildableName = "libDeviceProximity.a"
+               BlueprintName = "DeviceProximity"
+               ReferencedContainer = "container:submodules/DeviceProximity/DeviceProximity.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6CDBC95600000000"
+               BuildableName = "libDirectionalPanGesture.a"
+               BlueprintName = "DirectionalPanGesture"
+               ReferencedContainer = "container:submodules/DirectionalPanGesture/DirectionalPanGesture.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E03FF902600000000"
+               BuildableName = "libEmoji.a"
+               BlueprintName = "Emoji"
+               ReferencedContainer = "container:submodules/Emoji/Emoji.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EBC0242C800000000"
+               BuildableName = "libEncryptionKeyVisualization.a"
+               BlueprintName = "EncryptionKeyVisualization"
+               ReferencedContainer = "container:submodules/EncryptionKeyVisualization/EncryptionKeyVisualization.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E11B2F67B00000000"
+               BuildableName = "libOpenInExternalAppUI.a"
+               BlueprintName = "OpenInExternalAppUI"
+               ReferencedContainer = "container:submodules/OpenInExternalAppUI/OpenInExternalAppUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E326B4A8B00000000"
+               BuildableName = "libScreenCaptureDetection.a"
+               BlueprintName = "ScreenCaptureDetection"
+               ReferencedContainer = "container:submodules/ScreenCaptureDetection/ScreenCaptureDetection.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6C23B9F400000000"
+               BuildableName = "libSwipeToDismissGesture.a"
+               BlueprintName = "SwipeToDismissGesture"
+               ReferencedContainer = "container:submodules/SwipeToDismissGesture/SwipeToDismissGesture.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E038732C800000000"
+               BuildableName = "libTelegramUniversalVideoContent.a"
+               BlueprintName = "TelegramUniversalVideoContent"
+               ReferencedContainer = "container:submodules/TelegramUniversalVideoContent/TelegramUniversalVideoContent.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE523C65500000000"
+               BuildableName = "libWebsiteType.a"
+               BlueprintName = "WebsiteType"
+               ReferencedContainer = "container:submodules/WebsiteType/WebsiteType.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E8A7E154600000000"
+               BuildableName = "libGalleryUI.a"
+               BlueprintName = "GalleryUI"
+               ReferencedContainer = "container:submodules/GalleryUI/GalleryUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E7EB20E2600000000"
+               BuildableName = "libGameUI.a"
+               BlueprintName = "GameUI"
+               ReferencedContainer = "container:submodules/GameUI/GameUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB9E031DB00000000"
+               BuildableName = "libGeocoding.a"
+               BlueprintName = "Geocoding"
+               ReferencedContainer = "container:submodules/Geocoding/Geocoding.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E8A7A256D00000000"
+               BuildableName = "libGridMessageSelectionNode.a"
+               BlueprintName = "GridMessageSelectionNode"
+               ReferencedContainer = "container:submodules/GridMessageSelectionNode/GridMessageSelectionNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0795F20800000000"
+               BuildableName = "libHashtagSearchUI.a"
+               BlueprintName = "HashtagSearchUI"
+               ReferencedContainer = "container:submodules/HashtagSearchUI/HashtagSearchUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE6D3C92800000000"
+               BuildableName = "libHexColor.a"
+               BlueprintName = "HexColor"
+               ReferencedContainer = "container:submodules/HexColor/HexColor.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EEF48A87700000000"
+               BuildableName = "libHockeySDK.a"
+               BlueprintName = "HockeySDK"
+               ReferencedContainer = "container:submodules/HockeySDK-iOS/HockeySDK-iOS.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE29FC52B00000000"
+               BuildableName = "libImageCompression.a"
+               BlueprintName = "ImageCompression"
+               ReferencedContainer = "container:submodules/ImageCompression/ImageCompression.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E7FA5B2D600000000"
+               BuildableName = "libPersistentStringHash.a"
+               BlueprintName = "PersistentStringHash"
+               ReferencedContainer = "container:submodules/PersistentStringHash/PersistentStringHash.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB949E97200000000"
+               BuildableName = "libInstantPageCache.a"
+               BlueprintName = "InstantPageCache"
+               ReferencedContainer = "container:submodules/InstantPageCache/InstantPageCache.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E46DD664C00000000"
+               BuildableName = "libLiveLocationPositionNode.a"
+               BlueprintName = "LiveLocationPositionNode"
+               ReferencedContainer = "container:submodules/LiveLocationPositionNode/LiveLocationPositionNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6AF7943D00000000"
+               BuildableName = "libLegacyUI.a"
+               BlueprintName = "LegacyUI"
+               ReferencedContainer = "container:submodules/LegacyUI/LegacyUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ED2B86D2900000000"
+               BuildableName = "libLocationUI.a"
+               BlueprintName = "LocationUI"
+               ReferencedContainer = "container:submodules/LocationUI/LocationUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6228587400000000"
+               BuildableName = "libMosaicLayout.a"
+               BlueprintName = "MosaicLayout"
+               ReferencedContainer = "container:submodules/MosaicLayout/MosaicLayout.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6C6A738C00000000"
+               BuildableName = "libMusicAlbumArtResources.a"
+               BlueprintName = "MusicAlbumArtResources"
+               ReferencedContainer = "container:submodules/MusicAlbumArtResources/MusicAlbumArtResources.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E3CC29A8400000000"
+               BuildableName = "libInstantPageUI.a"
+               BlueprintName = "InstantPageUI"
+               ReferencedContainer = "container:submodules/InstantPageUI/InstantPageUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E999395F600000000"
+               BuildableName = "libItemListAddressItem.a"
+               BlueprintName = "ItemListAddressItem"
+               ReferencedContainer = "container:submodules/ItemListAddressItem/ItemListAddressItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E87F7DB7900000000"
+               BuildableName = "libItemListAvatarAndNameInfoItem.a"
+               BlueprintName = "ItemListAvatarAndNameInfoItem"
+               ReferencedContainer = "container:submodules/ItemListAvatarAndNameInfoItem/ItemListAvatarAndNameInfoItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6DE1523C00000000"
+               BuildableName = "libItemListPeerActionItem.a"
+               BlueprintName = "ItemListPeerActionItem"
+               ReferencedContainer = "container:submodules/ItemListPeerActionItem/ItemListPeerActionItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EF17EA27800000000"
+               BuildableName = "libItemListStickerPackItem.a"
+               BlueprintName = "ItemListStickerPackItem"
+               ReferencedContainer = "container:submodules/ItemListStickerPackItem/ItemListStickerPackItem.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E592FAC5800000000"
+               BuildableName = "libJoinLinkPreviewUI.a"
+               BlueprintName = "JoinLinkPreviewUI"
+               ReferencedContainer = "container:submodules/JoinLinkPreviewUI/JoinLinkPreviewUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE2DE00EA00000000"
+               BuildableName = "libLanguageLinkPreviewUI.a"
+               BlueprintName = "LanguageLinkPreviewUI"
+               ReferencedContainer = "container:submodules/LanguageLinkPreviewUI/LanguageLinkPreviewUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB60714B800000000"
+               BuildableName = "libLegacyDataImport.a"
+               BlueprintName = "LegacyDataImport"
+               ReferencedContainer = "container:submodules/LegacyDataImport/LegacyDataImport.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E8A08AACC00000000"
+               BuildableName = "libLocalMediaResources.a"
+               BlueprintName = "LocalMediaResources"
+               ReferencedContainer = "container:submodules/LocalMediaResources/LocalMediaResources.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6B29E48500000000"
+               BuildableName = "libMimeTypes.a"
+               BlueprintName = "MimeTypes"
+               ReferencedContainer = "container:submodules/MimeTypes/MimeTypes.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E32210A3D00000000"
+               BuildableName = "libLegacyMediaPickerUI.a"
+               BlueprintName = "LegacyMediaPickerUI"
+               ReferencedContainer = "container:submodules/LegacyMediaPickerUI/LegacyMediaPickerUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E1D593FA900000000"
+               BuildableName = "libLightweightAccountData.a"
+               BlueprintName = "LightweightAccountData"
+               ReferencedContainer = "container:submodules/LightweightAccountData/LightweightAccountData.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC9BC3B8C00000000"
+               BuildableName = "libLiveLocationManager.a"
+               BlueprintName = "LiveLocationManager"
+               ReferencedContainer = "container:submodules/LiveLocationManager/LiveLocationManager.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0EC89FF400000000"
+               BuildableName = "libMapResourceToAvatarSizes.a"
+               BlueprintName = "MapResourceToAvatarSizes"
+               ReferencedContainer = "container:submodules/MapResourceToAvatarSizes/MapResourceToAvatarSizes.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E639FD30200000000"
+               BuildableName = "libMessageReactionListUI.a"
+               BlueprintName = "MessageReactionListUI"
+               ReferencedContainer = "container:submodules/MessageReactionListUI/MessageReactionListUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EFA93E6DB00000000"
+               BuildableName = "libNotificationMuteSettingsUI.a"
+               BlueprintName = "NotificationMuteSettingsUI"
+               ReferencedContainer = "container:submodules/NotificationMuteSettingsUI/NotificationMuteSettingsUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E6080E3BC00000000"
+               BuildableName = "libNotificationSoundSelectionUI.a"
+               BlueprintName = "NotificationSoundSelectionUI"
+               ReferencedContainer = "container:submodules/NotificationSoundSelectionUI/NotificationSoundSelectionUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E9CE7D12600000000"
+               BuildableName = "libOpusBinding.a"
+               BlueprintName = "OpusBinding"
+               ReferencedContainer = "container:submodules/OpusBinding/OpusBinding.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EA1B020B200000000"
+               BuildableName = "libPasscodeUI.a"
+               BlueprintName = "PasscodeUI"
+               ReferencedContainer = "container:submodules/PasscodeUI/PasscodeUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E08FC6F3E00000000"
+               BuildableName = "libPhoneInputNode.a"
+               BlueprintName = "PhoneInputNode"
+               ReferencedContainer = "container:submodules/PhoneInputNode/PhoneInputNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB7E5B64600000000"
+               BuildableName = "libPassportUI.a"
+               BlueprintName = "PassportUI"
+               ReferencedContainer = "container:submodules/PassportUI/PassportUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E000138D200000000"
+               BuildableName = "libPdf.a"
+               BlueprintName = "Pdf"
+               ReferencedContainer = "container:submodules/Pdf/Pdf.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E9FB5A62B00000000"
+               BuildableName = "libPeerAvatarGalleryUI.a"
+               BlueprintName = "PeerAvatarGalleryUI"
+               ReferencedContainer = "container:submodules/PeerAvatarGalleryUI/PeerAvatarGalleryUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E057909A600000000"
+               BuildableName = "libSinglePhoneInputNode.a"
+               BlueprintName = "SinglePhoneInputNode"
+               ReferencedContainer = "container:submodules/SinglePhoneInputNode/SinglePhoneInputNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ED4B62C2600000000"
+               BuildableName = "libStickerPackPreviewUI.a"
+               BlueprintName = "StickerPackPreviewUI"
+               ReferencedContainer = "container:submodules/StickerPackPreviewUI/StickerPackPreviewUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EF5B6E99000000000"
+               BuildableName = "libWebSearchUI.a"
+               BlueprintName = "WebSearchUI"
+               ReferencedContainer = "container:submodules/WebSearchUI/WebSearchUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE32023E400000000"
+               BuildableName = "libPeerInfoUI.a"
+               BlueprintName = "PeerInfoUI"
+               ReferencedContainer = "container:submodules/PeerInfoUI/PeerInfoUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE520FFA400000000"
+               BuildableName = "libPeersNearbyUI.a"
+               BlueprintName = "PeersNearbyUI"
+               ReferencedContainer = "container:submodules/PeersNearbyUI/PeersNearbyUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E909F23CE00000000"
+               BuildableName = "libQrCode.a"
+               BlueprintName = "QrCode"
+               ReferencedContainer = "container:submodules/QrCode/QrCode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E795C98F100000000"
+               BuildableName = "libRMIntro.a"
+               BlueprintName = "RMIntro"
+               ReferencedContainer = "container:submodules/RMIntro/RMIntro.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E2B77100E00000000"
+               BuildableName = "libRaiseToListen.a"
+               BlueprintName = "RaiseToListen"
+               ReferencedContainer = "container:submodules/RaiseToListen/RaiseToListen.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E3431D95800000000"
+               BuildableName = "liblibtgvoip.a"
+               BlueprintName = "libtgvoip"
+               ReferencedContainer = "container:submodules/libtgvoip/libtgvoip.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ED84E9A6100000000"
+               BuildableName = "libTelegramVoip.a"
+               BlueprintName = "TelegramVoip"
+               ReferencedContainer = "container:submodules/TelegramVoip/TelegramVoip.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EDE4F2EC800000000"
+               BuildableName = "libTelegramCallsUI.a"
+               BlueprintName = "TelegramCallsUI"
+               ReferencedContainer = "container:submodules/TelegramCallsUI/TelegramCallsUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC97C935400000000"
+               BuildableName = "libUrlHandling.a"
+               BlueprintName = "UrlHandling"
+               ReferencedContainer = "container:submodules/UrlHandling/UrlHandling.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E869F2E6300000000"
+               BuildableName = "libWallpaperResources.a"
+               BlueprintName = "WallpaperResources"
+               ReferencedContainer = "container:submodules/WallpaperResources/WallpaperResources.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E7696261700000000"
+               BuildableName = "libSettingsUI.a"
+               BlueprintName = "SettingsUI"
+               ReferencedContainer = "container:submodules/SettingsUI/SettingsUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0B09974100000000"
+               BuildableName = "libShareItems.a"
+               BlueprintName = "ShareItems"
+               ReferencedContainer = "container:submodules/ShareItems/ShareItems.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E44A8355E00000000"
+               BuildableName = "libTelegramUpdateUI.a"
+               BlueprintName = "TelegramUpdateUI"
+               ReferencedContainer = "container:submodules/TelegramUpdateUI/TelegramUpdateUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EF71B15A800000000"
+               BuildableName = "libTouchDownGesture.a"
+               BlueprintName = "TouchDownGesture"
+               ReferencedContainer = "container:submodules/TouchDownGesture/TouchDownGesture.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EF283359E00000000"
+               BuildableName = "libWatchBridgeAudio.a"
+               BlueprintName = "WatchBridgeAudio"
+               ReferencedContainer = "container:submodules/WatchBridgeAudio/WatchBridgeAudio.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E7ACF6B7A00000000"
+               BuildableName = "libWatchCommon.a"
+               BlueprintName = "WatchCommon"
+               ReferencedContainer = "container:submodules/WatchCommon/WatchCommon.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E7942E51800000000"
+               BuildableName = "libWatchBridge.a"
+               BlueprintName = "WatchBridge"
+               ReferencedContainer = "container:submodules/WatchBridge/WatchBridge.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E04F960C800000000"
+               BuildableName = "libWebUI.a"
+               BlueprintName = "WebUI"
+               ReferencedContainer = "container:submodules/WebUI/WebUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E2CA8553300000000"
+               BuildableName = "libTelegramUI.dylib"
+               BlueprintName = "TelegramUI#shared"
+               ReferencedContainer = "container:submodules/TelegramUI/TelegramUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC43AA77A00000000"
+               BuildableName = "libAppLibrary.a"
+               BlueprintName = "AppLibrary"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ECA074AD000000000"
+               BuildableName = "IntentsExtension.appex"
+               BlueprintName = "IntentsExtension#iphonesimulator-x86_64"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EF6E8B68700000000"
+               BuildableName = "NotificationContentExtension.appex"
+               BlueprintName = "NotificationContentExtension#iphonesimulator-x86_64"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E8C3D58C300000000"
+               BuildableName = "NotificationServiceExtension.appex"
+               BlueprintName = "NotificationServiceExtension#iphonesimulator-x86_64"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE64F555800000000"
+               BuildableName = "ShareExtension.appex"
+               BlueprintName = "ShareExtension#iphonesimulator-x86_64"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5A42857500000000"
+               BuildableName = "libWatchCommonWatch.a"
+               BlueprintName = "WatchCommonWatch"
+               ReferencedContainer = "container:submodules/WatchCommon/WatchCommon.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EADE3780A00000000"
+               BuildableName = "WatchAppExtension.appex"
+               BlueprintName = "WatchAppExtension#watchsimulator-i386"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EC42F8D0F00000000"
+               BuildableName = "WatchApp.app"
+               BlueprintName = "WatchApp#watchsimulator-i386"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E86ED67FD00000000"
+               BuildableName = "WidgetExtension.appex"
+               BlueprintName = "WidgetExtension#iphonesimulator-x86_64"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB2C34D2100000000"
+               BuildableName = "Telegram.app"
+               BlueprintName = "Telegram"
+               ReferencedContainer = "container:Project.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES">
+      <Testables>
+      </Testables>
+      <AdditionalOptions>
+      </AdditionalOptions>
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "E66DC04EB2C34D2100000000"
+            BuildableName = "Telegram.app"
+            BlueprintName = "Telegram"
+            ReferencedContainer = "container:Project.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+      <AdditionalOptions>
+      </AdditionalOptions>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "E66DC04EB2C34D2100000000"
+            BuildableName = "Telegram.app"
+            BlueprintName = "Telegram"
+            ReferencedContainer = "container:Project.xcodeproj">
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>

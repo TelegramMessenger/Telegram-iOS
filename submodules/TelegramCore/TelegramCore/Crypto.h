@@ -3,10 +3,10 @@
 
 #import <Foundation/Foundation.h>
 
-NSData * _Nonnull CryptoMD5(const void *bytes, int count);
-NSData * _Nonnull CryptoSHA1(const void *bytes, int count);
-NSData * _Nonnull CryptoSHA256(const void *bytes, int count);
-NSData * _Nonnull CryptoSHA512(const void *bytes, int count);
+NSData * _Nonnull CryptoMD5(const void * _Nonnull bytes, int count);
+NSData * _Nonnull CryptoSHA1(const void * _Nonnull bytes, int count);
+NSData * _Nonnull CryptoSHA256(const void * _Nonnull bytes, int count);
+NSData * _Nonnull CryptoSHA512(const void * _Nonnull bytes, int count);
 
 @interface IncrementalMD5 : NSObject
 
