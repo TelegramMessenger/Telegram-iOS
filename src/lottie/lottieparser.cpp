@@ -780,10 +780,7 @@ LottieColor LottieParserImpl::toColor(const char *str)
 
     // some resource has empty color string
     // return a default color for those cases.
-    if (!len) return color;
-
-    RAPIDJSON_ASSERT(len == 7);
-    RAPIDJSON_ASSERT(str[0] == '#');
+    if (len != 7 || str[0] != '#') return color;
 
     char tmp[3] = {'\0', '\0', '\0'};
     tmp[0] = str[1];
