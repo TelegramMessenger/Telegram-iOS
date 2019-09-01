@@ -17,7 +17,7 @@ static_library(
         "//submodules/SSignalKit/SSignalKit:SSignalKit",
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
-        "//submodules/WatchCommon:WatchCommon",
+        "//submodules/WatchCommon/Host:WatchCommon",
         "//submodules/WatchBridgeAudio:WatchBridgeAudio",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",

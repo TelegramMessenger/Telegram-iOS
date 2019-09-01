@@ -44,7 +44,7 @@ framework(
         "//submodules/MediaPlayer:UniversalMediaPlayer",
         "//submodules/TelegramVoip:TelegramVoip",
         "//submodules/DeviceAccess:DeviceAccess",
-        "//submodules/WatchCommon:WatchCommon",
+        "//submodules/WatchCommon/Host:WatchCommon",
         "//submodules/LightweightAccountData:LightweightAccountData",
         "//submodules/HockeySDK-iOS:HockeySDK",
         "//submodules/BuildConfig:BuildConfig",

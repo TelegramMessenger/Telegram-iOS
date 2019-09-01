@@ -17,13 +17,16 @@ load("//Config:configs.bzl",
     "intents_extension_info_plist_substitutions",
     "watch_extension_info_plist_substitutions",
     "watch_info_plist_substitutions",
-    "DEVELOPMENT_LANGUAGE"
-,)
+    "DEVELOPMENT_LANGUAGE",
+)
 
 load("//Config:buck_rule_macros.bzl",
     "apple_lib",
     "framework_binary_dependencies",
     "framework_bundle_dependencies",
+    "glob_map",
+    "glob_sub_map",
+    "merge_maps",
 )
 
 static_library_dependencies = [
@@ -203,6 +206,9 @@ apple_binary(
         "Widget/**/*.swift",
     ]),
     configs = widget_extension_configs("Widget"),
+    swift_compiler_flags = [
+        "-application-extension",
+    ],
     linker_flags = [
         "-e",
         "_NSExtensionMain",
@@ -243,6 +249,9 @@ apple_binary(
         "NotificationContent/**/*.swift",
     ]),
     configs = notification_content_extension_configs("NotificationContent"),
+    swift_compiler_flags = [
+        "-application-extension",
+    ],
     linker_flags = [
         "-e",
         "_NSExtensionMain",
@@ -283,6 +292,9 @@ apple_binary(
        "NotificationService/**/*.h", 
     ]),
     configs = notification_service_extension_configs("NotificationService"),
+    swift_compiler_flags = [
+        "-application-extension",
+    ],
     linker_flags = [
         "-e",
         "_NSExtensionMain",
@@ -320,6 +332,9 @@ apple_binary(
         "SiriIntents/**/*.swift",
     ]),
     configs = intents_extension_configs("SiriIntents"),
+    swift_compiler_flags = [
+        "-application-extension",
+    ],
     linker_flags = [
         "-e",
         "_NSExtensionMain",
@@ -357,17 +372,26 @@ apple_binary(
     name = "WatchAppExtensionBinary",
     srcs = glob([
         "Watch/Extension/**/*.m",
+        "Watch/SSignalKit/**/*.m",
+        "Watch/Bridge/**/*.m",
+        "Watch/WatchCommonWatch/**/*.m",
     ]),
-    headers = glob([
-        "Watch/Extension/**/*.h",
+    headers = merge_maps([
+        glob_map(glob([
+            "Watch/Extension/*.h",
+            "Watch/Bridge/*.h",
+        ])),
+        glob_sub_map("Watch/Extension/", glob([
+            "Watch/Extension/SSignalKit/*.h",
+        ])),
+        glob_sub_map("Watch/", glob([
+            "Watch/WatchCommonWatch/*.h",
+        ])),
     ]),
     compiler_flags = [
         "-DTARGET_OS_WATCH=1",
     ],
     configs = watch_extension_binary_configs("watchkitapp.watchkitextension"),
-    deps = [
-        "//submodules/WatchCommon:WatchCommonWatch",
-    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/UserNotifications.framework",
         "$SDKROOT/System/Library/Frameworks/CoreLocation.framework",

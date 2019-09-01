@@ -26,7 +26,7 @@ rm -f "$DSYMS_ZIP"
 rm -rf "$DSYMS_DIR"
 mkdir -p "$DSYMS_DIR"
 
-cp "buck-out/gen/App/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
+cp "buck-out/gen/AppPackage#$PLATFORM_FLAVORS.ipa" "$IPA_PATH.original"
 rm -rf "$IPA_PATH.original.unpacked"
 rm -f "$BUILD_PATH/${APP_NAME}_signed.ipa"
 mkdir -p "$IPA_PATH.original.unpacked"
@@ -40,7 +40,7 @@ FRAMEWORKS_DIR="$APP_PATH/Frameworks"
 rm -rf "$IPA_PATH.original.unpacked/SwiftSupport/iphoneos/"*
 rm -rf "$FRAMEWORKS_DIR"/*
 
-for DEPENDENCY in $(${BUCK} query "kind('apple_library|apple_binary', deps('//App:Telegram#$PLATFORM_FLAVORS', 1))" ${BUCK_OPTIONS}); do
+for DEPENDENCY in $(${BUCK} query "kind('apple_library|apple_binary', deps('//:Telegram#$PLATFORM_FLAVORS', 1))" ${BUCK_OPTIONS}); do
 	case "$DEPENDENCY" in 
 		*"#"*)
 			;;

@@ -44,7 +44,7 @@ def optimization_config():
 ALL_LOAD_LINKER_FLAG = "-all_load"
 
 def bundle_identifier(name):
-    return "org.telegram.%s" % name
+    return "org.telegram.Telegram-iOS.%s" % name
 
 def library_configs():
     lib_specific_config = {
@@ -202,9 +202,15 @@ def watch_extension_binary_configs(name):
         "WATCHOS_DEPLOYMENT_TARGET": "4.0",
         "TARGETED_DEVICE_FAMILY": "4",
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier("watchkitapp.watchkitextension"),
+        "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
+        "DEVELOPMENT_TEAM": "X834Q8SBVP",
+        "PROVISIONING_PROFILE_SPECIFIER": "match Development org.telegram.Telegram-iOS.watchkitapp.watchkitextension",
         "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks",
-        "WK_COMPANION_APP_BUNDLE_IDENTIFIER": bundle_identifier("watchkitapp"),
+        "WK_COMPANION_APP_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
         "WK_APP_BUNDLE_IDENTIFIER": bundle_identifier("watchkitapp"),
+        "APP_NAME": "Telegram",
+        "APP_BUNDLE_ID": "org.telegram.Telegram-iOS",
+        "BUILD_NUMBER": appConfig()["buildNumber"],
         "ENABLE_BITCODE": "YES",
     }
     config = config_with_updated_linker_flags(config, ALL_LOAD_LINKER_FLAG)
@@ -216,9 +222,15 @@ def watch_binary_configs(name):
         "WATCHOS_DEPLOYMENT_TARGET": "4.0",
         "TARGETED_DEVICE_FAMILY": "4",
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier("watchkitapp"),
+        "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
+        "DEVELOPMENT_TEAM": "X834Q8SBVP",
+        "PROVISIONING_PROFILE_SPECIFIER": "match Development org.telegram.Telegram-iOS.watchkitapp",
         "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks",
-        "WK_COMPANION_APP_BUNDLE_IDENTIFIER": bundle_identifier("watchkitapp"),
+        "WK_COMPANION_APP_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS",
         "WK_APP_BUNDLE_IDENTIFIER": bundle_identifier("watchkitapp"),
+        "APP_NAME": "Telegram",
+        "APP_BUNDLE_ID": "org.telegram.Telegram-iOS",
+        "BUILD_NUMBER": appConfig()["buildNumber"],
         "ENABLE_BITCODE": "YES",
     }
     config = config_with_updated_linker_flags(config, ALL_LOAD_LINKER_FLAG)
@@ -254,6 +266,7 @@ def share_extension_info_plist_substitutions(name):
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.Share",
         "PRODUCT_NAME": name,
+        "APP_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
@@ -267,6 +280,7 @@ def widget_extension_info_plist_substitutions(name):
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.Widget",
         "PRODUCT_NAME": name,
+        "APP_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
@@ -280,6 +294,7 @@ def notification_content_extension_info_plist_substitutions(name):
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.NotificationContent",
         "PRODUCT_NAME": name,
+        "APP_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
@@ -293,6 +308,7 @@ def notification_service_extension_info_plist_substitutions(name):
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.NotificationService",
         "PRODUCT_NAME": name,
+        "APP_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
@@ -306,6 +322,7 @@ def intents_extension_info_plist_substitutions(name):
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.SiriIntents",
         "PRODUCT_NAME": name,
+        "APP_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
@@ -318,6 +335,8 @@ def watch_extension_info_plist_substitutions(name):
         "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.watchkitapp.watchkitextension",
+        "APP_NAME": "Telegram",
+        "APP_BUNDLE_ID": "org.telegram.Telegram-iOS",
         "PRODUCT_NAME": name,
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",
@@ -330,6 +349,8 @@ def watch_info_plist_substitutions(name):
         "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
         "EXECUTABLE_NAME": name,
         "PRODUCT_BUNDLE_IDENTIFIER": "org.telegram.Telegram-iOS.watchkitapp",
+        "APP_NAME": "Telegram",
+        "APP_BUNDLE_ID": "org.telegram.Telegram-iOS",
         "PRODUCT_NAME": name,
         "CURRENT_PROJECT_VERSION": "1",
         "CODE_SIGN_IDENTITY": "iPhone Developer: Peter Iakovlev (9J4EJ3F97G)",

@@ -634,7 +634,6 @@
 		094DDF5222E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = id; path = Localizable.strings; sourceTree = "<group>"; };
 		094DDF5422E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = id; path = InfoPlist.strings; sourceTree = "<group>"; };
 		094DDF5622E8C30F004B0256 /* id */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = id; path = AppIntentVocabulary.plist; sourceTree = "<group>"; };
-		0956AF2B217B4642008106D0 /* WatchCommunicationManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WatchCommunicationManager.swift; sourceTree = "<group>"; };
 		0956AF2D217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TGNeoUnsupportedMessageViewModel.h; sourceTree = "<group>"; };
 		0956AF2E217B8109008106D0 /* TGNeoUnsupportedMessageViewModel.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TGNeoUnsupportedMessageViewModel.m; sourceTree = "<group>"; };
 		0972C6DF21791D950069E98A /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS5.0.sdk/System/Library/Frameworks/UserNotifications.framework; sourceTree = DEVELOPER_DIR; };
@@ -652,11 +651,8 @@
 		09A4192D22B7A4D400637EB4 /* BlueClassicIconLargeIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlueClassicIconLargeIpad@2x.png"; sourceTree = "<group>"; };
 		09A4192E22B7A4D400637EB4 /* BlackClassicIconIpad.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlackClassicIconIpad.png; sourceTree = "<group>"; };
 		09A4192F22B7A4D400637EB4 /* BlackClassicIconIpad@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackClassicIconIpad@2x.png"; sourceTree = "<group>"; };
-		09C50E7921738178009E676F /* TGBridgeServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGBridgeServer.h; sourceTree = "<group>"; };
-		09C50E7A21738178009E676F /* TGBridgeServer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGBridgeServer.m; sourceTree = "<group>"; };
 		09C50E852173854D009E676F /* WatchKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchKit.framework; path = System/Library/Frameworks/WatchKit.framework; sourceTree = SDKROOT; };
 		09C50E87217385CF009E676F /* WatchConnectivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WatchConnectivity.framework; path = System/Library/Frameworks/WatchConnectivity.framework; sourceTree = SDKROOT; };
-		09C50E892173AEDB009E676F /* WatchRequestHandlers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchRequestHandlers.swift; sourceTree = "<group>"; };
 		09C56F8B2172797200BDF00F /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		09C56F8E2172797200BDF00F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Interface.storyboard; sourceTree = "<group>"; };
 		09C56F902172797400BDF00F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -935,7 +931,6 @@
 		09C573132172953800BDF00F /* TGBridgeStickerPack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TGBridgeStickerPack.h; path = Bridge/TGBridgeStickerPack.h; sourceTree = "<group>"; };
 		09C573152172953800BDF00F /* TGBridgeLocationVenue+TGTableItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "TGBridgeLocationVenue+TGTableItem.h"; path = "Bridge/TGBridgeLocationVenue+TGTableItem.h"; sourceTree = "<group>"; };
 		09CFB211217299E80083F7A3 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS5.0.sdk/System/Library/Frameworks/CoreLocation.framework; sourceTree = DEVELOPER_DIR; };
-		09D304212174335F00C00567 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		09E9600122C23FF000B13673 /* BlackNotificationIcon@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "BlackNotificationIcon@3x.png"; sourceTree = "<group>"; };
 		09E9600222C23FF000B13673 /* BlackNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlackNotificationIcon.png; sourceTree = "<group>"; };
 		09E9600322C23FF000B13673 /* BlueNotificationIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = BlueNotificationIcon.png; sourceTree = "<group>"; };
@@ -1543,18 +1538,6 @@
 			name = "App Icons";
 			sourceTree = "<group>";
 		};
-		09C50E7821738150009E676F /* Watch */ = {
-			isa = PBXGroup;
-			children = (
-				0956AF2B217B4642008106D0 /* WatchCommunicationManager.swift */,
-				09C50E892173AEDB009E676F /* WatchRequestHandlers.swift */,
-				09D304212174335F00C00567 /* WatchBridge.swift */,
-				09C50E7921738178009E676F /* TGBridgeServer.h */,
-				09C50E7A21738178009E676F /* TGBridgeServer.m */,
-			);
-			name = Watch;
-			sourceTree = "<group>";
-		};
 		09C56F8C2172797200BDF00F /* Watch */ = {
 			isa = PBXGroup;
 			children = (
@@ -2119,7 +2102,6 @@
 			children = (
 				09A218E122A14E5600DE6898 /* App Icons */,
 				D0338729223A8347007A2CE4 /* Config */,
-				09C50E7821738150009E676F /* Watch */,
 				D021D4D8219CAEDD0064BEBA /* Config-Fork.xcconfig */,
 				D0ADF913212B398000310BBC /* Telegram-iOS-AppStoreLLC.entitlements */,
 				D079FD001F06BBD10038FADE /* Telegram-iOS-AppStore.entitlements */,

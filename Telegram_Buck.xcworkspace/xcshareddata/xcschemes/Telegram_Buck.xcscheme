@@ -2285,7 +2285,7 @@
                BlueprintIdentifier = "E66DC04E7ACF6B7A00000000"
                BuildableName = "libWatchCommon.a"
                BlueprintName = "WatchCommon"
-               ReferencedContainer = "container:submodules/WatchCommon/WatchCommon.xcodeproj">
+               ReferencedContainer = "container:submodules/WatchCommon/Host/Host.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -2398,20 +2398,6 @@
                BuildableName = "ShareExtension.appex"
                BlueprintName = "ShareExtension#iphonesimulator-x86_64"
                ReferencedContainer = "container:Project.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E66DC04E5A42857500000000"
-               BuildableName = "libWatchCommonWatch.a"
-               BlueprintName = "WatchCommonWatch"
-               ReferencedContainer = "container:submodules/WatchCommon/WatchCommon.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry

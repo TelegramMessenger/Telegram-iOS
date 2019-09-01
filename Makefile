@@ -14,11 +14,14 @@ build_arm64: check_env
 	$(BUCK) build //:AppPackage#iphoneos-arm64 ${BUCK_OPTIONS}
 	sh package_app.sh $(BUCK) "${BUCK_OPTIONS}" iphoneos-arm64
 
+package_arm64:
+	sh package_app.sh $(BUCK) "${BUCK_OPTIONS}" iphoneos-arm64
+
 build_buckdebug: check_env
 	BUCK_DEBUG_MODE=1 $(BUCK) build //:AppPackage#iphoneos-arm64 ${BUCK_OPTIONS}
 
 build_verbose: check_env
-	$(BUCK) build //:AppPackage#iphoneos-armv7,iphoneos-arm64 --verbose 8 ${BUCK_OPTIONS}
+	$(BUCK) build //:AppPackage#iphoneos-arm64 --verbose 7 ${BUCK_OPTIONS}
 
 targets:
 	$(BUCK) targets //...
