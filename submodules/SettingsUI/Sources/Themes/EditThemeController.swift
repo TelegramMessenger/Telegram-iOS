@@ -131,7 +131,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
     
     func item(_ arguments: EditThemeControllerArguments) -> ListViewItem {
         switch self {
-            case let .title(theme, strings, title, text, done):
+            case let .title(theme, strings, title, text, _):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(), text: text, placeholder: title, type: .regular(capitalization: true, autocorrection: false), returnKeyType: .default, clearType: .onFocus, tag: EditThemeEntryTag.title, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
@@ -152,7 +152,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                     
                 })
             case let .slugInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
             case let .chatPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder):
@@ -162,7 +162,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                     arguments.openFile()
                 })
             case let .uploadInfo(theme, text):
-                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+                return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
         }
     }
 }

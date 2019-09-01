@@ -288,6 +288,14 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }, error: { [weak controller] error in
+                let errorText: String
+                switch error {
+                    case .generic, .slugInvalid:
+                        errorText = presentationData.strings.Theme_ErrorNotFound
+                    case .unsupported:
+                        errorText = presentationData.strings.Theme_Unsupported
+                }
+                present(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 controller?.dismiss()
             })
             dismissInput()

@@ -4676,13 +4676,13 @@ Any member of this group will be able to see messages in the channel.";
 "EditTheme.EditTitle" = "Edit Theme";
 "EditTheme.Title" = "Theme Name";
 "EditTheme.ShortLink" = "link";
-"EditTheme.ShortLinkInfo" = "Short Link Info";
+"EditTheme.ShortLinkInfo" = "Your theme will be updated for all users each time you change it. Anyone can install it using this link.\n\nTheme links must be longer than 5 characters and can use a-z, 0-9 and underscores.";
 "EditTheme.Preview" = "CHAT PREVIEW";
-"EditTheme.UploadNewTheme" = "Select a File...";
-"EditTheme.UploadEditedTheme" = "Select Updated File...";
-"EditTheme.UploadNewInfo" = "This theme will be based on your current theme and wallpaper. Otherwise, you can use a custom theme file if you already have one.";
+"EditTheme.UploadNewTheme" = "Create from File...";
+"EditTheme.UploadEditedTheme" = "Update from File...";
+"EditTheme.UploadNewInfo" = "This theme will be based on your current theme and wallpaper. Alternatively, you can use a custom theme file if you already have one.";
 "EditTheme.UploadEditedInfo" = "You can select a new file to update the theme. It will be updated for all users.";
-"EditTheme.ThemeTemplateAlert" = "A copy of your theme template has been added to your Saved Messages.";
+"EditTheme.ThemeTemplateAlert" = "New Theme Added\n\nPress and hold on your theme to edit it or get a sharing link. Users who install your theme will get automatic updates each time you change it.\n\nFor advanced editing purposes, you can find a file with your theme in Saved Messages.";
 "EditTheme.FileReadError" = "Invalid theme file";
 
 "Wallpaper.ErrorNotFound" = "Sorry, this chat background doesn't seem to exist.";

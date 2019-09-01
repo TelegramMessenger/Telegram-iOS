@@ -84,10 +84,11 @@ final class ThemeGridControllerInteraction {
 private struct ThemeGridControllerEntry: Comparable, Identifiable {
     let index: Int
     let wallpaper: TelegramWallpaper
-    let selected: Bool
+    let isEditable: Bool
+    let isSelected: Bool
     
     static func ==(lhs: ThemeGridControllerEntry, rhs: ThemeGridControllerEntry) -> Bool {
-        return lhs.index == rhs.index && lhs.wallpaper == rhs.wallpaper && lhs.selected == rhs.selected
+        return lhs.index == rhs.index && lhs.wallpaper == rhs.wallpaper && lhs.isEditable == rhs.isEditable && lhs.isSelected == rhs.isSelected
     }
     
     static func <(lhs: ThemeGridControllerEntry, rhs: ThemeGridControllerEntry) -> Bool {
@@ -115,7 +116,7 @@ private struct ThemeGridControllerEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, interaction: ThemeGridControllerInteraction) -> ThemeGridControllerItem {
-        return ThemeGridControllerItem(context: context, wallpaper: self.wallpaper, index: self.index, selected: self.selected, interaction: interaction)
+        return ThemeGridControllerItem(context: context, wallpaper: self.wallpaper, index: self.index, editable: self.isEditable, selected: self.isSelected, interaction: interaction)
     }
 }
 
@@ -364,14 +365,20 @@ final class ThemeGridControllerNode: ASDisplayNode {
             var entries: [ThemeGridControllerEntry] = []
             var index = 1
             
-            entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, selected: true), at: 0)
+            var isSelectedEditable = true
+            if case .builtin = presentationData.chatWallpaper {
+                isSelectedEditable = false
+            } else if areWallpapersEqual(presentationData.chatWallpaper, presentationData.theme.chat.defaultWallpaper) {
+                isSelectedEditable = false
+            }
+            entries.insert(ThemeGridControllerEntry(index: 0, wallpaper: presentationData.chatWallpaper, isEditable: isSelectedEditable, isSelected: true), at: 0)
             
             var defaultWallpaper: TelegramWallpaper?
             if !areWallpapersEqual(presentationData.chatWallpaper, presentationData.theme.chat.defaultWallpaper) {
                 if case .builtin = presentationData.theme.chat.defaultWallpaper {
                 } else {
                     defaultWallpaper = presentationData.theme.chat.defaultWallpaper
-                    entries.insert(ThemeGridControllerEntry(index: 1, wallpaper: presentationData.theme.chat.defaultWallpaper, selected: false), at: 1)
+                    entries.insert(ThemeGridControllerEntry(index: 1, wallpaper: presentationData.theme.chat.defaultWallpaper, isEditable: false, isSelected: false), at: 1)
                     index += 1
                 }
             }
@@ -400,8 +407,12 @@ final class ThemeGridControllerNode: ASDisplayNode {
                 if let defaultWallpaper = defaultWallpaper, areWallpapersEqual(defaultWallpaper, wallpaper) {
                     isDefault = true
                 }
+                var isEditable = true
+                if case .builtin = wallpaper {
+                    isEditable = false
+                }
                 if !selected && !isDefault {
-                    entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, selected: false))
+                    entries.append(ThemeGridControllerEntry(index: index, wallpaper: wallpaper, isEditable: isEditable, isSelected: false))
                 }
                 index += 1
             }

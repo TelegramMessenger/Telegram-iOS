@@ -145,6 +145,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     
     private var theme: PresentationThemeReference?
     private var currentTheme: PresentationTheme?
+    private var accentColor: UIColor?
     private var bordered: Bool?
     private var selected: Bool?
     
@@ -175,9 +176,10 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
                 self.currentTheme = currentTheme
             }
         } else {
-            if theme != self.theme {
+            if theme != self.theme || accentColor != self.accentColor {
                 self.imageNode.setSignal(themeIconImage(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme, accentColor: accentColor))
                 self.theme = theme
+                self.accentColor = accentColor
             }
         }
         if self.currentTheme == nil || currentTheme !== self.currentTheme! || bordered != self.bordered || selected != self.selected {
