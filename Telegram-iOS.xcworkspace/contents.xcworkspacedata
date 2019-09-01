@@ -28,6 +28,9 @@
       <FileRef
          location = "group:submodules/libphonenumber/libphonenumber_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:/Users/peter/build/telegram-temp/telegram-ios/submodules/rlottie/RLottieBinding_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
