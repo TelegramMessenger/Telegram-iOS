@@ -804,14 +804,17 @@ LottieColor LottieParserImpl::applyReplacements(const LottieColor &color)
         return color;
     }
     const auto convert = [](float value) {
-        return std::uint32_t(std::round(std::clamp(value, 0.f, 1.f) * 255.));
+        return std::uint32_t(
+            std::round(std::min(std::max(value, 0.f), 1.f) * 255.));
     };
     const auto part = [](std::uint32_t value, int shift) {
         return float((value >> shift) & 0xFFU) / 255.f;
-	};
+    };
     const auto converted =
         convert(color.b) | (convert(color.g) << 8) | (convert(color.r) << 16);
-    for (const auto [key, value] : mColorReplacements) {
+    for (const auto &pair : mColorReplacements) {
+        const auto key = pair.first;
+        const auto value = pair.second;
         if (key == converted) {
             return LottieColor(part(value, 16), part(value, 8), part(value, 0));
         }
