@@ -1,6 +1,15 @@
-.PHONY : build build_arm64 build_verbose targets project kill_xcode clean
+.PHONY : check_env build build_arm64 package_arm64 build_buckdebug build_verbose kill_xcode clean project project_buckdebug
 
-BUCK_OPTIONS=--config custom.apiId="${TELEGRAM_API_ID}" --config custom.apiHash="${TELGRAM_API_HASH}" --config custom.hockeyAppId="${TELGRAM_HOCKEYAPP_ID}" --config custom.isInternalBuild="${TELEGRAM_IS_INTERNAL_BUILD}" --config custom.isAppStoreBuild="${TELEGRAM_IS_APPSTORE_BUILD}" --config custom.appStoreId="${TELEGRAM_APPSTORE_ID}" --config custom.appSpecificUrlScheme="${TELEGRAM_APP_SPECIFIC_URL_SCHEME}" --config custom.buildNumber="${TELEGRAM_BUILD_NUMBER}"
+BUCK_OPTIONS=\
+	--config custom.apiId="${TELEGRAM_API_ID}" \
+	--config custom.apiHash="${TELGRAM_API_HASH}" \
+	--config custom.hockeyAppId="${TELGRAM_HOCKEYAPP_ID}" \
+	--config custom.isInternalBuild="${TELEGRAM_IS_INTERNAL_BUILD}" \
+	--config custom.isAppStoreBuild="${TELEGRAM_IS_APPSTORE_BUILD}" \
+	--config custom.appStoreId="${TELEGRAM_APPSTORE_ID}" \
+	--config custom.appSpecificUrlScheme="${TELEGRAM_APP_SPECIFIC_URL_SCHEME}" \
+	--config custom.buildNumber="${TELEGRAM_BUILD_NUMBER}"
+
 BUCK=/Users/peter/build/buck-next/buck/buck-out/gen/programs/buck.pex
 
 check_env:
@@ -22,9 +31,6 @@ build_buckdebug: check_env
 
 build_verbose: check_env
 	$(BUCK) build //:AppPackage#iphoneos-arm64 --verbose 7 ${BUCK_OPTIONS}
-
-targets:
-	$(BUCK) targets //...
 
 kill_xcode:
 	killall Xcode || true

@@ -38,7 +38,8 @@ APP_PATH="$UNPACKED_PATH/Payload/Telegram.app"
 FRAMEWORKS_DIR="$APP_PATH/Frameworks"
 
 rm -rf "$IPA_PATH.original.unpacked/SwiftSupport/iphoneos/"*
-rm -rf "$FRAMEWORKS_DIR"/*
+rm -rf "$IPA_PATH.original.unpacked/Symbols/"*
+rm -rf "$FRAMEWORKS_DIR/"*
 
 for DEPENDENCY in $(${BUCK} query "kind('apple_library|apple_binary', deps('//:Telegram#$PLATFORM_FLAVORS', 1))" ${BUCK_OPTIONS}); do
 	case "$DEPENDENCY" in 
@@ -63,7 +64,7 @@ for LIB in $(ls "$FRAMEWORKS_DIR"/*.dylib); do
 	strip -S -T "$LIB"
 done
 
-xcrun swift-stdlib-tool --scan-folder "$IPA_PATH.original.unpacked/Payload/Telegram.app" --scan-folder "$IPA_PATH.original.unpacked/Payload/Telegram.app/Frameworks" --strip-bitcode --platform iphoneos --copy --destination "$IPA_PATH.original.unpacked/SwiftSupport/iphoneos"
+xcrun swift-stdlib-tool --scan-folder "$IPA_PATH.original.unpacked/Payload/Telegram.app" --scan-folder "$IPA_PATH.original.unpacked/Payload/Telegram.app/Frameworks" --scan-folder "$IPA_PATH.original.unpacked/Payload/Telegram.app/PlugIns" --strip-bitcode --platform iphoneos --copy --destination "$IPA_PATH.original.unpacked/SwiftSupport/iphoneos"
 
 for LIB in $(ls "$IPA_PATH.original.unpacked/SwiftSupport/iphoneos/"*.dylib); do
 	codesign --remove-signature "$LIB"
