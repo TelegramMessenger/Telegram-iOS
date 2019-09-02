@@ -7,12 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D03E3E4A2304B4CC0049C28B /* RLottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E492304B4CC0049C28B /* RLottie.framework */; };
 		D03E3E4F2304B50A0049C28B /* AnimatedStickerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3E4D2304B50A0049C28B /* AnimatedStickerNode.swift */; };
 		D03E3E502304B50A0049C28B /* AnimatedStickerUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3E4E2304B50A0049C28B /* AnimatedStickerUtils.swift */; };
 		D03E3E522304B51A0049C28B /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E512304B51A0049C28B /* Postbox.framework */; };
 		D03E3E542304B51E0049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E532304B51E0049C28B /* TelegramCore.framework */; };
-		D03E3E562304B52F0049C28B /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E552304B52F0049C28B /* libcompression.tbd */; };
+		D03E3E562304B52F0049C28B /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E552304B52F0049C28B /* libcompression.tbd */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D03E3E582304B53B0049C28B /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E572304B53B0049C28B /* Display.framework */; };
 		D03E3E5A2304B5400049C28B /* GZip.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E592304B5400049C28B /* GZip.framework */; };
 		D03E3E5C2304B5450049C28B /* Tuples.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E5B2304B5450049C28B /* Tuples.framework */; };
@@ -29,7 +28,8 @@
 		D06018A922F361F900796784 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018A822F361F800796784 /* UIKit.framework */; };
 		D06018AB22F361FC00796784 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018AA22F361FC00796784 /* AsyncDisplayKit.framework */; };
 		D06018AD22F361FF00796784 /* Lottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D06018AC22F361FF00796784 /* Lottie.framework */; };
-		D0EFF2442319802E00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2432319802E00CF5164 /* AppBundle.framework */; };
+		D06018AF22F3641F00796784 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06018AE22F3641F00796784 /* FrameworkBundle.swift */; };
+		D0AA5791231BE2E6000F88F3 /* RLottieBinding.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AA5790231BE2E6000F88F3 /* RLottieBinding.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -57,7 +57,8 @@
 		D06018A822F361F800796784 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		D06018AA22F361FC00796784 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D06018AC22F361FF00796784 /* Lottie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Lottie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0EFF2432319802E00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D06018AE22F3641F00796784 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0AA5790231BE2E6000F88F3 /* RLottieBinding.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RLottieBinding.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,7 +66,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0EFF2442319802E00CF5164 /* AppBundle.framework in Frameworks */,
+				D0AA5791231BE2E6000F88F3 /* RLottieBinding.framework in Frameworks */,
 				D03E3E8E2304B6EC0049C28B /* YuvConversion.framework in Frameworks */,
 				D03E3E642304B5640049C28B /* MobileCoreServices.framework in Frameworks */,
 				D03E3E622304B55F0049C28B /* SwiftSignalKit.framework in Frameworks */,
@@ -77,7 +78,6 @@
 				D03E3E562304B52F0049C28B /* libcompression.tbd in Frameworks */,
 				D03E3E542304B51E0049C28B /* TelegramCore.framework in Frameworks */,
 				D03E3E522304B51A0049C28B /* Postbox.framework in Frameworks */,
-				D03E3E4A2304B4CC0049C28B /* RLottie.framework in Frameworks */,
 				D06018AD22F361FF00796784 /* Lottie.framework in Frameworks */,
 				D06018AB22F361FC00796784 /* AsyncDisplayKit.framework in Frameworks */,
 				D06018A922F361F900796784 /* UIKit.framework in Frameworks */,
@@ -115,6 +115,7 @@
 				D03E3E4E2304B50A0049C28B /* AnimatedStickerUtils.swift */,
 				D06018A322F361E800796784 /* AnimationNode.swift */,
 				D060186F22F35FCD00796784 /* AnimationUI.h */,
+				D06018AE22F3641F00796784 /* FrameworkBundle.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -122,7 +123,7 @@
 		D06018A522F361F400796784 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				D0EFF2432319802E00CF5164 /* AppBundle.framework */,
+				D0AA5790231BE2E6000F88F3 /* RLottieBinding.framework */,
 				D03E3E8D2304B6EC0049C28B /* YuvConversion.framework */,
 				D03E3E632304B5640049C28B /* MobileCoreServices.framework */,
 				D03E3E612304B55F0049C28B /* SwiftSignalKit.framework */,
@@ -225,6 +226,7 @@
 			files = (
 				D03E3E672304B61A0049C28B /* AnimationRenderer.swift in Sources */,
 				D03E3E4F2304B50A0049C28B /* AnimatedStickerNode.swift in Sources */,
+				D06018AF22F3641F00796784 /* FrameworkBundle.swift in Sources */,
 				D03E3E502304B50A0049C28B /* AnimatedStickerUtils.swift in Sources */,
 				D03E3E682304B61A0049C28B /* SoftwareAnimationRenderer.swift in Sources */,
 				D06018A422F361E800796784 /* AnimationNode.swift in Sources */,

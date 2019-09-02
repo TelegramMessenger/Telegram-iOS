@@ -246,6 +246,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         mainMedia = webpage.file ?? webpage.image
                 }
                 
+                let themeMimeType = "application/x-tgtheme-ios"
+                
                 if let file = mainMedia as? TelegramMediaFile, webpage.type != "telegram_theme" {
                     if let embedUrl = webpage.embedUrl, !embedUrl.isEmpty {
                         if automaticPlayback {
@@ -295,10 +297,13 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     } else if type == "telegram_theme" {
                         var file: TelegramMediaFile?
-                        let mimeType = "application/x-tgtheme-ios"
-                        if let contentFiles = webpage.files, let filteredFile = contentFiles.filter({ $0.mimeType == mimeType }).first {
-                            file = filteredFile
-                        } else if let contentFile = webpage.file, contentFile.mimeType == mimeType {
+                        if let contentFiles = webpage.files {
+                            if let filteredFile = contentFiles.filter({ $0.mimeType == themeMimeType }).first {
+                                file = filteredFile
+                            } else {
+                                file = contentFiles.first
+                            }
+                        } else if let contentFile = webpage.file {
                             file = contentFile
                         }
                         if let file = file {
@@ -332,9 +337,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         case "telegram_theme":
                             title = item.presentationData.strings.Conversation_Theme
                             text = nil
-                            if mediaAndFlags != nil {
-                                actionTitle = item.presentationData.strings.Conversation_ViewTheme
-                            }
+                            actionTitle = item.presentationData.strings.Conversation_ViewTheme
                         default:
                             break
                     }

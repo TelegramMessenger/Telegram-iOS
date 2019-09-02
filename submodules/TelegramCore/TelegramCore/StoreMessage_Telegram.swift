@@ -561,6 +561,7 @@ extension StoreMessage {
                 
                 if (flags & (1 << 18)) != 0 {
                     storeFlags.insert(.WasScheduled)
+                    storeFlags.insert(.CountedAsIncoming)
                 }
                 
                 if (flags & (1 << 4)) != 0 || (flags & (1 << 13)) != 0 {

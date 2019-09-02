@@ -20,7 +20,7 @@ public struct LegacyAttachmentMenuMediaEditing: OptionSet {
     public static let imageOrVideo = LegacyAttachmentMenuMediaEditing(rawValue: 1 << 0)
 }
 
-public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
+public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaOptions: LegacyAttachmentMenuMediaEditing?, saveEditedPhotos: Bool, allowGrouping: Bool, hasSchedule: Bool, canSendPolls: Bool, theme: PresentationTheme, strings: PresentationStrings, parentController: LegacyController, recentlyUsedInlineBots: [Peer], initialCaption: String, openGallery: @escaping () -> Void, openCamera: @escaping (TGAttachmentCameraView?, TGMenuSheetController?) -> Void, openFileGallery: @escaping () -> Void, openWebSearch: @escaping () -> Void, openMap: @escaping () -> Void, openContacts: @escaping () -> Void, openPoll: @escaping () -> Void, presentSelectionLimitExceeded: @escaping () -> Void, presentCantSendMultipleFiles: @escaping () -> Void, presentSchedulePicker: @escaping (@escaping (Int32) -> Void) -> Void, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, selectRecentlyUsedInlineBot: @escaping (Peer) -> Void) -> TGMenuSheetController {
     let isSecretChat = peer.id.namespace == Namespaces.Peer.SecretChat
     
     let controller = TGMenuSheetController(context: parentController.context, dark: false)!
@@ -139,7 +139,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, editMediaO
         })!
         itemViews.append(locationItem)
         
-        if (peer is TelegramGroup || peer is TelegramChannel) && canSendMessagesToPeer(peer) {
+        if (peer is TelegramGroup || peer is TelegramChannel) && canSendMessagesToPeer(peer) && canSendPolls {
             let pollItem = TGMenuSheetButtonItemView(title: strings.AttachmentMenu_Poll, type: TGMenuSheetButtonTypeDefault, action: { [weak controller] in
                 controller?.dismiss(animated: true)
                 openPoll()

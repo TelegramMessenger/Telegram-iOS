@@ -5032,7 +5032,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return result
             }
             
-            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: !strongSelf.presentationInterfaceState.isScheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
+            let controller = legacyAttachmentMenu(context: strongSelf.context, peer: peer, editMediaOptions: menuEditMediaOptions, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: !strongSelf.presentationInterfaceState.isScheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, canSendPolls: canSendPolls, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, parentController: legacyController, recentlyUsedInlineBots: strongSelf.recentlyUsedInlineBotsValue, initialCaption: inputText.string, openGallery: {
                 self?.presentMediaPicker(fileMode: false, editingMedia: editMediaOptions != nil, completion: { signals, silentPosting, scheduleTime in
                     if !inputText.string.isEmpty {
                         //strongSelf.clearInputText()

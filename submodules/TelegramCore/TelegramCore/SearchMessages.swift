@@ -479,7 +479,7 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
             
             var renderedMessages: [Message] = []
             for message in messages {
-                if let message = StoreMessage(apiMessage: message), case let .Id(updatedId) = message.id {
+                if let message = StoreMessage(apiMessage: message, namespace: id.namespace), case let .Id(updatedId) = message.id {
                     var addedExisting = false
                     if transaction.getMessage(updatedId) != nil {
                         transaction.updateMessage(updatedId, update: { _ in
