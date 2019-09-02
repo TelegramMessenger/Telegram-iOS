@@ -1,4 +1,4 @@
-load("//Config:configs.bzl", "library_configs", "framework_library_configs", "info_plist_substitutions")
+load("//Config:configs.bzl", "library_configs", "dynamic_library_configs", "info_plist_substitutions")
 
 def apple_lib(
         name,
@@ -58,54 +58,29 @@ def apple_lib(
             linker_flags = []
 
         resolved_linker_flags = linker_flags + additional_linker_flags + ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)]
-        if native.read_config("custom", "mode") == "project":
-            native.apple_library(
-                name = name + "",
-                srcs = srcs,
-                header_namespace = name,
-                module_name = name,
-                headers = headers,
-                exported_headers = exported_headers,
-                deps = deps,
-                exported_deps = exported_deps,
-                extra_xcode_files = extra_xcode_files,
-                frameworks = frameworks,
-                visibility = visibility,
-                swift_version = swift_version,
-                configs = framework_library_configs(name),
-                modular = modular,
-                compiler_flags = compiler_flags,
-                platform_compiler_flags = platform_compiler_flags,
-                swift_compiler_flags = swift_compiler_flags,
-                preferred_linkage = "shared",
-                link_style = "static",
-                linker_flags = resolved_linker_flags,
-            )
-        else:
-            native.apple_library(
-                name = name + "",
-                srcs = srcs,
-                header_namespace = name,
-                module_name = name,
-                soname = "lib" + name + ".dylib",
-                headers = headers,
-                exported_headers = exported_headers,
-                deps = deps,
-                exported_deps = exported_deps,
-                extra_xcode_files = extra_xcode_files,
-                frameworks = frameworks,
-                visibility = visibility,
-                swift_version = swift_version,
-                configs = framework_library_configs(name),
-                modular = modular,
-                compiler_flags = compiler_flags,
-                platform_compiler_flags = platform_compiler_flags,
-                swift_compiler_flags = swift_compiler_flags,
-                preferred_linkage = "shared",
-                link_style = "static",
-                linker_flags = resolved_linker_flags,
-            )
-
+        native.apple_library(
+            name = name + "",
+            srcs = srcs,
+            header_namespace = name,
+            module_name = name,
+            soname = "lib" + name + ".dylib",
+            headers = headers,
+            exported_headers = exported_headers,
+            deps = deps,
+            exported_deps = exported_deps,
+            extra_xcode_files = extra_xcode_files,
+            frameworks = frameworks,
+            visibility = visibility,
+            swift_version = swift_version,
+            configs = dynamic_library_configs(),
+            modular = modular,
+            compiler_flags = compiler_flags,
+            platform_compiler_flags = platform_compiler_flags,
+            swift_compiler_flags = swift_compiler_flags,
+            preferred_linkage = "shared",
+            link_style = "static",
+            linker_flags = resolved_linker_flags,
+        )
     else:
         additional_linker_flags = additional_linker_flags or []
         if has_cpp:
@@ -240,24 +215,18 @@ def apple_cxx_lib(
 
 def framework_binary_dependencies(names):
     result = []
-    if native.read_config("custom", "mode") == "project":
-        for name in names:
-            result.append(name + "#shared")
-    else:
-        for name in names:
-            result.append(name + "#shared")
+    for name in names:
+        result.append(name + "#shared")
     return result
 
 def framework_bundle_dependencies(names):
     result = []
     if native.read_config("custom", "mode") == "project":
         for name in names:
-            #result.append(name + "#shared")
             pass
     else:
         for name in names:
             result.append(name + "#shared")
-            pass
     return result
 
 def gen_header_targets(header_paths, prefix, flavor, source_rule, source_path):

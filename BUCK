@@ -75,7 +75,7 @@ apple_resource(
 )
 
 apple_asset_catalog(
-  name = 'Icons',
+  name = "Icons",
   dirs = [
     "Telegram-iOS/Icons.xcassets",
   ],
@@ -83,7 +83,7 @@ apple_asset_catalog(
 )
 
 apple_asset_catalog(
-  name = 'AppIcons',
+  name = "AppIcons",
   dirs = [
     "Telegram-iOS/AppIcons.xcassets",
   ],
@@ -99,9 +99,9 @@ apple_resource(
 )
 
 apple_resource(
-    name = 'LaunchScreen',
+    name = "LaunchScreen",
     files = [
-        'Telegram-iOS/Base.lproj/LaunchScreen.xib',
+        "Telegram-iOS/Base.lproj/LaunchScreen.xib",
     ],
     visibility = ["PUBLIC"],
 )
@@ -130,7 +130,7 @@ apple_binary(
         "//:",
         "//...",
     ],
-    configs = app_binary_configs("Telegram"),
+    configs = app_binary_configs(),
     swift_version = native.read_config("swift", "version"),
     srcs = [
         "SupportFiles/Empty.swift",
@@ -150,7 +150,7 @@ apple_bundle(
     binary = ":AppBinary",
     product_name = "Telegram",
     info_plist = "Telegram-iOS/Info.plist",
-    info_plist_substitutions = app_info_plist_substitutions("Telegram"),
+    info_plist_substitutions = app_info_plist_substitutions(),
     deps = [
         ":ShareExtension",
         ":WidgetExtension",
@@ -169,7 +169,7 @@ apple_binary(
     srcs = glob([
         "Share/**/*.swift",
     ]),
-    configs = share_extension_configs("Share"),
+    configs = share_extension_configs(),
     linker_flags = [
         "-e",
         "_NSExtensionMain",
@@ -192,7 +192,7 @@ apple_bundle(
     binary = ":ShareBinary",
     extension = "appex",
     info_plist = "Share/Info.plist",
-    info_plist_substitutions = share_extension_info_plist_substitutions("Share"),
+    info_plist_substitutions = share_extension_info_plist_substitutions(),
     deps = [
     ],
     xcode_product_type = "com.apple.product-type.app-extension",
@@ -205,7 +205,7 @@ apple_binary(
     srcs = glob([
         "Widget/**/*.swift",
     ]),
-    configs = widget_extension_configs("Widget"),
+    configs = widget_extension_configs(),
     swift_compiler_flags = [
         "-application-extension",
     ],
@@ -235,7 +235,7 @@ apple_bundle(
     binary = ":WidgetBinary",
     extension = "appex",
     info_plist = "Widget/Info.plist",
-    info_plist_substitutions = widget_extension_info_plist_substitutions("Widget"),
+    info_plist_substitutions = widget_extension_info_plist_substitutions(),
     deps = [
     ],
     xcode_product_type = "com.apple.product-type.app-extension",
@@ -248,7 +248,7 @@ apple_binary(
     srcs = glob([
         "NotificationContent/**/*.swift",
     ]),
-    configs = notification_content_extension_configs("NotificationContent"),
+    configs = notification_content_extension_configs(),
     swift_compiler_flags = [
         "-application-extension",
     ],
@@ -274,8 +274,8 @@ apple_bundle(
     name = "NotificationContentExtension",
     binary = ":NotificationContentBinary",
     extension = "appex",
-    info_plist = "Widget/Info.plist",
-    info_plist_substitutions = notification_content_extension_info_plist_substitutions("NotificationContent"),
+    info_plist = "NotificationContent/Info.plist",
+    info_plist_substitutions = notification_content_extension_info_plist_substitutions(),
     deps = [
     ],
     xcode_product_type = "com.apple.product-type.app-extension",
@@ -291,7 +291,7 @@ apple_binary(
     headers = glob([
        "NotificationService/**/*.h", 
     ]),
-    configs = notification_service_extension_configs("NotificationService"),
+    configs = notification_service_extension_configs(),
     swift_compiler_flags = [
         "-application-extension",
     ],
@@ -317,8 +317,8 @@ apple_bundle(
     name = "NotificationServiceExtension",
     binary = ":NotificationServiceBinary",
     extension = "appex",
-    info_plist = "Widget/Info.plist",
-    info_plist_substitutions = notification_service_extension_info_plist_substitutions("NotificationService"),
+    info_plist = "NotificationService/Info.plist",
+    info_plist_substitutions = notification_service_extension_info_plist_substitutions(),
     deps = [
     ],
     xcode_product_type = "com.apple.product-type.app-extension",
@@ -331,7 +331,7 @@ apple_binary(
     srcs = glob([
         "SiriIntents/**/*.swift",
     ]),
-    configs = intents_extension_configs("SiriIntents"),
+    configs = intents_extension_configs(),
     swift_compiler_flags = [
         "-application-extension",
     ],
@@ -359,8 +359,8 @@ apple_bundle(
     name = "IntentsExtension",
     binary = ":IntentsBinary",
     extension = "appex",
-    info_plist = "Widget/Info.plist",
-    info_plist_substitutions = intents_extension_info_plist_substitutions("SiriIntents"),
+    info_plist = "SiriIntents/Info.plist",
+    info_plist_substitutions = intents_extension_info_plist_substitutions(),
     deps = [
     ],
     xcode_product_type = "com.apple.product-type.app-extension",
@@ -391,7 +391,7 @@ apple_binary(
     compiler_flags = [
         "-DTARGET_OS_WATCH=1",
     ],
-    configs = watch_extension_binary_configs("watchkitapp.watchkitextension"),
+    configs = watch_extension_binary_configs(),
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/UserNotifications.framework",
         "$SDKROOT/System/Library/Frameworks/CoreLocation.framework",
@@ -404,13 +404,50 @@ apple_bundle(
     binary = ":WatchAppExtensionBinary",
     extension = "appex",
     info_plist = "Watch/Extension/Info.plist",
-    info_plist_substitutions = watch_extension_info_plist_substitutions("watchkitapp.watchkitextension"),
+    info_plist_substitutions = watch_extension_info_plist_substitutions(),
     xcode_product_type = "com.apple.product-type.watchkit2-extension",
+)
+
+apple_resource(
+    name = "WatchAppResources",
+    dirs = [],
+    files = glob(["Watch/Extension/Resources/*.png"])
+)
+
+apple_asset_catalog(
+  name = "WatchAppAssets",
+  dirs = [
+    "Watch/App/Assets.xcassets",
+  ],
+  visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "WatchAppInterface",
+    files = [
+        "Watch/App/Base.lproj/Interface.storyboard",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "WatchAppStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/Localizable.strings",
+    ]),
+    visibility = ["PUBLIC"],
 )
 
 apple_binary(
     name = "WatchAppBinary",
-    configs = watch_binary_configs("watch.app")
+    configs = watch_binary_configs(),
+    deps = [
+        ":WatchAppResources",
+        ":WatchAppAssets",
+        ":WatchAppInterface",
+        ":WatchAppStringResources",
+    ],
 )
 
 apple_bundle(
@@ -421,18 +458,11 @@ apple_bundle(
     ],
     extension = "app",
     info_plist = "Watch/App/Info.plist",
-    info_plist_substitutions = watch_info_plist_substitutions("watchkitapp"),
+    info_plist_substitutions = watch_info_plist_substitutions(),
     xcode_product_type = "com.apple.product-type.application.watchapp2",
     deps = [
         ":WatchAppExtension",
-        ":WatchAppResources",
     ],
-)
-
-apple_resource(
-    name = "WatchAppResources",
-    dirs = [],
-    files = glob(["Watch/Extension/Resources/*.png"])
 )
 
 # Package

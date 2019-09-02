@@ -29,5 +29,9 @@
 	<string>$(APP_BUNDLE_ID)</string>
 	<key>WKWatchKitApp</key>
 	<true/>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>4</integer>
+	</array>
 </dict>
 </plist>
