@@ -11,7 +11,7 @@ public struct CacheStorageSettings: PreferencesEntry, Equatable {
     public let defaultCacheStorageTimeout: Int32
     
     public static var defaultSettings: CacheStorageSettings {
-        return CacheStorageSettings(defaultCacheStorageTimeout: 7 * 60 * 60 * 24)
+        return CacheStorageSettings(defaultCacheStorageTimeout: 1 * 31 * 24 * 60 * 60)
     }
     
     init(defaultCacheStorageTimeout: Int32) {
