@@ -108,7 +108,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, account: A
                                 if view.holeEarlier {
                                     var incomingCount: Int32 = 0
                                     inner: for entry in view.entries.reversed() {
-                                        if entry.message.flags.contains(.Incoming) {
+                                        if !entry.message.flags.intersection(.IsIncomingMask).isEmpty {
                                             incomingCount += 1
                                         }
                                     }
