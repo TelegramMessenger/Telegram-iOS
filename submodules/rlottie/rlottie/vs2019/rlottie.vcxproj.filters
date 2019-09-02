@@ -1,0 +1,382 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="inc">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="src\vector">
+      <UniqueIdentifier>{fe19fe8c-ea12-4233-a5b3-e1d3b5eef911}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\vector\freetype">
+      <UniqueIdentifier>{d270b25a-5e50-4fd3-9552-e97a4855bbce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\vector\pixman">
+      <UniqueIdentifier>{14ba4b30-7907-4e82-9e05-46bb1083eb30}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\vector\stb">
+      <UniqueIdentifier>{fb769465-148c-4a24-b6f7-d4f296c045f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lottie">
+      <UniqueIdentifier>{6c95ecc5-8b13-4cdf-b729-ef98cf1e23e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lottie\rapidjson">
+      <UniqueIdentifier>{089f6054-13bb-4ffe-8129-4b38224412db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lottie\rapidjson\error">
+      <UniqueIdentifier>{02c6210d-fe4b-4971-a04d-ca33f9b7f033}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lottie\rapidjson\internal">
+      <UniqueIdentifier>{d981dfd0-86e1-47ea-9fdb-2c06401fddec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\lottie\rapidjson\msinttypes">
+      <UniqueIdentifier>{75db7b83-6147-402f-bc29-25e5edab2531}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\binding">
+      <UniqueIdentifier>{386829e3-2415-4992-a85e-b3e9a352278d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\binding\c">
+      <UniqueIdentifier>{79196b11-c3ac-449b-83d6-52f81e748794}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\inc\rlottie.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\rlottie_capi.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\inc\rlottiecommon.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\allocators.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\cursorstreamwrapper.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\document.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\encodedstream.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\encodings.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\filereadstream.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\filewritestream.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\fwd.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\istreamwrapper.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\memorybuffer.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\memorystream.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\ostreamwrapper.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\pointer.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\prettywriter.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\rapidjson.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\reader.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\schema.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\stream.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\stringbuffer.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\writer.h">
+      <Filter>src\lottie\rapidjson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\error\en.h">
+      <Filter>src\lottie\rapidjson\error</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\error\error.h">
+      <Filter>src\lottie\rapidjson\error</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\biginteger.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\diyfp.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\dtoa.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\ieee754.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\itoa.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\meta.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\pow10.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\regex.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\stack.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\strfunc.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\strtod.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\internal\swap.h">
+      <Filter>src\lottie\rapidjson\internal</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\msinttypes\inttypes.h">
+      <Filter>src\lottie\rapidjson\msinttypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\rapidjson\msinttypes\stdint.h">
+      <Filter>src\lottie\rapidjson\msinttypes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\lottieitem.h">
+      <Filter>src\lottie</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\lottiekeypath.h">
+      <Filter>src\lottie</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\lottieloader.h">
+      <Filter>src\lottie</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\lottiemodel.h">
+      <Filter>src\lottie</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\lottieparser.h">
+      <Filter>src\lottie</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\lottie\lottieproxymodel.h">
+      <Filter>src\lottie</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\freetype\v_ft_math.h">
+      <Filter>src\vector\freetype</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\freetype\v_ft_raster.h">
+      <Filter>src\vector\freetype</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\freetype\v_ft_stroker.h">
+      <Filter>src\vector\freetype</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\freetype\v_ft_types.h">
+      <Filter>src\vector\freetype</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\pixman\pixman-arm-neon-asm.h">
+      <Filter>src\vector\pixman</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\pixman\vregion.h">
+      <Filter>src\vector\pixman</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\stb\stb_image.h">
+      <Filter>src\vector\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vbezier.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vbitmap.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vbrush.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vcowptr.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vdasher.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vdebug.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vdrawable.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vdrawhelper.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\velapsedtimer.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vglobal.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vimageloader.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vinterpolator.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vline.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vmatrix.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vpainter.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vpath.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vpathmesure.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vpoint.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vraster.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vrect.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vrle.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vstackallocator.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vector\vtaskqueue.h">
+      <Filter>src\vector</Filter>
+    </ClInclude>
+    <ClInclude Include="config.h">
+      <Filter>inc</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\binding\c\lottieanimation_capi.cpp">
+      <Filter>src\binding\c</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lottie\lottieanimation.cpp">
+      <Filter>src\lottie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lottie\lottieitem.cpp">
+      <Filter>src\lottie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lottie\lottiekeypath.cpp">
+      <Filter>src\lottie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lottie\lottieloader.cpp">
+      <Filter>src\lottie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lottie\lottiemodel.cpp">
+      <Filter>src\lottie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lottie\lottieparser.cpp">
+      <Filter>src\lottie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\lottie\lottieproxymodel.cpp">
+      <Filter>src\lottie</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\freetype\v_ft_math.cpp">
+      <Filter>src\vector\freetype</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\freetype\v_ft_raster.cpp">
+      <Filter>src\vector\freetype</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\freetype\v_ft_stroker.cpp">
+      <Filter>src\vector\freetype</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\pixman\vregion.cpp">
+      <Filter>src\vector\pixman</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\stb\stb_image.cpp">
+      <Filter>src\vector\stb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vbezier.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vbitmap.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vbrush.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vcompositionfunctions.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vdasher.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vdebug.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vdrawable.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vdrawhelper.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vdrawhelper_neon.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vdrawhelper_sse2.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\velapsedtimer.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vimageloader.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vinterpolator.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vmatrix.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vpainter.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vpath.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vpathmesure.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vraster.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vrect.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vector\vrle.cpp">
+      <Filter>src\vector</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\vector\pixman\pixman-arm-neon-asm.S">
+      <Filter>src\vector\pixman</Filter>
+    </None>
+  </ItemGroup>
+</Project>

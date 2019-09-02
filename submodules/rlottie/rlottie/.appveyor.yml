@@ -1,0 +1,23 @@
+os: Visual Studio 2017
+platform:
+  - x86
+environment:
+  matrix:
+    - ARCH: x86
+      PYTHON: "C:\\Python35"
+    - ARCH: x64
+      PYTHON: "C:\\Python35-x64"
+skip_branch_with_pr: true
+install:
+  - git submodule update --init --recursive
+  - set PATH=%cd%;%PYTHON%;%PYTHON%\Scripts;%PATH%
+  - pip install meson==0.50.0 ninja
+  - call "%VS140COMNTOOLS%\..\..\VC\vcvarsall.bat" %ARCH%
+build_script:
+  - meson -Dwerror=false --backend=ninja --prefix=%cd%  build
+  - where link
+  - ninja -C build
+test_script:
+  - ninja -C build test
+after_build:
+  - ninja -C build install

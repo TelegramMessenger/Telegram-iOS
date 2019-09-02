@@ -1,0 +1,12 @@
+build
+*.creator*
+*.config
+*.files
+*.includes
+html
+latex
+*.swp
+tmp
+.cproject
+.project
+.vs

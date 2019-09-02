@@ -1,0 +1,42 @@
+option('thread',
+   type: 'boolean',
+   value: true,
+   description: 'Enable threading in rlottie')
+
+option('cache',
+   type: 'boolean',
+   value: true,
+   description: 'Enable cache support in rlottie')
+
+option('module',
+   type: 'boolean',
+   value: true,
+   description: 'Enable module support in rlottie')
+
+option('log',
+   type: 'boolean',
+   value: false,
+   description: 'Enable logging in rlottie')
+
+option('dumptree',
+   type: 'boolean',
+   value: false,
+   description: 'Enable logging the rlottie tree in rlottie')
+
+option('test',
+   type: 'boolean',
+   value: false,
+   description: 'Enable building unit tests')
+
+option('example',
+   type: 'boolean',
+   value: true,
+   description: 'Enable building examples')
+
+option('cmake',
+  type: 'boolean',
+  value: false,
+  description: 'Enable Generating  CMake config files')
+
+
+
