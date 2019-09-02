@@ -944,23 +944,19 @@ public func themeIconImage(account: Account, accountManager: AccountManager, the
                             wallpaperSignal = cachedWallpaper(account: account, slug: file.slug)
                             |> mapToSignal { wallpaper in
                                 if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
-                                    if file.isPattern {
+                                    var convertedRepresentations: [ImageRepresentationWithReference] = []
+                                    convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
+                                    return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
+                                    |> mapToSignal { _, fullSizeData, complete -> Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> in
+                                        guard complete, let fullSizeData = fullSizeData else {
+                                            return .complete()
+                                        }
+                                        accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
                                         
-                                    } else {
-                                        var convertedRepresentations: [ImageRepresentationWithReference] = []
-                                        convertedRepresentations.append(ImageRepresentationWithReference(representation: TelegramMediaImageRepresentation(dimensions: CGSize(width: 100.0, height: 100.0), resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
-                                        return wallpaperDatas(account: account, accountManager: accountManager, fileReference: .standalone(media: file.file), representations: convertedRepresentations, alwaysShowThumbnailFirst: false, thumbnail: false, onlyFullSize: true, autoFetchFullSize: true, synchronousLoad: false)
-                                        |> mapToSignal { _, fullSizeData, complete -> Signal<(UIColor, UIColor, UIColor, UIImage?), NoError> in
-                                            guard complete, let fullSizeData = fullSizeData else {
-                                                return .complete()
-                                            }
-                                            accountManager.mediaBox.storeResourceData(file.file.resource.id, data: fullSizeData)
-                                            
-                                            if let image = UIImage(data: fullSizeData) {
-                                                return .single((backgroundColor, incomingColor, outgoingColor, image))
-                                            } else {
-                                                return .complete()
-                                            }
+                                        if let image = UIImage(data: fullSizeData) {
+                                            return .single((backgroundColor, incomingColor, outgoingColor, image))
+                                        } else {
+                                            return .complete()
                                         }
                                     }
                                 } else {

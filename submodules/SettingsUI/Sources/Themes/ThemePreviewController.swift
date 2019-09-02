@@ -29,6 +29,8 @@ public final class ThemePreviewController: ViewController {
         return self.displayNode as! ThemePreviewControllerNode
     }
     
+    private let titleView: CounterContollerTitleView
+    
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
@@ -43,6 +45,8 @@ public final class ThemePreviewController: ViewController {
         self.source = source
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        self.titleView = CounterContollerTitleView(theme: self.previewTheme)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
@@ -62,21 +66,21 @@ public final class ThemePreviewController: ViewController {
             themeName = previewTheme.name.string
         }
         
-//        if
-//        if let author = previewTheme.author {
-//            let titleView = CounterContollerTitleView(theme: self.previewTheme)
-//            titleView.title = CounterContollerTitle(title: themeName, counter: author)
-//            self.navigationItem.titleView = titleView
-//        } else {
-            self.title = themeName
-//        }
+        self.titleView.title = CounterContollerTitle(title: themeName, counter: " ")
+        self.navigationItem.titleView = titleView
+
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
         
-        //self.disposable
+        self.disposable = (self.theme.get()
+        |> deliverOnMainQueue).start(next: { [weak self] theme in
+            if let strongSelf = self, let theme = theme {
+                strongSelf.titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+            }
+        })
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
