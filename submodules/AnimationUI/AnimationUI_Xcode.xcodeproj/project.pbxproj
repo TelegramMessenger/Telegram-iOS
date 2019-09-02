@@ -11,7 +11,7 @@
 		D03E3E502304B50A0049C28B /* AnimatedStickerUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3E4E2304B50A0049C28B /* AnimatedStickerUtils.swift */; };
 		D03E3E522304B51A0049C28B /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E512304B51A0049C28B /* Postbox.framework */; };
 		D03E3E542304B51E0049C28B /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E532304B51E0049C28B /* TelegramCore.framework */; };
-		D03E3E562304B52F0049C28B /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E552304B52F0049C28B /* libcompression.tbd */; };
+		D03E3E562304B52F0049C28B /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E552304B52F0049C28B /* libcompression.tbd */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D03E3E582304B53B0049C28B /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E572304B53B0049C28B /* Display.framework */; };
 		D03E3E5A2304B5400049C28B /* GZip.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E592304B5400049C28B /* GZip.framework */; };
 		D03E3E5C2304B5450049C28B /* Tuples.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3E5B2304B5450049C28B /* Tuples.framework */; };

@@ -1114,7 +1114,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     }
                     return previous.withUpdatedPinnedMessageId(id == 0 ? nil : MessageId(peerId: userPeerId, namespace: Namespaces.Message.Cloud, id: id))
                 })
-            case let .updateChatPinnedMessage(groupId, id, version):
+            case let .updateChatPinnedMessage(groupId, id, _):
                 let groupPeerId = PeerId(namespace: Namespaces.Peer.CloudGroup, id: groupId)
                 updatedState.updateCachedPeerData(groupPeerId, { current in
                     let previous: CachedGroupData
@@ -1372,8 +1372,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
         return resolveAssociatedMessages(network: network, state: finalState)
         |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
             return resolveMissingPeerChatInfos(network: network, state: resultingState)
-            |> map { resultingState -> AccountFinalState in
-                return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError, incomplete: missingUpdates)
+            |> map { resultingState, resolveError -> AccountFinalState in
+                return AccountFinalState(state: resultingState, shouldPoll: shouldPoll || hadError || resolveError, incomplete: missingUpdates)
             }
         }
     }
@@ -1445,21 +1445,23 @@ private func resolveAssociatedMessages(network: Network, state: AccountMutableSt
     }
 }
 
-private func resolveMissingPeerChatInfos(network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+private func resolveMissingPeerChatInfos(network: Network, state: AccountMutableState) -> Signal<(AccountMutableState, Bool), NoError> {
     var missingPeers: [PeerId: Api.InputPeer] = [:]
+    var hadError = false
     
     for peerId in state.initialState.peerIdsRequiringLocalChatState {
         if state.peerChatInfos[peerId] == nil {
             if let peer = state.peers[peerId], let inputPeer = apiInputPeer(peer) {
                 missingPeers[peerId] = inputPeer
             } else {
+                hadError = true
                 Logger.shared.log("State", "can't fetch chat info for peer \(peerId): can't create inputPeer")
             }
         }
     }
     
     if missingPeers.isEmpty {
-        return .single(state)
+        return .single((state, hadError))
     } else {
         Logger.shared.log("State", "will fetch chat info for \(missingPeers.count) peers")
         let signal = network.request(Api.functions.messages.getPeerDialogs(peers: missingPeers.values.map(Api.InputDialogPeer.inputDialogPeer(peer:))))
@@ -1469,9 +1471,9 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
         |> `catch` { _ -> Signal<Api.messages.PeerDialogs?, NoError> in
             return .single(nil)
         }
-        |> map { result -> AccountMutableState in
+        |> map { result -> (AccountMutableState, Bool) in
             guard let result = result else {
-                return state
+                return (state, hadError)
             }
             
             var channelStates: [PeerId: ChannelState] = [:]
@@ -1563,7 +1565,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                         }
                     }
             }
-            return updatedState
+            return (updatedState, hadError)
         }
     }
 }
@@ -1596,7 +1598,7 @@ func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stat
                 return resolveAssociatedMessages(network: network, state: finalState)
                 |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
                     return resolveMissingPeerChatInfos(network: network, state: resultingState)
-                    |> map { resultingState -> AccountFinalState in
+                    |> map { resultingState, _ -> AccountFinalState in
                         return AccountFinalState(state: resultingState, shouldPoll: false, incomplete: false)
                     }
                 }

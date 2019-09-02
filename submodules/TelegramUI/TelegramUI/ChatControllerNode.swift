@@ -278,7 +278,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.textInputPanelNode?.storedInputLanguage = chatPresentationInterfaceState.interfaceState.inputLanguage
         self.textInputPanelNode?.updateHeight = { [weak self] animated in
             if let strongSelf = self, let _ = strongSelf.inputPanelNode as? ChatTextInputPanelNode, !strongSelf.ignoreUpdateHeight {
-                strongSelf.requestLayout(animated ? .animated(duration: 0.1, curve: .easeInOut) : .immediate)
+                if strongSelf.scheduledLayoutTransitionRequest == nil {
+                    strongSelf.scheduleLayoutTransitionRequest(animated ? .animated(duration: 0.1, curve: .easeInOut) : .immediate)
+                }
             }
         }
         
