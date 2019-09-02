@@ -252,7 +252,7 @@ public final class ThemePreviewController: ViewController {
         }
         |> mapToSignal { theme -> Signal<Void, NoError> in
             if case let .cloud(info) = theme {
-                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
+                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme, install: true).start()
                 let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
             return context.sharedContext.accountManager.transaction { transaction -> Void in
