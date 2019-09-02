@@ -18,6 +18,7 @@ DSYMS_DIR="$BUILD_PATH/$DSYMS_FOLDER_NAME"
 
 TEMP_PATH="$BUILD_PATH/temp"
 TEMP_ENTITLEMENTS_PATH="$TEMP_PATH/entitlements"
+KEYCHAIN_PATH="$TEMP_PATH/keychain"
 
 mkdir -p "$BUILD_PATH"
 rm -f "$IPA_PATH"
@@ -35,7 +36,6 @@ rm -f "$BUILD_PATH/${APP_NAME}_signed.ipa"
 mkdir -p "$IPA_PATH.original.unpacked"
 unzip "$IPA_PATH.original" -d "$IPA_PATH.original.unpacked/"
 rm "$IPA_PATH.original"
-rm -f "$KEYCHAIN_PATH"
 
 UNPACKED_PATH="$IPA_PATH.original.unpacked"
 APP_PATH="$UNPACKED_PATH/Payload/Telegram.app"
@@ -65,6 +65,33 @@ if [ ! -d "$CODESIGNING_DATA_PATH" ]; then
 	exit 1
 fi
 
+if [ -z "$CODESIGNING_CERTS_VARIANT" ]; then
+	echo "CODESIGNING_CERTS_VARIANT is not set"
+fi
+
+if [ -z "$CODESIGNING_PROFILES_VARIANT" ]; then
+	echo "CODESIGNING_PROFILES_VARIANT is not set"
+fi
+
+CERTS_PATH="$CODESIGNING_DATA_PATH/certs/$CODESIGNING_CERTS_VARIANT"
+PROFILES_PATH="$CODESIGNING_DATA_PATH/profiles/$CODESIGNING_PROFILES_VARIANT"
+
+if [ ! -d "$CERTS_PATH" ]; then
+	echo "$CERTS_PATH does not exist"
+	exit 1
+fi
+
+if [ ! -d "$PROFILES_PATH" ]; then
+	echo "$PROFILES_PATH does not exist"
+	exit 1
+fi
+
+#security delete-keychain "$KEYCHAIN_PATH" || true
+rm -f "$KEYCHAIN_PATH"
+#security create-keychain -p "password" "$KEYCHAIN_PATH"
+#security unlock-keychain -p "password" "$KEYCHAIN_PATH"
+KEYCHAIN_FLAG="--keychain '$KEYCHAIN_PATH'"
+
 APP_ITEMS_WITH_PROVISIONING_PROFILE="APP EXTENSION_Share EXTENSION_Widget EXTENSION_NotificationService EXTENSION_NotificationContent EXTENSION_Intents WATCH_APP WATCH_EXTENSION"
 APP_ITEMS_WITH_ENTITLEMENTS="APP EXTENSION_Share EXTENSION_Widget EXTENSION_NotificationService EXTENSION_NotificationContent EXTENSION_Intents"
 
@@ -76,7 +103,7 @@ for ITEM in $APP_ITEMS_WITH_PROVISIONING_PROFILE; do
 		echo "$PROFILE_VAR is not set"
 		exit 1
 	fi
-	for PROFILE in "$CODESIGNING_DATA_PATH/profiles/"*; do
+	for PROFILE in "$PROFILES_PATH/"*; do
 		PROFILE_DATA=$(security cms -D -i "$PROFILE")
 		PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /dev/stdin <<< $(echo $PROFILE_DATA))
 		if [ "$PROFILE_NAME" == "${!PROFILE_VAR}" ]; then
@@ -85,7 +112,6 @@ for ITEM in $APP_ITEMS_WITH_PROVISIONING_PROFILE; do
 				"Entitlements:com.apple.developer.team-identifier in $PROFILE does not match $DEVELOPMENT_TEAM"
 			fi
 
-			echo $(/usr/libexec/PlistBuddy -c "Print :DeveloperCertificates:0 :data" /dev/stdin <<< $(echo $PROFILE_DATA)) > cert.pem
 			IDENTITY_NAME=$(/usr/libexec/PlistBuddy -c "Print :DeveloperCertificates:0 :data" /dev/stdin <<< $(echo $PROFILE_DATA) | openssl x509 -inform DER -subject -nameopt multiline -sha1 -noout | grep commonName | sed -e 's#[ ]*commonName[ ]*=[ ]*##g')
 			if [ ! -z "$IDENTITY_NAME" ]; then
 				IDENTITY_HASH=$(/usr/libexec/PlistBuddy -c "Print :DeveloperCertificates:0 :data" /dev/stdin <<< $(echo $PROFILE_DATA) | openssl x509 -inform DER -fingerprint -sha1 -noout | sed -e 's#SHA1 Fingerprint=##' | sed -e 's#:##g')
