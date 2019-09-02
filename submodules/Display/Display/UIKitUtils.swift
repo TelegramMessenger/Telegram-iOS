@@ -188,7 +188,7 @@ public extension UIColor {
 }
 
 public extension CGSize {
-    public func fitted(_ size: CGSize) -> CGSize {
+    func fitted(_ size: CGSize) -> CGSize {
         var fittedSize = self
         if fittedSize.width > size.width {
             fittedSize = CGSize(width: size.width, height: floor((fittedSize.height * size.width / max(fittedSize.width, 1.0))))
@@ -199,11 +199,11 @@ public extension CGSize {
         return fittedSize
     }
     
-    public func cropped(_ size: CGSize) -> CGSize {
+    func cropped(_ size: CGSize) -> CGSize {
         return CGSize(width: min(size.width, self.width), height: min(size.height, self.height))
     }
     
-    public func fittedToArea(_ area: CGFloat) -> CGSize {
+    func fittedToArea(_ area: CGFloat) -> CGSize {
         if self.height < 1.0 || self.width < 1.0 {
             return CGSize()
         }
@@ -213,22 +213,22 @@ public extension CGSize {
         return CGSize(width: floor(width), height: floor(height))
     }
     
-    public func aspectFilled(_ size: CGSize) -> CGSize {
+    func aspectFilled(_ size: CGSize) -> CGSize {
         let scale = max(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func aspectFitted(_ size: CGSize) -> CGSize {
+    func aspectFitted(_ size: CGSize) -> CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func aspectFittedOrSmaller(_ size: CGSize) -> CGSize {
+    func aspectFittedOrSmaller(_ size: CGSize) -> CGSize {
         let scale = min(1.0, min(size.width / max(1.0, self.width), size.height / max(1.0, self.height)))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func aspectFittedWithOverflow(_ size: CGSize, leeway: CGFloat) -> CGSize {
+    func aspectFittedWithOverflow(_ size: CGSize, leeway: CGFloat) -> CGSize {
         let scale = min(size.width / max(1.0, self.width), size.height / max(1.0, self.height))
         var result = CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
         if result.width < size.width && result.width > size.width - leeway {
@@ -242,22 +242,22 @@ public extension CGSize {
         return result
     }
     
-    public func fittedToWidthOrSmaller(_ width: CGFloat) -> CGSize {
+    func fittedToWidthOrSmaller(_ width: CGFloat) -> CGSize {
         let scale = min(1.0, width / max(1.0, self.width))
         return CGSize(width: floor(self.width * scale), height: floor(self.height * scale))
     }
     
-    public func multipliedByScreenScale() -> CGSize {
+    func multipliedByScreenScale() -> CGSize {
         let scale = UIScreenScale
         return CGSize(width: self.width * scale, height: self.height * scale)
     }
     
-    public func dividedByScreenScale() -> CGSize {
+    func dividedByScreenScale() -> CGSize {
         let scale = UIScreenScale
         return CGSize(width: self.width / scale, height: self.height / scale)
     }
     
-    public var integralFloor: CGSize {
+    var integralFloor: CGSize {
         return CGSize(width: floor(self.width), height: floor(self.height))
     }
 }
@@ -272,7 +272,7 @@ public extension UIImage {
         self.draw(at: CGPoint())
         let result = UIGraphicsGetImageFromCurrentImageContext()!
         UIGraphicsEndImageContext()
-        if !UIEdgeInsetsEqualToEdgeInsets(self.capInsets, UIEdgeInsets()) {
+        if self.capInsets != UIEdgeInsets() {
             return result.resizableImage(withCapInsets: self.capInsets, resizingMode: self.resizingMode)
         }
         return result
@@ -350,7 +350,7 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
 }
 
 public extension UIView {
-    public func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
+    func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
         let wasHidden = self.isHidden
         if unhide && wasHidden {
             self.isHidden = false
@@ -370,7 +370,7 @@ public extension UIView {
 }
 
 public extension CALayer {
-    public func snapshotContentTree(unhide: Bool = false) -> CALayer? {
+    func snapshotContentTree(unhide: Bool = false) -> CALayer? {
         let wasHidden = self.isHidden
         if unhide && wasHidden {
             self.isHidden = false
@@ -390,29 +390,29 @@ public extension CALayer {
 }
 
 public extension CGRect {
-    public var topLeft: CGPoint {
+    var topLeft: CGPoint {
         return self.origin
     }
     
-    public var topRight: CGPoint {
+    var topRight: CGPoint {
         return CGPoint(x: self.maxX, y: self.minY)
     }
     
-    public var bottomLeft: CGPoint {
+    var bottomLeft: CGPoint {
         return CGPoint(x: self.minX, y: self.maxY)
     }
     
-    public var bottomRight: CGPoint {
+    var bottomRight: CGPoint {
         return CGPoint(x: self.maxX, y: self.maxY)
     }
     
-    public var center: CGPoint {
+    var center: CGPoint {
         return CGPoint(x: self.midX, y: self.midY)
     }
 }
 
 public extension CGPoint {
-    public func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint {
+    func offsetBy(dx: CGFloat, dy: CGFloat) -> CGPoint {
         return CGPoint(x: self.x + dx, y: self.y + dy)
     }
 }

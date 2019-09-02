@@ -36,7 +36,36 @@ extension TelegramWallpaper: Codable {
                     if [6,7].contains(value.count), let color = UIColor(hexString: value) {
                         self = .color(Int32(bitPattern: color.rgb))
                     } else {
-                        self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: false, isDark: false, slug: value, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: false, motion: false, color: nil, intensity: nil))
+                        let components = value.components(separatedBy: " ")
+                        var slug: String?
+                        var color: Int32?
+                        var intensity: Int32?
+                        var blur = false
+                        var motion = false
+                        if !components.isEmpty {
+                            slug = components[0]
+                        }
+                        if components.count > 1, !["motion", "blur"].contains(components[1]), [6,7].contains(components[1].count), let value = Int32(components[1]) {
+                            color = value
+                        }
+                        if components.count > 2, !["motion", "blur"].contains(components[2]), [6,7].contains(components[2].count), let value = Int32(components[2]) {
+                            if value >= 0 && value <= 100 {
+                                intensity = value
+                            } else {
+                                intensity = 50
+                            }
+                        }
+                        if components.contains("motion") {
+                            motion = true
+                        }
+                        if components.contains("blur") {
+                            blur = true
+                        }
+                        if let slug = slug {
+                            self = .file(id: 0, accessHash: 0, isCreator: false, isDefault: false, isPattern: color != nil, isDark: false, slug: slug, file: TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], immediateThumbnailData: nil, mimeType: "", size: nil, attributes: []), settings: WallpaperSettings(blur: blur, motion: motion, color: color, intensity: intensity))
+                        } else {
+                            throw PresentationThemeDecodingError.generic
+                        }
                     }
             }
         } else {
@@ -52,7 +81,23 @@ extension TelegramWallpaper: Codable {
             case let .color(value):
                 try container.encode(String(format: "%06x", value))
             case let .file(file):
-                try container.encode(file.slug)
+                var components: [String] = []
+                components.append(file.slug)
+                if file.isPattern {
+                    if let color = file.settings.color {
+                        components.append(String(format: "%06x", color))
+                    }
+                    if let intensity = file.settings.intensity {
+                        components.append("\(intensity)")
+                    }
+                    if file.settings.motion {
+                        components.append("motion")
+                    }
+                    if file.settings.blur {
+                        components.append("blur")
+                    }
+                }
+                try container.encode(components.joined(separator: " "))
             default:
                 break
         }
@@ -1521,7 +1566,6 @@ extension PresentationBuiltinThemeReference: Codable {
 extension PresentationTheme: Codable {
     enum CodingKeys: String, CodingKey {
         case name
-        case author
         case basedOn
         case dark
         case intro
@@ -1550,7 +1594,6 @@ extension PresentationTheme: Codable {
         }
         
         self.init(name: (try? values.decode(PresentationThemeName.self, forKey: .name)) ?? .custom("Untitled"),
-                  author: (try? values.decode(String.self, forKey: .author)) ?? nil,
                   referenceTheme: referenceTheme,
                   overallDarkAppearance: (try? values.decode(Bool.self, forKey: .dark)) ?? false,
                   baseColor: nil,
@@ -1569,7 +1612,6 @@ extension PresentationTheme: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.name, forKey: .name)
-        try container.encode(self.author, forKey: .author)
         try container.encode(self.referenceTheme, forKey: .basedOn)
         try container.encode(self.overallDarkAppearance, forKey: .dark)
         try container.encode(self.intro, forKey: .intro)

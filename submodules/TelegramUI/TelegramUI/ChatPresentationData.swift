@@ -52,9 +52,7 @@ public final class ChatPresentationData {
     let isPreview: Bool
     
     let messageFont: UIFont
-    let messageEmojiFont1: UIFont
-    let messageEmojiFont2: UIFont
-    let messageEmojiFont3: UIFont
+    let messageEmojiFont: UIFont
     let messageBoldFont: UIFont
     let messageItalicFont: UIFont
     let messageBoldItalicFont: UIFont
@@ -72,15 +70,13 @@ public final class ChatPresentationData {
         self.isPreview = isPreview
         
         let baseFontSize = fontSize.baseDisplaySize
-        self.messageFont = UIFont.systemFont(ofSize: baseFontSize)
-        self.messageEmojiFont1 = UIFont.systemFont(ofSize: 53.0)
-        self.messageEmojiFont2 = UIFont.systemFont(ofSize: 36.0)
-        self.messageEmojiFont3 = UIFont.systemFont(ofSize: 24.0)
-        self.messageBoldFont = UIFont.boldSystemFont(ofSize: baseFontSize)
-        self.messageItalicFont = UIFont.italicSystemFont(ofSize: baseFontSize)
+        self.messageFont = Font.regular(baseFontSize)
+        self.messageEmojiFont = Font.regular(53.0)
+        self.messageBoldFont = Font.bold(baseFontSize)
+        self.messageItalicFont = Font.italic(baseFontSize)
         self.messageBoldItalicFont = Font.semiboldItalic(baseFontSize)
-        self.messageFixedFont = UIFont(name: "Menlo-Regular", size: baseFontSize - 1.0) ?? UIFont.systemFont(ofSize: baseFontSize)
-        self.messageBlockQuoteFont = UIFont.systemFont(ofSize: baseFontSize - 1.0)
+        self.messageFixedFont = Font.monospace(baseFontSize)
+        self.messageBlockQuoteFont = Font.regular(baseFontSize - 1.0)
         
         self.animatedEmojiScale = animatedEmojiScale
     }

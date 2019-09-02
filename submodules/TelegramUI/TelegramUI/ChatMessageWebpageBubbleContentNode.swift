@@ -260,7 +260,7 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         if let wallpaper = parseWallpaperUrl(webpage.url), case let .slug(_, _, color, intensity) = wallpaper {
                             patternColor = color?.withAlphaComponent(CGFloat(intensity ?? 50) / 100.0)
                         }
-                        let media = WallpaperPreviewMedia(content: .file(file, patternColor, false))
+                        let media = WallpaperPreviewMedia(content: .file(file, patternColor, false, false))
                         mediaAndFlags = (media, [.preferMediaAspectFilled])
                         if let fileSize = file.size {
                             badge = dataSizeString(fileSize, decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
@@ -297,17 +297,20 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                     } else if type == "telegram_theme" {
                         var file: TelegramMediaFile?
+                        var isSupported = false
                         if let contentFiles = webpage.files {
                             if let filteredFile = contentFiles.filter({ $0.mimeType == themeMimeType }).first {
+                                isSupported = true
                                 file = filteredFile
                             } else {
                                 file = contentFiles.first
                             }
                         } else if let contentFile = webpage.file {
+                            isSupported = true
                             file = contentFile
                         }
                         if let file = file {
-                            let media = WallpaperPreviewMedia(content: .file(file, nil, true))
+                            let media = WallpaperPreviewMedia(content: .file(file, nil, true, isSupported))
                             mediaAndFlags = (media, ChatMessageAttachedContentNodeMediaFlags())
                         }
                     }

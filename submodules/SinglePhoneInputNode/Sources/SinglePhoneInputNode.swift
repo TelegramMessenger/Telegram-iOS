@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramCore
+import TelegramStringFormatting
 
 private func removeDuplicatedPlus(_ text: String?) -> String {
     var result = ""
@@ -34,7 +35,7 @@ private func removePlus(_ text: String?) -> String {
 
 private func cleanPhoneNumber(_ text: String?) -> String {
     var cleanNumber = ""
-    if let text = text {
+    if let text = text.flatMap({ normalizeArabicNumeralString($0, type: .western) }) {
         for c in text {
             if c == "+" {
                 if cleanNumber.isEmpty {
@@ -145,7 +146,7 @@ public final class SinglePhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         guard let numberField = self.numberField else {
             return
         }
-        let inputText = removeDuplicatedPlus(cleanPhoneNumber(cleanPhoneNumber(numberField.textField.text)))
+        let inputText = removeDuplicatedPlus(cleanPhoneNumber(numberField.textField.text))
         self.updateNumber(inputText)
         self.numberUpdated?(inputText)
     }

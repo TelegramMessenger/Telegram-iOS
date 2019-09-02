@@ -2984,7 +2984,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 var isScheduled = false
                                 for id in messageIds {
-                                    if [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal].contains(id.namespace) {
+                                    if Namespaces.Message.allScheduled.contains(id.namespace) {
                                         isScheduled = true
                                         break
                                     }
@@ -3483,11 +3483,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let icon: UIImage?
-            switch DeviceMetrics.forScreenSize(layout.size) {
-                case .iPhoneX?, .iPhoneXSMax?:
-                    icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX")
-                default:
-                    icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIcon")
+            if layout.deviceMetrics.hasTopNotch {
+                icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX")
+            } else {
+                icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIcon")
             }
             if let location = location, let icon = icon {
                 strongSelf.videoUnmuteTooltipController?.dismiss()
@@ -5533,8 +5532,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     for i in (0 ..< attributes.count).reversed() {
                         if attributes[i] is NotificationInfoMessageAttribute {
                             attributes.remove(at: i)
-                        }
-                        if let _ = scheduleTime, attributes[i] is OutgoingScheduleInfoMessageAttribute {
+                        } else if let _ = scheduleTime, attributes[i] is OutgoingScheduleInfoMessageAttribute {
                             attributes.remove(at: i)
                         }
                     }
@@ -6904,6 +6902,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func avatarPreviewingController(from sourceView: UIView) -> (UIViewController, CGRect)? {
+        guard let layout = self.validLayout else {
+            return nil
+        }
         guard let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view else {
             return nil
         }
@@ -6911,14 +6912,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let galleryController = AvatarGalleryController(context: self.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
             }, synchronousLoad: true)
             galleryController.setHintWillBePresentedInPreviewingContext(true)
-            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             return (galleryController, buttonView.convert(buttonView.bounds, to: sourceView))
         }
         return nil
     }
     
     func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
-        guard let view =  self.chatDisplayNode.view.hitTest(location, with: nil), view.isDescendant(of: self.chatDisplayNode.historyNode.view) else {
+        guard let layout = self.validLayout, case .phone = layout.deviceMetrics.type, let view = self.chatDisplayNode.view.hitTest(location, with: nil), view.isDescendant(of: self.chatDisplayNode.historyNode.view) else {
             return nil
         }
         
@@ -6952,7 +6953,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     gallery.setHintWillBePresentedInPreviewingContext(true)
                                     let rect = selectedTransitionNode.0.view.convert(selectedTransitionNode.0.bounds, to: sourceView)
                                     let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
-                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                                     return (gallery, sourceRect)
                                 case .instantPage:
                                     break

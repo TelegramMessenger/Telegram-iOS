@@ -414,7 +414,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     func setMessage(_ message: Message) {
         self.currentMessage = message
         
-        self.actionButton.isHidden = message.containsSecretMedia
+        self.actionButton.isHidden = message.containsSecretMedia || Namespaces.Message.allScheduled.contains(message.id.namespace)
         
         let canDelete: Bool
         if let peer = message.peers[message.id.peerId] {
@@ -805,7 +805,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 }
                 if actions.options.contains(.deleteLocally) {
                     var localOptionText = strongSelf.strings.Conversation_DeleteMessagesForMe
-                    if strongSelf.context.account.peerId == peerId {
+                    if let messageId = messages.first?.id, Namespaces.Message.allScheduled.contains(messageId.namespace) {
+                        localOptionText = messages.count > 1 ? strongSelf.strings.ScheduledMessages_DeleteMany : strongSelf.strings.ScheduledMessages_Delete
+                    } else if strongSelf.context.account.peerId == peerId {
                         localOptionText = strongSelf.strings.Conversation_Moderate_Delete
                     }
                     items.append(ActionSheetButtonItem(title: localOptionText, color: .destructive, action: { [weak actionSheet] in

@@ -40,6 +40,12 @@ public extension UnicodeScalar {
     var isZeroWidthJoiner: Bool {
         return self.value == 8205
     }
+    
+    var isVariationSelector: Bool {
+        return self.value == 0xfe0f
+    }
+    
+    static var VariationSelector = UnicodeScalar(0xfe0f)!
 }
 
 public extension String {
@@ -63,24 +69,24 @@ public extension String {
         guard !self.isEmpty else {
             return false
         }
-        var nextShouldBeFE0F = false
+        var nextShouldBeVariationSelector = false
         for scalar in self.unicodeScalars {
-            if nextShouldBeFE0F {
-                if scalar.value == 0xfe0f {
-                    nextShouldBeFE0F = false
+            if nextShouldBeVariationSelector {
+                if scalar.isVariationSelector {
+                    nextShouldBeVariationSelector = false
                     continue
                 } else {
                     return false
                 }
             }
             if !scalar.isEmoji && scalar.maybeEmoji {
-                nextShouldBeFE0F = true
+                nextShouldBeVariationSelector = true
             }
             else if !scalar.isEmoji && !scalar.isZeroWidthJoiner {
                 return false
             }
         }
-        return !nextShouldBeFE0F
+        return !nextShouldBeVariationSelector
     }
     
     var emojis: [String] {
@@ -106,22 +112,22 @@ public extension String {
     var normalizedEmoji: String {
         var string = ""
         
-        var nextShouldBeFE0F = false
+        var nextShouldBeVariationSelector = false
         for scalar in self.unicodeScalars {
-            if nextShouldBeFE0F {
-                if scalar.value != 0xfe0f {
-                    string.unicodeScalars.append("\u{fe0f}")
+            if nextShouldBeVariationSelector {
+                if !scalar.isVariationSelector{
+                    string.unicodeScalars.append(UnicodeScalar.VariationSelector)
                 }
-                nextShouldBeFE0F = false
+                nextShouldBeVariationSelector = false
             }
             string.unicodeScalars.append(scalar)
             if !scalar.isEmoji && scalar.maybeEmoji {
-                nextShouldBeFE0F = true
+                nextShouldBeVariationSelector = true
             }
         }
         
-        if nextShouldBeFE0F {
-            string.unicodeScalars.append("\u{fe0f}")
+        if nextShouldBeVariationSelector {
+            string.unicodeScalars.append(UnicodeScalar.VariationSelector)
         }
         
         return string

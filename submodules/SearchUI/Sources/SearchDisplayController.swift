@@ -96,7 +96,7 @@ public final class SearchDisplayController {
         self.containerLayout = (layout, navigationBarFrame.maxY)
         
         transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarFrame.maxY, transition: transition)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver), navigationBarHeight: navigationBarFrame.maxY, transition: transition)
     }
     
     public func activate(insertSubnode: (ASDisplayNode, Bool) -> Void, placeholder: SearchBarPlaceholderNode) {
@@ -107,7 +107,7 @@ public final class SearchDisplayController {
         insertSubnode(self.contentNode, false)
         
         self.contentNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
+        self.contentNode.containerLayoutUpdated(ContainerViewLayout(size: layout.size, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), navigationBarHeight: navigationBarHeight, transition: .immediate)
         
         let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: nil)
         

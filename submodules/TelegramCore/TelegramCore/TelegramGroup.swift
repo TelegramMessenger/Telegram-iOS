@@ -210,7 +210,7 @@ public final class TelegramGroup: Peer {
 }
 
 public extension TelegramGroup {
-    public func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> Bool {
+    func hasBannedPermission(_ rights: TelegramChatBannedRightsFlags) -> Bool {
         switch self.role {
             case .creator, .admin:
                 return false

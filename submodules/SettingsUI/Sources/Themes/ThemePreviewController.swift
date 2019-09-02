@@ -34,6 +34,7 @@ public final class ThemePreviewController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var disposable: Disposable?
     private var applyDisposable = MetaDisposable()
 
     public init(context: AccountContext, previewTheme: PresentationTheme, source: ThemePreviewSource) {
@@ -61,18 +62,21 @@ public final class ThemePreviewController: ViewController {
             themeName = previewTheme.name.string
         }
         
-        if let author = previewTheme.author {
-            let titleView = CounterContollerTitleView(theme: self.previewTheme)
-            titleView.title = CounterContollerTitle(title: themeName, counter: author)
-            self.navigationItem.titleView = titleView
-        } else {
+//        if
+//        if let author = previewTheme.author {
+//            let titleView = CounterContollerTitleView(theme: self.previewTheme)
+//            titleView.title = CounterContollerTitle(title: themeName, counter: author)
+//            self.navigationItem.titleView = titleView
+//        } else {
             self.title = themeName
-        }
+//        }
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
+        
+        //self.disposable
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -88,6 +92,7 @@ public final class ThemePreviewController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.disposable?.dispose()
         self.applyDisposable.dispose()
     }
     

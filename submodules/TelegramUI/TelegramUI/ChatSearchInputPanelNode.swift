@@ -155,7 +155,12 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         let makeLabelLayout = TextNode.asyncLayout(self.resultsLabel)
         let (labelSize, labelApply) = makeLabelLayout(TextNodeLayoutArguments(attributedString: resultsText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset - 50.0, height: 100.0), alignment: .left, cutout: nil, insets: UIEdgeInsets()))
         let _ = labelApply()
-        self.resultsLabel.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: floor((panelHeight - labelSize.size.height) / 2.0)), size: labelSize.size)
+        
+        var resultsOffset: CGFloat = 16.0
+        if !self.calendarButton.isHidden {
+            resultsOffset += 48.0
+        }
+        self.resultsLabel.frame = CGRect(origin: CGPoint(x: leftInset + resultsOffset, y: floor((panelHeight - labelSize.size.height) / 2.0)), size: labelSize.size)
         
         let indicatorSize = self.activityIndicator.measure(CGSize(width: 22.0, height: 22.0))
         self.activityIndicator.frame = CGRect(origin: CGPoint(x: width - rightInset - 41.0, y: floor((panelHeight - indicatorSize.height) / 2.0)), size: indicatorSize)

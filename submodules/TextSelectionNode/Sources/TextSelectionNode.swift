@@ -131,7 +131,6 @@ private final class TextSelectionGetureRecognizer: UIGestureRecognizer, UIGestur
         self.currentLocation = currentLocation
         
         if let (knob, initialKnobPosition, initialGesturePosition) = self.movingKnob, let currentLocation = currentLocation {
-            
             self.moveKnob?(knob, CGPoint(x: initialKnobPosition.x + currentLocation.x - initialGesturePosition.x, y: initialKnobPosition.y + currentLocation.y - initialGesturePosition.y))
         }
     }

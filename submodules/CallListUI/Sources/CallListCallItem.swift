@@ -474,14 +474,16 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                             
                             switch item.style {
                                 case .plain:
-                                    if strongSelf.backgroundNode.supernode != nil {
-                                        strongSelf.backgroundNode.removeFromSupernode()
+                                    if strongSelf.backgroundNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
                                     }
                                     if strongSelf.topStripeNode.supernode != nil {
                                         strongSelf.topStripeNode.removeFromSupernode()
                                     }
-                                    if strongSelf.bottomStripeNode.supernode == nil {
-                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
+                                    if !last && strongSelf.bottomStripeNode.supernode == nil {
+                                        strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 1)
+                                    } else if last && strongSelf.bottomStripeNode.supernode != nil {
+                                        strongSelf.bottomStripeNode.removeFromSupernode()
                                     }
                                     
                                     transition.updateFrameAdditive(node: strongSelf.bottomStripeNode, frame: CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight)))

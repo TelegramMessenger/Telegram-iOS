@@ -152,7 +152,7 @@ public struct PresentationResourcesChatList {
                 context.clear(bounds)
                 switch state {
                     case .regular:
-                        context.setFillColor(theme.chatList.backgroundColor.cgColor)
+                        context.setFillColor(theme.chatList.itemBackgroundColor.cgColor)
                     case .highlighted:
                         context.setFillColor(theme.chatList.itemHighlightedBackgroundColor.cgColor)
                     case .pinned:

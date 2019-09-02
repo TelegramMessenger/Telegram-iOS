@@ -372,9 +372,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         var bottomInset = toolbarHeight
-        let metrics = DeviceMetrics.forScreenSize(layout.size)
-        let standardInputHeight = metrics?.standardInputHeight(inLandscape: false) ?? 216.0
-        let height = standardInputHeight - bottomInset + 47.0
+        let standardInputHeight = layout.deviceMetrics.keyboardHeight(inLandscape: false)
+        let height = max(standardInputHeight, layout.inputHeight ?? 0.0) - bottomInset + 47.0
         let colorPanelFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset - height), size: CGSize(width: layout.size.width, height: height))
         bottomInset += height
         

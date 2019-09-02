@@ -1359,7 +1359,6 @@ const NSInteger TGMessageImageViewOverlayParticlesCount = 40;
 
 - (void)setCompletedAnimated:(bool)animated;
 {
-    __weak TGMessageImageViewOverlayView *weakSelf = self;
     [_contentLayer setCompletedAnimated:animated];
     [_progressLayer setNone];
     _blurredBackgroundLayer.hidden = _blurless;

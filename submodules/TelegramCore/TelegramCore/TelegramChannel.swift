@@ -316,7 +316,7 @@ public enum TelegramChannelPermission {
 }
 
 public extension TelegramChannel {
-    public func hasPermission(_ permission: TelegramChannelPermission) -> Bool {
+    func hasPermission(_ permission: TelegramChannelPermission) -> Bool {
         if self.flags.contains(.isCreator) {
             return true
         }
