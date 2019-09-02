@@ -867,7 +867,7 @@ void VSpanData::updateSpanFunc()
     }
 }
 
-#if !defined(__SSE2__) && !defined(__ARM_NEON__)
+#if !defined(__SSE2__) && (!defined(__ARM_NEON__) || defined(LOTTIE_DISABLE_ARM_NEON))
 void memfill32(uint32_t *dest, uint32_t value, int length)
 {
     int n;
@@ -912,7 +912,7 @@ void vInitDrawhelperFunctions()
 {
     vInitBlendFunctions();
 
-#if defined(__ARM_NEON__)
+#if defined(__ARM_NEON__) && !defined(LOTTIE_DISABLE_ARM_NEON)
     // update fast path for NEON
     extern void Vcomp_func_solid_SourceOver_neon(
         uint32_t * dest, int length, uint32_t color, uint32_t const_alpha);

@@ -778,7 +778,10 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				OTHER_CFLAGS = "-Dpixman_region_selfcheck(x)=1";
+				OTHER_CFLAGS = (
+					"-Dpixman_region_selfcheck(x)=1",
+					"-DLOTTIE_DISABLE_ARM_NEON=1",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.RLottieBinding;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -805,7 +808,10 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				OTHER_CFLAGS = "-Dpixman_region_selfcheck(x)=1";
+				OTHER_CFLAGS = (
+					"-Dpixman_region_selfcheck(x)=1",
+					"-DLOTTIE_DISABLE_ARM_NEON=1",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.RLottieBinding;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -895,7 +901,10 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				OTHER_CFLAGS = "-Dpixman_region_selfcheck(x)=1";
+				OTHER_CFLAGS = (
+					"-Dpixman_region_selfcheck(x)=1",
+					"-DLOTTIE_DISABLE_ARM_NEON=1",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.RLottieBinding;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -978,7 +987,10 @@
 					"@loader_path/Frameworks",
 				);
 				MACH_O_TYPE = staticlib;
-				OTHER_CFLAGS = "-Dpixman_region_selfcheck(x)=1";
+				OTHER_CFLAGS = (
+					"-Dpixman_region_selfcheck(x)=1",
+					"-DLOTTIE_DISABLE_ARM_NEON=1",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = org.telegram.RLottieBinding;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
