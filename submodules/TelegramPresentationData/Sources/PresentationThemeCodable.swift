@@ -85,17 +85,18 @@ extension TelegramWallpaper: Codable {
                 components.append(file.slug)
                 if file.isPattern {
                     if let color = file.settings.color {
+                        components.removeAll()
                         components.append(String(format: "%06x", color))
                     }
-                    if let intensity = file.settings.intensity {
-                        components.append("\(intensity)")
-                    }
-                    if file.settings.motion {
-                        components.append("motion")
-                    }
-                    if file.settings.blur {
-                        components.append("blur")
-                    }
+//                    if let intensity = file.settings.intensity {
+//                        components.append("\(intensity)")
+//                    }
+//                    if file.settings.motion {
+//                        components.append("motion")
+//                    }
+//                    if file.settings.blur {
+//                        components.append("blur")
+//                    }
                 }
                 try container.encode(components.joined(separator: " "))
             default:

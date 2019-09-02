@@ -447,7 +447,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                 let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData)
                                 |> deliverOnMainQueue).start(next: { next in
                                     if case let .result(resultTheme) = next {
-                                        let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
+                                        let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme, install: true).start()
                                         let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
                                             transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                                                 let current: PresentationThemeSettings

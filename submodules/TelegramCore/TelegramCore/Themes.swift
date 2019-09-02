@@ -461,13 +461,13 @@ public func deleteThemeInteractively(account: Account, accountManager: AccountMa
     return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: true)
 }
 
-public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?) -> Signal<Never, NoError> {
+public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?, install: Bool = false) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> Signal<Never, NoError> in
         transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
             return ThemeSettings(currentTheme: theme)
         })
         
-        if let theme = theme {
+        if let theme = theme, install {
             return installTheme(account: account, theme: theme)
         } else {
             return .complete()
