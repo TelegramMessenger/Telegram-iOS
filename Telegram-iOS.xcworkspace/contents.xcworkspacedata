@@ -456,9 +456,6 @@
          location = "group:submodules/Display/Display_Xcode.xcodeproj">
       </FileRef>
       <FileRef
-         location = "group:submodules/RLottie/RLottie_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
          location = "group:submodules/TelegramBaseController/TelegramBaseController_Xcode.xcodeproj">
       </FileRef>
       <FileRef

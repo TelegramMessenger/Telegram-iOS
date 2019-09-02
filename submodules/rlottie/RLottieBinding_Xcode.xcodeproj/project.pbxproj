@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D0AA5676231BE262000F88F3 /* LottieInstance.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5544231BE25E000F88F3 /* LottieInstance.h */; };
+		D0AA5676231BE262000F88F3 /* LottieInstance.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5544231BE25E000F88F3 /* LottieInstance.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AA567F231BE262000F88F3 /* rlottiecommon.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5551231BE25F000F88F3 /* rlottiecommon.h */; };
 		D0AA5681231BE262000F88F3 /* rlottie.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5553231BE25F000F88F3 /* rlottie.h */; };
 		D0AA5682231BE262000F88F3 /* rlottie_capi.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5554231BE25F000F88F3 /* rlottie_capi.h */; };
@@ -112,7 +112,7 @@
 		D0AA5789231BE263000F88F3 /* vrle.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0AA566F231BE262000F88F3 /* vrle.cpp */; };
 		D0AA578A231BE263000F88F3 /* vcowptr.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5670231BE262000F88F3 /* vcowptr.h */; };
 		D0AA578B231BE263000F88F3 /* vbrush.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D0AA5671231BE262000F88F3 /* vbrush.cpp */; };
-		D0AA578D231BE263000F88F3 /* RLottieBinding.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5673231BE262000F88F3 /* RLottieBinding.h */; };
+		D0AA578D231BE263000F88F3 /* RLottieBinding.h in Headers */ = {isa = PBXBuildFile; fileRef = D0AA5673231BE262000F88F3 /* RLottieBinding.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0AA578E231BE263000F88F3 /* LottieInstance.mm in Sources */ = {isa = PBXBuildFile; fileRef = D0AA5674231BE262000F88F3 /* LottieInstance.mm */; };
 /* End PBXBuildFile section */
 
