@@ -278,6 +278,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
 public enum CreateThemeError {
     case generic
     case slugInvalid
+    case slugOccupied
 }
 
 public enum CreateThemeResult {
@@ -296,6 +297,8 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                     |> mapError { error in
                         if error.errorDescription == "THEME_SLUG_INVALID" {
                             return .slugInvalid
+                        } else if error.errorDescription == "THEME_SLUG_OCCUPIED" {
+                            return .slugOccupied
                         }
                         return .generic
                     }
@@ -375,6 +378,8 @@ public func updateTheme(account: Account, accountManager: AccountManager, theme:
         |> mapError { error in
             if error.errorDescription == "THEME_SLUG_INVALID" {
                 return .slugInvalid
+            } else if error.errorDescription == "THEME_SLUG_OCCUPIED" {
+                return .slugOccupied
             }
             return .generic
         }

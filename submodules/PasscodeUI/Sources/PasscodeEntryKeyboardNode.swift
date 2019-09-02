@@ -220,7 +220,7 @@ final class PasscodeEntryKeyboardNode: ASDisplayNode {
         if let subnodes = self.subnodes {
             for i in 0 ..< subnodes.count {
                 let subnode = subnodes[i]
-                var delay: Double = 0.0
+                var delay: Double = 0.001
                 if i / 3 == 1 {
                     delay = 0.05
                 }

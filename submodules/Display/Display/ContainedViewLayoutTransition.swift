@@ -776,7 +776,7 @@ public extension ContainedViewLayoutTransition {
 #if os(iOS)
     
 public extension ContainedViewLayoutTransition {
-    public func animateView(_ f: @escaping () -> Void) {
+    func animateView(_ f: @escaping () -> Void) {
         switch self {
         case .immediate:
             f()

@@ -145,7 +145,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var textLayoutAndApply: (TextNodeLayout, () -> TextNode)?
             var isEmoji = false
             if item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
-                let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont1, textColor: .black)
+                let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont, textColor: .black)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
                 
                 imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: textLayoutAndApply!.0.size.height)

@@ -137,10 +137,7 @@ public final class PasscodeEntryController: ViewController {
                 case .none:
                     succeed = true
                 case let .numericalPassword(code, _, _):
-                    succeed = passcode == code
-                    if !succeed {
-                        succeed = convertToArabicNumeralString(passcode) == code
-                    }
+                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
                 case let .plaintextPassword(code, _, _):
                     succeed = passcode == code
             }

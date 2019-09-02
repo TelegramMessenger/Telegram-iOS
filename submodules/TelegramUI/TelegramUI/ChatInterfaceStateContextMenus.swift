@@ -27,7 +27,18 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
     var unlimitedInterval = false
     
     if message.id.namespace == Namespaces.Message.ScheduledCloud {
-        hasEditRights = true
+        if let peer = message.peers[message.id.peerId], let channel = peer as? TelegramChannel {
+            switch channel.info {
+                case .broadcast:
+                    if channel.hasPermission(.editAllMessages) {
+                        hasEditRights = true
+                    }
+                default:
+                    hasEditRights = true
+            }
+        } else {
+            hasEditRights = true
+        }
     } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
     } else if let author = message.author, author.id == context.account.peerId {
@@ -261,29 +272,9 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
     var canPin = false
     let canSelect = !isAction
     
-    var canDeleteMessage: Bool = false
-    
     let message = messages[0]
-    if let channel = message.peers[message.id.peerId] as? TelegramChannel {
-        if case .broadcast = channel.info {
-            if !message.flags.contains(.Incoming) {
-                canDeleteMessage = channel.hasPermission(.sendMessages)
-            }
-            if channel.hasPermission(.deleteAllMessages) {
-                canDeleteMessage = true
-            }
-        } else {
-            if channel.hasPermission(.deleteAllMessages) || !message.flags.contains(.Incoming) {
-                canDeleteMessage = true
-            }
-        }
-    } else if message.peers[message.id.peerId] is TelegramSecretChat {
-        canDeleteMessage = true
-    } else {
-        canDeleteMessage = context.account.peerId == message.author?.id
-    }
     
-    if [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal].contains(message.id.namespace) {
+    if Namespaces.Message.allScheduled.contains(message.id.namespace) {
         canReply = false
         canPin = false
     }

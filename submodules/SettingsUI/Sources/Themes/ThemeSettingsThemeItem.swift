@@ -171,9 +171,10 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     
     func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
         if case let .cloud(theme) = theme, theme.theme.file == nil {
-            if self.currentTheme == nil || currentTheme !== self.currentTheme! {
+            if self.currentTheme == nil || currentTheme !== self.currentTheme! || accentColor != self.accentColor {
                 self.imageNode.setSignal(createThemeImage(theme: currentTheme))
                 self.currentTheme = currentTheme
+                self.accentColor = accentColor
             }
         } else {
             if theme != self.theme || accentColor != self.accentColor {

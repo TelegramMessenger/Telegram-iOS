@@ -129,7 +129,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
             constructive: PresentationThemeFillForeground(fillColor: constructiveColor, foregroundColor: .white),
             accent: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x007cd6), foregroundColor: .white),
             warning: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xcd7800), foregroundColor: .white),
-            inactive: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x26384c), foregroundColor: .white)
+            inactive: PresentationThemeFillForeground(fillColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.3), foregroundColor: .white)
         ),
         itemCheckColors: PresentationThemeFillStrokeForeground(
             fillColor: accentColor,
@@ -332,7 +332,6 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
 
     return PresentationTheme(
         name: .builtin(.nightAccent),
-        author: "Telegram",
         referenceTheme: .nightAccent,
         overallDarkAppearance: true,
         baseColor: baseColor,

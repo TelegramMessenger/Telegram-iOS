@@ -344,6 +344,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.dismissOnOrientationChange = item.landscape
             
+            var disablePictureInPicture = false
             var disablePlayerControls = false
             var isAnimated = false
             if let content = item.content as? NativeVideoContent {
@@ -396,6 +397,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.requiresDownload = true
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+                if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                    disablePictureInPicture = true
+                }
+                
                 var file: TelegramMediaFile?
                 var isWebpage = false
                 for m in message.media {
@@ -525,7 +530,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.zoomableContent = (videoSize, videoNode)
             
-            if !isAnimated && !disablePlayerControls {
+            if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 self._rightBarButtonItem.set(.single(rightBarButtonItem))
             }

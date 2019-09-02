@@ -363,7 +363,6 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     
     return PresentationTheme(
         name: .builtin(day ? .day : .dayClassic),
-        author: "Telegram",
         referenceTheme: day ? .day : .dayClassic,
         overallDarkAppearance: false,
         baseColor: baseColor,

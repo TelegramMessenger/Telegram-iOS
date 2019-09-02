@@ -18231,7 +18231,7 @@ public extension Api {
     }
     public enum Theme: TypeConstructorDescription {
         case themeDocumentNotModified
-        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?)
+        case theme(flags: Int32, id: Int64, accessHash: Int64, slug: String, title: String, document: Api.Document?, installsCount: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -18241,9 +18241,9 @@ public extension Api {
                     }
                     
                     break
-                case .theme(let flags, let id, let accessHash, let slug, let title, let document):
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let installsCount):
                     if boxed {
-                        buffer.appendInt32(975846885)
+                        buffer.appendInt32(-136770336)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -18251,6 +18251,7 @@ public extension Api {
                     serializeString(slug, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {document!.serialize(buffer, true)}
+                    serializeInt32(installsCount, buffer: buffer, boxed: false)
                     break
     }
     }
@@ -18259,8 +18260,8 @@ public extension Api {
         switch self {
                 case .themeDocumentNotModified:
                 return ("themeDocumentNotModified", [])
-                case .theme(let flags, let id, let accessHash, let slug, let title, let document):
-                return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document)])
+                case .theme(let flags, let id, let accessHash, let slug, let title, let document, let installsCount):
+                return ("theme", [("flags", flags), ("id", id), ("accessHash", accessHash), ("slug", slug), ("title", title), ("document", document), ("installsCount", installsCount)])
     }
     }
     
@@ -18282,14 +18283,17 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
                 _6 = Api.parse(reader, signature: signature) as? Api.Document
             } }
+            var _7: Int32?
+            _7 = reader.readInt32()
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
             let _c4 = _4 != nil
             let _c5 = _5 != nil
             let _c6 = (Int(_1!) & Int(1 << 2) == 0) || _6 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 {
-                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6)
+            let _c7 = _7 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 {
+                return Api.Theme.theme(flags: _1!, id: _2!, accessHash: _3!, slug: _4!, title: _5!, document: _6, installsCount: _7!)
             }
             else {
                 return nil
