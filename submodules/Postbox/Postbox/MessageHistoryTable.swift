@@ -282,7 +282,7 @@ final class MessageHistoryTable: Table {
                     if !message.localTags.isEmpty {
                         self.localTagsTable.set(id: message.id, tags: message.localTags, previousTags: [], operations: &localTagsOperations)
                     }
-                    if message.flags.contains(.Incoming) {
+                    if !message.flags.intersection(.IsIncomingMask).isEmpty {
                         accumulatedAddedIncomingMessageIndices.insert(message.index)
                     }
                 case let .InsertExistingMessage(storeMessage):
@@ -312,7 +312,7 @@ final class MessageHistoryTable: Table {
                             outputOperations.append(.UpdateGroupInfos(updatedGroupInfos))
                         }
                         
-                        if message.flags.contains(.Incoming) {
+                        if !message.flags.intersection(.IsIncomingMask).isEmpty {
                             if index != message.index {
                                 accumulatedRemoveIndices.append(index)
                                 accumulatedAddedIncomingMessageIndices.insert(message.index)
@@ -520,7 +520,7 @@ final class MessageHistoryTable: Table {
         var topMessageId: (MessageId.Id, Bool)?
         if let index = self.topIndexEntry(peerId: messageId.peerId, namespace: messageId.namespace) {
             if let message = self.getMessage(index) {
-                topMessageId = (index.id.id, !message.flags.contains(.Incoming))
+                topMessageId = (index.id.id, message.flags.intersection(.IsIncomingMask).isEmpty)
             } else {
                 topMessageId = (index.id.id, false)
             }
@@ -584,7 +584,7 @@ final class MessageHistoryTable: Table {
         var topMessageId: (MessageId.Id, Bool)?
         if let index = self.topIndexEntry(peerId: messageIndex.id.peerId, namespace: messageIndex.id.namespace) {
             if let message = self.getMessage(index) {
-                topMessageId = (index.id.id, !message.flags.contains(.Incoming))
+                topMessageId = (index.id.id, message.flags.intersection(.IsIncomingMask).isEmpty)
             } else {
                 topMessageId = (index.id.id, false)
             }
@@ -2390,7 +2390,7 @@ final class MessageHistoryTable: Table {
             let key = self.key(index)
             if let value = self.valueBox.get(self.table, key: key) {
                 let entry = self.readIntermediateEntry(key, value: value)
-                if entry.message.id.namespace == namespace && entry.message.flags.contains(.Incoming) {
+                if entry.message.id.namespace == namespace && !entry.message.flags.intersection(.IsIncomingMask).isEmpty {
                     count += 1
                 }
             } else {
@@ -2412,7 +2412,7 @@ final class MessageHistoryTable: Table {
         if fromIndex <= toIndex {
             self.valueBox.range(self.table, start: self.key(fromIndex).predecessor, end: self.key(toIndex).successor, values: { key, value in
                 let entry = self.readIntermediateEntry(key, value: value)
-                if entry.message.id.namespace == namespace && entry.message.flags.contains(.Incoming) {
+                if entry.message.id.namespace == namespace && !entry.message.flags.intersection(.IsIncomingMask).isEmpty {
                     count += 1
                     messageIds.append(entry.message.id)
                 }
@@ -2431,7 +2431,7 @@ final class MessageHistoryTable: Table {
         var messageIds: [MessageId] = []
         self.valueBox.range(self.table, start: self.key(fromIndex).predecessor, end: self.key(toIndex).successor, values: { key, value in
             let entry = self.readIntermediateEntry(key, value: value)
-            if !entry.message.flags.contains(.Incoming) {
+            if entry.message.flags.intersection(.IsIncomingMask).isEmpty {
                 messageIds.append(entry.message.id)
             }
             return true

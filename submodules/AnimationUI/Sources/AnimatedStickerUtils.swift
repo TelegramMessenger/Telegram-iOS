@@ -6,7 +6,7 @@ import Display
 import TelegramCore
 import Compression
 import GZip
-import RLottie
+import RLottieBinding
 import MediaResources
 import MobileCoreServices
 import MediaResources

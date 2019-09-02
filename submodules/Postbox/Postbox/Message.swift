@@ -370,8 +370,13 @@ public struct MessageFlags: OptionSet {
         if flags.contains(StoreMessageFlags.CanBeGroupedIntoFeed) {
             rawValue |= MessageFlags.CanBeGroupedIntoFeed.rawValue
         }
+        
         if flags.contains(StoreMessageFlags.WasScheduled) {
             rawValue |= MessageFlags.WasScheduled.rawValue
+        }
+        
+        if flags.contains(StoreMessageFlags.CountedAsIncoming) {
+            rawValue |= MessageFlags.CountedAsIncoming.rawValue
         }
         
         self.rawValue = rawValue
@@ -384,7 +389,9 @@ public struct MessageFlags: OptionSet {
     public static let Sending = MessageFlags(rawValue: 32)
     public static let CanBeGroupedIntoFeed = MessageFlags(rawValue: 64)
     public static let WasScheduled = MessageFlags(rawValue: 128)
+    public static let CountedAsIncoming = MessageFlags(rawValue: 256)
     
+    public static let IsIncomingMask = MessageFlags([.Incoming, .CountedAsIncoming])
 }
 
 public struct StoreMessageForwardInfo {
@@ -568,8 +575,13 @@ public struct StoreMessageFlags: OptionSet {
         if flags.contains(.CanBeGroupedIntoFeed) {
             rawValue |= StoreMessageFlags.CanBeGroupedIntoFeed.rawValue
         }
+        
         if flags.contains(.WasScheduled) {
             rawValue |= StoreMessageFlags.WasScheduled.rawValue
+        }
+        
+        if flags.contains(.CountedAsIncoming) {
+            rawValue |= StoreMessageFlags.CountedAsIncoming.rawValue
         }
         
         self.rawValue = rawValue
@@ -582,6 +594,9 @@ public struct StoreMessageFlags: OptionSet {
     public static let Sending = StoreMessageFlags(rawValue: 32)
     public static let CanBeGroupedIntoFeed = StoreMessageFlags(rawValue: 64)
     public static let WasScheduled = StoreMessageFlags(rawValue: 128)
+    public static let CountedAsIncoming = StoreMessageFlags(rawValue: 256)
+    
+    public static let IsIncomingMask = StoreMessageFlags([.Incoming, .CountedAsIncoming])
 }
 
 public enum StoreMessageId {

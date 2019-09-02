@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{9C97B40D-AB46-4EC7-9A17-7F5256FBC059}</ProjectGuid>
+    <RootNamespace>rlottie</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v142</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>../inc;./;../src/lottie;../src/vector;../src/vector/pixman;../src/vector/freetype;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>-DLOT_BUILD %(AdditionalOptions)</AdditionalOptions>
+      <DisableSpecificWarnings>4251;4244</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\inc\rlottie.h" />
+    <ClInclude Include="..\inc\rlottiecommon.h" />
+    <ClInclude Include="..\inc\rlottie_capi.h" />
+    <ClInclude Include="..\src\lottie\lottieitem.h" />
+    <ClInclude Include="..\src\lottie\lottiekeypath.h" />
+    <ClInclude Include="..\src\lottie\lottieloader.h" />
+    <ClInclude Include="..\src\lottie\lottiemodel.h" />
+    <ClInclude Include="..\src\lottie\lottieparser.h" />
+    <ClInclude Include="..\src\lottie\lottieproxymodel.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\allocators.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\cursorstreamwrapper.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\document.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\encodedstream.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\encodings.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\error\en.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\error\error.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\filereadstream.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\filewritestream.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\fwd.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\biginteger.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\diyfp.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\dtoa.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\ieee754.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\itoa.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\meta.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\pow10.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\regex.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\stack.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\strfunc.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\strtod.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\internal\swap.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\istreamwrapper.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\memorybuffer.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\memorystream.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\msinttypes\inttypes.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\msinttypes\stdint.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\ostreamwrapper.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\pointer.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\prettywriter.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\rapidjson.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\reader.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\schema.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\stream.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\stringbuffer.h" />
+    <ClInclude Include="..\src\lottie\rapidjson\writer.h" />
+    <ClInclude Include="..\src\vector\freetype\v_ft_math.h" />
+    <ClInclude Include="..\src\vector\freetype\v_ft_raster.h" />
+    <ClInclude Include="..\src\vector\freetype\v_ft_stroker.h" />
+    <ClInclude Include="..\src\vector\freetype\v_ft_types.h" />
+    <ClInclude Include="..\src\vector\pixman\pixman-arm-neon-asm.h" />
+    <ClInclude Include="..\src\vector\pixman\vregion.h" />
+    <ClInclude Include="..\src\vector\stb\stb_image.h" />
+    <ClInclude Include="..\src\vector\vbezier.h" />
+    <ClInclude Include="..\src\vector\vbitmap.h" />
+    <ClInclude Include="..\src\vector\vbrush.h" />
+    <ClInclude Include="..\src\vector\vcowptr.h" />
+    <ClInclude Include="..\src\vector\vdasher.h" />
+    <ClInclude Include="..\src\vector\vdebug.h" />
+    <ClInclude Include="..\src\vector\vdrawable.h" />
+    <ClInclude Include="..\src\vector\vdrawhelper.h" />
+    <ClInclude Include="..\src\vector\velapsedtimer.h" />
+    <ClInclude Include="..\src\vector\vglobal.h" />
+    <ClInclude Include="..\src\vector\vimageloader.h" />
+    <ClInclude Include="..\src\vector\vinterpolator.h" />
+    <ClInclude Include="..\src\vector\vline.h" />
+    <ClInclude Include="..\src\vector\vmatrix.h" />
+    <ClInclude Include="..\src\vector\vpainter.h" />
+    <ClInclude Include="..\src\vector\vpath.h" />
+    <ClInclude Include="..\src\vector\vpathmesure.h" />
+    <ClInclude Include="..\src\vector\vpoint.h" />
+    <ClInclude Include="..\src\vector\vraster.h" />
+    <ClInclude Include="..\src\vector\vrect.h" />
+    <ClInclude Include="..\src\vector\vrle.h" />
+    <ClInclude Include="..\src\vector\vstackallocator.h" />
+    <ClInclude Include="..\src\vector\vtaskqueue.h" />
+    <ClInclude Include="config.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\binding\c\lottieanimation_capi.cpp" />
+    <ClCompile Include="..\src\lottie\lottieanimation.cpp" />
+    <ClCompile Include="..\src\lottie\lottieitem.cpp" />
+    <ClCompile Include="..\src\lottie\lottiekeypath.cpp" />
+    <ClCompile Include="..\src\lottie\lottieloader.cpp" />
+    <ClCompile Include="..\src\lottie\lottiemodel.cpp" />
+    <ClCompile Include="..\src\lottie\lottieparser.cpp" />
+    <ClCompile Include="..\src\lottie\lottieproxymodel.cpp" />
+    <ClCompile Include="..\src\vector\freetype\v_ft_math.cpp" />
+    <ClCompile Include="..\src\vector\freetype\v_ft_raster.cpp" />
+    <ClCompile Include="..\src\vector\freetype\v_ft_stroker.cpp" />
+    <ClCompile Include="..\src\vector\pixman\vregion.cpp" />
+    <ClCompile Include="..\src\vector\stb\stb_image.cpp" />
+    <ClCompile Include="..\src\vector\vbezier.cpp" />
+    <ClCompile Include="..\src\vector\vbitmap.cpp" />
+    <ClCompile Include="..\src\vector\vbrush.cpp" />
+    <ClCompile Include="..\src\vector\vcompositionfunctions.cpp" />
+    <ClCompile Include="..\src\vector\vdasher.cpp" />
+    <ClCompile Include="..\src\vector\vdebug.cpp" />
+    <ClCompile Include="..\src\vector\vdrawable.cpp" />
+    <ClCompile Include="..\src\vector\vdrawhelper.cpp" />
+    <ClCompile Include="..\src\vector\vdrawhelper_neon.cpp" />
+    <ClCompile Include="..\src\vector\vdrawhelper_sse2.cpp" />
+    <ClCompile Include="..\src\vector\velapsedtimer.cpp" />
+    <ClCompile Include="..\src\vector\vimageloader.cpp" />
+    <ClCompile Include="..\src\vector\vinterpolator.cpp" />
+    <ClCompile Include="..\src\vector\vmatrix.cpp" />
+    <ClCompile Include="..\src\vector\vpainter.cpp" />
+    <ClCompile Include="..\src\vector\vpath.cpp" />
+    <ClCompile Include="..\src\vector\vpathmesure.cpp" />
+    <ClCompile Include="..\src\vector\vraster.cpp" />
+    <ClCompile Include="..\src\vector\vrect.cpp" />
+    <ClCompile Include="..\src\vector\vrle.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\vector\pixman\pixman-arm-neon-asm.S" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

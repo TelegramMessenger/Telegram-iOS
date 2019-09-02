@@ -1,0 +1,20 @@
+sudo: false
+
+os:
+  - linux
+
+language:
+  - cpp
+
+services:
+  - docker
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker pull smohantty/rlottie-ci-setup; fi
+
+script:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo FROM smohantty/rlottie-ci-setup > Dockerfile; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then echo ADD . /root >> Dockerfile; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker build -t withgit .; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker run withgit /bin/sh -c "cd /root && TRAVIS=true meson -Dtest=true builddir && ninja -C builddir test && ninja -C builddir install"; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then docker run withgit /bin/sh -c "cd /root && TRAVIS=true cmake -DLOTTIE_TEST=ON -Bbuilddir -H. && make -C builddir -j$(nproc) all test && make -C builddir install"; fi

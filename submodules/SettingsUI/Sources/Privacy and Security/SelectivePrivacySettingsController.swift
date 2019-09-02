@@ -564,7 +564,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             enableForText = presentationData.strings.Privacy_GroupsAndChannels_AlwaysAllow
         case .phoneNumber:
             settingTitle = presentationData.strings.PrivacyPhoneNumberSettings_WhoCanSeeMyPhoneNumber
-            if state.setting == .nobody, state.phoneDiscoveryEnabled == false {
+            if state.setting == .nobody {
                 settingInfoText = nil
             } else {
                 settingInfoText = presentationData.strings.PrivacyPhoneNumberSettings_CustomHelp
@@ -609,7 +609,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.phoneDiscoveryHeader(presentationData.theme, presentationData.strings.PrivacyPhoneNumberSettings_DiscoveryHeader))
         entries.append(.phoneDiscoveryEverybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.phoneDiscoveryEnabled != false))
         entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
-        entries.append(.phoneDiscoveryInfo(presentationData.theme, presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp))
+        entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomHelp : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp))
     }
     
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))

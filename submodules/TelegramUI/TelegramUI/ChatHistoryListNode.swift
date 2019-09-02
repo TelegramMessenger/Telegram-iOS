@@ -166,7 +166,7 @@ private func maxMessageIndexForEntries(_ view: ChatHistoryView, indexRange: (Int
         if overall == nil || overall! < index {
             overall = index
         }
-        if messageEntry.message.flags.contains(.Incoming) {
+        if !messageEntry.message.flags.intersection(.IsIncomingMask).isEmpty {
             if incoming == nil || incoming! < index {
                 incoming = index
             }

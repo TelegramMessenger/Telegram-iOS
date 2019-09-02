@@ -718,7 +718,7 @@ public final class MessageHistoryView {
                     for entry in state.entries {
                         if mutableView.namespaces.contains(entry.message.id.namespace) {
                             let read: Bool
-                            if entry.message.flags.contains(.Incoming) {
+                            if !entry.message.flags.intersection(.IsIncomingMask).isEmpty {
                                 read = false
                             } else if let readState = states[entry.message.id.peerId] {
                                 read = readState.isOutgoingMessageIndexRead(entry.message.index)
@@ -822,7 +822,7 @@ public final class MessageHistoryView {
                                     }
                                     if let _ = maxNamespaceIndex , index + 1 < entries.count {
                                         for i in index + 1 ..< entries.count {
-                                            if !entries[i].message.flags.contains(.Incoming) {
+                                            if entries[i].message.flags.intersection(.IsIncomingMask).isEmpty {
                                                 maxNamespaceIndex = entries[i].message.index
                                             } else {
                                                 break

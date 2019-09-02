@@ -51,7 +51,7 @@ final class GlobalOverlayPresentationContext {
     private let statusBarHost: StatusBarHost?
     private weak var parentView: UIView?
     
-    private var controllers: [ContainableController] = []
+    private(set) var controllers: [ContainableController] = []
     
     private var presentationDisposables = DisposableSet()
     private var layout: ContainerViewLayout?

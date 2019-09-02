@@ -34,7 +34,7 @@ public func installInteractiveReadMessagesAction(postbox: Postbox, stateManager:
                     consumeMessageIds.append(id)
                 }
                 
-                if message.flags.contains(.Incoming) {
+                if !message.flags.intersection(.IsIncomingMask).isEmpty {
                     let index = MessageIndex(id: id, timestamp: message.timestamp)
                     let current = readMessageIndexByNamespace[id.namespace]
                     if current == nil || current! < index {

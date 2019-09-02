@@ -1041,10 +1041,21 @@ public class Window1 {
     }
     
     public func simulateKeyboardDismiss(transition: ContainedViewLayoutTransition) {
-        if self.windowLayout.inputHeight != nil {
+        var simulate = false
+        for controller in self.overlayPresentationContext.controllers {
+            if controller.isViewLoaded {
+                if controller.view.window != self.hostView.containerView.window {
+                    simulate = true
+                    break
+                }
+            }
+        }
+        if simulate {
             self.updateLayout {
                 $0.update(upperKeyboardInputPositionBound: self.windowLayout.size.height, transition: transition, overrideTransition: false)
             }
+        } else {
+            self.hostView.containerView.endEditing(true)
         }
     }
     

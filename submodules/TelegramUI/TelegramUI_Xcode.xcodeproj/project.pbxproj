@@ -74,7 +74,6 @@
 		D00818CD22B595CB008A895F /* LightweightAccountData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00818CC22B595CB008A895F /* LightweightAccountData.framework */; };
 		D00ACA4B20222C280045D427 /* libtgvoip.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D00ACA4C20222C280045D427 /* libtgvoip.framework */; };
 		D00ACA5A2022897D0045D427 /* ProcessedPeerRestrictionText.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00ACA592022897D0045D427 /* ProcessedPeerRestrictionText.swift */; };
-		D010E17D22C238BC009324D4 /* RLottie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D010E17C22C238BC009324D4 /* RLottie.framework */; };
 		D015E04F225D2E5900CB9E8A /* WebP.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D015E04E225D2E5900CB9E8A /* WebP.framework */; };
 		D017734C22049BF800DA06A7 /* UpgradedAccounts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D017734B22049BF800DA06A7 /* UpgradedAccounts.swift */; };
 		D01776BE1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01776BD1F1E76920044446D /* PeerMediaCollectionSectionsNode.swift */; };
@@ -236,6 +235,7 @@
 		D09E77A922FA5CEA00B9CCA7 /* TextFormat.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09E77A822FA5CEA00B9CCA7 /* TextFormat.framework */; };
 		D09E77AB22FA5CEA00B9CCA7 /* Tuples.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09E77AA22FA5CEA00B9CCA7 /* Tuples.framework */; };
 		D09E77AD22FA5CEA00B9CCA7 /* UrlEscaping.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D09E77AC22FA5CEA00B9CCA7 /* UrlEscaping.framework */; };
+		D0AA5793231BE2FD000F88F3 /* RLottieBinding.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AA5792231BE2FD000F88F3 /* RLottieBinding.framework */; };
 		D0AA840C1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */; };
 		D0AB262921C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AB262821C307D7008F6685 /* ChatMessagePollBubbleContentNode.swift */; };
 		D0ACCB1C1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0ACCB1B1EC5FF4B0079D8BF /* ChatMessageCallBubbleContentNode.swift */; };
@@ -895,6 +895,7 @@
 		D09E77A822FA5CEA00B9CCA7 /* TextFormat.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TextFormat.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D09E77AA22FA5CEA00B9CCA7 /* Tuples.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Tuples.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D09E77AC22FA5CEA00B9CCA7 /* UrlEscaping.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlEscaping.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0AA5792231BE2FD000F88F3 /* RLottieBinding.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RLottieBinding.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0AA840B1FEB2BA3005C6E91 /* OverlayPlayerControlsNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverlayPlayerControlsNode.swift; sourceTree = "<group>"; };
 		D0AB0BB01D6718DA002C78E7 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		D0AB0BB21D6718EB002C78E7 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
@@ -1169,6 +1170,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0AA5793231BE2FD000F88F3 /* RLottieBinding.framework in Frameworks */,
 				09B4A9BA231519CD005C2E08 /* VideoToolbox.framework in Frameworks */,
 				D072F38423155EAF0009E66F /* MessageReactionListUI.framework in Frameworks */,
 				D03E495D230868DF0049C28B /* PersistentStringHash.framework in Frameworks */,
@@ -1302,7 +1304,6 @@
 				D060184222F35D2000796784 /* ActivityIndicator.framework in Frameworks */,
 				D060184022F35D1C00796784 /* MergeLists.framework in Frameworks */,
 				D0D3281422F31B3000D07EE2 /* TelegramUpdateUI.framework in Frameworks */,
-				D010E17D22C238BC009324D4 /* RLottie.framework in Frameworks */,
 				D03AE67522B945D30078411C /* BuildConfig.framework in Frameworks */,
 				D03AE67322B9459C0078411C /* HockeySDK.framework in Frameworks */,
 				D02D634A22B85B94006BE519 /* PushKit.framework in Frameworks */,
@@ -1774,6 +1775,7 @@
 		D08D45281D5E340200A7428A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0AA5792231BE2FD000F88F3 /* RLottieBinding.framework */,
 				09B4A9B9231519CD005C2E08 /* VideoToolbox.framework */,
 				D072F38323155EAF0009E66F /* MessageReactionListUI.framework */,
 				D03E495C230868DF0049C28B /* PersistentStringHash.framework */,

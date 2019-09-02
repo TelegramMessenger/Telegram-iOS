@@ -88,7 +88,7 @@ func applySecretOutgoingMessageReadActions(transaction: Transaction, id: Message
         return
     }
     
-    if let message = transaction.getMessage(id), !message.flags.contains(.Incoming) {
+    if let message = transaction.getMessage(id), message.flags.intersection(.IsIncomingMask).isEmpty {
         if message.flags.intersection([.Unsent, .Sending, .Failed]).isEmpty {
             for attribute in message.attributes {
                 if let attribute = attribute as? AutoremoveTimeoutMessageAttribute {

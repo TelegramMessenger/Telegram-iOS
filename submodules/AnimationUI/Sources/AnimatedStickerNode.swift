@@ -5,7 +5,7 @@ import TelegramCore
 import Compression
 import Display
 import AsyncDisplayKit
-import RLottie
+import RLottieBinding
 import GZip
 import Tuples
 import MediaResources

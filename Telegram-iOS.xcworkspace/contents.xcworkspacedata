@@ -28,6 +28,9 @@
       <FileRef
          location = "group:submodules/libphonenumber/libphonenumber_Xcode.xcodeproj">
       </FileRef>
+      <FileRef
+         location = "group:submodules/rlottie/RLottieBinding_Xcode.xcodeproj">
+      </FileRef>
    </Group>
    <Group
       location = "container:"
@@ -451,9 +454,6 @@
       </FileRef>
       <FileRef
          location = "group:submodules/Display/Display_Xcode.xcodeproj">
-      </FileRef>
-      <FileRef
-         location = "group:submodules/RLottie/RLottie_Xcode.xcodeproj">
       </FileRef>
       <FileRef
          location = "group:submodules/TelegramBaseController/TelegramBaseController_Xcode.xcodeproj">
