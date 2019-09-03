@@ -1554,10 +1554,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] scheduleTime in
                     if let strongSelf = self {
-                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime)
-                        if !strongSelf.presentationInterfaceState.isScheduledMessages {
-                            strongSelf.openScheduledMessages()
-                        }
+                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime, completion: { [weak self] in
+                            if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                strongSelf.openScheduledMessages()
+                            }
+                        })
                     }
                 })
                 strongSelf.chatDisplayNode.dismissInput()
