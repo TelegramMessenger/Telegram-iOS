@@ -46,9 +46,6 @@ public final class ThemePreviewController: ViewController {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationTheme.set(.single(previewTheme))
         
-        let titleView = CounterContollerTitleView(theme: self.previewTheme)
-        self.titleView = titleView
-        
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
         let themeName: String
@@ -85,8 +82,9 @@ public final class ThemePreviewController: ViewController {
             themeName = previewTheme.name.string
         }
         
-        self.navigationItem.titleView = titleView
+        let titleView = CounterContollerTitleView(theme: self.previewTheme)
         titleView.title = CounterContollerTitle(title: themeName, counter: " ")
+        self.navigationItem.titleView = titleView
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
