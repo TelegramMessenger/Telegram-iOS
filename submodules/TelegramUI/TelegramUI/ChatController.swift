@@ -526,6 +526,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             if let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
                 (strongSelf.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
+                strongSelf.chatDisplayNode.cancelInteractiveKeyboardGestures()
                 var updatedMessages = messages
                 for i in 0 ..< updatedMessages.count {
                     if updatedMessages[i].id == message.id {
@@ -562,7 +563,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                         reactionItems = []
                     }
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: reactionItems, recognizer: recognizer)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: reactionItems, recognizer: recognizer)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {
@@ -1391,7 +1392,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })))
                     
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: [], recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
@@ -1431,7 +1432,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         f(.dismissWithoutContent)
                     })))
                     
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: [], recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })

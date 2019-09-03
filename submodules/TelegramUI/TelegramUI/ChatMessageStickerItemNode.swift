@@ -80,6 +80,15 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             return .waitForSingleTap
         }
+        recognizer.longTap = { [weak self] point, recognizer in
+            guard let strongSelf = self else {
+                return
+            }
+            //strongSelf.reactionRecognizer?.cancel()
+            if strongSelf.gestureRecognized(gesture: .longTap, location: point, recognizer: recognizer) {
+                recognizer.cancel()
+            }
+        }
         self.view.addGestureRecognizer(recognizer)
         
         let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
@@ -577,97 +586,104 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     
     @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
         switch recognizer.state {
-            case .ended:
-                if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
-                    switch gesture {
-                        case .tap:
-                            if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
-                                if let item = self.item, let author = item.content.firstMessage.author {
-                                    var openPeerId = item.effectiveAuthorId ?? author.id
-                                    var navigate: ChatControllerInteractionNavigateToPeer
-                                    
-                                    if item.content.firstMessage.id.peerId == item.context.account.peerId {
-                                        navigate = .chat(textInputState: nil, subject: nil)
-                                    } else {
-                                        navigate = .info
-                                    }
-                                    
-                                    for attribute in item.content.firstMessage.attributes {
-                                        if let attribute = attribute as? SourceReferenceMessageAttribute {
-                                            openPeerId = attribute.messageId.peerId
-                                            navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
-                                        }
-                                    }
-                                    
-                                    if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
-                                        item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
-                                    } else {
-                                        if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
-                                            if case .member = channel.participationStatus {
-                                            } else {
-                                                item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
-                                                return
-                                            }
-                                        }
-                                        item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
-                                    }
-                                }
-                                return
-                            }
-                            
-                            if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
-                                if let item = self.item {
-                                    for attribute in item.message.attributes {
-                                        if let attribute = attribute as? InlineBotMessageAttribute {
-                                            var botAddressName: String?
-                                            if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
-                                                botAddressName = addressName
-                                            } else {
-                                                botAddressName = attribute.title
-                                            }
-                                            
-                                            if let botAddressName = botAddressName {
-                                                item.controllerInteraction.updateInputState { textInputState in
-                                                    return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
-                                                }
-                                                item.controllerInteraction.updateInputMode { _ in
-                                                    return .text
-                                                }
-                                            }
-                                            return
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
-                                if let item = self.item {
-                                    for attribute in item.message.attributes {
-                                        if let attribute = attribute as? ReplyMessageAttribute {
-                                            item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
-                                            return
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            if let item = self.item, self.imageNode.frame.contains(location) {
-                                let _ = item.controllerInteraction.openMessage(item.message, .default)
-                                return
-                            }
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                let _ = self.gestureRecognized(gesture: gesture, location: location, recognizer: nil)
+            }
+        default:
+            break
+        }
+    }
+    
+    private func gestureRecognized(gesture: TapLongTapOrDoubleTapGesture, location: CGPoint, recognizer: TapLongTapOrDoubleTapGestureRecognizer?) -> Bool {
+        switch gesture {
+            case .tap:
+                if let avatarNode = self.accessoryItemNode as? ChatMessageAvatarAccessoryItemNode, avatarNode.frame.contains(location) {
+                    if let item = self.item, let author = item.content.firstMessage.author {
+                        var openPeerId = item.effectiveAuthorId ?? author.id
+                        var navigate: ChatControllerInteractionNavigateToPeer
                         
-                            self.item?.controllerInteraction.clickThroughMessage()
-                        case .longTap, .doubleTap:
-                            if let item = self.item, self.imageNode.frame.contains(location) {
-                                item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+                        if item.content.firstMessage.id.peerId == item.context.account.peerId {
+                            navigate = .chat(textInputState: nil, subject: nil)
+                        } else {
+                            navigate = .info
+                        }
+                        
+                        for attribute in item.content.firstMessage.attributes {
+                            if let attribute = attribute as? SourceReferenceMessageAttribute {
+                                openPeerId = attribute.messageId.peerId
+                                navigate = .chat(textInputState: nil, subject: .message(attribute.messageId))
                             }
-                        case .hold:
-                            break
+                        }
+                        
+                        if item.effectiveAuthorId?.namespace == Namespaces.Peer.Empty {
+                            item.controllerInteraction.displayMessageTooltip(item.content.firstMessage.id,  item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, avatarNode.frame)
+                        } else {
+                            if let channel = item.content.firstMessage.forwardInfo?.author as? TelegramChannel, channel.username == nil {
+                                if case .member = channel.participationStatus {
+                                } else {
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, self, avatarNode.frame)
+                                    return true
+                                }
+                            }
+                            item.controllerInteraction.openPeer(openPeerId, navigate, item.message)
+                        }
+                    }
+                    return true
+                }
+                
+                if let viaBotNode = self.viaBotNode, viaBotNode.frame.contains(location) {
+                    if let item = self.item {
+                        for attribute in item.message.attributes {
+                            if let attribute = attribute as? InlineBotMessageAttribute {
+                                var botAddressName: String?
+                                if let peerId = attribute.peerId, let botPeer = item.message.peers[peerId], let addressName = botPeer.addressName {
+                                    botAddressName = addressName
+                                } else {
+                                    botAddressName = attribute.title
+                                }
+                                
+                                if let botAddressName = botAddressName {
+                                    item.controllerInteraction.updateInputState { textInputState in
+                                        return ChatTextInputState(inputText: NSAttributedString(string: "@" + botAddressName + " "))
+                                    }
+                                    item.controllerInteraction.updateInputMode { _ in
+                                        return .text
+                                    }
+                                }
+                                return true
+                            }
+                        }
                     }
                 }
-            default:
+                
+                if let replyInfoNode = self.replyInfoNode, replyInfoNode.frame.contains(location) {
+                    if let item = self.item {
+                        for attribute in item.message.attributes {
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
+                                return true
+                            }
+                        }
+                    }
+                }
+                
+                if let item = self.item, self.imageNode.frame.contains(location) {
+                    let _ = item.controllerInteraction.openMessage(item.message, .default)
+                    return true
+                }
+            
+                self.item?.controllerInteraction.clickThroughMessage()
+            case .longTap, .doubleTap:
+                if let item = self.item, self.imageNode.frame.contains(location) {
+                    item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, recognizer)
+                    return false
+                }
+            case .hold:
                 break
         }
+        
+        return true
     }
     
     @objc func shareButtonPressed() {
