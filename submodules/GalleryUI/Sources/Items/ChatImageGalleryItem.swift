@@ -112,7 +112,7 @@ class ChatImageGalleryItem: GalleryItem {
         }
         
         if let location = self.location {
-            node._title.set(.single("\(location.index + 1) \(self.presentationData.strings.Common_of) \(location.count)"))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
         }
         
         node.setMessage(self.message)
@@ -122,7 +122,7 @@ class ChatImageGalleryItem: GalleryItem {
     
     func updateNode(node: GalleryItemNode) {
         if let node = node as? ChatImageGalleryItemNode, let location = self.location {
-            node._title.set(.single("\(location.index + 1) \(self.presentationData.strings.Common_of) \(location.count)"))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.index + 1)", "\(location.count)").0))
             
             node.setMessage(self.message)
         }
