@@ -9,7 +9,7 @@ final class ContextContentContainerNode: ASDisplayNode {
         super.init()
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, scaledSize: CGSize, transition: ContainedViewLayoutTransition) {
         guard let contentNode = self.contentNode else {
             return
         }
@@ -17,6 +17,9 @@ final class ContextContentContainerNode: ASDisplayNode {
         case .extracted:
             break
         case let .controller(controller):
+            transition.updatePosition(node: controller, position: CGPoint(x: scaledSize.width / 2.0, y: scaledSize.height / 2.0))
+            transition.updateBounds(node: controller, bounds: CGRect(origin: CGPoint(), size: size))
+            transition.updateTransformScale(node: controller, scale: scaledSize.width / size.width)
             controller.updateLayout(size: size, transition: transition)
         }
     }

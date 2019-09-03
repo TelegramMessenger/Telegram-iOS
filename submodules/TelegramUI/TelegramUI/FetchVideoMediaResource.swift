@@ -73,6 +73,151 @@ struct VideoConversionConfiguration {
     }
 }
 
+private final class FetchVideoLibraryMediaResourceItem {
+    let priority: MediaBoxFetchPriority
+    let signal: Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>
+    let next: (MediaResourceDataFetchResult) -> Void
+    let error: (MediaResourceDataFetchError) -> Void
+    let completion: () -> Void
+    var isActive: Bool = false
+    var disposable: Disposable?
+    
+    init(priority: MediaBoxFetchPriority, signal: Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, next: @escaping (MediaResourceDataFetchResult) -> Void, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) {
+        self.priority = priority
+        self.signal = signal
+        self.next = next
+        self.error = error
+        self.completion = completion
+    }
+    
+    deinit {
+        self.disposable?.dispose()
+    }
+}
+
+private let fetchVideoLimit: Int = 2
+
+private final class FetchVideoLibraryMediaResourceContextImpl {
+    private let queue: Queue
+    var items: [FetchVideoLibraryMediaResourceItem] = []
+    
+    init(queue: Queue) {
+        self.queue = queue
+    }
+    
+    func add(priority: MediaBoxFetchPriority, signal: Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, next: @escaping (MediaResourceDataFetchResult) -> Void, error: @escaping (MediaResourceDataFetchError) -> Void, completion: @escaping () -> Void) -> Disposable {
+        let queue = self.queue
+        
+        let item = FetchVideoLibraryMediaResourceItem(priority: priority, signal: signal, next: next, error: error, completion: completion)
+        self.items.append(item)
+        
+        self.update()
+        
+        return ActionDisposable { [weak self, weak item] in
+            queue.async {
+                guard let strongSelf = self, let item = item else {
+                    return
+                }
+                for i in 0 ..< strongSelf.items.count {
+                    if strongSelf.items[i] === item {
+                        strongSelf.items[i].disposable?.dispose()
+                        strongSelf.items.remove(at: i)
+                        strongSelf.update()
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    func update() {
+        let queue = self.queue
+        
+        var activeCount = 0
+        for item in self.items {
+            if item.isActive {
+                activeCount += 1
+            }
+        }
+        
+        while activeCount < fetchVideoLimit {
+            var maxPriorityIndex: Int?
+            for i in 0 ..< self.items.count {
+                if !self.items[i].isActive {
+                    if let maxPriorityIndexValue = maxPriorityIndex {
+                        if self.items[i].priority.rawValue > self.items[maxPriorityIndexValue].priority.rawValue {
+                            maxPriorityIndex = i
+                        }
+                    } else {
+                        maxPriorityIndex = i
+                    }
+                }
+            }
+            if let maxPriorityIndex = maxPriorityIndex {
+                let item = self.items[maxPriorityIndex]
+                item.isActive = true
+                activeCount += 1
+                assert(item.disposable == nil)
+                item.disposable = self.items[maxPriorityIndex].signal.start(next: { [weak item] value in
+                    queue.async {
+                        item?.next(value)
+                    }
+                }, error: { [weak item] value in
+                    queue.async {
+                        item?.error(value)
+                    }
+                }, completed: { [weak self, weak item] in
+                    queue.async {
+                        guard let strongSelf = self, let item = item else {
+                            return
+                        }
+                        for i in 0 ..< strongSelf.items.count {
+                            if strongSelf.items[i] === item {
+                                strongSelf.items.remove(at: i)
+                                item.completion()
+                                strongSelf.update()
+                                break
+                            }
+                        }
+                    }
+                })
+            } else {
+                break
+            }
+        }
+    }
+}
+
+private final class FetchVideoLibraryMediaResourceContext {
+    private let queue = Queue()
+    private let impl: QueueLocalObject<FetchVideoLibraryMediaResourceContextImpl>
+    
+    init() {
+        let queue = self.queue
+        self.impl = QueueLocalObject(queue: queue, generate: {
+            return FetchVideoLibraryMediaResourceContextImpl(queue: queue)
+        })
+    }
+    
+    func wrap(priority: MediaBoxFetchPriority, signal: Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.add(priority: priority, signal: signal, next: { value in
+                    subscriber.putNext(value)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completion: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
+        }
+    }
+}
+
+private let throttlingContext = FetchVideoLibraryMediaResourceContext()
+
 public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibraryMediaResource) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> {
     return postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
     |> take(1)
@@ -82,9 +227,8 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
     |> introduceError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         let config = VideoConversionConfiguration.with(appConfiguration: appConfiguration)
-        return Signal { subscriber in
+        let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
             subscriber.putNext(.reset)
-            
             let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: [resource.localIdentifier], options: nil)
             var requestId: PHImageRequestID?
             let disposable = MetaDisposable()
@@ -189,6 +333,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                 disposable.dispose()
             }
         }
+        return throttlingContext.wrap(priority: .default, signal: signal)
     }
 }
 
@@ -201,7 +346,7 @@ func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideo
     |> introduceError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         let config = VideoConversionConfiguration.with(appConfiguration: appConfiguration)
-        return Signal { subscriber in
+        let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
             subscriber.putNext(.reset)
             
             let avAsset = AVURLAsset(url: URL(fileURLWithPath: resource.path))
@@ -267,6 +412,7 @@ func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideo
                 disposable.dispose()
             }
         }
+        return throttlingContext.wrap(priority: .default, signal: signal)
     }
 }
 

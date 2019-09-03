@@ -15,6 +15,7 @@ import TelegramNotices
 import SearchUI
 import DeleteChatPeerActionSheetItem
 import LanguageSuggestionUI
+import ContextUI
 
 public func useSpecialTabBarIcons() -> Bool {
     return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())
@@ -62,6 +63,27 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         }
     }
     return false
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
 }
 
 public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate {
@@ -355,6 +377,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             self.tabBarItemDebugTapAction = {
                 preconditionFailure("debug tap")
             }
+        }
+        
+        self.customPresentPreviewingController = { [weak self] controller, sourceNode in
+            guard let strongSelf = self else {
+                return nil
+            }
+            var items: [ContextMenuItem] = []
+            for i in 0 ..< 5 {
+                items.append(.action(ContextMenuActionItem(text: "Item \(i)", icon: { _ in nil }, action: { controller, f in
+                    f(.default)
+                })))
+            }
+            return ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: controller, sourceNode: sourceNode)), items: items, reactionItems: [])
         }
     }
 
@@ -1067,6 +1102,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 return true
             })
+        }
+        
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+            if !self.didSetup3dTouch {
+                self.didSetup3dTouch = true
+                self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
+            }
         }
     }
     

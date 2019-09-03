@@ -5,7 +5,7 @@ import SwiftSignalKit
 
 @available(iOSApplicationExtension 9.0, iOS 9.0, *)
 private final class ViewControllerPeekContent: PeekControllerContent {
-    private let controller: ViewController
+    let controller: ViewController
     private let menu: [PeekControllerMenuItem]
     
     init(controller: ViewController) {
@@ -101,7 +101,7 @@ final class SimulatedViewControllerPreviewing: NSObject, UIViewControllerPreview
     
     var sourceRect: CGRect = CGRect()
     
-    init(theme: PeekControllerTheme, delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, node: ASDisplayNode, present: @escaping (ViewController, Any?) -> Void) {
+    init(theme: PeekControllerTheme, delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, node: ASDisplayNode, present: @escaping (ViewController, Any?) -> Void, customPresent: ((ViewController, ASDisplayNode) -> ViewController?)?) {
         self.delegateImpl = delegate
         self.sourceView = sourceView
         self.node = node
@@ -109,11 +109,16 @@ final class SimulatedViewControllerPreviewing: NSObject, UIViewControllerPreview
         self.recognizer = PeekControllerGestureRecognizer(contentAtPoint: { point in
             return contentAtPointImpl?(point)
         }, present: { content, sourceNode in
-            let controller = PeekController(theme: theme, content: content, sourceNode: {
-                return sourceNode
-            })
-            present(controller, nil)
-            return controller
+            if let content = content as? ViewControllerPeekContent, let controller = customPresent?(content.controller, sourceNode) {
+                present(controller, nil)
+                return controller
+            } else {
+                let controller = PeekController(theme: theme, content: content, sourceNode: {
+                    return sourceNode
+                })
+                present(controller, nil)
+                return controller
+            }
         })
         
         node.view.addGestureRecognizer(self.recognizer)

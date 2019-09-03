@@ -832,7 +832,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         }
                                         strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
                                     }
-                                } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming && message.id.namespace != Namespaces.Message.Local {
+                                } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming /*&& message.id.namespace != Namespaces.Message.Local*/ {
                                     if let file = media as? TelegramMediaFile {
                                         let fetchSignal = preloadVideoResource(postbox: context.account.postbox, resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), duration: 4.0)
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()

@@ -224,6 +224,8 @@ open class ViewControllerPresentationArguments {
     public var scrollToTopWithTabBar: (() -> Void)?
     public var longTapWithTabBar: (() -> Void)?
     
+    public var customPresentPreviewingController: ((ViewController, ASDisplayNode) -> ViewController?)?
+    
     open func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         
     }
@@ -491,12 +493,14 @@ open class ViewControllerPresentationArguments {
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     open func registerForPreviewing(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme, onlyNative: Bool) {
-        if self.traitCollection.forceTouchCapability == .available {
+        if false, self.traitCollection.forceTouchCapability == .available {
             let _ = super.registerForPreviewing(with: delegate, sourceView: sourceView)
         } else if !onlyNative {
             if self.previewingContext == nil {
                 let previewingContext = SimulatedViewControllerPreviewing(theme: theme, delegate: delegate, sourceView: sourceView, node: self.displayNode, present: { [weak self] c, a in
                     self?.presentInGlobalOverlay(c, with: a)
+                }, customPresent: { [weak self] c, n in
+                    return self?.customPresentPreviewingController?(c, n)
                 })
                 self.previewingContext = previewingContext
             }
@@ -505,10 +509,12 @@ open class ViewControllerPresentationArguments {
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)
     public func registerForPreviewingNonNative(with delegate: UIViewControllerPreviewingDelegate, sourceView: UIView, theme: PeekControllerTheme) {
-        if self.traitCollection.forceTouchCapability != .available {
+        if true || self.traitCollection.forceTouchCapability != .available {
             if self.previewingContext == nil {
                 let previewingContext = SimulatedViewControllerPreviewing(theme: theme, delegate: delegate, sourceView: sourceView, node: self.displayNode, present: { [weak self] c, a in
                     self?.presentInGlobalOverlay(c, with: a)
+                }, customPresent: { [weak self] c, n in
+                    return self?.customPresentPreviewingController?(c, n)
                 })
                 self.previewingContext = previewingContext
             }
