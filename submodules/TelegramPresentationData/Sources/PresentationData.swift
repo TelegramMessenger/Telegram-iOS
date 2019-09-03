@@ -330,17 +330,6 @@ private struct AutomaticThemeSwitchParameters {
 }
 
 private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchParameters, currentTheme: PresentationThemeReference) -> Bool {
-    switch currentTheme {
-        case let .builtin(builtin):
-            switch builtin {
-                case .nightAccent, .night:
-                    return false
-                default:
-                    break
-            }
-        default:
-            return false
-    }
     switch parameters.trigger {
         case .none:
             return false
