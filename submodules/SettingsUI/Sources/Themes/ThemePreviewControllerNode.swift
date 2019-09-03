@@ -270,6 +270,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.previewTheme = theme
     
         self.backgroundColor = self.previewTheme.list.plainBackgroundColor
+        
+        self.pageControlNode.dotColor = self.previewTheme.chatList.unreadBadgeActiveBackgroundColor
+        self.pageControlNode.inactiveDotColor = self.previewTheme.list.pageIndicatorInactiveColor
+        
         self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
         self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
         if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
