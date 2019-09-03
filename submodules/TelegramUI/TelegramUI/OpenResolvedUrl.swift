@@ -282,7 +282,32 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
             present(controller, nil)
             
-            let _ = (signal
+            var cancelImpl: (() -> Void)?
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                    cancelImpl?()
+                }))
+                present(controller, nil)
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.35, queue: Queue.mainQueue())
+            
+            let disposable = MetaDisposable()
+            let progressDisposable = progressSignal.start()
+            cancelImpl = {
+                disposable.set(nil)
+            }
+            disposable.set((signal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
             |> deliverOnMainQueue).start(next: { [weak controller] dataAndTheme in
                 controller?.dismiss()
                 
@@ -300,7 +325,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
                 present(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 controller?.dismiss()
-            })
+            }))
             dismissInput()
     }
 }

@@ -98,7 +98,8 @@ private let colors: [UInt32: String] = [
     0x80b3c4: "Glacier",
     0xfebaad: "Melon",
     0xc54b8c: "Mulberry",
-    0xa9c6c2: "Opal"
+    0xa9c6c2: "Opal",
+    0x54a5f8: "Blue"
 ]
 
 private let adjectives = [
@@ -148,7 +149,6 @@ private let adjectives = [
     "Frosty",
     "Frozen",
     "Gentle",
-    "Golden",
     "Heavenly",
     "Hyper",
     "Icy",
@@ -202,7 +202,6 @@ private let adjectives = [
     "Twinkling",
     "Ultimate",
     "Ultra",
-    "Uptown",
     "Velvety",
     "Vibrant",
     "Vintage",

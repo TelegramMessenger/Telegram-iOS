@@ -69,7 +69,6 @@ public final class ThemePreviewController: ViewController {
         self.titleView.title = CounterContollerTitle(title: themeName, counter: " ")
         self.navigationItem.titleView = titleView
 
-        
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
