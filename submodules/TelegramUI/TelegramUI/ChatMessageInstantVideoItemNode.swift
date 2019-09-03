@@ -18,7 +18,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView {
-    private let contextSourceNode: ContextContentContainingNode
+    private let contextSourceNode: ContextExtractedContentContainingNode
     private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
     private var selectionNode: ChatMessageSelectionNode?
@@ -54,7 +54,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
     }
     
     required init() {
-        self.contextSourceNode = ContextContentContainingNode()
+        self.contextSourceNode = ContextExtractedContentContainingNode()
         self.interactiveVideoNode = ChatMessageInteractiveInstantVideoNode()
         
         super.init(layerBacked: false)
@@ -830,7 +830,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView {
         return self.interactiveVideoNode.playMediaWithSound()
     }
     
-    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     

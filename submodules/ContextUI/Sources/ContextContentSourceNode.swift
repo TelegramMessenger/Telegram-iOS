@@ -2,8 +2,8 @@ import Foundation
 import AsyncDisplayKit
 import Display
 
-public final class ContextContentContainingNode: ASDisplayNode {
-    public let contentNode: ContextContentNode
+public final class ContextExtractedContentContainingNode: ASDisplayNode {
+    public let contentNode: ContextExtractedContentNode
     public var contentRect: CGRect = CGRect()
     public var isExtractedToContextPreview: Bool = false
     public var willUpdateIsExtractedToContextPreview: ((Bool) -> Void)?
@@ -15,7 +15,7 @@ public final class ContextContentContainingNode: ASDisplayNode {
     public var updateDistractionFreeMode: ((Bool) -> Void)?
     
     public override init() {
-        self.contentNode = ContextContentNode()
+        self.contentNode = ContextExtractedContentNode()
         
         super.init()
         
@@ -23,5 +23,26 @@ public final class ContextContentContainingNode: ASDisplayNode {
     }
 }
 
-public final class ContextContentNode: ASDisplayNode {
+public final class ContextExtractedContentNode: ASDisplayNode {
+}
+
+final class ContextControllerContentNode: ASDisplayNode {
+    let controller: ViewController
+    
+    init(controller: ViewController) {
+        self.controller = controller
+        
+        super.init()
+        
+        self.addSubnode(controller.displayNode)
+    }
+    
+    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+        controller.containerLayoutUpdated(ContainerViewLayout(size: size, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: .iPhoneX, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: transition)
+    }
+}
+
+enum ContextContentNode {
+    case extracted(ContextExtractedContentContainingNode)
+    case controller(ContextControllerContentNode)
 }

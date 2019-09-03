@@ -107,7 +107,7 @@ private class ChatMessageHeartbeatHaptic {
 }
 
 class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
-    private let contextSourceNode: ContextContentContainingNode
+    private let contextSourceNode: ContextExtractedContentContainingNode
     let imageNode: TransformImageNode
     private let animationNode: AnimatedStickerNode
     private var didSetUpAnimationNode = false
@@ -138,7 +138,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     required init() {
-        self.contextSourceNode = ContextContentContainingNode()
+        self.contextSourceNode = ContextExtractedContentContainingNode()
         self.imageNode = TransformImageNode()
         self.animationNode = AnimatedStickerNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
@@ -1063,7 +1063,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     

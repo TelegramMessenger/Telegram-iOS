@@ -146,7 +146,7 @@ private enum ContentNodeOperation {
 }
 
 class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode {
-    private let contextSourceNode: ContextContentContainingNode
+    private let contextSourceNode: ContextExtractedContentContainingNode
     private let backgroundWallpaperNode: ChatMessageBubbleBackdrop
     private let backgroundNode: ChatMessageBackground
     private var transitionClippingNode: ASDisplayNode?
@@ -197,7 +197,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     required init() {
-        self.contextSourceNode = ContextContentContainingNode()
+        self.contextSourceNode = ContextExtractedContentContainingNode()
         self.backgroundWallpaperNode = ChatMessageBubbleBackdrop()
         
         self.backgroundNode = ChatMessageBackground()
@@ -276,7 +276,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         
         if let subnodes = self.subnodes {
             for node in subnodes {
-                if let contextNode = node as? ContextContentContainingNode {
+                if let contextNode = node as? ContextExtractedContentContainingNode {
                     if let contextSubnodes = contextNode.contentNode.subnodes {
                         for contextSubnode in contextSubnodes {
                             if contextSubnode !== self.accessoryItemNode {
@@ -2821,7 +2821,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.backgroundWallpaperNode.offsetSpring(value: value, duration: duration, damping: damping)
     }
     
-    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     
