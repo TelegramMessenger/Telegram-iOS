@@ -47,8 +47,7 @@ public final class ThemePreviewController: ViewController {
         self.presentationTheme.set(.single(previewTheme))
         
         let titleView = CounterContollerTitleView(theme: self.previewTheme)
-        titleView.title = CounterContollerTitle(title: themeName, counter: " ")
-        strongSelf.titleView = titleView
+        self.titleView = titleView
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
@@ -87,7 +86,8 @@ public final class ThemePreviewController: ViewController {
         }
         
         self.navigationItem.titleView = titleView
-
+        titleView.title = CounterContollerTitle(title: themeName, counter: " ")
+        
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -98,7 +98,6 @@ public final class ThemePreviewController: ViewController {
             if let strongSelf = self, let theme = theme {
                 let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
                 titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
-                strongSelf.titleView = titleView
                 strongSelf.navigationItem.titleView = titleView
                 strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
             }
