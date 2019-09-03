@@ -29,7 +29,7 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
 
 final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
-    private let previewTheme: PresentationTheme
+    private var previewTheme: PresentationTheme
     private var presentationData: PresentationData
     
     public let wallpaperPromise = Promise<TelegramWallpaper>()
@@ -264,6 +264,23 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.isPagingEnabled = true
         self.scrollNode.view.delegate = self
         self.pageControlNode.setPage(0.0)
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.previewTheme = theme
+    
+        self.backgroundColor = self.previewTheme.list.plainBackgroundColor
+        self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
+        self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
+        if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
+            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+        }
+        
+        self.toolbarNode.updateThemeAndStrings(theme: self.previewTheme, strings: self.presentationData.strings)
+    
+        if let (layout, navigationBarHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        }
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

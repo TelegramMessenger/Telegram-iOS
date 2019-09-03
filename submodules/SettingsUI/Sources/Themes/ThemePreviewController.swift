@@ -24,13 +24,12 @@ public final class ThemePreviewController: ViewController {
     private let previewTheme: PresentationTheme
     private let source: ThemePreviewSource
     private let theme = Promise<TelegramTheme?>()
+    private let presentationTheme = Promise<PresentationTheme>()
     
     private var controllerNode: ThemePreviewControllerNode {
         return self.displayNode as! ThemePreviewControllerNode
     }
-    
-    private let titleView: CounterContollerTitleView
-    
+        
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
@@ -45,8 +44,11 @@ public final class ThemePreviewController: ViewController {
         self.source = source
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationTheme.set(.single(previewTheme))
         
-        self.titleView = CounterContollerTitleView(theme: self.previewTheme)
+        let titleView = CounterContollerTitleView(theme: self.previewTheme)
+        titleView.title = CounterContollerTitle(title: themeName, counter: " ")
+        strongSelf.titleView = titleView
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
@@ -61,12 +63,29 @@ public final class ThemePreviewController: ViewController {
                 return .single(nil)
             })
             themeName = previewTheme.name.string
+            
+            self.presentationTheme.set(.single(self.previewTheme)
+            |> then(
+                self.theme.get()
+                |> mapToSignal { theme in
+                    if let file = theme?.file {
+                        return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: file.resource)
+                        |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
+                            guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
+                                return .complete()
+                            }
+                            return .single(presentationTheme)
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+            ))
         } else {
             self.theme.set(.single(nil))
             themeName = previewTheme.name.string
         }
         
-        self.titleView.title = CounterContollerTitle(title: themeName, counter: " ")
         self.navigationItem.titleView = titleView
 
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
@@ -74,10 +93,14 @@ public final class ThemePreviewController: ViewController {
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
         
-        self.disposable = (self.theme.get()
-        |> deliverOnMainQueue).start(next: { [weak self] theme in
+        self.disposable = (combineLatest(self.theme.get(), self.presentationTheme.get())
+        |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
             if let strongSelf = self, let theme = theme {
-                strongSelf.titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+                let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
+                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+                strongSelf.titleView = titleView
+                strongSelf.navigationItem.titleView = titleView
+                strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
             }
         })
         

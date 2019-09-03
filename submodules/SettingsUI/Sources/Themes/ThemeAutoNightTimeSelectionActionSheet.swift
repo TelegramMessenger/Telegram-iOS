@@ -101,7 +101,7 @@ private final class ThemeAutoNightTimeSelectionActionSheetItemNode: ActionSheetI
         self.pickerView.datePickerMode = .time
         self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)
         self.pickerView.date = Date(timeIntervalSince1970: Double(currentValue))
-        self.pickerView.locale = localeWithStrings(strings)
+        self.pickerView.locale = Locale.current
         
         self.pickerView.setValue(theme.primaryTextColor, forKey: "textColor")
         
