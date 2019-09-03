@@ -740,12 +740,6 @@ NSString *suffix = @"";
     if ([platform hasPrefix:@"iPad"])               return UIDeviceUnknowniPad;
     if ([platform hasPrefix:@"AppleTV"])            return UIDeviceUnknownAppleTV;
     
-#define IPAD_PRO_3G_NAMESTRING  @"iPad Pro 12.9 (3rd gen)"
-#define IPAD_PRO_11_NAMESTRING  @"iPad Pro 11"
-#define IPAD_PRO_6G_NAMESTRING  @"iPad (6th gen)"
-#define IPAD_PRO_10_5_NAMESTRING  @"iPad Pro 10.5"
-#define IPAD_PRO_12_9_NAMESTRING  @"iPad Pro 12.9"
-    
     // Simulator thanks Jordan Breeding
     if ([platform hasSuffix:@"86"] || [platform isEqual:@"x86_64"])
     {
