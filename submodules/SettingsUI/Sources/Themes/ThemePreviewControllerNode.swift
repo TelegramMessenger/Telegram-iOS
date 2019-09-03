@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import AccountContext
 import ChatListUI
 import WallpaperResources
+import LegacyComponents
 
 private func generateMaskImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 80.0), opaque: false, rotatedContext: { size, context in
@@ -46,6 +47,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let chatContainerNode: ASDisplayNode
     private let instantChatBackgroundNode: WallpaperBackgroundNode
     private let remoteChatBackgroundNode: TransformImageNode
+    private let blurredNode: BlurredImageNode
     private var messageNodes: [ListViewItemNode]?
 
     private let toolbarNode: WallpaperGalleryToolbarNode
@@ -88,6 +90,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.remoteChatBackgroundNode = TransformImageNode()
         self.remoteChatBackgroundNode.backgroundColor = previewTheme.chatList.backgroundColor
+        
+        self.blurredNode = BlurredImageNode()
+        self.blurredNode.clipsToBounds = true
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
         
@@ -140,6 +145,26 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
             apply()
         }
         
+        if case let .file(file) = self.previewTheme.chat.defaultWallpaper {
+            if file.settings.blur {
+                self.chatContainerNode.addSubnode(self.blurredNode)
+            }
+        }
+        
+        self.remoteChatBackgroundNode.imageUpdated = { [weak self] image in
+            if let strongSelf = self, strongSelf.blurredNode.supernode != nil {
+                var image = image
+                if let imageToScale = image {
+                    let actualSize = CGSize(width: imageToScale.size.width * imageToScale.scale, height: imageToScale.size.height * imageToScale.scale)
+                    if actualSize.width > 1280.0 || actualSize.height > 1280.0 {
+                        image = TGScaleImageToPixelSize(image, actualSize.fitted(CGSize(width: 1280.0, height: 1280.0)))
+                    }
+                }
+                strongSelf.blurredNode.image = image
+                strongSelf.blurredNode.blurView.blurRadius = 45.0
+            }
+        }
+        
         self.colorDisposable = (self.wallpaperPromise.get()
         |> mapToSignal { wallpaper -> Signal<UIColor, NoError> in
             if case let .file(file) = wallpaper, file.id == 0 {
@@ -173,12 +198,17 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource), reference: .media(media: .standalone(media: file.file), resource: file.file.resource)))
                 
+                let signal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                 let fileReference = FileMediaReference.standalone(media: file.file)
-                let signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
-                |> afterNext { next in
-                    if let _ = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
-                    } else if let path = context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
-                        context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
+                if file.isPattern {
+                    signal = patternWallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: false)
+                } else {
+                    signal = wallpaperImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: fileReference, representations: convertedRepresentations, alwaysShowThumbnailFirst: false, autoFetchFullSize: false)
+                        |> afterNext { next in
+                            if let _ = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.file.resource) {
+                            } else if let path = context.account.postbox.mediaBox.completedResourcePath(file.file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                context.sharedContext.accountManager.mediaBox.storeResourceData(file.file.resource.id, data: data)
+                            }
                     }
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
@@ -203,7 +233,16 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 })
                 
-                strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))()
+                var patternColor: UIColor?
+                var patternIntensity: CGFloat = 0.5
+                if let color = file.settings.color {
+                    if let intensity = file.settings.intensity {
+                        patternIntensity = CGFloat(intensity) / 100.0
+                    }
+                    patternColor = UIColor(rgb: UInt32(bitPattern: color), alpha: patternIntensity)
+                }
+
+                strongSelf.remoteChatBackgroundNode.asyncLayout()(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets(), emptyColor: patternColor))()
             }
         })
     }
@@ -402,6 +441,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.chatContainerNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
         self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
+        self.blurredNode.frame = self.chatContainerNode.bounds
     
         self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
         

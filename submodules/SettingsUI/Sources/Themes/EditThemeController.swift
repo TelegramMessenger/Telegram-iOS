@@ -247,12 +247,12 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     switch mode {
         case .create:
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            initialState = EditThemeControllerState(mode: mode, title: "", slug: "", updatedTheme: nil, updating: false)
+            initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: presentationData.theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
             previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", defaultWallpaper: presentationData.chatWallpaper)))
         case let .edit(info):
             if let file = info.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
-                    previewThemePromise.set(cachedWallpaper(account: context.account, slug: file.slug)
+                    previewThemePromise.set(cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
                     |> map ({ wallpaper -> PresentationTheme in
                         if let wallpaper = wallpaper {
                             return theme.withUpdated(name: nil, defaultWallpaper: wallpaper.wallpaper)
@@ -287,7 +287,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
             if let url = urls.first{
                 if let data = try? Data(contentsOf: url), let theme = makePresentationTheme(data: data) {
                     if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
-                        let _ = (cachedWallpaper(account: context.account, slug: file.slug)
+                        let _ = (cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
                         |> mapToSignal { wallpaper -> Signal<TelegramWallpaper?, NoError> in
                             if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                                 var convertedRepresentations: [ImageRepresentationWithReference] = []
@@ -447,7 +447,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                 let _ = (createTheme(account: context.account, title: state.title, resource: themeResource, thumbnailData: themeThumbnailData)
                                 |> deliverOnMainQueue).start(next: { next in
                                     if case let .result(resultTheme) = next {
-                                        let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme, install: true).start()
+                                        let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: resultTheme).start()
                                         let _ = (context.sharedContext.accountManager.transaction { transaction -> Void in
                                             transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                                                 let current: PresentationThemeSettings

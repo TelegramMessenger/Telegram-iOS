@@ -311,7 +311,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5)).fitted(CGSize(width: 240.0, height: 240.0))
                         } else if isTheme {
                             if isSupported {
-                                unboundSize = CGSize(width: 160.0, height: 240.0)
+                                unboundSize = CGSize(width: 160.0, height: 240.0).fitted(CGSize(width: 240.0, height: 240.0))
                             } else if let thumbnail = file.previewRepresentations.first {
                                 unboundSize = CGSize(width: floor(thumbnail.dimensions.width), height: floor(thumbnail.dimensions.height)).fitted(CGSize(width: 240.0, height: 240.0))
                             } else {

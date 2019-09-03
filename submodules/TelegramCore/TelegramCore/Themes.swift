@@ -178,8 +178,21 @@ private func saveUnsaveTheme(account: Account, accountManager: AccountManager, t
     } |> switchToLatest
 }
 
-private func installTheme(account: Account, theme: TelegramTheme) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.account.installTheme(format: themeFormat, theme: Api.InputTheme.inputTheme(id: theme.id, accessHash: theme.accessHash)))
+private func installTheme(account: Account, theme: TelegramTheme?, autoNight: Bool) -> Signal<Never, NoError> {
+    var flags: Int32 = 0
+    if autoNight {
+        flags |= 1 << 0
+    }
+    
+    let inputTheme: Api.InputTheme?
+    if let theme = theme {
+        inputTheme = .inputTheme(id: theme.id, accessHash: theme.accessHash)
+        flags |= 1 << 1
+    } else {
+        inputTheme = nil
+    }
+    
+    return account.network.request(Api.functions.account.installTheme(flags: flags, format: themeFormat, theme: inputTheme))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
     }
@@ -461,14 +474,14 @@ public func deleteThemeInteractively(account: Account, accountManager: AccountMa
     return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: true)
 }
 
-public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?, install: Bool = false) -> Signal<Never, NoError> {
+public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?, autoNight: Bool = false) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> Signal<Never, NoError> in
         transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
             return ThemeSettings(currentTheme: theme)
         })
         
-        if let theme = theme, install {
-            return installTheme(account: account, theme: theme)
+        if let theme = theme {
+            return installTheme(account: account, theme: theme, autoNight: autoNight)
         } else {
             return .complete()
         }

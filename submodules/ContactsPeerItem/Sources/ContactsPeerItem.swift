@@ -825,7 +825,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         super.updateRevealOffset(offset: offset, transition: transition)
         
         if let item = self.item, let params = self.layoutParams?.1 {
-            var leftInset: CGFloat = 65.0
+            var leftInset: CGFloat = 65.0 + params.leftInset
             
             switch item.selection {
                 case .none:

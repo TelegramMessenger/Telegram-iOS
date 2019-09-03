@@ -5717,12 +5717,13 @@ public extension Api {
                     })
                 }
             
-                public static func installTheme(format: String, theme: Api.InputTheme) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                public static func installTheme(flags: Int32, format: String?, theme: Api.InputTheme?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-520600676)
-                    serializeString(format, buffer: buffer, boxed: false)
-                    theme.serialize(buffer, true)
-                    return (FunctionDescription(name: "account.installTheme", parameters: [("format", format), ("theme", theme)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    buffer.appendInt32(2061776695)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {serializeString(format!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {theme!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "account.installTheme", parameters: [("flags", flags), ("format", format), ("theme", theme)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {

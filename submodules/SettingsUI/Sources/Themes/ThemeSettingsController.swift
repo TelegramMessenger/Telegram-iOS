@@ -570,7 +570,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         
         let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
         if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
-            resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug)
+            resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
             |> map { wallpaper -> TelegramWallpaper? in
                 return wallpaper?.wallpaper
             }

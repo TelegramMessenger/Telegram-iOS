@@ -45,10 +45,10 @@ extension TelegramWallpaper: Codable {
                         if !components.isEmpty {
                             slug = components[0]
                         }
-                        if components.count > 1, !["motion", "blur"].contains(components[1]), [6,7].contains(components[1].count), let value = Int32(components[1]) {
-                            color = value
+                        if components.count > 1, !["motion", "blur"].contains(components[1]), components[1].count == 6, let value = UIColor(hexString: components[1]) {
+                            color = Int32(bitPattern: value.rgb)
                         }
-                        if components.count > 2, !["motion", "blur"].contains(components[2]), [6,7].contains(components[2].count), let value = Int32(components[2]) {
+                        if components.count > 2, !["motion", "blur"].contains(components[2]), let value = Int32(components[2]) {
                             if value >= 0 && value <= 100 {
                                 intensity = value
                             } else {
@@ -85,18 +85,17 @@ extension TelegramWallpaper: Codable {
                 components.append(file.slug)
                 if file.isPattern {
                     if let color = file.settings.color {
-                        components.removeAll()
                         components.append(String(format: "%06x", color))
                     }
-//                    if let intensity = file.settings.intensity {
-//                        components.append("\(intensity)")
-//                    }
-//                    if file.settings.motion {
-//                        components.append("motion")
-//                    }
-//                    if file.settings.blur {
-//                        components.append("blur")
-//                    }
+                    if let intensity = file.settings.intensity {
+                        components.append("\(intensity)")
+                    }
+                }
+                if file.settings.motion {
+                    components.append("motion")
+                }
+                if file.settings.blur {
+                    components.append("blur")
                 }
                 try container.encode(components.joined(separator: " "))
             default:

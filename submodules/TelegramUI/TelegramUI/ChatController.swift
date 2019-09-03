@@ -3973,90 +3973,93 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch self.chatLocation {
             case let .peer(peerId):
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
-                let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
-                self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
-                |> deliverOnMainQueue).start(next: { [weak self] views in
-                    if let strongSelf = self {
-                        var unreadCount: Int32 = 0
-                        var totalChatCount: Int32 = 0
-                        
-                        let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                        if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
-                            if let count = view.count(for: .peer(peerId)) {
-                                unreadCount = count
-                            }
-                            if let (_, state) = view.total() {
-                                let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
-                                totalChatCount = count
-                            }
-                        }
-                        
-                        strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
-                        
-                        if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
-                            var globalRemainingUnreadChatCount = totalChatCount
-                            if !notificationSettings.isRemovedFromTotalUnreadCount && unreadCount > 0 {
-                                if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
-                                    globalRemainingUnreadChatCount -= unreadCount
-                                } else {
-                                    globalRemainingUnreadChatCount -= 1
+                if let subject = self.subject, case .scheduledMessages = subject {
+                } else {
+                    let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
+                    let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
+                    self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
+                    |> deliverOnMainQueue).start(next: { [weak self] views in
+                        if let strongSelf = self {
+                            var unreadCount: Int32 = 0
+                            var totalChatCount: Int32 = 0
+                            
+                            let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
+                            if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
+                                if let count = view.count(for: .peer(peerId)) {
+                                    unreadCount = count
+                                }
+                                if let (_, state) = view.total() {
+                                    let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
+                                    totalChatCount = count
                                 }
                             }
                             
-                            if globalRemainingUnreadChatCount > 0 {
-                                strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
-                            } else {
-                                strongSelf.navigationItem.badge = ""
-                            }
-                        }
-                    }
-                })
-            
-                self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesCount(peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] count in
-                    if let strongSelf = self {
-                        strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
-                    }
-                })
-                
-                let postbox = self.context.account.postbox
-                let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
-                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: peerId)
-                |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
-                    var foundAllPeers = true
-                    var cachedResult: [(Peer, PeerInputActivity)] = []
-                    previousPeerCache.with { dict -> Void in
-                        for (peerId, activity) in activities {
-                            if let peer = dict[peerId] {
-                                cachedResult.append((peer, activity))
-                            } else {
-                                foundAllPeers = false
-                                break
-                            }
-                        }
-                    }
-                    if foundAllPeers {
-                        return .single(cachedResult)
-                    } else {
-                        return postbox.transaction { transaction -> [(Peer, PeerInputActivity)] in
-                            var result: [(Peer, PeerInputActivity)] = []
-                            var peerCache: [PeerId: Peer] = [:]
-                            for (peerId, activity) in activities {
-                                if let peer = transaction.getPeer(peerId) {
-                                    result.append((peer, activity))
-                                    peerCache[peerId] = peer
+                            strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
+                            
+                            if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
+                                var globalRemainingUnreadChatCount = totalChatCount
+                                if !notificationSettings.isRemovedFromTotalUnreadCount && unreadCount > 0 {
+                                    if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
+                                        globalRemainingUnreadChatCount -= unreadCount
+                                    } else {
+                                        globalRemainingUnreadChatCount -= 1
+                                    }
+                                }
+                                
+                                if globalRemainingUnreadChatCount > 0 {
+                                    strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
+                                } else {
+                                    strongSelf.navigationItem.badge = ""
                                 }
                             }
-                            let _ = previousPeerCache.swap(peerCache)
-                            return result
+                        }
+                    })
+                
+                    self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesCount(peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] count in
+                        if let strongSelf = self {
+                            strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
+                        }
+                    })
+                    
+                    let postbox = self.context.account.postbox
+                    let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
+                    self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: peerId)
+                    |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
+                        var foundAllPeers = true
+                        var cachedResult: [(Peer, PeerInputActivity)] = []
+                        previousPeerCache.with { dict -> Void in
+                            for (peerId, activity) in activities {
+                                if let peer = dict[peerId] {
+                                    cachedResult.append((peer, activity))
+                                } else {
+                                    foundAllPeers = false
+                                    break
+                                }
+                            }
+                        }
+                        if foundAllPeers {
+                            return .single(cachedResult)
+                        } else {
+                            return postbox.transaction { transaction -> [(Peer, PeerInputActivity)] in
+                                var result: [(Peer, PeerInputActivity)] = []
+                                var peerCache: [PeerId: Peer] = [:]
+                                for (peerId, activity) in activities {
+                                    if let peer = transaction.getPeer(peerId) {
+                                        result.append((peer, activity))
+                                        peerCache[peerId] = peer
+                                    }
+                                }
+                                let _ = previousPeerCache.swap(peerCache)
+                                return result
+                            }
                         }
                     }
+                    |> deliverOnMainQueue).start(next: { [weak self] activities in
+                        if let strongSelf = self {
+                            strongSelf.chatTitleView?.inputActivities = (peerId, activities)
+                        }
+                    })
                 }
-                |> deliverOnMainQueue).start(next: { [weak self] activities in
-                    if let strongSelf = self {
-                        strongSelf.chatTitleView?.inputActivities = (peerId, activities)
-                    }
-                })
                 
                 self.sentMessageEventsDisposable.set(self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId).start(next: { [weak self] _ in
                     if let strongSelf = self {
