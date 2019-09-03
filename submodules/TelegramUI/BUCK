@@ -48,7 +48,7 @@ framework(
         "//submodules/LightweightAccountData:LightweightAccountData",
         "//submodules/HockeySDK-iOS:HockeySDK",
         "//submodules/BuildConfig:BuildConfig",
-        "//submodules/RLottie:RLottie",
+        "//submodules/rlottie:RLottieBinding",
         "//submodules/TelegramUpdateUI:TelegramUpdateUI",
         "//submodules/MergeLists:MergeLists",
         "//submodules/ActivityIndicator:ActivityIndicator",

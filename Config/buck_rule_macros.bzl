@@ -57,7 +57,10 @@ def apple_lib(
         else:
             linker_flags = []
 
-        resolved_linker_flags = linker_flags + additional_linker_flags + ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)]
+        if native.read_config("custom", "mode") == "project":
+            resolved_linker_flags = linker_flags + additional_linker_flags + ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)]
+        else:
+            resolved_linker_flags = linker_flags + additional_linker_flags + ["-Wl,-install_name,@rpath/%s.framework/%s" % (name, name)]
         native.apple_library(
             name = name + "",
             srcs = srcs,
@@ -78,7 +81,7 @@ def apple_lib(
             platform_compiler_flags = platform_compiler_flags,
             swift_compiler_flags = swift_compiler_flags,
             preferred_linkage = "shared",
-            link_style = "static",
+            #link_style = "static",
             linker_flags = resolved_linker_flags,
         )
     else:
@@ -109,6 +112,7 @@ def apple_lib(
             compiler_flags = compiler_flags,
             platform_compiler_flags = platform_compiler_flags,
             swift_compiler_flags = swift_compiler_flags,
+            preferred_linkage = "static",
         )
 
 def static_library(

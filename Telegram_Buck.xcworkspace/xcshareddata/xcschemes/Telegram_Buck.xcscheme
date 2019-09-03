@@ -420,20 +420,6 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E66DC04E79C1F69100000000"
-               BuildableName = "libRLottie.a"
-               BlueprintName = "RLottie"
-               ReferencedContainer = "container:submodules/RLottie/RLottie.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E4312484200000000"
                BuildableName = "libImageBlur.a"
                BlueprintName = "ImageBlur"
@@ -522,6 +508,20 @@
                BuildableName = "libLottie.a"
                BlueprintName = "Lottie"
                ReferencedContainer = "container:submodules/lottie-ios/lottie-ios.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04ECF8CFAB400000000"
+               BuildableName = "libRLottieBinding.a"
+               BlueprintName = "RLottieBinding"
+               ReferencedContainer = "container:submodules/rlottie/rlottie.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry

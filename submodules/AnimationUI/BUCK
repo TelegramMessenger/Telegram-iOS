@@ -16,7 +16,7 @@ static_library(
         "//submodules/MediaResources:MediaResources",
         "//submodules/Tuples:Tuples",
         "//submodules/GZip:GZip",
-        "//submodules/RLottie:RLottie",
+        "//submodules/rlottie:RLottieBinding",
         "//submodules/lottie-ios:Lottie",
         "//submodules/AppBundle:AppBundle",
     ],

@@ -11,40 +11,40 @@
 	<string>46</string>
 	<key>objects</key>
 	<dict>
-		<key>1DD70E294153AE0400000000</key>
+		<key>1DD70E295A917F8100000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXFileReference</string>
 			<key>name</key>
-			<string>RLottie-Debug.xcconfig</string>
+			<string>RLottieBinding-Debug.xcconfig</string>
 			<key>path</key>
-			<string>../../buck-out/gen/submodules/RLottie/RLottie-Debug.xcconfig</string>
+			<string>../../buck-out/gen/submodules/rlottie/RLottieBinding-Debug.xcconfig</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>explicitFileType</key>
 			<string>text.xcconfig</string>
 		</dict>
-		<key>1DD70E292042D46E00000000</key>
+		<key>1DD70E29E1523AAB00000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXFileReference</string>
 			<key>name</key>
-			<string>RLottie-Profile.xcconfig</string>
+			<string>RLottieBinding-Profile.xcconfig</string>
 			<key>path</key>
-			<string>../../buck-out/gen/submodules/RLottie/RLottie-Profile.xcconfig</string>
+			<string>../../buck-out/gen/submodules/rlottie/RLottieBinding-Profile.xcconfig</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>explicitFileType</key>
 			<string>text.xcconfig</string>
 		</dict>
-		<key>1DD70E2993D97FD000000000</key>
+		<key>1DD70E2954E8E60D00000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXFileReference</string>
 			<key>name</key>
-			<string>RLottie-Release.xcconfig</string>
+			<string>RLottieBinding-Release.xcconfig</string>
 			<key>path</key>
-			<string>../../buck-out/gen/submodules/RLottie/RLottie-Release.xcconfig</string>
+			<string>../../buck-out/gen/submodules/rlottie/RLottieBinding-Release.xcconfig</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>explicitFileType</key>
@@ -60,9 +60,9 @@
 			<string><![CDATA[<group>]]></string>
 			<key>children</key>
 			<array>
-				<string>1DD70E294153AE0400000000</string>
-				<string>1DD70E292042D46E00000000</string>
-				<string>1DD70E2993D97FD000000000</string>
+				<string>1DD70E295A917F8100000000</string>
+				<string>1DD70E29E1523AAB00000000</string>
+				<string>1DD70E2954E8E60D00000000</string>
 			</array>
 		</dict>
 		<key>B401C979B781F65D00000000</key>
@@ -78,14 +78,14 @@
 				<string>B401C9792F7F325000000000</string>
 			</array>
 		</dict>
-		<key>1DD70E29E5FAFF5F00000000</key>
+		<key>1DD70E2964F71C2C00000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXFileReference</string>
 			<key>name</key>
-			<string>libRLottie.a</string>
+			<string>libRLottieBinding.a</string>
 			<key>path</key>
-			<string>libRLottie.a</string>
+			<string>libRLottieBinding.a</string>
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 			<key>explicitFileType</key>
@@ -101,7 +101,7 @@
 			<string><![CDATA[<group>]]></string>
 			<key>children</key>
 			<array>
-				<string>1DD70E29E5FAFF5F00000000</string>
+				<string>1DD70E2964F71C2C00000000</string>
 			</array>
 		</dict>
 		<key>1DD70E29001F47FB00000000</key>
@@ -124,7 +124,7 @@
 			<key>name</key>
 			<string>rlottie.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/inc/rlottie.h</string>
+			<string>rlottie/inc/rlottie.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -137,7 +137,7 @@
 			<key>name</key>
 			<string>rlottie_capi.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/inc/rlottie_capi.h</string>
+			<string>rlottie/inc/rlottie_capi.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -150,7 +150,7 @@
 			<key>name</key>
 			<string>rlottiecommon.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/inc/rlottiecommon.h</string>
+			<string>rlottie/inc/rlottiecommon.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -163,7 +163,7 @@
 			<key>name</key>
 			<string>inc</string>
 			<key>path</key>
-			<string>Sources/rlottie/inc</string>
+			<string>rlottie/inc</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -180,7 +180,7 @@
 			<key>name</key>
 			<string>lottieanimation_capi.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/binding/c/lottieanimation_capi.cpp</string>
+			<string>rlottie/src/binding/c/lottieanimation_capi.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -193,7 +193,7 @@
 			<key>name</key>
 			<string>c</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/binding/c</string>
+			<string>rlottie/src/binding/c</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -208,7 +208,7 @@
 			<key>name</key>
 			<string>binding</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/binding</string>
+			<string>rlottie/src/binding</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -223,7 +223,7 @@
 			<key>name</key>
 			<string>en.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/error/en.h</string>
+			<string>rlottie/src/lottie/rapidjson/error/en.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -236,7 +236,7 @@
 			<key>name</key>
 			<string>error.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/error/error.h</string>
+			<string>rlottie/src/lottie/rapidjson/error/error.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -249,7 +249,7 @@
 			<key>name</key>
 			<string>error</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/error</string>
+			<string>rlottie/src/lottie/rapidjson/error</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -265,7 +265,7 @@
 			<key>name</key>
 			<string>biginteger.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/biginteger.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/biginteger.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -278,7 +278,7 @@
 			<key>name</key>
 			<string>diyfp.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/diyfp.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/diyfp.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -291,7 +291,7 @@
 			<key>name</key>
 			<string>dtoa.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/dtoa.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/dtoa.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -304,7 +304,7 @@
 			<key>name</key>
 			<string>ieee754.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/ieee754.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/ieee754.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -317,7 +317,7 @@
 			<key>name</key>
 			<string>itoa.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/itoa.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/itoa.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -330,7 +330,7 @@
 			<key>name</key>
 			<string>meta.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/meta.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/meta.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -343,7 +343,7 @@
 			<key>name</key>
 			<string>pow10.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/pow10.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/pow10.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -356,7 +356,7 @@
 			<key>name</key>
 			<string>regex.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/regex.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/regex.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -369,7 +369,7 @@
 			<key>name</key>
 			<string>stack.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/stack.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/stack.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -382,7 +382,7 @@
 			<key>name</key>
 			<string>strfunc.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/strfunc.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/strfunc.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -395,7 +395,7 @@
 			<key>name</key>
 			<string>strtod.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/strtod.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/strtod.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -408,7 +408,7 @@
 			<key>name</key>
 			<string>swap.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal/swap.h</string>
+			<string>rlottie/src/lottie/rapidjson/internal/swap.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -421,7 +421,7 @@
 			<key>name</key>
 			<string>internal</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/internal</string>
+			<string>rlottie/src/lottie/rapidjson/internal</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -447,7 +447,7 @@
 			<key>name</key>
 			<string>allocators.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/allocators.h</string>
+			<string>rlottie/src/lottie/rapidjson/allocators.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -460,7 +460,7 @@
 			<key>name</key>
 			<string>cursorstreamwrapper.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/cursorstreamwrapper.h</string>
+			<string>rlottie/src/lottie/rapidjson/cursorstreamwrapper.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -473,7 +473,7 @@
 			<key>name</key>
 			<string>document.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/document.h</string>
+			<string>rlottie/src/lottie/rapidjson/document.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -486,7 +486,7 @@
 			<key>name</key>
 			<string>encodedstream.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/encodedstream.h</string>
+			<string>rlottie/src/lottie/rapidjson/encodedstream.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -499,7 +499,7 @@
 			<key>name</key>
 			<string>encodings.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/encodings.h</string>
+			<string>rlottie/src/lottie/rapidjson/encodings.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -512,7 +512,7 @@
 			<key>name</key>
 			<string>filereadstream.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/filereadstream.h</string>
+			<string>rlottie/src/lottie/rapidjson/filereadstream.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -525,7 +525,7 @@
 			<key>name</key>
 			<string>filewritestream.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/filewritestream.h</string>
+			<string>rlottie/src/lottie/rapidjson/filewritestream.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -538,7 +538,7 @@
 			<key>name</key>
 			<string>fwd.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/fwd.h</string>
+			<string>rlottie/src/lottie/rapidjson/fwd.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -551,7 +551,7 @@
 			<key>name</key>
 			<string>istreamwrapper.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/istreamwrapper.h</string>
+			<string>rlottie/src/lottie/rapidjson/istreamwrapper.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -564,7 +564,7 @@
 			<key>name</key>
 			<string>memorybuffer.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/memorybuffer.h</string>
+			<string>rlottie/src/lottie/rapidjson/memorybuffer.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -577,7 +577,7 @@
 			<key>name</key>
 			<string>memorystream.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/memorystream.h</string>
+			<string>rlottie/src/lottie/rapidjson/memorystream.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -590,7 +590,7 @@
 			<key>name</key>
 			<string>ostreamwrapper.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/ostreamwrapper.h</string>
+			<string>rlottie/src/lottie/rapidjson/ostreamwrapper.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -603,7 +603,7 @@
 			<key>name</key>
 			<string>pointer.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/pointer.h</string>
+			<string>rlottie/src/lottie/rapidjson/pointer.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -616,7 +616,7 @@
 			<key>name</key>
 			<string>prettywriter.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/prettywriter.h</string>
+			<string>rlottie/src/lottie/rapidjson/prettywriter.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -629,7 +629,7 @@
 			<key>name</key>
 			<string>rapidjson.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/rapidjson.h</string>
+			<string>rlottie/src/lottie/rapidjson/rapidjson.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -642,7 +642,7 @@
 			<key>name</key>
 			<string>reader.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/reader.h</string>
+			<string>rlottie/src/lottie/rapidjson/reader.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -655,7 +655,7 @@
 			<key>name</key>
 			<string>schema.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/schema.h</string>
+			<string>rlottie/src/lottie/rapidjson/schema.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -668,7 +668,7 @@
 			<key>name</key>
 			<string>stream.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/stream.h</string>
+			<string>rlottie/src/lottie/rapidjson/stream.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -681,7 +681,7 @@
 			<key>name</key>
 			<string>stringbuffer.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/stringbuffer.h</string>
+			<string>rlottie/src/lottie/rapidjson/stringbuffer.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -694,7 +694,7 @@
 			<key>name</key>
 			<string>writer.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson/writer.h</string>
+			<string>rlottie/src/lottie/rapidjson/writer.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -707,7 +707,7 @@
 			<key>name</key>
 			<string>rapidjson</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/rapidjson</string>
+			<string>rlottie/src/lottie/rapidjson</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -743,7 +743,7 @@
 			<key>name</key>
 			<string>lottieanimation.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieanimation.cpp</string>
+			<string>rlottie/src/lottie/lottieanimation.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -756,7 +756,7 @@
 			<key>name</key>
 			<string>lottieitem.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieitem.cpp</string>
+			<string>rlottie/src/lottie/lottieitem.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -769,7 +769,7 @@
 			<key>name</key>
 			<string>lottieitem.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieitem.h</string>
+			<string>rlottie/src/lottie/lottieitem.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -782,7 +782,7 @@
 			<key>name</key>
 			<string>lottiekeypath.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottiekeypath.cpp</string>
+			<string>rlottie/src/lottie/lottiekeypath.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -795,7 +795,7 @@
 			<key>name</key>
 			<string>lottiekeypath.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottiekeypath.h</string>
+			<string>rlottie/src/lottie/lottiekeypath.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -808,7 +808,7 @@
 			<key>name</key>
 			<string>lottieloader.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieloader.cpp</string>
+			<string>rlottie/src/lottie/lottieloader.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -821,7 +821,7 @@
 			<key>name</key>
 			<string>lottieloader.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieloader.h</string>
+			<string>rlottie/src/lottie/lottieloader.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -834,7 +834,7 @@
 			<key>name</key>
 			<string>lottiemodel.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottiemodel.cpp</string>
+			<string>rlottie/src/lottie/lottiemodel.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -847,7 +847,7 @@
 			<key>name</key>
 			<string>lottiemodel.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottiemodel.h</string>
+			<string>rlottie/src/lottie/lottiemodel.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -860,7 +860,7 @@
 			<key>name</key>
 			<string>lottieparser.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieparser.cpp</string>
+			<string>rlottie/src/lottie/lottieparser.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -873,7 +873,7 @@
 			<key>name</key>
 			<string>lottieparser.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieparser.h</string>
+			<string>rlottie/src/lottie/lottieparser.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -886,7 +886,7 @@
 			<key>name</key>
 			<string>lottieproxymodel.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieproxymodel.cpp</string>
+			<string>rlottie/src/lottie/lottieproxymodel.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -899,7 +899,7 @@
 			<key>name</key>
 			<string>lottieproxymodel.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie/lottieproxymodel.h</string>
+			<string>rlottie/src/lottie/lottieproxymodel.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -912,7 +912,7 @@
 			<key>name</key>
 			<string>lottie</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/lottie</string>
+			<string>rlottie/src/lottie</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -940,7 +940,7 @@
 			<key>name</key>
 			<string>v_ft_math.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype/v_ft_math.cpp</string>
+			<string>rlottie/src/vector/freetype/v_ft_math.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -953,7 +953,7 @@
 			<key>name</key>
 			<string>v_ft_math.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype/v_ft_math.h</string>
+			<string>rlottie/src/vector/freetype/v_ft_math.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -966,7 +966,7 @@
 			<key>name</key>
 			<string>v_ft_raster.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype/v_ft_raster.cpp</string>
+			<string>rlottie/src/vector/freetype/v_ft_raster.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -979,7 +979,7 @@
 			<key>name</key>
 			<string>v_ft_raster.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype/v_ft_raster.h</string>
+			<string>rlottie/src/vector/freetype/v_ft_raster.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -992,7 +992,7 @@
 			<key>name</key>
 			<string>v_ft_stroker.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype/v_ft_stroker.cpp</string>
+			<string>rlottie/src/vector/freetype/v_ft_stroker.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1005,7 +1005,7 @@
 			<key>name</key>
 			<string>v_ft_stroker.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype/v_ft_stroker.h</string>
+			<string>rlottie/src/vector/freetype/v_ft_stroker.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1018,7 +1018,7 @@
 			<key>name</key>
 			<string>v_ft_types.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype/v_ft_types.h</string>
+			<string>rlottie/src/vector/freetype/v_ft_types.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1031,7 +1031,7 @@
 			<key>name</key>
 			<string>freetype</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/freetype</string>
+			<string>rlottie/src/vector/freetype</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -1052,20 +1052,7 @@
 			<key>name</key>
 			<string>pixman-arm-neon-asm.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/pixman/pixman-arm-neon-asm.h</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.c.h</string>
-		</dict>
-		<key>1DD70E29412C7E1600000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>pixman-arma64-neon-asm.h</string>
-			<key>path</key>
-			<string>Sources/rlottie/src/vector/pixman/pixman-arma64-neon-asm.h</string>
+			<string>rlottie/src/vector/pixman/pixman-arm-neon-asm.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1078,7 +1065,7 @@
 			<key>name</key>
 			<string>vregion.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/pixman/vregion.cpp</string>
+			<string>rlottie/src/vector/pixman/vregion.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1091,7 +1078,7 @@
 			<key>name</key>
 			<string>vregion.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/pixman/vregion.h</string>
+			<string>rlottie/src/vector/pixman/vregion.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1104,29 +1091,15 @@
 			<key>name</key>
 			<string>pixman</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/pixman</string>
+			<string>rlottie/src/vector/pixman</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
 			<array>
 				<string>1DD70E29B391E3C100000000</string>
-				<string>1DD70E29412C7E1600000000</string>
 				<string>1DD70E292AB45C9F00000000</string>
 				<string>1DD70E292E656A6400000000</string>
 			</array>
-		</dict>
-		<key>1DD70E2913BF31F200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>name</key>
-			<string>stb_image.cpp</string>
-			<key>path</key>
-			<string>Sources/rlottie/src/vector/stb/stb_image.cpp</string>
-			<key>sourceTree</key>
-			<string>SOURCE_ROOT</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.cpp.cpp</string>
 		</dict>
 		<key>1DD70E2954BB787700000000</key>
 		<dict>
@@ -1135,7 +1108,7 @@
 			<key>name</key>
 			<string>stb_image.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/stb/stb_image.h</string>
+			<string>rlottie/src/vector/stb/stb_image.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1148,12 +1121,11 @@
 			<key>name</key>
 			<string>stb</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/stb</string>
+			<string>rlottie/src/vector/stb</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
 			<array>
-				<string>1DD70E2913BF31F200000000</string>
 				<string>1DD70E2954BB787700000000</string>
 			</array>
 		</dict>
@@ -1164,7 +1136,7 @@
 			<key>name</key>
 			<string>config.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/config.h</string>
+			<string>rlottie/src/vector/config.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1177,7 +1149,7 @@
 			<key>name</key>
 			<string>vbezier.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vbezier.cpp</string>
+			<string>rlottie/src/vector/vbezier.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1190,7 +1162,7 @@
 			<key>name</key>
 			<string>vbezier.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vbezier.h</string>
+			<string>rlottie/src/vector/vbezier.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1203,7 +1175,7 @@
 			<key>name</key>
 			<string>vbitmap.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vbitmap.cpp</string>
+			<string>rlottie/src/vector/vbitmap.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1216,7 +1188,7 @@
 			<key>name</key>
 			<string>vbitmap.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vbitmap.h</string>
+			<string>rlottie/src/vector/vbitmap.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1229,7 +1201,7 @@
 			<key>name</key>
 			<string>vbrush.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vbrush.cpp</string>
+			<string>rlottie/src/vector/vbrush.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1242,7 +1214,7 @@
 			<key>name</key>
 			<string>vbrush.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vbrush.h</string>
+			<string>rlottie/src/vector/vbrush.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1255,7 +1227,7 @@
 			<key>name</key>
 			<string>vcompositionfunctions.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vcompositionfunctions.cpp</string>
+			<string>rlottie/src/vector/vcompositionfunctions.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1268,7 +1240,7 @@
 			<key>name</key>
 			<string>vcowptr.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vcowptr.h</string>
+			<string>rlottie/src/vector/vcowptr.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1281,7 +1253,7 @@
 			<key>name</key>
 			<string>vdasher.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdasher.cpp</string>
+			<string>rlottie/src/vector/vdasher.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1294,7 +1266,7 @@
 			<key>name</key>
 			<string>vdasher.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdasher.h</string>
+			<string>rlottie/src/vector/vdasher.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1307,7 +1279,7 @@
 			<key>name</key>
 			<string>vdebug.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdebug.cpp</string>
+			<string>rlottie/src/vector/vdebug.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1320,7 +1292,7 @@
 			<key>name</key>
 			<string>vdebug.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdebug.h</string>
+			<string>rlottie/src/vector/vdebug.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1333,7 +1305,7 @@
 			<key>name</key>
 			<string>vdrawable.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdrawable.cpp</string>
+			<string>rlottie/src/vector/vdrawable.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1346,7 +1318,7 @@
 			<key>name</key>
 			<string>vdrawable.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdrawable.h</string>
+			<string>rlottie/src/vector/vdrawable.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1359,7 +1331,7 @@
 			<key>name</key>
 			<string>vdrawhelper.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdrawhelper.cpp</string>
+			<string>rlottie/src/vector/vdrawhelper.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1372,7 +1344,7 @@
 			<key>name</key>
 			<string>vdrawhelper.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdrawhelper.h</string>
+			<string>rlottie/src/vector/vdrawhelper.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1385,7 +1357,7 @@
 			<key>name</key>
 			<string>vdrawhelper_sse2.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vdrawhelper_sse2.cpp</string>
+			<string>rlottie/src/vector/vdrawhelper_sse2.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1398,7 +1370,7 @@
 			<key>name</key>
 			<string>velapsedtimer.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/velapsedtimer.cpp</string>
+			<string>rlottie/src/vector/velapsedtimer.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1411,7 +1383,7 @@
 			<key>name</key>
 			<string>velapsedtimer.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/velapsedtimer.h</string>
+			<string>rlottie/src/vector/velapsedtimer.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1424,7 +1396,7 @@
 			<key>name</key>
 			<string>vglobal.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vglobal.h</string>
+			<string>rlottie/src/vector/vglobal.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1437,7 +1409,7 @@
 			<key>name</key>
 			<string>vimageloader.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vimageloader.cpp</string>
+			<string>rlottie/src/vector/vimageloader.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1450,7 +1422,7 @@
 			<key>name</key>
 			<string>vimageloader.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vimageloader.h</string>
+			<string>rlottie/src/vector/vimageloader.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1463,7 +1435,7 @@
 			<key>name</key>
 			<string>vinterpolator.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vinterpolator.cpp</string>
+			<string>rlottie/src/vector/vinterpolator.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1476,7 +1448,7 @@
 			<key>name</key>
 			<string>vinterpolator.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vinterpolator.h</string>
+			<string>rlottie/src/vector/vinterpolator.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1489,7 +1461,7 @@
 			<key>name</key>
 			<string>vline.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vline.h</string>
+			<string>rlottie/src/vector/vline.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1502,7 +1474,7 @@
 			<key>name</key>
 			<string>vmatrix.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vmatrix.cpp</string>
+			<string>rlottie/src/vector/vmatrix.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1515,7 +1487,7 @@
 			<key>name</key>
 			<string>vmatrix.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vmatrix.h</string>
+			<string>rlottie/src/vector/vmatrix.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1528,7 +1500,7 @@
 			<key>name</key>
 			<string>vpainter.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vpainter.cpp</string>
+			<string>rlottie/src/vector/vpainter.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1541,7 +1513,7 @@
 			<key>name</key>
 			<string>vpainter.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vpainter.h</string>
+			<string>rlottie/src/vector/vpainter.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1554,7 +1526,7 @@
 			<key>name</key>
 			<string>vpath.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vpath.cpp</string>
+			<string>rlottie/src/vector/vpath.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1567,7 +1539,7 @@
 			<key>name</key>
 			<string>vpath.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vpath.h</string>
+			<string>rlottie/src/vector/vpath.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1580,7 +1552,7 @@
 			<key>name</key>
 			<string>vpathmesure.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vpathmesure.cpp</string>
+			<string>rlottie/src/vector/vpathmesure.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1593,7 +1565,7 @@
 			<key>name</key>
 			<string>vpathmesure.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vpathmesure.h</string>
+			<string>rlottie/src/vector/vpathmesure.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1606,7 +1578,7 @@
 			<key>name</key>
 			<string>vpoint.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vpoint.h</string>
+			<string>rlottie/src/vector/vpoint.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1619,7 +1591,7 @@
 			<key>name</key>
 			<string>vraster.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vraster.cpp</string>
+			<string>rlottie/src/vector/vraster.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1632,7 +1604,7 @@
 			<key>name</key>
 			<string>vraster.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vraster.h</string>
+			<string>rlottie/src/vector/vraster.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1645,7 +1617,7 @@
 			<key>name</key>
 			<string>vrect.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vrect.cpp</string>
+			<string>rlottie/src/vector/vrect.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1658,7 +1630,7 @@
 			<key>name</key>
 			<string>vrect.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vrect.h</string>
+			<string>rlottie/src/vector/vrect.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1671,7 +1643,7 @@
 			<key>name</key>
 			<string>vrle.cpp</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vrle.cpp</string>
+			<string>rlottie/src/vector/vrle.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1684,7 +1656,7 @@
 			<key>name</key>
 			<string>vrle.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vrle.h</string>
+			<string>rlottie/src/vector/vrle.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1697,7 +1669,7 @@
 			<key>name</key>
 			<string>vstackallocator.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vstackallocator.h</string>
+			<string>rlottie/src/vector/vstackallocator.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1710,7 +1682,7 @@
 			<key>name</key>
 			<string>vtaskqueue.h</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector/vtaskqueue.h</string>
+			<string>rlottie/src/vector/vtaskqueue.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1723,7 +1695,7 @@
 			<key>name</key>
 			<string>vector</string>
 			<key>path</key>
-			<string>Sources/rlottie/src/vector</string>
+			<string>rlottie/src/vector</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -1783,7 +1755,7 @@
 			<key>name</key>
 			<string>src</string>
 			<key>path</key>
-			<string>Sources/rlottie/src</string>
+			<string>rlottie/src</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -1800,7 +1772,7 @@
 			<key>name</key>
 			<string>rlottie</string>
 			<key>path</key>
-			<string>Sources/rlottie</string>
+			<string>rlottie</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>children</key>
@@ -1816,7 +1788,7 @@
 			<key>name</key>
 			<string>LottieInstance.h</string>
 			<key>path</key>
-			<string>Sources/LottieInstance.h</string>
+			<string>LottieInstance.h</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1829,7 +1801,7 @@
 			<key>name</key>
 			<string>LottieInstance.mm</string>
 			<key>path</key>
-			<string>Sources/LottieInstance.mm</string>
+			<string>LottieInstance.mm</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 			<key>lastKnownFileType</key>
@@ -1850,12 +1822,12 @@
 				<string>1DD70E29938B905A00000000</string>
 			</array>
 		</dict>
-		<key>B401C97979C1F69100000000</key>
+		<key>B401C979CF8CFAB400000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXGroup</string>
 			<key>name</key>
-			<string>RLottie</string>
+			<string>RLottieBinding</string>
 			<key>sourceTree</key>
 			<string><![CDATA[<group>]]></string>
 			<key>children</key>
@@ -1876,7 +1848,7 @@
 			<array>
 				<string>B401C979B781F65D00000000</string>
 				<string>B401C979C806358400000000</string>
-				<string>B401C97979C1F69100000000</string>
+				<string>B401C979CF8CFAB400000000</string>
 			</array>
 		</dict>
 		<key>E7A30F048FDF724600000000</key>
@@ -1962,13 +1934,6 @@
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
 			<string>1DD70E292AB45C9F00000000</string>
-		</dict>
-		<key>E7A30F0413BF31F200000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E2913BF31F200000000</string>
 		</dict>
 		<key>E7A30F048AFB870A00000000</key>
 		<dict>
@@ -2128,7 +2093,6 @@
 				<string>E7A30F044DD571BA00000000</string>
 				<string>E7A30F04B262E7E700000000</string>
 				<string>E7A30F042AB45C9F00000000</string>
-				<string>E7A30F0413BF31F200000000</string>
 				<string>E7A30F048AFB870A00000000</string>
 				<string>E7A30F04396F915A00000000</string>
 				<string>E7A30F049598F93900000000</string>
@@ -2161,7 +2125,7 @@
 			<dict>
 			</dict>
 			<key>baseConfigurationReference</key>
-			<string>1DD70E294153AE0400000000</string>
+			<string>1DD70E295A917F8100000000</string>
 		</dict>
 		<key>4952437350C7218900000000</key>
 		<dict>
@@ -2173,7 +2137,7 @@
 			<dict>
 			</dict>
 			<key>baseConfigurationReference</key>
-			<string>1DD70E292042D46E00000000</string>
+			<string>1DD70E29E1523AAB00000000</string>
 		</dict>
 		<key>49524373A439BFE700000000</key>
 		<dict>
@@ -2185,7 +2149,7 @@
 			<dict>
 			</dict>
 			<key>baseConfigurationReference</key>
-			<string>1DD70E2993D97FD000000000</string>
+			<string>1DD70E2954E8E60D00000000</string>
 		</dict>
 		<key>218C37090000000000000000</key>
 		<dict>
@@ -2200,16 +2164,16 @@
 			<key>defaultConfigurationIsVisible</key>
 			<false/>
 		</dict>
-		<key>E66DC04E79C1F69100000000</key>
+		<key>E66DC04ECF8CFAB400000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXNativeTarget</string>
 			<key>name</key>
-			<string>RLottie</string>
+			<string>RLottieBinding</string>
 			<key>productName</key>
-			<string>RLottie</string>
+			<string>RLottieBinding</string>
 			<key>productReference</key>
-			<string>1DD70E29E5FAFF5F00000000</string>
+			<string>1DD70E2964F71C2C00000000</string>
 			<key>productType</key>
 			<string>com.apple.product-type.library.static</string>
 			<key>dependencies</key>
@@ -2265,7 +2229,7 @@
 			<key>defaultConfigurationIsVisible</key>
 			<false/>
 		</dict>
-		<key>96C8479379C1F69100000000</key>
+		<key>96C847934D24729100000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXProject</string>
@@ -2273,7 +2237,7 @@
 			<string>B401C979EFB6AC4600000000</string>
 			<key>targets</key>
 			<array>
-				<string>E66DC04E79C1F69100000000</string>
+				<string>E66DC04ECF8CFAB400000000</string>
 			</array>
 			<key>buildConfigurationList</key>
 			<string>218C37090000000000000001</string>
@@ -2287,6 +2251,6 @@
 		</dict>
 	</dict>
 	<key>rootObject</key>
-	<string>96C8479379C1F69100000000</string>
+	<string>96C847934D24729100000000</string>
 </dict>
 </plist>

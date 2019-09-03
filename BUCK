@@ -29,9 +29,6 @@ load("//Config:buck_rule_macros.bzl",
     "merge_maps",
 )
 
-static_library_dependencies = [
-]
-
 framework_dependencies = [
     "//submodules/MtProtoKit:MtProtoKit",
     "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
@@ -48,8 +45,8 @@ resource_dependencies = [
     "//submodules/TelegramUI:TelegramUIResources",
     "//:AppResources",
     "//:AppStringResources",
+    "//:AppIntentVocabularyResources",
     "//:Icons",
-    "//:AppIcons",
     "//:AdditionalIcons",
     "//:LaunchScreen",
 ]
@@ -74,19 +71,22 @@ apple_resource(
     visibility = ["PUBLIC"],
 )
 
+apple_resource(
+    name = "AppIntentVocabularyResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/AppIntentVocabulary.plist",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
 apple_asset_catalog(
   name = "Icons",
   dirs = [
     "Telegram-iOS/Icons.xcassets",
-  ],
-  visibility = ["PUBLIC"],
-)
-
-apple_asset_catalog(
-  name = "AppIcons",
-  dirs = [
     "Telegram-iOS/AppIcons.xcassets",
   ],
+  app_icon = "AppIconLLC",
   visibility = ["PUBLIC"],
 )
 
@@ -120,7 +120,6 @@ apple_library(
     ],
     deps = [
     ]
-    + static_library_dependencies
     + framework_binary_dependencies(framework_dependencies),
 )
 
@@ -419,6 +418,7 @@ apple_asset_catalog(
   dirs = [
     "Watch/App/Assets.xcassets",
   ],
+  app_icon = "AppIcon",
   visibility = ["PUBLIC"],
 )
 

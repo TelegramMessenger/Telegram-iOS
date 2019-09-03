@@ -92,12 +92,21 @@ else
 	fi
 
 	echo "Unpacking files..."
-	mkdir "$SOURCE_PATH"
+
+	mkdir -p "$SOURCE_PATH/buildbox"
+	mkdir -p "$SOURCE_PATH/buildbox/transient-data"
+	cp -r "$HOME/codesigning_teams" "$SOURCE_PATH/buildbox/transient-data/teams"
+
 	BASE_DIR=$(pwd)
 	cd "$SOURCE_PATH"
 	tar -xf "../source.tar"
 
-	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR"
+	BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" LOCAL_CODESIGNING=1 sh "../telegram-ios-shared/buildbox/bin/internal.sh" make app
+	cp "build/Telegram_signed.ipa" "./Telegram-iOS-Hockeyapp-Internal.ipa"
+	cp "build/DSYMs.zip" "./Telegram-iOS-Hockeyapp-Internal.app.dSYM.zip"
+	FASTLANE_BUILD_CONFIGURATION="testinghockeyapp"
+
+	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR" skip_build:1
 
 	cd "$BASE_DIR"
 fi

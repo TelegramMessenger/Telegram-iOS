@@ -218,6 +218,7 @@
 "PUSH_CHAT_MESSAGE_VIDEOS" = "%1$@ sent %3$@ videos to the group %2$@";
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
+"PUSH_SENDER_YOU" = "📅 You";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";

@@ -174,7 +174,7 @@ def dynamic_library_configs():
 
     library_config = merge_dict(SHARED_CONFIGS, lib_specific_config)
     library_config = merge_dict(library_config, optimization_config())
-    library_config = config_with_updated_linker_flags(library_config, ALL_LOAD_LINKER_FLAG)
+    #library_config = config_with_updated_linker_flags(library_config, ALL_LOAD_LINKER_FLAG)
     configs = {
         "Debug": library_config,
         "Profile": library_config,
@@ -193,6 +193,7 @@ def app_binary_configs():
         "BUILD_NUMBER": get_build_number(),
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "Telegram",
+        "TARGETED_DEVICE_FAMILY": "1,2",
     }
     config = merge_dict(SHARED_CONFIGS, config)
     config = merge_dict(config, optimization_config())
@@ -360,6 +361,8 @@ def app_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
         "BUILD_NUMBER": get_build_number(),
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+        "TARGETED_DEVICE_FAMILY": "1,2",
     }
     return substitutions
 

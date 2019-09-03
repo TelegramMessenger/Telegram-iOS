@@ -1,5 +1,6 @@
 #import <UIKit/UIKit.h>
 #import <dlfcn.h>
+#import <MtProtoKit/MTProtoKit.h>
 
 int main(int argc, char *argv[]) {
     /*NSString *basePath = [[NSString stringWithUTF8String:argv[0]] stringByDeletingLastPathComponent];
