@@ -985,10 +985,6 @@ public final class PresentationTheme: Equatable {
             switch wallpaper {
                 case .image:
                     defaultWallpaper = nil
-                case let .file(file):
-                    if file.isPattern {
-                        defaultWallpaper = nil
-                    }
                 default:
                     break
             }

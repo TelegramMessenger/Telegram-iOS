@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		091EABA5231DAC7500A0EC14 /* ThemeNameGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 091EABA4231DAC7500A0EC14 /* ThemeNameGenerator.swift */; };
 		09B4A9B823102B7A005C2E08 /* EditThemeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09B4A9B723102B7A005C2E08 /* EditThemeController.swift */; };
 		D03E465223075D930049C28B /* SettingsUI.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E465023075D930049C28B /* SettingsUI.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E466823075E660049C28B /* TabBarAccountSwitchControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E465C23075E630049C28B /* TabBarAccountSwitchControllerNode.swift */; };
@@ -191,6 +192,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		091EABA4231DAC7500A0EC14 /* ThemeNameGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeNameGenerator.swift; sourceTree = "<group>"; };
 		09B4A9B723102B7A005C2E08 /* EditThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditThemeController.swift; sourceTree = "<group>"; };
 		D03E464D23075D930049C28B /* SettingsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SettingsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E465023075D930049C28B /* SettingsUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SettingsUI.h; sourceTree = "<group>"; };
@@ -650,6 +652,7 @@
 				D03E46EB23075FD60049C28B /* WallpaperPatternPanelNode.swift */,
 				D03E46EE23075FD60049C28B /* WallpaperSearchRecentQueries.swift */,
 				09B4A9B723102B7A005C2E08 /* EditThemeController.swift */,
+				091EABA4231DAC7500A0EC14 /* ThemeNameGenerator.swift */,
 			);
 			path = Themes;
 			sourceTree = "<group>";
@@ -915,6 +918,7 @@
 				D03E471523075FE40049C28B /* ThemeSettingsFontSizeItem.swift in Sources */,
 				D03E46AA23075F2C0049C28B /* DataPrivacySettingsController.swift in Sources */,
 				D03E467123075E660049C28B /* SettingsController.swift in Sources */,
+				091EABA5231DAC7500A0EC14 /* ThemeNameGenerator.swift in Sources */,
 				D03E46A923075F2C0049C28B /* BlockedPeersController.swift in Sources */,
 				D03E469F23075F2C0049C28B /* TwoStepVerificationResetController.swift in Sources */,
 				D03E472A230760330049C28B /* LocalizationListItem.swift in Sources */,

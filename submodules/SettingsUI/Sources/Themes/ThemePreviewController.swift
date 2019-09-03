@@ -127,7 +127,7 @@ public final class ThemePreviewController: ViewController {
         
         let previewTheme = self.previewTheme
         if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
-            self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug)
+            self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug, settings: file.settings)
             |> mapToSignal { wallpaper in
                 return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
             })
@@ -252,7 +252,7 @@ public final class ThemePreviewController: ViewController {
         }
         |> mapToSignal { theme -> Signal<Void, NoError> in
             if case let .cloud(info) = theme {
-                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme, install: true).start()
+                let _ = applyTheme(accountManager: context.sharedContext.accountManager, account: context.account, theme: info.theme).start()
                 let _ = saveThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: info.theme).start()
             }
             return context.sharedContext.accountManager.transaction { transaction -> Void in
@@ -278,7 +278,7 @@ public final class ThemePreviewController: ViewController {
             }
         }
         |> runOn(Queue.mainQueue())
-        |> delay(0.7, queue: Queue.mainQueue())
+        |> delay(0.35, queue: Queue.mainQueue())
         
         let progressDisposable = progressSignal.start()
         cancelImpl = {

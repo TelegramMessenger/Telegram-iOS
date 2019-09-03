@@ -594,12 +594,12 @@ final class SharedApplicationContext {
             if #available(iOS 10.3, *) {
                 var icons = [PresentationAppIcon(name: "Blue", imageName: "BlueIcon", isDefault: buildConfig.isAppStoreBuild),
                         PresentationAppIcon(name: "Black", imageName: "BlackIcon", isDefault: buildConfig.isInternalBuild),
-                        PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon", isDefault: false),
-                        PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon", isDefault: false),
-                        PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon", isDefault: false),
-                        PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon", isDefault: false)]
+                        PresentationAppIcon(name: "BlueClassic", imageName: "BlueClassicIcon"),
+                        PresentationAppIcon(name: "BlackClassic", imageName: "BlackClassicIcon"),
+                        PresentationAppIcon(name: "BlueFilled", imageName: "BlueFilledIcon"),
+                        PresentationAppIcon(name: "BlackFilled", imageName: "BlackFilledIcon")]
                 if buildConfig.isInternalBuild {
-                    icons.append(PresentationAppIcon(name: "WhiteFilled", imageName: "WhiteFilledIcon", isDefault: false))
+                    icons.append(PresentationAppIcon(name: "WhiteFilled", imageName: "WhiteFilledIcon"))
                 }
                 return icons
             } else {

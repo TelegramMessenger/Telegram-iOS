@@ -123,11 +123,11 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         freeMonoIconColor: mainFreeTextColor,
         itemSwitchColors: switchColors,
         itemDisclosureActions: PresentationThemeItemDisclosureActions(
-            neutral1: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x007cd6), foregroundColor: .white),
+            neutral1: PresentationThemeFillForeground(fillColor: accentColor, foregroundColor: .white),
             neutral2: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xcd7800), foregroundColor: .white),
             destructive: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xc70c0c), foregroundColor: .white),
             constructive: PresentationThemeFillForeground(fillColor: constructiveColor, foregroundColor: .white),
-            accent: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0x007cd6), foregroundColor: .white),
+            accent: PresentationThemeFillForeground(fillColor: accentColor, foregroundColor: .white),
             warning: PresentationThemeFillForeground(fillColor: UIColor(rgb: 0xcd7800), foregroundColor: .white),
             inactive: PresentationThemeFillForeground(fillColor: accentColor.withMultiplied(hue: 1.029, saturation: 0.609, brightness: 0.3), foregroundColor: .white)
         ),
