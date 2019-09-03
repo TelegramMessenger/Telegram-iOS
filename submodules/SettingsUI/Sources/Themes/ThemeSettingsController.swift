@@ -324,11 +324,6 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
     }
 }
 
-private struct ThemeSettingsState: Equatable {
-    init() {
-    }
-}
-
 private func themeSettingsControllerEntries(presentationData: PresentationData, theme: PresentationTheme, themeReference: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], availableThemes: [PresentationThemeReference], autoNightSettings: AutomaticThemeSwitchSetting, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, largeEmoji: Bool, disableAnimations: Bool, availableAppIcons: [PresentationAppIcon], currentAppIconName: String?) -> [ThemeSettingsControllerEntry] {
     var entries: [ThemeSettingsControllerEntry] = []
     
@@ -342,19 +337,17 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
     }
     
     entries.append(.wallpaper(presentationData.theme, strings.Settings_ChatBackground))
-
-    if theme.name == .builtin(.day) || theme.name == .builtin(.dayClassic) {
-        let title: String
-        switch autoNightSettings.trigger {
-            case .none:
-                title = strings.AutoNightTheme_Disabled
-            case .timeBased:
-                title = strings.AutoNightTheme_Scheduled
-            case .brightness:
-                title = strings.AutoNightTheme_Automatic
-        }
-        entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, title))
+    
+    let title: String
+    switch autoNightSettings.trigger {
+        case .none:
+            title = strings.AutoNightTheme_Disabled
+        case .timeBased:
+            title = strings.AutoNightTheme_Scheduled
+        case .brightness:
+            title = strings.AutoNightTheme_Automatic
     }
+    entries.append(.autoNightTheme(presentationData.theme, strings.Appearance_AutoNightTheme, title))
     
     entries.append(.fontSizeHeader(presentationData.theme, strings.Appearance_TextSize.uppercased()))
     entries.append(.fontSize(presentationData.theme, fontSize))
@@ -373,13 +366,6 @@ private func themeSettingsControllerEntries(presentationData: PresentationData, 
 }
 
 public func themeSettingsController(context: AccountContext, focusOnItemTag: ThemeSettingsEntryTag? = nil) -> ViewController {
-    let initialState = ThemeSettingsState()
-    let statePromise = ValuePromise(initialState, ignoreRepeated: true)
-    let stateValue = Atomic(value: initialState)
-    let updateState: ((ThemeSettingsState) -> ThemeSettingsState) -> Void = { f in
-        statePromise.set(stateValue.modify { f($0) })
-    }
-    
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
@@ -516,8 +502,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     })
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get(), statePromise.get())
-    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName, state -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings]), cloudThemes.get(), availableAppIcons, currentAppIconName.get())
+    |> map { presentationData, sharedData, cloudThemes, availableAppIcons, currentAppIconName -> (ItemListControllerState, (ItemListNodeState<ThemeSettingsControllerEntry>, ThemeSettingsControllerEntry.ItemGenerationArguments)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let fontSize = settings.fontSize
@@ -590,7 +576,6 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             if case let .cloud(info) = theme {
                 updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper))
             }
-            
             return (context.sharedContext.accountManager.transaction { transaction -> Void in
                 transaction.updateSharedData(ApplicationSpecificSharedDataKeys.presentationThemeSettings, { entry in
                     let current: PresentationThemeSettings
