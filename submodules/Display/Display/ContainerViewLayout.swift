@@ -83,6 +83,12 @@ public struct ContainerViewLayout: Equatable {
 public extension ContainerViewLayout {
     func insets(options: ContainerViewLayoutInsetOptions) -> UIEdgeInsets {
         var insets = self.intrinsicInsets
+        if self.inSlideOver {
+            let onScreenNavigationHeight = self.deviceMetrics.onScreenNavigationHeight(inLandscape: false) ?? 0.0
+            if insets.bottom > 0.0 && abs(insets.bottom - onScreenNavigationHeight) < 0.1 {
+                insets.bottom = 0.0
+            }
+        }
         if let statusBarHeight = self.statusBarHeight, options.contains(.statusBar) {
             insets.top += statusBarHeight
         }
@@ -90,6 +96,50 @@ public extension ContainerViewLayout {
             insets.bottom = max(inputHeight, insets.bottom)
         }
         return insets
+    }
+    
+    var isNonExclusive: Bool {
+        if case .tablet = self.deviceMetrics.type {
+            if case .compact = self.metrics.widthClass {
+                return true
+            }
+            if case .compact = self.metrics.heightClass {
+                return true
+            }
+        }
+        return false
+    }
+    
+    var inSplitView: Bool {
+        var maybeSplitView = false
+        if case .tablet = self.deviceMetrics.type {
+            if case .compact = self.metrics.widthClass {
+                maybeSplitView = true
+            }
+            if case .compact = self.metrics.heightClass {
+                maybeSplitView = true
+            }
+        }
+        if maybeSplitView && abs(max(self.size.width, self.size.height) - self.deviceMetrics.screenSize.height) < 1.0 {
+            return true
+        }
+        return false
+    }
+    
+    var inSlideOver: Bool {
+        var maybeSlideOver = false
+        if case .tablet = self.deviceMetrics.type {
+            if case .compact = self.metrics.widthClass {
+                maybeSlideOver = true
+            }
+            if case .compact = self.metrics.heightClass {
+                maybeSlideOver = true
+            }
+        }
+        if maybeSlideOver && abs(max(self.size.width, self.size.height) - self.deviceMetrics.screenSize.height) > 10.0 {
+            return true
+        }
+        return false
     }
     
     var orientation: LayoutOrientation {

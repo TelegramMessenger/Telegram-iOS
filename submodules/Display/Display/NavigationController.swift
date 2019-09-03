@@ -438,6 +438,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                 if self.controllerView.sharedStatusBar.view.superview != nil {
                     self.controllerView.sharedStatusBar.removeFromSupernode()
                     self.controllerView.containerView.layer.setTraceableInfo(nil)
+                    
+                    if layout.deviceMetrics.type == .tablet {
+                        self.controllerView.containerView.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: 0, disableChildrenTracingTags: WindowTracingTags.statusBar | WindowTracingTags.keyboard))
+                    }
                 }
             case .masterDetail:
                 if self.controllerView.sharedStatusBar.view.superview == nil {
@@ -865,7 +869,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let translation = recognizer.translation(in: self.view).x
                     let progress = max(0.0, min(1.0, translation / self.view.frame.width))
                     navigationTransitionCoordinator.progress = progress
-
                 }
             case .ended:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {

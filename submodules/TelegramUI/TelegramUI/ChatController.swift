@@ -3957,13 +3957,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
                 }
                 
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, sendButtonFrame: sendButtonFrame, textInputNode: textInputNode, completion: { [weak self] in
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, sendButtonFrame: strongSelf.chatDisplayNode.convert(sendButtonFrame, to: nil), textInputNode: textInputNode, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
                     }
                 })
                 strongSelf.sendMessageActionsController = controller
-                strongSelf.presentInGlobalOverlay(controller, with: nil)
+                if layout.isNonExclusive {
+                    strongSelf.present(controller, in: .window(.root))
+                } else {
+                    strongSelf.presentInGlobalOverlay(controller, with: nil)
+                }
             }
         }, openScheduledMessages: { [weak self] in
             if let strongSelf = self {

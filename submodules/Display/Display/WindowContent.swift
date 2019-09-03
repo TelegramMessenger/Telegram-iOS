@@ -237,7 +237,7 @@ public final class WindowHostView {
     
     fileprivate var onScreenNavigationHeight: CGFloat? {
         if #available(iOSApplicationExtension 11.0, *) {
-            return !self.eventView.safeAreaInsets.bottom.isLessThanOrEqualTo(0.0) ? nil : self.eventView.safeAreaInsets.bottom
+            return self.eventView.safeAreaInsets.bottom.isLessThanOrEqualTo(0.0) ? nil : self.eventView.safeAreaInsets.bottom
         } else {
             return nil
         }
@@ -342,7 +342,6 @@ public class Window1 {
         self.volumeControlStatusBarNode.isHidden = true
         
         let boundsSize = self.hostView.eventView.bounds.size
-        
         self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, statusBarHeight: statusBarHost?.statusBarFrame.height ?? 20.0, onScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
         
         self.statusBarHost = statusBarHost
@@ -451,7 +450,10 @@ public class Window1 {
                 if !strongSelf.hostView.isUpdatingOrientationLayout {
                     return
                 }
-                let keyboardHeight = max(0.0, strongSelf.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0)
+                var keyboardHeight = max(0.0, strongSelf.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0)
+                if strongSelf.deviceMetrics.type == .tablet, abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
+                    keyboardHeight = max(0.0, keyboardHeight - 24.0)
+                }
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5
@@ -474,10 +476,11 @@ public class Window1 {
                 let keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
                 
                 let screenHeight: CGFloat
-                
+                var inPopover = false
                 if keyboardFrame.width.isEqual(to: UIScreen.main.bounds.width) {
                     if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
                         screenHeight = UIScreen.main.bounds.height
+                        inPopover = true
                     } else {
                         screenHeight = strongSelf.windowLayout.size.height
                     }
@@ -485,7 +488,11 @@ public class Window1 {
                     screenHeight = UIScreen.main.bounds.width
                 }
                 
-                let keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
+                var keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
+                if inPopover {
+                    keyboardHeight = max(0.0, keyboardHeight - 48.0)
+                }
+            
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5
@@ -518,7 +525,10 @@ public class Window1 {
                             }
                             
                             if let keyboardManager = strongSelf.keyboardManager {
-                                let updatedKeyboardHeight = keyboardManager.getCurrentKeyboardHeight()
+                                var updatedKeyboardHeight = keyboardManager.getCurrentKeyboardHeight()
+                                if strongSelf.deviceMetrics.type == .tablet, abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
+                                    updatedKeyboardHeight = max(0.0, updatedKeyboardHeight - 24.0)
+                                }
                                 if !updatedKeyboardHeight.isEqual(to: initialInputHeight) {
                                     strongSelf.updateLayout({ $0.update(inputHeight: updatedKeyboardHeight, transition: .immediate, overrideTransition: false) })
                                 }
@@ -544,6 +554,7 @@ public class Window1 {
         recognizer.delaysTouchesBegan = false
         recognizer.delaysTouchesEnded = false
         recognizer.delegate = self.keyboardGestureRecognizerDelegate
+        recognizer.isEnabled = self.deviceMetrics.type == .phone
         recognizer.began = { [weak self] point in
             self?.panGestureBegan(location: point)
         }
