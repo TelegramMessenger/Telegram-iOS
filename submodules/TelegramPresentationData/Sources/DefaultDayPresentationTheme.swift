@@ -294,8 +294,8 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     )
     
     let historyNavigation = PresentationThemeChatHistoryNavigation(
-        fillColor: .white,
-        strokeColor: UIColor(rgb: 0x000000, alpha: 0.15),
+        fillColor: UIColor(rgb: 0xf7f7f7),
+        strokeColor: UIColor(rgb: 0xb1b1b1),
         foregroundColor: UIColor(rgb: 0x88888d),
         badgeBackgroundColor: accentColor,
         badgeStrokeColor: accentColor,

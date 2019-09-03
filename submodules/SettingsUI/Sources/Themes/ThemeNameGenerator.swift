@@ -320,7 +320,6 @@ private extension UIColor {
     }
 }
 
-
 func generateThemeName(accentColor: UIColor) -> String {
     var nearest: (color: UInt32, distance: Int32)?
     for (color, _) in colors {
@@ -338,11 +337,7 @@ func generateThemeName(accentColor: UIColor) -> String {
         if arc4random() % 2 == 0 {
             return "\(adjectives[Int(arc4random()) % adjectives.count].capitalized) \(colorName)"
         } else {
-            if false, arc4random() % 3 == 0 {
-                return "\(adjectives[Int(arc4random()) % adjectives.count].capitalized) \(colorName) \(subjectives[Int(arc4random()) % subjectives.count].capitalized)"
-            } else {
-                return "\(colorName) \(subjectives[Int(arc4random()) % subjectives.count].capitalized)"
-            }
+            return "\(colorName) \(subjectives[Int(arc4random()) % subjectives.count].capitalized)"
         }
     } else {
         return ""

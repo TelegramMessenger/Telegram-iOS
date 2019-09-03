@@ -11,6 +11,7 @@ import TelegramStringFormatting
 import AccountContext
 import DeviceLocationManager
 import Geocoding
+import WallpaperResources
 
 private enum TriggerMode {
     case none
@@ -497,11 +498,33 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
             }
         }))
     }, updateTheme: { theme in
-        updateSettings { settings in
-            var settings = settings
-            settings.theme = theme
-            return settings
+        let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil)
+        
+        let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
+        if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
+            resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+            |> map { wallpaper -> TelegramWallpaper? in
+                return wallpaper?.wallpaper
+            }
+        } else {
+            resolvedWallpaper = .single(nil)
         }
+        
+        let _ = (resolvedWallpaper
+        |> mapToSignal { resolvedWallpaper -> Signal<Void, NoError> in
+            var updatedTheme = theme
+            if case let .cloud(info) = theme {
+                updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper))
+            }
+            
+            updateSettings { settings in
+                var settings = settings
+                settings.theme = updatedTheme
+                return settings
+            }
+            
+            return .complete()
+        }).start()
     })
     
     let cloudThemes = Promise<[TelegramTheme]>()
