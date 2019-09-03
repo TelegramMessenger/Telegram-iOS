@@ -254,7 +254,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
         if automaticThemeShouldSwitchNow(parameters, currentTheme: themeSettings.theme) {
-            effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
+            effectiveTheme = themeSettings.automaticThemeSwitchSetting.theme
         } else {
             effectiveTheme = themeSettings.theme
         }
@@ -301,7 +301,7 @@ private enum PreparedAutomaticThemeSwitchTrigger {
 
 private struct AutomaticThemeSwitchParameters {
     let trigger: PreparedAutomaticThemeSwitchTrigger
-    let theme: PresentationBuiltinThemeReference
+    let theme: PresentationThemeReference
     
     init(settings: AutomaticThemeSwitchSetting) {
         let trigger: PreparedAutomaticThemeSwitchTrigger
@@ -514,7 +514,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
                         
                         if shouldSwitch {
-                            let automaticTheme: PresentationThemeReference = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
+                            let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
                             if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[automaticTheme.index] {
                                 effectiveChatWallpaper = themeSpecificWallpaper
                             }

@@ -87,12 +87,15 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.instantChatBackgroundNode.displaysAsynchronously = false
         self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
         self.instantChatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
+        self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.remoteChatBackgroundNode = TransformImageNode()
         self.remoteChatBackgroundNode.backgroundColor = previewTheme.chatList.backgroundColor
+        self.remoteChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.blurredNode = BlurredImageNode()
         self.blurredNode.clipsToBounds = true
+        self.blurredNode.blurView.contentMode = .scaleAspectFill
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
         

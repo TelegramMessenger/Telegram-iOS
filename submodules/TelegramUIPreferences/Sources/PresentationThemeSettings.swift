@@ -271,21 +271,27 @@ public enum AutomaticThemeSwitchTrigger: PostboxCoding, Equatable {
 
 public struct AutomaticThemeSwitchSetting: PostboxCoding, Equatable {
     public var trigger: AutomaticThemeSwitchTrigger
-    public var theme: PresentationBuiltinThemeReference
+    public var theme: PresentationThemeReference
     
-    public init(trigger: AutomaticThemeSwitchTrigger, theme: PresentationBuiltinThemeReference) {
+    public init(trigger: AutomaticThemeSwitchTrigger, theme: PresentationThemeReference) {
         self.trigger = trigger
         self.theme = theme
     }
     
     public init(decoder: PostboxDecoder) {
         self.trigger = decoder.decodeObjectForKey("trigger", decoder: { AutomaticThemeSwitchTrigger(decoder: $0) }) as! AutomaticThemeSwitchTrigger
-        self.theme = PresentationBuiltinThemeReference(rawValue: decoder.decodeInt32ForKey("theme", orElse: 0))!
+        if let theme = decoder.decodeObjectForKey("theme_v2", decoder: { PresentationThemeReference(decoder: $0) }) as? PresentationThemeReference {
+            self.theme = theme
+        } else if let legacyValue = decoder.decodeOptionalInt32ForKey("theme") {
+            self.theme = .builtin(PresentationBuiltinThemeReference(rawValue: legacyValue) ?? .nightAccent)
+        } else {
+            self.theme = .builtin(.nightAccent)
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeObject(self.trigger, forKey: "trigger")
-        encoder.encodeInt32(self.theme.rawValue, forKey: "theme")
+        encoder.encodeObject(self.theme, forKey: "theme_v2")
     }
 }
 
@@ -443,7 +449,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
     }
     
     public static var defaultSettings: PresentationThemeSettings {
-        return PresentationThemeSettings(chatWallpaper: .builtin(WallpaperSettings()), theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent), largeEmoji: true, disableAnimations: true)
+        return PresentationThemeSettings(chatWallpaper: .builtin(WallpaperSettings()), theme: .builtin(.dayClassic), themeSpecificAccentColors: [:], themeSpecificChatWallpapers: [:], fontSize: .regular, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting(trigger: .none, theme: .builtin(.nightAccent)), largeEmoji: true, disableAnimations: true)
     }
     
     public init(chatWallpaper: TelegramWallpaper, theme: PresentationThemeReference, themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], themeSpecificChatWallpapers: [Int64: TelegramWallpaper], fontSize: PresentationFontSize, automaticThemeSwitchSetting: AutomaticThemeSwitchSetting, largeEmoji: Bool, disableAnimations: Bool) {
@@ -499,7 +505,7 @@ public struct PresentationThemeSettings: PreferencesEntry {
         }
         
         self.fontSize = PresentationFontSize(rawValue: decoder.decodeInt32ForKey("f", orElse: PresentationFontSize.regular.rawValue)) ?? .regular
-        self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .none, theme: .nightAccent)
+        self.automaticThemeSwitchSetting = (decoder.decodeObjectForKey("automaticThemeSwitchSetting", decoder: { AutomaticThemeSwitchSetting(decoder: $0) }) as? AutomaticThemeSwitchSetting) ?? AutomaticThemeSwitchSetting(trigger: .none, theme: .builtin(.nightAccent))
         self.largeEmoji = decoder.decodeBoolForKey("largeEmoji", orElse: true)
         self.disableAnimations = decoder.decodeBoolForKey("disableAnimations", orElse: true)
     }

@@ -36,7 +36,7 @@ func themeDisplayName(strings: PresentationStrings, reference: PresentationTheme
 
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext
-    let selectTheme: (PresentationThemeReference) -> Void
+    let updateTheme: (PresentationThemeReference) -> Void
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
     let selectAccentColor: (PresentationThemeAccentColor) -> Void
@@ -48,9 +48,9 @@ private final class ThemeSettingsControllerArguments {
     let presentThemeMenu: (PresentationThemeReference, Bool) -> Void
     let editTheme: (PresentationCloudTheme) -> Void
     
-    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, PresentationThemeAccentColor?) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, presentThemeMenu: @escaping (PresentationThemeReference, Bool) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void) {
+    init(context: AccountContext, updateTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, PresentationThemeAccentColor?) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, presentThemeMenu: @escaping (PresentationThemeReference, Bool) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void) {
         self.context = context
-        self.selectTheme = selectTheme
+        self.updateTheme = updateTheme
         self.selectFontSize = selectFontSize
         self.openWallpaperSettings = openWallpaperSettings
         self.selectAccentColor = selectAccentColor
@@ -290,14 +290,14 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                 })
             case let .themeListHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, currentColor):
+            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors, _):
                 return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
                     if case let .cloud(theme) = theme, theme.theme.file == nil {
                         if theme.theme.isCreator {
                             arguments.editTheme(theme)
                         }
                     } else {
-                        arguments.selectTheme(theme)
+                        arguments.updateTheme(theme)
                     }
                 }, longTapped: { theme in
                     arguments.presentThemeMenu(theme, theme.index == currentTheme.index)
@@ -370,7 +370,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
     
-    var selectThemeImpl: ((PresentationThemeReference) -> Void)?
+    var updateThemeImpl: ((PresentationThemeReference) -> Void)?
     var moreImpl: (() -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
@@ -391,8 +391,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
     cloudThemes.set(updatedCloudThemes)
     
-    let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
-        selectThemeImpl?(theme)
+    let arguments = ThemeSettingsControllerArguments(context: context, updateTheme: { theme in
+        updateThemeImpl?(theme)
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
@@ -474,7 +474,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         } else {
                             newTheme = .builtin(.nightAccent)
                         }
-                        selectThemeImpl?(newTheme)
+                        updateThemeImpl?(newTheme)
                     }
                     
                     let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
@@ -551,7 +551,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     getNavigationControllerImpl = { [weak controller] in
         return controller?.navigationController as? NavigationController
     }
-    selectThemeImpl = { theme in
+    updateThemeImpl = { theme in
         let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil)
         
         let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>

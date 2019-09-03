@@ -103,7 +103,6 @@ private let colors: [UInt32: String] = [
 ]
 
 private let adjectives = [
-    "Always",
     "Ancient",
     "Antique",
     "Autumn",
