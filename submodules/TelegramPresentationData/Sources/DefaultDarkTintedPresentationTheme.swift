@@ -76,6 +76,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     )
 
     let intro = PresentationThemeIntro(
+        statusBarStyle: .white,
         startButtonColor: accentColor,
         dotColor: mainSecondaryColor
     )

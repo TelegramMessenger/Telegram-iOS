@@ -15,6 +15,22 @@ public class EditableTextNode: ASEditableTextNode {
             self.textView.reloadInputViews()
         }
     }
+    
+    public var isRTL: Bool {
+        if let text = self.textView.text, !text.isEmpty {
+            let tagger = NSLinguisticTagger(tagSchemes: [.language], options: 0)
+            tagger.string = text
+            
+            let lang = tagger.tag(at: 0, scheme: .language, tokenRange: nil, sentenceRange: nil)
+            if let lang = lang?.rawValue, lang.contains("he") || lang.contains("ar") || lang.contains("fa") {
+                return true
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
 }
 
 public extension UITextView {

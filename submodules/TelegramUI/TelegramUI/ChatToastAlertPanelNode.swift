@@ -42,8 +42,8 @@ final class ChatToastAlertPanelNode: ChatTitleAccessoryPanelNode {
         let panelHeight: CGFloat = 40.0
 
         self.textColor = interfaceState.theme.rootController.navigationBar.primaryTextColor
-        self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
-        self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+        self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
+        self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight - UIScreenPixel), size: CGSize(width: width, height: UIScreenPixel)))
         

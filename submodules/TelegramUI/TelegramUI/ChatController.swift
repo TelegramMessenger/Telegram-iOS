@@ -526,6 +526,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             if let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
                 (strongSelf.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
+                strongSelf.chatDisplayNode.cancelInteractiveKeyboardGestures()
                 var updatedMessages = messages
                 for i in 0 ..< updatedMessages.count {
                     if updatedMessages[i].id == message.id {
@@ -1553,10 +1554,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] scheduleTime in
                     if let strongSelf = self {
-                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime)
-                        if !strongSelf.presentationInterfaceState.isScheduledMessages {
-                            strongSelf.openScheduledMessages()
-                        }
+                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime, completion: { [weak self] in
+                            if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                strongSelf.openScheduledMessages()
+                            }
+                        })
                     }
                 })
                 strongSelf.chatDisplayNode.dismissInput()

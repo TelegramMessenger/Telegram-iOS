@@ -38,7 +38,7 @@ final class AuthorizationSequenceAwaitingAccountResetController: ViewController 
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
         self.attemptNavigation = { _ in
             return false

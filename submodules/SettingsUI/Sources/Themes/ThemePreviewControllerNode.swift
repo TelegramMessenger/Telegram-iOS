@@ -29,7 +29,7 @@ private func generateMaskImage(color: UIColor) -> UIImage? {
 
 final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
-    private let previewTheme: PresentationTheme
+    private var previewTheme: PresentationTheme
     private var presentationData: PresentationData
     
     public let wallpaperPromise = Promise<TelegramWallpaper>()
@@ -87,12 +87,15 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.instantChatBackgroundNode.displaysAsynchronously = false
         self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
         self.instantChatBackgroundNode.motionEnabled = previewTheme.chat.defaultWallpaper.settings?.motion ?? false
+        self.instantChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.remoteChatBackgroundNode = TransformImageNode()
         self.remoteChatBackgroundNode.backgroundColor = previewTheme.chatList.backgroundColor
+        self.remoteChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.blurredNode = BlurredImageNode()
         self.blurredNode.clipsToBounds = true
+        self.blurredNode.blurView.contentMode = .scaleAspectFill
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
         
@@ -261,6 +264,27 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.scrollNode.view.isPagingEnabled = true
         self.scrollNode.view.delegate = self
         self.pageControlNode.setPage(0.0)
+    }
+    
+    func updateTheme(_ theme: PresentationTheme) {
+        self.previewTheme = theme
+    
+        self.backgroundColor = self.previewTheme.list.plainBackgroundColor
+        
+        self.pageControlNode.dotColor = self.previewTheme.chatList.unreadBadgeActiveBackgroundColor
+        self.pageControlNode.inactiveDotColor = self.previewTheme.list.pageIndicatorInactiveColor
+        
+        self.chatListBackgroundNode.backgroundColor = self.previewTheme.chatList.backgroundColor
+        self.maskNode.image = generateMaskImage(color: self.previewTheme.chatList.backgroundColor)
+        if case let .color(value) = self.previewTheme.chat.defaultWallpaper {
+            self.instantChatBackgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: value))
+        }
+        
+        self.toolbarNode.updateThemeAndStrings(theme: self.previewTheme, strings: self.presentationData.strings)
+    
+        if let (layout, navigationBarHeight) = self.validLayout {
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+        }
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

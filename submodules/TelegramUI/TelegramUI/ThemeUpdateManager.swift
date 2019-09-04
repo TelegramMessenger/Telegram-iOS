@@ -66,6 +66,10 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
             validIds.insert(themeSettings.theme.index)
             themes[themeSettings.theme.index] = (themeSettings.theme, false)
         }
+        if case .cloud = themeSettings.automaticThemeSwitchSetting.theme, themeSettings.automaticThemeSwitchSetting.trigger != .none {
+            validIds.insert(themeSettings.automaticThemeSwitchSetting.theme.index)
+            themes[themeSettings.automaticThemeSwitchSetting.theme.index] = (themeSettings.automaticThemeSwitchSetting.theme, true)
+        }
         
         if previousIds != validIds {
             for id in validIds {
@@ -126,20 +130,25 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
                                         current = PresentationThemeSettings.defaultSettings
                                     }
                                     
-                                    let chatWallpaper: TelegramWallpaper
-                                    if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[updatedTheme.index] {
-                                        chatWallpaper = themeSpecificWallpaper
-                                    } else if let presentationTheme = presentationTheme {
-                                        if case let .cloud(info) = updatedTheme, let resolvedWallpaper = info.resolvedWallpaper {
-                                            chatWallpaper = resolvedWallpaper
-                                        } else {
-                                            chatWallpaper = presentationTheme.chat.defaultWallpaper
-                                        }
+                                    var chatWallpaper = current.chatWallpaper
+                                    var automaticThemeSwitchSetting = current.automaticThemeSwitchSetting
+                                    if isAutoNight {
+                                        automaticThemeSwitchSetting.theme = updatedTheme
                                     } else {
-                                        chatWallpaper = current.chatWallpaper
+                                        if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[updatedTheme.index] {
+                                            chatWallpaper = themeSpecificWallpaper
+                                        } else if let presentationTheme = presentationTheme {
+                                            if case let .cloud(info) = updatedTheme, let resolvedWallpaper = info.resolvedWallpaper {
+                                                chatWallpaper = resolvedWallpaper
+                                            } else {
+                                                chatWallpaper = presentationTheme.chat.defaultWallpaper
+                                            }
+                                        } else {
+                                            chatWallpaper = current.chatWallpaper
+                                        }
                                     }
                                     
-                                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: updatedTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                    return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: updatedTheme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                 })
                             }).start()
                         }

@@ -243,6 +243,7 @@
 "Common.Search" = "Search";
 "Common.More" = "More";
 "Common.Select" = "Select";
+"Items.NOfM" = "%1$@ of %2$@";
 
 // State
 "State.Connecting" = "Connecting...";
@@ -309,6 +310,7 @@
 "LastSeen.HoursAgo_0" = "last seen %@ hours ago";
 "LastSeen.YesterdayAt" = "last seen yesterday at %@";
 "LastSeen.AtDate" = "last seen %@";
+"LastSeen.TodayAt" = "last seen today at %@";
 "LastSeen.Lately" = "last seen recently";
 "LastSeen.WithinAWeek" = "last seen within a week";
 "LastSeen.WithinAMonth" = "last seen within a month";
@@ -4679,7 +4681,8 @@ Any member of this group will be able to see messages in the channel.";
 "EditTheme.Preview" = "CHAT PREVIEW";
 "EditTheme.UploadNewTheme" = "Create from File...";
 "EditTheme.UploadEditedTheme" = "Update from File...";
-"EditTheme.ThemeTemplateAlert" = "New Theme Added\n\nPress and hold on your theme to edit it or get a sharing link. Users who install your theme will get automatic updates each time you change it.\n\nFor advanced editing purposes, you can find a file with your theme in Saved Messages.";
+"EditTheme.ThemeTemplateAlertTitle" = "New Theme Added";
+"EditTheme.ThemeTemplateAlertText" = "Press and hold on your theme to edit it or get a sharing link. Users who install your theme will get automatic updates each time you change it.\n\nFor advanced editing purposes, you can find a file with your theme in Saved Messages.";
 "EditTheme.FileReadError" = "Invalid theme file";
 
 "EditTheme.Create.TopInfo" = "The theme will be based on your currently selected colors and wallpaper.";
@@ -4707,6 +4710,7 @@ Any member of this group will be able to see messages in the channel.";
 "EditTheme.Edit.Preview.OutgoingText" = "Or upload a theme file";
 
 "EditTheme.ErrorLinkTaken" = "Sorry, this link is already taken";
+"EditTheme.ErrorInvalidCharacters" = "Sorry, this link is invalid.";
 
 "Wallpaper.ErrorNotFound" = "Sorry, this chat background doesn't seem to exist.";
 "Theme.ErrorNotFound" = "Sorry, this color theme doesn't seem to exist.";

@@ -32,6 +32,7 @@ public enum AddressNameAvailability: Equatable {
 public enum AddressNameDomain {
     case account
     case peer(PeerId)
+    case theme(TelegramTheme)
 }
 
 public func checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -> AddressNameFormatError? {
@@ -106,6 +107,20 @@ public func addressNameAvailability(account: Account, domain: AddressNameDomain,
                 } else {
                     return .single(.invalid)
                 }
+            case .theme:
+                return account.network.request(Api.functions.account.createTheme(slug: name, title: "", document: .inputDocumentEmpty))
+                |> map { _ -> AddressNameAvailability in
+                    return .available
+                }
+                |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
+                    if error.errorDescription == "THEME_SLUG_OCCUPIED" {
+                        return .single(.taken)
+                    } else if error.errorDescription == "THEME_SLUG_INVALID" {
+                        return .single(.invalid)
+                    } else {
+                        return .single(.available)
+                    }
+                }
         }
     } |> switchToLatest
 }
@@ -153,6 +168,15 @@ public func updateAddressName(account: Account, domain: AddressNameDomain, name:
                     }
                 } else {
                     return .fail(.generic)
+                }
+            case let .theme(theme):
+                let flags: Int32 = 1 << 0
+                return account.network.request(Api.functions.account.updateTheme(flags: flags, format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: nil, title: nil, document: nil))
+                |> mapError { _ -> UpdateAddressNameError in
+                    return .generic
+                }
+                |> map { _ in
+                    return Void()
                 }
         }
     } |> mapError { _ -> UpdateAddressNameError in return .generic } |> switchToLatest

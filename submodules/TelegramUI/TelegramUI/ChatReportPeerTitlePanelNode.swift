@@ -92,8 +92,8 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.theme = interfaceState.theme
             
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelEncircledCloseIconImage(interfaceState.theme), for: [])
-            self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
-            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+            self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
+            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         }
         
         let panelHeight: CGFloat = 40.0

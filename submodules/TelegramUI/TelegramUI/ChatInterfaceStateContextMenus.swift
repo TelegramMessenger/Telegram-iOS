@@ -373,6 +373,24 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
+        if data.messageActions.options.contains(.sendScheduledNow) {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
+                f(.dismissWithoutContent)
+            })))
+        }
+        
+        if data.messageActions.options.contains(.editScheduledTime) {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                controllerInteraction.editScheduledMessagesTime(selectAll ? messages.map { $0.id } : [message.id])
+                f(.dismissWithoutContent)
+            })))
+        }
+        
         let resourceAvailable: Bool
         if let resourceStatus = data.resourceStatus, case .Local = resourceStatus {
             resourceAvailable = true
@@ -422,24 +440,6 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                     storeMessageTextInPasteboard(message.text, entities: messageEntities)
                 }
                 f(.default)
-            })))
-        }
-        
-        if data.messageActions.options.contains(.sendScheduledNow) {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
-                f(.dismissWithoutContent)
-            })))
-        }
-        
-        if data.messageActions.options.contains(.editScheduledTime) {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                controllerInteraction.editScheduledMessagesTime(selectAll ? messages.map { $0.id } : [message.id])
-                f(.dismissWithoutContent)
             })))
         }
         
@@ -738,8 +738,14 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
                     optionsMap[id]!.insert(.sendScheduledNow)
-                    optionsMap[id]!.insert(.editScheduledTime)
-                    optionsMap[id]!.insert(.deleteLocally)
+                    if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel, !channel.hasPermission(.editAllMessages) {
+                    } else {
+                        optionsMap[id]!.insert(.editScheduledTime)
+                    }
+                    if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel, !channel.hasPermission(.deleteAllMessages) {
+                    } else {
+                        optionsMap[id]!.insert(.deleteLocally)
+                    }
                 } else if id.peerId == accountPeerId {
                     if !(message.flags.isSending || message.flags.contains(.Failed)) {
                         optionsMap[id]!.insert(.forward)
