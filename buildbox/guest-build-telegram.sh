@@ -101,10 +101,24 @@ else
 	cd "$SOURCE_PATH"
 	tar -xf "../source.tar"
 
-	BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" LOCAL_CODESIGNING=1 sh "../telegram-ios-shared/buildbox/bin/internal.sh" make app
-	cp "build/Telegram_signed.ipa" "./Telegram-iOS-Hockeyapp-Internal.ipa"
-	cp "build/DSYMs.zip" "./Telegram-iOS-Hockeyapp-Internal.app.dSYM.zip"
-	FASTLANE_BUILD_CONFIGURATION="testinghockeyapp"
+	if [ "$1" == "hockeyapp" ]; then
+		BUILD_ENV_SCRIPT="internal"
+		RESULT_IPA_NAME="Telegram-iOS-Hockeyapp-Internal.ipa"
+		RESULT_DSYM_NAME="Telegram-iOS-Hockeyapp-Internal.app.dSYM.zip"
+		FASTLANE_BUILD_CONFIGURATION="internalhockeyapp"
+	elif [ "$1" == "appstore" ]; then
+		BUILD_ENV_SCRIPT="appstore"
+		RESULT_IPA_NAME="Telegram-iOS-AppStoreLLC.ipa"
+		RESULT_DSYM_NAME="Telegram-iOS-AppStoreLLC.app.dSYM.zip"
+		FASTLANE_BUILD_CONFIGURATION="testflight_llc"
+	else
+		echo "Unsupported configuration $1"
+		exit 1
+	fi
+
+	BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" LOCAL_CODESIGNING=1 sh "../telegram-ios-shared/buildbox/bin/$BUILD_ENV_SCRIPT.sh" make app
+	cp "build/Telegram_signed.ipa" "./$RESULT_IPA_NAME"
+	cp "build/DSYMs.zip" "./$RESULT_DSYM_NAME"
 
 	FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR" skip_build:1
 

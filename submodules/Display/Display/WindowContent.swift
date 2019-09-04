@@ -233,7 +233,7 @@ public final class WindowHostView {
     }
     
     fileprivate var onScreenNavigationHeight: CGFloat? {
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             return self.eventView.safeAreaInsets.bottom.isLessThanOrEqualTo(0.0) ? nil : self.eventView.safeAreaInsets.bottom
         } else {
             return nil
