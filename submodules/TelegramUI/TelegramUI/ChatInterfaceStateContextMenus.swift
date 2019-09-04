@@ -23,6 +23,10 @@ private struct MessageContextMenuData {
 }
 
 func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
+    return canEditMessage(accountPeerId: context.account.peerId, limitsConfiguration: limitsConfiguration, message: message)
+}
+
+private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
     var hasEditRights = false
     var unlimitedInterval = false
     
@@ -41,7 +45,7 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
         }
     } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
-    } else if let author = message.author, author.id == context.account.peerId {
+    } else if let author = message.author, author.id == accountPeerId {
         hasEditRights = true
     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramChannel {
@@ -100,7 +104,7 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
         }
         
         if !hasUneditableAttributes {
-            if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: context.account.peerId, message: message, unlimitedInterval: unlimitedInterval) {
+            if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message, unlimitedInterval: unlimitedInterval) {
                 return true
             }
         }
@@ -738,13 +742,19 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
                     optionsMap[id]!.insert(.sendScheduledNow)
-                    if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel, !channel.hasPermission(.editAllMessages) {
-                    } else {
+                    if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message) {
                         optionsMap[id]!.insert(.editScheduledTime)
                     }
-                    if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel, !channel.hasPermission(.deleteAllMessages) {
+                    if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel {
+                        if !message.flags.contains(.Incoming) {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        } else {
+                            if channel.hasPermission(.deleteAllMessages) {
+                                optionsMap[id]!.insert(.deleteGlobally)
+                            }
+                        }
                     } else {
-                        optionsMap[id]!.insert(.deleteLocally)
+                        optionsMap[id]!.insert(.deleteGlobally)
                     }
                 } else if id.peerId == accountPeerId {
                     if !(message.flags.isSending || message.flags.contains(.Failed)) {
