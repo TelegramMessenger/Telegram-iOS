@@ -19,13 +19,13 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
     if let image = borderImages[key] {
         return image
     } else {
-        let image = generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
+        let image = generateImage(CGSize(width: 32.0, height: 32.0), rotatedContext: { size, context in
             let bounds = CGRect(origin: CGPoint(), size: size)
             context.setFillColor(theme.list.itemBlocksBackgroundColor.cgColor)
             context.fill(bounds)
             
             context.setBlendMode(.clear)
-            context.fillEllipse(in: bounds)
+            context.fillEllipse(in: bounds.insetBy(dx: 1.0, dy: 1.0))
             context.setBlendMode(.normal)
             
             let lineWidth: CGFloat
@@ -43,9 +43,9 @@ private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selec
             
             if bordered || selected {
                 context.setLineWidth(lineWidth)
-                context.strokeEllipse(in: bounds.insetBy(dx: lineWidth / 2.0, dy: lineWidth / 2.0))
+                context.strokeEllipse(in: bounds.insetBy(dx: 1.0 + lineWidth / 2.0, dy: 1.0 + lineWidth / 2.0))
             }
-        })?.stretchableImage(withLeftCapWidth: 15, topCapHeight: 15)
+        })?.stretchableImage(withLeftCapWidth: 16, topCapHeight: 16)
         borderImages[key] = image
         return image
     }
@@ -55,7 +55,7 @@ private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImag
     return .single(theme)
     |> map { theme -> (TransformImageArguments) -> DrawingContext? in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: false)
             let drawingRect = arguments.drawingRect
             
             context.withContext { c in
@@ -156,7 +156,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         self.imageNode.isLayerBacked = true
         
         self.overlayNode = ASImageNode()
-        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 98.0, height: 62.0))
+        self.overlayNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 100.0, height: 64.0))
         self.overlayNode.isLayerBacked = true
         
         self.textNode = ASTextNode()
@@ -171,10 +171,12 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     }
     
     func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
+        let updatedTheme = self.currentTheme == nil || currentTheme !== self.currentTheme!
         if case let .cloud(theme) = theme, theme.theme.file == nil {
-            if self.currentTheme == nil || currentTheme !== self.currentTheme! {
+            if updatedTheme || accentColor != self.accentColor {
                 self.imageNode.setSignal(createThemeImage(theme: currentTheme))
                 self.currentTheme = currentTheme
+                self.accentColor = accentColor
             }
         } else {
             if theme != self.theme || accentColor != self.accentColor {
@@ -183,7 +185,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
                 self.accentColor = accentColor
             }
         }
-        if self.currentTheme == nil || currentTheme !== self.currentTheme! || bordered != self.bordered || selected != self.selected {
+        if updatedTheme || bordered != self.bordered || selected != self.selected {
             self.overlayNode.image = generateBorderImage(theme: currentTheme, bordered: bordered, selected: selected)
             self.currentTheme = currentTheme
             self.bordered = bordered
@@ -238,7 +240,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         let applyLayout = makeLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: .clear))
         applyLayout()
         
-        self.overlayNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: CGSize(width: 98.0, height: 62.0))
+        self.overlayNode.frame = CGRect(origin: CGPoint(x: 9.0, y: 13.0), size: CGSize(width: 100.0, height: 64.0))
         self.textNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 14.0 + 60.0 + 4.0 + 9.0), size: CGSize(width: bounds.size.width, height: 16.0))
     }
 }
@@ -295,8 +297,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
     }
     
     func asyncLayout() -> (_ item: ThemeSettingsThemeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let currentItem = self.item
-        
         return { item, params, neighbors in
             let contentSize: CGSize
             let insets: UIEdgeInsets

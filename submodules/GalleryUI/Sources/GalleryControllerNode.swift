@@ -70,7 +70,6 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
                 let completion = { [weak self] in
                     if interfaceAnimationCompleted && contentAnimationCompleted {
                         if let dismiss = self?.dismiss {
-                            self?.scrollView.isScrollEnabled = true
                             dismiss()
                         }
                     }
@@ -123,6 +122,10 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         var previousIndex: Int?
         self.pager.centralItemIndexOffsetUpdated = { [weak self] itemsIndexAndProgress in
             if let strongSelf = self {
+                if abs(strongSelf.scrollView.contentOffset.y - strongSelf.scrollView.contentSize.height / 3.0) > 0.1 {
+                    strongSelf.scrollView.setContentOffset(CGPoint(x: 0.0, y: strongSelf.scrollView.contentSize.height / 3.0), animated: true)
+                }
+                
                 var node: GalleryThumbnailContainerNode?
                 var thumbnailContainerVisible = false
                 if let layout = strongSelf.containerLayout?.1, layout.size.width < layout.size.height {
@@ -402,7 +405,6 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             let completion = { [weak self] in
                 if interfaceAnimationCompleted && contentAnimationCompleted {
                     if let dismiss = self?.dismiss {
-                        self?.scrollView.isScrollEnabled = true
                         dismiss()
                     }
                 }

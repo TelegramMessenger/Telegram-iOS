@@ -191,7 +191,6 @@ open class TabBarController: ViewController {
                     }
                     updatedLayout.intrinsicInsets.bottom = tabBarHeight
                     
-                    
                     strongSelf.controllers[index].containerLayoutUpdated(updatedLayout, transition: .immediate)
                 }
                 let startTime = CFAbsoluteTimeGetCurrent()
@@ -301,7 +300,6 @@ open class TabBarController: ViewController {
                 tabBarHeight = 49.0 + bottomInset
             }
             updatedLayout.intrinsicInsets.bottom = tabBarHeight
-            
             
             currentController.containerLayoutUpdated(updatedLayout, transition: transition)
         }

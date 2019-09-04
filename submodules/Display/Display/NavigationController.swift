@@ -267,10 +267,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let masterWidth: CGFloat = max(320.0, floor(layout.size.width / 3.0))
                 let detailWidth: CGFloat = layout.size.width - masterWidth
                 if index == 0 {
-                    return (CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: masterWidth, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                    return (CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: masterWidth, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
                 } else {
                     let detailFrame = CGRect(origin: CGPoint(x: masterWidth, y: 0.0), size: CGSize(width: detailWidth, height: layout.size.height))
-                    return (CGRect(origin: CGPoint(), size: detailFrame.size), ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: LayoutMetrics(widthClass: .regular, heightClass: .regular), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                    return (CGRect(origin: CGPoint(), size: detailFrame.size), ContainerViewLayout(size: CGSize(width: detailWidth, height: layout.size.height), metrics: LayoutMetrics(widthClass: .regular, heightClass: .regular), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
                 }
             case .single:
                 var heightClass: ContainerViewLayoutSizeClass
@@ -280,7 +280,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     heightClass = .compact
                 }
                 
-                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: heightClass), intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
+                return (CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height), metrics: LayoutMetrics(widthClass: .compact, heightClass: heightClass), deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
         }
     }
     
@@ -434,6 +434,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                 if self.controllerView.sharedStatusBar.view.superview != nil {
                     self.controllerView.sharedStatusBar.removeFromSupernode()
                     self.controllerView.containerView.layer.setTraceableInfo(nil)
+                    
+                    if layout.deviceMetrics.type == .tablet {
+                        self.controllerView.containerView.layer.setTraceableInfo(CATracingLayerInfo(shouldBeAdjustedToInverseTransform: true, userData: self, tracingTag: 0, disableChildrenTracingTags: WindowTracingTags.statusBar | WindowTracingTags.keyboard))
+                    }
                 }
             case .masterDetail:
                 if self.controllerView.sharedStatusBar.view.superview == nil {
@@ -716,7 +720,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         self.updateControllerLayouts(previousControllers: self._viewControllers, layout: layout, transition: transition)
         
         if let presentedViewController = self.presentedViewController {
-            let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, standardInputHeight: layout.standardInputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+            let containedLayout = ContainerViewLayout(size: layout.size, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
             
             if let presentedViewController = presentedViewController as? ContainableController {
                 presentedViewController.containerLayoutUpdated(containedLayout, transition: transition)
@@ -861,7 +865,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let translation = recognizer.translation(in: self.view).x
                     let progress = max(0.0, min(1.0, translation / self.view.frame.width))
                     navigationTransitionCoordinator.progress = progress
-
                 }
             case .ended:
                 if let navigationTransitionCoordinator = self.navigationTransitionCoordinator, !navigationTransitionCoordinator.animatingCompletion {

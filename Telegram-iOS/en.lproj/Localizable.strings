@@ -244,6 +244,7 @@
 "Common.Search" = "Search";
 "Common.More" = "More";
 "Common.Select" = "Select";
+"Items.NOfM" = "%1$@ of %2$@";
 
 // State
 "State.Connecting" = "Connecting...";
@@ -310,6 +311,7 @@
 "LastSeen.HoursAgo_0" = "last seen %@ hours ago";
 "LastSeen.YesterdayAt" = "last seen yesterday at %@";
 "LastSeen.AtDate" = "last seen %@";
+"LastSeen.TodayAt" = "last seen today at %@";
 "LastSeen.Lately" = "last seen recently";
 "LastSeen.WithinAWeek" = "last seen within a week";
 "LastSeen.WithinAMonth" = "last seen within a month";
@@ -4677,17 +4679,49 @@ Any member of this group will be able to see messages in the channel.";
 "EditTheme.EditTitle" = "Edit Theme";
 "EditTheme.Title" = "Theme Name";
 "EditTheme.ShortLink" = "link";
-"EditTheme.ShortLinkInfo" = "Your theme will be updated for all users each time you change it. Anyone can install it using this link.\n\nTheme links must be longer than 5 characters and can use a-z, 0-9 and underscores.";
 "EditTheme.Preview" = "CHAT PREVIEW";
 "EditTheme.UploadNewTheme" = "Create from File...";
 "EditTheme.UploadEditedTheme" = "Update from File...";
-"EditTheme.UploadNewInfo" = "This theme will be based on your current theme and wallpaper. Alternatively, you can use a custom theme file if you already have one.";
-"EditTheme.UploadEditedInfo" = "You can select a new file to update the theme. It will be updated for all users.";
-"EditTheme.ThemeTemplateAlert" = "New Theme Added\n\nPress and hold on your theme to edit it or get a sharing link. Users who install your theme will get automatic updates each time you change it.\n\nFor advanced editing purposes, you can find a file with your theme in Saved Messages.";
+"EditTheme.ThemeTemplateAlertTitle" = "New Theme Added";
+"EditTheme.ThemeTemplateAlertText" = "Press and hold on your theme to edit it or get a sharing link. Users who install your theme will get automatic updates each time you change it.\n\nFor advanced editing purposes, you can find a file with your theme in Saved Messages.";
 "EditTheme.FileReadError" = "Invalid theme file";
+
+"EditTheme.Create.TopInfo" = "The theme will be based on your currently selected colors and wallpaper.";
+"EditTheme.Create.BottomInfo" = "You can also use a manually edited custom theme file.";
+
+"EditTheme.Expand.TopInfo" = "The theme will be based on your currently selected colors and wallpaper.";
+"EditTheme.Expand.BottomInfo" = "You can also use a manually edited custom theme file.";
+
+"EditTheme.Edit.TopInfo" = "Your theme will be updated for all users each time you change it. Anyone can install it using this link.\n\nTheme links must be at least **5** characters long and can use **a-z**, **0-9** and underscores.";
+"EditTheme.Edit.BottomInfo" = "You can select a new file to update the theme. It will be updated for all users.";
+
+"EditTheme.Create.Preview.IncomingReplyName" = "Bob";
+"EditTheme.Create.Preview.IncomingReplyText" = "How does it work?";
+"EditTheme.Create.Preview.IncomingText" = "Use your current colors";
+"EditTheme.Create.Preview.OutgoingText" = "Or upload a theme file";
+
+"EditTheme.Expand.Preview.IncomingReplyName" = "Bob";
+"EditTheme.Expand.Preview.IncomingReplyText" = "How does it work?";
+"EditTheme.Expand.Preview.IncomingText" = "Use your current colors";
+"EditTheme.Expand.Preview.OutgoingText" = "Or upload a theme file";
+
+"EditTheme.Edit.Preview.IncomingReplyName" = "Bob";
+"EditTheme.Edit.Preview.IncomingReplyText" = "How does it work?";
+"EditTheme.Edit.Preview.IncomingText" = "Use your current colors";
+"EditTheme.Edit.Preview.OutgoingText" = "Or upload a theme file";
+
+"EditTheme.ErrorLinkTaken" = "Sorry, this link is already taken";
+"EditTheme.ErrorInvalidCharacters" = "Sorry, this link is invalid.";
 
 "Wallpaper.ErrorNotFound" = "Sorry, this chat background doesn't seem to exist.";
 "Theme.ErrorNotFound" = "Sorry, this color theme doesn't seem to exist.";
 "Theme.Unsupported" = "Sorry, this color theme doesn't support your device yet.";
+
+"Theme.UsersCount_1" = "%@ person is using this theme";
+"Theme.UsersCount_2" = "%@ people are using this theme";
+"Theme.UsersCount_3_10" = "%@ people are using this theme";
+"Theme.UsersCount_any" = "%@ people are using this theme";
+"Theme.UsersCount_many" = "%@ people are using this theme";
+"Theme.UsersCount_0" = "%@ people are using this theme";
 
 "Conversation.SendMessageErrorTooMuchScheduled" = "Sorry, you can not schedule more than 100 messages.";

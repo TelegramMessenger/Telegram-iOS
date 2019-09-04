@@ -705,11 +705,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             updating = $0.updatingAvatar != nil
             return $0
         }
-        
         if updating {
             return
         }
-        
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in

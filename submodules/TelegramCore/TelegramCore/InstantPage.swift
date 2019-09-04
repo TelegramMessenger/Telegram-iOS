@@ -917,7 +917,7 @@ extension InstantPageCaption {
 }
 
 public extension InstantPageListItem {
-    public var num: String? {
+    var num: String? {
         switch self {
             case let .text(_, num):
                 return num

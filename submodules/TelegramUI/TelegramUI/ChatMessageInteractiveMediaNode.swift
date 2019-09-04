@@ -301,7 +301,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                 unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5))
             } else if let wallpaper = media as? WallpaperPreviewMedia {
                 switch wallpaper.content {
-                    case let .file(file, _, isTheme):
+                    case let .file(file, _, isTheme, isSupported):
                         if let thumbnail = file.previewRepresentations.first, var dimensions = file.dimensions {
                             let dimensionsVertical = dimensions.width < dimensions.height
                             let thumbnailVertical = thumbnail.dimensions.width < thumbnail.dimensions.height
@@ -310,7 +310,13 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                             unboundSize = CGSize(width: floor(dimensions.width * 0.5), height: floor(dimensions.height * 0.5)).fitted(CGSize(width: 240.0, height: 240.0))
                         } else if isTheme {
-                            unboundSize = CGSize(width: 160.0, height: 240.0).fitted(CGSize(width: 240.0, height: 240.0))
+                            if isSupported {
+                                unboundSize = CGSize(width: 160.0, height: 240.0).fitted(CGSize(width: 240.0, height: 240.0))
+                            } else if let thumbnail = file.previewRepresentations.first {
+                                unboundSize = CGSize(width: floor(thumbnail.dimensions.width), height: floor(thumbnail.dimensions.height)).fitted(CGSize(width: 240.0, height: 240.0))
+                            } else {
+                                unboundSize = CGSize(width: 54.0, height: 54.0)
+                            }
                         } else {
                             unboundSize = CGSize(width: 54.0, height: 54.0)
                         }
@@ -430,7 +436,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     } else {
                         emptyColor = message.effectivelyIncoming(context.account.peerId) ? theme.chat.message.incoming.mediaPlaceholderColor : theme.chat.message.outgoing.mediaPlaceholderColor
                     }
-                    if let wallpaper = media as? WallpaperPreviewMedia, case let .file(_, patternColor, _) = wallpaper.content {
+                    if let wallpaper = media as? WallpaperPreviewMedia, case let .file(_, patternColor, _, _) = wallpaper.content {
                         emptyColor = patternColor ?? UIColor(rgb: 0xd6e2ee, alpha: 0.5)
                     }
                     
@@ -560,7 +566,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else if let wallpaper = media as? WallpaperPreviewMedia {
                             updateImageSignal = { synchronousLoad in
                                 switch wallpaper.content {
-                                    case let .file(file, _, isTheme):
+                                    case let .file(file, _, isTheme, _):
                                         if isTheme {
                                             return themeImage(account: context.account, accountManager: context.sharedContext.accountManager, fileReference: FileMediaReference.message(message: MessageReference(message), media: file))
                                         } else {
@@ -576,7 +582,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }
                             }
                             
-                            if case let .file(file, _, _) = wallpaper.content {
+                            if case let .file(file, _, _, _) = wallpaper.content {
                                 updatedFetchControls = FetchControls(fetch: { manual in
                                     if let strongSelf = self {
                                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).start())
@@ -620,7 +626,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                         } else if let wallpaper = media as? WallpaperPreviewMedia {
                             switch wallpaper.content {
-                                case let .file(file, _, _):
+                                case let .file(file, _, _, _):
                                     updatedStatusSignal = messageMediaFileStatus(context: context, messageId: message.id, file: file)
                                     |> map { resourceStatus -> (MediaResourceStatus, MediaResourceStatus?) in
                                         return (resourceStatus, nil)
@@ -826,7 +832,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                         }
                                         strongSelf.fetchDisposable.set(visibilityAwareFetchSignal.start())
                                     }
-                                } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming {
+                                } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming && message.id.namespace != Namespaces.Message.Local {
                                     if let file = media as? TelegramMediaFile {
                                         let fetchSignal = preloadVideoResource(postbox: context.account.postbox, resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), duration: 4.0)
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()

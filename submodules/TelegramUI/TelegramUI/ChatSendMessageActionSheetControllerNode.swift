@@ -371,7 +371,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             
             let inputHeight = layout.inputHeight ?? 0.0
             var clipDelta = delta
-            if inputHeight.isZero {
+            if inputHeight.isZero || layout.isNonExclusive {
                 clipDelta -= self.contentContainerNode.frame.height + 16.0
             }
             
@@ -385,9 +385,14 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             self.messageBackgroundNode.layer.animateBounds(from: fromFrame, to: self.messageBackgroundNode.bounds, duration: duration, timingFunction: kCAMediaTimingFunctionSpring)
             self.messageBackgroundNode.layer.animatePosition(from: CGPoint(x: (initialWidth - self.messageClipNode.bounds.width) / 2.0, y: delta), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
            
-            let textOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
-            self.fromMessageTextNode.layer.animatePosition(from: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-            self.toMessageTextNode.layer.animatePosition(from: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            
+            var textXOffset: CGFloat = 0.0
+            let textYOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
+            if self.textInputNode.textView.numberOfLines == 1 && self.textInputNode.isRTL {
+                textXOffset = initialWidth - self.messageClipNode.bounds.width
+            }
+            self.fromMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+            self.toMessageTextNode.layer.animatePosition(from: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), to: CGPoint(), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
             let springDuration: Double = 0.42
             let springDamping: CGFloat = 104.0
@@ -467,7 +472,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             
             let inputHeight = layout.inputHeight ?? 0.0
             var clipDelta = delta
-            if inputHeight.isZero {
+            if inputHeight.isZero || layout.isNonExclusive {
                 clipDelta -= self.contentContainerNode.frame.height + 16.0
             }
             
@@ -481,9 +486,13 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
                 self.messageBackgroundNode.layer.animateBounds(from: self.messageBackgroundNode.bounds, to: toFrame, duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
                 self.messageBackgroundNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: (initialWidth - self.messageClipNode.bounds.width) / 2.0, y: delta), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
                 
-                let textOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
-                self.fromMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                self.toMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: delta * 2.0 + textOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                var textXOffset: CGFloat = 0.0
+                let textYOffset = self.textInputNode.textView.contentSize.height - self.textInputNode.textView.contentOffset.y - self.textInputNode.textView.frame.height
+                if self.textInputNode.textView.numberOfLines == 1 && self.textInputNode.isRTL {
+                    textXOffset = initialWidth - self.messageClipNode.bounds.width
+                }
+                self.fromMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+                self.toMessageTextNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: textXOffset, y: delta * 2.0 + textYOffset), duration: duration, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
             } else {
                 completedBubble = true
             }
@@ -528,7 +537,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         let contentOffset = self.scrollNode.view.contentOffset.y
         
         var contentOrigin = CGPoint(x: layout.size.width - sideInset - contentSize.width - layout.safeInsets.right, y: layout.size.height - 6.0 - insets.bottom - contentSize.height)
-        if inputHeight > 0.0 {
+        if inputHeight > 0.0 && !layout.isNonExclusive {
             contentOrigin.y += menuHeightWithInset
         }
         contentOrigin.y = min(contentOrigin.y + contentOffset, layout.size.height - 6.0 - layout.intrinsicInsets.bottom - contentSize.height)
@@ -543,7 +552,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         
         let initialSendButtonFrame = self.sendButtonFrame
         var sendButtonFrame = CGRect(origin: CGPoint(x: layout.size.width - initialSendButtonFrame.width + 1.0 - UIScreenPixel - layout.safeInsets.right, y: layout.size.height - insets.bottom - initialSendButtonFrame.height), size: initialSendButtonFrame.size)
-        if inputHeight.isZero {
+        if inputHeight.isZero || layout.isNonExclusive {
             sendButtonFrame.origin.y -= menuHeightWithInset
         }
         sendButtonFrame.origin.y = min(sendButtonFrame.origin.y + contentOffset, layout.size.height - layout.intrinsicInsets.bottom - initialSendButtonFrame.height)
@@ -553,7 +562,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         messageFrame.size.width += 32.0
         messageFrame.origin.x -= 13.0
         messageFrame.origin.y = layout.size.height - messageFrame.origin.y - messageFrame.size.height - 1.0
-        if inputHeight.isZero {
+        if inputHeight.isZero || layout.isNonExclusive {
             messageFrame.origin.y += menuHeightWithInset
         }
         
@@ -561,9 +570,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
             messageFrame.size.width = ceil(layout.size.width - messageFrame.origin.x - sendButtonFrame.width - layout.safeInsets.left - layout.safeInsets.right + 8.0)
         }
         
+        var messageOriginDelta: CGFloat = 0.0
         if self.textInputNode.textView.numberOfLines == 1 || self.textInputNode.textView.attributedText.string.isEmpty {
             let textWidth = min(self.toMessageTextNode.textView.sizeThatFits(layout.size).width + 36.0, messageFrame.width)
-            messageFrame.origin.x += messageFrame.width - textWidth
+            messageOriginDelta = messageFrame.width - textWidth
+            messageFrame.origin.x += messageOriginDelta
             messageFrame.size.width = textWidth
         }
         
@@ -587,6 +598,11 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         var textFrame = self.textFieldFrame
         textFrame.origin = CGPoint(x: 13.0, y: 6.0 - UIScreenPixel)
         textFrame.size.height = self.textInputNode.textView.contentSize.height
+        
+        if self.textInputNode.isRTL {
+            textFrame.origin.x -= messageOriginDelta
+        }
+        
         self.fromMessageTextNode.frame = textFrame
         self.toMessageTextNode.frame = textFrame
         

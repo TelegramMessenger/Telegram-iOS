@@ -14,7 +14,6 @@
 #import "TGModernConversationInputMicButton.h"
 
 static const CGFloat TGVideoScrubberMinimumTrimDuration = 1.0f;
-static const CGFloat TGVideoScrubberZoomActivationInterval = 0.25f;
 static const CGFloat TGVideoScrubberTrimRectEpsilon = 3.0f;
 
 typedef enum

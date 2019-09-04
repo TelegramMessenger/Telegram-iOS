@@ -60,7 +60,7 @@ class InstantImageGalleryItem: GalleryItem {
         node.setImage(imageReference: self.imageReference)
     
         if let location = self.location {
-            node._title.set(.single("\(location.position + 1) \(self.presentationData.strings.Common_of) \(location.totalCount)"))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.position + 1)", "\(location.totalCount)").0))
         }
         
         node.setCaption(self.caption, credit: self.credit)
@@ -71,7 +71,7 @@ class InstantImageGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode) {
         if let node = node as? InstantImageGalleryItemNode {
             if let location = self.location {
-                node._title.set(.single("\(location.position + 1) \(self.presentationData.strings.Common_of) \(location.totalCount)"))
+                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(location.position + 1)", "\(location.totalCount)").0))
             }
             
             node.setCaption(self.caption, credit: self.credit)

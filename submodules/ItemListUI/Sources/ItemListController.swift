@@ -542,16 +542,16 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     }
     
     public func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
-        guard let layout = self.validLayout else {
+        guard let layout = self.validLayout, case .phone = layout.deviceMetrics.type else {
             return nil
         }
         
         let boundsSize = self.view.bounds.size
         let contentSize: CGSize
-        if let metrics = DeviceMetrics.forScreenSize(layout.size) {
-            contentSize = metrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
-        } else {
+        if case .unknown = layout.deviceMetrics {
             contentSize = boundsSize
+        } else {
+            contentSize = layout.deviceMetrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
         }
         
         var selectedNode: ItemListItemNode?
@@ -567,7 +567,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
             
             if let controller = self.previewItemWithTag?(tag) {
                 if let controller = controller as? ContainableController {
-                    controller.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+                    controller.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                 }
                 return (controller, sourceRect)
             } else {

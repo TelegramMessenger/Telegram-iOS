@@ -9,6 +9,7 @@ import AvatarNode
 import AccountContext
 import LocalizedPeerData
 
+private let animationDurationFactor: Double = 1.0
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 
 private protocol AbstractSwitchAccountItemNode {
@@ -216,6 +217,8 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
     private let cancel: () -> Void
     
     private let effectView: UIVisualEffectView
+    private var propertyAnimator: AnyObject?
+    private var displayLinkAnimator: DisplayLinkAnimator?
     private let dimNode: ASDisplayNode
     
     private let contentContainerNode: ASDisplayNode
@@ -284,41 +287,44 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
         self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
     }
     
+    deinit {
+        if let propertyAnimator = self.propertyAnimator {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+                propertyAnimator?.stopAnimation(true)
+            }
+        }
+    }
+    
     func animateIn() {
-        UIView.animate(withDuration: 0.3, animations: {
-            if #available(iOS 9.0, *) {
-                if self.presentationData.theme.rootController.keyboardColor == .dark {
-                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                        self.effectView.effect = UIBlurEffect(style: .regular)
-                        if self.effectView.subviews.count == 2 {
-                            self.effectView.subviews[1].isHidden = true
-                        }
-                    } else {
-                        self.effectView.effect = UIBlurEffect(style: .dark)
-                    }
-                } else {
-                    if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                        self.effectView.effect = UIBlurEffect(style: .regular)
-                    } else {
-                        self.effectView.effect = UIBlurEffect(style: .light)
-                    }
-                }
-            } else {
-                self.effectView.alpha = 1.0
+        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
+        if #available(iOS 10.0, *) {
+            if let propertyAnimator = self.propertyAnimator {
+                let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+                propertyAnimator?.stopAnimation(true)
             }
-        }, completion: { [weak self] _ in
-            guard let strongSelf = self else {
-                return
+            self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2 * animationDurationFactor, curve: .easeInOut, animations: { [weak self] in
+                self?.effectView.effect = makeCustomZoomBlurEffect()
+            })
+        }
+        
+        if let _ = self.propertyAnimator {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.2 * animationDurationFactor, from: 0.0, to: 1.0, update: { [weak self] value in
+                    (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
+                }, completion: {
+                })
             }
-            if strongSelf.presentationData.theme.rootController.keyboardColor == .dark {
-                if strongSelf.effectView.subviews.count == 2 {
-                    strongSelf.effectView.subviews[1].isHidden = true
-                }
-            }
-        })
-        self.effectView.subviews[1].layer.removeAnimation(forKey: "backgroundColor")
-        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-        self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.08)
+        } else {
+            UIView.animate(withDuration: 0.2 * animationDurationFactor, animations: {
+                self.effectView.effect = makeCustomZoomBlurEffect()
+            }, completion: { _ in
+            })
+        }
+        
+        self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        
         if let _ = self.validLayout, let sourceNode = self.sourceNodes.first {
             let sourceFrame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
             self.contentContainerNode.layer.animateFrame(from: sourceFrame, to: self.contentContainerNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
@@ -354,23 +360,52 @@ final class TabBarAccountSwitchControllerNode: ViewControllerTracingNode {
             }
         }
         
-        UIView.animate(withDuration: 0.3, animations: {
-            if #available(iOS 9.0, *) {
-                self.effectView.effect = nil
-            } else {
-                self.effectView.alpha = 0.0
+        if #available(iOS 10.0, *) {
+            if let propertyAnimator = self.propertyAnimator {
+                let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+                propertyAnimator?.stopAnimation(true)
             }
-        }, completion: { [weak self] _ in
-            if let strongSelf = self {
-                for sourceNode in strongSelf.sourceNodes {
-                    sourceNode.alpha = 1.0
+            self.propertyAnimator = UIViewPropertyAnimator(duration: 0.2, curve: .easeInOut, animations: { [weak self] in
+                self?.effectView.effect = nil
+            })
+        }
+        
+        if let _ = self.propertyAnimator {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.2 * animationDurationFactor, from: 0.0, to: 0.999, update: { [weak self] value in
+                    (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
+                    }, completion: { [weak self] in
+                        if let strongSelf = self {
+                            for sourceNode in strongSelf.sourceNodes {
+                                sourceNode.alpha = 1.0
+                            }
+                        }
+                        
+                        completedEffect = true
+                        intermediateCompletion()
+                })
+            }
+            self.effectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.05 * animationDurationFactor, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
+        } else {
+            UIView.animate(withDuration: 0.21 * animationDurationFactor, animations: {
+                if #available(iOS 9.0, *) {
+                    self.effectView.effect = nil
+                } else {
+                    self.effectView.alpha = 0.0
                 }
-            }
-            
-            completedEffect = true
-            intermediateCompletion()
-        })
-        self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            }, completion: { [weak self] _ in
+                if let strongSelf = self {
+                    for sourceNode in strongSelf.sourceNodes {
+                        sourceNode.alpha = 1.0
+                    }
+                }
+                
+                completedEffect = true
+                intermediateCompletion()
+            })
+        }
+        
+        self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.contentContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.12, removeOnCompletion: false, completion: { _ in
         })
         if let _ = self.validLayout, let sourceNode = self.sourceNodes.first {

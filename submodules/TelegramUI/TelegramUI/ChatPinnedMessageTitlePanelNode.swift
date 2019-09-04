@@ -110,8 +110,8 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.theme = interfaceState.theme
             self.closeButton.setImage(PresentationResourcesChat.chatInputPanelCloseIconImage(interfaceState.theme), for: [])
             self.lineNode.image = PresentationResourcesChat.chatInputPanelVerticalSeparatorLineImage(interfaceState.theme)
-            self.backgroundColor = interfaceState.theme.rootController.navigationBar.backgroundColor
-            self.separatorNode.backgroundColor = interfaceState.theme.rootController.navigationBar.separatorColor
+            self.backgroundColor = interfaceState.theme.chat.historyNavigation.fillColor
+            self.separatorNode.backgroundColor = interfaceState.theme.chat.historyNavigation.strokeColor
         }
         
         var messageUpdated = false

@@ -106,7 +106,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
             insets.top += toolbarHeight - 4.0
             let chatSize = CGSize(width: layout.size.width, height: layout.size.height)
             transition.updateFrame(node: chatController.displayNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: chatSize))
-            chatController.containerLayoutUpdated(ContainerViewLayout(size: chatSize, metrics: layout.metrics, intrinsicInsets: UIEdgeInsets(top: insets.top, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+            chatController.containerLayoutUpdated(ContainerViewLayout(size: chatSize, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: insets.top, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), safeInsets: layout.safeInsets, statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             
             if chatController.displayNode.supernode == nil {
                 chatController.viewWillAppear(false)

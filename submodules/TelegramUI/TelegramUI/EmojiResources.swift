@@ -201,7 +201,7 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
 }
 
 func messageIsElligibleForLargeEmoji(_ message: Message) -> Bool {
-    if message.media.isEmpty && !message.text.isEmpty && message.text.containsOnlyEmoji && message.text.emojis.count < 4 {
+    if !message.text.isEmpty && message.text.containsOnlyEmoji && message.text.emojis.count < 4 {
         var messageEntities: [MessageTextEntity]?
         for attribute in message.attributes {
             if let attribute = attribute as? TextEntitiesMessageAttribute {

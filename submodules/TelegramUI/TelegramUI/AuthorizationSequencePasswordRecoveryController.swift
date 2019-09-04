@@ -42,7 +42,7 @@ final class AuthorizationSequencePasswordRecoveryController: ViewController {
         
         self.hasActiveInput = true
         
-        self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
         self.attemptNavigation = { _ in
             return false

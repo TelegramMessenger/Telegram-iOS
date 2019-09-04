@@ -25,16 +25,18 @@ public final class ThemePreviewController: ViewController {
     private let previewTheme: PresentationTheme
     private let source: ThemePreviewSource
     private let theme = Promise<TelegramTheme?>()
+    private let presentationTheme = Promise<PresentationTheme>()
     
     private var controllerNode: ThemePreviewControllerNode {
         return self.displayNode as! ThemePreviewControllerNode
     }
-    
+        
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var disposable: Disposable?
     private var applyDisposable = MetaDisposable()
 
     public init(context: AccountContext, previewTheme: PresentationTheme, source: ThemePreviewSource) {
@@ -43,6 +45,7 @@ public final class ThemePreviewController: ViewController {
         self.source = source
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationTheme.set(.single(previewTheme))
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
@@ -57,23 +60,47 @@ public final class ThemePreviewController: ViewController {
                 return .single(nil)
             })
             themeName = previewTheme.name.string
+            
+            self.presentationTheme.set(.single(self.previewTheme)
+            |> then(
+                self.theme.get()
+                |> mapToSignal { theme in
+                    if let file = theme?.file {
+                        return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: file.resource)
+                        |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
+                            guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
+                                return .complete()
+                            }
+                            return .single(presentationTheme)
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+            ))
         } else {
             self.theme.set(.single(nil))
             themeName = previewTheme.name.string
         }
         
-        if let author = previewTheme.author {
-            let titleView = CounterContollerTitleView(theme: self.previewTheme)
-            titleView.title = CounterContollerTitle(title: themeName, counter: author)
-            self.navigationItem.titleView = titleView
-        } else {
-            self.title = themeName
-        }
+        let titleView = CounterContollerTitleView(theme: self.previewTheme)
+        titleView.title = CounterContollerTitle(title: themeName, counter: " ")
+        self.navigationItem.titleView = titleView
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
+        
+        self.disposable = (combineLatest(self.theme.get(), self.presentationTheme.get())
+        |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
+            if let strongSelf = self, let theme = theme {
+                let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
+                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+                strongSelf.navigationItem.titleView = titleView
+                strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
+            }
+        })
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -89,6 +116,7 @@ public final class ThemePreviewController: ViewController {
     
     deinit {
         self.presentationDataDisposable?.dispose()
+        self.disposable?.dispose()
         self.applyDisposable.dispose()
     }
     
@@ -119,7 +147,7 @@ public final class ThemePreviewController: ViewController {
         
         let previewTheme = self.previewTheme
         if case let .file(file) = previewTheme.chat.defaultWallpaper, file.id == 0 {
-            self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug)
+            self.controllerNode.wallpaperPromise.set(cachedWallpaper(account: self.context.account, slug: file.slug, settings: file.settings)
             |> mapToSignal { wallpaper in
                 return .single(wallpaper?.wallpaper ?? .color(Int32(bitPattern: previewTheme.chatList.backgroundColor.rgb)))
             })
@@ -270,7 +298,7 @@ public final class ThemePreviewController: ViewController {
             }
         }
         |> runOn(Queue.mainQueue())
-        |> delay(0.7, queue: Queue.mainQueue())
+        |> delay(0.35, queue: Queue.mainQueue())
         
         let progressDisposable = progressSignal.start()
         cancelImpl = {

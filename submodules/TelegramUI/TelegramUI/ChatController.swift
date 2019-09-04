@@ -527,6 +527,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             if let messages = strongSelf.chatDisplayNode.historyNode.messageGroupInCurrentHistoryView(message.id) {
                 (strongSelf.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
+                strongSelf.chatDisplayNode.cancelInteractiveKeyboardGestures()
                 var updatedMessages = messages
                 for i in 0 ..< updatedMessages.count {
                     if updatedMessages[i].id == message.id {
@@ -1554,10 +1555,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let controller = ChatScheduleTimeController(context: strongSelf.context, mode: mode, minimalTime: strongSelf.presentationInterfaceState.slowmodeState?.timeout, completion: { [weak self] scheduleTime in
                     if let strongSelf = self {
-                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime)
-                        if !strongSelf.presentationInterfaceState.isScheduledMessages {
-                            strongSelf.openScheduledMessages()
-                        }
+                        strongSelf.chatDisplayNode.sendCurrentMessage(scheduleTime: scheduleTime, completion: { [weak self] in
+                            if let strongSelf = self, !strongSelf.presentationInterfaceState.isScheduledMessages {
+                                strongSelf.openScheduledMessages()
+                            }
+                        })
                     }
                 })
                 strongSelf.chatDisplayNode.dismissInput()
@@ -2985,7 +2987,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             } else {
                                 var isScheduled = false
                                 for id in messageIds {
-                                    if [Namespaces.Message.ScheduledCloud, Namespaces.Message.ScheduledLocal].contains(id.namespace) {
+                                    if Namespaces.Message.allScheduled.contains(id.namespace) {
                                         isScheduled = true
                                         break
                                     }
@@ -3484,11 +3486,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let icon: UIImage?
-            switch DeviceMetrics.forScreenSize(layout.size) {
-                case .iPhoneX?, .iPhoneXSMax?:
-                    icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX")
-                default:
-                    icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIcon")
+            if layout.deviceMetrics.hasTopNotch {
+                icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX")
+            } else {
+                icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIcon")
             }
             if let location = location, let icon = icon {
                 strongSelf.videoUnmuteTooltipController?.dismiss()
@@ -3959,13 +3960,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
                 }
                 
-                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, sendButtonFrame: sendButtonFrame, textInputNode: textInputNode, completion: { [weak self] in
+                let controller = ChatSendMessageActionSheetController(context: strongSelf.context, controllerInteraction: strongSelf.controllerInteraction, interfaceState: strongSelf.presentationInterfaceState, sendButtonFrame: strongSelf.chatDisplayNode.convert(sendButtonFrame, to: nil), textInputNode: textInputNode, completion: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
                     }
                 })
                 strongSelf.sendMessageActionsController = controller
-                strongSelf.presentInGlobalOverlay(controller, with: nil)
+                if layout.isNonExclusive {
+                    strongSelf.present(controller, in: .window(.root))
+                } else {
+                    strongSelf.presentInGlobalOverlay(controller, with: nil)
+                }
             }
         }, openScheduledMessages: { [weak self] in
             if let strongSelf = self {
@@ -3975,90 +3980,93 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         switch self.chatLocation {
             case let .peer(peerId):
-                let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
-                let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
-                self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
-                |> deliverOnMainQueue).start(next: { [weak self] views in
-                    if let strongSelf = self {
-                        var unreadCount: Int32 = 0
-                        var totalChatCount: Int32 = 0
-                        
-                        let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
-                        if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
-                            if let count = view.count(for: .peer(peerId)) {
-                                unreadCount = count
-                            }
-                            if let (_, state) = view.total() {
-                                let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
-                                totalChatCount = count
-                            }
-                        }
-                        
-                        strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
-                        
-                        if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
-                            var globalRemainingUnreadChatCount = totalChatCount
-                            if !notificationSettings.isRemovedFromTotalUnreadCount && unreadCount > 0 {
-                                if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
-                                    globalRemainingUnreadChatCount -= unreadCount
-                                } else {
-                                    globalRemainingUnreadChatCount -= 1
+                if let subject = self.subject, case .scheduledMessages = subject {
+                } else {
+                    let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
+                    let notificationSettingsKey: PostboxViewKey = .peerNotificationSettings(peerIds: Set([peerId]))
+                    self.chatUnreadCountDisposable = (self.context.account.postbox.combinedView(keys: [unreadCountsKey, notificationSettingsKey])
+                    |> deliverOnMainQueue).start(next: { [weak self] views in
+                        if let strongSelf = self {
+                            var unreadCount: Int32 = 0
+                            var totalChatCount: Int32 = 0
+                            
+                            let inAppSettings = strongSelf.context.sharedContext.currentInAppNotificationSettings.with { $0 }
+                            if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
+                                if let count = view.count(for: .peer(peerId)) {
+                                    unreadCount = count
+                                }
+                                if let (_, state) = view.total() {
+                                    let (count, _) = renderedTotalUnreadCount(inAppSettings: inAppSettings, totalUnreadState: state)
+                                    totalChatCount = count
                                 }
                             }
                             
-                            if globalRemainingUnreadChatCount > 0 {
-                                strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
-                            } else {
-                                strongSelf.navigationItem.badge = ""
-                            }
-                        }
-                    }
-                })
-            
-                self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesCount(peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] count in
-                    if let strongSelf = self {
-                        strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
-                    }
-                })
-                
-                let postbox = self.context.account.postbox
-                let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
-                self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: peerId)
-                |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
-                    var foundAllPeers = true
-                    var cachedResult: [(Peer, PeerInputActivity)] = []
-                    previousPeerCache.with { dict -> Void in
-                        for (peerId, activity) in activities {
-                            if let peer = dict[peerId] {
-                                cachedResult.append((peer, activity))
-                            } else {
-                                foundAllPeers = false
-                                break
-                            }
-                        }
-                    }
-                    if foundAllPeers {
-                        return .single(cachedResult)
-                    } else {
-                        return postbox.transaction { transaction -> [(Peer, PeerInputActivity)] in
-                            var result: [(Peer, PeerInputActivity)] = []
-                            var peerCache: [PeerId: Peer] = [:]
-                            for (peerId, activity) in activities {
-                                if let peer = transaction.getPeer(peerId) {
-                                    result.append((peer, activity))
-                                    peerCache[peerId] = peer
+                            strongSelf.chatDisplayNode.navigateButtons.unreadCount = unreadCount
+                            
+                            if let view = views.views[notificationSettingsKey] as? PeerNotificationSettingsView, let notificationSettings = view.notificationSettings[peerId] {
+                                var globalRemainingUnreadChatCount = totalChatCount
+                                if !notificationSettings.isRemovedFromTotalUnreadCount && unreadCount > 0 {
+                                    if case .messages = inAppSettings.totalUnreadCountDisplayCategory {
+                                        globalRemainingUnreadChatCount -= unreadCount
+                                    } else {
+                                        globalRemainingUnreadChatCount -= 1
+                                    }
+                                }
+                                
+                                if globalRemainingUnreadChatCount > 0 {
+                                    strongSelf.navigationItem.badge = "\(globalRemainingUnreadChatCount)"
+                                } else {
+                                    strongSelf.navigationItem.badge = ""
                                 }
                             }
-                            let _ = previousPeerCache.swap(peerCache)
-                            return result
+                        }
+                    })
+                
+                    self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesCount(peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] count in
+                        if let strongSelf = self {
+                            strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
+                        }
+                    })
+                    
+                    let postbox = self.context.account.postbox
+                    let previousPeerCache = Atomic<[PeerId: Peer]>(value: [:])
+                    self.peerInputActivitiesDisposable = (self.context.account.peerInputActivities(peerId: peerId)
+                    |> mapToSignal { activities -> Signal<[(Peer, PeerInputActivity)], NoError> in
+                        var foundAllPeers = true
+                        var cachedResult: [(Peer, PeerInputActivity)] = []
+                        previousPeerCache.with { dict -> Void in
+                            for (peerId, activity) in activities {
+                                if let peer = dict[peerId] {
+                                    cachedResult.append((peer, activity))
+                                } else {
+                                    foundAllPeers = false
+                                    break
+                                }
+                            }
+                        }
+                        if foundAllPeers {
+                            return .single(cachedResult)
+                        } else {
+                            return postbox.transaction { transaction -> [(Peer, PeerInputActivity)] in
+                                var result: [(Peer, PeerInputActivity)] = []
+                                var peerCache: [PeerId: Peer] = [:]
+                                for (peerId, activity) in activities {
+                                    if let peer = transaction.getPeer(peerId) {
+                                        result.append((peer, activity))
+                                        peerCache[peerId] = peer
+                                    }
+                                }
+                                let _ = previousPeerCache.swap(peerCache)
+                                return result
+                            }
                         }
                     }
+                    |> deliverOnMainQueue).start(next: { [weak self] activities in
+                        if let strongSelf = self {
+                            strongSelf.chatTitleView?.inputActivities = (peerId, activities)
+                        }
+                    })
                 }
-                |> deliverOnMainQueue).start(next: { [weak self] activities in
-                    if let strongSelf = self {
-                        strongSelf.chatTitleView?.inputActivities = (peerId, activities)
-                    }
-                })
                 
                 self.sentMessageEventsDisposable.set(self.context.account.pendingMessageManager.deliveredMessageEvents(peerId: peerId).start(next: { [weak self] _ in
                     if let strongSelf = self {
@@ -5534,8 +5542,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     for i in (0 ..< attributes.count).reversed() {
                         if attributes[i] is NotificationInfoMessageAttribute {
                             attributes.remove(at: i)
-                        }
-                        if let _ = scheduleTime, attributes[i] is OutgoingScheduleInfoMessageAttribute {
+                        } else if let _ = scheduleTime, attributes[i] is OutgoingScheduleInfoMessageAttribute {
                             attributes.remove(at: i)
                         }
                     }
@@ -6905,6 +6912,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     func avatarPreviewingController(from sourceView: UIView) -> (UIViewController, CGRect)? {
+        guard let layout = self.validLayout else {
+            return nil
+        }
         guard let buttonView = (self.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.avatarNode.view else {
             return nil
         }
@@ -6912,14 +6922,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             let galleryController = AvatarGalleryController(context: self.context, peer: peer, remoteEntries: nil, replaceRootController: { controller, ready in
             }, synchronousLoad: true)
             galleryController.setHintWillBePresentedInPreviewingContext(true)
-            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+            galleryController.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             return (galleryController, buttonView.convert(buttonView.bounds, to: sourceView))
         }
         return nil
     }
     
     func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
-        guard let view =  self.chatDisplayNode.view.hitTest(location, with: nil), view.isDescendant(of: self.chatDisplayNode.historyNode.view) else {
+        guard let layout = self.validLayout, case .phone = layout.deviceMetrics.type, let view = self.chatDisplayNode.view.hitTest(location, with: nil), view.isDescendant(of: self.chatDisplayNode.historyNode.view) else {
             return nil
         }
         
@@ -6953,7 +6963,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     gallery.setHintWillBePresentedInPreviewingContext(true)
                                     let rect = selectedTransitionNode.0.view.convert(selectedTransitionNode.0.bounds, to: sourceView)
                                     let sourceRect = rect.insetBy(dx: -2.0, dy: -2.0)
-                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+                                    gallery.containerLayoutUpdated(ContainerViewLayout(size: CGSize(width: self.view.bounds.size.width, height: self.view.bounds.size.height), metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                                     return (gallery, sourceRect)
                                 case .instantPage:
                                     break

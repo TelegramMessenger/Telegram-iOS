@@ -455,7 +455,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
         
         if let (item, previousItem, nextItem, order, type, _) = self.playlistStateAndType, !mediaAccessoryPanelHidden {
             let panelHeight = MediaNavigationAccessoryHeaderNode.minimizedHeight
-            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight + UIScreenPixel)), size: CGSize(width: layout.size.width, height: panelHeight))
+            let panelFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationHeight.isZero ? -panelHeight : (navigationHeight + additionalHeight)), size: CGSize(width: layout.size.width, height: panelHeight))
             if let (mediaAccessoryPanel, mediaType) = self.mediaAccessoryPanel, mediaType == type {
                 transition.updateFrame(layer: mediaAccessoryPanel.layer, frame: panelFrame)
                 mediaAccessoryPanel.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
@@ -615,7 +615,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                 if let dismissingPanel = self.dismissingPanel {
                     self.displayNode.insertSubnode(mediaAccessoryPanel, aboveSubnode: dismissingPanel)
                 } else if let navigationBar = self.navigationBar {
-                    self.displayNode.insertSubnode(mediaAccessoryPanel, aboveSubnode: navigationBar)
+                    self.displayNode.insertSubnode(mediaAccessoryPanel, belowSubnode: navigationBar)
                 } else {
                     self.displayNode.addSubnode(mediaAccessoryPanel)
                 }

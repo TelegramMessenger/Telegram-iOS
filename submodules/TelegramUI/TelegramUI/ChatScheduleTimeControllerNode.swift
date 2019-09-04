@@ -125,7 +125,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         let pickerView = UIDatePicker()
         pickerView.timeZone = TimeZone(secondsFromGMT: 0)
         pickerView.datePickerMode = .dateAndTime
-        pickerView.locale = localeWithStrings(self.presentationData.strings)
+        pickerView.locale = Locale.current
         pickerView.timeZone = TimeZone.current
         pickerView.minuteInterval = 1
         pickerView.setValue(self.presentationData.theme.actionSheet.primaryTextColor, forKey: "textColor")

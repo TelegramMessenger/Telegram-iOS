@@ -388,18 +388,18 @@ public class ContactsController: ViewController {
     }
     
     func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
-        guard let layout = self.validLayout, case .compact = layout.metrics.widthClass else {
+        guard let layout = self.validLayout, case .phone = layout.deviceMetrics.type else {
             return nil
         }
         
         let boundsSize = self.view.bounds.size
         let contentSize: CGSize
-        if let metrics = DeviceMetrics.forScreenSize(layout.size) {
-            contentSize = metrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
-        } else {
+        if case .unknown = layout.deviceMetrics {
             contentSize = boundsSize
+        } else {
+            contentSize = layout.deviceMetrics.previewingContentSize(inLandscape: boundsSize.width > boundsSize.height)
         }
-        
+
         var selectedNode: ContactsPeerItemNode?
         
         if let searchController = self.contactsNode.searchDisplayController {
@@ -435,7 +435,7 @@ public class ContactsController: ViewController {
                 if peer.id.namespace != Namespaces.Peer.SecretChat {
                     let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
-                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, standardInputHeight: 216.0, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
+                    chatController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatController, sourceRect)
                 } else {
                     return nil

@@ -56,7 +56,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         let node = UniversalVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
         
         if let indexData = self.indexData {
-            node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
         }
         
         node.setupItem(self)
@@ -67,7 +67,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     public func updateNode(node: GalleryItemNode) {
         if let node = node as? UniversalVideoGalleryItemNode {
             if let indexData = self.indexData {
-                node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
+                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
             }
             
             node.setupItem(self)
@@ -345,6 +345,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.dismissOnOrientationChange = item.landscape
             
+            var disablePictureInPicture = false
             var disablePlayerControls = false
             var isAnimated = false
             if let content = item.content as? NativeVideoContent {
@@ -397,6 +398,10 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             self.requiresDownload = true
             var mediaFileStatus: Signal<MediaResourceStatus?, NoError> = .single(nil)
             if let contentInfo = item.contentInfo, case let .message(message) = contentInfo {
+                if Namespaces.Message.allScheduled.contains(message.id.namespace) {
+                    disablePictureInPicture = true
+                }
+                
                 var file: TelegramMediaFile?
                 var isWebpage = false
                 for m in message.media {
@@ -526,7 +531,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             self.zoomableContent = (videoSize, videoNode)
             
-            if !isAnimated && !disablePlayerControls {
+            if !isAnimated && !disablePlayerControls && !disablePictureInPicture {
                 let rightBarButtonItem = UIBarButtonItem(image: pictureInPictureButtonImage, style: .plain, target: self, action: #selector(self.pictureInPictureButtonPressed))
                 self._rightBarButtonItem.set(.single(rightBarButtonItem))
             }

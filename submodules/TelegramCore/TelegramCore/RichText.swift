@@ -259,7 +259,7 @@ public indirect enum RichText: PostboxCoding, Equatable {
 }
 
 public extension RichText {
-    public var plainText: String {
+    var plainText: String {
         switch self {
             case .empty:
                 return ""

@@ -11,6 +11,7 @@ import TelegramStringFormatting
 import AccountContext
 import DeviceLocationManager
 import Geocoding
+import WallpaperResources
 
 private enum TriggerMode {
     case none
@@ -24,14 +25,16 @@ private enum TimeBasedManualField {
 }
 
 private final class ThemeAutoNightSettingsControllerArguments {
+    let context: AccountContext
     let updateMode: (TriggerMode) -> Void
     let updateTimeBasedAutomatic: (Bool) -> Void
     let openTimeBasedManual: (TimeBasedManualField) -> Void
     let updateTimeBasedAutomaticLocation: () -> Void
     let updateAutomaticBrightness: (Double) -> Void
-    let updateTheme: (PresentationBuiltinThemeReference) -> Void
+    let updateTheme: (PresentationThemeReference) -> Void
     
-    init(updateMode: @escaping (TriggerMode) -> Void, updateTimeBasedAutomatic: @escaping (Bool) -> Void, openTimeBasedManual: @escaping (TimeBasedManualField) -> Void, updateTimeBasedAutomaticLocation: @escaping () -> Void, updateAutomaticBrightness: @escaping (Double) -> Void, updateTheme: @escaping (PresentationBuiltinThemeReference) -> Void) {
+    init(context: AccountContext, updateMode: @escaping (TriggerMode) -> Void, updateTimeBasedAutomatic: @escaping (Bool) -> Void, openTimeBasedManual: @escaping (TimeBasedManualField) -> Void, updateTimeBasedAutomaticLocation: @escaping () -> Void, updateAutomaticBrightness: @escaping (Double) -> Void, updateTheme: @escaping (PresentationThemeReference) -> Void) {
+        self.context = context
         self.updateMode = updateMode
         self.updateTimeBasedAutomatic = updateTimeBasedAutomatic
         self.openTimeBasedManual = openTimeBasedManual
@@ -61,8 +64,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
     case settingInfo(PresentationTheme, String)
     
     case themeHeader(PresentationTheme, String)
-    case themeNightBlue(PresentationTheme, String, Bool)
-    case themeNight(PresentationTheme, String, Bool)
+    case themeItem(PresentationTheme, PresentationStrings, [PresentationThemeReference], PresentationThemeReference, [Int64: PresentationThemeAccentColor])
     
     var section: ItemListSectionId {
         switch self {
@@ -70,7 +72,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
             return ThemeAutoNightSettingsControllerSection.mode.rawValue
         case .settingsHeader, .timeBasedAutomaticLocation, .timeBasedAutomaticLocationValue, .timeBasedManualFrom, .timeBasedManualTo, .brightnessValue, .settingInfo:
             return ThemeAutoNightSettingsControllerSection.settings.rawValue
-        case .themeHeader, .themeNightBlue, .themeNight:
+        case .themeHeader, .themeItem:
             return ThemeAutoNightSettingsControllerSection.theme.rawValue
         }
     }
@@ -99,10 +101,8 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 return 9
             case .themeHeader:
                 return 10
-            case .themeNightBlue:
+            case .themeItem:
                 return 11
-            case .themeNight:
-                return 12
         }
     }
     
@@ -174,14 +174,8 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .themeNightBlue(lhsTheme, lhsTitle, lhsValue):
-                if case let .themeNightBlue(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .themeNight(lhsTheme, lhsTitle, lhsValue):
-                if case let .themeNight(rhsTheme, rhsTitle, rhsValue) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsValue == rhsValue {
+            case let .themeItem(lhsTheme, lhsStrings, lhsThemes, lhsCurrentTheme, lhsThemeAccentColors):
+                if case let .themeItem(rhsTheme, rhsStrings, rhsThemes, rhsCurrentTheme, rhsThemeAccentColors) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsThemes == rhsThemes, lhsCurrentTheme == rhsCurrentTheme, lhsThemeAccentColors == rhsThemeAccentColors {
                     return true
                 } else {
                     return false
@@ -233,19 +227,16 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .themeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
-            case let .themeNightBlue(theme, title, value):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateTheme(.nightAccent)
-                })
-            case let .themeNight(theme, title, value):
-                return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
-                    arguments.updateTheme(.night)
+            case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors):
+                return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
+                    arguments.updateTheme(theme)
+                }, longTapped: { _ in
                 })
         }
     }
 }
 
-private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, strings: PresentationStrings, switchSetting: AutomaticThemeSwitchSetting, dateTimeFormat: PresentationDateTimeFormat) -> [ThemeAutoNightSettingsControllerEntry] {
+private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, strings: PresentationStrings, settings: PresentationThemeSettings, switchSetting: AutomaticThemeSwitchSetting, availableThemes: [PresentationThemeReference], dateTimeFormat: PresentationDateTimeFormat) -> [ThemeAutoNightSettingsControllerEntry] {
     var entries: [ThemeAutoNightSettingsControllerEntry] = []
     
     let activeTriggerMode: TriggerMode
@@ -297,8 +288,7 @@ private func themeAutoNightSettingsControllerEntries(theme: PresentationTheme, s
             break
         case .timeBased, .brightness:
             entries.append(.themeHeader(theme, strings.AutoNightTheme_PreferredTheme))
-            entries.append(.themeNightBlue(theme, strings.Appearance_ThemeCarouselTintedNight, switchSetting.theme == .nightAccent))
-            entries.append(.themeNight(theme, strings.Appearance_ThemeCarouselNewNight, switchSetting.theme == .night))
+            entries.append(.themeItem(theme, strings, availableThemes, switchSetting.theme, settings.themeSpecificAccentColors))
     }
     
     return entries
@@ -389,7 +379,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
         updateLocationDisposable.set(disposable)
     }
     
-    let arguments = ThemeAutoNightSettingsControllerArguments(updateMode: { mode in
+    let arguments = ThemeAutoNightSettingsControllerArguments(context: context, updateMode: { mode in
         var updateLocation = false
         updateSettings { settings in
             var settings = settings
@@ -508,19 +498,51 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
             }
         }))
     }, updateTheme: { theme in
-        updateSettings { settings in
-            var settings = settings
-            settings.theme = theme
-            return settings
+        let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil)
+        
+        let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
+        if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
+            resolvedWallpaper = cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
+            |> map { wallpaper -> TelegramWallpaper? in
+                return wallpaper?.wallpaper
+            }
+        } else {
+            resolvedWallpaper = .single(nil)
         }
+        
+        let _ = (resolvedWallpaper
+        |> mapToSignal { resolvedWallpaper -> Signal<Void, NoError> in
+            var updatedTheme = theme
+            if case let .cloud(info) = theme {
+                updatedTheme = .cloud(PresentationCloudTheme(theme: info.theme, resolvedWallpaper: resolvedWallpaper))
+            }
+            
+            updateSettings { settings in
+                var settings = settings
+                settings.theme = updatedTheme
+                return settings
+            }
+            
+            return .complete()
+        }).start()
     })
     
-    let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, sharedData |> deliverOnMainQueue, stagingSettingsPromise.get() |> deliverOnMainQueue)
-    |> map { presentationData, sharedData, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
+    let cloudThemes = Promise<[TelegramTheme]>()
+    let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
+    cloudThemes.set(updatedCloudThemes)
+    
+    let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, sharedData |> deliverOnMainQueue, cloudThemes.get() |> deliverOnMainQueue, stagingSettingsPromise.get() |> deliverOnMainQueue)
+    |> map { presentationData, sharedData, cloudThemes, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
+        let defaultThemes: [PresentationThemeReference] = [.builtin(.night), .builtin(.nightAccent)]
+        let cloudThemes: [PresentationThemeReference] = cloudThemes.map { .cloud(PresentationCloudTheme(theme: $0, resolvedWallpaper: nil)) }
+        
+        var availableThemes = defaultThemes
+        availableThemes.append(contentsOf: cloudThemes)
+        
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.AutoNightTheme_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(entries: themeAutoNightSettingsControllerEntries(theme: presentationData.theme, strings: presentationData.strings, settings: settings, switchSetting: stagingSettings ?? settings.automaticThemeSwitchSetting, availableThemes: availableThemes, dateTimeFormat: presentationData.dateTimeFormat), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

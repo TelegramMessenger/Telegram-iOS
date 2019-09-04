@@ -17,8 +17,9 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
     public let file: TelegramMediaFile?
     public let isCreator: Bool
     public let isDefault: Bool
+    public let installCount: Int32
     
-    public init(id: Int64, accessHash: Int64, slug: String, title: String, file: TelegramMediaFile?, isCreator: Bool, isDefault: Bool) {
+    public init(id: Int64, accessHash: Int64, slug: String, title: String, file: TelegramMediaFile?, isCreator: Bool, isDefault: Bool, installCount: Int32) {
         self.id = id
         self.accessHash = accessHash
         self.slug = slug
@@ -26,6 +27,7 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         self.file = file
         self.isCreator = isCreator
         self.isDefault = isDefault
+        self.installCount = installCount
     }
     
     public init(decoder: PostboxDecoder) {
@@ -36,6 +38,7 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         self.file = decoder.decodeObjectForKey("file", decoder: { TelegramMediaFile(decoder: $0) }) as? TelegramMediaFile
         self.isCreator = decoder.decodeInt32ForKey("isCreator", orElse: 0) != 0
         self.isDefault = decoder.decodeInt32ForKey("isDefault", orElse: 0) != 0
+        self.installCount = decoder.decodeInt32ForKey("installCount", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -50,6 +53,7 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         }
         encoder.encodeInt32(self.isCreator ? 1 : 0, forKey: "isCreator")
         encoder.encodeInt32(self.isDefault ? 1 : 0, forKey: "isDefault")
+        encoder.encodeInt32(self.installCount, forKey: "installCount")
     }
     
     public static func ==(lhs: TelegramTheme, rhs: TelegramTheme) -> Bool {
@@ -74,6 +78,9 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
         if lhs.isDefault != rhs.isDefault {
             return false
         }
+        if lhs.installCount != rhs.installCount {
+            return false
+        }
         return true
     }
 }
@@ -81,8 +88,8 @@ public final class TelegramTheme: OrderedItemListEntryContents, Equatable {
 extension TelegramTheme {
     convenience init?(apiTheme: Api.Theme) {
         switch apiTheme {
-            case let .theme(flags, id, accessHash, slug, title, document):
-                self.init(id: id, accessHash: accessHash, slug: slug, title: title, file: document.flatMap(telegramMediaFileFromApiDocument), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0)
+            case let .theme(flags, id, accessHash, slug, title, document, installCount):
+                self.init(id: id, accessHash: accessHash, slug: slug, title: title, file: document.flatMap(telegramMediaFileFromApiDocument), isCreator: (flags & 1 << 0) != 0, isDefault: (flags & 1 << 1) != 0, installCount: installCount)
             default:
                 return nil
         }

@@ -26,6 +26,7 @@ private final class EditThemeControllerArguments {
 
 private enum EditThemeEntryTag: ItemListItemTag {
     case title
+    case slug
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? EditThemeEntryTag, self == other {
@@ -46,7 +47,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
     case slug(PresentationTheme, PresentationStrings, String, String, Bool)
     case slugInfo(PresentationTheme, String)
     case chatPreviewHeader(PresentationTheme, String)
-    case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder)
+    case chatPreview(PresentationTheme, PresentationTheme, TelegramWallpaper, PresentationFontSize, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, [ChatPreviewMessageItem])
     case uploadTheme(PresentationTheme, String)
     case uploadInfo(PresentationTheme, String)
     
@@ -104,8 +105,8 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .chatPreview(lhsTheme, lhsComponentTheme, lhsWallpaper, lhsFontSize, lhsStrings, lhsTimeFormat, lhsNameOrder):
-                if case let .chatPreview(rhsTheme, rhsComponentTheme, rhsWallpaper, rhsFontSize, rhsStrings, rhsTimeFormat, rhsNameOrder) = rhs, lhsComponentTheme === rhsComponentTheme, lhsTheme === rhsTheme, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsStrings === rhsStrings, lhsTimeFormat == rhsTimeFormat, lhsNameOrder == rhsNameOrder {
+            case let .chatPreview(lhsTheme, lhsComponentTheme, lhsWallpaper, lhsFontSize, lhsStrings, lhsTimeFormat, lhsNameOrder, lhsItems):
+                if case let .chatPreview(rhsTheme, rhsComponentTheme, rhsWallpaper, rhsFontSize, rhsStrings, rhsTimeFormat, rhsNameOrder, rhsItems) = rhs, lhsComponentTheme === rhsComponentTheme, lhsTheme === rhsTheme, lhsWallpaper == rhsWallpaper, lhsFontSize == rhsFontSize, lhsStrings === rhsStrings, lhsTimeFormat == rhsTimeFormat, lhsNameOrder == rhsNameOrder, lhsItems == rhsItems {
                     return true
                 } else {
                     return false
@@ -142,7 +143,7 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                     
                 })
             case let .slug(theme, strings, title, text, enabled):
-                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: "t.me/addtheme/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: title, type: .username, clearType: .onFocus, enabled: enabled, sectionId: self.section, textUpdated: { value in
+                return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: "t.me/addtheme/", textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: title, type: .username, clearType: .onFocus, enabled: enabled, tag: EditThemeEntryTag.slug, sectionId: self.section, textUpdated: { value in
                     arguments.updateState { current in
                         var state = current
                         state.slug = value
@@ -155,8 +156,8 @@ private enum EditThemeControllerEntry: ItemListNodeEntry {
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
             case let .chatPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-            case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder):
-                return ThemeSettingsChatPreviewItem(context: arguments.context, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder)
+            case let .chatPreview(theme, componentTheme, wallpaper, fontSize, strings, dateTimeFormat, nameDisplayOrder, items):
+                return ThemeSettingsChatPreviewItem(context: arguments.context, theme: theme, componentTheme: componentTheme, strings: strings, sectionId: self.section, fontSize: fontSize, wallpaper: wallpaper, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, messageItems: items)
             case let .uploadTheme(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                     arguments.openFile()
@@ -189,29 +190,51 @@ private func editThemeControllerEntries(presentationData: PresentationData, stat
     }
     entries.append(.title(presentationData.theme, presentationData.strings, presentationData.strings.EditTheme_Title, state.title, isCreate))
     
-    if case .edit = state.mode {
-        entries.append(.slug(presentationData.theme, presentationData.strings, presentationData.strings.EditTheme_ShortLink, state.slug, true))
-        entries.append(.slugInfo(presentationData.theme, presentationData.strings.EditTheme_ShortLinkInfo))
-    }
-    
-    entries.append(.chatPreviewHeader(presentationData.theme, presentationData.strings.EditTheme_Preview.uppercased()))
-    entries.append(.chatPreview(presentationData.theme, previewTheme, previewTheme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder))
-    
+    let infoText: String
     let uploadText: String
     let uploadInfo: String
+    let previewIncomingReplyName: String
+    let previewIncomingReplyText: String
+    let previewIncomingText: String
+    let previewOutgoingText: String
     switch state.mode {
         case .create:
+            infoText = presentationData.strings.EditTheme_Create_TopInfo
             uploadText = presentationData.strings.EditTheme_UploadNewTheme
-            uploadInfo = presentationData.strings.EditTheme_UploadNewInfo
+            uploadInfo = presentationData.strings.EditTheme_Create_BottomInfo
+            previewIncomingReplyName = presentationData.strings.EditTheme_Create_Preview_IncomingReplyName
+            previewIncomingReplyText = presentationData.strings.EditTheme_Create_Preview_IncomingReplyText
+            previewIncomingText = presentationData.strings.EditTheme_Create_Preview_IncomingText
+            previewOutgoingText = presentationData.strings.EditTheme_Create_Preview_OutgoingText
         case let .edit(theme):
             if let _ = theme.theme.file {
+                infoText = presentationData.strings.EditTheme_Edit_TopInfo
                 uploadText = presentationData.strings.EditTheme_UploadEditedTheme
-                uploadInfo = presentationData.strings.EditTheme_UploadEditedInfo
+                uploadInfo = presentationData.strings.EditTheme_Edit_BottomInfo
+                previewIncomingReplyName = presentationData.strings.EditTheme_Expand_Preview_IncomingReplyName
+                previewIncomingReplyText = presentationData.strings.EditTheme_Expand_Preview_IncomingReplyText
+                previewIncomingText = presentationData.strings.EditTheme_Expand_Preview_IncomingText
+                previewOutgoingText = presentationData.strings.EditTheme_Expand_Preview_OutgoingText
             } else {
+                infoText = presentationData.strings.EditTheme_Expand_TopInfo
                 uploadText = presentationData.strings.EditTheme_UploadNewTheme
-                uploadInfo = presentationData.strings.EditTheme_UploadNewInfo
+                uploadInfo = presentationData.strings.EditTheme_Expand_BottomInfo
+                previewIncomingReplyName = presentationData.strings.EditTheme_Edit_Preview_IncomingReplyName
+                previewIncomingReplyText = presentationData.strings.EditTheme_Edit_Preview_IncomingReplyText
+                previewIncomingText = presentationData.strings.EditTheme_Edit_Preview_IncomingText
+                previewOutgoingText = presentationData.strings.EditTheme_Edit_Preview_OutgoingText
             }
     }
+    
+    if case .edit = state.mode {
+        entries.append(.slug(presentationData.theme, presentationData.strings, presentationData.strings.EditTheme_ShortLink, state.slug, true))
+    }
+    
+    entries.append(.slugInfo(presentationData.theme, infoText))
+    
+    entries.append(.chatPreviewHeader(presentationData.theme, presentationData.strings.EditTheme_Preview.uppercased()))
+    entries.append(.chatPreview(presentationData.theme, previewTheme, previewTheme.chat.defaultWallpaper, presentationData.fontSize, presentationData.strings, presentationData.dateTimeFormat, presentationData.nameDisplayOrder, [ChatPreviewMessageItem(outgoing: false, reply: (previewIncomingReplyName, previewIncomingReplyText), text: previewIncomingText), ChatPreviewMessageItem(outgoing: true, reply: nil, text: previewOutgoingText)]))
+    
     entries.append(.uploadTheme(presentationData.theme, uploadText))
     entries.append(.uploadInfo(presentationData.theme, uploadInfo))
     
@@ -224,21 +247,21 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     switch mode {
         case .create:
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            initialState = EditThemeControllerState(mode: mode, title: "", slug: "", updatedTheme: nil, updating: false)
-            previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", author: nil, defaultWallpaper: presentationData.chatWallpaper)))
+            initialState = EditThemeControllerState(mode: mode, title: generateThemeName(accentColor: presentationData.theme.rootController.navigationBar.buttonColor), slug: "", updatedTheme: nil, updating: false)
+            previewThemePromise.set(.single(presentationData.theme.withUpdated(name: "", defaultWallpaper: presentationData.chatWallpaper)))
         case let .edit(info):
             if let file = info.theme.file, let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let theme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
-                    previewThemePromise.set(cachedWallpaper(account: context.account, slug: file.slug)
+                    previewThemePromise.set(cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
                     |> map ({ wallpaper -> PresentationTheme in
                         if let wallpaper = wallpaper {
-                            return theme.withUpdated(name: nil, author: nil, defaultWallpaper: wallpaper.wallpaper)
+                            return theme.withUpdated(name: nil, defaultWallpaper: wallpaper.wallpaper)
                         } else {
-                            return theme.withUpdated(name: nil, author: nil, defaultWallpaper: .color(Int32(bitPattern: theme.chatList.backgroundColor.rgb)))
+                            return theme.withUpdated(name: nil, defaultWallpaper: .color(Int32(bitPattern: theme.chatList.backgroundColor.rgb)))
                         }
                     }))
                 } else {
-                    previewThemePromise.set(.single(theme.withUpdated(name: nil, author: nil, defaultWallpaper: info.resolvedWallpaper)))
+                    previewThemePromise.set(.single(theme.withUpdated(name: nil, defaultWallpaper: info.resolvedWallpaper)))
                 }
             } else {
                 previewThemePromise.set(.single(context.sharedContext.currentPresentationData.with { $0 }.theme))
@@ -254,6 +277,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
+    var errorImpl: ((EditThemeEntryTag) -> Void)?
     
     let arguments = EditThemeControllerArguments(context: context, updateState: { f in
         updateState(f)
@@ -263,7 +287,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
             if let url = urls.first{
                 if let data = try? Data(contentsOf: url), let theme = makePresentationTheme(data: data) {
                     if case let .file(file) = theme.chat.defaultWallpaper, file.id == 0 {
-                        let _ = (cachedWallpaper(account: context.account, slug: file.slug)
+                        let _ = (cachedWallpaper(account: context.account, slug: file.slug, settings: file.settings)
                         |> mapToSignal { wallpaper -> Signal<TelegramWallpaper?, NoError> in
                             if let wallpaper = wallpaper, case let .file(file) = wallpaper.wallpaper {
                                 var convertedRepresentations: [ImageRepresentationWithReference] = []
@@ -281,7 +305,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                             }
                         }
                         |> deliverOnMainQueue).start(next: { wallpaper in
-                            let updatedTheme = theme.withUpdated(name: nil, author: nil, defaultWallpaper: wallpaper)
+                            let updatedTheme = theme.withUpdated(name: nil, defaultWallpaper: wallpaper)
                             updateState { current in
                                 var state = current
                                 previewThemePromise.set(.single(updatedTheme))
@@ -329,6 +353,16 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
             }
             
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: isComplete, action: {
+                if state.title.count > 128 {
+                    errorImpl?(.title)
+                    return
+                }
+                if case .create = mode {
+                } else if state.slug.count < 5 || state.slug.count > 64 {
+                    errorImpl?(.slug)
+                    return
+                }
+                
                 dismissInputImpl?()
                 arguments.updateState { current in
                     var state = current
@@ -345,7 +379,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                         let _ = enqueueMessages(account: context.account, peerId: context.account.peerId, messages: [message]).start()
 
                         if let navigateToChat = navigateToChat {
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_ThemeTemplateAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
+                            presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.EditTheme_ThemeTemplateAlertTitle, text: presentationData.strings.EditTheme_ThemeTemplateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
                                 completion()
                                 navigateToChat(context.account.peerId)
                             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
@@ -359,14 +393,14 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                     let theme: PresentationTheme?
                     let hasCustomFile: Bool
                     if let updatedTheme = state.updatedTheme {
-                        theme = updatedTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
+                        theme = updatedTheme.withUpdated(name: state.title, defaultWallpaper: nil)
                         hasCustomFile = true
                     } else {
                         if case let .edit(info) = mode, let _ = info.theme.file {
                             theme = nil
                             hasCustomFile = true
                         } else {
-                            theme = previewTheme.withUpdated(name: state.title, author: "", defaultWallpaper: nil)
+                            theme = previewTheme.withUpdated(name: state.title, defaultWallpaper: nil)
                             hasCustomFile = false
                         }
                     }
@@ -489,6 +523,20 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                     state.updating = false
                                     return state
                                 }
+                                
+                                var errorText: String?
+                                switch error {
+                                    case .slugOccupied:
+                                        errorText = presentationData.strings.EditTheme_ErrorLinkTaken
+                                    case .slugInvalid:
+                                        errorText = presentationData.strings.EditTheme_ErrorInvalidCharacters
+                                    default:
+                                        break
+                                }
+                                
+                                if let errorText = errorText {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                }
                             })
                     }
                 })
@@ -522,6 +570,15 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    let hapticFeedback = HapticFeedback()
+    errorImpl = { [weak controller] targetTag in
+        hapticFeedback.error()
+        controller?.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListSingleLineInputItemNode, let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                itemNode.animateError()
+            }
+        }
     }
     return controller
 }

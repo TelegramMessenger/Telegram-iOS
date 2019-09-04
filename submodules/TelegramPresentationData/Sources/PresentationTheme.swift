@@ -19,10 +19,12 @@ public final class PresentationThemeGradientColors {
 }
 
 public final class PresentationThemeIntro {
+    public let statusBarStyle: PresentationThemeStatusBarStyle
     public let startButtonColor: UIColor
     public let dotColor: UIColor
     
-    public init(startButtonColor: UIColor, dotColor: UIColor) {
+    public init(statusBarStyle: PresentationThemeStatusBarStyle, startButtonColor: UIColor, dotColor: UIColor) {
+        self.statusBarStyle = statusBarStyle
         self.startButtonColor = startButtonColor
         self.dotColor = dotColor
     }
@@ -934,7 +936,6 @@ public enum PresentationThemeName: Equatable {
 
 public final class PresentationTheme: Equatable {
     public let name: PresentationThemeName
-    public let author: String?
     public let referenceTheme: PresentationBuiltinThemeReference
     public let overallDarkAppearance: Bool
     public let baseColor: PresentationThemeBaseColor?
@@ -951,9 +952,8 @@ public final class PresentationTheme: Equatable {
     
     public let resourceCache: PresentationsResourceCache = PresentationsResourceCache()
     
-    public init(name: PresentationThemeName, author: String?, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
+    public init(name: PresentationThemeName, referenceTheme: PresentationBuiltinThemeReference, overallDarkAppearance: Bool, baseColor: PresentationThemeBaseColor?, intro: PresentationThemeIntro, passcode: PresentationThemePasscode, rootController: PresentationThemeRootController, list: PresentationThemeList, chatList: PresentationThemeChatList, chat: PresentationThemeChat, actionSheet: PresentationThemeActionSheet, contextMenu: PresentationThemeContextMenu, inAppNotification: PresentationThemeInAppNotification, preview: Bool = false) {
         self.name = name
-        self.author = author
         self.referenceTheme = referenceTheme
         self.overallDarkAppearance = overallDarkAppearance
         self.baseColor = baseColor
@@ -981,20 +981,16 @@ public final class PresentationTheme: Equatable {
         return lhs === rhs
     }
     
-    public func withUpdated(name: String?, author: String?, defaultWallpaper: TelegramWallpaper?) -> PresentationTheme {
+    public func withUpdated(name: String?, defaultWallpaper: TelegramWallpaper?) -> PresentationTheme {
         var defaultWallpaper = defaultWallpaper
         if let wallpaper = defaultWallpaper {
             switch wallpaper {
                 case .image:
                     defaultWallpaper = nil
-                case let .file(file):
-                    if file.isPattern {
-                        defaultWallpaper = nil
-                    }
                 default:
                     break
             }
         }
-        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), author: author ?? self.author, referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, baseColor: nil, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdatedDefaultWallpaper(defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
+        return PresentationTheme(name: name.flatMap(PresentationThemeName.custom) ?? .custom(self.name.string), referenceTheme: self.referenceTheme, overallDarkAppearance: self.overallDarkAppearance, baseColor: nil, intro: self.intro, passcode: self.passcode, rootController: self.rootController, list: self.list, chatList: self.chatList, chat: self.chat.withUpdatedDefaultWallpaper(defaultWallpaper), actionSheet: self.actionSheet, contextMenu: self.contextMenu, inAppNotification: self.inAppNotification)
     }
 }

@@ -157,7 +157,7 @@ public enum TelegramWallpaper: OrderedItemListEntryContents, Equatable {
             case let .image(representations, _):
                 return .image(representations, settings)
             case let .file(id, accessHash, isCreator, isDefault, isPattern, isDark, slug, file, _):
-                return .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: isPattern, isDark: isDark, slug: slug, file: file, settings: settings)
+                return .file(id: id, accessHash: accessHash, isCreator: isCreator, isDefault: isDefault, isPattern: settings.color != nil ? true : isPattern, isDark: isDark, slug: slug, file: file, settings: settings)
         }
     }
 }

@@ -2057,7 +2057,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil) {
+    func sendCurrentMessage(silentPosting: Bool? = nil, scheduleTime: Int32? = nil, completion: @escaping () -> Void = {}) {
         if let textInputPanelNode = self.inputPanelNode as? ChatTextInputPanelNode {
             if textInputPanelNode.textInputNode?.isFirstResponder() ?? false {
                 Keyboard.applyAutocorrection()
@@ -2114,6 +2114,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             textInputPanelNode.text = ""
                             strongSelf.requestUpdateChatInterfaceState(false, true, { $0.withUpdatedReplyMessageId(nil).withUpdatedForwardMessageIds(nil).withUpdatedComposeDisableUrlPreview(nil) })
                             strongSelf.ignoreUpdateHeight = false
+                            completion()
                         }
                     })
                     

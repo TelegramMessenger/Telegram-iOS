@@ -41,8 +41,7 @@ func chatHistoryEntriesForView(location: ChatLocation, view: MessageHistoryView,
         
         var contentTypeHint: ChatMessageEntryContentType = .generic
         if presentationData.largeEmoji, entry.message.media.isEmpty {
-            let messageText = entry.message.text
-            if messageText.count == 1, let _ = associatedData.animatedEmojiStickers[messageText.basicEmoji.0] {
+            if entry.message.text.count == 1, let _ = associatedData.animatedEmojiStickers[entry.message.text.basicEmoji.0] {
                 contentTypeHint = .animatedEmoji
             } else if messageIsElligibleForLargeEmoji(entry.message) {
                 contentTypeHint = .largeEmoji

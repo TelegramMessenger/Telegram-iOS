@@ -47,7 +47,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.statusBar.statusBarStyle = self.theme.rootController.statusBarStyle.style
+        self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         

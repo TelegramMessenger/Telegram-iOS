@@ -100,6 +100,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     )
 
     let intro = PresentationThemeIntro(
+        statusBarStyle: .white,
         startButtonColor: accentColor,
         dotColor: UIColor(rgb: 0x5e5e5e)
     )
@@ -354,7 +355,6 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
 
     return PresentationTheme(
         name: .builtin(.night),
-        author: "Telegram",
         referenceTheme: .night,
         overallDarkAppearance: true,
         baseColor: baseColor,

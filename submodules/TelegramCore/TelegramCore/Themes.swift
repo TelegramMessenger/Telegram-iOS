@@ -26,16 +26,16 @@ final class CachedThemesConfiguration: PostboxCoding {
 }
 
 #if os(macOS)
-private let themeFormat = "macos"
-private let themeFileExtension = "palette"
+let telegramThemeFormat = "macos"
+let telegramThemeFileExtension = "palette"
 #else
-private let themeFormat = "ios"
-private let themeFileExtension = "tgios-theme"
+let telegramThemeFormat = "ios"
+let telegramThemeFileExtension = "tgios-theme"
 #endif
 
 public func telegramThemes(postbox: Postbox, network: Network, accountManager: AccountManager, forceUpdate: Bool = false) -> Signal<[TelegramTheme], NoError> {
     let fetch: ([TelegramTheme]?, Int32?) -> Signal<[TelegramTheme], NoError> = { current, hash in
-        network.request(Api.functions.account.getThemes(format: themeFormat, hash: hash ?? 0))
+        network.request(Api.functions.account.getThemes(format: telegramThemeFormat, hash: hash ?? 0))
         |> retryRequest
         |> mapToSignal { result -> Signal<([TelegramTheme], Int32), NoError> in
             switch result {
@@ -109,7 +109,7 @@ public enum GetThemeError {
 }
 
 public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, GetThemeError> {
-    return account.network.request(Api.functions.account.getTheme(format: themeFormat, theme: .inputThemeSlug(slug: slug), documentId: 0))
+    return account.network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputThemeSlug(slug: slug), documentId: 0))
     |> mapError { error -> GetThemeError in
         if error.errorDescription == "THEME_FORMAT_INVALID" {
             return .unsupported
@@ -137,7 +137,7 @@ private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal
     guard let file = theme.file, let fileId = file.id?.id else {
         return .fail(.generic)
     }
-    return network.request(Api.functions.account.getTheme(format: themeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: fileId))
+    return network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: fileId))
     |> mapError { _ -> GetThemeError in return .generic }
     |> map { theme -> ThemeUpdatedResult in
         if let theme = TelegramTheme(apiTheme: theme) {
@@ -178,8 +178,21 @@ private func saveUnsaveTheme(account: Account, accountManager: AccountManager, t
     } |> switchToLatest
 }
 
-private func installTheme(account: Account, theme: TelegramTheme) -> Signal<Never, NoError> {
-    return account.network.request(Api.functions.account.installTheme(format: themeFormat, theme: Api.InputTheme.inputTheme(id: theme.id, accessHash: theme.accessHash)))
+private func installTheme(account: Account, theme: TelegramTheme?, autoNight: Bool) -> Signal<Never, NoError> {
+    var flags: Int32 = 0
+    if autoNight {
+        flags |= 1 << 0
+    }
+    
+    let inputTheme: Api.InputTheme?
+    if let theme = theme {
+        inputTheme = .inputTheme(id: theme.id, accessHash: theme.accessHash)
+        flags |= 1 << 1
+    } else {
+        inputTheme = nil
+    }
+    
+    return account.network.request(Api.functions.account.installTheme(flags: flags, format: telegramThemeFormat, theme: inputTheme))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .complete()
     }
@@ -227,8 +240,8 @@ private func uploadedThemeThumbnail(postbox: Postbox, network: Network, data: Da
 }
 
 private func uploadTheme(account: Account, resource: MediaResource, thumbnailData: Data? = nil) -> Signal<UploadThemeResult, UploadThemeError> {
-    let fileName = "theme.\(themeFileExtension)"
-    let mimeType = "application/x-tgtheme-\(themeFormat)"
+    let fileName = "theme.\(telegramThemeFileExtension)"
+    let mimeType = "application/x-tgtheme-\(telegramThemeFormat)"
     
     let uploadedThumbnail: Signal<UploadedThemeData?, UploadThemeError>
     if let thumbnailData = thumbnailData {
@@ -278,6 +291,7 @@ private func uploadTheme(account: Account, resource: MediaResource, thumbnailDat
 public enum CreateThemeError {
     case generic
     case slugInvalid
+    case slugOccupied
 }
 
 public enum CreateThemeResult {
@@ -296,6 +310,8 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                     |> mapError { error in
                         if error.errorDescription == "THEME_SLUG_INVALID" {
                             return .slugInvalid
+                        } else if error.errorDescription == "THEME_SLUG_OCCUPIED" {
+                            return .slugOccupied
                         }
                         return .generic
                     }
@@ -371,10 +387,12 @@ public func updateTheme(account: Account, accountManager: AccountManager, theme:
             inputDocument = nil
         }
         
-        return account.network.request(Api.functions.account.updateTheme(flags: flags, format: themeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
+        return account.network.request(Api.functions.account.updateTheme(flags: flags, format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), slug: slug, title: title, document: inputDocument))
         |> mapError { error in
             if error.errorDescription == "THEME_SLUG_INVALID" {
                 return .slugInvalid
+            } else if error.errorDescription == "THEME_SLUG_OCCUPIED" {
+                return .slugOccupied
             }
             return .generic
         }
@@ -456,14 +474,14 @@ public func deleteThemeInteractively(account: Account, accountManager: AccountMa
     return saveUnsaveTheme(account: account, accountManager: accountManager, theme: theme, unsave: true)
 }
 
-public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?) -> Signal<Never, NoError> {
+public func applyTheme(accountManager: AccountManager, account: Account, theme: TelegramTheme?, autoNight: Bool = false) -> Signal<Never, NoError> {
     return accountManager.transaction { transaction -> Signal<Never, NoError> in
         transaction.updateSharedData(SharedDataKeys.themeSettings, { _ in
             return ThemeSettings(currentTheme: theme)
         })
         
         if let theme = theme {
-            return installTheme(account: account, theme: theme)
+            return installTheme(account: account, theme: theme, autoNight: autoNight)
         } else {
             return .complete()
         }

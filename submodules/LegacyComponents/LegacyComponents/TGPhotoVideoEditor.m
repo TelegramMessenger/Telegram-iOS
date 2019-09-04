@@ -56,7 +56,6 @@
     galleryController.model = model;
     
     __weak TGModernGalleryController *weakGalleryController = galleryController;
-    __weak TGMediaPickerGalleryModel *weakModel = model;
     
     [model.interfaceView updateSelectionInterface:1 counterVisible:false animated:false];
     model.interfaceView.thumbnailSignalForItem = ^SSignal *(id item)
