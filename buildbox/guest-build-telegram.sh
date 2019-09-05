@@ -106,17 +106,19 @@ else
 		RESULT_IPA_NAME="Telegram-iOS-Hockeyapp-Internal.ipa"
 		RESULT_DSYM_NAME="Telegram-iOS-Hockeyapp-Internal.app.dSYM.zip"
 		FASTLANE_BUILD_CONFIGURATION="internalhockeyapp"
+		APP_TARGET="app_arm64"
 	elif [ "$1" == "appstore" ]; then
 		BUILD_ENV_SCRIPT="appstore"
 		RESULT_IPA_NAME="Telegram-iOS-AppStoreLLC.ipa"
 		RESULT_DSYM_NAME="Telegram-iOS-AppStoreLLC.app.dSYM.zip"
 		FASTLANE_BUILD_CONFIGURATION="testflight_llc"
+		APP_TARGET="app"
 	else
 		echo "Unsupported configuration $1"
 		exit 1
 	fi
 
-	BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" LOCAL_CODESIGNING=1 sh "../telegram-ios-shared/buildbox/bin/$BUILD_ENV_SCRIPT.sh" make app
+	BUCK="$(pwd)/tools/buck" BUCK_HTTP_CACHE="$BUCK_HTTP_CACHE" LOCAL_CODESIGNING=1 sh "../telegram-ios-shared/buildbox/bin/$BUILD_ENV_SCRIPT.sh" make "$APP_TARGET"
 	cp "build/Telegram_signed.ipa" "./$RESULT_IPA_NAME"
 	cp "build/DSYMs.zip" "./$RESULT_DSYM_NAME"
 
