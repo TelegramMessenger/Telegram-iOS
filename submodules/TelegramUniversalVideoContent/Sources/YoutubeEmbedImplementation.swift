@@ -2,6 +2,7 @@ import Foundation
 import WebKit
 import SwiftSignalKit
 import UniversalMediaPlayer
+import AppBundle
 
 func extractYoutubeVideoIdAndTimestamp(url: String) -> (String, Int)? {
     guard let url = URL(string: url), let host = url.host?.lowercased() else {
@@ -116,7 +117,7 @@ final class YoutubeEmbedImplementation: WebEmbedImplementation {
     }
     
     func setup(_ webView: WKWebView, userContentController: WKUserContentController, evaluateJavaScript: @escaping (String) -> Void, updateStatus: @escaping (MediaPlayerStatus) -> Void, onPlaybackStarted: @escaping () -> Void) {
-        let bundle = Bundle(for: type(of: self))
+        let bundle = getAppBundle()
         guard let userScriptPath = bundle.path(forResource: "YoutubeUserScript", ofType: "js") else {
             return
         }

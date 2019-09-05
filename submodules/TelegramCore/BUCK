@@ -1,44 +1,31 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'combined_config')
-load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
+load("//Config:buck_rule_macros.bzl", "framework")
 
-apple_library(
-	name = 'TelegramCorePrivateModule',
-	srcs = glob([
-		'TelegramCore/**/*.m',
-		'TelegramCore/**/*.c',
-		'third-party/libphonenumber-iOS/*.m',
-	]),
-	headers = glob([
-		'TelegramCore/**/*.h',
-		'third-party/libphonenumber-iOS/*.h',
-	]),
-	header_namespace = 'TelegramCorePrivateModule',
-	exported_headers = glob([
-		'TelegramCore/**/*.h',
-		'third-party/libphonenumber-iOS/*.h',
-	], exclude = ['TelegramCore/TelegramCore.h']),
-	modular = True,
-	visibility = ['//submodules/TelegramCore:TelegramCore'],
-	deps = [
-		'//submodules/MtProtoKit:MtProtoKit',
-	],
-)
-
-apple_library(
-    name = 'TelegramCore',
+framework(
+    name = "TelegramCore",
     srcs = glob([
-	    'TelegramCore/**/*.swift'
+        "TelegramCore/*.swift",
+        "TelegramCore/*.m",
     ]),
-	configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
-	swift_compiler_flags = [
-        '-suppress-warnings',
-        '-application-extension',
+    headers = [
+        "TelegramCore/FormatPhoneNumber.h",
+        "TelegramCore/Crypto.h",
+        "TelegramCore/NetworkLogging.h",
+        "TelegramCore/Reachability.h",
     ],
-    visibility = ['PUBLIC'],
+    exported_headers = [
+        "TelegramCore/FormatPhoneNumber.h",
+        "TelegramCore/Crypto.h",
+        "TelegramCore/NetworkLogging.h",
+        "TelegramCore/Reachability.h",
+    ],
     deps = [
-    	':TelegramCorePrivateModule',
-    	'//submodules/SSignalKit:SwiftSignalKit',
-    	'//submodules/MtProtoKit:MtProtoKit',
-    	'//submodules/Postbox:Postbox',
+    	"//submodules/libphonenumber:libphonenumber",
+        "//submodules/TelegramApi:TelegramApi",
+    	"//submodules/MtProtoKit:MtProtoKit#shared",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    	"//submodules/Postbox:Postbox#shared",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
     ],
 )

@@ -19,6 +19,7 @@ import Emoji
 import ReactionSelectionNode
 import PersistentStringHash
 import GridMessageSelectionNode
+import AppBundle
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -436,7 +437,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             
             var reactionItems: [ReactionGestureItem] = []
             for (value, text, name) in reactions {
-                if let path = frameworkBundle.path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
+                if let path = getAppBundle().path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
                     reactionItems.append(.reaction(value: value, text: text, path: path))
                 }
             }

@@ -22,7 +22,7 @@
 		D03E3DCC2304AF6D0049C28B /* AvatarNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3DCB2304AF6D0049C28B /* AvatarNode.framework */; };
 		D03E3DCE2304AF720049C28B /* TelegramStringFormatting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3DCD2304AF720049C28B /* TelegramStringFormatting.framework */; };
 		D03E3DD02304AF760049C28B /* PeerPresenceStatusManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3DCF2304AF760049C28B /* PeerPresenceStatusManager.framework */; };
-		D03E3DD42304AFE80049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3DD32304AFE80049C28B /* FrameworkBundle.swift */; };
+		D0EFF2542319810F00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2532319810F00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,7 +43,7 @@
 		D03E3DCB2304AF6D0049C28B /* AvatarNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AvatarNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E3DCD2304AF720049C28B /* TelegramStringFormatting.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramStringFormatting.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E3DCF2304AF760049C28B /* PeerPresenceStatusManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerPresenceStatusManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E3DD32304AFE80049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF2532319810F00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +51,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF2542319810F00CF5164 /* AppBundle.framework in Frameworks */,
 				D03E3DD02304AF760049C28B /* PeerPresenceStatusManager.framework in Frameworks */,
 				D03E3DCE2304AF720049C28B /* TelegramStringFormatting.framework in Frameworks */,
 				D03E3DCC2304AF6D0049C28B /* AvatarNode.framework in Frameworks */,
@@ -93,7 +94,6 @@
 			children = (
 				D03E3DB42304AF2E0049C28B /* ItemListAvatarAndNameItem.swift */,
 				D03E3DA82304AEDD0049C28B /* ItemListAvatarAndNameInfoItem.h */,
-				D03E3DD32304AFE80049C28B /* FrameworkBundle.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -101,6 +101,7 @@
 		D03E3DB62304AF3A0049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2532319810F00CF5164 /* AppBundle.framework */,
 				D03E3DCF2304AF760049C28B /* PeerPresenceStatusManager.framework */,
 				D03E3DCD2304AF720049C28B /* TelegramStringFormatting.framework */,
 				D03E3DCB2304AF6D0049C28B /* AvatarNode.framework */,
@@ -198,7 +199,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E3DD42304AFE80049C28B /* FrameworkBundle.swift in Sources */,
 				D03E3DB52304AF2E0049C28B /* ItemListAvatarAndNameItem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

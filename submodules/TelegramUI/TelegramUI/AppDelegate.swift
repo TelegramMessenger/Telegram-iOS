@@ -238,6 +238,7 @@ final class SharedApplicationContext {
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
+        
         let statusBarHost = ApplicationStatusBarHost()
         let (window, hostView, aboveStatusbarWindow) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)

@@ -11,6 +11,7 @@ import DeviceAccess
 import AccountContext
 import SearchBarNode
 import SearchUI
+import AppBundle
 
 private final class ContactsControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {

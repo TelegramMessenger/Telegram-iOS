@@ -1,0 +1,17 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "RadialStatusNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    	"//submodules/Display:Display#dynamic",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#dynamic",
+        "//submodules/LegacyComponents:LegacyComponents",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

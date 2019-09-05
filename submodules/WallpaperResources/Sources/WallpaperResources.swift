@@ -11,6 +11,7 @@ import PhotoResources
 import LocalMediaResources
 import TelegramPresentationData
 import TelegramUIPreferences
+import AppBundle
 
 public func wallpaperDatas(account: Account, accountManager: AccountManager, fileReference: FileMediaReference? = nil, representations: [ImageRepresentationWithReference], alwaysShowThumbnailFirst: Bool = false, thumbnail: Bool = false, onlyFullSize: Bool = false, autoFetchFullSize: Bool = false, synchronousLoad: Bool = false) -> Signal<(Data?, Data?, Bool), NoError> {
     if let smallestRepresentation = smallestImageRepresentation(representations.map({ $0.representation })), let largestRepresentation = largestImageRepresentation(representations.map({ $0.representation })), let smallestIndex = representations.firstIndex(where: { $0.representation == smallestRepresentation }), let largestIndex = representations.firstIndex(where: { $0.representation == largestRepresentation }) {
@@ -490,7 +491,7 @@ public func solidColor(_ color: UIColor) -> Signal<(TransformImageArguments) -> 
 
 private func builtinWallpaperData() -> Signal<UIImage, NoError> {
     return Signal { subscriber in
-        if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath) {
+        if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath) {
             subscriber.putNext(image)
         }
         subscriber.putCompletion()
@@ -650,7 +651,7 @@ public func drawThemeImage(context c: CGContext, theme: PresentationTheme, wallp
     
     switch theme.chat.defaultWallpaper {
         case .builtin:
-            if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath), let cgImage = image.cgImage {
+            if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg"), let image = UIImage(contentsOfFile: filePath), let cgImage = image.cgImage {
                 let size = image.size.aspectFilled(drawingRect.size)
                 c.draw(cgImage, in: CGRect(origin: CGPoint(x: (drawingRect.size.width - size.width) / 2.0, y: (drawingRect.size.height - size.height) / 2.0), size: size))
             }

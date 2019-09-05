@@ -1,0 +1,24 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "CheckNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/TelegramPresentationData.h"]),
+    exported_headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/TelegramPresentationData.h"]),
+    deps = [
+    	"//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+	    "//submodules/Display:Display#shared",
+        "//submodules/LegacyComponents:LegacyComponents",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

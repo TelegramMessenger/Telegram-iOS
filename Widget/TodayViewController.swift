@@ -222,7 +222,7 @@ class TodayViewController: UIViewController, NCWidgetProviding {
                 self.view.drawHierarchy(in: self.view.bounds, afterScreenUpdates: false)
                 let image = UIGraphicsGetImageFromCurrentImageContext()
                 UIGraphicsEndImageContext()
-                if let image = image, let data = UIImagePNGRepresentation(image) {
+                if let image = image, let data = image.pngData() {
                     let _ = try? FileManager.default.removeItem(atPath: path)
                     do {
                         try data.write(to: URL(fileURLWithPath: path))

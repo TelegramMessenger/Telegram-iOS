@@ -1,10 +1,6 @@
 import Foundation
 import UIKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 public protocol Interpolatable {
     static func interpolator() -> (Interpolatable, Interpolatable, CGFloat) -> (Interpolatable)
 }

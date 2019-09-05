@@ -1,0 +1,17 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "GZip",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ]),
+    exported_headers = glob([
+        "Sources/*.h",
+    ]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

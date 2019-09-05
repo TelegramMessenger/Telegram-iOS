@@ -1,5 +1,6 @@
 import Foundation
 import CoreText
+import AVFoundation
 
 public extension UnicodeScalar {
     var isEmoji: Bool {
@@ -46,6 +47,9 @@ public extension UnicodeScalar {
     }
     
     static var VariationSelector = UnicodeScalar(0xfe0f)!
+}
+
+private final class FrameworkClass: NSObject {
 }
 
 public extension String {

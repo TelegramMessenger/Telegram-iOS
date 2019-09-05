@@ -1,44 +1,24 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'combined_config')
-load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
+load("//Config:buck_rule_macros.bzl", "framework")
 
-apple_library(
-	name = 'sqlcipher',
-	srcs = glob([
-		'Postbox/**/*.m',
-		'Postbox/**/*.c',
-	]),
-	headers = glob([
-		'Postbox/**/*.h',
-	]),
-	header_namespace = 'sqlcipher',
-	exported_headers = glob([
-		'Postbox/**/*.h',
-	], exclude = ['Postbox/Postbox.h']),
-	compiler_flags = [
-		'-DNDEBUG',
-		'-DSQLCIPHER_CRYPTO_CC=1',
-		'-DSQLITE_ENABLE_FTS5',
-		'-DSQLITE_DEFAULT_MEMSTATUS=0',
-		'-DSQLITE_MAX_MMAP_SIZE=0',
-		'-DSQLITE_HAS_CODEC',
-	],
-	modular = True,
-	visibility = ['//submodules/Postbox:Postbox'],
-)
-
-apple_library(
-    name = 'Postbox',
+framework(
+    name = "Postbox",
     srcs = glob([
-	    'Postbox/**/*.swift'
+        "Postbox/*.swift",
+        "Postbox/*.m",
     ]),
-	configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
-	swift_compiler_flags = [
-        '-suppress-warnings',
-        '-application-extension',
+    headers = [
+        "Postbox/MurMurHash32.h",
     ],
-    visibility = ['PUBLIC'],
+    exported_headers = [
+        "Postbox/MurMurHash32.h",
+    ],
     deps = [
-    	':sqlcipher',
-    	'//submodules/SSignalKit:SwiftSignalKit'
+    	"//submodules/Crc32:Crc32",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    	"//submodules/sqlcipher:sqlcipher",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/Security.framework",
     ],
 )

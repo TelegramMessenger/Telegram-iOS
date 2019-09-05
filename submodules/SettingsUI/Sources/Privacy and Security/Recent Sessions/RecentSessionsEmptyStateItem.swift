@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import ItemListUI
+import AppBundle
 
 final class RecentSessionsEmptyStateItem: ItemListControllerEmptyStateItem {
     let theme: PresentationTheme

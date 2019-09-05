@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
+import AppBundle
 
 final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode

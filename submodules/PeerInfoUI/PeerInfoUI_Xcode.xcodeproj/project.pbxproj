@@ -88,7 +88,6 @@
 		D03E41182304D2690049C28B /* LocationUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E41172304D2690049C28B /* LocationUI.framework */; };
 		D03E411A2304D27E0049C28B /* StickerResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E41192304D27E0049C28B /* StickerResources.framework */; };
 		D03E411C2304D2870049C28B /* StickerPackPreviewUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E411B2304D2870049C28B /* StickerPackPreviewUI.framework */; };
-		D03E411E2304D2C20049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E411D2304D2C20049C28B /* FrameworkBundle.swift */; };
 		D03E41212304D3040049C28B /* UserInfoEditingPhoneItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E411F2304D3030049C28B /* UserInfoEditingPhoneItem.swift */; };
 		D03E41222304D3040049C28B /* UserInfoEditingPhoneActionItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E41202304D3040049C28B /* UserInfoEditingPhoneActionItem.swift */; };
 		D03E41432304D4010049C28B /* PeerAvatarGalleryUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E41422304D4010049C28B /* PeerAvatarGalleryUI.framework */; };
@@ -100,6 +99,7 @@
 		D03E428823056B590049C28B /* NotificationSoundSelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E428723056B590049C28B /* NotificationSoundSelectionUI.framework */; };
 		D03E42B223056C6E0049C28B /* EncryptionKeyVisualization.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42B123056C6D0049C28B /* EncryptionKeyVisualization.framework */; };
 		D03E42E42305724A0049C28B /* ItemListAddressItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E42E32305724A0049C28B /* ItemListAddressItem.framework */; };
+		D0EFF26C2319829500CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF26B2319829500CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -186,7 +186,6 @@
 		D03E41172304D2690049C28B /* LocationUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocationUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E41192304D27E0049C28B /* StickerResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E411B2304D2870049C28B /* StickerPackPreviewUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerPackPreviewUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E411D2304D2C20049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D03E411F2304D3030049C28B /* UserInfoEditingPhoneItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserInfoEditingPhoneItem.swift; sourceTree = "<group>"; };
 		D03E41202304D3040049C28B /* UserInfoEditingPhoneActionItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserInfoEditingPhoneActionItem.swift; sourceTree = "<group>"; };
 		D03E41422304D4010049C28B /* PeerAvatarGalleryUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerAvatarGalleryUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -198,6 +197,7 @@
 		D03E428723056B590049C28B /* NotificationSoundSelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = NotificationSoundSelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E42B123056C6D0049C28B /* EncryptionKeyVisualization.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = EncryptionKeyVisualization.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E42E32305724A0049C28B /* ItemListAddressItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListAddressItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF26B2319829500CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -205,6 +205,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF26C2319829500CF5164 /* AppBundle.framework in Frameworks */,
 				D03E42E42305724A0049C28B /* ItemListAddressItem.framework in Frameworks */,
 				D03E42B223056C6E0049C28B /* EncryptionKeyVisualization.framework in Frameworks */,
 				D03E428823056B590049C28B /* NotificationSoundSelectionUI.framework in Frameworks */,
@@ -323,7 +324,6 @@
 				D03E407B2304D1190049C28B /* SecretChatKeyController.swift */,
 				D03E407D2304D1190049C28B /* SecretChatKeyControllerNode.swift */,
 				D03E408E2304D11D0049C28B /* UserInfoController.swift */,
-				D03E411D2304D2C20049C28B /* FrameworkBundle.swift */,
 				D03E406C2304D0B30049C28B /* PeerInfoUI.h */,
 			);
 			path = Sources;
@@ -332,6 +332,7 @@
 		D03E40C82304D13C0049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF26B2319829500CF5164 /* AppBundle.framework */,
 				D03E42E32305724A0049C28B /* ItemListAddressItem.framework */,
 				D03E42B123056C6D0049C28B /* EncryptionKeyVisualization.framework */,
 				D03E428723056B590049C28B /* NotificationSoundSelectionUI.framework */,
@@ -491,7 +492,6 @@
 				D03E40B12304D1240049C28B /* ConvertToSupergroupController.swift in Sources */,
 				D03E41222304D3040049C28B /* UserInfoEditingPhoneActionItem.swift in Sources */,
 				D03E40A72304D1240049C28B /* ItemListSecretChatKeyItem.swift in Sources */,
-				D03E411E2304D2C20049C28B /* FrameworkBundle.swift in Sources */,
 				D03E40BD2304D1240049C28B /* ChannelStatsControllerNode.swift in Sources */,
 				D03E40AC2304D1240049C28B /* ChannelDiscussionGroupActionSheetItem.swift in Sources */,
 				D03E40A62304D1240049C28B /* ChannelDiscussionGroupSetupController.swift in Sources */,

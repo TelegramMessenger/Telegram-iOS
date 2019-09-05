@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import ItemListUI
 import WallpaperResources
 import AccountContext
+import AppBundle
 
 private var borderImages: [String: UIImage] = [:]
 

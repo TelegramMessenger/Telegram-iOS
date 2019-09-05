@@ -3,10 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 var testSpringFrictionLimits: (CGFloat, CGFloat) = (3.0, 60.0)
 var testSpringFriction: CGFloat = 31.8211269378662
 

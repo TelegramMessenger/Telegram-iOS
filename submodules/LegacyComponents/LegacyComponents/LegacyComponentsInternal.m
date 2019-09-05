@@ -6,6 +6,8 @@
 
 #import <sys/sysctl.h>
 
+#import <AppBundle/AppBundle.h>
+
 TGLocalization *legacyEffectiveLocalization() {
     return [[LegacyComponentsGlobals provider] effectiveLocalization];
 }
@@ -127,11 +129,11 @@ void TGDispatchAfter(double delay, dispatch_queue_t queue, dispatch_block_t bloc
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)((delay) * NSEC_PER_SEC)), queue, block);
 }
 
-static NSBundle *frameworkBundle() {
+static NSBundle *resourcesBundle() {
     static NSBundle *currentBundle = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        currentBundle = [NSBundle bundleForClass:[LegacyComponentsGlobals class]];
+        currentBundle = getAppBundle();
         NSString *updatedPath = [[currentBundle bundlePath] stringByAppendingPathComponent:@"LegacyComponentsResources.bundle"];
         currentBundle = [NSBundle bundleWithPath:updatedPath];
     });
@@ -142,7 +144,7 @@ UIImage *TGComponentsImageNamed(NSString *name) {
     if (iosMajorVersion() < 8)
         return [UIImage imageNamed:[NSString stringWithFormat:@"LegacyComponentsResources.bundle/%@", name]];
     
-    UIImage *image = [UIImage imageNamed:name inBundle:frameworkBundle() compatibleWithTraitCollection:nil];
+    UIImage *image = [UIImage imageNamed:name inBundle:resourcesBundle() compatibleWithTraitCollection:nil];
     if (image == nil) {
         assert(true);
     }
@@ -150,5 +152,5 @@ UIImage *TGComponentsImageNamed(NSString *name) {
 }
 
 NSString *TGComponentsPathForResource(NSString *name, NSString *type) {
-    return [frameworkBundle() pathForResource:name ofType:type];
+    return [resourcesBundle() pathForResource:name ofType:type];
 }

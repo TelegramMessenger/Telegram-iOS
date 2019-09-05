@@ -1,5 +1,11 @@
 #import "TGShareLocationSignals.h"
 
+#ifdef BUCK
+#import <MTProtoKit/MTProtoKit.h>
+#else
+#import <MTProtoKitDynamic/MTProtoKitDynamic.h>
+#endif
+
 NSString *const TGShareAppleMapsHost = @"maps.apple.com";
 NSString *const TGShareAppleMapsPath = @"/maps";
 NSString *const TGShareAppleMapsLatLonKey = @"ll";

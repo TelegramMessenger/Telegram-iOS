@@ -14,6 +14,7 @@ import SearchBarNode
 import SearchUI
 import ContactsPeerItem
 import ChatListSearchItemHeader
+import AppBundle
 
 private enum InviteContactsEntryId: Hashable {
     case option(index: Int)

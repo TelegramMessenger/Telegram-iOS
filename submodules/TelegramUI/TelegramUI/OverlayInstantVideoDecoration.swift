@@ -5,6 +5,7 @@ import Display
 import SwiftSignalKit
 import UniversalMediaPlayer
 import AccountContext
+import AppBundle
 
 private let backgroundImage = UIImage(bundleImageName: "Chat/Message/OverlayInstantVideoShadow")?.precomposed()
 

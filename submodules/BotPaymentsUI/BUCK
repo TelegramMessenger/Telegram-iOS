@@ -1,0 +1,27 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "BotPaymentsUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/LocalAuth:LocalAuth",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/PasswordSetupUI:PasswordSetupUI",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/Stripe:Stripe",
+        "//submodules/CountrySelectionUI:CountrySelectionUI",
+        "//submodules/AppBundle:AppBundle",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

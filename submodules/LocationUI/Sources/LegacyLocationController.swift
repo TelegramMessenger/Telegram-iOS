@@ -9,6 +9,7 @@ import AccountContext
 import ShareController
 import LegacyUI
 import OpenInExternalAppUI
+import AppBundle
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)

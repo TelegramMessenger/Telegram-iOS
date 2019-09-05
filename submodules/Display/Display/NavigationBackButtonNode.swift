@@ -1,5 +1,6 @@
 import UIKit
 import AsyncDisplayKit
+import AppBundle
 
 public class NavigationBackButtonNode: ASControlNode {
     private func fontForCurrentState() -> UIFont {
@@ -60,7 +61,7 @@ public class NavigationBackButtonNode: ASControlNode {
         self.label.displaysAsynchronously = false
         
         self.addSubnode(self.arrow)
-        let arrowImage = UIImage(named: "NavigationBackArrowLight", in: Bundle(for: NavigationBackButtonNode.self), compatibleWith: nil)?.precomposed()
+        let arrowImage = UIImage(named: "NavigationBackArrowLight", in: getAppBundle(), compatibleWith: nil)?.precomposed()
         self.arrow.contents = arrowImage?.cgImage
         self.arrow.frame = CGRect(origin: CGPoint(), size: arrowImage?.size ?? CGSize())
         

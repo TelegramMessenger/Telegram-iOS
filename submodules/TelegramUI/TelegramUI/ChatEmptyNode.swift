@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AppBundle
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize

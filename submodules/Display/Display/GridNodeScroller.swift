@@ -14,7 +14,7 @@ private class GridNodeScrollerView: UIScrollView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.contentInsetAdjustmentBehavior = .never
         }
     }

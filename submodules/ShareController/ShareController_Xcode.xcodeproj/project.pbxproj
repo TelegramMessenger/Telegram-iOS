@@ -27,7 +27,6 @@
 		D0879BC522F857E600C4D6B3 /* ShareSearchContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BC022F857E600C4D6B3 /* ShareSearchContainerNode.swift */; };
 		D0879BC622F857E600C4D6B3 /* ShareSearchBarNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879BC122F857E600C4D6B3 /* ShareSearchBarNode.swift */; };
 		D0879BEC22F85F8500C4D6B3 /* RadialStatusNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879BEB22F85F8500C4D6B3 /* RadialStatusNode.framework */; };
-		D0879C0722F8636500C4D6B3 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0879C0622F8636500C4D6B3 /* FrameworkBundle.swift */; };
 		D0879C3722F8733500C4D6B3 /* SelectablePeerNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879C3622F8733500C4D6B3 /* SelectablePeerNode.framework */; };
 		D0879C9422F875B900C4D6B3 /* PeerPresenceStatusManager.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879C9322F875B900C4D6B3 /* PeerPresenceStatusManager.framework */; };
 		D0879CCA22F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879CC922F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework */; };
@@ -35,6 +34,7 @@
 		D0879D9D22F87E7F00C4D6B3 /* LocalizedPeerData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879D9C22F87E7F00C4D6B3 /* LocalizedPeerData.framework */; };
 		D0879DBB22F87F2700C4D6B3 /* UrlEscaping.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879DBA22F87F2700C4D6B3 /* UrlEscaping.framework */; };
 		D0879DE822F8819E00C4D6B3 /* StickerResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0879DE722F8819E00C4D6B3 /* StickerResources.framework */; };
+		D0EFF252231980F100CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF251231980F100CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,7 +61,6 @@
 		D0879BC022F857E600C4D6B3 /* ShareSearchContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareSearchContainerNode.swift; sourceTree = "<group>"; };
 		D0879BC122F857E600C4D6B3 /* ShareSearchBarNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShareSearchBarNode.swift; sourceTree = "<group>"; };
 		D0879BEB22F85F8500C4D6B3 /* RadialStatusNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RadialStatusNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0879C0622F8636500C4D6B3 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0879C3622F8733500C4D6B3 /* SelectablePeerNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SelectablePeerNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879C9322F875B900C4D6B3 /* PeerPresenceStatusManager.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeerPresenceStatusManager.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879CC922F876D700C4D6B3 /* ChatListSearchRecentPeersNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ChatListSearchRecentPeersNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -69,6 +68,7 @@
 		D0879D9C22F87E7F00C4D6B3 /* LocalizedPeerData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalizedPeerData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879DBA22F87F2700C4D6B3 /* UrlEscaping.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlEscaping.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0879DE722F8819E00C4D6B3 /* StickerResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = StickerResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF251231980F100CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +76,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF252231980F100CF5164 /* AppBundle.framework in Frameworks */,
 				D038AC4F22F8883700320981 /* SaveToCameraRoll.framework in Frameworks */,
 				D0879DE822F8819E00C4D6B3 /* StickerResources.framework in Frameworks */,
 				D0879DBB22F87F2700C4D6B3 /* UrlEscaping.framework in Frameworks */,
@@ -129,7 +130,6 @@
 				D0879BA222F854C600C4D6B3 /* ShareControllerNode.swift */,
 				D0879BA722F854C700C4D6B3 /* ShareControllerPeerGridItem.swift */,
 				D0879BA622F854C700C4D6B3 /* ShareControllerRecentPeersGridItem.swift */,
-				D0879C0622F8636500C4D6B3 /* FrameworkBundle.swift */,
 				D0879B9622F8537800C4D6B3 /* ShareController.h */,
 			);
 			path = Sources;
@@ -138,6 +138,7 @@
 		D0879BAE22F854D200C4D6B3 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF251231980F100CF5164 /* AppBundle.framework */,
 				D038AC5022F889E600320981 /* libc++.tbd */,
 				D038AC4E22F8883700320981 /* SaveToCameraRoll.framework */,
 				D0879DE722F8819E00C4D6B3 /* StickerResources.framework */,
@@ -246,7 +247,6 @@
 				D0879BC522F857E600C4D6B3 /* ShareSearchContainerNode.swift in Sources */,
 				D0879BC622F857E600C4D6B3 /* ShareSearchBarNode.swift in Sources */,
 				D0879BC322F857E600C4D6B3 /* ShareLoadingContainerNode.swift in Sources */,
-				D0879C0722F8636500C4D6B3 /* FrameworkBundle.swift in Sources */,
 				D0879BA922F854C700C4D6B3 /* ShareController.swift in Sources */,
 				D0879BAD22F854C700C4D6B3 /* ShareControllerPeerGridItem.swift in Sources */,
 				D0879BAA22F854C700C4D6B3 /* ShareContentContainerNode.swift in Sources */,

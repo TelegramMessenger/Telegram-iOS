@@ -2,10 +2,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
 

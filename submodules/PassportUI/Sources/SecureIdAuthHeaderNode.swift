@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AvatarNode
+import AppBundle
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 26.0)!
 private let titleFont = Font.semibold(14.0)

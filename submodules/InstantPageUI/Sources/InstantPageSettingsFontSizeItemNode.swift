@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-
+import AppBundle
 import LegacyComponents
 
 private func generateKnobImage() -> UIImage? {

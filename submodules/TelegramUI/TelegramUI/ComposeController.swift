@@ -10,6 +10,7 @@ import AccountContext
 import AlertUI
 import SearchUI
 import TelegramPermissionsUI
+import AppBundle
 
 public class ComposeController: ViewController {
     private let context: AccountContext

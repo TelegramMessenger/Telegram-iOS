@@ -6,6 +6,7 @@ import AVFoundation
 import Postbox
 import TelegramCore
 import SwiftSignalKit
+import AppBundle
 
 private var sharedProviderDelegate: AnyObject?
 
@@ -134,7 +135,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         providerConfiguration.maximumCallsPerCallGroup = 1
         providerConfiguration.maximumCallGroups = 1
         providerConfiguration.supportedHandleTypes = [.phoneNumber, .generic]
-        if let image = UIImage(named: "Call/CallKitLogo", in: Bundle(for: CallKitIntegration.self), compatibleWith: nil) {
+        if let image = UIImage(named: "Call/CallKitLogo", in: getAppBundle(), compatibleWith: nil) {
             providerConfiguration.iconTemplateImageData = image.pngData()
         }
         

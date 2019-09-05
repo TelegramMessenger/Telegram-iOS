@@ -29,12 +29,12 @@
 		D0C9C09122FE3CF300FAB518 /* CallRatingController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08722FE3CF300FAB518 /* CallRatingController.swift */; };
 		D0C9C09222FE3CF300FAB518 /* CallRouteActionSheetItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08822FE3CF300FAB518 /* CallRouteActionSheetItem.swift */; };
 		D0C9C09322FE3CF300FAB518 /* CallControllerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C08922FE3CF300FAB518 /* CallControllerNode.swift */; };
-		D0C9C09522FE3D1700FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C09422FE3D1700FAB518 /* FrameworkBundle.swift */; };
 		D0C9C0CF22FE3E2400FAB518 /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0CE22FE3E2400FAB518 /* PhotoResources.framework */; };
 		D0C9C12522FE41C600FAB518 /* CallsEmoji.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C12422FE41C600FAB518 /* CallsEmoji.m */; };
 		D0C9C12722FE41DB00FAB518 /* CallsEmoji.h in Headers */ = {isa = PBXBuildFile; fileRef = D0C9C12622FE41D200FAB518 /* CallsEmoji.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0C9C14B22FE439300FAB518 /* TelegramNotices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C14A22FE439300FAB518 /* TelegramNotices.framework */; };
 		D0C9C17B22FEF26C00FAB518 /* CallSuggestTabController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C17A22FEF26C00FAB518 /* CallSuggestTabController.swift */; };
+		D0EFF25C2319816200CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF25B2319816200CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,12 +62,12 @@
 		D0C9C08722FE3CF300FAB518 /* CallRatingController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRatingController.swift; sourceTree = "<group>"; };
 		D0C9C08822FE3CF300FAB518 /* CallRouteActionSheetItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallRouteActionSheetItem.swift; sourceTree = "<group>"; };
 		D0C9C08922FE3CF300FAB518 /* CallControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallControllerNode.swift; sourceTree = "<group>"; };
-		D0C9C09422FE3D1700FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C0CE22FE3E2400FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C12422FE41C600FAB518 /* CallsEmoji.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CallsEmoji.m; sourceTree = "<group>"; };
 		D0C9C12622FE41D200FAB518 /* CallsEmoji.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CallsEmoji.h; sourceTree = "<group>"; };
 		D0C9C14A22FE439300FAB518 /* TelegramNotices.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramNotices.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C17A22FEF26C00FAB518 /* CallSuggestTabController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CallSuggestTabController.swift; sourceTree = "<group>"; };
+		D0EFF25B2319816200CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +75,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF25C2319816200CF5164 /* AppBundle.framework in Frameworks */,
 				D021289F230EF3B2006B8456 /* ItemListUI.framework in Frameworks */,
 				D0C9C14B22FE439300FAB518 /* TelegramNotices.framework in Frameworks */,
 				D0C9C0CF22FE3E2400FAB518 /* PhotoResources.framework in Frameworks */,
@@ -125,7 +126,6 @@
 				D0AE310A22B1DD160058D3BC /* PresentationCall.swift */,
 				D0AE310922B1DD160058D3BC /* PresentationCallManager.swift */,
 				D0AE310B22B1DD160058D3BC /* PresentationCallToneData.swift */,
-				D0C9C09422FE3D1700FAB518 /* FrameworkBundle.swift */,
 				D0C9C17A22FEF26C00FAB518 /* CallSuggestTabController.swift */,
 				D0C9C12622FE41D200FAB518 /* CallsEmoji.h */,
 				D0C9C12422FE41C600FAB518 /* CallsEmoji.m */,
@@ -137,6 +137,7 @@
 		D0AE315522B1DEF10058D3BC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF25B2319816200CF5164 /* AppBundle.framework */,
 				D021289E230EF3B2006B8456 /* ItemListUI.framework */,
 				D0C9C14A22FE439300FAB518 /* TelegramNotices.framework */,
 				D0C9C0CE22FE3E2400FAB518 /* PhotoResources.framework */,
@@ -247,7 +248,6 @@
 				D0C9C08E22FE3CF300FAB518 /* CallControllerButtonsNode.swift in Sources */,
 				D0C9C08C22FE3CF300FAB518 /* CallControllerButton.swift in Sources */,
 				D0C9C08D22FE3CF300FAB518 /* CallController.swift in Sources */,
-				D0C9C09522FE3D1700FAB518 /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

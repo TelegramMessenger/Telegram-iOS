@@ -24,8 +24,8 @@
 		D0C9C0CB22FE3E1200FAB518 /* Tuples.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0CA22FE3E1200FAB518 /* Tuples.framework */; };
 		D0C9C0CD22FE3E1700FAB518 /* ImageBlur.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0CC22FE3E1700FAB518 /* ImageBlur.framework */; };
 		D0C9C0F522FE3F8400FAB518 /* TinyThumbnail.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C0F422FE3F8400FAB518 /* TinyThumbnail.framework */; };
-		D0C9C0F922FE3FA500FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C0F822FE3FA500FAB518 /* FrameworkBundle.swift */; };
 		D0C9C11F22FE40B500FAB518 /* ImageTransparency.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C11E22FE40B500FAB518 /* ImageTransparency.framework */; };
+		D0EFF24A231980A700CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF249231980A700CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,8 +48,8 @@
 		D0C9C0CA22FE3E1200FAB518 /* Tuples.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Tuples.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C0CC22FE3E1700FAB518 /* ImageBlur.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageBlur.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C0F422FE3F8400FAB518 /* TinyThumbnail.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TinyThumbnail.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C0F822FE3FA500FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C11E22FE40B500FAB518 /* ImageTransparency.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageTransparency.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF249231980A700CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF24A231980A700CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C11F22FE40B500FAB518 /* ImageTransparency.framework in Frameworks */,
 				D0C9C0F522FE3F8400FAB518 /* TinyThumbnail.framework in Frameworks */,
 				D0C9C0CD22FE3E1700FAB518 /* ImageBlur.framework in Frameworks */,
@@ -101,7 +102,6 @@
 			isa = PBXGroup;
 			children = (
 				D0C9C0AF22FE3DB800FAB518 /* PhotoResources.swift */,
-				D0C9C0F822FE3FA500FAB518 /* FrameworkBundle.swift */,
 				D0C9C0A322FE3D6200FAB518 /* PhotoResources.h */,
 			);
 			path = Sources;
@@ -110,6 +110,7 @@
 		D0C9C0B122FE3DD000FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF249231980A700CF5164 /* AppBundle.framework */,
 				D0C9C11E22FE40B500FAB518 /* ImageTransparency.framework */,
 				D0C9C0F422FE3F8400FAB518 /* TinyThumbnail.framework */,
 				D0C9C0CC22FE3E1700FAB518 /* ImageBlur.framework */,
@@ -210,7 +211,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C9C0F922FE3FA500FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C0B022FE3DB800FAB518 /* PhotoResources.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

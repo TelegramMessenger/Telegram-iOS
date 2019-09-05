@@ -40,12 +40,12 @@
 		D0C9C7B52301FFE500FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B42301FFE500FAB518 /* TelegramCore.framework */; };
 		D0C9C7B72301FFE900FAB518 /* SwiftSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B62301FFE900FAB518 /* SwiftSignalKit.framework */; };
 		D0C9C7B92301FFEF00FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7B82301FFEF00FAB518 /* TelegramPresentationData.framework */; };
-		D0C9C7BF2302023D00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C7BE2302023D00FAB518 /* FrameworkBundle.swift */; };
 		D0C9C7E32302035800FAB518 /* LocalAuth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E22302035800FAB518 /* LocalAuth.framework */; };
 		D0C9C7E72302041100FAB518 /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E62302041100FAB518 /* AccountContext.framework */; };
 		D0C9C7E9230205A500FAB518 /* ItemListUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7E8230205A500FAB518 /* ItemListUI.framework */; };
 		D0C9C7EB230205D700FAB518 /* PasswordSetupUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7EA230205D700FAB518 /* PasswordSetupUI.framework */; };
 		D0C9C7EF2302061E00FAB518 /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C7EE2302061E00FAB518 /* PhotoResources.framework */; };
+		D0EFF27A2319832400CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2792319832400CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,12 +84,12 @@
 		D0C9C7B42301FFE500FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C7B62301FFE900FAB518 /* SwiftSignalKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SwiftSignalKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C7B82301FFEF00FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C7BE2302023D00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C7E22302035800FAB518 /* LocalAuth.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocalAuth.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C7E62302041100FAB518 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C7E8230205A500FAB518 /* ItemListUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C7EA230205D700FAB518 /* PasswordSetupUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PasswordSetupUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C7EE2302061E00FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF2792319832400CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +97,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF27A2319832400CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C7EF2302061E00FAB518 /* PhotoResources.framework in Frameworks */,
 				D0C9C7EB230205D700FAB518 /* PasswordSetupUI.framework in Frameworks */,
 				D0C9C7E9230205A500FAB518 /* ItemListUI.framework in Frameworks */,
@@ -161,7 +162,6 @@
 				D0C9C77D2301FFCA00FAB518 /* BotPaymentTextItemNode.swift */,
 				D0C9C7812301FFCA00FAB518 /* BotReceiptController.swift */,
 				D0C9C7862301FFCB00FAB518 /* BotReceiptControllerNode.swift */,
-				D0C9C7BE2302023D00FAB518 /* FrameworkBundle.swift */,
 				D0C9C6CB2301FC9300FAB518 /* BotPaymentsUI.h */,
 			);
 			path = Sources;
@@ -170,6 +170,7 @@
 		D0C9C7AB2301FFD300FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2792319832400CF5164 /* AppBundle.framework */,
 				D0C9C7EE2302061E00FAB518 /* PhotoResources.framework */,
 				D0C9C7EA230205D700FAB518 /* PasswordSetupUI.framework */,
 				D0C9C7E8230205A500FAB518 /* ItemListUI.framework */,
@@ -286,7 +287,6 @@
 				D0C9C7A12301FFD000FAB518 /* BotCheckoutWebInteractionControllerNode.swift in Sources */,
 				D0C9C7922301FFD000FAB518 /* BotCheckoutPasswordEntryController.swift in Sources */,
 				D0C9C7932301FFD000FAB518 /* BotPaymentActionItemNode.swift in Sources */,
-				D0C9C7BF2302023D00FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C7A72301FFD000FAB518 /* BotCheckoutNativeCardEntryControllerNode.swift in Sources */,
 				D0C9C7A52301FFD000FAB518 /* BotPaymentFieldItemNode.swift in Sources */,
 				D0C9C79C2301FFD000FAB518 /* BotCheckoutWebInteractionController.swift in Sources */,

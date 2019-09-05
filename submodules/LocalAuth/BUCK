@@ -1,0 +1,15 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "LocalAuth",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/LocalAuthentication.framework",
+    ],
+)

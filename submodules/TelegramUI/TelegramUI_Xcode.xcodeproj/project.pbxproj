@@ -1117,7 +1117,6 @@
 		D0F53BF61E79593500117362 /* AuthorizationSequenceSignUpController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceSignUpController.swift; sourceTree = "<group>"; };
 		D0F53BF81E79593F00117362 /* AuthorizationSequenceSignUpControllerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AuthorizationSequenceSignUpControllerNode.swift; sourceTree = "<group>"; };
 		D0F69CD61D6B87D30046BCD6 /* MediaManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MediaManager.swift; sourceTree = "<group>"; };
-		D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = TelegramUI.xcconfig; path = TelegramUI/Config/TelegramUI.xcconfig; sourceTree = "<group>"; };
 		D0F69DC41D6B89E10046BCD6 /* RadialProgressNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RadialProgressNode.swift; sourceTree = "<group>"; };
 		D0F69E0E1D6B8ACF0046BCD6 /* ChatController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatController.swift; sourceTree = "<group>"; };
 		D0F69E0F1D6B8ACF0046BCD6 /* ChatControllerInteraction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatControllerInteraction.swift; sourceTree = "<group>"; };
@@ -2569,7 +2568,6 @@
 			isa = PBXGroup;
 			children = (
 				D0EB42041F3143AB00838FE6 /* LegacyComponentsResources.bundle */,
-				D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */,
 				D0AB0BBA1D6719B5002C78E7 /* Images.xcassets */,
 				D0471B521EFD8EBC0074D609 /* Resources */,
 				D073CE611DCBBE09007511FD /* Sounds */,
@@ -3138,7 +3136,6 @@
 /* Begin XCBuildConfiguration section */
 		D021D510219CB2240064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3201,7 +3198,6 @@
 		};
 		D021D511219CB2240064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -3265,7 +3261,6 @@
 		};
 		D0400EDB1D5B900A007931CE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3321,7 +3316,6 @@
 		};
 		D0400EDD1D5B900A007931CE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -3338,7 +3332,6 @@
 		};
 		D079FD261F06BEF70038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3401,7 +3394,6 @@
 		};
 		D079FD271F06BEF70038FADE /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -3465,7 +3457,6 @@
 		};
 		D0924FEE1FE52C29003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3521,7 +3512,6 @@
 		};
 		D0924FEF1FE52C29003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -3585,7 +3575,6 @@
 		};
 		D0ADF948212B3B0000310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3648,7 +3637,6 @@
 		};
 		D0ADF949212B3B0000310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -3712,7 +3700,6 @@
 		};
 		D0CE6F02213DC32300BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -3768,7 +3755,6 @@
 		};
 		D0CE6F03213DC32300BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;
@@ -3973,7 +3959,6 @@
 		};
 		D0FC40911D5B8E7500261D9D /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -4036,7 +4021,6 @@
 		};
 		D0FC40921D5B8E7500261D9D /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -4092,7 +4076,6 @@
 		};
 		D0FC40971D5B8E7500261D9D /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				DEVELOPMENT_TEAM = X834Q8SBVP;
@@ -4108,7 +4091,6 @@
 		};
 		D0FC40981D5B8E7500261D9D /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = D0F69DB91D6B88190046BCD6 /* TelegramUI.xcconfig */;
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				COPY_PHASE_STRIP = YES;

@@ -242,7 +242,7 @@ class ProxySettingsServerItemNode: ItemListRevealOptionsItemNode {
             var reorderInset: CGFloat = 0.0
             
             if item.editing.editing {
-                let sizeAndApply = editableControlLayout(48.0, item.theme, false)
+                let sizeAndApply = editableControlLayout(64.0, item.theme, false)
                 editableControlSizeAndApply = sizeAndApply
                 editingOffset = sizeAndApply.0.width
                 

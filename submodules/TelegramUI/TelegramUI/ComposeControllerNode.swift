@@ -9,6 +9,7 @@ import AccountContext
 import SearchBarNode
 import SearchUI
 import ContactListUI
+import AppBundle
 
 final class ComposeControllerNode: ASDisplayNode {
     let contactListNode: ContactListNode

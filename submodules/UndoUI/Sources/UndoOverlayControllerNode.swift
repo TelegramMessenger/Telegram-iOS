@@ -7,6 +7,7 @@ import TelegramPresentationData
 import AnimationUI
 import TextFormat
 import RadialStatusNode
+import AppBundle
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let elevatedLayout: Bool

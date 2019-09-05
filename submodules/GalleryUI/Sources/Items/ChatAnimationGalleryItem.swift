@@ -11,6 +11,7 @@ import AnimationUI
 import AccountContext
 import RadialStatusNode
 import StickerResources
+import AppBundle
 
 class ChatAnimationGalleryItem: GalleryItem {
     let context: AccountContext

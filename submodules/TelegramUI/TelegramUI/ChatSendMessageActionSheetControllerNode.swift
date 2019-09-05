@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import AppBundle
 
 private let leftInset: CGFloat = 16.0
 private let rightInset: CGFloat = 16.0

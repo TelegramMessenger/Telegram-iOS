@@ -255,7 +255,7 @@ final class ContextMenuNode: ASDisplayNode {
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let event = event {
             var eventIsPresses = false
-            if #available(iOSApplicationExtension 9.0, *) {
+            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 eventIsPresses = event.type == .presses
             }
             if event.type == .touches || eventIsPresses {

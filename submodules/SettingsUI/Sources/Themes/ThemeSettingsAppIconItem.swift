@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import AppBundle
 
 private func generateBorderImage(theme: PresentationTheme, bordered: Bool, selected: Bool) -> UIImage? {
     return generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
@@ -274,7 +275,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             updated = true
                         }
                         
-                        if let image = UIImage(named: icon.imageName, in: Bundle.main, compatibleWith: nil) {
+                        if let image = UIImage(named: icon.imageName, in: getAppBundle(), compatibleWith: nil) {
                             let selected = icon.name == item.currentIconName
                             if selected {
                                 selectedNode = imageNode
