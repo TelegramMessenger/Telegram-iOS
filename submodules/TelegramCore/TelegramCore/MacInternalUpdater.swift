@@ -64,7 +64,7 @@ public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, 
                             break
                         }
                         return .fail(.xmlLoad)
-                    }
+                }
             } else {
                 return .fail(.xmlLoad)
             }
@@ -107,50 +107,57 @@ public func downloadAppUpdate(account: Account, source: String, fileName: String
                             
                             let messageAndFile:(Message, TelegramMediaFile)? = apiMessages.compactMap { value in
                                 return StoreMessage(apiMessage: value)
-                            }.compactMap { value in
-                                return locallyRenderedMessage(message: value, peers: peers)
-                            }.sorted(by: {
-                                $0.id > $1.id
-                            }).first(where: { value -> Bool in
-                                if let file = value.media.first as? TelegramMediaFile, file.fileName == fileName {
-                                    return true
-                                } else {
-                                    return false
-                                }
-                            }).map { ($0, $0.media.first as! TelegramMediaFile )}
+                                }.compactMap { value in
+                                    return locallyRenderedMessage(message: value, peers: peers)
+                                }.sorted(by: {
+                                    $0.id > $1.id
+                                }).first(where: { value -> Bool in
+                                    if let file = value.media.first as? TelegramMediaFile, file.fileName == fileName {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                }).map { ($0, $0.media.first as! TelegramMediaFile )}
                             
                             if let (message, media) = messageAndFile {
                                 return Signal { subscriber in
-                                    
-                                    let reference = MediaResourceReference.media(media: .message(message: MessageReference(message), media: media), resource: media.resource)
-                                    
-                                    let fetchDispsable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
-                                    
-                                    let statusDisposable = account.postbox.mediaBox.resourceStatus(media.resource).start(next: { status in
-                                        switch status {
-                                        case let .Fetching(_, progress):
-                                            if let size = media.size {
-                                                if progress == 0 {
-                                                    subscriber.putNext(.started(size))
-                                                } else {
-                                                    subscriber.putNext(.progress(Int(progress * Float(size)), Int(size)))
+                                    var dataDisposable: Disposable?
+                                    var fetchDisposable: Disposable?
+                                    var statusDisposable: Disposable?
+                                    let removeDisposable = account.postbox.mediaBox.removeCachedResources(Set([WrappedMediaResourceId(media.resource.id)])).start(completed: {
+                                        let reference = MediaResourceReference.media(media: .message(message: MessageReference(message), media: media), resource: media.resource)
+                                        
+                                        fetchDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()
+                                        statusDisposable = account.postbox.mediaBox.resourceStatus(media.resource).start(next: { status in
+                                            switch status {
+                                            case let .Fetching(_, progress):
+                                                if let size = media.size {
+                                                    if progress == 0 {
+                                                        subscriber.putNext(.started(size))
+                                                    } else {
+                                                        subscriber.putNext(.progress(Int(progress * Float(size)), Int(size)))
+                                                    }
                                                 }
+                                            default:
+                                                break
                                             }
-                                        default:
-                                            break
-                                        }
+                                        })
+                                        
+                                        dataDisposable = account.postbox.mediaBox.resourceData(media.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { data in
+                                            if data.complete {
+                                                subscriber.putNext(.finished(data.path))
+                                                subscriber.putCompletion()
+                                            }
+                                        })
                                     })
                                     
-                                    let dataDisposable = account.postbox.mediaBox.resourceData(media.resource, option: .complete(waitUntilFetchStatus: true)).start(next: { data in
-                                        if data.complete {
-                                            subscriber.putNext(.finished(data.path))
-                                            subscriber.putCompletion()
-                                        }
-                                    })
+                                    
+                                    
                                     return ActionDisposable {
-                                        fetchDispsable.dispose()
-                                        dataDisposable.dispose()
-                                        statusDisposable.dispose()
+                                        fetchDisposable?.dispose()
+                                        dataDisposable?.dispose()
+                                        statusDisposable?.dispose()
+                                        removeDisposable.dispose()
                                     }
                                 }
                             } else {
