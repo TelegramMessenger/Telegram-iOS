@@ -308,11 +308,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                 }
             }
-            gesture.externalEnded = { [weak self, weak recognizer] viewAndPoint in
-                guard let strongSelf = self, let recognizer = recognizer else {
+            gesture.externalEnded = { [weak self, weak gesture] viewAndPoint in
+                guard let strongSelf = self, let gesture = gesture else {
                     return
                 }
-                recognizer.externalUpdated = nil
+                gesture.externalUpdated = nil
                 if strongSelf.didMoveFromInitialGesturePoint {
                     if let (_, _) = viewAndPoint {
                         if let highlightedActionNode = strongSelf.highlightedActionNode {
