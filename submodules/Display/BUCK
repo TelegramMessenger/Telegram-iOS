@@ -1,53 +1,24 @@
-load('//tools:buck_utils.bzl', 'config_with_updated_linker_flags', 'configs_with_config', 'combined_config')
-load('//tools:buck_defs.bzl', 'SHARED_CONFIGS', 'EXTENSION_LIB_SPECIFIC_CONFIG')
+load("//Config:buck_rule_macros.bzl", "framework")
 
-apple_library(
-    name = 'DisplayPrivate',
+framework(
+    name = "Display",
     srcs = glob([
-        'Display/*.m',
+        "Display/*.swift",
+        "Display/*.m",
     ]),
     headers = glob([
-        'Display/*.h',
-    ]),
-    header_namespace = 'DisplayPrivate',
+        "Display/*.h",
+    ], exclude = ["Display/Display.h"]),
     exported_headers = glob([
-        'Display/*.h',
-    ], exclude = ['Display/Display.h']),
-    modular = True,
-    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
-    compiler_flags = ['-w'],
-    preprocessor_flags = ['-fobjc-arc'],
-    visibility = ['//submodules/Display:Display'],
+        "Display/*.h",
+    ], exclude = ["Display/Display.h"]),
     deps = [
-        '//submodules/AsyncDisplayKit:AsyncDisplayKit',
+    	"//submodules/AsyncDisplayKit:AsyncDisplayKit#dynamic",
+    	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
+        "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [
-        '$SDKROOT/System/Library/Frameworks/Foundation.framework',
-        '$SDKROOT/System/Library/Frameworks/UIKit.framework',
-    ],
-)
-
-apple_library(
-    name = 'Display',
-    srcs = glob([
-	    'Display/*.swift',
-    ]),
-    configs = configs_with_config(combined_config([SHARED_CONFIGS, EXTENSION_LIB_SPECIFIC_CONFIG])),
-    swift_compiler_flags = [
-        '-suppress-warnings',
-        '-application-extension',
-    ],
-    visibility = ['PUBLIC'],
-    deps = [
-        ':DisplayPrivate',
-        '//submodules/AsyncDisplayKit:AsyncDisplayKit',
-        '//submodules/SSignalKit:SwiftSignalKit',
-    ],
-    frameworks = [
-		'$SDKROOT/System/Library/Frameworks/Foundation.framework',
-		'$SDKROOT/System/Library/Frameworks/UIKit.framework',
-		'$SDKROOT/System/Library/Frameworks/QuartzCore.framework',
-		'$SDKROOT/System/Library/Frameworks/CoreText.framework',
-		'$SDKROOT/System/Library/Frameworks/CoreGraphics.framework',
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
     ],
 )

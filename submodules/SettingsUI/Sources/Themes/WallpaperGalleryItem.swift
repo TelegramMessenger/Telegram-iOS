@@ -16,6 +16,7 @@ import PhotoResources
 import GalleryUI
 import LocalMediaResources
 import WallpaperResources
+import AppBundle
 
 struct WallpaperGalleryItemArguments {
     let colorPreview: Bool

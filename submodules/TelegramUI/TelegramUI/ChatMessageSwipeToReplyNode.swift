@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
+import AppBundle
 
 final class ChatMessageSwipeToReplyNode: ASDisplayNode {
     private let backgroundNode: ASImageNode

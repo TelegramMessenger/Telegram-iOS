@@ -2,10 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 public class StatusBarSurface {
     var statusBars: [StatusBar] = []
     

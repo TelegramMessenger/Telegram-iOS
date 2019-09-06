@@ -19,6 +19,7 @@ import Emoji
 import ReactionSelectionNode
 import PersistentStringHash
 import GridMessageSelectionNode
+import AppBundle
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []
@@ -381,7 +382,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
         
-        let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
+        /*let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
         replyRecognizer.shouldBegin = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
                 if strongSelf.selectionNode != nil {
@@ -403,9 +404,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             return false
         }
-        self.view.addGestureRecognizer(replyRecognizer)
+        self.view.addGestureRecognizer(replyRecognizer)*/
         
-        /*let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
+        let reactionRecognizer = ReactionSwipeGestureRecognizer(target: nil, action: nil)
         self.reactionRecognizer = reactionRecognizer
         reactionRecognizer.availableReactions = { [weak self] in
             guard let strongSelf = self, let item = strongSelf.item, !item.presentationData.isPreview && !Namespaces.Message.allScheduled.contains(item.message.id.namespace) else {
@@ -436,7 +437,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             
             var reactionItems: [ReactionGestureItem] = []
             for (value, text, name) in reactions {
-                if let path = frameworkBundle.path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
+                if let path = getAppBundle().path(forResource: name, ofType: "tgs") {
                     reactionItems.append(.reaction(value: value, text: text, path: path))
                 }
             }
@@ -550,7 +551,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             }
         }
-        self.view.addGestureRecognizer(reactionRecognizer)*/
+        self.view.addGestureRecognizer(reactionRecognizer)
     }
     
     override func asyncLayout() -> (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, Bool) -> Void) {
@@ -2729,7 +2730,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     }
     
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
-        switch recognizer.state {
+        /*switch recognizer.state {
             case .began:
                 self.currentSwipeToReplyTranslation = 0.0
                 if self.swipeToReplyFeedback == nil {
@@ -2788,7 +2789,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             default:
                 break
-        }
+        }*/
     }
     
     private var absoluteRect: (CGRect, CGSize)?

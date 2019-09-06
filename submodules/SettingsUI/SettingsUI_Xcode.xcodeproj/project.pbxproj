@@ -174,7 +174,6 @@
 		D03E47B0230763510049C28B /* UniversalMediaPlayer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47AF230763510049C28B /* UniversalMediaPlayer.framework */; };
 		D03E47B2230763570049C28B /* UrlEscaping.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47B1230763570049C28B /* UrlEscaping.framework */; };
 		D03E47B42307635C0049C28B /* WebSearchUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47B32307635C0049C28B /* WebSearchUI.framework */; };
-		D03E47B8230766870049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E47B7230766870049C28B /* FrameworkBundle.swift */; };
 		D03E47D5230767F40049C28B /* UrlHandling.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E47D4230767F40049C28B /* UrlHandling.framework */; };
 		D03E480C230769A30049C28B /* HexColor.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E480B230769A30049C28B /* HexColor.framework */; };
 		D03E483623076AE90049C28B /* QrCode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E483523076AE90049C28B /* QrCode.framework */; };
@@ -189,6 +188,7 @@
 		D03E48E22308649C0049C28B /* CounterContollerTitleView.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E48E12308649C0049C28B /* CounterContollerTitleView.framework */; };
 		D03E490E2308661A0049C28B /* GridMessageSelectionNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E490D2308661A0049C28B /* GridMessageSelectionNode.framework */; };
 		D03E493A2308678D0049C28B /* InstantPageCache.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E49392308678D0049C28B /* InstantPageCache.framework */; };
+		D0EFF26A2319825B00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2692319825B00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -361,7 +361,6 @@
 		D03E47AF230763510049C28B /* UniversalMediaPlayer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UniversalMediaPlayer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E47B1230763570049C28B /* UrlEscaping.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlEscaping.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E47B32307635C0049C28B /* WebSearchUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = WebSearchUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E47B7230766870049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D03E47D4230767F40049C28B /* UrlHandling.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlHandling.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E480B230769A30049C28B /* HexColor.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = HexColor.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E483523076AE90049C28B /* QrCode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = QrCode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -376,6 +375,7 @@
 		D03E48E12308649C0049C28B /* CounterContollerTitleView.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CounterContollerTitleView.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E490D2308661A0049C28B /* GridMessageSelectionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GridMessageSelectionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E49392308678D0049C28B /* InstantPageCache.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = InstantPageCache.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF2692319825B00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -383,6 +383,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF26A2319825B00CF5164 /* AppBundle.framework in Frameworks */,
 				D03E493A2308678D0049C28B /* InstantPageCache.framework in Frameworks */,
 				D03E490E2308661A0049C28B /* GridMessageSelectionNode.framework in Frameworks */,
 				D03E48E22308649C0049C28B /* CounterContollerTitleView.framework in Frameworks */,
@@ -510,7 +511,6 @@
 				D03E48AD230775800049C28B /* OpenSettings.swift */,
 				D03E48AF230775EF0049C28B /* AccountUtils.swift */,
 				D03E48B12307767A0049C28B /* CachedFaqInstantPage.swift */,
-				D03E47B7230766870049C28B /* FrameworkBundle.swift */,
 				D03E465023075D930049C28B /* SettingsUI.h */,
 			);
 			path = Sources;
@@ -687,6 +687,7 @@
 		D03E4732230761E10049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2692319825B00CF5164 /* AppBundle.framework */,
 				D03E49392308678D0049C28B /* InstantPageCache.framework */,
 				D03E490D2308661A0049C28B /* GridMessageSelectionNode.framework */,
 				D03E48E12308649C0049C28B /* CounterContollerTitleView.framework */,
@@ -867,7 +868,6 @@
 				D03E466E23075E660049C28B /* TabBarAccountSwitchController.swift in Sources */,
 				D03E46D223075F810049C28B /* ShareProxyServerActionSheetController.swift in Sources */,
 				D03E468A23075F010049C28B /* SettingsSearchRecentQueries.swift in Sources */,
-				D03E47B8230766870049C28B /* FrameworkBundle.swift in Sources */,
 				D03E472023075FE40049C28B /* WallpaperGalleryItem.swift in Sources */,
 				D03E471723075FE40049C28B /* WallpaperGalleryDecorationNode.swift in Sources */,
 				D03E46B123075F4E0049C28B /* ItemListWebsiteItem.swift in Sources */,

@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 import AccountContext
 import RadialStatusNode
 import TelegramUniversalVideoContent
+import AppBundle
 
 public enum UniversalVideoGalleryItemContentInfo {
     case message(Message)
@@ -55,7 +56,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
         let node = UniversalVideoGalleryItemNode(context: self.context, presentationData: self.presentationData, performAction: self.performAction, openActionOptions: self.openActionOptions)
         
         if let indexData = self.indexData {
-            node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
         }
         
         node.setupItem(self)
@@ -66,7 +67,7 @@ public class UniversalVideoGalleryItem: GalleryItem {
     public func updateNode(node: GalleryItemNode) {
         if let node = node as? UniversalVideoGalleryItemNode {
             if let indexData = self.indexData {
-                node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
+                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
             }
             
             node.setupItem(self)

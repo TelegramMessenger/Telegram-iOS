@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AppBundle
 
 public struct PresentationResourcesSettings {
     public static let editProfile = UIImage(bundleImageName: "Settings/MenuIcons/EditProfile")?.precomposed()

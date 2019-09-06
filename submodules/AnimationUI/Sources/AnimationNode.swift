@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Lottie
+import AppBundle
 
 public final class AnimationNode : ASDisplayNode {
     private let scale: CGFloat
@@ -24,8 +25,8 @@ public final class AnimationNode : ASDisplayNode {
         super.init()
         
         self.setViewBlock({
-            if let animation = animation, let url = frameworkBundle.url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
-                let view = LOTAnimationView(model: composition, in: frameworkBundle)
+            if let animation = animation, let url = getAppBundle().url(forResource: animation, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+                let view = LOTAnimationView(model: composition, in: getAppBundle())
                 view.animationSpeed = self.speed
                 view.backgroundColor = .clear
                 view.isOpaque = false
@@ -48,7 +49,7 @@ public final class AnimationNode : ASDisplayNode {
     }
     
     public func setAnimation(name: String) {
-        if let url = frameworkBundle.url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
+        if let url = getAppBundle().url(forResource: name, withExtension: "json"), let composition = LOTComposition(filePath: url.path) {
             self.animationView()?.sceneModel = composition
         }
     }

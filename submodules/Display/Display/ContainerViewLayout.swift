@@ -83,12 +83,6 @@ public struct ContainerViewLayout: Equatable {
 public extension ContainerViewLayout {
     func insets(options: ContainerViewLayoutInsetOptions) -> UIEdgeInsets {
         var insets = self.intrinsicInsets
-        if self.inSlideOver {
-            let onScreenNavigationHeight = self.deviceMetrics.onScreenNavigationHeight(inLandscape: false) ?? 0.0
-            if insets.bottom > 0.0 && abs(insets.bottom - onScreenNavigationHeight) < 0.1 {
-                insets.bottom = 0.0
-            }
-        }
         if let statusBarHeight = self.statusBarHeight, options.contains(.statusBar) {
             insets.top += statusBarHeight
         }

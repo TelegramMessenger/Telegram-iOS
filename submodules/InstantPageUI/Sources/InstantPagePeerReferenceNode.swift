@@ -8,6 +8,7 @@ import Display
 import TelegramPresentationData
 import ActivityIndicator
 import AccountContext
+import AppBundle
 
 private enum JoinState: Equatable {
     case none

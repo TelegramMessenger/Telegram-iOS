@@ -1154,6 +1154,7 @@
 		D0BFAE5420AB33F900793CF2 /* TGIconSwitchView.h in Headers */ = {isa = PBXBuildFile; fileRef = D0BFAE5220AB33F800793CF2 /* TGIconSwitchView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0BFAE5720AB34AB00793CF2 /* TGAnimationUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = D0BFAE5520AB34AA00793CF2 /* TGAnimationUtils.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0BFAE5820AB34AB00793CF2 /* TGAnimationUtils.m in Sources */ = {isa = PBXBuildFile; fileRef = D0BFAE5620AB34AA00793CF2 /* TGAnimationUtils.m */; };
+		D0EFF24023197FD500CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF23F23197FD500CF5164 /* AppBundle.framework */; };
 		D0F7C9C41F55DA49005B255A /* TGVideoCameraMovieRecorder.h in Headers */ = {isa = PBXBuildFile; fileRef = D0F7C9C21F55DA49005B255A /* TGVideoCameraMovieRecorder.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0F7C9C51F55DA49005B255A /* TGVideoCameraMovieRecorder.m in Sources */ = {isa = PBXBuildFile; fileRef = D0F7C9C31F55DA49005B255A /* TGVideoCameraMovieRecorder.m */; };
 		D0F7C9C81F55DA83005B255A /* TGVideoCameraGLRenderer.h in Headers */ = {isa = PBXBuildFile; fileRef = D0F7C9C61F55DA83005B255A /* TGVideoCameraGLRenderer.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -2318,6 +2319,7 @@
 		D0BFAE5520AB34AA00793CF2 /* TGAnimationUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGAnimationUtils.h; sourceTree = "<group>"; };
 		D0BFAE5620AB34AA00793CF2 /* TGAnimationUtils.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGAnimationUtils.m; sourceTree = "<group>"; };
 		D0EB42021F3142F400838FE6 /* LegacyComponentsResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; name = LegacyComponentsResources.bundle; path = Resources/LegacyComponentsResources.bundle; sourceTree = "<group>"; };
+		D0EFF23F23197FD500CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0F7C9C21F55DA49005B255A /* TGVideoCameraMovieRecorder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoCameraMovieRecorder.h; sourceTree = "<group>"; };
 		D0F7C9C31F55DA49005B255A /* TGVideoCameraMovieRecorder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TGVideoCameraMovieRecorder.m; sourceTree = "<group>"; };
 		D0F7C9C61F55DA83005B255A /* TGVideoCameraGLRenderer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TGVideoCameraGLRenderer.h; sourceTree = "<group>"; };
@@ -2336,6 +2338,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF24023197FD500CF5164 /* AppBundle.framework in Frameworks */,
 				09750F761F2FA816001B9886 /* SSignalKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2782,6 +2785,7 @@
 		D01779051F20E0DE0044446D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF23F23197FD500CF5164 /* AppBundle.framework */,
 				09750F741F2FA5E8001B9886 /* SSignalKit.framework */,
 			);
 			name = Frameworks;

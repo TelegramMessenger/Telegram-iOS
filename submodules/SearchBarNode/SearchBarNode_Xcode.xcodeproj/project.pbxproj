@@ -17,7 +17,7 @@
 		D0C9C2DD2300A3A000FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2DC2300A3A000FAB518 /* Display.framework */; };
 		D0C9C2DF2300A3A400FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2DE2300A3A400FAB518 /* TelegramPresentationData.framework */; };
 		D0C9C2E12300A3A800FAB518 /* ActivityIndicator.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2E02300A3A800FAB518 /* ActivityIndicator.framework */; };
-		D0C9C2E52300A44E00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C2E42300A44E00FAB518 /* FrameworkBundle.swift */; };
+		D0EFF250231980DD00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF24F231980DD00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,7 +33,7 @@
 		D0C9C2DC2300A3A000FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C2DE2300A3A400FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C2E02300A3A800FAB518 /* ActivityIndicator.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ActivityIndicator.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2E42300A44E00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF24F231980DD00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF250231980DD00CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C2E12300A3A800FAB518 /* ActivityIndicator.framework in Frameworks */,
 				D0C9C2DF2300A3A400FAB518 /* TelegramPresentationData.framework in Frameworks */,
 				D0C9C2DD2300A3A000FAB518 /* Display.framework in Frameworks */,
@@ -77,7 +78,6 @@
 			children = (
 				D0C9C2CB2300A2C900FAB518 /* SearchBarNode.swift */,
 				D0C9C2CC2300A2C900FAB518 /* SearchBarPlaceholderNode.swift */,
-				D0C9C2E42300A44E00FAB518 /* FrameworkBundle.swift */,
 				D0C9C2C32300A21900FAB518 /* SearchBarNode.h */,
 			);
 			path = Sources;
@@ -86,6 +86,7 @@
 		D0C9C2D32300A38F00FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF24F231980DD00CF5164 /* AppBundle.framework */,
 				D0C9C2E02300A3A800FAB518 /* ActivityIndicator.framework */,
 				D0C9C2DE2300A3A400FAB518 /* TelegramPresentationData.framework */,
 				D0C9C2DC2300A3A000FAB518 /* Display.framework */,
@@ -179,7 +180,6 @@
 			files = (
 				D0C9C2CD2300A2C900FAB518 /* SearchBarNode.swift in Sources */,
 				D0C9C2CE2300A2C900FAB518 /* SearchBarPlaceholderNode.swift in Sources */,
-				D0C9C2E52300A44E00FAB518 /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

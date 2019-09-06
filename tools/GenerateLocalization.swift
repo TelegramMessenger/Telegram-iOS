@@ -203,12 +203,12 @@ if CommandLine.arguments.count != 4 {
     print("Usage: swift GenerateLocalization.swift Localizable.strings Strings.swift Strings.mapping")
 } else {
     if let rawDict = NSDictionary(contentsOfFile: CommandLine.arguments[1]) {
-        var result = "import Foundation\n\n"
+        var result = "import Foundation\nimport AppBundle\n\n"
         
         result +=
 """
 private let fallbackDict: [String: String] = {
-    guard let mainPath = Bundle.main.path(forResource: \"en\", ofType: \"lproj\"), let bundle = Bundle(path: mainPath) else {
+    guard let mainPath = getAppBundle().path(forResource: \"en\", ofType: \"lproj\"), let bundle = Bundle(path: mainPath) else {
         return [:]
     }
     guard let path = bundle.path(forResource: \"Localizable\", ofType: \"strings\") else {
@@ -346,7 +346,7 @@ private final class DataReader {
 }
         
 private func loadMapping() -> ([Int], [String], [Int], [Int], [String]) {
-    guard let filePath = Bundle(for: PresentationStrings.self).path(forResource: "PresentationStrings", ofType: "mapping") else {
+    guard let filePath = getAppBundle().path(forResource: "PresentationStrings", ofType: "mapping") else {
         fatalError()
     }
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {

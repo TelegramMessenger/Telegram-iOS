@@ -1,0 +1,18 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "GridMessageSelectionNode",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/CheckNode:CheckNode",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

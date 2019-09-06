@@ -9,6 +9,7 @@ import Photos
 import TelegramPresentationData
 import AccountContext
 import GalleryUI
+import AppBundle
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 

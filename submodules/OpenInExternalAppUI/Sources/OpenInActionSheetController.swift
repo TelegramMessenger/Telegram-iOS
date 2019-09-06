@@ -9,6 +9,7 @@ import MapKit
 import TelegramPresentationData
 import AccountContext
 import PhotoResources
+import AppBundle
 
 public struct OpenInControllerAction {
     public let title: String

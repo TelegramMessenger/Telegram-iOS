@@ -11,6 +11,7 @@ import AccountContext
 import RadialStatusNode
 import PhotoResources
 import GridMessageSelectionNode
+import ContextUI
 
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {
@@ -145,6 +146,7 @@ final class GridMessageItem: GridItem {
 
 final class GridMessageItemNode: GridItemNode {
     private var currentState: (AccountContext, Media, CGSize)?
+    private let containerNode: ContextControllerSourceNode
     private let imageNode: TransformImageNode
     private(set) var messageId: MessageId?
     private var item: GridMessageItem?
@@ -159,6 +161,7 @@ final class GridMessageItemNode: GridItemNode {
     private var resourceStatus: MediaResourceStatus?
     
     override init() {
+        self.containerNode = ContextControllerSourceNode()
         self.imageNode = TransformImageNode()
         self.statusNode = RadialStatusNode(backgroundNodeColor: UIColor(white: 0.0, alpha: 0.6))
         let progressDiameter: CGFloat = 40.0
@@ -170,8 +173,17 @@ final class GridMessageItemNode: GridItemNode {
         
         super.init()
         
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.mediaBadgeNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.imageNode)
+        self.containerNode.addSubnode(self.mediaBadgeNode)
+        
+        self.containerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self, let item = strongSelf.item, let controllerInteraction = strongSelf.controllerInteraction else {
+                gesture.cancel()
+                return
+            }
+            controllerInteraction.openMessageContextActions(item.message, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
+        }
     }
     
     deinit {
@@ -302,6 +314,9 @@ final class GridMessageItemNode: GridItemNode {
         super.layout()
         
         let imageFrame = self.bounds
+        
+        self.containerNode.frame = imageFrame
+        
         self.imageNode.frame = imageFrame
         
         if let item = self.item, let (_, _, mediaDimensions) = self.currentState {
@@ -336,7 +351,7 @@ final class GridMessageItemNode: GridItemNode {
                     })
                     
                     selectionNode.frame = CGRect(origin: CGPoint(), size: self.bounds.size)
-                    self.addSubnode(selectionNode)
+                    self.containerNode.addSubnode(selectionNode)
                     self.selectionNode = selectionNode
                     selectionNode.updateSelected(selected, animated: false)
                     if animated {
@@ -437,7 +452,8 @@ final class GridMessageItemNode: GridItemNode {
                                 let _ = controllerInteraction.openMessage(message, .default)
                             }
                         case .longTap:
-                            controllerInteraction.openMessageContextMenu(message, false, self, self.bounds, nil)
+                        break
+                            //controllerInteraction.openMessageContextMenu(message, false, self, self.bounds, nil)
                         default:
                             break
                     }

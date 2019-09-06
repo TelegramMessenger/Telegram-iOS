@@ -1,3 +1,5 @@
+#if os(macOS)
+
 import TelegramApiMac
 import SwiftSignalKitMac
 import PostboxMac
@@ -164,3 +166,5 @@ public func downloadAppUpdate(account: Account, source: String, fileName: String
             }
     }
 }
+
+#endif

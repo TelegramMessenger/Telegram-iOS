@@ -11,6 +11,7 @@ import ActivityIndicator
 import AccountContext
 import SearchBarNode
 import SearchUI
+import ContextUI
 
 private final class ChatListControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {
@@ -64,6 +65,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestOpenRecentPeerOptions: ((Peer) -> Void)?
     var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
     var requestAddContact: ((String) -> Void)?
+    var peerContextAction: ((Peer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?) -> Void)?
     var dismissSelf: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
 
@@ -272,7 +274,7 @@ final class ChatListControllerNode: ASDisplayNode {
             if let requestAddContact = self?.requestAddContact {
                 requestAddContact(phoneNumber)
             }
-        }), cancel: { [weak self] in
+        }, peerContextAction: self.peerContextAction), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()
             }

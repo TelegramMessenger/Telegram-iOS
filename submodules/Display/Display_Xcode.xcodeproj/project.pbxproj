@@ -55,7 +55,6 @@
 		D03AA4EB202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA4EA202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift */; };
 		D03AA5162030C5F80056C405 /* ListViewTempItemNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03AA5152030C5F80056C405 /* ListViewTempItemNode.swift */; };
 		D03B0E701D6331FB00955575 /* StatusBarHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */; };
-		D03E7DE41C96A90100C07816 /* NavigationShadow@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */; };
 		D03E7DE61C96B96E00C07816 /* NavigationBarTransitionContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DE51C96B96E00C07816 /* NavigationBarTransitionContainer.swift */; };
 		D03E7DF81C96C5F200C07816 /* NSWeakReference.h in Headers */ = {isa = PBXBuildFile; fileRef = D03E7DF61C96C5F200C07816 /* NSWeakReference.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D03E7DF91C96C5F200C07816 /* NSWeakReference.m in Sources */ = {isa = PBXBuildFile; fileRef = D03E7DF71C96C5F200C07816 /* NSWeakReference.m */; };
@@ -101,7 +100,6 @@
 		D05CC3201B695A9600E235A3 /* NavigationControllerProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3141B695A9600E235A3 /* NavigationControllerProxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05CC3241B695B0700E235A3 /* NavigationBarProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = D05CC3221B695B0700E235A3 /* NavigationBarProxy.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D05CC3251B695B0700E235A3 /* NavigationBarProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */; };
-		D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */; };
 		D05CC3291B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */; };
 		D060185F22F35E7400796784 /* ShakeAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060185E22F35E7400796784 /* ShakeAnimation.swift */; };
 		D06B76DB20592A97006E9EEA /* LayoutSizes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06B76DA20592A97006E9EEA /* LayoutSizes.swift */; };
@@ -231,7 +229,6 @@
 		D03AA4EA202E02B10056C405 /* ListViewReorderingGestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewReorderingGestureRecognizer.swift; sourceTree = "<group>"; };
 		D03AA5152030C5F80056C405 /* ListViewTempItemNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListViewTempItemNode.swift; sourceTree = "<group>"; };
 		D03B0E6F1D6331FB00955575 /* StatusBarHost.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StatusBarHost.swift; sourceTree = "<group>"; };
-		D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationShadow@2x.png"; sourceTree = "<group>"; };
 		D03E7DE51C96B96E00C07816 /* NavigationBarTransitionContainer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NavigationBarTransitionContainer.swift; sourceTree = "<group>"; };
 		D03E7DF61C96C5F200C07816 /* NSWeakReference.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NSWeakReference.h; sourceTree = "<group>"; };
 		D03E7DF71C96C5F200C07816 /* NSWeakReference.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NSWeakReference.m; sourceTree = "<group>"; };
@@ -280,7 +277,6 @@
 		D05CC3141B695A9600E235A3 /* NavigationControllerProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NavigationControllerProxy.h; sourceTree = "<group>"; };
 		D05CC3221B695B0700E235A3 /* NavigationBarProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NavigationBarProxy.h; sourceTree = "<group>"; };
 		D05CC3231B695B0700E235A3 /* NavigationBarProxy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = NavigationBarProxy.m; sourceTree = "<group>"; };
-		D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "NavigationBackArrowLight@2x.png"; sourceTree = "<group>"; };
 		D05CC3281B69750D00E235A3 /* InteractiveTransitionGestureRecognizer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InteractiveTransitionGestureRecognizer.swift; sourceTree = "<group>"; };
 		D060185E22F35E7400796784 /* ShakeAnimation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShakeAnimation.swift; sourceTree = "<group>"; };
 		D06B76DA20592A97006E9EEA /* LayoutSizes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LayoutSizes.swift; sourceTree = "<group>"; };
@@ -575,8 +571,6 @@
 		D05CC2E11B69534100E235A3 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
-				D03E7DE31C96A90100C07816 /* NavigationShadow@2x.png */,
-				D05CC3261B69725400E235A3 /* NavigationBackArrowLight@2x.png */,
 				D05CC2661B69316F00E235A3 /* Display.h */,
 				D05CC2681B69316F00E235A3 /* Info.plist */,
 			);
@@ -852,8 +846,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E7DE41C96A90100C07816 /* NavigationShadow@2x.png in Resources */,
-				D05CC3271B69725400E235A3 /* NavigationBackArrowLight@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

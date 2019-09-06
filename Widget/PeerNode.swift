@@ -72,7 +72,7 @@ private func avatarViewLettersImage(size: CGSize, peerId: PeerId, accountPeerId:
     context?.setBlendMode(.normal)
     
     let string = letters.count == 0 ? "" : (letters[0] + (letters.count == 1 ? "" : letters[1]))
-    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedStringKey.font: UIFont.systemFont(ofSize: 20.0), NSAttributedStringKey.foregroundColor: UIColor.white])
+    let attributedString = NSAttributedString(string: string, attributes: [NSAttributedString.Key.font: UIFont.systemFont(ofSize: 20.0), NSAttributedString.Key.foregroundColor: UIColor.white])
     
     let line = CTLineCreateWithAttributedString(attributedString)
     let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)

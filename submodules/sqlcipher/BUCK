@@ -1,0 +1,30 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "sqlcipher",
+    compiler_flags = [
+    	"-DDSQLITE_HAS_CODEC=1",
+    	"-DSQLCIPHER_CRYPTO_CC=1",
+    	"-DSQLITE_ENABLE_FTS5",
+    	"-DSQLITE_DEFAULT_MEMSTATUS=0",
+    	"-DNDEBUG",
+    ],
+    srcs = glob([
+        "Sources/*.c",
+    ]),
+    headers = [
+	    "Sources/sqlcipher_config.h",
+    	"Sources/sqlite3.h",
+		"Sources/sqlite3ext.h",
+    ],
+    exported_headers = [
+    	"Sources/sqlcipher_config.h",
+    	"Sources/sqlite3.h",
+		"Sources/sqlite3ext.h",
+    ],
+    deps = [
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

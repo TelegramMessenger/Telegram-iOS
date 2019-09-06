@@ -12,8 +12,10 @@ import ShareController
 import CounterContollerTitleView
 import WallpaperResources
 import OverlayStatusController
+import AppBundle
 
 public enum ThemePreviewSource {
+    case settings(PresentationThemeReference)
     case theme(TelegramTheme)
     case slug(String, TelegramMediaFile)
     case media(AnyMediaReference)
@@ -24,13 +26,12 @@ public final class ThemePreviewController: ViewController {
     private let previewTheme: PresentationTheme
     private let source: ThemePreviewSource
     private let theme = Promise<TelegramTheme?>()
+    private let presentationTheme = Promise<PresentationTheme>()
     
     private var controllerNode: ThemePreviewControllerNode {
         return self.displayNode as! ThemePreviewControllerNode
     }
-    
-    private let titleView: CounterContollerTitleView
-    
+        
     private var didPlayPresentationAnimation = false
     
     private var presentationData: PresentationData
@@ -45,8 +46,7 @@ public final class ThemePreviewController: ViewController {
         self.source = source
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        
-        self.titleView = CounterContollerTitleView(theme: self.previewTheme)
+        self.presentationTheme.set(.single(previewTheme))
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
@@ -61,24 +61,52 @@ public final class ThemePreviewController: ViewController {
                 return .single(nil)
             })
             themeName = previewTheme.name.string
+            
+            self.presentationTheme.set(.single(self.previewTheme)
+            |> then(
+                self.theme.get()
+                |> mapToSignal { theme in
+                    if let file = theme?.file {
+                        return telegramThemeData(account: context.account, accountManager: context.sharedContext.accountManager, resource: file.resource)
+                        |> mapToSignal { data -> Signal<PresentationTheme, NoError> in
+                            guard let data = data, let presentationTheme = makePresentationTheme(data: data) else {
+                                return .complete()
+                            }
+                            return .single(presentationTheme)
+                        }
+                    } else {
+                        return .complete()
+                    }
+                }
+            ))
         } else {
             self.theme.set(.single(nil))
             themeName = previewTheme.name.string
         }
         
-        self.titleView.title = CounterContollerTitle(title: themeName, counter: " ")
+        var isPreview = false
+        if case .settings = source {
+            isPreview = true
+        }
+        
+        let titleView = CounterContollerTitleView(theme: self.previewTheme)
+        titleView.title = CounterContollerTitle(title: themeName, counter: isPreview ? "" : " ")
         self.navigationItem.titleView = titleView
-
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
+        if !isPreview {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
+        }
         
-        self.disposable = (self.theme.get()
-        |> deliverOnMainQueue).start(next: { [weak self] theme in
+        self.disposable = (combineLatest(self.theme.get(), self.presentationTheme.get())
+        |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
             if let strongSelf = self, let theme = theme {
-                strongSelf.titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+                let titleView = CounterContollerTitleView(theme: strongSelf.previewTheme)
+                titleView.title = CounterContollerTitle(title: themeName, counter: strongSelf.presentationData.strings.Theme_UsersCount(max(1, theme.installCount)))
+                strongSelf.navigationItem.titleView = titleView
+                strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationTheme: presentationTheme, presentationStrings: strongSelf.presentationData.strings))
             }
         })
         
@@ -114,6 +142,10 @@ public final class ThemePreviewController: ViewController {
     override public func loadDisplayNode() {
         super.loadDisplayNode()
         
+        var isPreview = false
+        if case .settings = self.source {
+            isPreview = true
+        }
         self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
@@ -122,7 +154,7 @@ public final class ThemePreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf.apply()
             }
-        })
+        }, isPreview: isPreview)
         self.displayNodeDidLoad()
         
         let previewTheme = self.previewTheme
@@ -146,6 +178,8 @@ public final class ThemePreviewController: ViewController {
         let disposable = self.applyDisposable
         
         switch self.source {
+            case let .settings(reference):
+                theme = .single(reference)
             case .theme, .slug:
                 theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
                 |> mapToSignal { theme, wallpaper -> Signal<PresentationThemeReference?, NoError> in
@@ -314,6 +348,8 @@ public final class ThemePreviewController: ViewController {
         let subject: ShareControllerSubject
         let preferredAction: ShareControllerPreferredAction
         switch self.source {
+            case let .settings(reference):
+                return
             case let .theme(theme):
                 subject = .url("https://t.me/addtheme/\(theme.slug)")
                 preferredAction = .default

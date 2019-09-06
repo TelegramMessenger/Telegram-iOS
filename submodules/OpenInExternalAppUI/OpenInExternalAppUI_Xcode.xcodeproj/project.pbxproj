@@ -24,7 +24,7 @@
 		D0C9C4352300D6B500FAB518 /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C4342300D6B500FAB518 /* PhotoResources.framework */; };
 		D0C9C4372300D6C100FAB518 /* CoreLocation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C4362300D6C000FAB518 /* CoreLocation.framework */; };
 		D0C9C4392300D6C400FAB518 /* UrlEscaping.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C4382300D6C400FAB518 /* UrlEscaping.framework */; };
-		D0C9C43F2300D75500FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C43E2300D75500FAB518 /* FrameworkBundle.swift */; };
+		D0EFF25A2319813400CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2592319813400CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -47,7 +47,7 @@
 		D0C9C4342300D6B500FAB518 /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C4362300D6C000FAB518 /* CoreLocation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreLocation.framework; path = System/Library/Frameworks/CoreLocation.framework; sourceTree = SDKROOT; };
 		D0C9C4382300D6C400FAB518 /* UrlEscaping.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = UrlEscaping.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C43E2300D75500FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF2592319813400CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +55,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF25A2319813400CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C4392300D6C400FAB518 /* UrlEscaping.framework in Frameworks */,
 				D0C9C4372300D6C100FAB518 /* CoreLocation.framework in Frameworks */,
 				D0C9C4352300D6B500FAB518 /* PhotoResources.framework in Frameworks */,
@@ -98,7 +99,6 @@
 				D0C9C41A2300D67800FAB518 /* OpenInActionSheetController.swift */,
 				D0C9C41B2300D67800FAB518 /* OpenInAppIconResources.swift */,
 				D0C9C4192300D67800FAB518 /* OpenInOptions.swift */,
-				D0C9C43E2300D75500FAB518 /* FrameworkBundle.swift */,
 				D0C9C40D2300D60C00FAB518 /* OpenInExternalAppUI.h */,
 			);
 			path = Sources;
@@ -107,6 +107,7 @@
 		D0C9C41F2300D68A00FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2592319813400CF5164 /* AppBundle.framework */,
 				D0C9C4382300D6C400FAB518 /* UrlEscaping.framework */,
 				D0C9C4362300D6C000FAB518 /* CoreLocation.framework */,
 				D0C9C4342300D6B500FAB518 /* PhotoResources.framework */,
@@ -204,7 +205,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0C9C43F2300D75500FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C41D2300D67800FAB518 /* OpenInActionSheetController.swift in Sources */,
 				D0C9C41C2300D67800FAB518 /* OpenInOptions.swift in Sources */,
 				D0C9C41E2300D67800FAB518 /* OpenInAppIconResources.swift in Sources */,

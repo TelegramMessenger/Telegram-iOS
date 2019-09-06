@@ -1,6 +1,10 @@
 #import "FetchImage.h"
 
+#ifdef BUCK
+#import <MTProtoKit/MTProtoKit.h>
+#else
 #import <MTProtoKitDynamic/MTProtoKitDynamic.h>
+#endif
 
 #import "Serialization.h"
 

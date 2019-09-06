@@ -232,7 +232,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
                     requestOpenMessageFromSearch(peer, messageId)
                 }
-            }, addContact: nil), cancel: { [weak self] in
+            }, addContact: nil, peerContextAction: nil), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()
                 }

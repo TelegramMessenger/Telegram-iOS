@@ -34,7 +34,7 @@ private func generateBackgroundImage(foreground: UIColor, diameter: CGFloat, sha
 private func generateBackgroundShadowImage(shadow: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter * 2.0 + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(UIColor.white.cgColor)
+        context.setFillColor(shadow.cgColor)
         context.setShadow(offset: CGSize(), blur: shadowBlur, color: shadow.cgColor)
         
         context.fillEllipse(in: CGRect(origin: CGPoint(x: shadowBlur, y: shadowBlur), size: CGSize(width: diameter, height: diameter)))

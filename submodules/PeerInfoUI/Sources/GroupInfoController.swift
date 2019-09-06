@@ -33,6 +33,7 @@ import NotificationMuteSettingsUI
 import MapResourceToAvatarSizes
 import NotificationSoundSelectionUI
 import ItemListAddressItem
+import AppBundle
 
 private final class GroupInfoArguments {
     let context: AccountContext

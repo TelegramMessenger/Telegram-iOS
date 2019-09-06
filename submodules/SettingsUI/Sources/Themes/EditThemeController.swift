@@ -379,7 +379,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                         let _ = enqueueMessages(account: context.account, peerId: context.account.peerId, messages: [message]).start()
 
                         if let navigateToChat = navigateToChat {
-                            presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_ThemeTemplateAlert, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
+                            presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.EditTheme_ThemeTemplateAlertTitle, text: presentationData.strings.EditTheme_ThemeTemplateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Settings_SavedMessages, action: {
                                 completion()
                                 navigateToChat(context.account.peerId)
                             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {
@@ -524,8 +524,18 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
                                     return state
                                 }
                                 
-                                if case .slugOccupied = error {
-                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.EditTheme_ErrorLinkTaken, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                                var errorText: String?
+                                switch error {
+                                    case .slugOccupied:
+                                        errorText = presentationData.strings.EditTheme_ErrorLinkTaken
+                                    case .slugInvalid:
+                                        errorText = presentationData.strings.EditTheme_ErrorInvalidCharacters
+                                    default:
+                                        break
+                                }
+                                
+                                if let errorText = errorText {
+                                    presentControllerImpl?(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                 }
                             })
                     }

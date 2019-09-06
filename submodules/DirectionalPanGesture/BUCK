@@ -1,0 +1,12 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "DirectionalPanGesture",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

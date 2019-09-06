@@ -237,18 +237,21 @@ extension PresentationThemeGradientColors: Codable {
 
 extension PresentationThemeIntro: Codable {
     enum CodingKeys: String, CodingKey {
+        case statusBar
         case startButton
         case dot
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
-        self.init(startButtonColor: try decodeColor(values, .startButton),
+        self.init(statusBarStyle: try values.decode(PresentationThemeStatusBarStyle.self, forKey: .statusBar),
+                  startButtonColor: try decodeColor(values, .startButton),
                   dotColor: try decodeColor(values, .dot))
     }
     
     public func encode(to encoder: Encoder) throws {
         var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(self.statusBarStyle, forKey: .statusBar)
         try encodeColor(&values, self.startButtonColor, .startButton)
         try encodeColor(&values, self.dotColor, .dot)
     }

@@ -7,6 +7,7 @@ import Contacts
 import AddressBook
 import Display
 import TelegramUIPreferences
+import AppBundle
 
 public struct PresentationDateTimeFormat: Equatable {
     public let timeFormat: PresentationTimeFormat
@@ -121,7 +122,7 @@ public func dictFromLocalization(_ value: Localization) -> [String: String] {
 }
 
 private func volumeControlStatusBarIcons() -> PresentationVolumeControlStatusBarIcons {
-    let bundle = Bundle(for: PresentationTheme.self)
+    let bundle = getAppBundle()
     return PresentationVolumeControlStatusBarIcons(offIcon: UIImage(named: "Components/Volume/VolumeOff", in: bundle, compatibleWith: nil)!, halfIcon: UIImage(named: "Components/Volume/VolumeHalf", in: bundle, compatibleWith: nil)!, fullIcon: UIImage(named: "Components/Volume/VolumeFull", in: bundle, compatibleWith: nil)!)
 }
 
@@ -254,7 +255,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager) -
         
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
         if automaticThemeShouldSwitchNow(parameters, currentTheme: themeSettings.theme) {
-            effectiveTheme = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
+            effectiveTheme = themeSettings.automaticThemeSwitchSetting.theme
         } else {
             effectiveTheme = themeSettings.theme
         }
@@ -301,7 +302,7 @@ private enum PreparedAutomaticThemeSwitchTrigger {
 
 private struct AutomaticThemeSwitchParameters {
     let trigger: PreparedAutomaticThemeSwitchTrigger
-    let theme: PresentationBuiltinThemeReference
+    let theme: PresentationThemeReference
     
     init(settings: AutomaticThemeSwitchSetting) {
         let trigger: PreparedAutomaticThemeSwitchTrigger
@@ -330,17 +331,6 @@ private struct AutomaticThemeSwitchParameters {
 }
 
 private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchParameters, currentTheme: PresentationThemeReference) -> Bool {
-    switch currentTheme {
-        case let .builtin(builtin):
-            switch builtin {
-                case .nightAccent, .night:
-                    return false
-                default:
-                    break
-            }
-        default:
-            return false
-    }
     switch parameters.trigger {
         case .none:
             return false
@@ -514,7 +504,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                         var effectiveChatWallpaper: TelegramWallpaper = currentWallpaper
                         
                         if shouldSwitch {
-                            let automaticTheme: PresentationThemeReference = .builtin(themeSettings.automaticThemeSwitchSetting.theme)
+                            let automaticTheme = themeSettings.automaticThemeSwitchSetting.theme
                             if let themeSpecificWallpaper = themeSettings.themeSpecificChatWallpapers[automaticTheme.index] {
                                 effectiveChatWallpaper = themeSpecificWallpaper
                             }

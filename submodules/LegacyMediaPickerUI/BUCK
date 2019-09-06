@@ -1,0 +1,32 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "LegacyMediaPickerUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+        "Sources/**/*.m",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
+    ], exclude = ["Sources/LegacyMediaPickerUI.h"]),
+    exported_headers = glob([
+        "Sources/**/*.h",
+    ], exclude = ["Sources/LegacyMediaPickerUI.h"]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/LegacyUI:LegacyUI",
+        "//submodules/MimeTypes:MimeTypes",
+        "//submodules/LocalMediaResources:LocalMediaResources",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

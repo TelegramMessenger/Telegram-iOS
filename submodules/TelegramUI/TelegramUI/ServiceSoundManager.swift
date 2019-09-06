@@ -1,9 +1,10 @@
 import Foundation
 import SwiftSignalKit
 import AudioToolbox
+import AppBundle
 
 private func loadSystemSoundFromBundle(name: String) -> SystemSoundID? {
-    let path = "\(frameworkBundle.resourcePath!)/\(name)"
+    let path = "\(getAppBundle().resourcePath!)/\(name)"
     let url = URL(fileURLWithPath: path)
     var sound: SystemSoundID = 0
     if AudioServicesCreateSystemSoundID(url as CFURL, &sound) == noErr {

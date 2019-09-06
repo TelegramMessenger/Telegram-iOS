@@ -10,6 +10,7 @@ import ContactListUI
 import CallListUI
 import ChatListUI
 import SettingsUI
+import AppBundle
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
@@ -48,18 +49,15 @@ public final class TelegramRootController: NavigationController {
                 if presentationData.chatWallpaper != strongSelf.presentationData.chatWallpaper {
                     let navigationDetailsBackgroundMode: NavigationEmptyDetailsBackgoundMode?
                     switch presentationData.chatWallpaper {
-                    case .color:
-                        let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
-                        navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
-                    default:
-                        let image = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.account.postbox.mediaBox, knockoutMode: strongSelf.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
-                        navigationDetailsBackgroundMode = image != nil ? .wallpaper(image!) : nil
+                        case .color:
+                            let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/EmptyMasterDetailIcon"), color: presentationData.theme.chatList.messageTextColor.withAlphaComponent(0.2))
+                            navigationDetailsBackgroundMode = image != nil ? .image(image!) : nil
+                        default:
+                            navigationDetailsBackgroundMode = chatControllerBackgroundImage(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper, mediaBox: strongSelf.context.sharedContext.accountManager.mediaBox, knockoutMode: strongSelf.context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper).flatMap(NavigationEmptyDetailsBackgoundMode.wallpaper)
                     }
                     strongSelf.updateBackgroundDetailsMode(navigationDetailsBackgroundMode, transition: .immediate)
                 }
-                
-                
-                
+
                 let previousTheme = strongSelf.presentationData.theme
                 strongSelf.presentationData = presentationData
                 if previousTheme !== presentationData.theme {

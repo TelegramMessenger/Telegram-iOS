@@ -71,11 +71,11 @@
 		D0C9C5F72301D04A00FAB518 /* GalleryUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5F62301D04A00FAB518 /* GalleryUI.framework */; };
 		D0C9C5F92301D04F00FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5F82301D04F00FAB518 /* AsyncDisplayKit.framework */; };
 		D0C9C5FB2301D05400FAB518 /* Display.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C5FA2301D05400FAB518 /* Display.framework */; };
-		D0C9C5FD2301D0A900FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C5FC2301D0A900FAB518 /* FrameworkBundle.swift */; };
 		D0C9C6272301D21600FAB518 /* MusicAlbumArtResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6262301D21600FAB518 /* MusicAlbumArtResources.framework */; };
 		D0C9C6572301D30C00FAB518 /* LiveLocationPositionNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6562301D30C00FAB518 /* LiveLocationPositionNode.framework */; };
 		D0C9C67D2301D45A00FAB518 /* MosaicLayout.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C67C2301D45A00FAB518 /* MosaicLayout.framework */; };
 		D0C9C6BB2301D92000FAB518 /* LocationUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C6BA2301D92000FAB518 /* LocationUI.framework */; };
+		D0EFF266231981C400CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF265231981C400CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -145,11 +145,11 @@
 		D0C9C5F62301D04A00FAB518 /* GalleryUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GalleryUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C5F82301D04F00FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C5FA2301D05400FAB518 /* Display.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Display.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C5FC2301D0A900FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C6262301D21600FAB518 /* MusicAlbumArtResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MusicAlbumArtResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C6562301D30C00FAB518 /* LiveLocationPositionNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LiveLocationPositionNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C67C2301D45A00FAB518 /* MosaicLayout.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = MosaicLayout.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C6BA2301D92000FAB518 /* LocationUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LocationUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF265231981C400CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -157,6 +157,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF266231981C400CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C6BB2301D92000FAB518 /* LocationUI.framework in Frameworks */,
 				D0C9C67D2301D45A00FAB518 /* MosaicLayout.framework in Frameworks */,
 				D0C9C6572301D30C00FAB518 /* LiveLocationPositionNode.framework in Frameworks */,
@@ -251,7 +252,6 @@
 				D0C9C5AC2301D04200FAB518 /* InstantPageTileNode.swift */,
 				D0C9C5952301D03F00FAB518 /* InstantPageWebEmbedItem.swift */,
 				D0C9C5AA2301D04200FAB518 /* InstantPageWebEmbedNode.swift */,
-				D0C9C5FC2301D0A900FAB518 /* FrameworkBundle.swift */,
 				D0C9C56D2301CFA600FAB518 /* InstantPageUI.h */,
 			);
 			path = Sources;
@@ -260,6 +260,7 @@
 		D0C9C5792301D01200FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF265231981C400CF5164 /* AppBundle.framework */,
 				D0C9C6BA2301D92000FAB518 /* LocationUI.framework */,
 				D0C9C67C2301D45A00FAB518 /* MosaicLayout.framework */,
 				D0C9C6562301D30C00FAB518 /* LiveLocationPositionNode.framework */,
@@ -377,7 +378,6 @@
 				D0C9C5EF2301D04700FAB518 /* InstantPageLayout.swift in Sources */,
 				D0C9C5F02301D04700FAB518 /* InstantPageItem.swift in Sources */,
 				D0C9C5DB2301D04700FAB518 /* InstantPageSlideshowItemNode.swift in Sources */,
-				D0C9C5FD2301D0A900FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C5E92301D04700FAB518 /* InstantPageTheme.swift in Sources */,
 				D0C9C5D52301D04700FAB518 /* InstantPageSettingsNode.swift in Sources */,
 				D0C9C5CF2301D04700FAB518 /* InstantPageSettingsFontFamilyItemNode.swift in Sources */,

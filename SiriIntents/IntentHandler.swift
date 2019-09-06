@@ -47,6 +47,7 @@ enum IntentHandlingError {
     case generic
 }
 
+@available(iOSApplicationExtension 10.0, *)
 class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessagesIntentHandling, INSetMessageAttributeIntentHandling, INStartAudioCallIntentHandling, INSearchCallHistoryIntentHandling {
     private let accountPromise = Promise<Account?>()
     

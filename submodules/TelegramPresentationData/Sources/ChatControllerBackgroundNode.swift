@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import Postbox
 import MediaResources
+import AppBundle
 
 private var backgroundImageForWallpaper: (TelegramWallpaper, Bool, UIImage)?
 
@@ -31,7 +32,7 @@ public func chatControllerBackgroundImage(theme: PresentationTheme, wallpaper in
     } else {
         switch wallpaper {
             case .builtin:
-                if let filePath = frameworkBundle.path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
+                if let filePath = getAppBundle().path(forResource: "ChatWallpaperBuiltin0", ofType: "jpg") {
                     backgroundImage = UIImage(contentsOfFile: filePath)?.precomposed()
                 }
             case let .color(color):

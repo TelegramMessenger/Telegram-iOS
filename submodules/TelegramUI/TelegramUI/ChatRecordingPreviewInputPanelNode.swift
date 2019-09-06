@@ -7,6 +7,7 @@ import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import UniversalMediaPlayer
+import AppBundle
 
 private func generatePauseIcon(_ theme: PresentationTheme) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPause"), color: theme.chat.inputPanel.actionControlForegroundColor)

@@ -1,0 +1,18 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "DeviceProximity",
+    srcs = glob([
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/DeviceProximity.h"]),
+    exported_headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/DeviceProximity.h"]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

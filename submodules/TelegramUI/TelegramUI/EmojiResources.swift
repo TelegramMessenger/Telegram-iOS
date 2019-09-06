@@ -11,6 +11,7 @@ import WebP
 #endif
 import MediaResources
 import Emoji
+import AppBundle
 
 public struct EmojiThumbnailResourceId: MediaResourceId {
     public let emoji: String
@@ -114,7 +115,7 @@ public class EmojiSpriteResource: TelegramMediaResource {
 }
 
 private var emojiMapping: [String: (UInt8, UInt8, UInt8)] = {
-    let path = frameworkBundle.path(forResource: "Emoji", ofType: "mapping")!
+    let path = getAppBundle().path(forResource: "Emoji", ofType: "mapping")!
     
     var mapping: [String: (UInt8, UInt8, UInt8)] = [:]
     if let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {

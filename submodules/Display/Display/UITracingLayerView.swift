@@ -2,10 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 open class UITracingLayerView: UIView {
     private var scheduledWithLayout: (() -> Void)?
     

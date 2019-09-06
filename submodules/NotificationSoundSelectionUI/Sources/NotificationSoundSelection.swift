@@ -9,6 +9,7 @@ import TelegramPresentationData
 import ItemListUI
 import AccountContext
 import TelegramStringFormatting
+import AppBundle
 
 private struct NotificationSoundSelectionArguments {
     let account: Account
@@ -223,7 +224,7 @@ public func playSound(context: AccountContext, sound: PeerMessageSound, defaultS
             var deactivateImpl: (() -> Void)?
             let session = context.sharedContext.mediaManager.audioSession.push(audioSessionType: .play, activate: { _ in
                 Queue.mainQueue().async {
-                    if let url = Bundle.main.url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
+                    if let url = getAppBundle().url(forResource: fileNameForNotificationSound(sound, defaultSound: defaultSound), withExtension: "m4a") {
                         currentPlayer = AudioPlayerWrapper(url: url, completed: {
                             deactivateImpl?()
                         })

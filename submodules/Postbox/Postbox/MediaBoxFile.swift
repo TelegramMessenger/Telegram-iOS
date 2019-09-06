@@ -192,7 +192,20 @@ final class MediaBoxPartialFile {
             self.metadataFd = metadataFd
             self.fd = fd
             if let fileMap = MediaBoxFileMap(fd: self.metadataFd) {
-                self.fileMap = fileMap
+                if !fileMap.ranges.isEmpty {
+                    let upperBound = fileMap.ranges[fileMap.ranges.endIndex]
+                    if let actualSize = fileSize(path, useTotalFileAllocatedSize: false) {
+                        if upperBound > actualSize {
+                            self.fileMap = MediaBoxFileMap()
+                        } else {
+                            self.fileMap = fileMap
+                        }
+                    } else {
+                        self.fileMap = MediaBoxFileMap()
+                    }
+                } else {
+                    self.fileMap = fileMap
+                }
             } else {
                 self.fileMap = MediaBoxFileMap()
             }

@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramPresentationData
 import TextFormat
 import RadialStatusNode
+import AppBundle
 
 enum ChatMessageInteractiveMediaDownloadState: Equatable {
     case remote

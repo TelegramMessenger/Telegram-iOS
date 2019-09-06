@@ -38,11 +38,11 @@
 #endif
 
 #if HOCKEYSDK_FEATURE_FEEDBACK
-#import "BITFeedbackManagerDelegate.h"
+//#import "BITFeedbackManagerDelegate.h"
 #endif
 
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
-#import "BITAuthenticator.h"
+//#import "BITAuthenticator.h"
 #endif
 
 @class BITHockeyManager;
@@ -61,10 +61,10 @@
   , BITUpdateManagerDelegate
 #endif
 #if HOCKEYSDK_FEATURE_FEEDBACK
-  , BITFeedbackManagerDelegate
+  //, BITFeedbackManagerDelegate
 #endif
 #if HOCKEYSDK_FEATURE_AUTHENTICATOR
-  , BITAuthenticatorDelegate
+  //, BITAuthenticatorDelegate
 #endif
   >
 

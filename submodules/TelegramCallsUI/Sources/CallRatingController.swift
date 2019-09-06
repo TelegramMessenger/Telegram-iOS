@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramVoip
 import AccountContext
+import AppBundle
 
 private final class CallRatingAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings

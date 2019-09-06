@@ -11,6 +11,7 @@ import TelegramVoip
 import TelegramAudio
 import AccountContext
 import TelegramNotices
+import AppBundle
 
 public final class CallController: ViewController {
     private var controllerNode: CallControllerNode {

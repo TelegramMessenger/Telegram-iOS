@@ -11,6 +11,7 @@ import ItemListUI
 import AvatarNode
 import TelegramStringFormatting
 import PeerPresenceStatusManager
+import ContextUI
 
 public struct ItemListPeerItemEditing: Equatable {
     public var editable: Bool
@@ -127,12 +128,13 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
     let setPeerIdWithRevealedOptions: (PeerId?, PeerId?) -> Void
     let removePeer: (PeerId) -> Void
     let toggleUpdated: ((Bool) -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     let hasTopStripe: Bool
     let hasTopGroupInset: Bool
     let noInsets: Bool
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, account: Account, peer: Peer, height: ItemListPeerItemHeight = .peerList, aliasHandling: ItemListPeerItemAliasHandling = .standard, nameColor: ItemListPeerItemNameColor = .primary, nameStyle: ItemListPeerItemNameStyle = .distinctBold, presence: PeerPresence?, text: ItemListPeerItemText, label: ItemListPeerItemLabel, editing: ItemListPeerItemEditing, revealOptions: ItemListPeerItemRevealOptions? = nil, switchValue: ItemListPeerItemSwitch?, enabled: Bool, selectable: Bool, sectionId: ItemListSectionId, action: (() -> Void)?, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, toggleUpdated: ((Bool) -> Void)? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil, hasTopStripe: Bool = true, hasTopGroupInset: Bool = true, noInsets: Bool = false, tag: ItemListItemTag? = nil) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -156,6 +158,7 @@ public final class ItemListPeerItem: ListViewItem, ItemListItem {
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
         self.toggleUpdated = toggleUpdated
+        self.contextAction = contextAction
         self.hasTopStripe = hasTopStripe
         self.hasTopGroupInset = hasTopGroupInset
         self.noInsets = noInsets
@@ -221,6 +224,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private let highlightedBackgroundNode: ASDisplayNode
     private var disabledOverlayNode: ASDisplayNode?
     
+    private let containerNode: ContextControllerSourceNode
+    
     fileprivate let avatarNode: AvatarNode
     private let titleNode: TextNode
     private let labelNode: TextNode
@@ -260,6 +265,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
         
+        self.containerNode = ContextControllerSourceNode()
+        
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
@@ -290,10 +297,11 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         
         self.isAccessibilityElement = true
         
-        self.addSubnode(self.avatarNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.statusNode)
-        self.addSubnode(self.labelNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.statusNode)
+        self.containerNode.addSubnode(self.labelNode)
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
@@ -301,6 +309,14 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 apply(false, true)
             }
         })
+        
+        self.containerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self, let item = strongSelf.layoutParams?.0, let contextAction = item.contextAction else {
+                gesture.cancel()
+                return
+            }
+            contextAction(strongSelf.containerNode, gesture)
+        }
     }
     
     public func asyncLayout() -> (_ item: ItemListPeerItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool, Bool) -> Void) {
@@ -568,6 +584,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, params, neighbors)
                     
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
+                    
                     strongSelf.accessibilityLabel = titleAttributedString?.string
                     var combinedValueString = ""
                     if let statusString = statusAttributedString?.string, !statusString.isEmpty {
@@ -627,7 +646,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                                 }
                             }
                             strongSelf.editableControlNode = editableControlNode
-                            strongSelf.insertSubnode(editableControlNode, aboveSubnode: strongSelf.avatarNode)
+                            strongSelf.addSubnode(editableControlNode)
                             editableControlNode.frame = editableControlFrame
                             transition.animatePosition(node: editableControlNode, from: CGPoint(x: -editableControlFrame.size.width / 2.0, y: editableControlFrame.midY))
                             editableControlNode.alpha = 0.0
@@ -687,11 +706,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     if let currentSwitchNode = currentSwitchNode {
                         if currentSwitchNode !== strongSelf.switchNode {
                             strongSelf.switchNode = currentSwitchNode
-                            if let disabledOverlayNode = strongSelf.disabledOverlayNode, disabledOverlayNode.supernode != nil {
-                                strongSelf.insertSubnode(currentSwitchNode, belowSubnode: disabledOverlayNode)
-                            } else {
-                                strongSelf.addSubnode(currentSwitchNode)
-                            }
+                            strongSelf.containerNode.addSubnode(currentSwitchNode)
                             currentSwitchNode.valueUpdated = { value in
                                 if let strongSelf = self {
                                     strongSelf.toggleUpdated(value)
@@ -710,11 +725,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     if let currentCheckNode = currentCheckNode {
                         if currentCheckNode !== strongSelf.checkNode {
                             strongSelf.checkNode = currentCheckNode
-                            if let disabledOverlayNode = strongSelf.disabledOverlayNode, disabledOverlayNode.supernode != nil {
-                                strongSelf.insertSubnode(currentCheckNode, belowSubnode: disabledOverlayNode)
-                            } else {
-                                strongSelf.addSubnode(currentCheckNode)
-                            }
+                            strongSelf.containerNode.addSubnode(currentCheckNode)
                         }
                         if let checkImage = checkImage {
                             currentCheckNode.image = checkImage
@@ -732,7 +743,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     if let updatedLabelArrowNode = updatedLabelArrowNode {
                         strongSelf.labelArrowNode = updatedLabelArrowNode
-                        strongSelf.addSubnode(updatedLabelArrowNode)
+                        strongSelf.containerNode.addSubnode(updatedLabelArrowNode)
                         if let image = updatedLabelArrowNode.image {
                             let labelArrowNodeFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightLabelInset - image.size.width, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size)
                             transition.updateFrame(node: updatedLabelArrowNode, frame: labelArrowNodeFrame)
@@ -755,7 +766,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     
                     if let updateBadgeImage = updatedLabelBadgeImage {
                         if strongSelf.labelBadgeNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.labelBadgeNode, belowSubnode: strongSelf.labelNode)
+                            strongSelf.containerNode.insertSubnode(strongSelf.labelBadgeNode, belowSubnode: strongSelf.labelNode)
                         }
                         strongSelf.labelBadgeNode.image = updateBadgeImage
                     }

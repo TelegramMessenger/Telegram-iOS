@@ -10,6 +10,8 @@ import TelegramUIPreferences
 import ItemListUI
 import WallpaperResources
 import AccountContext
+import AppBundle
+import ContextUI
 
 private var borderImages: [String: UIImage] = [:]
 
@@ -87,9 +89,10 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let currentTheme: PresentationThemeReference
     let updatedTheme: (PresentationThemeReference) -> Void
     let longTapped: (PresentationThemeReference) -> Void
+    let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     let tag: ItemListItemTag?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, longTapped: @escaping (PresentationThemeReference) -> Void, tag: ItemListItemTag? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, longTapped: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -98,6 +101,7 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
         self.currentTheme = currentTheme
         self.updatedTheme = updatedTheme
         self.longTapped = longTapped
+        self.contextAction = contextAction
         self.tag = tag
         self.sectionId = sectionId
     }
@@ -137,11 +141,13 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
 }
 
 private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
+    private let containerNode: ContextControllerSourceNode
     private let imageNode: TransformImageNode
     private let overlayNode: ASImageNode
     private let textNode: ASTextNode
     private var action: (() -> Void)?
     private var longTapAction: (() -> Void)?
+    private var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     private var theme: PresentationThemeReference?
     private var currentTheme: PresentationTheme?
@@ -150,6 +156,8 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     private var selected: Bool?
     
     override init() {
+        self.containerNode = ContextControllerSourceNode()
+        
         self.imageNode = TransformImageNode()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 98.0, height: 62.0))
         self.imageNode.isLayerBacked = true
@@ -164,12 +172,21 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.imageNode)
-        self.addSubnode(self.overlayNode)
-        self.addSubnode(self.textNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.imageNode)
+        self.containerNode.addSubnode(self.overlayNode)
+        self.containerNode.addSubnode(self.textNode)
+        
+        self.containerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self else {
+                gesture.cancel()
+                return
+            }
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
     }
     
-    func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
+    func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, longTapAction: @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
         let updatedTheme = self.currentTheme == nil || currentTheme !== self.currentTheme!
         if case let .cloud(theme) = theme, theme.theme.file == nil {
             if updatedTheme || accentColor != self.accentColor {
@@ -197,6 +214,8 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         self.longTapAction = {
             longTapAction()
         }
+        self.contextAction = contextAction
+        self.containerNode.isGestureEnabled = !selected
     }
     
     override func didLoad() {
@@ -232,6 +251,8 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         super.layout()
         
         let bounds = self.bounds
+        
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: bounds.size)
         
         let imageSize = CGSize(width: 98.0, height: 62.0)
         self.imageNode.frame = CGRect(origin: CGPoint(x: 10.0, y: 14.0), size: imageSize)
@@ -380,6 +401,11 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             }
                         }, longTapAction: {
                             item.longTapped(theme)
+                        }, contextAction: item.contextAction.flatMap {
+                            contextAction in
+                            return { node, gesture in
+                                contextAction(theme, node, gesture)
+                            }
                         })
                         
                         imageNode.frame = CGRect(origin: CGPoint(x: nodeOffset, y: 0.0), size: nodeSize)

@@ -32,7 +32,7 @@
 		D0C9CA32230229DE00FAB518 /* TelegramCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA31230229DE00FAB518 /* TelegramCore.framework */; };
 		D0C9CA34230229F100FAB518 /* LegacyComponents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA33230229F100FAB518 /* LegacyComponents.framework */; };
 		D0C9CA3623022A7400FAB518 /* TelegramStringFormatting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9CA3523022A7400FAB518 /* TelegramStringFormatting.framework */; };
-		D0C9CA3A23022AA300FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9CA3923022AA300FAB518 /* FrameworkBundle.swift */; };
+		D0EFF274231982DF00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF273231982DF00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,7 +63,7 @@
 		D0C9CA31230229DE00FAB518 /* TelegramCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CA33230229F100FAB518 /* LegacyComponents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyComponents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9CA3523022A7400FAB518 /* TelegramStringFormatting.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramStringFormatting.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9CA3923022AA300FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF273231982DF00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -71,6 +71,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF274231982DF00CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9CA3623022A7400FAB518 /* TelegramStringFormatting.framework in Frameworks */,
 				D0C9CA34230229F100FAB518 /* LegacyComponents.framework in Frameworks */,
 				D0C9CA32230229DE00FAB518 /* TelegramCore.framework in Frameworks */,
@@ -122,7 +123,6 @@
 				D0C9CA092302293300FAB518 /* PasscodeLockIconNode.swift */,
 				D0C9CA0D2302293400FAB518 /* PasscodeSetupController.swift */,
 				D0C9CA072302293300FAB518 /* PasscodeSetupControllerNode.swift */,
-				D0C9CA3923022AA300FAB518 /* FrameworkBundle.swift */,
 				D0C9C9F8230228D400FAB518 /* PasscodeUI.h */,
 			);
 			path = Sources;
@@ -131,6 +131,7 @@
 		D0C9CA1A2302298D00FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF273231982DF00CF5164 /* AppBundle.framework */,
 				D0C9CA3523022A7400FAB518 /* TelegramStringFormatting.framework */,
 				D0C9CA33230229F100FAB518 /* LegacyComponents.framework */,
 				D0C9CA31230229DE00FAB518 /* TelegramCore.framework */,
@@ -237,7 +238,6 @@
 				D0C9CA142302293400FAB518 /* PasscodeEntryInputFieldNode.swift in Sources */,
 				D0C9CA122302293400FAB518 /* PasscodeLayout.swift in Sources */,
 				D0C9CA132302293400FAB518 /* PasscodeLockIconNode.swift in Sources */,
-				D0C9CA3A23022AA300FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9CA102302293400FAB518 /* PasscodeEntryController.swift in Sources */,
 				D0C9CA112302293400FAB518 /* PasscodeSetupControllerNode.swift in Sources */,
 			);

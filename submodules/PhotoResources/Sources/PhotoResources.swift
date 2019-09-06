@@ -18,6 +18,7 @@ import Tuples
 import ImageBlur
 import TinyThumbnail
 import ImageTransparency
+import AppBundle
 
 private enum ResourceFileData {
     case data(Data)

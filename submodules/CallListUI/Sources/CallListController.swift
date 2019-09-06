@@ -9,6 +9,7 @@ import TelegramPresentationData
 import ItemListUI
 import AccountContext
 import AlertUI
+import AppBundle
 
 public enum CallListControllerMode {
     case tab

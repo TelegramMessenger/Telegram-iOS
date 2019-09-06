@@ -59,7 +59,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         let node = PeerAvatarImageGalleryItemNode(context: self.context, presentationData: self.presentationData, peer: self.peer)
         
         if let indexData = self.entry.indexData {
-            node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
+            node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
         }
         
         node.setEntry(self.entry)
@@ -71,7 +71,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
     func updateNode(node: GalleryItemNode) {
         if let node = node as? PeerAvatarImageGalleryItemNode {
             if let indexData = self.entry.indexData {
-                node._title.set(.single("\(indexData.position + 1) \(self.presentationData.strings.Common_of) \(indexData.totalCount)"))
+                node._title.set(.single(self.presentationData.strings.Items_NOfM("\(indexData.position + 1)", "\(indexData.totalCount)").0))
             }
             
             node.setEntry(self.entry)

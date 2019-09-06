@@ -94,7 +94,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                 f(.dismissWithoutContent)
             })))
         }
-        contextController.setItems(items)
+        contextController.setItems(.single(items))
     } else {
         contextController?.dismiss()
         parent.view.endEditing(true)

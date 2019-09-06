@@ -25,6 +25,11 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     }
     
     public init(screenSize: CGSize, statusBarHeight: CGFloat, onScreenNavigationHeight: CGFloat?) {
+        var screenSize = screenSize
+        if screenSize.width > screenSize.height {
+            screenSize = CGSize(width: screenSize.height, height: screenSize.width)
+        }
+        
         let additionalSize = CGSize(width: screenSize.width, height: screenSize.height + 20.0)
         for device in DeviceMetrics.allCases {
             if let _ = onScreenNavigationHeight, device.onScreenNavigationHeight(inLandscape: false) == nil {
@@ -33,7 +38,7 @@ public enum DeviceMetrics: CaseIterable, Equatable {
             
             let width = device.screenSize.width
             let height = device.screenSize.height
-            if ((screenSize.width.isEqual(to: width) && screenSize.height.isEqual(to: height)) || screenSize.height.isEqual(to: width) && screenSize.width.isEqual(to: height)) || ((additionalSize.width.isEqual(to: width) && additionalSize.height.isEqual(to: height)) || additionalSize.height.isEqual(to: width) && additionalSize.width.isEqual(to: height)) {
+            if ((screenSize.width.isEqual(to: width) && screenSize.height.isEqual(to: height)) || (additionalSize.width.isEqual(to: width) && additionalSize.height.isEqual(to: height))) {
                 self = device
                 return
             }

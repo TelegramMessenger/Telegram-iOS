@@ -215,11 +215,11 @@ func importLegacyPreferences(accountManager: AccountManager, account: TemporaryA
                     }
                     switch autoNightPreferences.mode {
                         case TGPresentationAutoNightModeSunsetSunrise:
-                            settings.automaticThemeSwitchSetting = AutomaticThemeSwitchSetting(trigger: .timeBased(setting: .automatic(latitude: Double(autoNightPreferences.latitude), longitude: Double(autoNightPreferences.longitude), localizedName: autoNightPreferences.cachedLocationName)), theme: nightTheme)
+                            settings.automaticThemeSwitchSetting = AutomaticThemeSwitchSetting(trigger: .timeBased(setting: .automatic(latitude: Double(autoNightPreferences.latitude), longitude: Double(autoNightPreferences.longitude), localizedName: autoNightPreferences.cachedLocationName)), theme: .builtin(nightTheme))
                         case TGPresentationAutoNightModeScheduled:
-                            settings.automaticThemeSwitchSetting = AutomaticThemeSwitchSetting(trigger: .timeBased(setting: .manual(fromSeconds: autoNightPreferences.scheduleStart, toSeconds: autoNightPreferences.scheduleEnd)), theme: nightTheme)
+                            settings.automaticThemeSwitchSetting = AutomaticThemeSwitchSetting(trigger: .timeBased(setting: .manual(fromSeconds: autoNightPreferences.scheduleStart, toSeconds: autoNightPreferences.scheduleEnd)), theme: .builtin(nightTheme))
                         case TGPresentationAutoNightModeBrightness:
-                            settings.automaticThemeSwitchSetting = AutomaticThemeSwitchSetting(trigger: .brightness(threshold: Double(autoNightPreferences.brightnessThreshold)), theme: nightTheme)
+                            settings.automaticThemeSwitchSetting = AutomaticThemeSwitchSetting(trigger: .brightness(threshold: Double(autoNightPreferences.brightnessThreshold)), theme: .builtin(nightTheme))
                         default:
                             break
                     }

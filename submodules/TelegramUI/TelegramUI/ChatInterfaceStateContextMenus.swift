@@ -11,6 +11,8 @@ import OverlayStatusController
 import AccountContext
 import ContextUI
 import LegacyUI
+import AppBundle
+import SaveToCameraRoll
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -23,6 +25,10 @@ private struct MessageContextMenuData {
 }
 
 func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
+    return canEditMessage(accountPeerId: context.account.peerId, limitsConfiguration: limitsConfiguration, message: message)
+}
+
+private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
     var hasEditRights = false
     var unlimitedInterval = false
     
@@ -41,7 +47,7 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
         }
     } else if message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.id.namespace != Namespaces.Message.Cloud {
         hasEditRights = false
-    } else if let author = message.author, author.id == context.account.peerId {
+    } else if let author = message.author, author.id == accountPeerId {
         hasEditRights = true
     } else if message.author?.id == message.id.peerId, let peer = message.peers[message.id.peerId] {
         if let peer = peer as? TelegramChannel {
@@ -100,7 +106,7 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
         }
         
         if !hasUneditableAttributes {
-            if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: context.account.peerId, message: message, unlimitedInterval: unlimitedInterval) {
+            if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message, unlimitedInterval: unlimitedInterval) {
                 return true
             }
         }
@@ -373,6 +379,24 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
             })))
         }
         
+        if data.messageActions.options.contains(.sendScheduledNow) {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
+                f(.dismissWithoutContent)
+            })))
+        }
+        
+        if data.messageActions.options.contains(.editScheduledTime) {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
+            }, action: { _, f in
+                controllerInteraction.editScheduledMessagesTime(selectAll ? messages.map { $0.id } : [message.id])
+                f(.dismissWithoutContent)
+            })))
+        }
+        
         let resourceAvailable: Bool
         if let resourceStatus = data.resourceStatus, case .Local = resourceStatus {
             resourceAvailable = true
@@ -423,24 +447,30 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
                 f(.default)
             })))
-        }
-        
-        if data.messageActions.options.contains(.sendScheduledNow) {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_SendNow, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                controllerInteraction.sendScheduledMessagesNow(selectAll ? messages.map { $0.id } : [message.id])
-                f(.dismissWithoutContent)
-            })))
-        }
-        
-        if data.messageActions.options.contains(.editScheduledTime) {
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.ScheduledMessages_EditTime, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Schedule"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                controllerInteraction.editScheduledMessagesTime(selectAll ? messages.map { $0.id } : [message.id])
-                f(.dismissWithoutContent)
-            })))
+            if resourceAvailable, !message.containsSecretMedia {
+                var mediaReference: AnyMediaReference?
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+                        mediaReference = ImageMediaReference.standalone(media: image).abstract
+                        break
+                    } else if let file = media as? TelegramMediaFile, file.isVideo {
+                        mediaReference = FileMediaReference.standalone(media: file).abstract
+                        break
+                    }
+                }
+                if let mediaReference = mediaReference {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Preview_SaveToCameraRoll, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)
+                        |> deliverOnMainQueue).start(completed: {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+                        })
+                        f(.default)
+                    })))
+                }
+            }
         }
         
         if data.canEdit {
@@ -738,8 +768,20 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
                     optionsMap[id]!.insert(.sendScheduledNow)
-                    optionsMap[id]!.insert(.editScheduledTime)
-                    optionsMap[id]!.insert(.deleteLocally)
+                    if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message) {
+                        optionsMap[id]!.insert(.editScheduledTime)
+                    }
+                    if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel {
+                        if !message.flags.contains(.Incoming) {
+                            optionsMap[id]!.insert(.deleteGlobally)
+                        } else {
+                            if channel.hasPermission(.deleteAllMessages) {
+                                optionsMap[id]!.insert(.deleteGlobally)
+                            }
+                        }
+                    } else {
+                        optionsMap[id]!.insert(.deleteGlobally)
+                    }
                 } else if id.peerId == accountPeerId {
                     if !(message.flags.isSending || message.flags.contains(.Failed)) {
                         optionsMap[id]!.insert(.forward)

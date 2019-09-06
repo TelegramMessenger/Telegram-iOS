@@ -16,6 +16,7 @@ import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
 import Geocoding
+import AppBundle
 
 private struct PeerNearbyEntry {
     let peer: (Peer, CachedPeerData?)

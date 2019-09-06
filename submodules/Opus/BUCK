@@ -1,0 +1,41 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+genrule(
+    name = "opus_lib_file",
+    visibility = [
+        "//submodules/Opus:..."
+    ],
+    srcs = [
+        "Sources/opus/lib/libopus.a",
+    ],
+    bash = "mkdir -p $OUT; cp $SRCS $OUT/",
+    out = "opus_lib_file",
+)
+
+apple_library(
+    name = "opus_lib",
+    visibility = [
+        "//submodules/Opus:..."
+    ],
+    header_namespace = "opus",
+    exported_headers = glob([
+        "Sources/**/*.h",
+    ]),
+    exported_linker_flags = [
+        "-lopus",
+        "-L$(location :opus_lib_file)",
+    ],
+)
+
+static_library(
+    name = "opus",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    exported_headers = glob([
+        "Sources/**/*.h",
+    ]),
+    deps = [
+        ":opus_lib",
+    ],
+)

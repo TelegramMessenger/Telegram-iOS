@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import RadialStatusNode
 import ScreenCaptureDetection
+import AppBundle
 
 private func galleryMediaForMedia(media: Media) -> Media? {
     if let media = media as? TelegramMediaImage {

@@ -36,14 +36,28 @@ if [ `which cleanup-telegram-build-vms.sh` ]; then
 	cleanup-telegram-build-vms.sh
 fi
 
+if [ -z "$BUCK" ]; then
+	echo "BUCK is not defined"
+	exit 1
+fi
+
+if [ ! -f "$BUCK" ]; then
+	echo "buck not found at $BUCK"
+	exit 1
+fi
+
 BUILDBOX_DIR="buildbox"
 
 mkdir -p "$BUILDBOX_DIR/transient-data"
+
+rm -f "tools/buck"
+cp "$BUCK" "tools/buck"
 
 BUILD_CONFIGURATION="$1"
 
 if [ "$BUILD_CONFIGURATION" == "hockeyapp" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
+	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
@@ -70,8 +84,14 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ] || [ "$BUILD_CONFIGURATION" == "app
 		echo "setup-telegram-build.sh not found in PATH $PATH"
 		exit 1
 	fi
+	if [ ! `which setup-codesigning.sh` ]; then
+		echo "setup-codesigning.sh not found in PATH $PATH"
+		exit 1
+	fi
 	source `which setup-telegram-build.sh`
 	setup_telegram_build "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
+	source `which setup-codesigning.sh`
+	setup_codesigning "$BUILD_CONFIGURATION" "$BASE_DIR/$BUILDBOX_DIR/transient-data"
 	if [ "$SETUP_TELEGRAM_BUILD_VERSION" != "$BUILD_TELEGRAM_VERSION" ]; then
 		echo "setup-telegram-build.sh script version doesn't match"
 		exit 1
@@ -95,10 +115,15 @@ fi
 
 SOURCE_DIR=$(basename "$BASE_DIR")
 rm -f "$BUILDBOX_DIR/transient-data/source.tar"
-tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude ".git" "."
+tar cf "$BUILDBOX_DIR/transient-data/source.tar" --exclude "$BUILDBOX_DIR" --exclude ".git" --exclude "buck-out" --exclude ".buckd" --exclude "build" "."
 
 PROCESS_ID="$$"
-VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
+
+if [ -z "$RUNNING_VM" ]; then
+	VM_NAME="$VM_BASE_NAME-$(openssl rand -hex 10)-build-telegram-$PROCESS_ID"
+else
+	VM_NAME="$RUNNING_VM"
+fi
 
 if [ "$BUILD_MACHINE" == "linux" ]; then
 	virt-clone --original "$VM_BASE_NAME" --name "$VM_NAME" --auto-clone
@@ -107,28 +132,31 @@ if [ "$BUILD_MACHINE" == "linux" ]; then
 	echo "Getting VM IP"
 
 	while [ 1 ]; do
-	TEST_IP=$(virsh domifaddr "$VM_NAME" 2>/dev/null | egrep -o 'ipv4.*' | sed -e 's/ipv4\s*//g' | sed -e 's|/.*||g')
-	if [ ! -z "$TEST_IP" ]; then
-		RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
-		if [ "$RESPONSE" == "1" ]; then
-			VM_IP="$TEST_IP"
-			break
+		TEST_IP=$(virsh domifaddr "$VM_NAME" 2>/dev/null | egrep -o 'ipv4.*' | sed -e 's/ipv4\s*//g' | sed -e 's|/.*||g')
+		if [ ! -z "$TEST_IP" ]; then
+			RESPONSE=$(ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$TEST_IP" -o ServerAliveInterval=60 -t "echo -n 1")
+			if [ "$RESPONSE" == "1" ]; then
+				VM_IP="$TEST_IP"
+				break
+			fi
 		fi
-	fi
-	sleep 1
-done
+		sleep 1
+	done
 elif [ "$BUILD_MACHINE" == "macOS" ]; then
-	SNAPSHOT_ID=$(prlctl snapshot-list "$VM_BASE_NAME" | grep -Eo '\{(\d|[a-f]|-)*\}' | tr '\n' '\0')
-	if [ -z "$SNAPSHOT_ID" ]; then
-		echo "$VM_BASE_NAME is required to have one snapshot"
-		exit 1
+	if [ -z "$RUNNING_VM" ]; then
+		SNAPSHOT_ID=$(prlctl snapshot-list "$VM_BASE_NAME" | grep -Eo '\{(\d|[a-f]|-)*\}' | tr '\n' '\0')
+		if [ -z "$SNAPSHOT_ID" ]; then
+			echo "$VM_BASE_NAME is required to have one snapshot"
+			exit 1
+		fi
+		prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
+		prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
 	fi
-	prlctl clone "$VM_BASE_NAME" --name "$VM_NAME"
-	prlctl snapshot-switch "$VM_NAME" -i "$SNAPSHOT_ID"
 	VM_IP=$(prlctl exec "$VM_NAME" "ifconfig | grep inet | grep broadcast | grep -Eo '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -1 | tr '\n' '\0'")
 fi
 
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_SUBPATH" telegram@"$VM_IP":codesigning_data
+scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/$CODESIGNING_TEAMS_SUBPATH" telegram@"$VM_IP":codesigning_teams
 
 if [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "mkdir -p telegram-ios-shared/fastlane; echo '' > telegram-ios-shared/fastlane/Fastfile"
@@ -137,7 +165,7 @@ else
 fi
 scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr "$BUILDBOX_DIR/guest-build-telegram.sh" "$BUILDBOX_DIR/transient-data/source.tar" telegram@"$VM_IP":
 
-ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
+ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null telegram@"$VM_IP" -o ServerAliveInterval=60 -t "export TELEGRAM_BUILD_APPSTORE_PASSWORD=\"$TELEGRAM_BUILD_APPSTORE_PASSWORD\"; export TELEGRAM_BUILD_APPSTORE_TEAM_NAME=\"$TELEGRAM_BUILD_APPSTORE_TEAM_NAME\"; export BUILD_NUMBER=\"$BUILD_NUMBER\"; export COMMIT_ID=\"$COMMIT_ID\"; export COMMIT_AUTHOR=\"$COMMIT_AUTHOR\"; export BUCK_HTTP_CACHE=\"$BUCK_HTTP_CACHE\"; bash -l guest-build-telegram.sh $BUILD_CONFIGURATION" || true
 
 if [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	ARCHIVE_PATH="$HOME/telegram-builds-archive"
@@ -158,10 +186,12 @@ elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	scp -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -pr telegram@"$VM_IP":telegram-ios/Telegram-iOS-AppStoreLLC.ipa "./$VERIFY_IPA"
 fi
 
-if [ "$BUILD_MACHINE" == "linux" ]; then
-	virsh destroy "$VM_NAME"
-	virsh undefine "$VM_NAME" --remove-all-storage --nvram
-elif [ "$BUILD_MACHINE" == "macOS" ]; then
-	prlctl stop "$VM_NAME" --kill
-	prlctl delete "$VM_NAME"
+if [ -z "$RUNNING_VM" ]; then
+	if [ "$BUILD_MACHINE" == "linux" ]; then
+		virsh destroy "$VM_NAME"
+		virsh undefine "$VM_NAME" --remove-all-storage --nvram
+	elif [ "$BUILD_MACHINE" == "macOS" ]; then
+		prlctl stop "$VM_NAME" --kill
+		prlctl delete "$VM_NAME"
+	fi
 fi

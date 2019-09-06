@@ -1,0 +1,25 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ItemListUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/ProgressNavigationButtonNode:ProgressNavigationButtonNode",
+        "//submodules/SwitchNode:SwitchNode",
+        "//submodules/AnimationUI:AnimationUI",
+        "//submodules/CheckNode:CheckNode",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

@@ -1,0 +1,29 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "PhotoResources",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    	"//submodules/TelegramCore:TelegramCore#shared",
+    	"//submodules/Postbox:Postbox#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/ImageTransparency:ImageTransparency",
+        "//submodules/TinyThumbnail:TinyThumbnail",
+        "//submodules/ImageBlur:ImageBlur",
+        "//submodules/Tuples:Tuples",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/MediaResources:MediaResources",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/WebP:WebPImage",
+        "//submodules/AppBundle:AppBundle",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+        "$SDKROOT/System/Library/Frameworks/ImageIO.framework",
+        "$SDKROOT/System/Library/Frameworks/AVFoundation.framework",
+    ],
+)

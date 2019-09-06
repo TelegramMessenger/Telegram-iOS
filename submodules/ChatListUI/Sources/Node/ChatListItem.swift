@@ -15,6 +15,7 @@ import LocalizedPeerData
 import PeerPresenceStatusManager
 import PhotoResources
 import ChatListSearchItemNode
+import ContextUI
 
 public enum ChatListItemContent {
     case peer(message: Message?, peer: RenderedPeer, combinedReadState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, presence: PeerPresence?, summaryInfo: ChatListMessageTagSummaryInfo, embeddedState: PeerChatListEmbeddedInterfaceState?, inputActivities: [(Peer, PeerInputActivity)]?, isAd: Bool, ignoreUnreadBadge: Bool)
@@ -294,6 +295,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private let backgroundNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    let contextContainer: ContextControllerSourceNode
+    
     let avatarNode: AvatarNode
     let titleNode: TextNode
     let authorNode: TextNode
@@ -410,6 +413,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.contextContainer = ContextControllerSourceNode()
+        
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = true
@@ -457,19 +462,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
-        self.addSubnode(self.avatarNode)
-        self.addSubnode(self.onlineNode)
         
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.authorNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.contentImageNode)
-        self.addSubnode(self.dateNode)
-        self.addSubnode(self.statusNode)
-        self.addSubnode(self.pinnedIconNode)
-        self.addSubnode(self.badgeNode)
-        self.addSubnode(self.mentionBadgeNode)
-        self.addSubnode(self.mutedIconNode)
+        self.addSubnode(self.contextContainer)
+        
+        self.contextContainer.addSubnode(self.avatarNode)
+        self.contextContainer.addSubnode(self.onlineNode)
+        
+        self.contextContainer.addSubnode(self.titleNode)
+        self.contextContainer.addSubnode(self.authorNode)
+        self.contextContainer.addSubnode(self.textNode)
+        self.contextContainer.addSubnode(self.contentImageNode)
+        self.contextContainer.addSubnode(self.dateNode)
+        self.contextContainer.addSubnode(self.statusNode)
+        self.contextContainer.addSubnode(self.pinnedIconNode)
+        self.contextContainer.addSubnode(self.badgeNode)
+        self.contextContainer.addSubnode(self.mentionBadgeNode)
+        self.contextContainer.addSubnode(self.mutedIconNode)
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
@@ -477,6 +485,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 let _ = apply(false, false)
             }
         })
+        
+        self.contextContainer.activated = { [weak self] gesture in
+            guard let strongSelf = self, let item = strongSelf.item else {
+                return
+            }
+            item.interaction.activateChatPreview(item, strongSelf, gesture)
+        }
     }
     
     func setupItem(item: ChatListItem, synchronousLoads: Bool) {
@@ -1110,6 +1125,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
                     strongSelf.contentImageMedia = contentImageMedia
                     
+                    strongSelf.contextContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                    
                     var dimensions: CGSize?
                     if let contentImageMedia = contentImageMedia as? TelegramMediaImage {
                         dimensions = largestRepresentationForPhoto(contentImageMedia)?.dimensions
@@ -1293,7 +1310,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             iconNode.isLayerBacked = true
                             iconNode.displaysAsynchronously = false
                             iconNode.displayWithoutProcessing = true
-                            strongSelf.addSubnode(iconNode)
+                            strongSelf.contextContainer.addSubnode(iconNode)
                             strongSelf.secretIconNode = iconNode
                         }
                         iconNode.image = currentSecretIconImage
@@ -1315,7 +1332,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             iconNode.isLayerBacked = true
                             iconNode.displaysAsynchronously = false
                             iconNode.displayWithoutProcessing = true
-                            strongSelf.addSubnode(iconNode)
+                            strongSelf.contextContainer.addSubnode(iconNode)
                             strongSelf.credibilityIconNode = iconNode
                         }
                         iconNode.image = currentCredibilityIconImage
@@ -1352,7 +1369,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var animateInputActivitiesFrame = false
                     if let inputActivities = inputActivities, !inputActivities.isEmpty {
                         if strongSelf.inputActivitiesNode.supernode == nil {
-                            strongSelf.addSubnode(strongSelf.inputActivitiesNode)
+                            strongSelf.contextContainer.addSubnode(strongSelf.inputActivitiesNode)
                         } else {
                             animateInputActivitiesFrame = true
                         }

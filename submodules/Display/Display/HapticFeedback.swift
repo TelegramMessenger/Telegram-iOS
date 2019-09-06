@@ -103,7 +103,7 @@ public final class HapticFeedback {
     deinit {
         let impl = self.impl
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
-            if #available(iOSApplicationExtension 10.0, *) {
+            if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                 if let impl = impl as? HapticFeedbackImpl {
                     impl.f()
                 }
@@ -120,7 +120,7 @@ public final class HapticFeedback {
     }
     
     public func prepareTap() {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.prepareTap()
             }
@@ -128,7 +128,7 @@ public final class HapticFeedback {
     }
     
     public func tap() {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.tap()
             }
@@ -136,7 +136,7 @@ public final class HapticFeedback {
     }
     
     public func prepareImpact(_ style: ImpactHapticFeedbackStyle = .medium) {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.prepareImpact(style)
             }
@@ -144,7 +144,7 @@ public final class HapticFeedback {
     }
     
     public func impact(_ style: ImpactHapticFeedbackStyle = .medium) {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.impact(style)
             }
@@ -152,7 +152,7 @@ public final class HapticFeedback {
     }
     
     public func success() {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.success()
             }
@@ -160,7 +160,7 @@ public final class HapticFeedback {
     }
     
     public func prepareError() {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.prepareError()
             }
@@ -168,7 +168,7 @@ public final class HapticFeedback {
     }
     
     public func error() {
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             self.withImpl { impl in
                 impl.error()
             }

@@ -66,8 +66,8 @@ final class WallpaperGalleryToolbarNode: ASDisplayNode {
         self.separatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         self.topSeparatorNode.backgroundColor = theme.rootController.tabBar.separatorColor
         
-        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.rootController.navigationBar.primaryTextColor, for: [])
-        self.doneButton.setTitle(strings.Wallpaper_Set, with: Font.regular(17.0), with: theme.rootController.navigationBar.primaryTextColor, for: [])
+        self.cancelButton.setTitle(strings.Common_Cancel, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
+        self.doneButton.setTitle(strings.Wallpaper_Set, with: Font.regular(17.0), with: theme.list.itemPrimaryTextColor, for: [])
     }
     
     func updateLayout(size: CGSize, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

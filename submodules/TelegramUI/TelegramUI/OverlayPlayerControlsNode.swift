@@ -10,6 +10,7 @@ import UniversalMediaPlayer
 import TelegramUIPreferences
 import AccountContext
 import PhotoResources
+import AppBundle
 
 private func generateBackground(theme: PresentationTheme) -> UIImage? {
     return generateImage(CGSize(width: 20.0, height: 10.0 + 8.0), rotatedContext: { size, context in

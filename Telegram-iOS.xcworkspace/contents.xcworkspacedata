@@ -64,6 +64,9 @@
       location = "container:"
       name = "Utils">
       <FileRef
+         location = "group:submodules/AppBundle/AppBundle_Xcode.xcodeproj">
+      </FileRef>
+      <FileRef
          location = "group:submodules/AccountContext/AccountContext_Xcode.xcodeproj">
       </FileRef>
       <FileRef
@@ -180,7 +183,7 @@
          location = "container:"
          name = "Image Processing">
          <FileRef
-            location = "group:submodules/YuvConversion/YuvConversion.xcodeproj">
+            location = "group:submodules/YuvConversion/YuvConversion_Xcode.xcodeproj">
          </FileRef>
          <FileRef
             location = "group:submodules/ImageBlur/ImageBlur_Xcode.xcodeproj">

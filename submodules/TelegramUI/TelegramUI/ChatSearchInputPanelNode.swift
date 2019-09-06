@@ -128,7 +128,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
             if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
                 let adjustedIndex = results.messageIndices.count - 1 - index
                 resultIndex = index
-                resultsText = NSAttributedString(string: "\(adjustedIndex + 1) \(interfaceState.strings.Common_of) \(displayTotalCount)", font: labelFont, textColor: interfaceState.theme.chat.inputPanel.primaryTextColor)
+                resultsText = NSAttributedString(string: interfaceState.strings.Items_NOfM("\(adjustedIndex + 1)", "\(displayTotalCount)").0, font: labelFont, textColor: interfaceState.theme.chat.inputPanel.primaryTextColor)
             } else {
                 resultsText = NSAttributedString(string: interfaceState.strings.Conversation_SearchNoResults, font: labelFont, textColor: interfaceState.theme.chat.inputPanel.primaryTextColor)
             }

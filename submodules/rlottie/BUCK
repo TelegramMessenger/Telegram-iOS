@@ -1,0 +1,32 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "RLottieBinding",
+    srcs = glob([
+        "rlottie/src/**/*.cpp",
+    ], exclude = [
+        "rlottie/src/vector/vdrawhelper_neon.cpp",
+        "rlottie/src/vector/stb/**/*",
+    ]) + [
+        "LottieInstance.mm"
+    ],
+    compiler_flags = [
+        "-Dpixman_region_selfcheck(x)=1",
+        "-DLOTTIE_DISABLE_ARM_NEON=1",
+    ],
+    headers = glob([
+        "rlottie/src/**/*.h",
+        "rlottie/inc/**/*.h",
+    ], exclude = [
+        "rlottie/src/lottie/rapidjson/msinttypes/**/*",
+    ]) + [
+        "LottieInstance.h"
+    ],
+    exported_headers = [
+        "LottieInstance.h"
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

@@ -10,6 +10,7 @@ import MergeLists
 import AvatarNode
 import AccountContext
 import PeerPresenceStatusManager
+import AppBundle
 
 private let subtitleFont = Font.regular(12.0)
 

@@ -218,6 +218,7 @@
 "PUSH_CHAT_MESSAGE_VIDEOS" = "%1$@ sent %3$@ videos to the group %2$@";
 
 "PUSH_REMINDER_TITLE" = "🗓 Reminder";
+"PUSH_SENDER_YOU" = "📅 You";
 
 "LOCAL_MESSAGE_FWDS" = "%1$@ forwarded you %2$d messages";
 "LOCAL_CHANNEL_MESSAGE_FWDS" = "%1$@ posted %2$d forwarded messages";
@@ -243,6 +244,7 @@
 "Common.Search" = "Search";
 "Common.More" = "More";
 "Common.Select" = "Select";
+"Items.NOfM" = "%1$@ of %2$@";
 
 // State
 "State.Connecting" = "Connecting...";
@@ -309,6 +311,7 @@
 "LastSeen.HoursAgo_0" = "last seen %@ hours ago";
 "LastSeen.YesterdayAt" = "last seen yesterday at %@";
 "LastSeen.AtDate" = "last seen %@";
+"LastSeen.TodayAt" = "last seen today at %@";
 "LastSeen.Lately" = "last seen recently";
 "LastSeen.WithinAWeek" = "last seen within a week";
 "LastSeen.WithinAMonth" = "last seen within a month";
@@ -4679,7 +4682,8 @@ Any member of this group will be able to see messages in the channel.";
 "EditTheme.Preview" = "CHAT PREVIEW";
 "EditTheme.UploadNewTheme" = "Create from File...";
 "EditTheme.UploadEditedTheme" = "Update from File...";
-"EditTheme.ThemeTemplateAlert" = "New Theme Added\n\nPress and hold on your theme to edit it or get a sharing link. Users who install your theme will get automatic updates each time you change it.\n\nFor advanced editing purposes, you can find a file with your theme in Saved Messages.";
+"EditTheme.ThemeTemplateAlertTitle" = "New Theme Added";
+"EditTheme.ThemeTemplateAlertText" = "Press and hold on your theme to edit it or get a sharing link. Users who install your theme will get automatic updates each time you change it.\n\nFor advanced editing purposes, you can find a file with your theme in Saved Messages.";
 "EditTheme.FileReadError" = "Invalid theme file";
 
 "EditTheme.Create.TopInfo" = "The theme will be based on your currently selected colors and wallpaper.";
@@ -4707,6 +4711,7 @@ Any member of this group will be able to see messages in the channel.";
 "EditTheme.Edit.Preview.OutgoingText" = "Or upload a theme file";
 
 "EditTheme.ErrorLinkTaken" = "Sorry, this link is already taken";
+"EditTheme.ErrorInvalidCharacters" = "Sorry, this link is invalid.";
 
 "Wallpaper.ErrorNotFound" = "Sorry, this chat background doesn't seem to exist.";
 "Theme.ErrorNotFound" = "Sorry, this color theme doesn't seem to exist.";
@@ -4720,3 +4725,27 @@ Any member of this group will be able to see messages in the channel.";
 "Theme.UsersCount_0" = "%@ people are using this theme";
 
 "Conversation.SendMessageErrorTooMuchScheduled" = "Sorry, you can not schedule more than 100 messages.";
+
+"ChatList.Context.MarkAllAsRead" = "Mark All as Read";
+"ChatList.Context.HideArchive" = "Hide Above the List";
+"ChatList.Context.UnhideArchive" = "Pin in the list";
+"ChatList.Context.RemoveFromRecents" = "Clear from Recents";
+"ChatList.Context.AddToContacts" = "Add to Contacts";
+"ChatList.Context.MarkAsRead" = "Mark as Read";
+"ChatList.Context.MarkAsUnread" = "Mark as Unread";
+"ChatList.Context.Archive" = "Archive";
+"ChatList.Context.Unarchive" = "Unarchive";
+"ChatList.Context.Pin" = "Pin";
+"ChatList.Context.Unpin" = "Unpin";
+"ChatList.Context.Mute" = "Mute";
+"ChatList.Context.Unmute" = "Unmute";
+"ChatList.Context.JoinChannel" = "Join Channel";
+"ChatList.Context.Delete" = "Delete";
+
+"ContactList.Context.SendMessage" = "Send Message";
+"ContactList.Context.StartSecretChat" = "Start Secret Chat";
+"ContactList.Context.Call" = "Cal";
+
+"Theme.Context.Apply" = "Apply";
+
+"Settings.Context.Logout" = "Logout";

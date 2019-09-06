@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AppBundle
 
 private let textFont: UIFont = Font.regular(16.0)
 
