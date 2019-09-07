@@ -247,7 +247,6 @@ build_verbose: check_env
 
 kill_xcode:
 	killall Xcode || true
-	killall Simulator || true
 
 clean: kill_xcode
 	sh clean.sh

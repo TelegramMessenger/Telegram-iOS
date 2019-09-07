@@ -51,6 +51,12 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
         }
     }
     
+    var idealHeight: CGFloat = 93.0 {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    
     var files: [FileMediaReference] = [] {
         didSet {
             self.updateVisibleItems()
@@ -341,7 +347,7 @@ final class MultiplexedVideoNode: ASScrollNode, UIScrollViewDelegate {
         if !drawableSize.width.isZero {
             var displayItems: [VisibleVideoItem] = []
             
-            let idealHeight: CGFloat = 93.0
+            let idealHeight = self.idealHeight
             
             var weights: [Int] = []
             var totalItemSize: CGFloat = 0.0

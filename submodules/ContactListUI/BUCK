@@ -25,6 +25,7 @@ static_library(
         "//submodules/AlertUI:AlertUI",
         "//submodules/ShareController:ShareController",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/OverlayStatusController:OverlayStatusController",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

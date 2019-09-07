@@ -33,10 +33,32 @@ import WebSearchUI
 import PeerAvatarGalleryUI
 import MapResourceToAvatarSizes
 import AppBundle
+import ContextUI
 
 private let maximumNumberOfAccounts = 3
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 13.0)!
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
+}
 
 private enum SettingsEntryTag: Equatable, ItemListItemTag {
     case account(AccountRecordId)
@@ -80,6 +102,7 @@ private struct SettingsItemArguments {
     let removeAccount: (AccountRecordId) -> Void
     let keepPhone: () -> Void
     let openPhoneNumberChange: () -> Void
+    let accountContextAction: (AccountRecordId, ASDisplayNode, ContextGesture?) -> Void
 }
 
 private enum SettingsSection: Int32 {
@@ -409,6 +432,8 @@ private enum SettingsEntry: ItemListNodeEntry {
                     arguments.setAccountIdWithRevealedOptions(lhsAccountId, rhsAccountId)
                 }, removePeer: { _ in
                     arguments.removeAccount(account.id)
+                }, contextAction: { node, gesture in
+                    arguments.accountContextAction(account.id, node, gesture)
                 }, tag: SettingsEntryTag.account(account.id))
             case let .addAccount(theme, text):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.plusIconImage(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
@@ -627,6 +652,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var dismissInputImpl: (() -> Void)?
     var setDisplayNavigationBarImpl: ((Bool) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
@@ -695,6 +721,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return cachedFaqInstantPage(context: context)
     }
     
+    var removeAccountImpl: ((AccountRecordId) -> Void)?
     var switchToAccountImpl: ((AccountRecordId) -> Void)?
     
     let displayPhoneNumberConfirmation = ValuePromise<Bool>(false)
@@ -873,27 +900,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             return state
         }
     }, removeAccount: { id in
-        let _ = (contextValue.get()
-        |> deliverOnMainQueue
-        |> take(1)).start(next: { context in
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = ActionSheetController(presentationTheme: presentationData.theme)
-            let dismissAction: () -> Void = { [weak controller] in
-                controller?.dismissAnimated()
-            }
-            
-            var items: [ActionSheetItem] = []
-            items.append(ActionSheetTextItem(title: presentationData.strings.Settings_LogoutConfirmationText.trimmingCharacters(in: .whitespacesAndNewlines)))
-            items.append(ActionSheetButtonItem(title: presentationData.strings.Settings_Logout, color: .destructive, action: {
-                dismissAction()
-                let _ = logoutFromAccount(id: id, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
-            }))
-            controller.setItemGroups([
-                ActionSheetItemGroup(items: items),
-                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-            ])
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        })
+        removeAccountImpl?(id)
     }, keepPhone: {
         displayPhoneNumberConfirmation.set(false)
     }, openPhoneNumberChange: {
@@ -907,6 +914,37 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                 pushControllerImpl?(ChangePhoneNumberIntroController(context: context, phoneNumber: formatPhoneNumber(phoneNumber)))
             })
         })
+    }, accountContextAction: { id, node, gesture in
+        var selectedAccount: Account?
+        let _ = (accountsAndPeers.get()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { accountsAndPeers in
+            for (account, _, _) in accountsAndPeers.1 {
+                if account.id == id {
+                    selectedAccount = account
+                    break
+                }
+            }
+        })
+        var sharedContext: SharedAccountContext?
+        let _ = (contextValue.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { context in
+            sharedContext = context.sharedContext
+        })
+        if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
+            let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
+            let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, enableDebugActions: enableDebugActions)
+            
+            let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
+            
+            let contextController = ContextController(account: accountContext.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: accountContextMenuItems(context: accountContext, logout: {
+                removeAccountImpl?(id)
+            }), reactionItems: [], gesture: gesture)
+            presentInGlobalOverlayImpl?(contextController, nil)
+        } else {
+            gesture?.cancel()
+        }
     })
     
     changeProfilePhotoImpl = {
@@ -1269,6 +1307,9 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     presentControllerImpl = { [weak controller] value, arguments in
         controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
     }
+    presentInGlobalOverlayImpl = { [weak controller] value, arguments in
+        controller?.presentInGlobalOverlay(value, with: arguments)
+    }
     dismissInputImpl = { [weak controller] in
         controller?.view.window?.endEditing(true)
     }
@@ -1355,6 +1396,29 @@ public func settingsController(context: AccountContext, accountManager: AccountM
                     }))
                 }
             }
+        })
+    }
+    removeAccountImpl = { id in
+        let _ = (contextValue.get()
+        |> deliverOnMainQueue
+        |> take(1)).start(next: { context in
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = ActionSheetController(presentationTheme: presentationData.theme)
+            let dismissAction: () -> Void = { [weak controller] in
+                controller?.dismissAnimated()
+            }
+            
+            var items: [ActionSheetItem] = []
+            items.append(ActionSheetTextItem(title: presentationData.strings.Settings_LogoutConfirmationText.trimmingCharacters(in: .whitespacesAndNewlines)))
+            items.append(ActionSheetButtonItem(title: presentationData.strings.Settings_Logout, color: .destructive, action: {
+                dismissAction()
+                let _ = logoutFromAccount(id: id, accountManager: context.sharedContext.accountManager, alreadyLoggedOutRemotely: false).start()
+            }))
+            controller.setItemGroups([
+                ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                ])
+            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
         })
     }
     switchToAccountImpl = { id in
@@ -1457,5 +1521,30 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         controller?.setDisplayNavigationBar(display, transition: .animated(duration: 0.5, curve: .spring))
     }
     return controller
+}
+
+private func accountContextMenuItems(context: AccountContext, logout: @escaping () -> Void) -> Signal<[ContextMenuItem], NoError> {
+    let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
+    return context.account.postbox.transaction { transaction -> [ContextMenuItem] in
+        var items: [ContextMenuItem] = []
+        
+        if !transaction.getUnreadChatListPeerIds(groupId: .root).isEmpty {
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAllAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                let _ = (context.account.postbox.transaction { transaction in
+                    markAllChatsAsReadInteractively(transaction: transaction, viewTracker: context.account.viewTracker, groupId: .root)
+                }
+                |> deliverOnMainQueue).start(completed: {
+                    f(.default)
+                })
+            })))
+        }
+        
+        items.append(.action(ContextMenuActionItem(text: strings.Settings_Context_Logout, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Logout"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+            logout()
+            f(.default)
+        })))
+        
+        return items
+    }
 }
 

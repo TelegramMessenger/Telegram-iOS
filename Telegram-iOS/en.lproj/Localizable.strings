@@ -4725,3 +4725,27 @@ Any member of this group will be able to see messages in the channel.";
 "Theme.UsersCount_0" = "%@ people are using this theme";
 
 "Conversation.SendMessageErrorTooMuchScheduled" = "Sorry, you can not schedule more than 100 messages.";
+
+"ChatList.Context.MarkAllAsRead" = "Mark All as Read";
+"ChatList.Context.HideArchive" = "Hide Above the List";
+"ChatList.Context.UnhideArchive" = "Pin in the list";
+"ChatList.Context.RemoveFromRecents" = "Clear from Recents";
+"ChatList.Context.AddToContacts" = "Add to Contacts";
+"ChatList.Context.MarkAsRead" = "Mark as Read";
+"ChatList.Context.MarkAsUnread" = "Mark as Unread";
+"ChatList.Context.Archive" = "Archive";
+"ChatList.Context.Unarchive" = "Unarchive";
+"ChatList.Context.Pin" = "Pin";
+"ChatList.Context.Unpin" = "Unpin";
+"ChatList.Context.Mute" = "Mute";
+"ChatList.Context.Unmute" = "Unmute";
+"ChatList.Context.JoinChannel" = "Join Channel";
+"ChatList.Context.Delete" = "Delete";
+
+"ContactList.Context.SendMessage" = "Send Message";
+"ContactList.Context.StartSecretChat" = "Start Secret Chat";
+"ContactList.Context.Call" = "Cal";
+
+"Theme.Context.Apply" = "Apply";
+
+"Settings.Context.Logout" = "Logout";

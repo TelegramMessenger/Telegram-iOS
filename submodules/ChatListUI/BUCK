@@ -37,6 +37,7 @@ static_library(
         "//submodules/ContactListUI:ContactListUI",
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/ContextUI:ContextUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

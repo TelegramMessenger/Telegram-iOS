@@ -46,7 +46,7 @@ public final class ReactionsMessageAttribute: MessageAttribute {
         encoder.encodeObjectArray(self.reactions, forKey: "r")
     }
     
-    /*func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
+    func withUpdatedResults(_ reactions: Api.MessageReactions) -> ReactionsMessageAttribute {
         switch reactions {
         case let .messageReactions(flags, results):
             let min = (flags & (1 << 0)) != 0
@@ -74,7 +74,7 @@ public final class ReactionsMessageAttribute: MessageAttribute {
             }
             return ReactionsMessageAttribute(reactions: reactions)
         }
-    }*/
+    }
 }
 
 public func mergedMessageReactions(attributes: [MessageAttribute]) -> ReactionsMessageAttribute? {
@@ -147,7 +147,7 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
     }
 }
 
-/*extension ReactionsMessageAttribute {
+extension ReactionsMessageAttribute {
     convenience init(apiReactions: Api.MessageReactions) {
         switch apiReactions {
         case let .messageReactions(_, results):
@@ -159,4 +159,4 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
             })
         }
     }
-}*/
+}

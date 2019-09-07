@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import RadialStatusNode
 import PhotoResources
+import StickerResources
 
 final class VerticalListContextResultsChatInputPanelItem: ListViewItem {
     fileprivate let account: Account
@@ -165,7 +166,6 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             var textString: NSAttributedString?
             var iconText: NSAttributedString?
             
-            var iconImageRepresentation: TelegramMediaImageRepresentation?
             var updateIconImageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>?
             var updatedStatusSignal: Signal<MediaResourceStatus, NoError>?
 
@@ -178,8 +178,9 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             }
             
             var imageResource: TelegramMediaResource?
+            var stickerFile: TelegramMediaFile?
             switch item.result {
-                case let .externalReference(_, _, _, title, _, url, content, thumbnail, _):
+                case let .externalReference(_, _, _, _, _, url, content, thumbnail, _):
                     if let thumbnail = thumbnail {
                         imageResource = thumbnail.resource
                     }
@@ -198,11 +199,16 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
                             iconText = NSAttributedString(string: host.substring(to: host.index(after: host.startIndex)).uppercased(), font: iconFont, textColor: UIColor.white)
                         }
                     }
-                case let .internalReference(_, _, _, title, _, image, file, _):
+                case let .internalReference(_, _, _, _, _, image, file, _):
                     if let image = image {
                         imageResource = imageRepresentationLargerThan(image.representations, size: CGSize(width: 200.0, height: 200.0))?.resource
                     } else if let file = file {
-                        imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
+                        if file.isSticker {
+                            stickerFile = file
+                            imageResource = file.resource
+                        } else {
+                            imageResource = smallestImageRepresentation(file.previewRepresentations)?.resource
+                        }
                     }
             }
             
@@ -215,9 +221,15 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             
             var iconImageApply: (() -> Void)?
             if let imageResource = imageResource {
-                let iconSize = CGSize(width: 55.0, height: 55.0)
+                let boundingSize = CGSize(width: 55.0, height: 55.0)
+                let iconSize: CGSize
+                if let stickerFile = stickerFile, let dimensions = stickerFile.dimensions {
+                    iconSize = dimensions.fitted(boundingSize)
+                } else {
+                    iconSize = boundingSize
+                }
                 let imageCorners = ImageCorners(topLeft: .Corner(2.0), topRight: .Corner(2.0), bottomLeft: .Corner(2.0), bottomRight: .Corner(2.0))
-                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconSize, boundingSize: iconSize, intrinsicInsets: UIEdgeInsets())
+                let arguments = TransformImageArguments(corners: imageCorners, imageSize: iconSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
                 iconImageApply = iconImageLayout(arguments)
                 
                 updatedStatusSignal = item.account.postbox.mediaBox.resourceStatus(imageResource)
@@ -235,9 +247,13 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
             
             if updatedIconImageResource {
                 if let imageResource = imageResource {
-                    let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 55.0, height: 55.0), resource: imageResource)
-                    let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil)
-                    updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photoReference: .standalone(media: tmpImage))
+                    if let stickerFile = stickerFile {
+                        updateIconImageSignal = chatMessageSticker(account: item.account, file: stickerFile, small: false, fetched: true)
+                    } else {
+                        let tmpRepresentation = TelegramMediaImageRepresentation(dimensions: CGSize(width: 55.0, height: 55.0), resource: imageResource)
+                        let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: [tmpRepresentation], immediateThumbnailData: nil, reference: nil, partialReference: nil)
+                        updateIconImageSignal = chatWebpageSnippetPhoto(account: item.account, photoReference: .standalone(media: tmpImage))
+                    }
                 } else {
                     updateIconImageSignal = .complete()
                 }

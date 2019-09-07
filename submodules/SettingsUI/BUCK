@@ -75,6 +75,7 @@ static_library(
         "//submodules/GridMessageSelectionNode:GridMessageSelectionNode",
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/ContextUI:ContextUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

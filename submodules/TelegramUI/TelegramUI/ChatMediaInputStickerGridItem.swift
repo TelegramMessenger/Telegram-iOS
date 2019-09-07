@@ -251,7 +251,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
         if self.currentSize != size {
             self.currentSize = size
             
-            let sideSize: CGFloat = min(75.0 - 10.0, size.width)
+            let sideSize: CGFloat = size.width - 10.0 //min(75.0 - 10.0, size.width)
             let boundingSize = CGSize(width: sideSize, height: sideSize)
             
             if let (_, _, mediaDimensions) = self.currentState {
@@ -271,7 +271,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
             return
         }
         if let interfaceInteraction = self.interfaceInteraction, let (_, item, _) = self.currentState, case .ended = recognizer.state {
-            interfaceInteraction.sendSticker(.standalone(media: item.file), false, self, self.bounds)
+            let _ = interfaceInteraction.sendSticker(.standalone(media: item.file), false, self, self.bounds)
             self.imageNode.layer.animateAlpha(from: 0.5, to: 1.0, duration: 1.0)
         }
     }

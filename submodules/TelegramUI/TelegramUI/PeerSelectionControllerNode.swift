@@ -11,6 +11,7 @@ import SearchBarNode
 import SearchUI
 import ContactListUI
 import ChatListUI
+import SegmentedControlNode
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -28,7 +29,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     
     private let toolbarBackgroundNode: ASDisplayNode?
     private let toolbarSeparatorNode: ASDisplayNode?
-    private let segmentedControl: UISegmentedControl?
+    private let segmentedControlNode: SegmentedControlNode?
     
     var contactListNode: ContactListNode?
     let chatListNode: ChatListNode
@@ -71,13 +72,15 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             self.toolbarSeparatorNode = ASDisplayNode()
             self.toolbarSeparatorNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
             
-            self.segmentedControl = UISegmentedControl(items: [self.presentationData.strings.DialogList_TabTitle, self.presentationData.strings.Contacts_TabTitle])
-            self.segmentedControl?.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
-            self.segmentedControl?.selectedSegmentIndex = 0
+            let items = [
+                self.presentationData.strings.DialogList_TabTitle,
+                self.presentationData.strings.Contacts_TabTitle
+            ]
+            self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: self.presentationData.theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
         } else {
             self.toolbarBackgroundNode = nil
             self.toolbarSeparatorNode = nil
-            self.segmentedControl = nil
+            self.segmentedControlNode = nil
         }
        
         
@@ -121,10 +124,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         })
         
         if hasContactSelector {
+            self.segmentedControlNode!.selectedIndexChanged = { [weak self] index in
+                self?.indexChanged(index)
+            }
+            
             self.addSubnode(self.toolbarBackgroundNode!)
             self.addSubnode(self.toolbarSeparatorNode!)
-            self.view.addSubview(self.segmentedControl!)
-            self.segmentedControl!.addTarget(self, action: #selector(indexChanged), for: .valueChanged)
+            self.addSubnode(self.segmentedControlNode!)
         }
         
         
@@ -142,7 +148,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         self.toolbarBackgroundNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
         self.toolbarSeparatorNode?.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
-        self.segmentedControl?.tintColor = self.presentationData.theme.rootController.navigationBar.accentTextColor
+        self.segmentedControlNode?.updateTheme(SegmentedControlTheme(theme: self.presentationData.theme))
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, actualNavigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -152,14 +158,13 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         var toolbarHeight: CGFloat = cleanInsets.bottom
 
-        if let segmentedControl = segmentedControl, let toolbarBackgroundNode = toolbarBackgroundNode, let toolbarSeparatorNode = toolbarSeparatorNode {
+        if let segmentedControlNode = self.segmentedControlNode, let toolbarBackgroundNode = self.toolbarBackgroundNode, let toolbarSeparatorNode = self.toolbarSeparatorNode {
             toolbarHeight += 44
             transition.updateFrame(node: toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
             transition.updateFrame(node: toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
             
-            var controlSize = segmentedControl.sizeThatFits(layout.size)
-            controlSize.width = min(layout.size.width, max(200.0, controlSize.width))
-            transition.updateFrame(view: segmentedControl, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: layout.size.height - toolbarHeight + floor((44.0 - controlSize.height) / 2.0)), size: controlSize))
+            let controlSize = segmentedControlNode.updateLayout(.sizeToFit(maximumWidth: layout.size.width, minimumWidth: 200.0), transition: transition)
+            transition.updateFrame(node: segmentedControlNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: layout.size.height - toolbarHeight + floor((44.0 - controlSize.height) / 2.0)), size: controlSize))
         }
         
         var insets = layout.insets(options: [.input])
@@ -232,7 +237,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
                     requestOpenMessageFromSearch(peer, messageId)
                 }
-            }, addContact: nil), cancel: { [weak self] in
+            }, addContact: nil, peerContextAction: nil), cancel: { [weak self] in
                 if let requestDeactivateSearch = self?.requestDeactivateSearch {
                     requestDeactivateSearch()
                 }
@@ -318,12 +323,12 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         })
     }
     
-    @objc func indexChanged() {
-        guard let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout, let segmentedControl = self.segmentedControl else {
+    private func indexChanged(_ index: Int) {
+        guard let (layout, navigationHeight, actualNavigationHeight) = self.containerLayout else {
             return
         }
             
-        let contactListActive = segmentedControl.selectedSegmentIndex == 1
+        let contactListActive = index == 1
         if contactListActive != self.contactListActive {
             self.contactListActive = contactListActive
             if contactListActive {

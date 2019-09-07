@@ -20,6 +20,7 @@ import ChatListSearchItemHeader
 import SearchUI
 import TelegramPermissionsUI
 import AppBundle
+import ContextUI
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)
@@ -98,15 +99,17 @@ private final class ContactListNodeInteraction {
     fileprivate let authorize: () -> Void
     fileprivate let suppressWarning: () -> Void
     fileprivate let openPeer: (ContactListPeer) -> Void
+    fileprivate let contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
     
     let itemHighlighting = ContactItemHighlighting()
     
-    init(activateSearch: @escaping () -> Void, openSortMenu: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void) {
+    init(activateSearch: @escaping () -> Void, openSortMenu: @escaping () -> Void, authorize: @escaping () -> Void, suppressWarning: @escaping () -> Void, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?) {
         self.activateSearch = activateSearch
         self.openSortMenu = openSortMenu
         self.authorize = authorize
         self.suppressWarning = suppressWarning
         self.openPeer = openPeer
+        self.contextAction = contextAction
     }
 }
 
@@ -175,8 +178,10 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
             case let .peer(_, peer, presence, header, selection, theme, strings, dateTimeFormat, nameSortOrder, nameDisplayOrder, enabled):
                 let status: ContactsPeerItemStatus
                 let itemPeer: ContactsPeerItemPeer
+                var isContextActionEnabled = false
                 switch peer {
                     case let .peer(peer, isGlobal, participantCount):
+                        isContextActionEnabled = true
                         if isGlobal, let _ = peer.addressName {
                             status = .addressName("")
                         } else {
@@ -200,9 +205,22 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                         status = .none
                         itemPeer = .deviceContact(stableId: id, contact: contact)
                 }
+                var itemContextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+                if isContextActionEnabled, let contextAction = interaction.contextAction {
+                    itemContextAction = { node, gesture in
+                        switch itemPeer {
+                        case let .peer(peer, _):
+                            if let peer = peer {
+                                contextAction(peer, node, gesture)
+                            }
+                        case .deviceContact:
+                            break
+                        }
+                    }
+                }
                 return ContactsPeerItem(theme: theme, strings: strings, sortOrder: nameSortOrder, displayOrder: nameDisplayOrder, account: account, peerMode: .peer, peer: itemPeer, status: status, enabled: enabled, selection: selection, editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false), index: nil, header: header, action: { _ in
                     interaction.openPeer(peer)
-                }, itemHighlighting: interaction.itemHighlighting)
+                }, itemHighlighting: interaction.itemHighlighting, contextAction: itemContextAction)
         }
     }
 
@@ -744,6 +762,7 @@ public final class ContactListNode: ASDisplayNode {
     public var openPeer: ((ContactListPeer) -> Void)?
     public var openPrivacyPolicy: (() -> Void)?
     public var suppressPermissionWarning: (() -> Void)?
+    private let contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
     
     private let previousEntries = Atomic<[ContactListNodeEntry]?>(value: nil)
     private let disposable = MetaDisposable()
@@ -755,10 +774,11 @@ public final class ContactListNode: ASDisplayNode {
     private var authorizationNode: PermissionContentNode
     private let displayPermissionPlaceholder: Bool
     
-    public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false) {
+    public init(context: AccountContext, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
+        self.contextAction = contextAction
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -826,7 +846,7 @@ public final class ContactListNode: ASDisplayNode {
             self?.suppressPermissionWarning?()
         }, openPeer: { [weak self] peer in
             self?.openPeer?(peer)
-        })
+        }, contextAction: contextAction)
         
         self.indexNode.indexSelected = { [weak self] section in
             guard let strongSelf = self, let layout = strongSelf.validLayout, let entries = previousEntries.with({ $0 }) else {

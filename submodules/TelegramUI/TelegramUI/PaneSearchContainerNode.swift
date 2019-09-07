@@ -17,7 +17,7 @@ protocol PaneSearchContentNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings)
     func updateText(_ text: String, languageCode: String?)
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition)
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition)
     
     func animateIn(additivePosition: CGFloat, transition: ContainedViewLayoutTransition)
     func animateOut(transition: ContainedViewLayoutTransition)
@@ -103,7 +103,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
         return self.contentNode.itemAt(point: CGPoint(x: point.x, y: point.y - searchBarHeight))
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         
@@ -113,7 +113,7 @@ final class PaneSearchContainerNode: ASDisplayNode {
         let contentFrame = CGRect(origin: CGPoint(x: leftInset, y: searchBarHeight), size: CGSize(width: size.width - leftInset - rightInset, height: size.height - searchBarHeight))
         
         transition.updateFrame(node: self.contentNode, frame: contentFrame)
-        self.contentNode.updateLayout(size: contentFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, transition: transition)
+        self.contentNode.updateLayout(size: contentFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: transition)
     }
     
     func deactivate() {

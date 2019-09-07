@@ -166,6 +166,8 @@ private final class WindowRootViewController: UIViewController, UIViewController
             shouldRegister = true
         }
         
+        shouldRegister = false
+        
         if shouldRegister != self.registeredForPreviewing {
             self.registeredForPreviewing = shouldRegister
             if shouldRegister {

@@ -16,7 +16,7 @@ private let inlineBotPrefixFont = Font.regular(14.0)
 private let inlineBotNameFont = nameFont
 
 class ChatMessageStickerItemNode: ChatMessageItemView {
-    private let contextSourceNode: ContextContentContainingNode
+    private let contextSourceNode: ContextExtractedContentContainingNode
     let imageNode: TransformImageNode
     var textNode: TextNode?
     
@@ -42,7 +42,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
     private var currentSwipeToReplyTranslation: CGFloat = 0.0
     
     required init() {
-        self.contextSourceNode = ContextContentContainingNode()
+        self.contextSourceNode = ContextExtractedContentContainingNode()
         self.imageNode = TransformImageNode()
         self.dateAndStatusNode = ChatMessageDateAndStatusNode()
         
@@ -899,7 +899,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    override func getMessageContextSourceNode() -> ContextContentContainingNode? {
+    override func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
         return self.contextSourceNode
     }
     

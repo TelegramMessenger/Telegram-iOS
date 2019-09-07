@@ -425,7 +425,7 @@ final class ChatMediaInputNode: ChatInputNode {
     private var currentView: ItemCollectionsView?
     private let dismissedPeerSpecificStickerPack = Promise<Bool>()
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState, Bool)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState, DeviceMetrics, Bool)?
     private var paneArrangement: ChatMediaInputPaneArrangement
     private var initializedArrangement = false
     
@@ -1045,8 +1045,8 @@ final class ChatMediaInputNode: ChatInputNode {
         if let index = self.paneArrangement.panes.firstIndex(of: pane), index != self.paneArrangement.currentIndex {
             let previousGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
-            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, isVisible) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight,  transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, isVisible: isVisible)
+            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
                 self.updateAppearanceTransition(transition: transition)
             }
             let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
@@ -1066,8 +1066,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.setHighlightedItemCollectionId(ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.trending.rawValue, id: 0))
             }
         } else {
-            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, isVisible) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, isVisible: isVisible)
+            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
             }
         }
     }
@@ -1195,13 +1195,13 @@ final class ChatMediaInputNode: ChatInputNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, isVisible: Bool) -> (CGFloat, CGFloat) {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
         var searchMode: ChatMediaInputSearchMode?
-        if let (_, _, _, _, _, _, _, _, interfaceState, _) = self.validLayout, case let .media(_, maybeExpanded) = interfaceState.inputMode, let expanded = maybeExpanded, case let .search(mode) = expanded {
+        if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = self.validLayout, case let .media(_, maybeExpanded) = interfaceState.inputMode, let expanded = maybeExpanded, case let .search(mode) = expanded {
             searchMode = mode
         }
         
-        self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, isVisible)
+        self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
         
         if self.theme !== interfaceState.theme || self.strings !== interfaceState.strings {
             self.updateThemeAndStrings(theme: interfaceState.theme, strings: interfaceState.strings)
@@ -1235,12 +1235,12 @@ final class ChatMediaInputNode: ChatInputNode {
                 let containerFrame = CGRect(origin: CGPoint(x: 0.0, y: -inputPanelHeight), size: CGSize(width: width, height: panelHeight + inputPanelHeight))
                 if searchContainerNode.supernode != nil {
                     transition.updateFrame(node: searchContainerNode, frame: containerFrame)
-                    searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, transition: transition)
+                    searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: transition)
                 } else {
                     self.searchContainerNode = searchContainerNode
                     self.insertSubnode(searchContainerNode, belowSubnode: self.collectionListContainer)
                     searchContainerNode.frame = containerFrame
-                    searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, transition: .immediate)
+                    searchContainerNode.updateLayout(size: containerFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: .immediate)
                     var placeholderNode: PaneSearchBarPlaceholderNode?
                     if let searchMode = searchMode {
                         switch searchMode {
@@ -1349,10 +1349,9 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         }
         
-        self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, transition: transition)
-        
-        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible && visiblePanes.contains(where: { $0.0 == .stickers }), transition: transition)
-        self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, transition: transition)
+        self.gifPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, deviceMetrics: deviceMetrics, transition: transition)
+        self.stickerPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible && visiblePanes.contains(where: { $0.0 == .stickers }), deviceMetrics: deviceMetrics, transition: transition)
+        self.trendingPane.updateLayout(size: CGSize(width: width - leftInset - rightInset, height: panelHeight), topInset: 41.0, bottomInset: bottomInset, isExpanded: isExpanded, isVisible: isVisible, deviceMetrics: deviceMetrics, transition: transition)
         
         if self.gifPane.supernode != nil {
             if !visiblePanes.contains(where: { $0.0 == .gifs }) {
@@ -1525,7 +1524,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.trendingPane.removeFromSupernode()
             }
             case .changed:
-                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, isVisible) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                     let translationX = -recognizer.translation(in: self.view).x
                     var indexTransition = translationX / width
                     if self.paneArrangement.currentIndex == 0 {
@@ -1534,10 +1533,10 @@ final class ChatMediaInputNode: ChatInputNode {
                         indexTransition = min(0.0, indexTransition)
                     }
                     self.paneArrangement = self.paneArrangement.withIndexTransition(indexTransition)
-                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, isVisible: isVisible)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
                 }
             case .ended:
-                if let (width, _, _, _, _, _, _, _, _, _) = self.validLayout {
+                if let (width, _, _, _, _, _, _, _, _, _, _) = self.validLayout {
                     var updatedIndex = self.paneArrangement.currentIndex
                     if abs(self.paneArrangement.indexTransition * width) > 30.0 {
                         if self.paneArrangement.indexTransition < 0.0 {
@@ -1550,9 +1549,9 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.setCurrentPane(self.paneArrangement.panes[updatedIndex], transition: .animated(duration: 0.25, curve: .spring))
                 }
             case .cancelled:
-                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, isVisible) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
                     self.paneArrangement = self.paneArrangement.withIndexTransition(0.0)
-                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, isVisible: isVisible)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
                 }
             default:
                 break

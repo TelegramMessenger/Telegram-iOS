@@ -540,7 +540,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
-                    /*let reactions: [(String, String, String)] = [
+                    let reactions: [(String, String, String)] = [
                         ("😔", "Sad", "sad"),
                         ("😳", "Surprised", "surprised"),
                         ("😂", "Fun", "lol"),
@@ -553,18 +553,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         ("😐", "Poker", "poker"),
                         ("💩", "Poop", "poop"),
                         ("😊", "Smile", "smile")
-                    ]*/
+                    ]
                     
                     var reactionItems: [ReactionContextItem] = []
-                    /*for (value, text, name) in reactions {
-                        if let path = getAppBundle().path(forResource: name, ofType: "tgs", inDirectory: "BuiltinReactions") {
+                    for (value, text, name) in reactions {
+                        if let path = getAppBundle().path(forResource: name, ofType: "tgs") {
                             reactionItems.append(ReactionContextItem(value: value, text: text, path: path))
                         }
-                    }*/
+                    }
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                         reactionItems = []
                     }
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: reactionItems, recognizer: recognizer)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {
@@ -592,6 +592,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
             }
+        }, openMessageContextActions: { message, node, rect, gesture in
+            gesture?.cancel()
         }, navigateToMessage: { [weak self] fromId, id in
             self?.navigateToMessage(from: fromId, to: .id(id))
         }, clickThroughMessage: { [weak self] in
@@ -1393,7 +1395,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     })))
                     
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: [], recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
@@ -1433,7 +1435,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         f(.dismissWithoutContent)
                     })))
                     
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: ChatMessageContextControllerContentSource(chatNode: strongSelf.chatDisplayNode, message: message), items: actions, reactionItems: [], recognizer: nil)
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: [], recognizer: nil)
                     strongSelf.currentContextController = controller
                     strongSelf.window?.presentInGlobalOverlay(controller)
                 })
@@ -4153,7 +4155,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         subscriber.putCompletion()
                         return EmptyDisposable
                     }
-                    subscriber.putNext(strongSelf.traceVisibility() && isTopmostChatController(strongSelf))
+                    
+                    subscriber.putNext(strongSelf.traceVisibility() && isTopmostChatController(strongSelf) && !strongSelf.context.sharedContext.mediaManager.audioSession.isOtherAudioPlaying())
                     subscriber.putCompletion()
                     return EmptyDisposable
                 } |> then(.complete() |> delay(1.0, queue: Queue.mainQueue())) |> restart
@@ -7323,7 +7326,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         
         if canDisplayContextMenu, let contextController = contextController {
-            contextController.setItems(contextItems)
+            contextController.setItems(.single(contextItems))
         } else {
             actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                 ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in

@@ -151,9 +151,8 @@ public func generateImage(_ size: CGSize, opaque: Bool = false, scale: CGFloat? 
     
     guard let provider = CGDataProvider(dataInfo: bytes, data: bytes, size: length, releaseData: { bytes, _, _ in
         free(bytes)
-    })
-        else {
-            return nil
+    }) else {
+        return nil
     }
     
     let bitmapInfo = CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | (opaque ? CGImageAlphaInfo.noneSkipFirst.rawValue : CGImageAlphaInfo.premultipliedFirst.rawValue))

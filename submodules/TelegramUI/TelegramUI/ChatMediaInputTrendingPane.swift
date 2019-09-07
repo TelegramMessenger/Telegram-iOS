@@ -75,24 +75,31 @@ private final class TrendingPaneEntry: Identifiable, Comparable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, interaction: TrendingPaneInteraction) -> ListViewItem {
-        return MediaInputPaneTrendingItem(account: account, theme: self.theme, strings: self.strings, interaction: interaction, info: self.info, topItems: self.topItems, installed: self.installed, unread: self.unread)
+    func item(account: Account, interaction: TrendingPaneInteraction) -> GridItem {
+        let info = self.info
+        return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, info: self.info, topItems: self.topItems, grid: true, installed: self.installed, unread: self.unread, open: {
+            interaction.openPack(info)
+        }, install: {
+            interaction.installPack(info)
+        }, getItemIsPreviewed: { item in
+            return interaction.getItemIsPreviewed(item)
+        })
     }
 }
 
 private struct TrendingPaneTransition {
-    let deletions: [ListViewDeleteItem]
-    let insertions: [ListViewInsertItem]
-    let updates: [ListViewUpdateItem]
+    let deletions: [Int]
+    let insertions: [GridNodeInsertItem]
+    let updates: [GridNodeUpdateItem]
     let initial: Bool
 }
 
 private func preparedTransition(from fromEntries: [TrendingPaneEntry], to toEntries: [TrendingPaneEntry], account: Account, interaction: TrendingPaneInteraction, initial: Bool) -> TrendingPaneTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
-    let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction), directionHint: nil) }
+    let deletions = deleteIndices
+    let insertions = indicesAndItems.map { GridNodeInsertItem(index: $0.0, item: $0.1.item(account: account, interaction: interaction), previousIndex: $0.2) }
+    let updates = updateIndices.map { GridNodeUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, interaction: interaction)) }
     
     return TrendingPaneTransition(deletions: deletions, insertions: insertions, updates: updates, initial: initial)
 }
@@ -114,7 +121,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     private let controllerInteraction: ChatControllerInteraction
     private let getItemIsPreviewed: (StickerPackItem) -> Bool
     
-    private let listNode: ListView
+    let gridNode: GridNode
     
     private var enqueuedTransitions: [TrendingPaneTransition] = []
     private var validLayout: (CGSize, CGFloat)?
@@ -135,13 +142,13 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         self.controllerInteraction = controllerInteraction
         self.getItemIsPreviewed = getItemIsPreviewed
         
-        self.listNode = ListView()
+        self.gridNode = GridNode()
         
         super.init()
         
-        self.addSubnode(self.listNode)
+        self.addSubnode(self.gridNode)
         
-        self.listNode.beganInteractiveDragging = { [weak self] in
+        self.gridNode.scrollingInitiated = { [weak self] in
             self?.scrollingInitiated?()
         }
     }
@@ -224,28 +231,39 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         })
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, bottomInset)
         
-        transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
-        
-        var duration: Double = 0.0
-        var listViewCurve: ListViewAnimationCurve = .Default(duration: nil)
-        switch transition {
-            case .immediate:
-                break
-            case let .animated(animationDuration, animationCurve):
-                duration = animationDuration
-                switch animationCurve {
-                    case .easeInOut, .custom:
-                        listViewCurve = .Default(duration: duration)
-                    case .spring:
-                        listViewCurve = .Spring(duration: duration)
-                }
+        let itemSize: CGSize
+        if case .tablet = deviceMetrics.type, size.width > 480.0 {
+            itemSize = CGSize(width: floor(size.width / 2.0), height: 128.0)
+        } else {
+            itemSize = CGSize(width: size.width, height: 128.0)
         }
         
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0), preloadSize: isVisible ? 300.0 : 0.0, type: .fixed(itemSize: itemSize, fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
+        
+        transition.updateFrame(node: self.gridNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height)))
+        
+//        transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
+//
+//        var duration: Double = 0.0
+//        var listViewCurve: ListViewAnimationCurve = .Default(duration: nil)
+//        switch transition {
+//            case .immediate:
+//                break
+//            case let .animated(animationDuration, animationCurve):
+//                duration = animationDuration
+//                switch animationCurve {
+//                    case .easeInOut, .custom:
+//                        listViewCurve = .Default(duration: duration)
+//                    case .spring:
+//                        listViewCurve = .Spring(duration: duration)
+//                }
+//        }
+//
+//        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: bottomInset, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !hadValidLayout {
             while !self.enqueuedTransitions.isEmpty {
@@ -274,38 +292,28 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         if let transition = self.enqueuedTransitions.first {
             self.enqueuedTransitions.remove(at: 0)
             
-            var options = ListViewDeleteAndInsertOptions()
-            if transition.initial {
-                options.insert(.Synchronous)
-                options.insert(.LowLatency)
-                options.insert(.PreferSynchronousResourceLoading)
-            } else {
-                options.insert(.AnimateInsertion)
-            }
-            
-            self.listNode.transaction(deleteIndices: transition.deletions, insertIndicesAndItems: transition.insertions, updateIndicesAndItems: transition.updates, options: options, updateSizeAndInsets: nil, updateOpaqueState: nil, completion: { _ in
-            })
+            let itemTransition: ContainedViewLayoutTransition = .immediate
+            self.gridNode.transaction(GridNodeTransaction(deleteItems: transition.deletions, insertItems: transition.insertions, updateItems: transition.updates, scrollToItem: nil, updateLayout: nil, itemTransition: itemTransition, stationaryItems: .none, updateFirstIndexInSectionOffset: nil, synchronousLoads: transition.initial), completion: { _ in })
         }
     }
     
     func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
-        let localPoint = self.view.convert(point, to: self.listNode.view)
-        var resultNode: MediaInputPaneTrendingItemNode?
-        self.listNode.forEachItemNode { itemNode in
-            if itemNode.frame.contains(localPoint), let itemNode = itemNode as? MediaInputPaneTrendingItemNode {
+        let localPoint = self.view.convert(point, to: self.gridNode.view)
+        var resultNode: StickerPaneSearchGlobalItemNode?
+        self.gridNode.forEachItemNode { itemNode in
+            if itemNode.frame.contains(localPoint), let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                 resultNode = itemNode
             }
         }
         if let resultNode = resultNode {
-            return resultNode.itemAt(point: self.listNode.view.convert(localPoint, to: resultNode.view))
+            return resultNode.itemAt(point: self.gridNode.view.convert(localPoint, to: resultNode.view))
         }
-        
         return nil
     }
     
     func updatePreviewing(animated: Bool) {
-        self.listNode.forEachItemNode { itemNode in
-            if let itemNode = itemNode as? MediaInputPaneTrendingItemNode {
+        self.gridNode.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                 itemNode.updatePreviewing(animated: animated)
             }
         }

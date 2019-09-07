@@ -37,6 +37,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let strings: PresentationStrings
     let info: StickerPackCollectionInfo
     let topItems: [StickerPackItem]
+    let grid: Bool
     let installed: Bool
     let unread: Bool
     let open: () -> Void
@@ -44,14 +45,17 @@ final class StickerPaneSearchGlobalItem: GridItem {
     let getItemIsPreviewed: (StickerPackItem) -> Bool
     
     let section: GridSection? = StickerPaneSearchGlobalSection()
-    let fillsRowWithHeight: CGFloat? = 128.0
+    var fillsRowWithHeight: CGFloat? {
+        return self.grid ? nil : 128.0
+    }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, info: StickerPackCollectionInfo, topItems: [StickerPackItem], grid: Bool, installed: Bool, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.info = info
         self.topItems = topItems
+        self.grid = grid
         self.installed = installed
         self.unread = unread
         self.open = open

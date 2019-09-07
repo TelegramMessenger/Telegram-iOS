@@ -15,6 +15,7 @@ import OverlayStatusController
 import AppBundle
 
 public enum ThemePreviewSource {
+    case settings(PresentationThemeReference)
     case theme(TelegramTheme)
     case slug(String, TelegramMediaFile)
     case media(AnyMediaReference)
@@ -83,14 +84,21 @@ public final class ThemePreviewController: ViewController {
             themeName = previewTheme.name.string
         }
         
+        var isPreview = false
+        if case .settings = source {
+            isPreview = true
+        }
+        
         let titleView = CounterContollerTitleView(theme: self.previewTheme)
-        titleView.title = CounterContollerTitle(title: themeName, counter: " ")
+        titleView.title = CounterContollerTitle(title: themeName, counter: isPreview ? "" : " ")
         self.navigationItem.titleView = titleView
         
         self.statusBar.statusBarStyle = self.previewTheme.rootController.statusBarStyle.style
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
+        if !isPreview {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: self.previewTheme.rootController.navigationBar.accentTextColor), style: .plain, target: self, action: #selector(self.actionPressed))
+        }
         
         self.disposable = (combineLatest(self.theme.get(), self.presentationTheme.get())
         |> deliverOnMainQueue).start(next: { [weak self] theme, presentationTheme in
@@ -134,6 +142,10 @@ public final class ThemePreviewController: ViewController {
     override public func loadDisplayNode() {
         super.loadDisplayNode()
         
+        var isPreview = false
+        if case .settings = self.source {
+            isPreview = true
+        }
         self.displayNode = ThemePreviewControllerNode(context: self.context, previewTheme: self.previewTheme, dismiss: { [weak self] in
             if let strongSelf = self {
                 strongSelf.dismiss()
@@ -142,7 +154,7 @@ public final class ThemePreviewController: ViewController {
             if let strongSelf = self {
                 strongSelf.apply()
             }
-        })
+        }, isPreview: isPreview)
         self.displayNodeDidLoad()
         
         let previewTheme = self.previewTheme
@@ -166,6 +178,8 @@ public final class ThemePreviewController: ViewController {
         let disposable = self.applyDisposable
         
         switch self.source {
+            case let .settings(reference):
+                theme = .single(reference)
             case .theme, .slug:
                 theme = combineLatest(self.theme.get() |> take(1), wallpaperPromise.get() |> take(1))
                 |> mapToSignal { theme, wallpaper -> Signal<PresentationThemeReference?, NoError> in
@@ -334,6 +348,8 @@ public final class ThemePreviewController: ViewController {
         let subject: ShareControllerSubject
         let preferredAction: ShareControllerPreferredAction
         switch self.source {
+            case let .settings(reference):
+                return
             case let .theme(theme):
                 subject = .url("https://t.me/addtheme/\(theme.slug)")
                 preferredAction = .default

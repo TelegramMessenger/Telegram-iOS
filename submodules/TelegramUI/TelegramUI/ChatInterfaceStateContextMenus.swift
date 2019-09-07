@@ -12,6 +12,7 @@ import AccountContext
 import ContextUI
 import LegacyUI
 import AppBundle
+import SaveToCameraRoll
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -35,7 +36,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
         if let peer = message.peers[message.id.peerId], let channel = peer as? TelegramChannel {
             switch channel.info {
                 case .broadcast:
-                    if channel.hasPermission(.editAllMessages) {
+                    if message.author?.id == message.id.peerId || channel.hasPermission(.editAllMessages) {
                         hasEditRights = true
                     }
                 default:
@@ -446,6 +447,30 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
                 }
                 f(.default)
             })))
+            if resourceAvailable, !message.containsSecretMedia {
+                var mediaReference: AnyMediaReference?
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+                        mediaReference = ImageMediaReference.standalone(media: image).abstract
+                        break
+                    } else if let file = media as? TelegramMediaFile, file.isVideo {
+                        mediaReference = FileMediaReference.standalone(media: file).abstract
+                        break
+                    }
+                }
+                if let mediaReference = mediaReference {
+                    actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Preview_SaveToCameraRoll, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Save"), color: theme.actionSheet.primaryTextColor)
+                    }, action: { _, f in
+                        let _ = (saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference)
+                        |> deliverOnMainQueue).start(completed: {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            controllerInteraction.presentGlobalOverlayController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+                        })
+                        f(.default)
+                    })))
+                }
+            }
         }
         
         if data.canEdit {

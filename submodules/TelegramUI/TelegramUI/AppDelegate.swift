@@ -1278,6 +1278,14 @@ final class SharedApplicationContext {
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
+        
+        let configuration = URLSessionConfiguration.background(withIdentifier: "org.telegram.Telegram-iOS.background")
+        let session = URLSession(configuration: configuration)
+        if #available(iOS 9.0, *) {
+            session.getAllTasks(completionHandler: { tasks in
+                print(tasks)
+            })
+        }
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
@@ -1740,6 +1748,11 @@ final class SharedApplicationContext {
                 }
             }
         })
+    }
+    
+    func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
+        Logger.shared.log("App \(self.episodeId)", "handleEventsForBackgroundURLSession \(identifier)")
+        completionHandler()
     }
     
     override var next: UIResponder? {

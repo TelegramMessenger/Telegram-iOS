@@ -31,6 +31,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let context: AccountContext
     private var previewTheme: PresentationTheme
     private var presentationData: PresentationData
+    private let isPreview: Bool
     
     public let wallpaperPromise = Promise<TelegramWallpaper>()
     
@@ -59,9 +60,10 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var statusDisposable: Disposable?
     private var fetchDisposable = MetaDisposable()
     
-    init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void) {
+    init(context: AccountContext, previewTheme: PresentationTheme, dismiss: @escaping () -> Void, apply: @escaping () -> Void, isPreview: Bool) {
         self.context = context
         self.previewTheme = previewTheme
+        self.isPreview = isPreview
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -83,6 +85,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.chatListBackgroundNode = ASDisplayNode()
         
         self.chatContainerNode = ASDisplayNode()
+        self.chatContainerNode.clipsToBounds = true
         self.instantChatBackgroundNode = WallpaperBackgroundNode()
         self.instantChatBackgroundNode.displaysAsynchronously = false
         self.instantChatBackgroundNode.image = chatControllerBackgroundImage(theme: previewTheme, wallpaper: previewTheme.chat.defaultWallpaper, mediaBox: context.sharedContext.accountManager.mediaBox, knockoutMode: context.sharedContext.immediateExperimentalUISettings.knockoutWallpaper)
@@ -94,7 +97,6 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.remoteChatBackgroundNode.view.contentMode = .scaleAspectFill
         
         self.blurredNode = BlurredImageNode()
-        self.blurredNode.clipsToBounds = true
         self.blurredNode.blurView.contentMode = .scaleAspectFill
         
         self.toolbarNode = WallpaperGalleryToolbarNode(theme: self.previewTheme, strings: self.presentationData.strings)
@@ -131,9 +133,11 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.addSubnode(self.scrollNode)
         self.chatListBackgroundNode.addSubnode(self.maskNode)
-        self.addSubnode(self.pageControlBackgroundNode)
-        self.addSubnode(self.pageControlNode)
-        self.addSubnode(self.toolbarNode)
+        if !isPreview {
+            self.addSubnode(self.pageControlBackgroundNode)
+            self.addSubnode(self.pageControlNode)
+            self.addSubnode(self.toolbarNode)
+        }
         
         self.scrollNode.addSubnode(self.chatListBackgroundNode)
         self.scrollNode.addSubnode(self.chatContainerNode)
@@ -307,7 +311,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private func updateChatsLayout(layout: ContainerViewLayout, topInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var items: [ChatListItem] = []
         
-        let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, togglePeerSelected: { _ in }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {})
+        let interaction = ChatListNodeInteraction(activateSearch: {}, peerSelected: { _ in }, togglePeerSelected: { _ in }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, activateChatPreview: { _, _, gesture in
+            gesture?.cancel()
+        })
         let chatListPresentationData = ChatListPresentationData(theme: self.previewTheme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: true)
         
         let peers = SimpleDictionary<PeerId, Peer>()
@@ -473,7 +479,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
-        self.updateMessagesLayout(layout: layout, bottomInset: toolbarHeight + 66.0, transition: transition)
+        self.updateMessagesLayout(layout: layout, bottomInset: self.isPreview ? 0.0 : (toolbarHeight + 66.0), transition: transition)
         
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
         let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 42.0), size: pageControlSize)

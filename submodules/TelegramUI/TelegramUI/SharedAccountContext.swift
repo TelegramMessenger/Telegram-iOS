@@ -995,6 +995,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         openAddContactImpl(context: context, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, label: label, present: present, pushController: pushController, completed: completed)
     }
     
+    public func openAddPersonContact(context: AccountContext, peerId: PeerId, present: @escaping (ViewController, Any?) -> Void) {
+        openAddPersonContactImpl(context: context, peerId: peerId, present: present)
+    }
+    
     public func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController {
         return createGroupControllerImpl(context: context, peerIds: peerIds, initialTitle: initialTitle, mode: mode, completion: completion)
     }

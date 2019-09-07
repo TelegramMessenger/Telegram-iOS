@@ -4,7 +4,7 @@ import Display
 import ContextUI
 import Postbox
 
-final class ChatMessageContextControllerContentSource: ContextControllerContentSource {
+final class ChatMessageContextExtractedContentSource: ContextExtractedContentSource {
     private weak var chatNode: ChatControllerNode?
     private let message: Message
     

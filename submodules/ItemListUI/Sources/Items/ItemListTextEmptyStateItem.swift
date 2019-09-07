@@ -60,7 +60,7 @@ public final class ItemListTextEmptyStateItemNode: ItemListControllerEmptyStateI
         self.validLayout = (layout, navigationBarHeight)
         var insets = layout.insets(options: [.statusBar])
         insets.top += navigationBarHeight
-        let textSize = self.textNode.measure(CGSize(width: layout.size.width - 40.0 - layout.safeInsets.left - layout.safeInsets.right, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
-        self.textNode.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - textSize.width) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - textSize.height) / 2.0)), size: textSize)
+        let textSize = self.textNode.measure(CGSize(width: layout.size.width - 40.0 - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right, height: max(1.0, layout.size.height - insets.top - insets.bottom)))
+        self.textNode.frame = CGRect(origin: CGPoint(x: layout.safeInsets.left + layout.intrinsicInsets.left + floor((layout.size.width - layout.safeInsets.left - layout.safeInsets.right - layout.intrinsicInsets.left - layout.intrinsicInsets.right - textSize.width) / 2.0), y: insets.top + floor((layout.size.height - insets.top - insets.bottom - textSize.height) / 2.0)), size: textSize)
     }
 }

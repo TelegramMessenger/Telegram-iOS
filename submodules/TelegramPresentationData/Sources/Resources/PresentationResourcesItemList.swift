@@ -145,4 +145,40 @@ public struct PresentationResourcesItemList {
             })
         })
     }
+    
+    public static func cornersImage(_ theme: PresentationTheme, top: Bool, bottom: Bool) -> UIImage? {
+        if !top && !bottom {
+            return nil
+        }
+        let key: PresentationResourceKey
+        if top && bottom {
+            key = PresentationResourceKey.itemListCornersBoth
+        } else if top {
+            key = PresentationResourceKey.itemListCornersTop
+        } else {
+            key = PresentationResourceKey.itemListCornersBottom
+        }
+        return theme.image(key.rawValue, { theme in
+            return generateImage(CGSize(width: 50.0, height: 50.0), rotatedContext: { (size, context) in
+                let bounds = CGRect(origin: CGPoint(), size: size)
+                context.setFillColor(theme.list.blocksBackgroundColor.cgColor)
+                context.fill(bounds)
+                
+                context.setBlendMode(.clear)
+                
+                var corners: UIRectCorner = []
+                if top {
+                    corners.insert(.topLeft)
+                    corners.insert(.topRight)
+                }
+                if bottom {
+                    corners.insert(.bottomLeft)
+                    corners.insert(.bottomRight)
+                }
+                let path = UIBezierPath(roundedRect: bounds, byRoundingCorners: corners, cornerRadii: CGSize(width: 11.0, height: 11.0))
+                context.addPath(path.cgPath)
+                context.fillPath()
+            })?.stretchableImage(withLeftCapWidth: 25, topCapHeight: 25)
+        })
+    }
 }
