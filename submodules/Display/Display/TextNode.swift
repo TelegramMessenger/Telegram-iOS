@@ -60,9 +60,10 @@ private func displayLineFrame(frame: CGRect, isRTL: Bool, boundingRect: CGRect, 
         return frame
     }
     var lineFrame = frame
+    let intersectionFrame = lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height)
+
     if isRTL {
         lineFrame.origin.x = max(0.0, floor(boundingRect.width - lineFrame.size.width))
-        let intersectionFrame = lineFrame.offsetBy(dx: 0.0, dy: -lineFrame.height / 4.5)
         if let topRight = cutout?.topRight {
             let topRightRect = CGRect(origin: CGPoint(x: boundingRect.width - topRight.width, y: 0.0), size: topRight)
             if intersectionFrame.intersects(topRightRect) {
