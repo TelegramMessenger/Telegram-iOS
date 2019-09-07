@@ -766,6 +766,30 @@ private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<(Peer?, Cac
     }
 }
 
+public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, present: @escaping (ViewController, Any?) -> Void) {
+    let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
+    |> deliverOnMainQueue).start(next: { peer, cachedData in
+        guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
+            return
+        }
+        
+        var shareViaException = false
+        if let cachedData = cachedData as? CachedUserData, let peerStatusSettings = cachedData.peerStatusSettings {
+            shareViaException = peerStatusSettings.contains(.addExceptionWhenAddingContact)
+        }
+        
+        present(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
+            if let peer = peer as? TelegramUser {
+                if let phone = peer.phone, !phone.isEmpty {
+                }
+                
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                present(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
+            }
+        }), completed: nil, cancelled: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    })
+}
+
 public func userInfoController(context: AccountContext, peerId: PeerId, mode: PeerInfoControllerMode = .generic) -> ViewController {
     let statePromise = ValuePromise(UserInfoState(), ignoreRepeated: true)
     let stateValue = Atomic(value: UserInfoState())
@@ -892,26 +916,8 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     }, openChat: {
         openChatImpl?()
     }, addContact: {
-        let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
-        |> deliverOnMainQueue).start(next: { peer, cachedData in
-            guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
-                return
-            }
-            
-            var shareViaException = false
-            if let cachedData = cachedData as? CachedUserData, let peerStatusSettings = cachedData.peerStatusSettings {
-                shareViaException = peerStatusSettings.contains(.addExceptionWhenAddingContact)
-            }
-            
-            presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
-                if let peer = peer as? TelegramUser {
-                    if let phone = peer.phone, !phone.isEmpty {
-                    }
-                    
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
-                }
-            }), completed: nil, cancelled: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        openAddPersonContactImpl(context: context, peerId: peerId, present: { c, a in
+            presentControllerImpl?(c, a)
         })
     }, shareContact: {
         shareContactImpl?()

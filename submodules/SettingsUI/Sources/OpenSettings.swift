@@ -50,7 +50,7 @@ func openEditSettings(context: AccountContext, accountsAndPeers: Signal<((Accoun
     }
     openEditingDisposable.set((signal
     |> deliverOnMainQueue).start(next: { peer, cachedData, canAddAccounts in
-        pushController(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? ""), currentBioText: cachedData.about ?? "", accountManager: context.sharedContext.accountManager, canAddAccounts: canAddAccounts, focusOnItemTag: focusOnItemTag))
+        pushController(editSettingsController(context: context, currentName: .personName(firstName: peer.firstName ?? "", lastName: peer.lastName ?? " "), currentBioText: cachedData.about ?? "", accountManager: context.sharedContext.accountManager, canAddAccounts: canAddAccounts, focusOnItemTag: focusOnItemTag))
     }))
     return openEditingDisposable
 }

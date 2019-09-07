@@ -1,0 +1,34 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "TelegramCallsUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+        "Sources/**/*.m",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
+    ], exclude = ["Sources/TelegramCallsUI.h"]),
+    exported_headers = glob([
+        "Sources/**/*.h",
+    ], exclude = ["Sources/TelegramCallsUI.h"]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+	    "//submodules/Display:Display#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+    	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/TelegramNotices:TelegramNotices",
+        "//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/DeviceAccess:DeviceAccess",
+        "//submodules/TelegramAudio:TelegramAudio",
+        "//submodules/TelegramVoip:TelegramVoip",
+        "//submodules/ItemListUI:ItemListUI",
+        "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/AppBundle:AppBundle",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

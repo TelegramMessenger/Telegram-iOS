@@ -6,6 +6,7 @@ import Display
 import SwiftSignalKit
 import TelegramPresentationData
 import ListSectionHeaderNode
+import AppBundle
 
 class ChatListArchiveInfoItem: ListViewItem {
     let theme: PresentationTheme

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import ActivityIndicator
+import AppBundle
 
 final class PeerMediaCollectionEmptyNode: ASDisplayNode {
     private let mode: PeerMediaCollectionMode

@@ -1,0 +1,26 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "TelegramUniversalVideoContent",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+    	"//submodules/MediaPlayer:UniversalMediaPlayer",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/RadialStatusNode:RadialStatusNode",
+        "//submodules/AppBundle:AppBundle",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

@@ -1,6 +1,11 @@
 #import "StoredAccountInfos.h"
 
-#import <MtProtoKitDynamic/MtProtoKitDynamic.h>
+#ifdef BUCK
+#import <MTProtoKit/MTProtoKit.h>
+#else
+#import <MTProtoKitDynamic/MTProtoKitDynamic.h>
+#endif
+
 #import <CommonCrypto/CommonDigest.h>
 
 @implementation AccountNotificationKey

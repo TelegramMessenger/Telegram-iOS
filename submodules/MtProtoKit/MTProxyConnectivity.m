@@ -1,34 +1,13 @@
 #import "MTProxyConnectivity.h"
 
-#if defined(MtProtoKitDynamicFramework)
-#   import <MTProtoKitDynamic/MTSignal.h>
-#   import <MTProtoKitDynamic/MTQueue.h>
-#   import <MTProtoKitDynamic/MTContext.h>
-#   import <MTProtoKitDynamic/MTApiEnvironment.h>
-#   import <MTProtoKitDynamic/MTDatacenterAddressSet.h>
-#   import <MTProtoKitDynamic/MTDatacenterAddress.h>
-#   import <MTProtoKitDynamic/MTTcpConnection.h>
-#   import <MTProtoKitDynamic/MTTransportScheme.h>
-#elif defined(MtProtoKitMacFramework)
-#   import <MTProtoKitMac/MTSignal.h>
-#   import <MTProtoKitMac/MTQueue.h>
-#   import <MTProtoKitMac/MTContext.h>
-#   import <MTProtoKitMac/MTApiEnvironment.h>
-#   import <MTProtoKitMac/MTDatacenterAddressSet.h>
-#   import <MTProtoKitMac/MTDatacenterAddress.h>
-#   import <MTProtoKitMac/MTTcpConnection.h>
-#   import <MTProtoKitMac/MTTransportScheme.h>
-#else
-#   import <MtProtoKit/MTSignal.h>
-#   import <MtProtoKit/MTQueue.h>
-#   import <MtProtoKit/MTContext.h>
-#   import <MtProtoKit/MTApiEnvironment.h>
-#   import <MtProtoKit/MTDatacenterAddressSet.h>
-#   import <MtProtoKit/MTDatacenterAddress.h>
-#   import <MtProtoKit/MTTcpConnection.h>
-#   import <MtProtoKit/MTTransportScheme.h>
-#endif
-
+#import "MTSignal.h"
+#import "MTQueue.h"
+#import "MTContext.h"
+#import "MTApiEnvironment.h"
+#import "MTDatacenterAddressSet.h"
+#import "MTDatacenterAddress.h"
+#import "MTTcpConnection.h"
+#import "MTTransportScheme.h"
 #import "MTDiscoverConnectionSignals.h"
 
 @implementation MTProxyConnectivityStatus

@@ -3,6 +3,7 @@ import UIKit
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
+import AppBundle
 
 private let templateLoupeIcon = UIImage(bundleImageName: "Components/Search Bar/Loupe")
 

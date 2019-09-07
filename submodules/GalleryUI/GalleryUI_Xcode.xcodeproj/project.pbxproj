@@ -19,7 +19,6 @@
 		D0C9C3102300A58500FAB518 /* GalleryFooterContentNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3032300A58500FAB518 /* GalleryFooterContentNode.swift */; };
 		D0C9C3112300A58500FAB518 /* GalleryVideoDecoration.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3042300A58500FAB518 /* GalleryVideoDecoration.swift */; };
 		D0C9C3122300A58500FAB518 /* GalleryThumbnailContainerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3052300A58500FAB518 /* GalleryThumbnailContainerNode.swift */; };
-		D0C9C3132300A58500FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3062300A58500FAB518 /* FrameworkBundle.swift */; };
 		D0C9C3142300A58500FAB518 /* GalleryPagerNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C3072300A58500FAB518 /* GalleryPagerNode.swift */; };
 		D0C9C31B2300A9B900FAB518 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C31A2300A9B900FAB518 /* Foundation.framework */; };
 		D0C9C31D2300A9BD00FAB518 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C31C2300A9BD00FAB518 /* UIKit.framework */; };
@@ -49,6 +48,7 @@
 		D0C9C43B2300D6DC00FAB518 /* OpenInExternalAppUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C43A2300D6DC00FAB518 /* OpenInExternalAppUI.framework */; };
 		D0C9C4412300D91200FAB518 /* GalleryItemTransitionNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4402300D91200FAB518 /* GalleryItemTransitionNode.swift */; };
 		D0C9C91723020E6100FAB518 /* ShareController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C91623020E6100FAB518 /* ShareController.framework */; };
+		D0EFF262231981A300CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF261231981A300CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -66,7 +66,6 @@
 		D0C9C3032300A58500FAB518 /* GalleryFooterContentNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GalleryFooterContentNode.swift; sourceTree = "<group>"; };
 		D0C9C3042300A58500FAB518 /* GalleryVideoDecoration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GalleryVideoDecoration.swift; sourceTree = "<group>"; };
 		D0C9C3052300A58500FAB518 /* GalleryThumbnailContainerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GalleryThumbnailContainerNode.swift; sourceTree = "<group>"; };
-		D0C9C3062300A58500FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C3072300A58500FAB518 /* GalleryPagerNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GalleryPagerNode.swift; sourceTree = "<group>"; };
 		D0C9C31A2300A9B900FAB518 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		D0C9C31C2300A9BD00FAB518 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -96,6 +95,7 @@
 		D0C9C43A2300D6DC00FAB518 /* OpenInExternalAppUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = OpenInExternalAppUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C4402300D91200FAB518 /* GalleryItemTransitionNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryItemTransitionNode.swift; sourceTree = "<group>"; };
 		D0C9C91623020E6100FAB518 /* ShareController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ShareController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF261231981A300CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,6 +103,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF262231981A300CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C91723020E6100FAB518 /* ShareController.framework in Frameworks */,
 				D0C9C43B2300D6DC00FAB518 /* OpenInExternalAppUI.framework in Frameworks */,
 				D0C9C3FD2300D59B00FAB518 /* ScreenCaptureDetection.framework in Frameworks */,
@@ -165,7 +166,6 @@
 				D0C9C3072300A58500FAB518 /* GalleryPagerNode.swift */,
 				D0C9C3052300A58500FAB518 /* GalleryThumbnailContainerNode.swift */,
 				D0C9C3042300A58500FAB518 /* GalleryVideoDecoration.swift */,
-				D0C9C3062300A58500FAB518 /* FrameworkBundle.swift */,
 				D0C9C2F32300A51400FAB518 /* GalleryUI.h */,
 				D0C9C4402300D91200FAB518 /* GalleryItemTransitionNode.swift */,
 			);
@@ -175,6 +175,7 @@
 		D0C9C3192300A9B900FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF261231981A300CF5164 /* AppBundle.framework */,
 				D0C9C91623020E6100FAB518 /* ShareController.framework */,
 				D0C9C43A2300D6DC00FAB518 /* OpenInExternalAppUI.framework */,
 				D0C9C3FC2300D59B00FAB518 /* ScreenCaptureDetection.framework */,
@@ -306,7 +307,6 @@
 				D0C9C34D2300AA8A00FAB518 /* ChatAnimationGalleryItem.swift in Sources */,
 				D0C9C3442300AA8A00FAB518 /* ChatImageGalleryItem.swift in Sources */,
 				D0C9C34F2300AA8A00FAB518 /* ChatDocumentGalleryItem.swift in Sources */,
-				D0C9C3132300A58500FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C3082300A58500FAB518 /* GalleryItem.swift in Sources */,
 				D0C9C3112300A58500FAB518 /* GalleryVideoDecoration.swift in Sources */,
 				D0C9C34A2300AA8A00FAB518 /* ChatItemGalleryFooterContentNode.swift in Sources */,

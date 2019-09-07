@@ -18,7 +18,7 @@ private func traceDeceleratingScrollView(_ view: UIView, at point: CGPoint) -> B
 
 public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     private let contentAtPoint: (CGPoint) -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>?
-    private let present: (PeekControllerContent, ASDisplayNode) -> PeekController?
+    private let present: (PeekControllerContent, ASDisplayNode) -> ViewController?
     private let updateContent: (PeekControllerContent?) -> Void
     private let activateBySingleTap: Bool
     
@@ -36,7 +36,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
     private var menuActivation: PeerkControllerMenuActivation?
     private weak var presentedController: PeekController?
     
-    public init(contentAtPoint: @escaping (CGPoint) -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>?, present: @escaping (PeekControllerContent, ASDisplayNode) -> PeekController?, updateContent: @escaping (PeekControllerContent?) -> Void = { _ in }, activateBySingleTap: Bool = false) {
+    public init(contentAtPoint: @escaping (CGPoint) -> Signal<(ASDisplayNode, PeekControllerContent)?, NoError>?, present: @escaping (PeekControllerContent, ASDisplayNode) -> ViewController?, updateContent: @escaping (PeekControllerContent?) -> Void = { _ in }, activateBySingleTap: Bool = false) {
         self.contentAtPoint = contentAtPoint
         self.present = present
         self.updateContent = updateContent
@@ -184,7 +184,7 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                             (presentedController.displayNode as? PeekControllerNode)?.applyDraggingOffset(offset)
                         }
                     case .press:
-                        if #available(iOSApplicationExtension 9.0, *) {
+                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                             if touch.force >= 2.5 {
                                 if presentedController.isNodeLoaded {
                                     (presentedController.displayNode as? PeekControllerNode)?.activateMenu()
@@ -259,29 +259,35 @@ public final class PeekControllerGestureRecognizer: UIPanGestureRecognizer {
                                 }
                             } else {
                                 if let presentedController = strongSelf.present(content, sourceNode) {
-                                    if forceActivate {
-                                        strongSelf.candidateContent = nil
-                                        if case .press = content.menuActivation() {
-                                            (presentedController.displayNode as? PeekControllerNode)?.activateMenu()
-                                        }
-                                    } else {
-                                        strongSelf.candidateContent = (sourceNode, content)
-                                        strongSelf.menuActivation = content.menuActivation()
-                                        strongSelf.presentedController = presentedController
-                                        
-                                        strongSelf.state = .began
-                                        
-                                        switch content.menuActivation() {
-                                            case .drag:
-                                                break
-                                            case .press:
-                                                if #available(iOSApplicationExtension 9.0, *) {
-                                                    if presentedController.traitCollection.forceTouchCapability != .available {
+                                    if let presentedController = presentedController as? PeekController {
+                                        if forceActivate {
+                                            strongSelf.candidateContent = nil
+                                            if case .press = content.menuActivation() {
+                                                (presentedController.displayNode as? PeekControllerNode)?.activateMenu()
+                                            }
+                                        } else {
+                                            strongSelf.candidateContent = (sourceNode, content)
+                                            strongSelf.menuActivation = content.menuActivation()
+                                            strongSelf.presentedController = presentedController
+                                            
+                                            strongSelf.state = .began
+                                            
+                                            switch content.menuActivation() {
+                                                case .drag:
+                                                    break
+                                                case .press:
+                                                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+                                                        if presentedController.traitCollection.forceTouchCapability != .available {
+                                                            strongSelf.startPressTimer()
+                                                        }
+                                                    } else {
                                                         strongSelf.startPressTimer()
                                                     }
-                                                } else {
-                                                    strongSelf.startPressTimer()
-                                                }
+                                            }
+                                        }
+                                    } else {
+                                        if strongSelf.state != .ended {
+                                            strongSelf.state = .ended
                                         }
                                     }
                                 }

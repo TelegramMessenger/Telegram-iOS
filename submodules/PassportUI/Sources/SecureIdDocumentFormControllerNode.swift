@@ -11,6 +11,7 @@ import AccountContext
 import GalleryUI
 import CountrySelectionUI
 import DateSelectionUI
+import AppBundle
 
 private enum SecureIdDocumentFormTextField {
     case identifier

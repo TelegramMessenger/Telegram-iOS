@@ -15,6 +15,8 @@ import TelegramNotices
 import SearchUI
 import DeleteChatPeerActionSheetItem
 import LanguageSuggestionUI
+import ContextUI
+import AppBundle
 
 public func useSpecialTabBarIcons() -> Bool {
     return (Date(timeIntervalSince1970: 1545642000)...Date(timeIntervalSince1970: 1546387200)).contains(Date())
@@ -62,6 +64,27 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         }
     }
     return false
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
 }
 
 public class ChatListControllerImpl: TelegramBaseController, ChatListController, UIViewControllerPreviewingDelegate {
@@ -441,240 +464,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             guard let strongSelf = self else {
                 return
             }
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                var updatedValue = false
-                updateChatArchiveSettings(transaction: transaction, { settings in
-                    var settings = settings
-                    settings.isHiddenByDefault = !settings.isHiddenByDefault
-                    updatedValue = settings.isHiddenByDefault
-                    return settings
-                })
-                return updatedValue
-            }
-            |> deliverOnMainQueue).start(next: { value in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.chatListDisplayNode.chatListNode.updateState { state in
-                    var state = state
-                    if value {
-                        state.archiveShouldBeTemporaryRevealed = false
-                    }
-                    state.peerIdWithRevealedOptions = nil
-                    return state
-                }
-                strongSelf.forEachController({ controller in
-                    if let controller = controller as? UndoOverlayController {
-                        controller.dismissWithCommitActionAndReplacementAnimation()
-                    }
-                    return true
-                })
-                
-                if value {
-                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        if !shouldCommit {
-                            let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
-                                var updatedValue = false
-                                updateChatArchiveSettings(transaction: transaction, { settings in
-                                    var settings = settings
-                                    settings.isHiddenByDefault = false
-                                    updatedValue = settings.isHiddenByDefault
-                                    return settings
-                                })
-                                return updatedValue
-                            }).start()
-                        }
-                    }), in: .current)
-                } else {
-                    strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
-                    }), in: .current)
-                }
-            })
+            strongSelf.toggleArchivedFolderHiddenByDefault()
         }
         
         self.chatListDisplayNode.chatListNode.deletePeerChat = { [weak self] peerId in
             guard let strongSelf = self else {
                 return
             }
-            let _ = (strongSelf.context.account.postbox.transaction { transaction -> RenderedPeer? in
-                guard let peer = transaction.getPeer(peerId) else {
-                    return nil
-                }
-                if let associatedPeerId = peer.associatedPeerId {
-                    if let associatedPeer = transaction.getPeer(associatedPeerId) {
-                        return RenderedPeer(peerId: peerId, peers: SimpleDictionary([peer.id: peer, associatedPeer.id: associatedPeer]))
-                    } else {
-                        return nil
-                    }
-                } else {
-                    return RenderedPeer(peer: peer)
-                }
-            }
-            |> deliverOnMainQueue).start(next: { peer in
-                guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
-                    return
-                }
-                
-                var canRemoveGlobally = false
-                let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
-                if peer.peerId.namespace == Namespaces.Peer.CloudUser && peer.peerId != strongSelf.context.account.peerId {
-                    if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
-                        canRemoveGlobally = true
-                    }
-                }
-                
-                if let user = chatPeer as? TelegramUser, user.botInfo == nil, canRemoveGlobally {
-                    strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
-                } else {
-                    let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                    var items: [ActionSheetItem] = []
-                    var canClear = true
-                    var canStop = false
-                
-                    var deleteTitle = strongSelf.presentationData.strings.Common_Delete
-                    if let channel = chatPeer as? TelegramChannel {
-                        if case .broadcast = channel.info {
-                            canClear = false
-                            deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
-                        } else {
-                            deleteTitle = strongSelf.presentationData.strings.Group_LeaveGroup
-                        }
-                        if let addressName = channel.addressName, !addressName.isEmpty {
-                            canClear = false
-                        }
-                    } else if let user = chatPeer as? TelegramUser, user.botInfo != nil {
-                        canStop = !user.flags.contains(.isSupport)
-                        canClear = user.botInfo == nil
-                        deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
-                    } else if let _ = chatPeer as? TelegramSecretChat {
-                        deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
-                    }
-                    
-                    var canRemoveGlobally = false
-                    let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
-                    if chatPeer is TelegramUser && chatPeer.id != strongSelf.context.account.peerId {
-                        if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
-                            canRemoveGlobally = true
-                        }
-                    }
-                    
-                    items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings))
-                    if canClear {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
-                                    var state = state
-                                    state.pendingClearHistoryPeerIds.insert(peer.peerId)
-                                    return state
-                                })
-                                strongSelf.forEachController({ controller in
-                                    if let controller = controller as? UndoOverlayController {
-                                        controller.dismissWithCommitActionAndReplacementAnimation()
-                                    }
-                                    return true
-                                })
-                                
-                                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    if shouldCommit {
-                                        let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
-                                                var state = state
-                                                state.pendingClearHistoryPeerIds.remove(peer.peerId)
-                                                return state
-                                            })
-                                        })
-                                    } else {
-                                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
-                                            var state = state
-                                            state.pendingClearHistoryPeerIds.remove(peer.peerId)
-                                            return state
-                                        })
-                                    }
-                                }), in: .current)
-                            }
-                            
-                            if canRemoveGlobally {
-                                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
-                                var items: [ActionSheetItem] = []
-                                
-                                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: strongSelf.presentationData.strings))
-                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
-                                    beginClear(.forEveryone)
-                                    actionSheet?.dismissAnimated()
-                                }))
-                                items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
-                                    beginClear(.forLocalPeer)
-                                    actionSheet?.dismissAnimated()
-                                }))
-                                
-                                actionSheet.setItemGroups([
-                                    ActionSheetItemGroup(items: items),
-                                    ActionSheetItemGroup(items: [
-                                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                            actionSheet?.dismissAnimated()
-                                        })
-                                    ])
-                                ])
-                                strongSelf.present(actionSheet, in: .window(.root))
-                            } else {
-                                beginClear(.forLocalPeer)
-                            }
-                        }))
-                    }
-                
-                    items.append(ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        
-                        strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
-                    }))
-            
-                    if canStop {
-                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_DeleteBotConversationConfirmation, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            
-                            if let strongSelf = self {
-                                strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in
-                                }, removed: {
-                                    guard let strongSelf = self else {
-                                        return
-                                    }
-                                    let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.peerId, isBlocked: true).start()
-                                })
-                            }
-                        }))
-                    }
-            
-                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
-                        ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])
-                    ])
-                    strongSelf.present(actionSheet, in: .window(.root))
-                }
-            })
+            strongSelf.deletePeerChat(peerId: peerId)
         }
         
         self.chatListDisplayNode.chatListNode.peerSelected = { [weak self] peerId, animated, isAd in
@@ -859,6 +656,36 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             self?.toolbarActionSelected(action: action)
         }
         
+        self.chatListDisplayNode.chatListNode.activateChatPreview = { [weak self] item, node, gesture in
+            guard let strongSelf = self else {
+                gesture?.cancel()
+                return
+            }
+            switch item.content {
+            case let .groupReference(groupReference):
+                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupReference.groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                strongSelf.presentInGlobalOverlay(contextController)
+            case let .peer(peer):
+                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
+                chatController.canReadHistory.set(false)
+                let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peer.peerId, source: .chatList, chatListController: strongSelf), reactionItems: [], gesture: gesture)
+                strongSelf.presentInGlobalOverlay(contextController)
+            }
+        }
+        
+        self.chatListDisplayNode.peerContextAction = { [weak self] peer, source, node, gesture in
+            guard let strongSelf = self else {
+                gesture?.cancel()
+                return
+            }
+            
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            chatController.canReadHistory.set(false)
+            let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.id, source: .search(source), chatListController: strongSelf), reactionItems: [], gesture: gesture)
+            strongSelf.presentInGlobalOverlay(contextController)
+        }
+        
         let context = self.context
         let peerIdsAndOptions: Signal<(ChatListSelectionOptions, Set<PeerId>)?, NoError> = self.chatListDisplayNode.chatListNode.state
         |> map { state -> Set<PeerId>? in
@@ -950,7 +777,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             if !self.didSetup3dTouch && self.traitCollection.forceTouchCapability != .unknown {
                 self.didSetup3dTouch = true
-                self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
+                //self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
             }
         }
     }
@@ -1067,6 +894,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 }
                 return true
             })
+        }
+        
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+            if !self.didSetup3dTouch {
+                self.didSetup3dTouch = true
+                //self.registerForPreviewingNonNative(with: self, sourceView: self.view, theme: PeekControllerTheme(presentationTheme: self.presentationData.theme))
+            }
         }
     }
     
@@ -1447,6 +1281,240 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
     }
     
+    func toggleArchivedFolderHiddenByDefault() {
+        let _ = (self.context.account.postbox.transaction { transaction -> Bool in
+            var updatedValue = false
+            updateChatArchiveSettings(transaction: transaction, { settings in
+                var settings = settings
+                settings.isHiddenByDefault = !settings.isHiddenByDefault
+                updatedValue = settings.isHiddenByDefault
+                return settings
+            })
+            return updatedValue
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatListDisplayNode.chatListNode.updateState { state in
+                var state = state
+                if value {
+                    state.archiveShouldBeTemporaryRevealed = false
+                }
+                state.peerIdWithRevealedOptions = nil
+                return state
+            }
+            strongSelf.forEachController({ controller in
+                if let controller = controller as? UndoOverlayController {
+                    controller.dismissWithCommitActionAndReplacementAnimation()
+                }
+                return true
+            })
+            
+            if value {
+                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if !shouldCommit {
+                        let _ = (strongSelf.context.account.postbox.transaction { transaction -> Bool in
+                            var updatedValue = false
+                            updateChatArchiveSettings(transaction: transaction, { settings in
+                                var settings = settings
+                                settings.isHiddenByDefault = false
+                                updatedValue = settings.isHiddenByDefault
+                                return settings
+                            })
+                            return updatedValue
+                        }).start()
+                    }
+                }), in: .current)
+            } else {
+                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                }), in: .current)
+            }
+        })
+    }
+    
+    func deletePeerChat(peerId: PeerId) {
+        let _ = (self.context.account.postbox.transaction { transaction -> RenderedPeer? in
+            guard let peer = transaction.getPeer(peerId) else {
+                return nil
+            }
+            if let associatedPeerId = peer.associatedPeerId {
+                if let associatedPeer = transaction.getPeer(associatedPeerId) {
+                    return RenderedPeer(peerId: peerId, peers: SimpleDictionary([peer.id: peer, associatedPeer.id: associatedPeer]))
+                } else {
+                    return nil
+                }
+            } else {
+                return RenderedPeer(peer: peer)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
+            guard let strongSelf = self, let peer = peer, let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
+                return
+            }
+            
+            var canRemoveGlobally = false
+            let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
+            if peer.peerId.namespace == Namespaces.Peer.CloudUser && peer.peerId != strongSelf.context.account.peerId {
+                if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
+                    canRemoveGlobally = true
+                }
+            }
+            
+            if let user = chatPeer as? TelegramUser, user.botInfo == nil, canRemoveGlobally {
+                strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
+            } else {
+                let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                var items: [ActionSheetItem] = []
+                var canClear = true
+                var canStop = false
+                
+                var deleteTitle = strongSelf.presentationData.strings.Common_Delete
+                if let channel = chatPeer as? TelegramChannel {
+                    if case .broadcast = channel.info {
+                        canClear = false
+                        deleteTitle = strongSelf.presentationData.strings.Channel_LeaveChannel
+                    } else {
+                        deleteTitle = strongSelf.presentationData.strings.Group_LeaveGroup
+                    }
+                    if let addressName = channel.addressName, !addressName.isEmpty {
+                        canClear = false
+                    }
+                } else if let user = chatPeer as? TelegramUser, user.botInfo != nil {
+                    canStop = !user.flags.contains(.isSupport)
+                    canClear = user.botInfo == nil
+                    deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
+                } else if let _ = chatPeer as? TelegramSecretChat {
+                    deleteTitle = strongSelf.presentationData.strings.ChatList_DeleteChat
+                }
+                
+                var canRemoveGlobally = false
+                let limitsConfiguration = strongSelf.context.currentLimitsConfiguration.with { $0 }
+                if chatPeer is TelegramUser && chatPeer.id != strongSelf.context.account.peerId {
+                    if limitsConfiguration.maxMessageRevokeIntervalInPrivateChats == LimitsConfiguration.timeIntervalForever {
+                        canRemoveGlobally = true
+                    }
+                }
+                
+                items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .delete, strings: strongSelf.presentationData.strings))
+                if canClear {
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_ClearHistoryConfirmation, color: .accent, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        let beginClear: (InteractiveHistoryClearingType) -> Void = { type in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                var state = state
+                                state.pendingClearHistoryPeerIds.insert(peer.peerId)
+                                return state
+                            })
+                            strongSelf.forEachController({ controller in
+                                if let controller = controller as? UndoOverlayController {
+                                    controller.dismissWithCommitActionAndReplacementAnimation()
+                                }
+                                return true
+                            })
+                            
+                            strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if shouldCommit {
+                                    let _ = clearHistoryInteractively(postbox: strongSelf.context.account.postbox, peerId: peerId, type: type).start(completed: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                            var state = state
+                                            state.pendingClearHistoryPeerIds.remove(peer.peerId)
+                                            return state
+                                        })
+                                    })
+                                } else {
+                                    strongSelf.chatListDisplayNode.chatListNode.updateState({ state in
+                                        var state = state
+                                        state.pendingClearHistoryPeerIds.remove(peer.peerId)
+                                        return state
+                                    })
+                                }
+                            }), in: .current)
+                        }
+                        
+                        if canRemoveGlobally {
+                            let actionSheet = ActionSheetController(presentationTheme: strongSelf.presentationData.theme)
+                            var items: [ActionSheetItem] = []
+                            
+                            items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: strongSelf.presentationData.strings))
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
+                                beginClear(.forEveryone)
+                                actionSheet?.dismissAnimated()
+                            }))
+                            items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
+                                beginClear(.forLocalPeer)
+                                actionSheet?.dismissAnimated()
+                            }))
+                            
+                            actionSheet.setItemGroups([
+                                ActionSheetItemGroup(items: items),
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                    })
+                                    ])
+                                ])
+                            strongSelf.present(actionSheet, in: .window(.root))
+                        } else {
+                            beginClear(.forLocalPeer)
+                        }
+                    }))
+                }
+                
+                items.append(ActionSheetButtonItem(title: deleteTitle, color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in }, removed: {})
+                }))
+                
+                if canStop {
+                    items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.DialogList_DeleteBotConversationConfirmation, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        
+                        if let strongSelf = self {
+                            strongSelf.maybeAskForPeerChatRemoval(peer: peer, completion: { _ in
+                            }, removed: {
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let _ = requestUpdatePeerIsBlocked(account: strongSelf.context.account, peerId: peer.peerId, isBlocked: true).start()
+                            })
+                        }
+                    }))
+                }
+                
+                actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                                           ActionSheetItemGroup(items: [
+                                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in
+                                                actionSheet?.dismissAnimated()
+                                            })
+                                            ])
+                    ])
+                strongSelf.present(actionSheet, in: .window(.root))
+            }
+        })
+    }
+    
     public func maybeAskForPeerChatRemoval(peer: RenderedPeer, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {
         guard let chatPeer = peer.peers[peer.peerId], let mainPeer = peer.chatMainPeer else {
             completion(false)
@@ -1501,7 +1569,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
     }
     
-    private func archiveChats(peerIds: [PeerId]) {
+    func archiveChats(peerIds: [PeerId]) {
         guard !peerIds.isEmpty else {
             return
         }

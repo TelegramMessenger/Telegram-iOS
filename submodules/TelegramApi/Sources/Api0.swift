@@ -5,6 +5,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[570911930] = { return $0.readInt64() }
     dict[571523412] = { return $0.readDouble() }
     dict[-1255641564] = { return parseString($0) }
+    dict[-475111160] = { return Api.MessageReactionsList.parse_messageReactionsList($0) }
     dict[-1240849242] = { return Api.messages.StickerSet.parse_stickerSet($0) }
     dict[-457104426] = { return Api.InputGeoPoint.parse_inputGeoPointEmpty($0) }
     dict[-206066487] = { return Api.InputGeoPoint.parse_inputGeoPoint($0) }
@@ -240,6 +241,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[967122427] = { return Api.Update.parse_updateNewScheduledMessage($0) }
     dict[-1870238482] = { return Api.Update.parse_updateDeleteScheduledMessages($0) }
     dict[-2112423005] = { return Api.Update.parse_updateTheme($0) }
+    dict[357013699] = { return Api.Update.parse_updateMessageReactions($0) }
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
     dict[367766557] = { return Api.ChannelParticipant.parse_channelParticipant($0) }
@@ -281,6 +283,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1012306921] = { return Api.InputTheme.parse_inputTheme($0) }
     dict[-175567375] = { return Api.InputTheme.parse_inputThemeSlug($0) }
     dict[1158290442] = { return Api.messages.FoundGifs.parse_foundGifs($0) }
+    dict[-1199954735] = { return Api.MessageReactions.parse_messageReactions($0) }
     dict[-1132476723] = { return Api.FileLocation.parse_fileLocationToBeDeprecated($0) }
     dict[-716006138] = { return Api.Poll.parse_poll($0) }
     dict[423314455] = { return Api.InputNotifyPeer.parse_inputNotifyUsers($0) }
@@ -558,7 +561,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1820043071] = { return Api.User.parse_user($0) }
     dict[-2082087340] = { return Api.Message.parse_messageEmpty($0) }
     dict[-1642487306] = { return Api.Message.parse_messageService($0) }
-    dict[1160515173] = { return Api.Message.parse_message($0) }
+    dict[-1752573244] = { return Api.Message.parse_message($0) }
     dict[186120336] = { return Api.messages.RecentStickers.parse_recentStickersNotModified($0) }
     dict[586395571] = { return Api.messages.RecentStickers.parse_recentStickers($0) }
     dict[-182231723] = { return Api.InputFileLocation.parse_inputEncryptedFileLocation($0) }
@@ -612,6 +615,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1625153079] = { return Api.InputWebFileLocation.parse_inputWebFileGeoPointLocation($0) }
     dict[-332168592] = { return Api.MessageFwdHeader.parse_messageFwdHeader($0) }
     dict[398898678] = { return Api.help.Support.parse_support($0) }
+    dict[1873957073] = { return Api.ReactionCount.parse_reactionCount($0) }
     dict[1474492012] = { return Api.MessagesFilter.parse_inputMessagesFilterEmpty($0) }
     dict[-1777752804] = { return Api.MessagesFilter.parse_inputMessagesFilterPhotos($0) }
     dict[-1614803355] = { return Api.MessagesFilter.parse_inputMessagesFilterVideo($0) }
@@ -638,6 +642,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-290921362] = { return Api.upload.CdnFile.parse_cdnFileReuploadNeeded($0) }
     dict[-1449145777] = { return Api.upload.CdnFile.parse_cdnFile($0) }
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
+    dict[-764945220] = { return Api.MessageUserReaction.parse_messageUserReaction($0) }
     dict[-1937807902] = { return Api.BotInlineMessage.parse_botInlineMessageText($0) }
     dict[982505656] = { return Api.BotInlineMessage.parse_botInlineMessageMediaGeo($0) }
     dict[1984755728] = { return Api.BotInlineMessage.parse_botInlineMessageMediaAuto($0) }
@@ -837,6 +842,8 @@ public struct Api {
     
     public static func serializeObject(_ object: Any, buffer: Buffer, boxed: Swift.Bool) {
         switch object {
+            case let _1 as Api.MessageReactionsList:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.messages.StickerSet:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.InputGeoPoint:
@@ -968,6 +975,8 @@ public struct Api {
             case let _1 as Api.InputTheme:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FoundGifs:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageReactions:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.FileLocation:
                 _1.serialize(buffer, boxed)
@@ -1257,6 +1266,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.Support:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.ReactionCount:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.MessagesFilter:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.Dialogs:
@@ -1266,6 +1277,8 @@ public struct Api {
             case let _1 as Api.upload.CdnFile:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.InviteText:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.MessageUserReaction:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.BotInlineMessage:
                 _1.serialize(buffer, boxed)

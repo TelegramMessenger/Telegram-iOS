@@ -1,0 +1,29 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "StickerPackPreviewUI",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
+        "//submodules/Display:Display#shared",
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/ShareController:ShareController",
+        "//submodules/StickerResources:StickerResources",
+        "//submodules/AlertUI:AlertUI",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/ActivityIndicator:ActivityIndicator",
+        "//submodules/AnimationUI:AnimationUI",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

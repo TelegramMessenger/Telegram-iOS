@@ -11,6 +11,7 @@ import ItemListUI
 import AccountContext
 import TelegramNotices
 import LocalAuth
+import AppBundle
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account

@@ -1,4 +1,5 @@
 import UIKit
+import AppBundle
 
 enum NavigationTransition {
     case Push
@@ -8,7 +9,7 @@ enum NavigationTransition {
 private let shadowWidth: CGFloat = 16.0
 
 private func generateShadow() -> UIImage? {
-    return UIImage(named: "NavigationShadow", in: Bundle(for: NavigationBackButtonNode.self), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsets(), resizingMode: .tile)
+    return UIImage(named: "NavigationShadow", in: getAppBundle(), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsets(), resizingMode: .tile)
 }
 
 private let shadowImage = generateShadow()

@@ -11,6 +11,8 @@ import DeviceAccess
 import AccountContext
 import SearchBarNode
 import SearchUI
+import AppBundle
+import ContextUI
 
 private final class ContactsControllerNodeView: UITracingLayerView, PreviewingHostView {
     var previewingDelegate: PreviewingHostViewDelegate? {
@@ -22,6 +24,27 @@ private final class ContactsControllerNodeView: UITracingLayerView, PreviewingHo
     }
     
     weak var controller: ContactsController?
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
 }
 
 final class ContactsControllerNode: ASDisplayNode {
@@ -68,7 +91,11 @@ final class ContactsControllerNode: ASDisplayNode {
             }
         }
         
-        self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true)
+        var contextAction: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+        
+        self.contactListNode = ContactListNode(context: context, presentation: presentation, displaySortOptions: true, contextAction: { peer, node, gesture in
+            contextAction?(peer, node, gesture)
+        })
         
         super.init()
         
@@ -104,6 +131,16 @@ final class ContactsControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 strongSelf.openInvite?()
             }
+        }
+        
+        contextAction = { [weak self] peer, node, gesture in
+            guard let strongSelf = self, let contactsController = strongSelf.controller else {
+                return
+            }
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+            chatController.canReadHistory.set(false)
+            let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: strongSelf.context, peerId: peer.id, contactsController: contactsController), reactionItems: [], gesture: gesture)
+            contactsController.presentInGlobalOverlay(contextController)
         }
     }
     

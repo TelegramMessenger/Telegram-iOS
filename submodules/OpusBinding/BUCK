@@ -1,0 +1,34 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "OpusBinding",
+    srcs = glob([
+        "Sources/**/*.m",
+        "Sources/**/*.c",
+    ]),
+    headers = {
+        "ogg/ogg.h": "Sources/ogg/ogg.h",
+        "ogg/os_types.h": "Sources/ogg/os_types.h",
+        "OggOpusReader.h": "Sources/OggOpusReader.h",
+        "TGDataItem.h": "Sources/TGDataItem.h",
+        "TGOggOpusWriter.h": "Sources/TGOggOpusWriter.h",
+        "opusenc/diag_range.h": "Sources/opusenc/diag_range.h",
+        "opusenc/opus_header.h": "Sources/opusenc/opus_header.h",
+        "opusenc/picture.h": "Sources/opusenc/picture.h",
+        "opusenc/wav_io.h": "Sources/opusenc/wav_io.h",
+        "opusfile/internal.h": "Sources/opusfile/internal.h",
+        "OpusBinding/opusfile.h": "Sources/opusfile/opusfile.h",
+    },
+    exported_headers = [
+        "Sources/TGDataItem.h",
+        "Sources/TGOggOpusWriter.h",
+        "Sources/OggOpusReader.h",
+    ],
+    deps = [
+        "//submodules/Opus:opus",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

@@ -231,7 +231,7 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
                 return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.updateTheme(theme)
                 }, longTapped: { _ in
-                })
+                }, contextAction: nil)
         }
     }
 }

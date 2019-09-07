@@ -5,6 +5,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import AppBundle
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
@@ -137,7 +138,7 @@ final class ReactionNode: ASDisplayNode {
             self.animationNode.setup(account: account, resource: .localFile(path), width: Int(renderSize.width), height: Int(renderSize.height), mode: .direct)
         case .reply:
             self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
-            self.imageNode.image = UIImage(named: "Chat/Context Menu/ReactionReply", in: Bundle(for: ReactionNode.self), compatibleWith: nil)
+            self.imageNode.image = UIImage(named: "Chat/Context Menu/ReactionReply", in: getAppBundle(), compatibleWith: nil)
         }
         
         self.intrinsicSize = intrinsicSize

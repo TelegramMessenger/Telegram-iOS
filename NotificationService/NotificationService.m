@@ -63,9 +63,20 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     return self;
 }
 
+- (void)completeWithContent:(UNNotificationContent * _Nonnull)content {
+    /*NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:@"org.telegram.Telegram-iOS.background"];
+    NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
+    NSURLSessionDownloadTask *task = [session downloadTaskWithURL:[NSURL URLWithString:@"https://telegram.org"]];
+    [task resume];*/
+    
+    if (_contentHandler) {
+        _contentHandler(content);
+    }
+}
+
 - (void)didReceiveNotificationRequest:(UNNotificationRequest *)request withContentHandler:(void (^)(UNNotificationContent * _Nonnull))contentHandler {
     if (_rootPath == nil) {
-        contentHandler(request.content);
+        [self completeWithContent:request.content];
         return;
     }
     
@@ -289,8 +300,8 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
                         _bestAttemptContent.attachments = @[attachment];
                     }
                 }
-                if (_contentHandler && _bestAttemptContent != nil) {
-                    _contentHandler(_bestAttemptContent);
+                if (_bestAttemptContent != nil) {
+                    [self completeWithContent:_bestAttemptContent];
                 }
             } else {
                 BuildConfig *buildConfig = [[BuildConfig alloc] initWithBaseAppBundleId:_baseAppBundleId];
@@ -322,21 +333,21 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
                                 }
                             }
                             
-                            if (strongSelf->_contentHandler && strongSelf->_bestAttemptContent != nil) {
-                                strongSelf->_contentHandler(strongSelf->_bestAttemptContent);
+                            if (strongSelf->_bestAttemptContent != nil) {
+                                [strongSelf completeWithContent:strongSelf->_bestAttemptContent];
                             }
                         }
                     });
                 });
             }
         } else {
-            if (_contentHandler && _bestAttemptContent != nil) {
-                _contentHandler(_bestAttemptContent);
+            if (_bestAttemptContent != nil) {
+                [self completeWithContent:_bestAttemptContent];
             }
         }
     } else {
-        if (_contentHandler && _bestAttemptContent != nil) {
-            _contentHandler(_bestAttemptContent);
+        if (_bestAttemptContent != nil) {
+            [self completeWithContent:_bestAttemptContent];
         }
     }
 }
@@ -349,7 +360,7 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
     
     if (_contentHandler) {
         if(_bestAttemptContent) {
-            _contentHandler(_bestAttemptContent);
+            [self completeWithContent:_bestAttemptContent];
             _bestAttemptContent = nil;
         }
         _contentHandler = nil;

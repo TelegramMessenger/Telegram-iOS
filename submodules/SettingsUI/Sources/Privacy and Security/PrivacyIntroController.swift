@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import AccountContext
+import AppBundle
 
 enum PrivacyIntroControllerMode {
     case passcode

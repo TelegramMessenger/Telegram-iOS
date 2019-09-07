@@ -1,0 +1,18 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "TelegramPermissions",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramCore:TelegramCore#shared",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/DeviceAccess:DeviceAccess",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

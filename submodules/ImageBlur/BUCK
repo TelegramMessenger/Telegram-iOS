@@ -1,0 +1,20 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "ImageBlur",
+    srcs = glob([
+        "Sources/**/*.swift",
+        "Sources/*.m",
+    ]),
+    headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/ImageBlur.h"]),
+    exported_headers = glob([
+        "Sources/*.h",
+    ], exclude = ["Sources/ImageBlur.h"]),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+        "$SDKROOT/System/Library/Frameworks/Accelerate.framework",
+    ],
+)

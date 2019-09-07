@@ -6,7 +6,11 @@
     import Postbox
     import UIKit
     import TelegramApi
+#if BUCK
+    import MtProtoKit
+#else
     import MtProtoKitDynamic
+#endif
 #endif
 
 public func smallestImageRepresentation(_ representations: [TelegramMediaImageRepresentation]) -> TelegramMediaImageRepresentation? {

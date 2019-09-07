@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
+import AppBundle
 
 class ThemeSettingsBrightnessItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

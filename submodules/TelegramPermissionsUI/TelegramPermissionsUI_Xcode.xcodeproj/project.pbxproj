@@ -24,9 +24,9 @@
 		D0C9C9872302151500FAB518 /* DeviceAccess.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C9862302151500FAB518 /* DeviceAccess.framework */; };
 		D0C9C9892302151900FAB518 /* AccountContext.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C9882302151900FAB518 /* AccountContext.framework */; };
 		D0C9C98B2302152800FAB518 /* Postbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C98A2302152800FAB518 /* Postbox.framework */; };
-		D0C9C9912302157F00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C9902302157F00FAB518 /* FrameworkBundle.swift */; };
 		D0C9C9BD2302168C00FAB518 /* PeersNearbyIconNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C9BC2302168C00FAB518 /* PeersNearbyIconNode.framework */; };
 		D0C9C9DC2302266A00FAB518 /* SolidRoundedButtonNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C9DB2302266A00FAB518 /* SolidRoundedButtonNode.framework */; };
+		D0EFF276231982EE00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF275231982EE00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,9 +49,9 @@
 		D0C9C9862302151500FAB518 /* DeviceAccess.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DeviceAccess.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C9882302151900FAB518 /* AccountContext.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AccountContext.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C98A2302152800FAB518 /* Postbox.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Postbox.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C9902302157F00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C9BC2302168C00FAB518 /* PeersNearbyIconNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeersNearbyIconNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C9DB2302266A00FAB518 /* SolidRoundedButtonNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SolidRoundedButtonNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF275231982EE00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -59,6 +59,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF276231982EE00CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C9DC2302266A00FAB518 /* SolidRoundedButtonNode.framework in Frameworks */,
 				D0C9C9BD2302168C00FAB518 /* PeersNearbyIconNode.framework in Frameworks */,
 				D0C9C98B2302152800FAB518 /* Postbox.framework in Frameworks */,
@@ -104,7 +105,6 @@
 				D0C9C96B230214D300FAB518 /* PermissionController.swift */,
 				D0C9C96A230214D300FAB518 /* PermissionControllerNode.swift */,
 				D0C9C96C230214D300FAB518 /* PermissionSplitTest.swift */,
-				D0C9C9902302157F00FAB518 /* FrameworkBundle.swift */,
 				D0C9C95D2302147100FAB518 /* TelegramPermissionsUI.h */,
 			);
 			path = Sources;
@@ -113,6 +113,7 @@
 		D0C9C973230214E500FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF275231982EE00CF5164 /* AppBundle.framework */,
 				D0C9C9DB2302266A00FAB518 /* SolidRoundedButtonNode.framework */,
 				D0C9C9BC2302168C00FAB518 /* PeersNearbyIconNode.framework */,
 				D0C9C98A2302152800FAB518 /* Postbox.framework */,
@@ -213,7 +214,6 @@
 			files = (
 				D0C9C96F230214D300FAB518 /* PermissionControllerNode.swift in Sources */,
 				D0C9C971230214D300FAB518 /* PermissionSplitTest.swift in Sources */,
-				D0C9C9912302157F00FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C96E230214D300FAB518 /* PermissionContentNode.swift in Sources */,
 				D0C9C970230214D300FAB518 /* PermissionController.swift in Sources */,
 			);

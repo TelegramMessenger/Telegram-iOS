@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import TelegramPermissions
+import AppBundle
 
 public struct PermissionControllerCustomIcon: Equatable {
     let light: UIImage?

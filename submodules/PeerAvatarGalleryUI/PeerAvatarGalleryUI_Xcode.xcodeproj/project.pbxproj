@@ -28,7 +28,7 @@
 		D03E41622304D4650049C28B /* PhotoResources.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E41612304D4650049C28B /* PhotoResources.framework */; };
 		D03E41642304D4690049C28B /* RadialStatusNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E41632304D4690049C28B /* RadialStatusNode.framework */; };
 		D03E41662304D46E0049C28B /* ShareController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E41652304D46E0049C28B /* ShareController.framework */; };
-		D03E416A2304D4F50049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E41692304D4F50049C28B /* FrameworkBundle.swift */; };
+		D0EFF264231981BA00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF263231981BA00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,7 +55,7 @@
 		D03E41612304D4650049C28B /* PhotoResources.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhotoResources.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E41632304D4690049C28B /* RadialStatusNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = RadialStatusNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E41652304D46E0049C28B /* ShareController.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ShareController.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E41692304D4F50049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF263231981BA00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,6 +63,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF264231981BA00CF5164 /* AppBundle.framework in Frameworks */,
 				D03E41662304D46E0049C28B /* ShareController.framework in Frameworks */,
 				D03E41642304D4690049C28B /* RadialStatusNode.framework in Frameworks */,
 				D03E41622304D4650049C28B /* PhotoResources.framework in Frameworks */,
@@ -110,7 +111,6 @@
 				D03E413C2304D3F50049C28B /* AvatarGalleryController.swift */,
 				D03E413D2304D3F60049C28B /* AvatarGalleryItemFooterContentNode.swift */,
 				D03E413E2304D3F60049C28B /* PeerAvatarImageGalleryItem.swift */,
-				D03E41692304D4F50049C28B /* FrameworkBundle.swift */,
 				D03E41302304D37B0049C28B /* PeerAvatarGalleryUI.h */,
 			);
 			path = Sources;
@@ -119,6 +119,7 @@
 		D03E41442304D40D0049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF263231981BA00CF5164 /* AppBundle.framework */,
 				D03E41652304D46E0049C28B /* ShareController.framework */,
 				D03E41632304D4690049C28B /* RadialStatusNode.framework */,
 				D03E41612304D4650049C28B /* PhotoResources.framework */,
@@ -220,7 +221,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D03E416A2304D4F50049C28B /* FrameworkBundle.swift in Sources */,
 				D03E413F2304D3F60049C28B /* AvatarGalleryController.swift in Sources */,
 				D03E41402304D3F60049C28B /* AvatarGalleryItemFooterContentNode.swift in Sources */,
 				D03E41412304D3F60049C28B /* PeerAvatarImageGalleryItem.swift in Sources */,

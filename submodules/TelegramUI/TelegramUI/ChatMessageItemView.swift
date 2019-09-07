@@ -680,7 +680,7 @@ public class ChatMessageItemView: ListViewItemNode {
         return nil
     }
     
-    func getMessageContextSourceNode() -> ContextContentContainingNode? {
+    func getMessageContextSourceNode() -> ContextExtractedContentContainingNode? {
         return nil
     }
     

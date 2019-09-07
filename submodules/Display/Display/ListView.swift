@@ -2,10 +2,6 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-#if BUCK
-import DisplayPrivate
-#endif
-
 private let infiniteScrollSize: CGFloat = 10000.0
 private let insertionAnimationDuration: Double = 0.4
 
@@ -30,39 +26,39 @@ private final class ListViewBackingLayer: CALayer {
     }
 }
 
-final class ListViewBackingView: UIView {
-    weak var target: ListView?
+public final class ListViewBackingView: UIView {
+    public fileprivate(set) weak var target: ListView?
     
-    override class var layerClass: AnyClass {
+    override public class var layerClass: AnyClass {
         return ListViewBackingLayer.self
     }
     
-    override func setNeedsLayout() {
+    override public func setNeedsLayout() {
     }
     
-    override func layoutSubviews() {
+    override public func layoutSubviews() {
     }
     
-    override func setNeedsDisplay() {
+    override public func setNeedsDisplay() {
     }
     
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+    override public func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.target?.touchesBegan(touches, with: event)
     }
     
-    override func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
+    override public func touchesCancelled(_ touches: Set<UITouch>?, with event: UIEvent?) {
         self.target?.touchesCancelled(touches, with: event)
     }
     
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+    override public func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.target?.touchesMoved(touches, with: event)
     }
     
-    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+    override public func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         self.target?.touchesEnded(touches, with: event)
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if !self.isHidden, let target = self.target {
             if target.limitHitTestToNodes, !target.internalHitTest(point, with: event) {
                 return nil
@@ -74,7 +70,7 @@ final class ListViewBackingView: UIView {
         return super.hitTest(point, with: event)
     }
     
-    override func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
+    override public func accessibilityScroll(_ direction: UIAccessibilityScrollDirection) -> Bool {
         return self.target?.accessibilityScroll(direction) ?? false
     }
 }
@@ -3746,6 +3742,13 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         
         super.touchesMoved(touches, with: event)
+    }
+    
+    public func cancelSelection() {
+        if let selectionTouchLocation = self.selectionTouchLocation {
+            self.clearHighlightAnimated(true)
+            self.selectionTouchLocation = nil
+        }
     }
     
     override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {

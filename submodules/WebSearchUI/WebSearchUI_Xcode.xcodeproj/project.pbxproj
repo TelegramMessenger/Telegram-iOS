@@ -42,7 +42,7 @@
 		D03E3F5D2304C3E20049C28B /* LegacyWebSearchEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3F5A2304C3E20049C28B /* LegacyWebSearchEditor.swift */; };
 		D03E3F5E2304C3E20049C28B /* LegacyWebSearchGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3F5B2304C3E20049C28B /* LegacyWebSearchGallery.swift */; };
 		D03E3FA22304C5AA0049C28B /* LegacyMediaPickerUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E3FA12304C5AA0049C28B /* LegacyMediaPickerUI.framework */; };
-		D03E3FA42304C5D00049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E3FA32304C5D00049C28B /* FrameworkBundle.swift */; };
+		D0EFF270231982BB00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF26F231982BB00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -83,7 +83,7 @@
 		D03E3F5A2304C3E20049C28B /* LegacyWebSearchEditor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchEditor.swift; sourceTree = "<group>"; };
 		D03E3F5B2304C3E20049C28B /* LegacyWebSearchGallery.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacyWebSearchGallery.swift; sourceTree = "<group>"; };
 		D03E3FA12304C5AA0049C28B /* LegacyMediaPickerUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = LegacyMediaPickerUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E3FA32304C5D00049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
+		D0EFF26F231982BB00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +91,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF270231982BB00CF5164 /* AppBundle.framework in Frameworks */,
 				D03E3FA22304C5AA0049C28B /* LegacyMediaPickerUI.framework in Frameworks */,
 				D03E3F562304C37F0049C28B /* ItemListUI.framework in Frameworks */,
 				D03E3F542304C3730049C28B /* SearchBarNode.framework in Frameworks */,
@@ -152,7 +153,6 @@
 				D03E3F1B2304C2DF0049C28B /* WebSearchNavigationContentNode.swift */,
 				D03E3F1F2304C2DF0049C28B /* WebSearchRecentQueries.swift */,
 				D03E3F1C2304C2DF0049C28B /* WebSearchRecentQueryItem.swift */,
-				D03E3FA32304C5D00049C28B /* FrameworkBundle.swift */,
 				D03E3F0E2304C2530049C28B /* WebSearchUI.h */,
 			);
 			path = Sources;
@@ -161,6 +161,7 @@
 		D03E3F2E2304C2ED0049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF26F231982BB00CF5164 /* AppBundle.framework */,
 				D03E3FA12304C5AA0049C28B /* LegacyMediaPickerUI.framework */,
 				D03E3F552304C37F0049C28B /* ItemListUI.framework */,
 				D03E3F532304C3730049C28B /* SearchBarNode.framework */,
@@ -278,7 +279,6 @@
 				D03E3F272304C2E00049C28B /* WebSearchGalleryFooterContentNode.swift in Sources */,
 				D03E3F2B2304C2E00049C28B /* WebSearchControllerNode.swift in Sources */,
 				D03E3F5D2304C3E20049C28B /* LegacyWebSearchEditor.swift in Sources */,
-				D03E3FA42304C5D00049C28B /* FrameworkBundle.swift in Sources */,
 				D03E3F262304C2E00049C28B /* WebSearchRecentQueryItem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -10,6 +10,7 @@ import ContactListUI
 import CallListUI
 import ChatListUI
 import SettingsUI
+import AppBundle
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext

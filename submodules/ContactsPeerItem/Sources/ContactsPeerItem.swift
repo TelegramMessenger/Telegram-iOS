@@ -14,6 +14,7 @@ import TelegramStringFormatting
 import AccountContext
 import PeerPresenceStatusManager
 import ItemListPeerItem
+import ContextUI
 
 public final class ContactItemHighlighting {
     public var chatLocation: ChatLocation?
@@ -125,6 +126,7 @@ public class ContactsPeerItem: ListViewItem, ListViewItemWithHeader {
     let setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)?
     let deletePeer: ((PeerId) -> Void)?
     let itemHighlighting: ContactItemHighlighting?
+    let contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     public let selectable: Bool
     
@@ -132,7 +134,7 @@ public class ContactsPeerItem: ListViewItem, ListViewItemWithHeader {
     
     public let header: ListViewItemHeader?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, sortOrder: PresentationPersonNameOrder, displayOrder: PresentationPersonNameOrder, account: Account, peerMode: ContactsPeerItemPeerMode, peer: ContactsPeerItemPeer, status: ContactsPeerItemStatus, badge: ContactsPeerItemBadge? = nil, enabled: Bool, selection: ContactsPeerItemSelection, editing: ContactsPeerItemEditing, options: [ItemListPeerItemRevealOption] = [], actionIcon: ContactsPeerItemActionIcon = .none, index: PeerNameIndex?, header: ListViewItemHeader?, action: @escaping (ContactsPeerItemPeer) -> Void, setPeerIdWithRevealedOptions: ((PeerId?, PeerId?) -> Void)? = nil, deletePeer: ((PeerId) -> Void)? = nil, itemHighlighting: ContactItemHighlighting? = nil, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? = nil) {
         self.theme = theme
         self.strings = strings
         self.sortOrder = sortOrder
@@ -153,6 +155,7 @@ public class ContactsPeerItem: ListViewItem, ListViewItemWithHeader {
         self.header = header
         self.itemHighlighting = itemHighlighting
         self.selectable = enabled
+        self.contextAction = contextAction
         
         if let index = index {
             var letter: String = "#"
@@ -283,6 +286,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let separatorNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    private let containerNode: ContextControllerSourceNode
+    
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
     private var verificationIconNode: ASImageNode?
@@ -325,6 +330,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
+        self.containerNode = ContextControllerSourceNode()
+        
         self.avatarNode = AvatarNode(font: avatarFont)
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
@@ -337,9 +344,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.separatorNode)
-        self.addSubnode(self.avatarNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.statusNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.avatarNode)
+        self.containerNode.addSubnode(self.titleNode)
+        self.containerNode.addSubnode(self.statusNode)
         
         self.peerPresenceManager = PeerPresenceStatusManager(update: { [weak self] in
             if let strongSelf = self, let layoutParams = strongSelf.layoutParams {
@@ -347,6 +355,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 let _ = apply()
             }
         })
+        
+        self.containerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
+                gesture.cancel()
+                return
+            }
+            contextAction(strongSelf.containerNode, gesture)
+        }
     }
     
     override public func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -639,6 +655,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.accessibilityLabel = titleAttributedString?.string
                             strongSelf.accessibilityValue = statusAttributedString?.string
                             
+                            strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: nodeLayout.contentSize)
+                            strongSelf.containerNode.isGestureEnabled = item.contextAction != nil
+                            
                             switch item.peer {
                                 case let .peer(peer, _):
                                     if let peer = peer {
@@ -701,7 +720,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     verificationIconNode.displayWithoutProcessing = true
                                     verificationIconNode.displaysAsynchronously = false
                                     strongSelf.verificationIconNode = verificationIconNode
-                                    strongSelf.addSubnode(verificationIconNode)
+                                    strongSelf.containerNode.addSubnode(verificationIconNode)
                                 }
                                 if let verificationIconNode = strongSelf.verificationIconNode {
                                     verificationIconNode.image = verificationIconImage
@@ -720,7 +739,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     actionIconNode.displayWithoutProcessing = true
                                     actionIconNode.displaysAsynchronously = false
                                     strongSelf.actionIconNode = actionIconNode
-                                    strongSelf.addSubnode(actionIconNode)
+                                    strongSelf.containerNode.addSubnode(actionIconNode)
                                 }
                                 if let actionIconNode = strongSelf.actionIconNode {
                                     actionIconNode.image = actionIconImage
@@ -744,7 +763,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     badgeBackgroundNode.isLayerBacked = true
                                     badgeBackgroundNode.displaysAsynchronously = false
                                     badgeBackgroundNode.displayWithoutProcessing = true
-                                    strongSelf.addSubnode(badgeBackgroundNode)
+                                    strongSelf.containerNode.addSubnode(badgeBackgroundNode)
                                     strongSelf.badgeBackgroundNode = badgeBackgroundNode
                                     badgeTransition = .immediate
                                 }
@@ -758,7 +777,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 let badgeTextNode = badgeTextApply()
                                 if badgeTextNode !== strongSelf.badgeTextNode {
                                     strongSelf.badgeTextNode?.removeFromSupernode()
-                                    strongSelf.addSubnode(badgeTextNode)
+                                    strongSelf.containerNode.addSubnode(badgeTextNode)
                                     strongSelf.badgeTextNode = badgeTextNode
                                 }
                                 

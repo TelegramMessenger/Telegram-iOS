@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import Display
+import AppBundle
 
 public struct PresentationResourcesCallList {
     public static func outgoingIcon(_ theme: PresentationTheme) -> UIImage? {

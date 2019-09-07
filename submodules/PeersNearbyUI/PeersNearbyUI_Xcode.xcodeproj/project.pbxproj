@@ -28,8 +28,8 @@
 		D03E402F2304CD100049C28B /* TelegramPermissionsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E402E2304CD100049C28B /* TelegramPermissionsUI.framework */; };
 		D03E40312304CD170049C28B /* ItemListPeerActionItem.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E40302304CD170049C28B /* ItemListPeerActionItem.framework */; };
 		D03E40332304CD220049C28B /* PeersNearbyIconNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E40322304CD220049C28B /* PeersNearbyIconNode.framework */; };
-		D03E40372304CD6C0049C28B /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D03E40362304CD6C0049C28B /* FrameworkBundle.swift */; };
 		D03E405B2304CE8B0049C28B /* Geocoding.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D03E405A2304CE8B0049C28B /* Geocoding.framework */; };
+		D0EFF26E231982AF00CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF26D231982AF00CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,8 +56,8 @@
 		D03E402E2304CD100049C28B /* TelegramPermissionsUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPermissionsUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E40302304CD170049C28B /* ItemListPeerActionItem.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ItemListPeerActionItem.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D03E40322304CD220049C28B /* PeersNearbyIconNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PeersNearbyIconNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D03E40362304CD6C0049C28B /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D03E405A2304CE8B0049C28B /* Geocoding.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = Geocoding.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF26D231982AF00CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF26E231982AF00CF5164 /* AppBundle.framework in Frameworks */,
 				D03E405B2304CE8B0049C28B /* Geocoding.framework in Frameworks */,
 				D03E40332304CD220049C28B /* PeersNearbyIconNode.framework in Frameworks */,
 				D03E40312304CD170049C28B /* ItemListPeerActionItem.framework in Frameworks */,
@@ -113,7 +114,6 @@
 			children = (
 				D03E400B2304CCBD0049C28B /* PeersNearbyController.swift */,
 				D03E400C2304CCBD0049C28B /* PeersNearbyHeaderItem.swift */,
-				D03E40362304CD6C0049C28B /* FrameworkBundle.swift */,
 				D03E3FFF2304CC5C0049C28B /* PeersNearbyUI.h */,
 			);
 			path = Sources;
@@ -122,6 +122,7 @@
 		D03E400F2304CCCD0049C28B /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF26D231982AF00CF5164 /* AppBundle.framework */,
 				D03E405A2304CE8B0049C28B /* Geocoding.framework */,
 				D03E40322304CD220049C28B /* PeersNearbyIconNode.framework */,
 				D03E40302304CD170049C28B /* ItemListPeerActionItem.framework */,
@@ -227,7 +228,6 @@
 			files = (
 				D03E400E2304CCBD0049C28B /* PeersNearbyHeaderItem.swift in Sources */,
 				D03E400D2304CCBD0049C28B /* PeersNearbyController.swift in Sources */,
-				D03E40372304CD6C0049C28B /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

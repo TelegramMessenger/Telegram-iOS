@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramCore
 import AccountContext
+import AppBundle
 
 struct BotCheckoutPaymentWebToken: Equatable {
     let title: String

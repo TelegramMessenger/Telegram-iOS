@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import TextFormat
+import AppBundle
 
 class ChannelDiscussionGroupSetupHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

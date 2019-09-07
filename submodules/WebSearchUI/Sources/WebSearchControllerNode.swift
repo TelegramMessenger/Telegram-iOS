@@ -13,6 +13,7 @@ import AccountContext
 import GalleryUI
 import ChatListSearchItemHeader
 import SegmentedControlNode
+import AppBundle
 
 private struct WebSearchContextResultStableId: Hashable {
     let result: ChatContextResult

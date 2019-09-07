@@ -3,6 +3,7 @@ import UIKit
 import Display
 import Postbox
 import TelegramCore
+import AppBundle
 
 private func generateLineImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 2.0, height: 3.0), contextGenerator: { size, context in

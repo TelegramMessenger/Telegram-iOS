@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import AppBundle
 
 final class ThemeGridSelectionPanelNode: ASDisplayNode {
     private let deleteButton: UIButton

@@ -1,7 +1,8 @@
 import Foundation
+import AppBundle
 
 private func loadCountriesInfo() -> [(Int, String, String)] {
-    guard let filePath = Bundle.main.path(forResource: "PhoneCountries", ofType: "txt") else {
+    guard let filePath = getAppBundle().path(forResource: "PhoneCountries", ofType: "txt") else {
         return []
     }
     guard let stringData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {

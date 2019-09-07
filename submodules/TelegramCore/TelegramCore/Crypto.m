@@ -2,25 +2,25 @@
 
 #import <CommonCrypto/CommonCrypto.h>
 
-NSData * _Nonnull CryptoMD5(const void *bytes, int count) {
+NSData * _Nonnull CryptoMD5(const void * _Nonnull bytes, int count) {
     NSMutableData *result = [[NSMutableData alloc] initWithLength:(NSUInteger)CC_MD5_DIGEST_LENGTH];
     CC_MD5(bytes, (CC_LONG)count, result.mutableBytes);
     return result;
 }
 
-NSData * _Nonnull CryptoSHA1(const void *bytes, int count) {
+NSData * _Nonnull CryptoSHA1(const void * _Nonnull bytes, int count) {
     NSMutableData *result = [[NSMutableData alloc] initWithLength:(NSUInteger)CC_SHA1_DIGEST_LENGTH];
     CC_SHA1(bytes, (CC_LONG)count, result.mutableBytes);
     return result;
 }
 
-NSData * _Nonnull CryptoSHA256(const void *bytes, int count) {
+NSData * _Nonnull CryptoSHA256(const void * _Nonnull bytes, int count) {
     NSMutableData *result = [[NSMutableData alloc] initWithLength:(NSUInteger)CC_SHA256_DIGEST_LENGTH];
     CC_SHA256(bytes, (CC_LONG)count, result.mutableBytes);
     return result;
 }
 
-NSData * _Nonnull CryptoSHA512(const void *bytes, int count) {
+NSData * _Nonnull CryptoSHA512(const void * _Nonnull bytes, int count) {
     NSMutableData *result = [[NSMutableData alloc] initWithLength:(NSUInteger)CC_SHA512_DIGEST_LENGTH];
     CC_SHA512(bytes, (CC_LONG)count, result.mutableBytes);
     return result;

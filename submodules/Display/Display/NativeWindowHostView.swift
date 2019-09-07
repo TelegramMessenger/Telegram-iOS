@@ -77,7 +77,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
     var gestureEdges: UIRectEdge = [] {
         didSet {
             if oldValue != self.gestureEdges {
-                if #available(iOSApplicationExtension 11.0, *) {
+                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     self.setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
                 }
             }
@@ -87,7 +87,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
     var preferNavigationUIHidden: Bool = false {
         didSet {
             if oldValue != self.preferNavigationUIHidden {
-                if #available(iOSApplicationExtension 11.0, *) {
+                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     self.setNeedsUpdateOfHomeIndicatorAutoHidden()
                 }
             }
@@ -111,7 +111,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
         
         self.extendedLayoutIncludesOpaqueBars = true
         
-        if #available(iOSApplicationExtension 11.0, *) {
+        if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
             self.voiceOverStatusObserver = NotificationCenter.default.addObserver(forName: UIAccessibility.voiceOverStatusDidChangeNotification, object: nil, queue: OperationQueue.main, using: { [weak self] _ in
                 if let strongSelf = self {
                     strongSelf.updatePreviewingRegistration()
@@ -159,23 +159,25 @@ private final class WindowRootViewController: UIViewController, UIViewController
         var shouldRegister = false
         
         var isVoiceOverRunning = false
-        if #available(iOSApplicationExtension 10.0, *) {
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
             isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
         }
         if !isVoiceOverRunning {
             shouldRegister = true
         }
         
+        shouldRegister = false
+        
         if shouldRegister != self.registeredForPreviewing {
             self.registeredForPreviewing = shouldRegister
             if shouldRegister {
-                if #available(iOSApplicationExtension 9.0, *) {
+                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                     self.previewingContext = self.registerForPreviewing(with: self, sourceView: self.view)
                 }
             } else if let previewingContext = self.previewingContext {
                 self.previewingContext = nil
                 if let previewingContext = previewingContext as? UIViewControllerPreviewing {
-                    if #available(iOSApplicationExtension 9.0, *) {
+                    if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                         self.unregisterForPreviewing(withContext: previewingContext)
                     }
                 }
@@ -189,7 +191,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
         if UIAccessibility.isVoiceOverRunning {
             return nil
         }
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             guard let result = self.view.hitTest(location, with: nil) else {
                 return nil
             }
@@ -205,7 +207,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
-        if #available(iOSApplicationExtension 9.0, *) {
+        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             if let previousPreviewingHostView = self.previousPreviewingHostView, let delegate = previousPreviewingHostView.previewingDelegate {
                 delegate.commitController(viewControllerToCommit)
             }
@@ -237,7 +239,7 @@ private final class NativeWindow: UIWindow, WindowHost {
             let sizeUpdated = super.frame.size != value.size
             
             var frameTransition: ContainedViewLayoutTransition = .immediate
-            if #available(iOSApplicationExtension 9.0, *) {
+            if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
                 let duration = UIView.inheritedAnimationDuration
                 if !duration.isZero {
                     frameTransition = .animated(duration: duration, curve: .easeInOut)

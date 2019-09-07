@@ -11,6 +11,7 @@ import RadialStatusNode
 import PhotoResources
 import MediaResources
 import LiveLocationPositionNode
+import AppBundle
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

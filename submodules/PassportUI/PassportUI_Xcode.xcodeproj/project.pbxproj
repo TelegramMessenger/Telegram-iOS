@@ -55,7 +55,6 @@
 		D0C9C255230022E000FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C254230022E000FAB518 /* TelegramPresentationData.framework */; };
 		D0C9C25923009EC900FAB518 /* FindSecureIdValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C25823009EC900FAB518 /* FindSecureIdValue.swift */; };
 		D0C9C2812300A04900FAB518 /* PhoneInputNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2802300A04900FAB518 /* PhoneInputNode.framework */; };
-		D0C9C2852300A0BF00FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C2842300A0BF00FAB518 /* FrameworkBundle.swift */; };
 		D0C9C2B32300A1D300FAB518 /* CountrySelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2B22300A1D300FAB518 /* CountrySelectionUI.framework */; };
 		D0C9C3332300AA0100FAB518 /* GalleryUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C3322300AA0100FAB518 /* GalleryUI.framework */; };
 		D0C9C4492300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4482300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift */; };
@@ -66,6 +65,7 @@
 		D0C9C4BF2300E5B400FAB518 /* ImageCompression.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C4BE2300E5B400FAB518 /* ImageCompression.framework */; };
 		D0C9C4DA2300E67200FAB518 /* DateSelectionUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C4D92300E67200FAB518 /* DateSelectionUI.framework */; };
 		D0C9C52D2300EFB100FAB518 /* PasswordSetupUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C52C2300EFB100FAB518 /* PasswordSetupUI.framework */; };
+		D0EFF2602319818400CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF25F2319818400CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -119,7 +119,6 @@
 		D0C9C254230022E000FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C25823009EC900FAB518 /* FindSecureIdValue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FindSecureIdValue.swift; sourceTree = "<group>"; };
 		D0C9C2802300A04900FAB518 /* PhoneInputNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PhoneInputNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2842300A0BF00FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C2B22300A1D300FAB518 /* CountrySelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = CountrySelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C3322300AA0100FAB518 /* GalleryUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = GalleryUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C4482300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LegacySecureIdAttachmentMenu.swift; sourceTree = "<group>"; };
@@ -130,6 +129,7 @@
 		D0C9C4BE2300E5B400FAB518 /* ImageCompression.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ImageCompression.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C4D92300E67200FAB518 /* DateSelectionUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = DateSelectionUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C52C2300EFB100FAB518 /* PasswordSetupUI.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = PasswordSetupUI.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		D0EFF25F2319818400CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -137,6 +137,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF2602319818400CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C52D2300EFB100FAB518 /* PasswordSetupUI.framework in Frameworks */,
 				D0C9C4DA2300E67200FAB518 /* DateSelectionUI.framework in Frameworks */,
 				D0C9C4BF2300E5B400FAB518 /* ImageCompression.framework in Frameworks */,
@@ -211,7 +212,6 @@
 				D0C9C25823009EC900FAB518 /* FindSecureIdValue.swift */,
 				D0C9C4482300E15E00FAB518 /* LegacySecureIdAttachmentMenu.swift */,
 				D0C9C44E2300E1D600FAB518 /* LegacySecureIdScanController.swift */,
-				D0C9C2842300A0BF00FAB518 /* FrameworkBundle.swift */,
 				D0C9C1EE2300222100FAB518 /* PassportUI.h */,
 			);
 			path = Sources;
@@ -238,6 +238,7 @@
 		D0C9C245230022BF00FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF25F2319818400CF5164 /* AppBundle.framework */,
 				D0C9C52C2300EFB100FAB518 /* PasswordSetupUI.framework */,
 				D0C9C4D92300E67200FAB518 /* DateSelectionUI.framework */,
 				D0C9C4BE2300E5B400FAB518 /* ImageCompression.framework */,
@@ -361,7 +362,6 @@
 				D0C9C23C230022AB00FAB518 /* SecureIdAuthController.swift in Sources */,
 				D0C9C22E230022AB00FAB518 /* FormControllerScrollerNode.swift in Sources */,
 				D0C9C22C230022AB00FAB518 /* FormControllerActionItem.swift in Sources */,
-				D0C9C2852300A0BF00FAB518 /* FrameworkBundle.swift in Sources */,
 				D0C9C237230022AB00FAB518 /* SecureIdAuthFormContentNode.swift in Sources */,
 				D0C9C22D230022AB00FAB518 /* FormEditableBlockItemNode.swift in Sources */,
 				D0C9C239230022AB00FAB518 /* SecureIdAuthPasswordOptionContentNode.swift in Sources */,

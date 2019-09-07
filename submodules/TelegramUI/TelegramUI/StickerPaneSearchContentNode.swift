@@ -11,6 +11,7 @@ import MergeLists
 import AccountContext
 import StickerPackPreviewUI
 import Emoji
+import AppBundle
 
 final class StickerPaneSearchInteraction {
     let open: (StickerPackCollectionInfo) -> Void

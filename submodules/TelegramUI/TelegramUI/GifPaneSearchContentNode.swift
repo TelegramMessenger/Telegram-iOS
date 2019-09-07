@@ -8,6 +8,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import WebSearchUI
+import AppBundle
 
 func paneGifSearchForQuery(account: Account, query: String, updateActivity: ((Bool) -> Void)?) -> Signal<[FileMediaReference]?, NoError> {
     let delayRequest = true

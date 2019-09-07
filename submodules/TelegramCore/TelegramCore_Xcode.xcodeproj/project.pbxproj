@@ -554,7 +554,6 @@
 		D0AF32311FACEDEC0097362B /* CoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32301FACEDEC0097362B /* CoreSettings.swift */; };
 		D0AF32321FACEDEC0097362B /* CoreSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32301FACEDEC0097362B /* CoreSettings.swift */; };
 		D0AF32351FAE8C6B0097362B /* MultipeerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AF32341FAE8C6B0097362B /* MultipeerManager.swift */; };
-		D0AF32381FAE8C920097362B /* MultipeerConnectivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0AF32371FAE8C910097362B /* MultipeerConnectivity.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		D0B1671D1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */; };
 		D0B1671E1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B1671C1F9EA2C300976B40 /* ChatHistoryPreloadManager.swift */; };
 		D0B167231F9F972E00976B40 /* LoggingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B167221F9F972E00976B40 /* LoggingSettings.swift */; };
@@ -1231,7 +1230,6 @@
 			files = (
 				D03E45D42305D44A0049C28B /* libphonenumber.framework in Frameworks */,
 				D035732F22B5C24F00F0920D /* TelegramApi.framework in Frameworks */,
-				D0AF32381FAE8C920097362B /* MultipeerConnectivity.framework in Frameworks */,
 				D0CAF2EA1D75EC600011F558 /* MtProtoKitDynamic.framework in Frameworks */,
 				D067066C1D512ADB00DED3E3 /* Postbox.framework in Frameworks */,
 				D067066D1D512ADB00DED3E3 /* SwiftSignalKit.framework in Frameworks */,

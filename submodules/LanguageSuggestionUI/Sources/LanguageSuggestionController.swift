@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import ActivityIndicator
 import AccountContext
+import AppBundle
 
 public struct LanguageSuggestionControllerStrings {
     let ChooseLanguage: String
@@ -334,7 +335,7 @@ public func languageSuggestionController(context: AccountContext, suggestedLocal
     
     let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
     let strings = LanguageSuggestionControllerStrings(localization: suggestedLocalization)
-    guard let mainPath = Bundle.main.path(forResource: "en", ofType: "lproj") else {
+    guard let mainPath = getAppBundle().path(forResource: "en", ofType: "lproj") else {
         return nil
     }
     let englishStrings = LanguageSuggestionControllerStrings(bundle: Bundle(path: mainPath))

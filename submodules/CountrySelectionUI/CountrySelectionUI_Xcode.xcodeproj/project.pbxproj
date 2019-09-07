@@ -16,9 +16,9 @@
 		D0C9C2AB2300A1A500FAB518 /* AsyncDisplayKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2AA2300A1A500FAB518 /* AsyncDisplayKit.framework */; };
 		D0C9C2AD2300A1AC00FAB518 /* TelegramPresentationData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2AC2300A1AC00FAB518 /* TelegramPresentationData.framework */; };
 		D0C9C2AF2300A1B100FAB518 /* TelegramStringFormatting.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2AE2300A1B100FAB518 /* TelegramStringFormatting.framework */; };
-		D0C9C2B52300A1F300FAB518 /* FrameworkBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C2B42300A1F300FAB518 /* FrameworkBundle.swift */; };
 		D0C9C2D02300A2D400FAB518 /* SearchBarNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0C9C2CF2300A2D400FAB518 /* SearchBarNode.framework */; };
 		D0C9C4472300DE5100FAB518 /* CountryList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9C4462300DE5100FAB518 /* CountryList.swift */; };
+		D0EFF2462319804800CF5164 /* AppBundle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0EFF2452319804800CF5164 /* AppBundle.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,9 +33,9 @@
 		D0C9C2AA2300A1A500FAB518 /* AsyncDisplayKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AsyncDisplayKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C2AC2300A1AC00FAB518 /* TelegramPresentationData.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramPresentationData.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C2AE2300A1B100FAB518 /* TelegramStringFormatting.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = TelegramStringFormatting.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		D0C9C2B42300A1F300FAB518 /* FrameworkBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameworkBundle.swift; sourceTree = "<group>"; };
 		D0C9C2CF2300A2D400FAB518 /* SearchBarNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = SearchBarNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0C9C4462300DE5100FAB518 /* CountryList.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CountryList.swift; sourceTree = "<group>"; };
+		D0EFF2452319804800CF5164 /* AppBundle.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = AppBundle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -43,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EFF2462319804800CF5164 /* AppBundle.framework in Frameworks */,
 				D0C9C2D02300A2D400FAB518 /* SearchBarNode.framework in Frameworks */,
 				D0C9C2AF2300A1B100FAB518 /* TelegramStringFormatting.framework in Frameworks */,
 				D0C9C2AD2300A1AC00FAB518 /* TelegramPresentationData.framework in Frameworks */,
@@ -80,7 +81,6 @@
 				D0C9C4462300DE5100FAB518 /* CountryList.swift */,
 				D0C9C29F2300A18B00FAB518 /* AuthorizationSequenceCountrySelectionController.swift */,
 				D0C9C2A02300A18C00FAB518 /* AuthorizationSequenceCountrySelectionControllerNode.swift */,
-				D0C9C2B42300A1F300FAB518 /* FrameworkBundle.swift */,
 				D0C9C2932300A11000FAB518 /* CountrySelectionUI.h */,
 			);
 			path = Sources;
@@ -89,6 +89,7 @@
 		D0C9C2A32300A19900FAB518 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D0EFF2452319804800CF5164 /* AppBundle.framework */,
 				D0C9C2CF2300A2D400FAB518 /* SearchBarNode.framework */,
 				D0C9C2AE2300A1B100FAB518 /* TelegramStringFormatting.framework */,
 				D0C9C2AC2300A1AC00FAB518 /* TelegramPresentationData.framework */,
@@ -183,7 +184,6 @@
 				D0C9C4472300DE5100FAB518 /* CountryList.swift in Sources */,
 				D0C9C2A22300A18C00FAB518 /* AuthorizationSequenceCountrySelectionControllerNode.swift in Sources */,
 				D0C9C2A12300A18C00FAB518 /* AuthorizationSequenceCountrySelectionController.swift in Sources */,
-				D0C9C2B52300A1F300FAB518 /* FrameworkBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

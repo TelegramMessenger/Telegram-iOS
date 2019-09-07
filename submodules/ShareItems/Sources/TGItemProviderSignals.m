@@ -1,5 +1,11 @@
 #import "TGItemProviderSignals.h"
 
+#ifdef BUCK
+#import <MTProtoKit/MTProtoKit.h>
+#else
+#import <MTProtoKitDynamic/MTProtoKitDynamic.h>
+#endif
+
 #import <UIKit/UIKit.h>
 #import <MobileCoreServices/MobileCoreServices.h>
 #import <AddressBook/AddressBook.h>
