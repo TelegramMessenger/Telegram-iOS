@@ -370,7 +370,7 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
         
         loop: for media in self.message.media {
             if let telegramFile = media as? TelegramMediaFile {
-                if telegramFile.isAnimatedSticker, !telegramFile.previewRepresentations.isEmpty, let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
+                if telegramFile.isAnimatedSticker, (self.message.id.peerId.namespace == Namespaces.Peer.SecretChat || !telegramFile.previewRepresentations.isEmpty), let size = telegramFile.size, size > 0 && size <= 128 * 1024 {
                     if self.message.id.peerId.namespace == Namespaces.Peer.SecretChat {
                         if telegramFile.fileId.namespace == Namespaces.Media.CloudFile {
                             viewClassName = ChatMessageAnimatedStickerItemNode.self
