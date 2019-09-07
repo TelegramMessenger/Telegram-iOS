@@ -196,7 +196,7 @@ final class GifPaneSearchContentNode: ASDisplayNode & PaneSearchContentNode {
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
         self.validLayout = size
         

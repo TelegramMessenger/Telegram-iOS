@@ -666,7 +666,6 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
     
     func animateLayoutTransition() {
         UIView.transition(with: self, duration: 0.25, options: [.transitionCrossDissolve], animations: {
-            
         }, completion: nil)
     }
 }

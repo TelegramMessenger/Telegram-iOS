@@ -362,6 +362,10 @@ public final class ManagedAudioSession {
         } |> runOn(queue)
     }
     
+    public func isOtherAudioPlaying() -> Bool {
+        return AVAudioSession.sharedInstance().secondaryAudioShouldBeSilencedHint
+    }
+    
     public func push(audioSessionType: ManagedAudioSessionType, outputMode: AudioSessionOutputMode = .system, once: Bool = false, activate: @escaping (AudioSessionActivationState) -> Void, deactivate: @escaping () -> Signal<Void, NoError>) -> Disposable {
         return self.push(audioSessionType: audioSessionType, once: once, manualActivate: { control in
             control.setupAndActivate(synchronous: false, { state in

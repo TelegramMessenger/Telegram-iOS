@@ -126,7 +126,6 @@ final class VerticalListContextResultsChatInputContextPanelNode: ChatInputContex
     private var enqueuedTransitions: [(VerticalListContextResultsChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat)?
     
-    
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
         self.listView.isOpaque = false

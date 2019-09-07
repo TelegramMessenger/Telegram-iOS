@@ -34,7 +34,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
         if let peer = message.peers[message.id.peerId], let channel = peer as? TelegramChannel {
             switch channel.info {
                 case .broadcast:
-                    if channel.hasPermission(.editAllMessages) {
+                    if message.author?.id == message.id.peerId || channel.hasPermission(.editAllMessages) {
                         hasEditRights = true
                     }
                 default:

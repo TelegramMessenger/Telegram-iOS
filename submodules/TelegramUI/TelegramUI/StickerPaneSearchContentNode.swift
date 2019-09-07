@@ -99,7 +99,7 @@ private enum StickerSearchEntry: Identifiable, Comparable {
                 interaction.sendSticker(.standalone(media: stickerItem.file), node, rect)
             })
         case let .global(_, info, topItems, installed):
-            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, installed: installed, unread: false, open: {
+            return StickerPaneSearchGlobalItem(account: account, theme: theme, strings: strings, info: info, topItems: topItems, grid: false, installed: installed, unread: false, open: {
                 interaction.open(info)
             }, install: {
                 interaction.install(info)
@@ -247,7 +247,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
             }
         }, sendSticker: { [weak self] file, sourceNode, sourceRect in
             if let strongSelf = self {
-                strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
+                let _ = strongSelf.controllerInteraction.sendSticker(file, false, sourceNode, sourceRect)
             }
         }, getItemIsPreviewed: { item in
             return inputNodeInteraction.previewedStickerPackItem == .pack(item)
@@ -460,7 +460,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         return nil
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         let firstLayout = self.validLayout == nil
 
         self.validLayout = size
@@ -478,7 +478,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: contentFrame.size, insets: UIEdgeInsets(top: 4.0, left: 0.0, bottom: 4.0 + bottomInset, right: 0.0), preloadSize: 300.0, type: .fixed(itemSize: CGSize(width: 75.0, height: 75.0), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })
 
         transition.updateFrame(node: self.trendingPane, frame: contentFrame)
-        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: bottomInset, isExpanded: false, isVisible: true, transition: transition)
+        self.trendingPane.updateLayout(size: contentFrame.size, topInset: 0.0, bottomInset: bottomInset, isExpanded: false, isVisible: true, deviceMetrics: deviceMetrics, transition: transition)
         
         transition.updateFrame(node: self.gridNode, frame: contentFrame)
         if firstLayout {

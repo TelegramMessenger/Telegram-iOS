@@ -275,6 +275,9 @@
             location = "group:submodules/RadialStatusNode/RadialStatusNode_Xcode.xcodeproj">
          </FileRef>
          <FileRef
+            location = "group:submodules/SegmentedControlNode/SegmentedControlNode_Xcode.xcodeproj">
+         </FileRef>
+         <FileRef
             location = "group:submodules/LiveLocationTimerNode/LiveLocationTimerNode_Xcode.xcodeproj">
          </FileRef>
          <FileRef

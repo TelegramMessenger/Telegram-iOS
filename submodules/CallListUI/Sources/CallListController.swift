@@ -45,7 +45,7 @@ public final class CallListController: ViewController {
         self.mode = mode
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
-        self.segmentedTitleView = ItemListControllerSegmentedTitleView(segments: [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed], index: 0, color: self.presentationData.theme.rootController.navigationBar.accentTextColor)
+        self.segmentedTitleView = ItemListControllerSegmentedTitleView(theme: self.presentationData.theme, segments: [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed], selectedIndex: 0)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -101,7 +101,7 @@ public final class CallListController: ViewController {
     private func updateThemeAndStrings() {
         let index = self.segmentedTitleView.index
         self.segmentedTitleView.segments = [self.presentationData.strings.Calls_All, self.presentationData.strings.Calls_Missed]
-        self.segmentedTitleView.color = self.presentationData.theme.rootController.navigationBar.accentTextColor
+        self.segmentedTitleView.theme = self.presentationData.theme
         self.segmentedTitleView.index = index
             
         self.tabBarItem.title = self.presentationData.strings.Calls_TabTitle

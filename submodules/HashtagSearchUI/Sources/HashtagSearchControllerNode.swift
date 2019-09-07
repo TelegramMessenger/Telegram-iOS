@@ -6,11 +6,12 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import ChatListUI
+import SegmentedControlNode
 
 final class HashtagSearchControllerNode: ASDisplayNode {
     private let toolbarBackgroundNode: ASDisplayNode
     private let toolbarSeparatorNode: ASDisplayNode
-    private let segmentedControl: UISegmentedControl
+    private let segmentedControlNode: SegmentedControlNode
     let listNode: ListView
     
     var chatController: ChatController?
@@ -35,9 +36,11 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.toolbarSeparatorNode = ASDisplayNode()
         self.toolbarSeparatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
         
-        self.segmentedControl = UISegmentedControl(items: [peer?.displayTitle ?? "", strings.HashtagSearch_AllChats])
-        self.segmentedControl.tintColor = theme.rootController.navigationBar.accentTextColor
-        self.segmentedControl.selectedSegmentIndex = 0
+        let items = [
+            peer?.displayTitle ?? "",
+            strings.HashtagSearch_AllChats
+        ]
+        self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
         
         if let peer = peer {
             self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .inline)
@@ -56,7 +59,17 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.addSubnode(self.listNode)
         self.listNode.isHidden = true
         
-        self.segmentedControl.addTarget(self, action: #selector(self.indexChanged), for: .valueChanged)
+        self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
+            if let strongSelf = self {
+                if index == 0 {
+                    strongSelf.chatController?.displayNode.isHidden = false
+                    strongSelf.listNode.isHidden = true
+                } else {
+                    strongSelf.chatController?.displayNode.isHidden = true
+                    strongSelf.listNode.isHidden = false
+                }
+            }
+        }
     }
     
     func enqueueTransition(_ transition: ChatListSearchContainerTransition, firstTime: Bool) {
@@ -84,8 +97,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         if self.chatController != nil && self.toolbarBackgroundNode.supernode == nil {
             self.addSubnode(self.toolbarBackgroundNode)
             self.addSubnode(self.toolbarSeparatorNode)
-            
-            self.view.addSubview(self.segmentedControl)
+            self.addSubnode(self.segmentedControlNode)
         }
         
         var insets = layout.insets(options: [.input])
@@ -97,10 +109,8 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY), size: CGSize(width: layout.size.width, height: toolbarHeight)))
         transition.updateFrame(node: self.toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelY + toolbarHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         
-        var controlSize = self.segmentedControl.sizeThatFits(layout.size)
-        controlSize.width = layout.size.width - 14.0 * 2.0
-        
-        transition.updateFrame(view: self.segmentedControl, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: panelY + floor((toolbarHeight - controlSize.height) / 2.0)), size: controlSize))
+        let controlSize = self.segmentedControlNode.updateLayout(.stretchToFill(width: layout.size.width - 14.0 * 2.0), transition: transition)
+        transition.updateFrame(node: self.segmentedControlNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - controlSize.width) / 2.0), y: panelY + floor((toolbarHeight - controlSize.height) / 2.0)), size: controlSize))
         
         if let chatController = self.chatController {
             insets.top += toolbarHeight - 4.0
@@ -146,21 +156,11 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        if !hasValidLayout {
-            hasValidLayout = true
+        if !self.hasValidLayout {
+            self.hasValidLayout = true
             while !self.enqueuedTransitions.isEmpty {
                 self.dequeueTransition()
             }
-        }
-    }
-    
-    @objc private func indexChanged() {
-        if self.segmentedControl.selectedSegmentIndex == 0 {
-            self.chatController?.displayNode.isHidden = false
-            self.listNode.isHidden = true
-        } else {
-            self.chatController?.displayNode.isHidden = true
-            self.listNode.isHidden = false
         }
     }
 }

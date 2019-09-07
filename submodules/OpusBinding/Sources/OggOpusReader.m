@@ -10,7 +10,7 @@
 
 @implementation OggOpusReader
 
-- (instancetype _Nullable)init:(NSString *)path {
+- (instancetype _Nullable)initWithPath:(NSString *)path {
     self = [super init];
     if (self != nil) {
         int error = OPUS_OK;

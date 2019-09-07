@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		09CE5B922322985500743FF4 /* ItemListMaskAccessory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09CE5B912322985500743FF4 /* ItemListMaskAccessory.swift */; };
 		D060182122F35C2300796784 /* ProgressNavigationButtonNode.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D060182022F35C2300796784 /* ProgressNavigationButtonNode.framework */; };
 		D060185322F35E1F00796784 /* ItemListMultilineInputItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060184922F35E1E00796784 /* ItemListMultilineInputItem.swift */; };
 		D060185422F35E1F00796784 /* ItemListTextWithLabelItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = D060184A22F35E1E00796784 /* ItemListTextWithLabelItem.swift */; };
@@ -50,6 +51,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		09CE5B912322985500743FF4 /* ItemListMaskAccessory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemListMaskAccessory.swift; sourceTree = "<group>"; };
 		D060182022F35C2300796784 /* ProgressNavigationButtonNode.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; path = ProgressNavigationButtonNode.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D060184922F35E1E00796784 /* ItemListMultilineInputItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListMultilineInputItem.swift; sourceTree = "<group>"; };
 		D060184A22F35E1E00796784 /* ItemListTextWithLabelItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ItemListTextWithLabelItem.swift; sourceTree = "<group>"; };
@@ -168,6 +170,7 @@
 				D0D3286322F3366500D07EE2 /* ItemListControllerSearch.swift */,
 				D0D3286122F3366500D07EE2 /* ItemListControllerSegmentedTitleView.swift */,
 				D0D3289922F345C500D07EE2 /* ItemListItem.swift */,
+				09CE5B912322985500743FF4 /* ItemListMaskAccessory.swift */,
 				D060186022F35F6B00796784 /* ItemListRevealOptionsNode.swift */,
 				D06018BA22F3663900796784 /* ItemListEditableDeleteControlNode.swift */,
 				D06018B822F3663800796784 /* ItemListEditableReorderControlNode.swift */,
@@ -294,6 +297,7 @@
 				D060185422F35E1F00796784 /* ItemListTextWithLabelItem.swift in Sources */,
 				D0C9BFB222FE327700FAB518 /* ItemListPlaceholderItem.swift in Sources */,
 				D0D3286722F3366600D07EE2 /* ItemListController.swift in Sources */,
+				09CE5B922322985500743FF4 /* ItemListMaskAccessory.swift in Sources */,
 				D0D3286822F3366600D07EE2 /* ItemListControllerSearch.swift in Sources */,
 				D060185722F35E1F00796784 /* ItemListSwitchItem.swift in Sources */,
 				D0D3286622F3366600D07EE2 /* ItemListControllerSegmentedTitleView.swift in Sources */,
