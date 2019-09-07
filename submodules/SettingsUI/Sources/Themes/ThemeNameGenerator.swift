@@ -335,9 +335,10 @@ func generateThemeName(accentColor: UIColor) -> String {
     
     if let color = nearest?.color, let colorName = colors[color]?.capitalized {
         if arc4random() % 2 == 0 {
-            return "\(adjectives[Int(arc4random()) % adjectives.count].capitalized) \(colorName)"
+            
+            return "\((adjectives.randomElement() ?? "").capitalized) \(colorName)"
         } else {
-            return "\(colorName) \(subjectives[Int(arc4random()) % subjectives.count].capitalized)"
+            return "\(colorName) \((subjectives.randomElement() ?? "").capitalized)"
         }
     } else {
         return ""

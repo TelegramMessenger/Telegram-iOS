@@ -14,6 +14,8 @@ public protocol ItemListItem {
 }
 
 public extension ItemListItem {
+    //let accessoryItem: ListViewAccessoryItem?
+    
     var isAlwaysPlain: Bool {
         return false
     }

@@ -24,6 +24,7 @@ static_library(
         "//submodules/SearchBarNode:SearchBarNode",
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
+        "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [

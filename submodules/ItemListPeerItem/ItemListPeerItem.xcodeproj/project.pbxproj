@@ -312,6 +312,19 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E2957B5522500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libSegmentedControlNode.a</string>
+			<key>path</key>
+			<string>libSegmentedControlNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E293594DCC000000000</key>
 		<dict>
 			<key>isa</key>
@@ -509,6 +522,7 @@
 				<string>1DD70E29DB6520C800000000</string>
 				<string>1DD70E29CBE117ED00000000</string>
 				<string>1DD70E29AD66967300000000</string>
+				<string>1DD70E2957B5522500000000</string>
 				<string>1DD70E293594DCC000000000</string>
 				<string>1DD70E29D65BA68200000000</string>
 				<string>1DD70E2925BBFEEE00000000</string>
@@ -829,6 +843,13 @@
 			<key>fileRef</key>
 			<string>1DD70E29CBE117ED00000000</string>
 		</dict>
+		<key>E7A30F0457B5522500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2957B5522500000000</string>
+		</dict>
 		<key>E7A30F0425BBFEEE00000000</key>
 		<dict>
 			<key>isa</key>
@@ -884,6 +905,7 @@
 				<string>E7A30F04C37F741500000000</string>
 				<string>E7A30F04BF0846EE00000000</string>
 				<string>E7A30F04CBE117ED00000000</string>
+				<string>E7A30F0457B5522500000000</string>
 				<string>E7A30F0425BBFEEE00000000</string>
 				<string>E7A30F045A26607D00000000</string>
 				<string>E7A30F04D233F68C00000000</string>

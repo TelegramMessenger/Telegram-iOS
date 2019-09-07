@@ -162,6 +162,8 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
     private let navigationBar: NavigationBar
     
     public let listNode: ListView
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     private var emptyStateItem: ItemListControllerEmptyStateItem?
     private var emptyStateNode: ItemListControllerEmptyStateItemNode?
     
@@ -204,6 +206,8 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         self.updateNavigationOffset = updateNavigationOffset
         
         self.listNode = ListView()
+        self.leftOverlayNode = ASDisplayNode()
+        self.rightOverlayNode = ASDisplayNode()
         
         super.init()
         
@@ -351,15 +355,45 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
-        insets.left += layout.safeInsets.left
-        insets.right += layout.safeInsets.right
+        
+        var addedInsets: UIEdgeInsets?
+        if case .tablet = layout.deviceMetrics.type, layout.size.width > 460.0 {
+            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+            insets.left += inset
+            insets.right += inset
+            addedInsets = UIEdgeInsets(top: 0.0, left: inset, bottom: 0.0, right: inset)
+            
+            if self.leftOverlayNode.supernode == nil {
+                self.addSubnode(self.leftOverlayNode)
+            }
+            if self.rightOverlayNode.supernode == nil {
+                self.addSubnode(self.rightOverlayNode)
+            }
+        } else {
+            insets.left += layout.safeInsets.left
+            insets.right += layout.safeInsets.right
+            
+            if self.leftOverlayNode.supernode != nil {
+                self.leftOverlayNode.removeFromSupernode()
+            }
+            if self.rightOverlayNode.supernode != nil {
+                self.rightOverlayNode.removeFromSupernode()
+            }
+        }
         
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: insets.top + 1.0, width: insets.left, height: layout.size.height - insets.top)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - insets.right, y: insets.top + 1.0, width: insets.right, height: layout.size.height - insets.top)
+        
         if let emptyStateNode = self.emptyStateNode {
+            var layout = layout
+            if let addedInsets = addedInsets {
+                layout = layout.addedInsets(insets: addedInsets)
+            }
             emptyStateNode.updateLayout(layout: layout, navigationBarHeight: navigationBarHeight, transition: transition)
         }
         
@@ -401,9 +435,13 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
                         case .plain:
                             self.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
+                            self.leftOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
+                            self.rightOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
                         case .blocks:
                             self.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
+                            self.leftOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
+                            self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
             }
@@ -416,9 +454,13 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
                         case .plain:
                             self.backgroundColor = transition.theme.list.plainBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.plainBackgroundColor
+                            self.leftOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
+                            self.rightOverlayNode.backgroundColor = transition.theme.list.plainBackgroundColor
                         case .blocks:
                             self.backgroundColor = transition.theme.list.blocksBackgroundColor
                             self.listNode.backgroundColor = transition.theme.list.blocksBackgroundColor
+                            self.leftOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
+                            self.rightOverlayNode.backgroundColor = transition.theme.list.blocksBackgroundColor
                     }
                 }
             }
@@ -553,10 +595,6 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
                                         if itemTag.isEqual(to: ensureVisibleItemTag) {
                                             if let itemNode = itemNode as? ListViewItemNode {
                                                 strongSelf.listNode.ensureItemNodeVisible(itemNode)
-                                                /*itemNode.setHighlighted(true, at: CGPoint(), animated: false)
-                                                Queue.mainQueue().after(1.0, {
-                                                    itemNode.setHighlighted(false, at: CGPoint(), animated: true)
-                                                })*/
                                                 applied = true
                                             }
                                         }
@@ -613,21 +651,13 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
     
     open func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let distanceFromEquilibrium = scrollView.contentOffset.y - scrollView.contentSize.height / 3.0
-        
-        //let transition = 1.0 - min(1.0, max(0.0, abs(distanceFromEquilibrium) / 50.0))
-        
         self.updateNavigationOffset(-distanceFromEquilibrium)
-        
-        /*if let toolbarNode = toolbarNode {
-            toolbarNode.layer.position = CGPoint(x: toolbarNode.layer.position.x, y: self.bounds.size.height - toolbarNode.bounds.size.height / 2.0 + (1.0 - transition) * toolbarNode.bounds.size.height)
-        }*/
     }
     
     open func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         targetContentOffset.pointee = scrollView.contentOffset
         
         let scrollVelocity = scrollView.panGestureRecognizer.velocity(in: scrollView)
-        
         if abs(scrollVelocity.y) > 200.0 {
            self.animateOut()
         }

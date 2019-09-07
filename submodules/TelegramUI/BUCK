@@ -180,6 +180,7 @@ framework(
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/MessageReactionListUI:MessageReactionListUI",
+        "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [

@@ -114,7 +114,7 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         self.gridNode.scrollView.alwaysBounceVertical = true
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         var changedIsExpanded = false
         if let previousIsExpanded = self.isExpanded {
             if previousIsExpanded != isExpanded {
@@ -123,10 +123,17 @@ final class ChatMediaInputStickerPane: ChatMediaInputPane {
         }
         self.isExpanded = isExpanded
         
+        let maxItemSize: CGSize
+        if case .tablet = deviceMetrics.type, size.width > 480.0 {
+            maxItemSize = CGSize(width: 90.0, height: 96.0)
+        } else {
+            maxItemSize = CGSize(width: 75.0, height: 80.0)
+        }
+        
         let sideInset: CGFloat = 2.0
         var itemSide: CGFloat = floor((size.width - sideInset * 2.0) / 5.0)
-        itemSide = min(itemSide, 75.0)
-        let itemSize = CGSize(width: itemSide, height: max(itemSide, 80.0))
+        itemSide = min(itemSide, maxItemSize.width)
+        let itemSize = CGSize(width: itemSide, height: max(itemSide, maxItemSize.height))
         
         var scrollToItem: GridNodeScrollToItem?
         if changedIsExpanded {

@@ -47,13 +47,13 @@ public enum PresentationResourceKey: Int32 {
     case itemListAddExceptionIcon
     case itemListAddPhoneIcon
     case itemListClearInputIcon
-    
     case itemListStickerItemUnreadDot
     case itemListVerifiedPeerIcon
-    
     case itemListCloudFetchIcon
-    
     case itemListCloseIconImage
+    case itemListCornersTop
+    case itemListCornersBottom
+    case itemListCornersBoth
     
     case chatListLockTopUnlockedImage
     case chatListLockBottomUnlockedImage

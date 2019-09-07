@@ -4155,7 +4155,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         subscriber.putCompletion()
                         return EmptyDisposable
                     }
-                    subscriber.putNext(strongSelf.traceVisibility() && isTopmostChatController(strongSelf))
+                    
+                    subscriber.putNext(strongSelf.traceVisibility() && isTopmostChatController(strongSelf) && !strongSelf.context.sharedContext.mediaManager.audioSession.isOtherAudioPlaying())
                     subscriber.putCompletion()
                     return EmptyDisposable
                 } |> then(.complete() |> delay(1.0, queue: Queue.mainQueue())) |> restart

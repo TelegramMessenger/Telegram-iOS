@@ -714,6 +714,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EB84A82AD00000000"
+               BuildableName = "libSegmentedControlNode.a"
+               BlueprintName = "SegmentedControlNode"
+               ReferencedContainer = "container:submodules/SegmentedControlNode/SegmentedControlNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E621BFB7600000000"
                BuildableName = "libSwitchNode.a"
                BlueprintName = "SwitchNode"

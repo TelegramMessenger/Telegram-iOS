@@ -36,7 +36,7 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
     private let disposable = MetaDisposable()
     let trendingPromise = Promise<[FileMediaReference]?>(nil)
     
-    private var validLayout: (CGSize, CGFloat, CGFloat, Bool, Bool)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, Bool, Bool, DeviceMetrics)?
     private var didScrollPreviousOffset: CGFloat?
     
     private var didScrollPreviousState: ChatMediaInputPaneScrollState?
@@ -76,18 +76,18 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
         self.searchPlaceholderNode.setup(theme: theme, strings: strings, type: .gifs)
         
         if let layout = self.validLayout {
-            self.updateLayout(size: layout.0, topInset: layout.1, bottomInset: layout.2, isExpanded: layout.3, isVisible: layout.4, transition: .immediate)
+            self.updateLayout(size: layout.0, topInset: layout.1, bottomInset: layout.2, isExpanded: layout.3, isVisible: layout.4, deviceMetrics: layout.5, transition: .immediate)
         }
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, transition: ContainedViewLayoutTransition) {
+    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         var changedIsExpanded = false
-        if let (_, _, _, previousIsExpanded, _) = self.validLayout {
+        if let (_, _, _, previousIsExpanded, _, _) = self.validLayout {
             if previousIsExpanded != isExpanded {
                 changedIsExpanded = true
             }
         }
-        self.validLayout = (size, topInset, bottomInset, isExpanded, isVisible)
+        self.validLayout = (size, topInset, bottomInset, isExpanded, isVisible, deviceMetrics)
         
         let emptySize = self.emptyNode.updateLayout(size)
         transition.updateFrame(node: self.emptyNode, frame: CGRect(origin: CGPoint(x: floor(size.width - emptySize.width) / 2.0, y: topInset + floor(size.height - topInset - emptySize.height) / 2.0), size: emptySize))
@@ -96,8 +96,15 @@ final class ChatMediaInputGifPane: ChatMediaInputPane, UIScrollViewDelegate {
             let previousBounds = multiplexedNode.layer.bounds
             multiplexedNode.topInset = topInset + 60.0
             multiplexedNode.bottomInset = bottomInset
+
+            if case .tablet = deviceMetrics.type, size.width > 480.0 {
+                multiplexedNode.idealHeight = 120.0
+            } else {
+                multiplexedNode.idealHeight = 93.0
+            }
+            
             let nodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
-    
+
             var targetBounds = CGRect(origin: previousBounds.origin, size: nodeFrame.size)
             if changedIsExpanded {
                 targetBounds.origin.y = isExpanded || multiplexedNode.files.isEmpty ? 0.0 : 60.0

@@ -283,7 +283,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                                 if let segmentedTitleView = strongSelf.segmentedTitleView, segmentedTitleView.segments == sections {
                                     segmentedTitleView.index = index
                                 } else {
-                                    let segmentedTitleView = ItemListControllerSegmentedTitleView(segments: sections, index: index, color: controllerState.theme.rootController.navigationBar.accentTextColor)
+                                    let segmentedTitleView = ItemListControllerSegmentedTitleView(theme: controllerState.theme, segments: sections, selectedIndex: index)
                                     strongSelf.segmentedTitleView = segmentedTitleView
                                     strongSelf.navigationItem.titleView = strongSelf.segmentedTitleView
                                     segmentedTitleView.indexUpdated = { index in
@@ -406,7 +406,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                         strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: strongSelf.theme), strings: NavigationBarStrings(presentationStrings: strongSelf.strings)))
                         strongSelf.statusBar.statusBarStyle = strongSelf.theme.rootController.statusBarStyle.style
                         
-                        strongSelf.segmentedTitleView?.color = controllerState.theme.rootController.navigationBar.accentTextColor
+                        strongSelf.segmentedTitleView?.theme = controllerState.theme
                         
                         var items = strongSelf.navigationItem.rightBarButtonItems ?? []
                         for i in 0 ..< strongSelf.rightNavigationButtonTitleAndStyle.count {

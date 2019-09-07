@@ -17,6 +17,7 @@ static_library(
         "//submodules/SwitchNode:SwitchNode",
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/CheckNode:CheckNode",
+        "//submodules/SegmentedControlNode:SegmentedControlNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
