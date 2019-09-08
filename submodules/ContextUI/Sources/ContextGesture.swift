@@ -92,7 +92,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         
         if let touch = touches.first {
             if #available(iOS 9.0, *) {
-                let maxForce: CGFloat = min(3.0, touch.maximumPossibleForce)
+                let maxForce: CGFloat = max(2.5, min(3.0, touch.maximumPossibleForce))
                 let progress = touch.force / maxForce
                 self.currentProgress = progress
                 if self.isValidated {
