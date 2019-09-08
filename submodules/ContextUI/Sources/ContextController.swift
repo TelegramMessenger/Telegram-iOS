@@ -366,8 +366,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 })
             }
         } else {
+            self.effectView.effect = makeCustomZoomBlurEffect()
+            self.effectView.alpha = 0.0
             UIView.animate(withDuration: 0.2 * animationDurationFactor, animations: {
-                self.effectView.effect = makeCustomZoomBlurEffect()
+                self.effectView.alpha = 1.0
             }, completion: { [weak self] _ in
                 self?.didCompleteAnimationIn = true
             })
@@ -478,11 +480,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.effectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.05 * animationDurationFactor, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)
         } else {
             UIView.animate(withDuration: 0.21 * animationDurationFactor, animations: {
-                if #available(iOS 9.0, *) {
-                    self.effectView.effect = nil
-                } else {
-                    self.effectView.alpha = 0.0
-                }
+                self.effectView.alpha = 0.0
             }, completion: { _ in
                 completedEffect = true
                 intermediateCompletion()
