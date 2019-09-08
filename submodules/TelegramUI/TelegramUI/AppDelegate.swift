@@ -1185,9 +1185,7 @@ final class SharedApplicationContext {
             BITHockeyManager.shared().configure(withIdentifier: hockeyAppId, delegate: self)
             BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
             BITHockeyManager.shared().start()
-            #if !BUCK
             BITHockeyManager.shared().authenticator.authenticateInstallation()
-            #endif
         }
         
         NotificationCenter.default.addObserver(forName: UIWindow.didBecomeHiddenNotification, object: nil, queue: nil, using: { notification in

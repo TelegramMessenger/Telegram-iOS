@@ -509,10 +509,10 @@
       [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonSearching") enabled:NO] animated:animated];
       break;
     case AppStoreButtonStateUpdate:
-      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonUpdate") enabled:YES] animated:animated];
+      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"Update") enabled:YES] animated:animated];
       break;
     case AppStoreButtonStateInstalling:
-      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"UpdateButtonInstalling") enabled:NO] animated:animated];
+      [self.appStoreButton setButtonData:[BITStoreButtonData dataWithLabel:BITHockeyLocalizedString(@"Installing") enabled:NO] animated:animated];
       break;
     default:
       break;
