@@ -576,7 +576,7 @@ public func actualizedTheme(account: Account, accountManager: AccountManager, th
                 }
             }
             |> map { themes -> TelegramTheme in
-                let updatedTheme = themes.filter { $0.id == theme.id }.first
+                let updatedTheme = themes.first(where: { $0.id == theme.id })
                 if let updatedTheme = updatedTheme {
                     if !areThemesEqual(updatedTheme, currentTheme) {
                         currentTheme = updatedTheme
