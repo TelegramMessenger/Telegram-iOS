@@ -3,8 +3,8 @@ load("//Config:buck_rule_macros.bzl", "framework")
 framework(
     name = "Display",
     srcs = glob([
-        "Display/*.swift",
-        "Display/*.m",
+        "Display/**/*.swift",
+        "Display/**/*.m",
     ]),
     headers = glob([
         "Display/*.h",

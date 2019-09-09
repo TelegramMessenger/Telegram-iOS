@@ -51,17 +51,6 @@ private final class NavigationControllerView: UITracingLayerView {
     var masterDetailsBlackout: ASDisplayNode?
     var topControllerNode: ASDisplayNode?
     
-    /*override var accessibilityElements: [Any]? {
-        get {
-            var accessibilityElements: [Any] = []
-            if let topControllerNode = self.topControllerNode {
-                addAccessibilityChildren(of: topControllerNode, container: self, to: &accessibilityElements)
-            }
-            return accessibilityElements
-        } set(value) {
-        }
-    }*/
-    
     override init(frame: CGRect) {
         self.containerView = NavigationControllerContainerView()
         self.separatorView = UIView()
@@ -235,12 +224,6 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.controllerView.separatorView.backgroundColor = theme.navigationBar.separatorColor
             self.controllerView.navigationBackgroundView?.backgroundColor = theme.navigationBar.backgroundColor
             self.controllerView.navigationSeparatorView?.backgroundColor = theme.navigationBar.separatorColor
-//            if let emptyDetailView = self.controllerView.emptyDetailView {
-//                emptyDetailView.image = theme.emptyDetailIcon
-//                if let image = theme.emptyDetailIcon {
-//                    emptyDetailView.frame = CGRect(origin: CGPoint(x: floor(emptyDetailView.center.x - image.size.width / 2.0), y: floor(emptyDetailView.center.y - image.size.height / 2.0)), size: image.size)
-//                }
-//            }
         }
     }
     
