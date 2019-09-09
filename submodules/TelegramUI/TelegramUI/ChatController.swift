@@ -1667,6 +1667,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 if !initialReactions.isEmpty {
+                    strongSelf.chatDisplayNode.dismissInput()
                     strongSelf.present(MessageReactionListController(context: strongSelf.context, messageId: message.id, initialReactions: initialReactions), in: .window(.root))
                 }
             })

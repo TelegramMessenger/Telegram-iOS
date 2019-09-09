@@ -11,7 +11,7 @@ import ItemListPeerItem
 public final class MessageReactionListController: ViewController {
     private let context: AccountContext
     private let messageId: MessageId
-    private let presentatonData: PresentationData
+    private let presentationData: PresentationData
     private let initialReactions: [MessageReaction]
     
     private var controllerNode: MessageReactionListControllerNode {
@@ -28,7 +28,7 @@ public final class MessageReactionListController: ViewController {
     public init(context: AccountContext, messageId: MessageId, initialReactions: [MessageReaction]) {
         self.context = context
         self.messageId = messageId
-        self.presentatonData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.initialReactions = initialReactions
         
         super.init(navigationBarPresentationData: nil)
@@ -41,7 +41,7 @@ public final class MessageReactionListController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = MessageReactionListControllerNode(context: self.context, presentatonData: self.presentatonData, messageId: messageId, initialReactions: initialReactions, dismiss: { [weak self] in
+        self.displayNode = MessageReactionListControllerNode(context: self.context, presentationData: self.presentationData, messageId: messageId, initialReactions: initialReactions, dismiss: { [weak self] in
             self?.dismiss()
         })
         
@@ -113,14 +113,14 @@ private let itemHeight: CGFloat = 50.0
 
 private func topInsetForLayout(layout: ContainerViewLayout, itemCount: Int) -> CGFloat {
     let contentHeight = CGFloat(itemCount) * itemHeight
-    let minimumItemHeights: CGFloat = contentHeight
+    let minimumItemHeights: CGFloat = max(contentHeight, itemHeight * 5.0)
     
     return max(layout.size.height - layout.intrinsicInsets.bottom - minimumItemHeights, headerHeight)
 }
 
 private final class MessageReactionListControllerNode: ViewControllerTracingNode {
     private let context: AccountContext
-    private let presentatonData: PresentationData
+    private let presentationData: PresentationData
     private let dismiss: () -> Void
     
     private let listContext: MessageReactionListContext
@@ -129,9 +129,12 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
     private let backgroundNode: ASDisplayNode
     private let contentHeaderContainerNode: ASDisplayNode
     private let contentHeaderContainerBackgroundNode: ASImageNode
+    private let contentHeaderContainerSeparatorNode: ASDisplayNode
     private var categoryItemNodes: [MessageReactionCategoryNode] = []
     private let categoryScrollNode: ASScrollNode
     private let listNode: ListView
+    private var placeholderNode: MessageReactionListLoadingPlaceholder?
+    private var placeholderNodeIsAnimatingOut = false
     
     private var validLayout: ContainerViewLayout?
     
@@ -146,32 +149,38 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
     
     private var forceHeaderTransition: ContainedViewLayoutTransition?
     
-    init(context: AccountContext, presentatonData: PresentationData, messageId: MessageId, initialReactions: [MessageReaction], dismiss: @escaping () -> Void) {
+    init(context: AccountContext, presentationData: PresentationData, messageId: MessageId, initialReactions: [MessageReaction], dismiss: @escaping () -> Void) {
         self.context = context
-        self.presentatonData = presentatonData
+        self.presentationData = presentationData
         self.dismiss = dismiss
         
         self.dimNode = ASDisplayNode()
         self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.5)
         
         self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.backgroundColor = self.presentatonData.theme.actionSheet.opaqueItemBackgroundColor
+        self.backgroundNode.backgroundColor = self.presentationData.theme.actionSheet.opaqueItemBackgroundColor
         
         self.contentHeaderContainerNode = ASDisplayNode()
         self.contentHeaderContainerBackgroundNode = ASImageNode()
         self.contentHeaderContainerBackgroundNode.displaysAsynchronously = false
         
+        self.contentHeaderContainerSeparatorNode = ASDisplayNode()
+        self.contentHeaderContainerSeparatorNode.backgroundColor = self.presentationData.theme.list.itemPlainSeparatorColor
+        
         self.categoryScrollNode = ASScrollNode()
         self.contentHeaderContainerBackgroundNode.displayWithoutProcessing = true
         self.contentHeaderContainerBackgroundNode.image = generateImage(CGSize(width: 10.0, height: 10.0), rotatedContext: { size, context in
             context.clear(CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(presentatonData.theme.rootController.navigationBar.backgroundColor.cgColor)
+            context.setFillColor(presentationData.theme.rootController.navigationBar.backgroundColor.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
             context.fill(CGRect(origin: CGPoint(x: 0.0, y: size.height / 2.0), size: CGSize(width: size.width, height: size.height / 2.0)))
         })?.stretchableImage(withLeftCapWidth: 5, topCapHeight: 5)
         
         self.listNode = ListView()
         self.listNode.limitHitTestToNodes = true
+        
+        self.placeholderNode = MessageReactionListLoadingPlaceholder(theme: presentationData.theme, itemHeight: itemHeight)
+        self.placeholderNode?.isUserInteractionEnabled = false
         
         self.listContext = MessageReactionListContext(postbox: self.context.account.postbox, network: self.context.account.network, messageId: messageId, initialReactions: initialReactions)
         
@@ -182,9 +191,11 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         
         self.listNode.stackFromBottom = false
         self.addSubnode(self.listNode)
+        self.placeholderNode.flatMap(self.addSubnode)
         
         self.addSubnode(self.contentHeaderContainerNode)
         self.contentHeaderContainerNode.addSubnode(self.contentHeaderContainerBackgroundNode)
+        self.contentHeaderContainerNode.addSubnode(self.contentHeaderContainerSeparatorNode)
         self.contentHeaderContainerNode.addSubnode(self.categoryScrollNode)
         
         self.listNode.updateFloatingHeaderOffset = { [weak self] offset, listTransition in
@@ -198,6 +209,10 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
             let topOffset = offset
             transition.updateFrame(node: strongSelf.contentHeaderContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topOffset - headerHeight), size: CGSize(width: layout.size.width, height: headerHeight)))
             transition.updateFrame(node: strongSelf.contentHeaderContainerBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: headerHeight)))
+            transition.updateFrame(node: strongSelf.contentHeaderContainerSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: headerHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
+            if let placeholderNode = strongSelf.placeholderNode {
+                transition.updateFrame(node: placeholderNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topOffset), size: placeholderNode.bounds.size))
+            }
             transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topOffset - headerHeight / 2.0), size: CGSize(width: layout.size.width, height: layout.size.height + 300.0)))
         }
         
@@ -223,11 +238,8 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        //transition.updateBounds(node: self.listNode, bounds: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height))
-        //transition.updatePosition(node: self.listNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
-        
-        self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
-        self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
+        transition.updateBounds(node: self.listNode, bounds: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height))
+        transition.updatePosition(node: self.listNode, position: CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0))
         
         var currentCategoryItemCount = 0
         if let currentState = self.currentState {
@@ -242,6 +254,12 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         var insets = UIEdgeInsets()
         insets.top = topInsetForLayout(layout: layout, itemCount: currentCategoryItemCount)
         insets.bottom = layout.intrinsicInsets.bottom
+        
+        if let placeholderNode = self.placeholderNode, !self.placeholderNodeIsAnimatingOut {
+            let placeholderHeight = min(CGFloat(currentCategoryItemCount) * itemHeight, layout.size.height) + UIScreenPixel
+            placeholderNode.frame = CGRect(origin: placeholderNode.frame.origin, size: CGSize(width: layout.size.width, height: placeholderHeight))
+            placeholderNode.updateLayout(size: CGSize(width: layout.size.width, height: placeholderHeight))
+        }
         
         var duration: Double = 0.0
         var curve: UInt = 0
@@ -322,7 +340,7 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         let states = self.currentState?.states ?? []
         for (category, categoryState) in states {
             if self.categoryItemNodes.count <= index {
-                let itemNode = MessageReactionCategoryNode(theme: self.presentatonData.theme, category: category, count: categoryState.count, action: { [weak self] in
+                let itemNode = MessageReactionCategoryNode(theme: self.presentationData.theme, category: category, count: categoryState.count, action: { [weak self] in
                     self?.setCategory(category)
                 })
                 self.categoryItemNodes.append(itemNode)
@@ -341,7 +359,7 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
             }
             index += 1
         }
-        let transaction = preparedTransition(from: self.currentEntries ?? [], to: entries, context: self.context, presentationData: self.presentatonData)
+        let transaction = preparedTransition(from: self.currentEntries ?? [], to: entries, context: self.context, presentationData: self.presentationData)
         let previousWasEmpty = self.currentEntries == nil || self.currentEntries?.count == 0
         let isEmpty = entries.isEmpty
         self.currentEntries = entries
@@ -350,7 +368,20 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         self.dequeueTransaction()
         
         if previousWasEmpty && !isEmpty {
-            self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+            if let placeholderNode = self.placeholderNode {
+                self.placeholderNodeIsAnimatingOut = true
+                placeholderNode.allowsGroupOpacity = true
+                placeholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.18, removeOnCompletion: false, completion: { [weak self] _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.placeholderNode?.removeFromSupernode()
+                    strongSelf.placeholderNode = nil
+                })
+            }
+            self.listNode.forEachItemNode({ itemNode in
+                itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.18)
+            })
         }
     }
     
@@ -380,9 +411,8 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
         
         var options = ListViewDeleteAndInsertOptions()
         options.insert(.Synchronous)
-        //options.insert(.AnimateTopItemPosition)
-        //options.insert(.AnimateCrossfade)
         options.insert(.PreferSynchronousResourceLoading)
+        options.insert(.PreferSynchronousDrawing)
         
         var currentCategoryItemCount = 0
         if let currentState = self.currentState {
@@ -417,6 +447,15 @@ private final class MessageReactionListControllerNode: ViewControllerTracingNode
                 return result
             }
         }
-        return super.hitTest(point, with: event)
+        if let result = self.listNode.hitTest(self.view.convert(point, to: self.listNode.view), with: event) {
+            return result
+        }
+        if point.y >= self.contentHeaderContainerNode.frame.minY && point.y < self.bounds.height {
+            return self.listNode.view
+        }
+        if point.y >= 0 && point.y < self.contentHeaderContainerNode.frame.minY {
+            return self.dimNode.view
+        }
+        return nil
     }
 }

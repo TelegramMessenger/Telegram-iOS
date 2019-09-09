@@ -10,7 +10,7 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
     private let theme: PresentationTheme
     
     private var currentNode: ReactionSelectionNode?
-    private var currentLocation: (CGPoint, CGFloat)?
+    private var currentLocation: (CGPoint, CGFloat, CGPoint)?
     
     private var validLayout: (size: CGSize, insets: UIEdgeInsets)?
     
@@ -21,7 +21,7 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
         super.init()
     }
     
-    func displayReactions(_ reactions: [ReactionGestureItem], at point: CGPoint) {
+    func displayReactions(_ reactions: [ReactionGestureItem], at point: CGPoint, touchPoint: CGPoint) {
         if let currentNode = self.currentNode {
             currentNode.removeFromSupernode()
             self.currentNode = nil
@@ -30,7 +30,7 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
         let reactionNode = ReactionSelectionNode(account: self.account, theme: self.theme, reactions: reactions)
         self.addSubnode(reactionNode)
         self.currentNode = reactionNode
-        self.currentLocation = (point, point.x)
+        self.currentLocation = (point, point.x, touchPoint)
         
         if let (size, insets) = self.validLayout {
             self.update(size: size, insets: insets, isInitial: true)
@@ -55,9 +55,9 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
         }
     }
     
-    func updateReactionsAnchor(point: CGPoint) {
-        if let (currentPoint, _) = self.currentLocation {
-            self.currentLocation = (currentPoint, point.x)
+    func updateReactionsAnchor(point: CGPoint, touchPoint: CGPoint) {
+        if let (currentPoint, _, _) = self.currentLocation {
+            self.currentLocation = (currentPoint, point.x, touchPoint)
             
             if let (size, insets) = self.validLayout {
                 self.update(size: size, insets: insets, isInitial: false)
@@ -72,8 +72,8 @@ public final class ReactionSelectionParentNode: ASDisplayNode {
     }
     
     private func update(size: CGSize, insets: UIEdgeInsets, isInitial: Bool) {
-        if let currentNode = self.currentNode, let (point, offset) = currentLocation {
-            currentNode.updateLayout(constrainedSize: size, startingPoint: point, offsetFromStart: offset, isInitial: isInitial)
+        if let currentNode = self.currentNode, let (point, offset, touchPoint) = self.currentLocation {
+            currentNode.updateLayout(constrainedSize: size, startingPoint: CGPoint(x: size.width - 32.0, y: point.y), offsetFromStart: offset, isInitial: isInitial, touchPoint: touchPoint)
             currentNode.frame = CGRect(origin: CGPoint(), size: size)
         }
     }
