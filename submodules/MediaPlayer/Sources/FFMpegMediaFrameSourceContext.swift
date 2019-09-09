@@ -75,7 +75,7 @@ private func readPacketCallback(userData: UnsafeMutableRawPointer?, buffer: Unsa
     let readCount = min(resourceSize - context.readingOffset, Int(bufferSize))
     let requestRange: Range<Int> = context.readingOffset ..< (context.readingOffset + readCount)
     
-    precondition(readCount < 3 * 1024 * 1024)
+    assert(readCount < 16 * 1024 * 1024)
     
     if let maximumFetchSize = context.maximumFetchSize {
         context.touchedRanges.insert(integersIn: requestRange)
