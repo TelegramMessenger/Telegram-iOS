@@ -4724,3 +4724,6 @@ Any member of this group will be able to see messages in the channel.";
 "Theme.UsersCount_0" = "%@ people are using this theme";
 
 "Conversation.SendMessageErrorTooMuchScheduled" = "Sorry, you can not schedule more than 100 messages.";
+
+"Channel.EditAdmin.PermissionDeleteMessagesOfOthers" = "Delete Messages of Others";
+"Channel.AdminLog.CanDeleteMessagesOfOthers" = "Delete Messages of Others";

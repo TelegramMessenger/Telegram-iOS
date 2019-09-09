@@ -519,6 +519,10 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
                             switch effectiveChatWallpaper {
                                 case .builtin, .color:
                                     effectiveChatWallpaper = themeValue.chat.defaultWallpaper
+                                case let .file(file):
+                                    if file.isPattern {
+                                        effectiveChatWallpaper = themeValue.chat.defaultWallpaper
+                                    }
                                 default:
                                     break
                             }

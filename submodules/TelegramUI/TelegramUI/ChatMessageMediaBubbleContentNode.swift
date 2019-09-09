@@ -6,6 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import TelegramPresentationData
 import AccountContext
 import GridMessageSelectionNode
 
@@ -115,7 +116,17 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             switch preparePosition {
                 case .linear:
                     if case .color = item.presentationData.theme.wallpaper {
-                        bubbleInsets = UIEdgeInsets()
+                        let colors: PresentationThemeBubbleColorComponents
+                        if item.message.effectivelyIncoming(item.context.account.peerId) {
+                            colors = item.presentationData.theme.theme.chat.message.incoming.bubble.withoutWallpaper
+                        } else {
+                            colors = item.presentationData.theme.theme.chat.message.outgoing.bubble.withoutWallpaper
+                        }
+                        if colors.fill == colors.stroke {
+                            bubbleInsets = UIEdgeInsets()
+                        } else {
+                            bubbleInsets = layoutConstants.bubble.strokeInsets
+                        }
                     } else {
                         bubbleInsets = layoutConstants.image.bubbleInsets
                     }

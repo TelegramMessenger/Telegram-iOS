@@ -159,7 +159,6 @@ private func checkIsPreviewingView(_ view: UIView) -> Bool {
 private func applyThemeToPreviewingView(_ view: UIView, accentColor: UIColor, darkBlur: Bool) {
     if let previewingActionGroupClass = previewingActionGroupClass, view.isKind(of: previewingActionGroupClass) {
         view.tintColor = accentColor
-        testZoomBlurEffect((view.superview?.superview?.subviews[1] as? UIVisualEffectView)?.effect)
         if darkBlur {
             applyThemeToPreviewingEffectView(view)
         }
