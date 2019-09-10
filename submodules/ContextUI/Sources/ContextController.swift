@@ -169,6 +169,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.scrollNode.view.delegate = self
         
+        self.view.addSubview(self.effectView)
         self.addSubnode(self.dimNode)
         self.addSubnode(self.withoutBlurDimNode)
         
