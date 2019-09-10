@@ -40,6 +40,7 @@ private func cancelParentGestures(view: UIView) {
 public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private var currentProgress: CGFloat = 0.0
     private var delayTimer: Timer?
+    private var animator: DisplayLinkAnimator?
     private var isValidated: Bool = false
     
     public var activationProgress: ((CGFloat, ContextGestureTransition) -> Void)?
@@ -62,6 +63,8 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         self.isValidated = false
         self.externalUpdated = nil
         self.externalEnded = nil
+        self.animator?.invalidate()
+        self.animator = nil
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -80,6 +83,33 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                     return
                 }
                 strongSelf.isValidated = true
+                if strongSelf.animator == nil {
+                    strongSelf.animator = DisplayLinkAnimator(duration: 0.3, from: 0.0, to: 1.0, update: { value in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if strongSelf.isValidated {
+                            strongSelf.currentProgress = value
+                            strongSelf.activationProgress?(value, .update)
+                        }
+                    }, completion: {
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        switch strongSelf.state {
+                        case .possible:
+                            strongSelf.delayTimer?.invalidate()
+                            strongSelf.animator?.invalidate()
+                            strongSelf.activated?(strongSelf)
+                            if let view = strongSelf.view?.superview {
+                                cancelParentGestures(view: view)
+                            }
+                            strongSelf.state = .began
+                        default:
+                            break
+                        }
+                    })
+                }
                 strongSelf.activationProgress?(strongSelf.currentProgress, .begin)
             }, selector: #selector(TimerTargetWrapper.timerEvent), userInfo: nil, repeats: false)
             self.delayTimer = delayTimer
@@ -91,7 +121,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         super.touchesMoved(touches, with: event)
         
         if let touch = touches.first {
-            if #available(iOS 9.0, *) {
+            /*if #available(iOS 9.0, *) {
                 let maxForce: CGFloat = max(2.5, min(3.0, touch.maximumPossibleForce))
                 let progress = touch.force / maxForce
                 self.currentProgress = progress
@@ -111,7 +141,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                         break
                     }
                 }
-            }
+            }*/
             
             self.externalUpdated?(self.view, touch.location(in: self.view))
         }
@@ -131,6 +161,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         }
         
         self.delayTimer?.invalidate()
+        self.animator?.invalidate()
         
         self.state = .failed
     }
@@ -145,6 +176,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         }
         
         self.delayTimer?.invalidate()
+        self.animator?.invalidate()
         
         self.state = .failed
     }
@@ -154,6 +186,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
             self.activationProgress?(0.0, .ended(self.currentProgress))
             
             self.delayTimer?.invalidate()
+            self.animator?.invalidate()
             self.state = .failed
         }
     }
@@ -163,6 +196,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
             let previousProgress = self.currentProgress
             self.currentProgress = 0.0
             self.delayTimer?.invalidate()
+            self.animator?.invalidate()
             self.isValidated = false
             self.activationProgress?(0.0, .ended(previousProgress))
         }
