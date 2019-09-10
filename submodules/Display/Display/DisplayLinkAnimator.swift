@@ -44,7 +44,12 @@ public final class DisplayLinkAnimator {
         self.displayLink.invalidate()
     }
     
-    @objc func tick() {
+    public func invalidate() {
+        self.displayLink.isPaused = true
+        self.displayLink.invalidate()
+    }
+    
+    @objc private func tick() {
         if self.completed {
             return
         }

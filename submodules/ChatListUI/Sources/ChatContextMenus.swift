@@ -114,7 +114,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
         if let (group, index) = groupAndIndex {
             if !isSavedMessages {
                 let isArchived = group == Namespaces.PeerGroup.archive
-                items.append(.action(ContextMenuActionItem(text: isArchived ? strings.ChatList_Context_Archive : strings.ChatList_Context_Unarchive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isArchived ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: isArchived ? strings.ChatList_Context_Unarchive : strings.ChatList_Context_Archive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isArchived ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     if isArchived {
                         let _ = (context.account.postbox.transaction { transaction -> Void in
                             updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)

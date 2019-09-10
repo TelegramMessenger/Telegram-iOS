@@ -281,7 +281,8 @@ public class ContactsController: ViewController {
                 }
                 let presentPeersNearby = {
                     let controller = strongSelf.context.sharedContext.makePeersNearbyController(context: strongSelf.context)
-                    (strongSelf.navigationController as? NavigationController)?.replaceAllButRootController(controller, animated: true, completion: { [weak self] in
+                    controller.navigationPresentation = .master
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(controller, animated: true, completion: { [weak self] in
                         if let strongSelf = self {
                             strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                         }
@@ -294,6 +295,7 @@ public class ContactsController: ViewController {
                     default:
                         let controller = PermissionController(context: strongSelf.context, splashScreen: false)
                         controller.setState(.permission(.nearbyLocation(status: PermissionRequestStatus(accessType: status))), animated: false)
+                        controller.navigationPresentation = .master
                         controller.proceed = { result in
                             if result {
                                 presentPeersNearby()

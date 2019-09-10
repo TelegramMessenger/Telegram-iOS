@@ -509,6 +509,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                    chatListController.navigationPresentation = .master
                     navigationController.pushViewController(chatListController)
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
@@ -664,6 +665,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             switch item.content {
             case let .groupReference(groupReference):
                 let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupReference.groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(peer):
@@ -1094,6 +1096,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     }
                 case let .groupReference(groupId, _, _, _, _):
                     let chatListController = ChatListControllerImpl(context: self.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                    chatListController.navigationPresentation = .master
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatListController, sourceRect)
             }
