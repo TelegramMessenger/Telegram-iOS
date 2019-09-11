@@ -414,9 +414,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     func setMessage(_ message: Message) {
         self.currentMessage = message
         
-        self.actionButton.isHidden = message.containsSecretMedia || Namespaces.Message.allScheduled.contains(message.id.namespace)
-        
         let canDelete: Bool
+        var canShare = !message.containsSecretMedia && !Namespaces.Message.allScheduled.contains(message.id.namespace)
         if let peer = message.peers[message.id.peerId] {
             if peer is TelegramUser || peer is TelegramSecretChat {
                 canDelete = true
@@ -433,6 +432,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
         } else {
             canDelete = false
+            canShare = false
         }
         
         var authorNameText: String?
@@ -465,7 +465,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
         }
         
-        if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
+        self.actionButton.isHidden = message.containsSecretMedia || Namespaces.Message.allScheduled.contains(message.id.namespace)
+        
+        
+        if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canShare != !self.actionButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
             self.currentMessageText = messageText
             
             if messageText.length == 0 {
@@ -484,6 +487,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             self.dateNode.attributedText = NSAttributedString(string: dateText, font: dateFont, textColor: .white)
             
             self.deleteButton.isHidden = !canDelete
+            self.actionButton.isHidden = !canShare
             
             self.requestLayout?(.immediate)
         }
