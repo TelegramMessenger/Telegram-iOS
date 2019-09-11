@@ -235,12 +235,6 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.controllerView.separatorView.backgroundColor = theme.navigationBar.separatorColor
             self.controllerView.navigationBackgroundView?.backgroundColor = theme.navigationBar.backgroundColor
             self.controllerView.navigationSeparatorView?.backgroundColor = theme.navigationBar.separatorColor
-//            if let emptyDetailView = self.controllerView.emptyDetailView {
-//                emptyDetailView.image = theme.emptyDetailIcon
-//                if let image = theme.emptyDetailIcon {
-//                    emptyDetailView.frame = CGRect(origin: CGPoint(x: floor(emptyDetailView.center.x - image.size.width / 2.0), y: floor(emptyDetailView.center.y - image.size.height / 2.0)), size: image.size)
-//                }
-//            }
         }
     }
     
@@ -264,7 +258,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     private func layoutDataForConfiguration(_ layoutConfiguration: ControllerLayoutConfiguration, layout: ContainerViewLayout, index: Int) -> (CGRect, ContainerViewLayout) {
         switch layoutConfiguration {
             case .masterDetail:
-                let masterWidth: CGFloat = max(320.0, floor(layout.size.width / 3.0))
+                let masterWidth: CGFloat = max(320.0, min(375.0, floor(layout.size.width / 3.0)))
                 let detailWidth: CGFloat = layout.size.width - masterWidth
                 if index == 0 {
                     return (CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: masterWidth, height: layout.size.height)), ContainerViewLayout(size: CGSize(width: masterWidth, height: layout.size.height), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: layout.intrinsicInsets, safeInsets: layout.safeInsets, statusBarHeight: layout.statusBarHeight, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver))
@@ -367,10 +361,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                 if let blackout = self.masterDetailsBlackout {
                     let blackoutFrame: CGRect
                     switch blackout {
-                    case .details:
-                        blackoutFrame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: lastControllerFrameAndLayout.0.size)
-                    case .master:
-                        blackoutFrame = masterData.0
+                        case .details:
+                            blackoutFrame = CGRect(origin: CGPoint(x: masterData.0.maxX, y: 0.0), size: lastControllerFrameAndLayout.0.size)
+                        case .master:
+                            blackoutFrame = masterData.0
                     }
                     if self.controllerView.masterDetailsBlackout == nil {
                         self.controllerView.masterDetailsBlackout = ASDisplayNode()

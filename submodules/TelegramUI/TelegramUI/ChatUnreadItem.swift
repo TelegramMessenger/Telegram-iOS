@@ -61,7 +61,7 @@ class ChatUnreadItemNode: ListViewItemNode {
     
     private var theme: ChatPresentationThemeData?
     
-    private let layoutConstants = ChatMessageItemLayoutConstants()
+    private let layoutConstants = ChatMessageItemLayoutConstants.default
     
     init() {
         self.backgroundNode = ASImageNode()

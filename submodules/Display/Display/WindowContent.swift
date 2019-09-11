@@ -665,7 +665,7 @@ public class Window1 {
             }
         }
         
-        if let result = self.presentationContext.hitTest(point, with: event) {
+        if let result = self.presentationContext.hitTest(view: self.hostView.containerView, point: point, with: event) {
             return result
         }
         return self.viewController?.view.hitTest(point, with: event)

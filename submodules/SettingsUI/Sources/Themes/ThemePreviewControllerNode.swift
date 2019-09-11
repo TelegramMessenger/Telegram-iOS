@@ -45,6 +45,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var chatNodes: [ListViewItemNode]?
     private let maskNode: ASImageNode
     
+    private let separatorNode: ASDisplayNode
+    
     private let chatContainerNode: ASDisplayNode
     private let instantChatBackgroundNode: WallpaperBackgroundNode
     private let remoteChatBackgroundNode: TransformImageNode
@@ -113,6 +115,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.maskNode.displayWithoutProcessing = true
         self.maskNode.contentMode = .scaleToFill
         
+        self.separatorNode = ASDisplayNode()
+        self.separatorNode.backgroundColor = previewTheme.rootController.tabBar.separatorColor
+        
         super.init()
         
         self.setViewBlock({
@@ -144,6 +149,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         self.chatContainerNode.addSubnode(self.instantChatBackgroundNode)
         self.chatContainerNode.addSubnode(self.remoteChatBackgroundNode)
+        
+        self.addSubnode(self.separatorNode)
         
         self.toolbarNode.cancel = {
             dismiss()
@@ -299,13 +306,19 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func animateIn(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        if let (layout, _) = self.validLayout, case .compact = layout.metrics.widthClass {
+            self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+        }
     }
     
     func animateOut(completion: (() -> Void)? = nil) {
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
+        if let (layout, _) = self.validLayout, case .compact = layout.metrics.widthClass {
+            self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
+                completion?()
+            })
+        } else {
             completion?()
-        })
+        }
     }
     
     private func updateChatsLayout(layout: ContainerViewLayout, topInset: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -350,14 +363,21 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         items.append(ChatListItem(presentationData: chatListPresentationData, context: self.context, peerGroupId: .root, index: ChatListIndex(pinningIndex: nil, messageIndex: MessageIndex(id: MessageId(peerId: peer7.id, namespace: 0, id: 0), timestamp: timestamp - 420)), content: .peer(message: Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer7.id, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: timestamp - 420, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer6, text: self.presentationData.strings.Appearance_ThemePreview_ChatList_7_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: []), peer: RenderedPeer(peer: peer7), combinedReadState: nil, notificationSettings: nil, presence: nil, summaryInfo: ChatListMessageTagSummaryInfo(tagSummaryCount: nil, actionsSummaryCount: nil), embeddedState: nil, inputActivities: nil, isAd: false, ignoreUnreadBadge: false), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction))
         
-        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+        let width: CGFloat
+        if case .regular = layout.metrics.widthClass {
+            width = layout.size.width / 2.0
+        } else {
+            width = layout.size.width
+        }
+        
+        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let chatNodes = self.chatNodes {
             for i in 0 ..< items.count {
                 let itemNode = chatNodes[i]
                 items[i].updateNode(async: { $0() }, node: {
                     return itemNode
                 }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
-                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: width, height: layout.size.height))
                     
                     itemNode.contentSize = layout.contentSize
                     itemNode.insets = layout.insets
@@ -419,14 +439,21 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         let message4 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, timestamp: 66001, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [])
         items.append(self.context.sharedContext.makeChatMessagePreviewItem(context: self.context, message: message4, theme: self.previewTheme, strings: self.presentationData.strings, wallpaper: self.previewTheme.chat.defaultWallpaper, fontSize: self.presentationData.fontSize, dateTimeFormat: self.presentationData.dateTimeFormat, nameOrder: self.presentationData.nameDisplayOrder, forcedResourceStatus: nil))
         
-        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
+        let width: CGFloat
+        if case .regular = layout.metrics.widthClass {
+            width = layout.size.width / 2.0
+        } else {
+            width = layout.size.width
+        }
+        
+        let params = ListViewItemLayoutParams(width: width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right)
         if let messageNodes = self.messageNodes {
             for i in 0 ..< items.count {
                 let itemNode = messageNodes[i]
                 items[i].updateNode(async: { $0() }, node: {
                     return itemNode
                 }, params: params, previousItem: i == 0 ? nil : items[i - 1], nextItem: i == (items.count - 1) ? nil : items[i + 1], animation: .None, completion: { (layout, apply) in
-                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: layout.size.width, height: layout.size.height))
+                    let nodeFrame = CGRect(origin: itemNode.frame.origin, size: CGSize(width: width, height: layout.size.height))
                     
                     itemNode.contentSize = layout.contentSize
                     itemNode.insets = layout.insets
@@ -463,23 +490,49 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationBarHeight)
+        
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
         self.scrollNode.frame = bounds
         
         let toolbarHeight = 49.0 + layout.intrinsicInsets.bottom
         self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
         self.chatContainerNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+        
+        let bottomInset: CGFloat
+        if case .regular = layout.metrics.widthClass {
+            self.chatListBackgroundNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width / 2.0, height: bounds.height)
+            self.chatContainerNode.frame = CGRect(x: bounds.width / 2.0, y: 0.0, width: bounds.width / 2.0, height: bounds.height)
+            self.scrollNode.view.contentSize = CGSize(width: bounds.width, height: bounds.height)
+            
+            self.pageControlNode.isHidden = true
+            self.pageControlBackgroundNode.isHidden = true
+            self.separatorNode.isHidden = false
+            
+            self.separatorNode.frame = CGRect(x: bounds.width / 2.0, y: 0.0, width: UIScreenPixel, height: bounds.height - toolbarHeight)
+            
+            bottomInset = 0.0
+        } else {
+            self.chatListBackgroundNode.frame = CGRect(x: bounds.width, y: 0.0, width: bounds.width, height: bounds.height)
+            self.chatContainerNode.frame = CGRect(x: 0.0, y: 0.0, width: bounds.width, height: bounds.height)
+            self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
+            
+            self.pageControlNode.isHidden = false
+            self.pageControlBackgroundNode.isHidden = false
+            self.separatorNode.isHidden = true
+            
+            bottomInset = 66.0
+        }
+        
         self.instantChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.remoteChatBackgroundNode.frame = self.chatContainerNode.bounds
         self.blurredNode.frame = self.chatContainerNode.bounds
-    
-        self.scrollNode.view.contentSize = CGSize(width: bounds.width * 2.0, height: bounds.height)
         
         transition.updateFrame(node: self.toolbarNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: 49.0 + layout.intrinsicInsets.bottom)))
         self.toolbarNode.updateLayout(size: CGSize(width: layout.size.width, height: 49.0), layout: layout, transition: transition)
         
         self.updateChatsLayout(layout: layout, topInset: navigationBarHeight, transition: transition)
-        self.updateMessagesLayout(layout: layout, bottomInset: self.isPreview ? 0.0 : (toolbarHeight + 66.0), transition: transition)
+        self.updateMessagesLayout(layout: layout, bottomInset: self.isPreview ? 0.0 : (toolbarHeight + bottomInset), transition: transition)
         
         let pageControlSize = self.pageControlNode.measure(CGSize(width: bounds.width, height: 100.0))
         let pageControlFrame = CGRect(origin: CGPoint(x: floor((bounds.width - pageControlSize.width) / 2.0), y: layout.size.height - toolbarHeight - 42.0), size: pageControlSize)
