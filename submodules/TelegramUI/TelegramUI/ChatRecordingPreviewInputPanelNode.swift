@@ -19,7 +19,7 @@ private func generatePlayIcon(_ theme: PresentationTheme) -> UIImage? {
 
 final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode
-    private let sendButton: HighlightableButtonNode
+    let sendButton: HighlightTrackingButtonNode
     private var sendButtonRadialStatusNode: ChatSendButtonRadialStatusNode?
     private let playButton: HighlightableButtonNode
     private let pauseButton: HighlightableButtonNode
@@ -42,7 +42,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.deleteButton.displaysAsynchronously = false
         self.deleteButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: theme.chat.inputPanel.panelControlAccentColor), for: [])
         
-        self.sendButton = HighlightableButtonNode()
+        self.sendButton = HighlightTrackingButtonNode()
         self.sendButton.displaysAsynchronously = false
         self.sendButton.setImage(PresentationResourcesChat.chatInputPanelSendButtonImage(theme), for: [])
         
@@ -87,6 +87,16 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.addSubnode(self.durationLabel)
         self.addSubnode(self.waveformButton)
         
+        self.sendButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.sendButton.layer.animateScale(from: 1.0, to: 0.75, duration: 0.4, removeOnCompletion: false)
+                } else if let presentationLayer = strongSelf.sendButton.layer.presentation() {
+                    strongSelf.sendButton.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.25, removeOnCompletion: false)
+                }
+            }
+        }
+        
         self.deleteButton.addTarget(self, action: #selector(self.deletePressed), forControlEvents: [.touchUpInside])
         self.sendButton.addTarget(self, action: #selector(self.sendPressed), forControlEvents: [.touchUpInside])
         
@@ -98,8 +108,18 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
         self.statusDisposable.dispose()
     }
     
-    @objc func buttonPressed() {
-        self.interfaceInteraction?.deleteChat()
+    override func didLoad() {
+        super.didLoad()
+        
+        let gestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.handleLongPress(_:)))
+        gestureRecognizer.minimumPressDuration = 0.4
+        self.sendButton.view.addGestureRecognizer(gestureRecognizer)
+    }
+    
+    @objc func handleLongPress(_ gestureRecognizer: UILongPressGestureRecognizer) {
+        if gestureRecognizer.state == .began {
+            self.interfaceInteraction?.displaySendMessageOptions()
+        }
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {

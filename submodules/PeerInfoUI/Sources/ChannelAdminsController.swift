@@ -380,7 +380,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
                     switch participant.participant {
                         case .creator:
                             canEdit = false
-                            canOpen = false
+                            canOpen = isGroup && peer.flags.contains(.isCreator)
                         case let .member(id, _, adminInfo, _, _):
                             if id == accountPeerId {
                                 canEdit = false
