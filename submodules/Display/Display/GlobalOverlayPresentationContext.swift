@@ -119,7 +119,11 @@ final class GlobalOverlayPresentationContext {
             }
         }
         if let presentationView = self.currentPresentationView(underStatusBar: underStatusBar), let initialLayout = self.layout {
-            controller.view.frame = CGRect(origin: CGPoint(x: presentationView.bounds.width - initialLayout.size.width, y: 0.0), size: initialLayout.size)
+            if initialLayout.metrics.widthClass == .regular {
+                controller.view.frame = CGRect(origin: CGPoint(x: presentationView.bounds.width - initialLayout.size.width, y: 0.0), size: initialLayout.size)
+            } else {
+                controller.view.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: initialLayout.size)
+            }
             controller.containerLayoutUpdated(initialLayout, transition: .immediate)
             
             self.presentationDisposables.add(controllerReady.start(next: { [weak self] _ in
@@ -137,7 +141,11 @@ final class GlobalOverlayPresentationContext {
                         }, rootController: nil)
                         (controller as? UIViewController)?.setIgnoreAppearanceMethodInvocations(true)
                         if layout != initialLayout {
-                            controller.view.frame = CGRect(origin: CGPoint(x: view.bounds.width - layout.size.width, y: 0.0), size: layout.size)
+                            if layout.metrics.widthClass == .regular {
+                                controller.view.frame = CGRect(origin: CGPoint(x: view.bounds.width - layout.size.width, y: 0.0), size: layout.size)
+                            } else {
+                                controller.view.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size)
+                            }
                             view.addSubview(controller.view)
                             controller.containerLayoutUpdated(layout, transition: .immediate)
                         } else {
@@ -204,7 +212,11 @@ final class GlobalOverlayPresentationContext {
                     }
                     view.addSubview(controller.view)
                     if !justMove {
-                        controller.view.frame = CGRect(origin: CGPoint(x: view.bounds.width - layout.size.width, y: 0.0), size: layout.size)
+                        if layout.metrics.widthClass == .regular {
+                            controller.view.frame = CGRect(origin: CGPoint(x: view.bounds.width - layout.size.width, y: 0.0), size: layout.size)
+                        } else {
+                            controller.view.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: layout.size)
+                        }
                         controller.containerLayoutUpdated(layout, transition: .immediate)
                         controller.viewDidAppear(false)
                     }

@@ -1185,7 +1185,8 @@ final class SharedApplicationContext {
             BITHockeyManager.shared().configure(withIdentifier: hockeyAppId, delegate: self)
             BITHockeyManager.shared().crashManager.crashManagerStatus = .alwaysAsk
             BITHockeyManager.shared().start()
-            #if !BUCK
+            #if targetEnvironment(simulator)
+            #else
             BITHockeyManager.shared().authenticator.authenticateInstallation()
             #endif
         }

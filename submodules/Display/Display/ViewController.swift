@@ -55,6 +55,11 @@ open class ViewControllerPresentationArguments {
     }
 }
 
+public enum ViewControllerNavigationPresentation {
+    case `default`
+    case master
+}
+
 @objc open class ViewController: UIViewController, ContainableController {
     private var validLayout: ContainerViewLayout?
     public var currentlyAppliedLayout: ContainerViewLayout? {
@@ -116,6 +121,8 @@ open class ViewControllerPresentationArguments {
     override open var prefersHomeIndicatorAutoHidden: Bool {
         return self.preferNavigationUIHidden
     }
+    
+    open var navigationPresentation: ViewControllerNavigationPresentation = .default
     
     public var presentationArguments: Any?
     
@@ -236,6 +243,10 @@ open class ViewControllerPresentationArguments {
         return true
     }
     
+    open func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        return nil
+    }
+    
     private func updateScrollToTopView() {
         if self.scrollToTop != nil {
             if let displayNode = self._displayNode , self.scrollToTopView == nil {
@@ -267,9 +278,20 @@ open class ViewControllerPresentationArguments {
         
         self.navigationBar?.backPressed = { [weak self] in
             if let strongSelf = self, strongSelf.attemptNavigation({
-                self?.navigationController?.popViewController(animated: true)
+                guard let strongSelf = self else {
+                    return
+                }
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigationController.filterController(strongSelf, animated: true)
+                } else {
+                    strongSelf.navigationController?.popViewController(animated: true)
+                }
             }) {
-                strongSelf.navigationController?.popViewController(animated: true)
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigationController.filterController(strongSelf, animated: true)
+                } else {
+                    strongSelf.navigationController?.popViewController(animated: true)
+                }
             }
         }
         self.navigationBar?.requestContainerLayout = { [weak self] transition in

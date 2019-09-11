@@ -22,6 +22,7 @@ public protocol ContainableController: class {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition)
     func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation)
     func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition)
+    func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize?
     
     func viewWillAppear(_ animated: Bool)
     func viewWillDisappear(_ animated: Bool)

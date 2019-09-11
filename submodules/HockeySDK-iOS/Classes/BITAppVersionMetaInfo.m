@@ -166,7 +166,7 @@
 - (NSString *)versionString {
   NSString *shortString = ([self.shortVersion respondsToSelector:@selector(length)] && [self.shortVersion length]) ? [NSString stringWithFormat:@"%@", self.shortVersion] : @"";
   NSString *versionString = [shortString length] ? [NSString stringWithFormat:@" (%@)", self.version] : self.version;
-  return [NSString stringWithFormat:@"%@ %@%@", BITHockeyLocalizedString(@"UpdateVersion"), shortString, versionString];
+  return [NSString stringWithFormat:@"%@ %@%@", BITHockeyLocalizedString(@"Version"), shortString, versionString];
 }
 
 - (NSString *)dateString {

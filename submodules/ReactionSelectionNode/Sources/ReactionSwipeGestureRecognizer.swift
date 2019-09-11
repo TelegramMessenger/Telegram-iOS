@@ -15,11 +15,15 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
     
     public var availableReactions: (() -> [ReactionGestureItem])?
     public var getReactionContainer: (() -> ReactionSelectionParentNode?)?
+    public var getAnchorPoint: (() -> CGPoint?)?
     public var began: (() -> Void)?
     public var updateOffset: ((CGFloat, Bool) -> Void)?
     public var completed: ((ReactionGestureItem?) -> Void)?
     public var displayReply: ((CGFloat) -> Void)?
     public var activateReply: (() -> Void)?
+    
+    private var currentAnchorPoint: CGPoint?
+    private var currentAnchorStartPoint: CGPoint?
     
     override public init(target: Any?, action: Selector?) {
         super.init(target: target, action: action)
@@ -95,17 +99,20 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                         self.f()
                     }
                 }
-                let activationTimer = Timer(timeInterval: 0.3, target: TimerTarget { [weak self] in
+                let activationTimer = Timer(timeInterval: 0.1, target: TimerTarget { [weak self] in
                     guard let strongSelf = self else {
                         return
                     }
                     strongSelf.activationTimer = nil
                     if strongSelf.validatedGesture {
                         let location = strongSelf.currentLocation
-                        if !strongSelf.currentReactions.isEmpty, let reactionContainer = strongSelf.getReactionContainer?() {
+                        if !strongSelf.currentReactions.isEmpty, let reactionContainer = strongSelf.getReactionContainer?(), let localAnchorPoint = strongSelf.getAnchorPoint?() {
                             strongSelf.currentContainer = reactionContainer
-                            let reactionContainerLocation = reactionContainer.view.convert(location, from: nil)
-                            reactionContainer.displayReactions(strongSelf.currentReactions, at: reactionContainerLocation)
+                            let reactionContainerLocation = reactionContainer.view.convert(localAnchorPoint, from: strongSelf.view)
+                            let reactionContainerTouchPoint = reactionContainer.view.convert(location, from: nil)
+                            strongSelf.currentAnchorPoint = reactionContainerLocation
+                            strongSelf.currentAnchorStartPoint = location
+                            reactionContainer.displayReactions(strongSelf.currentReactions, at: reactionContainerLocation, touchPoint: reactionContainerTouchPoint)
                         }
                     }
                 }, selector: #selector(TimerTarget.event), userInfo: nil, repeats: false)
@@ -124,9 +131,11 @@ public final class ReactionSwipeGestureRecognizer: UIPanGestureRecognizer {
                     self.displayReply?(-min(0.0, translation.x))
                 }
             } else {
-                if let reactionContainer = self.currentContainer {
-                    let reactionContainerLocation = reactionContainer.view.convert(location, from: nil)
-                    reactionContainer.updateReactionsAnchor(point: reactionContainerLocation)
+                if let reactionContainer = self.currentContainer, let currentAnchorPoint = self.currentAnchorPoint, let currentAnchorStartPoint = self.currentAnchorStartPoint {
+                    let anchorPoint = CGPoint(x: currentAnchorPoint.x + location.x - currentAnchorStartPoint.x, y: currentAnchorPoint.y)
+                    let reactionContainerLocation = anchorPoint
+                    let reactionContainerTouchPoint = reactionContainer.view.convert(location, from: nil)
+                    reactionContainer.updateReactionsAnchor(point: reactionContainerLocation, touchPoint: reactionContainerTouchPoint)
                 }
             }
             super.touchesMoved(touches, with: event)

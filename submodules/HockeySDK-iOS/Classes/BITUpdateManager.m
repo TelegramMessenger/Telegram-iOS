@@ -88,10 +88,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
   // only show error if we enable that
   if (self.showFeedback) {
-    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateError")
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"An Error Occurred")
                                                                              message:[error localizedDescription]
                                                                       preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *okAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyOK")
+    UIAlertAction *okAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"OK")
                                                        style:UIAlertActionStyleDefault
                                                      handler:^(UIAlertAction __unused *action) {}];
     [alertController addAction:okAction];
@@ -223,9 +223,9 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
   
   if (shouldShowDefaultAlert) {
-    NSString *appName = bit_appName(BITHockeyLocalizedString(@"HockeyAppNamePlaceholder"));
+    NSString *appName = bit_appName(BITHockeyLocalizedString(@"Telegram"));
     if (!self.blockingScreenMessage)
-      self.blockingScreenMessage = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateExpired"), appName];
+      self.blockingScreenMessage = [NSString stringWithFormat:BITHockeyLocalizedString(@"Update expired"), appName];
     [self showBlockingScreen:self.blockingScreenMessage image:@"authorize_denied.png"];
 
     if ([strongDelegate respondsToSelector:@selector(didDisplayExpiryAlertForUpdateManager:)]) {
@@ -530,14 +530,14 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   }
 
   if (!self.updateAlertShowing) {
-    NSString *title = BITHockeyLocalizedString(@"UpdateAvailable");
+    NSString *title = BITHockeyLocalizedString(@"Update Available");
     NSString *message = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertMandatoryTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]];
     if ([self hasNewerMandatoryVersion]) {
       __weak typeof(self) weakSelf = self;
       UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title
                                                                                message:message
                                                                         preferredStyle:UIAlertControllerStyleAlert];
-      UIAlertAction *showAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateShow")
+      UIAlertAction *showAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Show")
                                                            style:UIAlertActionStyleDefault
                                                          handler:^(UIAlertAction __unused *action) {
                                                            typeof(self) strongSelf = weakSelf;
@@ -548,7 +548,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                            [strongSelf showUpdateView];
                                                          }];
       [alertController addAction:showAction];
-      UIAlertAction *installAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateInstall")
+      UIAlertAction *installAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Install")
                                                               style:UIAlertActionStyleDefault
                                                             handler:^(UIAlertAction __unused *action) {
                                                               typeof(self) strongSelf = weakSelf;
@@ -559,13 +559,13 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
       [self showAlertController:alertController];
       self.updateAlertShowing = YES;
     } else {
-      message = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), [self.newestAppVersion nameAndVersionString]];
+      message = [NSString stringWithFormat:BITHockeyLocalizedString(@"An update is available"), [self.newestAppVersion nameAndVersionString]];
       __weak typeof(self) weakSelf = self;
       
       UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title
                                                                                message:message
                                                                         preferredStyle:UIAlertControllerStyleAlert];
-      UIAlertAction *ignoreAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateIgnore")
+      UIAlertAction *ignoreAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Ignore")
                                                              style:UIAlertActionStyleCancel
                                                            handler:^(UIAlertAction __unused *action) {
                                                              typeof(self) strongSelf = weakSelf;
@@ -575,7 +575,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                              }
                                                        }];
       [alertController addAction:ignoreAction];
-      UIAlertAction *showAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateShow")
+      UIAlertAction *showAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Show")
                                                            style:UIAlertActionStyleDefault
                                                          handler:^(UIAlertAction __unused *action) {
                                                            typeof(self) strongSelf = weakSelf;
@@ -587,7 +587,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                          }];
       [alertController addAction:showAction];
       if (self.isShowingDirectInstallOption) {
-        UIAlertAction *installAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateInstall")
+        UIAlertAction *installAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Install")
                                                                 style:UIAlertActionStyleDefault
                                                               handler:^(UIAlertAction __unused *action) {
                                                                 typeof(self) strongSelf = weakSelf;
@@ -631,7 +631,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   if (!self.disableUpdateCheckOptionWhenExpired) {
     UIButton *checkForUpdateButton = [UIButton buttonWithType:kBITButtonTypeSystem];
     checkForUpdateButton.frame = CGRectMake((frame.size.width - 140) / (CGFloat)2.0, frame.size.height - 100, 140, 25);
-    [checkForUpdateButton setTitle:BITHockeyLocalizedString(@"UpdateButtonCheck") forState:UIControlStateNormal];
+    [checkForUpdateButton setTitle:BITHockeyLocalizedString(@"Check") forState:UIControlStateNormal];
     [checkForUpdateButton addTarget:self
                              action:@selector(checkForUpdateForExpiredVersion)
                    forControlEvents:UIControlEventTouchUpInside];
@@ -674,7 +674,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil
                                                                            message:message
                                                                     preferredStyle:UIAlertControllerStyleAlert];
-  UIAlertAction *okAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyOK")
+  UIAlertAction *okAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"OK")
                                                      style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction __unused *action) {
                                                      typeof(self) strongSelf = weakSelf;
@@ -682,7 +682,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
                                                    }];
   [alertController addAction:okAction];
   if (!self.disableUpdateCheckOptionWhenExpired && [message isEqualToString:self.blockingScreenMessage]) {
-    UIAlertAction *checkAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateButtonCheck")
+    UIAlertAction *checkAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Check")
                                                           style:UIAlertActionStyleDefault
                                                         handler:^(UIAlertAction __unused *action) {
                                                           typeof(self) strongSelf = weakSelf;
@@ -814,10 +814,10 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
   
 #if TARGET_OS_SIMULATOR
 
-  UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateWarning")
+  UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"Warning")
                                                                            message:BITHockeyLocalizedString(@"UpdateSimulatorMessage")
                                                                     preferredStyle:UIAlertControllerStyleAlert];
-  UIAlertAction *okAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"HockeyOK")
+  UIAlertAction *okAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"OK")
                                                      style:UIAlertActionStyleDefault
                                                    handler:^(UIAlertAction __unused *action) {}];
   [alertController addAction:okAction];
@@ -966,7 +966,7 @@ typedef NS_ENUM(NSInteger, BITUpdateAlertViewTag) {
           NSString *shortVersionString = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
           shortVersionString = shortVersionString ? [NSString stringWithFormat:@"%@ ", shortVersionString] : @"";
           versionString = [shortVersionString length] ? [NSString stringWithFormat:@"(%@)", versionString] : versionString;
-          NSString *currentVersionString = [NSString stringWithFormat:@"%@ %@ %@%@", self.newestAppVersion.name, BITHockeyLocalizedString(@"UpdateVersion"), shortVersionString, versionString];
+          NSString *currentVersionString = [NSString stringWithFormat:@"%@ %@ %@%@", self.newestAppVersion.name, BITHockeyLocalizedString(@"Version"), shortVersionString, versionString];
           NSString *alertMsg = [NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableMessage"), currentVersionString];
           __weak typeof(self) weakSelf = self;
           UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateNoUpdateAvailableTitle")

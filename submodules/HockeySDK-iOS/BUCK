@@ -32,6 +32,8 @@ static_library(
         "Classes/BITCrashDetails.h",
         "Classes/BITCrashMetaData.h",
 
+        "Classes/BITAuthenticator.h",
+
         "Classes/BITUpdateManager.h",
         "Classes/BITUpdateManagerDelegate.h",
         "Classes/BITUpdateViewController.h",
@@ -45,7 +47,7 @@ static_library(
         "-DHOCKEYSDK_FEATURE_CRASH_REPORTER=1",
         "-DHOCKEYSDK_FEATURE_UPDATES=1",
         "-DHOCKEYSDK_FEATURE_FEEDBACK=0",
-        "-DHOCKEYSDK_FEATURE_AUTHENTICATOR=0",
+        "-DHOCKEYSDK_FEATURE_AUTHENTICATOR=1",
         "-DHOCKEYSDK_FEATURE_METRICS=0",
     ],
     deps = [

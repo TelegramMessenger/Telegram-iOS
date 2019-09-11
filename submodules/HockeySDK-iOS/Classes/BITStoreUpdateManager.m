@@ -435,27 +435,27 @@
 - (void)showUpdateAlert {
   dispatch_async(dispatch_get_main_queue(), ^{
   if (!self.updateAlertShowing) {
-    NSString *versionString = [NSString stringWithFormat:@"%@ %@", BITHockeyLocalizedString(@"UpdateVersion"), self.latestStoreVersion];
+    NSString *versionString = [NSString stringWithFormat:@"%@ %@", BITHockeyLocalizedString(@"Version"), self.latestStoreVersion];
     __weak typeof(self) weakSelf = self;
 
     UIAlertController *alertController = [UIAlertController alertControllerWithTitle:BITHockeyLocalizedString(@"UpdateAvailable")
                                                                              message:[NSString stringWithFormat:BITHockeyLocalizedString(@"UpdateAlertTextWithAppVersion"), versionString]
                                                                       preferredStyle:UIAlertControllerStyleAlert];
-    UIAlertAction *ignoreAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateIgnore")
+    UIAlertAction *ignoreAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Ignore")
                                                            style:UIAlertActionStyleCancel
                                                          handler:^(UIAlertAction __unused *action) {
                                                            typeof(self) strongSelf = weakSelf;
                                                            [strongSelf ignoreAction];
                                                          }];
     [alertController addAction:ignoreAction];
-    UIAlertAction *remindAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateRemindMe")
+    UIAlertAction *remindAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Remind Me")
                                                            style:UIAlertActionStyleDefault
                                                          handler:^(UIAlertAction __unused *action) {
                                                            typeof(self) strongSelf = weakSelf;
                                                            [strongSelf remindAction];
                                                          }];
     [alertController addAction:remindAction];
-    UIAlertAction *showAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"UpdateShow")
+    UIAlertAction *showAction = [BITAlertAction actionWithTitle:BITHockeyLocalizedString(@"Show")
                                                          style:UIAlertActionStyleDefault
                                                        handler:^(UIAlertAction __unused *action) {
                                                          typeof(self) strongSelf = weakSelf;
