@@ -219,6 +219,16 @@ build_buckdebug: check_env
     //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
     --verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
+build_buckdebug_one: check_env
+	BUCK_DEBUG_MODE=1 $(BUCK) build \
+	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
+build_verbose_one: check_env
+	$(BUCK) build \
+	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
 build_verbose: check_env
 	$(BUCK) build \
 	//:AppPackage#iphoneos-arm64 \
