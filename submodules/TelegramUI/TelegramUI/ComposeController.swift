@@ -44,7 +44,11 @@ public class ComposeController: ViewController {
         
         self.title = self.presentationData.strings.Compose_NewMessage
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.isModalWhenInOverlay = true
+        
+        //self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -256,5 +260,9 @@ public class ComposeController: ViewController {
     
     private func openPeer(peerId: PeerId) {
         (self.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId)), animated: true)
+    }
+    
+    @objc private func cancelPressed() {
+        self.presentingViewController?.dismiss(animated: true, completion: nil)
     }
 }

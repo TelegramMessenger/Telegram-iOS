@@ -155,7 +155,6 @@ private func checkIsPreviewingView(_ view: UIView) -> Bool {
 private func applyThemeToPreviewingView(_ view: UIView, accentColor: UIColor, darkBlur: Bool) {
     if let previewingActionGroupClass = previewingActionGroupClass, view.isKind(of: previewingActionGroupClass) {
         view.tintColor = accentColor
-        testZoomBlurEffect((view.superview?.superview?.subviews[1] as? UIVisualEffectView)?.effect)
         if darkBlur {
             applyThemeToPreviewingEffectView(view)
         }
@@ -665,7 +664,7 @@ public class Window1 {
             }
         }
         
-        if let result = self.presentationContext.hitTest(point, with: event) {
+        if let result = self.presentationContext.hitTest(view: self.hostView.containerView, point: point, with: event) {
             return result
         }
         return self.viewController?.view.hitTest(point, with: event)

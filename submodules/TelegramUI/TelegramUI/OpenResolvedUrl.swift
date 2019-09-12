@@ -273,7 +273,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             }
                         }))
                     } else {
-                        subscriber.putError(.generic)
+                        subscriber.putError(.unsupported)
                     }
                     
                     return disposables
