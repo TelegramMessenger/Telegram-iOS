@@ -490,7 +490,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             guard let strongSelf = self, let item = strongSelf.item else {
                 return
             }
-            item.interaction.activateChatPreview(item, strongSelf, gesture)
+            item.interaction.activateChatPreview(item, strongSelf.contextContainer, gesture)
         }
     }
     
