@@ -151,7 +151,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
             let verticalInset: CGFloat = 44.0
             
             let maxSide = max(layout.size.width, layout.size.height)
-            let containerSize = CGSize(width: max(layout.size.width - 20.0, floor(maxSide / 2.0)), height: layout.size.height - verticalInset * 2.0)
+            let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: layout.size.height - verticalInset * 2.0)
             containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
             
             var inputHeight: CGFloat?
