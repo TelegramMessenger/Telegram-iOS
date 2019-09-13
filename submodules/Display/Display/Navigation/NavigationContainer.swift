@@ -178,8 +178,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         let topController = top.value
                         let bottomController = transition.previous.value
-                        strongSelf.keyboardManager?.updateInteractiveInputOffset(layout.size.height, transition: .immediate, completion: {})
+                        UIView.setAnimationsEnabled(false)
                         topController.view.endEditing(true)
+                        UIView.setAnimationsEnabled(true)
                         
                         strongSelf.state.transition = nil
                         
