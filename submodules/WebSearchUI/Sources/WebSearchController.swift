@@ -472,12 +472,4 @@ public final class WebSearchController: ViewController {
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.navigationContentNode?.deactivate()
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
-    }
 }

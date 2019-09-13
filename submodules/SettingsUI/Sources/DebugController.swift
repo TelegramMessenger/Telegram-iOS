@@ -172,7 +172,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                     let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                                 }
                             }
-                            arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                            arguments.pushController(controller)
                         }))
                     }
                     items.append(ActionSheetButtonItem(title: "Via Email", color: .accent, action: { [weak actionSheet] in
@@ -225,7 +225,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                                     }
                                 }
-                                arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                                arguments.pushController(controller)
                             }))
                         }
                         
@@ -272,7 +272,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                             }
                         }
-                        arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                        arguments.pushController(controller)
                     })
             })
         case let .sendCriticalLogs(theme):
@@ -301,7 +301,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: messages).start()
                                     }
                                 }
-                                arguments.presentController(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+                                arguments.pushController(controller)
                             }))
                         }
                         

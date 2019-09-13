@@ -387,6 +387,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

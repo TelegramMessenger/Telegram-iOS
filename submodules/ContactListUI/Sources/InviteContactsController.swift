@@ -38,6 +38,8 @@ public class InviteContactsController: ViewController, MFMessageComposeViewContr
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.navigationPresentation = .modal
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.presentationData.strings.Contacts_InviteFriends

@@ -50,6 +50,8 @@ public final class ThemePreviewController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
+        self.navigationPresentation = .modal
+        
         self.isModalWhenInOverlay = true
         
         let themeName: String
@@ -331,13 +333,6 @@ public final class ThemePreviewController: ViewController {
                 strongSelf.dismiss()
             }
         }))
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

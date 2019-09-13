@@ -692,6 +692,10 @@ public class Window1 {
             self._rootController = value
             
             if let rootController = self._rootController {
+                if let rootController = rootController as? NavigationController {
+                    rootController.statusBarHost = self.statusBarHost
+                    rootController.keyboardManager = self.keyboardManager
+                }
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
                     rootController.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
                 }
@@ -803,7 +807,7 @@ public class Window1 {
                     }
                 }
             }
-            keyboardManager.surfaces = keyboardSurfaces
+            //keyboardManager.surfaces = keyboardSurfaces
             
             var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
             let orientationToLock: UIInterfaceOrientationMask

@@ -1020,8 +1020,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     @objc private func composePressed() {
         let controller = self.context.sharedContext.makeComposeController(context: self.context)
-        self.present(controller, in: .window(.root))
-        //(self.navigationController as? NavigationController)?.replaceAllButRootController(self.context.sharedContext.makeComposeController(context: self.context), animated: true)
+        (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {

@@ -59,6 +59,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: self.presentationData.theme).withUpdatedSeparatorColor(self.presentationData.theme.rootController.navigationBar.backgroundColor), strings: NavigationBarStrings(presentationStrings: self.presentationData.strings)), mediaAccessoryPanelVisibility: .specific(size: .compact), locationBroadcastPanelSource: .none)
         
+        self.navigationPresentation = .modalInLargeLayout
+        
         self.title = self.presentationData.strings.SharedMedia_TitleAll
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -105,7 +107,18 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     return nil
                 }, addToTransitionSurface: { view in
                     if let strongSelf = self {
-                        strongSelf.mediaCollectionDisplayNode.view.insertSubview(view, aboveSubview: strongSelf.mediaCollectionDisplayNode.historyNode.view)
+                        var belowSubview: UIView?
+                        if let historyNode = strongSelf.mediaCollectionDisplayNode.historyNode as? ChatHistoryGridNode {
+                            if let lowestSectionNode = historyNode.lowestSectionNode() {
+                                belowSubview = lowestSectionNode.view
+                            }
+                        }
+                        strongSelf.mediaCollectionDisplayNode.historyNode
+                        if let belowSubview = belowSubview {
+                        strongSelf.mediaCollectionDisplayNode.historyNode.view.insertSubview(view, belowSubview: belowSubview)
+                        } else {
+                            strongSelf.mediaCollectionDisplayNode.historyNode.view.addSubview(view)
+                        }
                     }
                 }, openUrl: { url in
                     self?.openUrl(url)
@@ -823,7 +836,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                     })
                 }
             }
-            strongSelf.present(controller, in: .window(.root))
+            (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
         })
     }
     

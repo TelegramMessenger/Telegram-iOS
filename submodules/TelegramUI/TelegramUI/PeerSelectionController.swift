@@ -59,6 +59,9 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         self.presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
+        
+        self.navigationPresentation = .modal
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.customTitle = params.title
@@ -178,7 +181,7 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.peerSelectionNode.animateIn()
+        //self.peerSelectionNode.animateIn()
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -214,10 +217,5 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
                 self.peerSelectionNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode)
             }
         }
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.peerSelectionNode.view.endEditing(true)
-        self.peerSelectionNode.animateOut(completion: completion)
     }
 }

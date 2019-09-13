@@ -315,7 +315,7 @@ public func proxySettingsController(context: AccountContext, mode: ProxySettings
 }
 
 public func proxySettingsController(accountManager: AccountManager, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {
-    var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     let stateValue = Atomic(value: ProxySettingsControllerState())
     let statePromise = ValuePromise<ProxySettingsControllerState>(stateValue.with { $0 })
@@ -342,7 +342,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
             return current
         }).start()
     }, addNewServer: {
-        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        pushControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: nil))
     }, activateServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
@@ -355,7 +355,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
             return current
         }).start()
     }, editServer: { server in
-        presentControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: server), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        pushControllerImpl?(proxyServerSettingsController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, accountManager: accountManager, postbox: postbox, network: network, currentSettings: server))
     }, removeServer: { server in
         let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
             var current = current
@@ -438,8 +438,9 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
     }
     
     let controller = ItemListController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, state: signal, tabBarItem: nil)
-    presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
+    controller.navigationPresentation = .modal
+    pushControllerImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()

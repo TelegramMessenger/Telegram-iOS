@@ -194,6 +194,7 @@ public final class CallListController: ViewController {
     
     @objc func callPressed() {
         let controller = self.context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: self.context, title: { $0.Calls_NewCall }))
+        controller.navigationPresentation = .modal
         self.createActionDisposable.set((controller.result
         |> take(1)
         |> deliverOnMainQueue).start(next: { [weak controller, weak self] peer in

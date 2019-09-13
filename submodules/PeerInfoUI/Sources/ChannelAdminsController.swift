@@ -600,20 +600,20 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                                 }
                         }
                     }
-                    presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
-                    }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: peer.id, initialParticipant: participant?.participant, updated: { _ in
+                    }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership))
                 })
                 dismissController = { [weak controller] in
                     controller?.dismiss()
                 }
-                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                pushControllerImpl?(controller)
                 
                 return current
             }
         })
     }, openAdmin: { participant in
-        presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
-        }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+        }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership))
     })
     
     let membersAndLoadMoreControl: (Disposable, PeerChannelMemberCategoryControl?)
@@ -734,14 +734,14 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
                 }
             }, openPeer: { _, participant in
                 if let participant = participant?.participant, case .member = participant {
-                    presentControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
+                    pushControllerImpl?(channelAdminController(context: context, peerId: peerId, adminId: participant.peerId, initialParticipant: participant, updated: { _ in
                         updateState { state in
                             return state.withUpdatedSearchingMembers(false)
                         }
-                    }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }, upgradedToSupergroup: upgradedToSupergroup, transferedOwnership: transferedOwnership))
                 }
-            }, present: { c, a in
-                presentControllerImpl?(c, a)
+            }, pushController: { c in
+                pushControllerImpl?(c)
             })
         }
         

@@ -505,14 +505,6 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         self.didDisappear?(animated)
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
-        if !self.isDismissed {
-            self.isDismissed = true
-            (self.displayNode as! ItemListControllerNode<Entry>).animateOut(completion: completion)
-            self.updateTransitionWhenPresentedAsModal?(0.0, .animated(duration: 0.2, curve: .easeInOut))
-        }
-    }
-    
     public func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
         var result: CGRect?
         (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in

@@ -62,7 +62,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     var currentAccessibilityAreas: [AccessibilityAreaNode] = []
     
-    private var previousContentOffset: CGPoint?
     private var isDeceleratingBecauseOfDragging = false
     
     private let hiddenMediaDisposable = MetaDisposable()
@@ -372,7 +371,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             self.scrollNode.view.contentOffset = contentOffset
             if didSetScrollOffset {
-                self.previousContentOffset = contentOffset
                 self.updateNavigationBar()
                 if self.currentLayout != nil {
                     self.setupScrollOffsetOnLayout = false
@@ -660,8 +658,6 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.updateVisibleItems(visibleBounds: self.scrollNode.view.bounds)
-        self.updateNavigationBar()
-        self.previousContentOffset = self.scrollNode.view.contentOffset
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
@@ -694,50 +690,14 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             minBarHeight = 20.0
         }
         
-        var pageProgress: CGFloat = 0.0
-        if !self.scrollNode.view.contentSize.height.isZero {
-            let value = (contentOffset.y + self.scrollNode.view.contentInset.top) / (self.scrollNode.view.contentSize.height - bounds.size.height + self.scrollNode.view.contentInset.top)
-            pageProgress = max(0.0, min(1.0, value))
-        }
-        
-        let delta: CGFloat
-        if self.setupScrollOffsetOnLayout {
-            delta = 0.0
-        } else if let previousContentOffset = self.previousContentOffset {
-            delta = contentOffset.y - previousContentOffset.y
-        } else {
-            delta = 0.0
-        }
-        self.previousContentOffset = contentOffset
-        
         var transition: ContainedViewLayoutTransition = .immediate
         var navigationBarFrame = self.navigationBar.frame
         navigationBarFrame.size.width = bounds.size.width
         if navigationBarFrame.size.height.isZero {
             navigationBarFrame.size.height = maxBarHeight
         }
-        if forceState {
-            transition = .animated(duration: 0.3, curve: .spring)
-            
-            let transitionFactor = (navigationBarFrame.size.height - minBarHeight) / (maxBarHeight - minBarHeight)
-            
-            if contentOffset.y <= -self.scrollNode.view.contentInset.top || transitionFactor > 0.4 {
-                navigationBarFrame.size.height = maxBarHeight
-            } else {
-                navigationBarFrame.size.height = minBarHeight
-            }
-        } else {
-            if contentOffset.y <= -self.scrollNode.view.contentInset.top {
-                navigationBarFrame.size.height = maxBarHeight
-            } else {
-                navigationBarFrame.size.height -= delta
-            }
-            navigationBarFrame.size.height = max(minBarHeight, min(maxBarHeight, navigationBarFrame.size.height))
-        }
         
-        if self.setupScrollOffsetOnLayout {
-            navigationBarFrame.size.height = maxBarHeight
-        }
+        navigationBarFrame.size.height = maxBarHeight
         
         let transitionFactor = (navigationBarFrame.size.height - minBarHeight) / (maxBarHeight - minBarHeight)
         
@@ -756,7 +716,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         transition.updateFrame(node: self.navigationBar, frame: navigationBarFrame)
-        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, title: title, pageProgress: pageProgress, transition: transition)
+        self.navigationBar.updateLayout(size: navigationBarFrame.size, minHeight: minBarHeight, maxHeight: maxBarHeight, topInset: containerLayout.safeInsets.top, leftInset: containerLayout.safeInsets.left, rightInset: containerLayout.safeInsets.right, title: title, pageProgress: 0.0, transition: transition)
         
         transition.animateView {
             self.scrollNode.view.scrollIndicatorInsets = UIEdgeInsets(top: navigationBarFrame.size.height, left: 0.0, bottom: containerLayout.intrinsicInsets.bottom, right: 0.0)

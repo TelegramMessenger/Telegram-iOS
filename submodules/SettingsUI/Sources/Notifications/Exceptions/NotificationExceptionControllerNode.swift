@@ -894,7 +894,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 })
             }
             dismissInputImpl?()
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            pushController(controller)
         }, updateRevealedPeerId: { peerId in
             updateState { current in
                 return current.withUpdatedRevealedPeerId(peerId)

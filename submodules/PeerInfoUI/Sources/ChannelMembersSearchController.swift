@@ -47,6 +47,8 @@ final class ChannelMembersSearchController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.navigationPresentation = .modal
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.presentationData.strings.Channel_Members_Title
@@ -83,8 +85,8 @@ final class ChannelMembersSearchController: ViewController {
         self.controllerNode.requestOpenPeerFromSearch = { [weak self] peer, participant in
             self?.openPeer(peer, participant)
         }
-        self.controllerNode.present = { [weak self] c, a in
-            self?.present(c, in: .window(.root), with: a)
+        self.controllerNode.pushController = { [weak self] c in
+            (self?.navigationController as? NavigationController)?.pushViewController(c)
         }
         
         self.displayNodeDidLoad()
@@ -111,14 +113,6 @@ final class ChannelMembersSearchController: ViewController {
                 self.controllerNode.animateIn()
             }
         }
-    }
-    
-    override func dismiss(completion: (() -> Void)? = nil) {
-        self.view.endEditing(true)
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

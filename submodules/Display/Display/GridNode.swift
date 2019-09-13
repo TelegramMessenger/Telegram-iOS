@@ -759,7 +759,7 @@ open class GridNode: GridNodeScroller, UIScrollViewDelegate {
         }
     }
     
-    private func lowestSectionNode() -> ASDisplayNode? {
+    public func lowestSectionNode() -> ASDisplayNode? {
         var lowestHeaderNode: ASDisplayNode?
         var lowestHeaderNodeIndex: Int?
         for (_, headerNode) in self.sectionNodes {

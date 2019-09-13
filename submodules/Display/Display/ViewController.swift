@@ -58,6 +58,8 @@ open class ViewControllerPresentationArguments {
 public enum ViewControllerNavigationPresentation {
     case `default`
     case master
+    case modal
+    case modalInLargeLayout
 }
 
 @objc open class ViewController: UIViewController, ContainableController {
@@ -446,9 +448,9 @@ public enum ViewControllerNavigationPresentation {
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
-            navigationController.dismiss(animated: flag, completion: completion)
+            navigationController.filterController(self, animated: flag)
         } else {
-            super.dismiss(animated: flag, completion: completion)
+            assertionFailure()
         }
     }
     
@@ -468,10 +470,10 @@ public enum ViewControllerNavigationPresentation {
     public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
         controller.presentationArguments = arguments
         switch context {
-            case .current:
-                self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0), completion: completion)
-            case let .window(level):
-                self.window?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+        case .current:
+            self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0), completion: completion)
+        case let .window(level):
+            self.window?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
         }
     }
     
@@ -507,6 +509,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     open func dismiss(completion: (() -> Void)? = nil) {
+        (self.navigationController as? NavigationController)?.filterController(self, animated: true)
     }
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)

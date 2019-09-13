@@ -345,6 +345,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     controller.enableInteractiveDismiss = true
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)

@@ -1105,6 +1105,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     controller.experimentalSnapScrollToItem = true
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)

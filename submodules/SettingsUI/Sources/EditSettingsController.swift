@@ -211,7 +211,7 @@ private enum SettingsEntry: ItemListNodeEntry {
                 })
             case let .username(theme, text, address):
                 return ItemListDisclosureItem(theme: theme, title: text, label: address, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
-                    arguments.presentController(usernameSetupController(context: arguments.context))
+                    arguments.pushController(usernameSetupController(context: arguments.context))
                 })
             case let .addAccount(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .center, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
