@@ -325,7 +325,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                 visibleModalCount += 1
                 if previousModalContainer == nil {
                     topModalDismissProgress = modalContainer.dismissProgress
-                    modalContainer.container.keyboardManager = self.keyboardManager
+                    if case .compact = layout.metrics.widthClass {
+                        modalContainer.container.keyboardManager = self.keyboardManager
+                    } else {
+                        modalContainer.container.keyboardManager = nil
+                    }
                 } else {
                     modalContainer.container.keyboardManager = nil
                 }
