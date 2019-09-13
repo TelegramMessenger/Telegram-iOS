@@ -84,9 +84,9 @@ private final class WindowRootViewController: UIViewController, UIViewController
         }
     }
     
-    var preferNavigationUIHidden: Bool = false {
+    var prefersOnScreenNavigationHidden: Bool = false {
         didSet {
-            if oldValue != self.preferNavigationUIHidden {
+            if oldValue != self.prefersOnScreenNavigationHidden {
                 if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
                     self.setNeedsUpdateOfHomeIndicatorAutoHidden()
                 }
@@ -135,7 +135,7 @@ private final class WindowRootViewController: UIViewController, UIViewController
     }
     
     override var prefersHomeIndicatorAutoHidden: Bool {
-        return self.preferNavigationUIHidden
+        return self.prefersOnScreenNavigationHidden
     }
     
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -226,7 +226,7 @@ private final class NativeWindow: UIWindow, WindowHost {
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentNativeImpl: ((UIViewController) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
-    var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
+    var invalidatePrefersOnScreenNavigationHiddenImpl: (() -> Void)?
     var invalidateSupportedOrientationsImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
     var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
@@ -322,8 +322,8 @@ private final class NativeWindow: UIWindow, WindowHost {
         self.invalidateDeferScreenEdgeGestureImpl?()
     }
     
-    func invalidatePreferNavigationUIHidden() {
-        self.invalidatePreferNavigationUIHiddenImpl?()
+    func invalidatePrefersOnScreenNavigationHidden() {
+        self.invalidatePrefersOnScreenNavigationHiddenImpl?()
     }
     
     func invalidateSupportedOrientations() {
@@ -363,8 +363,8 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView, UI
         rootViewController.orientations = orientations
     }, updateDeferScreenEdgeGestures: { edges in
         rootViewController.gestureEdges = edges
-    }, updatePreferNavigationUIHidden: { value in
-        rootViewController.preferNavigationUIHidden = value
+    }, updatePrefersOnScreenNavigationHidden: { value in
+        rootViewController.prefersOnScreenNavigationHidden = value
     })
     
     rootViewController.transitionToSize = { [weak hostView] size, duration in
@@ -406,8 +406,8 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView, UI
         return hostView?.invalidateDeferScreenEdgeGesture?()
     }
     
-    window.invalidatePreferNavigationUIHiddenImpl = { [weak hostView] in
-        return hostView?.invalidatePreferNavigationUIHidden?()
+    window.invalidatePrefersOnScreenNavigationHiddenImpl = { [weak hostView] in
+        return hostView?.invalidatePrefersOnScreenNavigationHidden?()
     }
     
     window.invalidateSupportedOrientationsImpl = { [weak hostView] in

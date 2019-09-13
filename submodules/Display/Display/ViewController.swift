@@ -110,16 +110,16 @@ public enum ViewControllerNavigationPresentation {
         }
     }
     
-    public final var preferNavigationUIHidden: Bool = false {
+    public final var prefersOnScreenNavigationHidden: Bool = false {
         didSet {
-            if self.preferNavigationUIHidden != oldValue {
-                self.window?.invalidatePreferNavigationUIHidden()
+            if self.prefersOnScreenNavigationHidden != oldValue {
+                self.window?.invalidatePrefersOnScreenNavigationHidden()
             }
         }
     }
     
     override open var prefersHomeIndicatorAutoHidden: Bool {
-        return self.preferNavigationUIHidden
+        return self.prefersOnScreenNavigationHidden
     }
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default

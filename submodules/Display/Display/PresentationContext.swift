@@ -445,4 +445,16 @@ public final class PresentationContext {
         
         return edges
     }
+    
+    func combinedPrefersOnScreenNavigationHidden() -> Bool {
+        var hidden: Bool = false
+        
+        for (controller, _) in self.controllers {
+            if let controller = controller as? ViewController {
+                hidden = hidden || controller.prefersOnScreenNavigationHidden
+            }
+        }
+        
+        return hidden
+    }
 }

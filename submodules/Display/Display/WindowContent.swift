@@ -204,7 +204,7 @@ public final class WindowHostView {
     
     let updateSupportedInterfaceOrientations: (UIInterfaceOrientationMask) -> Void
     let updateDeferScreenEdgeGestures: (UIRectEdge) -> Void
-    let updatePreferNavigationUIHidden: (Bool) -> Void
+    let updatePrefersOnScreenNavigationHidden: (Bool) -> Void
     
     var present: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
@@ -215,20 +215,20 @@ public final class WindowHostView {
     var isUpdatingOrientationLayout = false
     var hitTest: ((CGPoint, UIEvent?) -> UIView?)?
     var invalidateDeferScreenEdgeGesture: (() -> Void)?
-    var invalidatePreferNavigationUIHidden: (() -> Void)?
+    var invalidatePrefersOnScreenNavigationHidden: (() -> Void)?
     var invalidateSupportedOrientations: (() -> Void)?
     var cancelInteractiveKeyboardGestures: (() -> Void)?
     var forEachController: (((ContainableController) -> Void) -> Void)?
     var getAccessibilityElements: (() -> [Any]?)?
     
-    init(containerView: UIView, eventView: UIView, aboveStatusBarView: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePreferNavigationUIHidden: @escaping (Bool) -> Void) {
+    init(containerView: UIView, eventView: UIView, aboveStatusBarView: UIView, isRotating: @escaping () -> Bool, updateSupportedInterfaceOrientations: @escaping (UIInterfaceOrientationMask) -> Void, updateDeferScreenEdgeGestures: @escaping (UIRectEdge) -> Void, updatePrefersOnScreenNavigationHidden: @escaping (Bool) -> Void) {
         self.containerView = containerView
         self.eventView = eventView
         self.aboveStatusBarView = aboveStatusBarView
         self.isRotating = isRotating
         self.updateSupportedInterfaceOrientations = updateSupportedInterfaceOrientations
         self.updateDeferScreenEdgeGestures = updateDeferScreenEdgeGestures
-        self.updatePreferNavigationUIHidden = updatePreferNavigationUIHidden
+        self.updatePrefersOnScreenNavigationHidden = updatePrefersOnScreenNavigationHidden
     }
     
     fileprivate var onScreenNavigationHeight: CGFloat? {
@@ -250,7 +250,7 @@ public protocol WindowHost {
     func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool, completion: @escaping () -> Void)
     func presentInGlobalOverlay(_ controller: ContainableController)
     func invalidateDeferScreenEdgeGestures()
-    func invalidatePreferNavigationUIHidden()
+    func invalidatePrefersOnScreenNavigationHidden()
     func invalidateSupportedOrientations()
     func cancelInteractiveKeyboardGestures()
 }
@@ -299,7 +299,7 @@ public class Window1 {
     
     private var tracingStatusBarsInvalidated = false
     private var shouldUpdateDeferScreenEdgeGestures = false
-    private var shouldInvalidatePreferNavigationUIHidden = false
+    private var shouldInvalidatePrefersOnScreenNavigationHidden = false
     private var shouldInvalidateSupportedOrientations = false
     
     private var statusBarHidden = false
@@ -405,8 +405,8 @@ public class Window1 {
             self?.invalidateDeferScreenEdgeGestures()
         }
         
-        self.hostView.invalidatePreferNavigationUIHidden = { [weak self] in
-            self?.invalidatePreferNavigationUIHidden()
+        self.hostView.invalidatePrefersOnScreenNavigationHidden = { [weak self] in
+            self?.invalidatePrefersOnScreenNavigationHidden()
         }
         
         self.hostView.invalidateSupportedOrientations = { [weak self] in
@@ -613,8 +613,8 @@ public class Window1 {
         self.hostView.eventView.setNeedsLayout()
     }
     
-    public func invalidatePreferNavigationUIHidden() {
-        self.shouldInvalidatePreferNavigationUIHidden = true
+    public func invalidatePrefersOnScreenNavigationHidden() {
+        self.shouldInvalidatePrefersOnScreenNavigationHidden = true
         self.hostView.eventView.setNeedsLayout()
     }
     
@@ -831,17 +831,17 @@ public class Window1 {
             self.hostView.updateSupportedInterfaceOrientations(resolvedOrientations)
             
             self.hostView.updateDeferScreenEdgeGestures(self.collectScreenEdgeGestures())
-            self.hostView.updatePreferNavigationUIHidden(self.collectPreferNavigationUIHidden())
+            self.hostView.updatePrefersOnScreenNavigationHidden(self.collectPrefersOnScreenNavigationHidden())
             
             self.shouldUpdateDeferScreenEdgeGestures = false
-            self.shouldInvalidatePreferNavigationUIHidden = false
+            self.shouldInvalidatePrefersOnScreenNavigationHidden = false
             self.shouldInvalidateSupportedOrientations = false
-        } else if self.shouldUpdateDeferScreenEdgeGestures || self.shouldInvalidatePreferNavigationUIHidden || self.shouldInvalidateSupportedOrientations {
+        } else if self.shouldUpdateDeferScreenEdgeGestures || self.shouldInvalidatePrefersOnScreenNavigationHidden || self.shouldInvalidateSupportedOrientations {
             self.hostView.updateDeferScreenEdgeGestures(self.collectScreenEdgeGestures())
-            self.hostView.updatePreferNavigationUIHidden(self.collectPreferNavigationUIHidden())
+            self.hostView.updatePrefersOnScreenNavigationHidden(self.collectPrefersOnScreenNavigationHidden())
             
             self.shouldUpdateDeferScreenEdgeGestures = false
-            self.shouldInvalidatePreferNavigationUIHidden = false
+            self.shouldInvalidatePrefersOnScreenNavigationHidden = false
             
             if self.shouldInvalidateSupportedOrientations {
                 var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
@@ -859,10 +859,10 @@ public class Window1 {
                 
                 var resolvedOrientations: UIInterfaceOrientationMask
                 switch self.windowLayout.metrics.widthClass {
-                case .regular:
-                    resolvedOrientations = supportedOrientations.regularSize
-                case .compact:
-                    resolvedOrientations = supportedOrientations.compactSize
+                    case .regular:
+                        resolvedOrientations = supportedOrientations.regularSize
+                    case .compact:
+                        resolvedOrientations = supportedOrientations.compactSize
                 }
                 if resolvedOrientations.isEmpty {
                     resolvedOrientations = [.portrait]
@@ -1126,8 +1126,16 @@ public class Window1 {
         return edges
     }
     
-    private func collectPreferNavigationUIHidden() -> Bool {
-        return false
+    private func collectPrefersOnScreenNavigationHidden() -> Bool {
+        var hidden = self.presentationContext.combinedPrefersOnScreenNavigationHidden()
+        
+        for controller in self.topLevelOverlayControllers {
+            if let controller = controller as? ViewController {
+                hidden = hidden || controller.prefersOnScreenNavigationHidden
+            }
+        }
+        
+        return hidden
     }
     
     public func forEachViewController(_ f: (ContainableController) -> Bool) {
