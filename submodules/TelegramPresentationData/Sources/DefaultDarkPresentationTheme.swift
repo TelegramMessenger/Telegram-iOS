@@ -187,6 +187,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
         dateTextColor: UIColor(rgb: 0x8e8e92),
         authorNameColor: UIColor(rgb: 0xffffff),
         messageTextColor: UIColor(rgb: 0x8e8e92),
+        messageHighlightedTextColor: UIColor(rgb: 0xffffff),
         messageDraftTextColor: UIColor(rgb: 0xdd4b39),
         checkmarkColor: accentColor,
         pendingIndicatorColor: UIColor(rgb: 0xffffff),

@@ -168,8 +168,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     }
                     if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content, webEmbedType(content: content).supportsSeeking {
                         isSeekableWebMedia = true
-                    }
-                    else if media is TelegramMediaUnsupported {
+                    } else if media is TelegramMediaUnsupported {
                         isUnsupportedMedia = true
                     }
                 }

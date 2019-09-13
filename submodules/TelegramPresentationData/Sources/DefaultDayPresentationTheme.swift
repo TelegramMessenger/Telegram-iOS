@@ -170,6 +170,7 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         dateTextColor: UIColor(rgb: 0x8e8e93),
         authorNameColor: .black,
         messageTextColor: UIColor(rgb: 0x8e8e93),
+        messageHighlightedTextColor: .black,
         messageDraftTextColor: UIColor(rgb: 0xdd4b39),
         checkmarkColor: day ? accentColor : UIColor(rgb: 0x21c004),
         pendingIndicatorColor: UIColor(rgb: 0x8e8e93),

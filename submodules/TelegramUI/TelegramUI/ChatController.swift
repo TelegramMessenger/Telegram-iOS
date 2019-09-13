@@ -183,6 +183,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let unblockingPeer = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
+    private let searchResult = Promise<(SearchMessagesResult, SearchMessagesState)?>()
     private let loadingMessage = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var preloadHistoryPeerId: PeerId?
@@ -3083,7 +3084,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let editingMessage = strongSelf.editingMessage
-                let text = trimChatInputText(editMessage.inputState.inputText)
+                let text = trimChatInputText(convertMarkdownToAttributes(editMessage.inputState.inputText))
                 let entities = generateTextEntities(text.string, enabledTypes: .all, currentEntities: generateChatInputTextEntities(text))
                 var entitiesAttribute: TextEntitiesMessageAttribute?
                 if !entities.isEmpty {
@@ -3173,6 +3174,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })
                 strongSelf.updateItemNodesSearchTextHighlightStates()
             }
+        }, openSearchResults: { [weak self] in
+            if let strongSelf = self, let searchData = strongSelf.presentationInterfaceState.search, let results = searchData.resultsState {
+                let _ = (strongSelf.searchResult.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] searchResult in
+                    if let strongSelf = self, let searchResult = searchResult?.0 {
+                        let controller = ChatSearchResultsController(context: strongSelf.context, searchQuery: searchData.query, messages: searchResult.messages, navigateToMessageIndex: { index in
+                            strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
+                        })
+                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    }
+                })
+            }
         }, navigateMessageSearch: { [weak self] action in
             if let strongSelf = self {
                 var navigateIndex: MessageIndex?
@@ -3188,6 +3202,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 case .later:
                                     if index != resultsState.messageIndices.count - 1 {
                                         updatedIndex = index + 1
+                                    }
+                                case let .index(index):
+                                    if index >= 0 && index < resultsState.messageIndices.count {
+                                        updatedIndex = index
                                     }
                             }
                             if let updatedIndex = updatedIndex {
@@ -4771,9 +4789,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func updateItemNodesSearchTextHighlightStates() {
-        if true {
-            return
-        }
         var searchString: String?
         if let search = self.presentationInterfaceState.search, let resultsState = search.resultsState, !resultsState.messageIndices.isEmpty {
             searchString = search.query
@@ -5979,6 +5994,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if queryIsEmpty {
                         self.searching.set(false)
                         self.searchDisposable?.set(nil)
+                        self.searchResult.set(.single(nil))
                         if let data = interfaceState.search {
                             return interfaceState.updatedSearch(data.withUpdatedResultsState(nil))
                         }
@@ -5991,8 +6007,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             searchDisposable = MetaDisposable()
                             self.searchDisposable = searchDisposable
                         }
-                        searchDisposable.set((searchMessages(account: self.context.account, location: searchState.location, query: searchState.query, state: nil, limit: limit)
+
+                        let search = searchMessages(account: self.context.account, location: searchState.location, query: searchState.query, state: nil, limit: limit)
                         |> delay(0.2, queue: Queue.mainQueue())
+                        self.searchResult.set(search |> map(Optional.init))
+                        
+                        searchDisposable.set((search
                         |> deliverOnMainQueue).start(next: { [weak self] results, updatedState in
                             guard let strongSelf = self else {
                                 return

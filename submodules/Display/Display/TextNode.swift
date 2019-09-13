@@ -452,20 +452,42 @@ public final class TextNodeLayout: NSObject {
         guard let attributedString = self.attributedString else {
             return []
         }
+        
         var ranges: [Range<String.Index>] = []
-        var searchRange = attributedString.string.startIndex ..< attributedString.string.endIndex
-        while searchRange.lowerBound != attributedString.string.endIndex {
-            if let range = attributedString.string.range(of: text, options: [.caseInsensitive, .diacriticInsensitive], range: searchRange, locale: nil) {
-                ranges.append(range)
-                searchRange = range.upperBound ..< attributedString.string.endIndex
-            } else {
-                break
+        let queryWords = text.split { !$0.isLetter }.filter { !$0.isEmpty }.map { $0.lowercased() }
+        
+        let text = attributedString.string.lowercased()
+        let searchRange = text.startIndex ..< text.endIndex
+        text.enumerateSubstrings(in: searchRange, options: .byWords) { (substring, range, _, _) in
+            guard let substring = substring else {
+                return
+            }
+            
+            for word in queryWords {
+                var count = 0
+                inner: for (c1, c2) in zip(word, substring) {
+                    if c1 != c2 {
+                        break inner
+                    }
+                    count += 1
+                }
+                if count > 0 {
+                    let length = Double(max(word.count, substring.count))
+                    if length > 0 {
+                        let difference = abs(length - Double(count))
+                        let rating = difference / length
+                        if rating < 0.33 {
+                            ranges.append(range)
+                        }
+                    }
+                }
             }
         }
+        
         var result: [[CGRect]] = []
         for stringRange in ranges {
             var rects: [CGRect] = []
-            let range = NSRange(stringRange, in: attributedString.string)
+            let range = NSRange(stringRange, in: text)
             for line in self.lines {
                 let lineRange = NSIntersectionRange(range, line.range)
                 if lineRange.length != 0 {
