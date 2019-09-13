@@ -271,19 +271,6 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         }))
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
-        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
-            switch presentationArguments.presentationAnimation {
-                case .modalSheet:
-                    self.dismissed?()
-                    self.contactsNode.animateOut(completion: completion)
-                case .none:
-                    self.dismissed?()
-                    completion?()
-            }
-        }
-    }
-    
     func dismissSearch() {
         self.deactivateSearch()
     }

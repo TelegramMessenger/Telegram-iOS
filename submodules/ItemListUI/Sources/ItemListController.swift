@@ -230,7 +230,6 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.isOpaqueWhenInOverlay = true
-        //self.isModalWhenInOverlay = true
         self.blocksBackgroundWhenInOverlay = true
         
         self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
@@ -503,14 +502,6 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         super.viewDidDisappear(animated)
         
         self.didDisappear?(animated)
-    }
-    
-    override open func dismiss(completion: (() -> Void)? = nil) {
-        if !self.isDismissed {
-            self.isDismissed = true
-            (self.displayNode as! ItemListControllerNode<Entry>).animateOut(completion: completion)
-            self.updateTransitionWhenPresentedAsModal?(0.0, .animated(duration: 0.2, curve: .easeInOut))
-        }
     }
     
     public func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {

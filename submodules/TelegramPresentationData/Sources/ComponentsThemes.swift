@@ -61,6 +61,13 @@ extension PeekControllerTheme {
 
 public extension NavigationControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
-        self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor)
+        let navigationStatusBar: NavigationStatusBarStyle
+        switch presentationTheme.rootController.statusBarStyle {
+        case .black:
+            navigationStatusBar = .black
+        case .white:
+            navigationStatusBar = .white
+        }
+        self.init(statusBar: navigationStatusBar, navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor)
     }
 }

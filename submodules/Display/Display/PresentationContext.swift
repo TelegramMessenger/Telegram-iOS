@@ -48,9 +48,6 @@ public final class PresentationContext {
         }
     }
     
-    private var modalPresentationValue: CGFloat = 0.0
-    var updateModalTransition: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
-    
     private var layout: ContainerViewLayout?
     
     private var ready: Bool {
@@ -125,17 +122,7 @@ public final class PresentationContext {
     }
     
     private func layoutForController(containerLayout: ContainerViewLayout, controller: ContainableController) -> (ContainerViewLayout, CGRect) {
-        if controller.isModalWhenInOverlay, case .regular = containerLayout.metrics.widthClass  {
-            let topInset = (containerLayout.statusBarHeight ?? 0.0) + 20.0
-            var updatedLayout = containerLayout
-            updatedLayout.statusBarHeight = nil
-            updatedLayout.size = CGSize(width: min(containerLayout.size.width - 90.0, 750.0), height: min(containerLayout.size.height - 90.0, 940.0))
-            updatedLayout.safeInsets = UIEdgeInsets()
-            updatedLayout.intrinsicInsets = UIEdgeInsets()
-            return (updatedLayout, CGRect(origin: CGPoint(x: (containerLayout.size.width - updatedLayout.size.width) / 2.0, y: (containerLayout.size.height - updatedLayout.size.height) / 2.0), size: updatedLayout.size))
-        } else {
-            return (containerLayout, CGRect(origin: CGPoint(), size: containerLayout.size))
-        }
+        return (containerLayout, CGRect(origin: CGPoint(), size: containerLayout.size))
     }
     
     public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void) {
@@ -224,17 +211,6 @@ public final class PresentationContext {
                             controller.viewDidAppear(false)
                             strongSelf.notifyAccessibilityScreenChanged()
                         }
-                        
-                        if controller.isModalWhenInOverlay, case .regular = layout.metrics.widthClass {
-                            let springDuration: Double = 0.52
-                            let springDamping: CGFloat = 110.0
-                            
-                            controller.view.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: 0.0, y: layout.size.height - controllerFrame.minY)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
-                        
-                            strongSelf.dimView?.frame = CGRect(origin: CGPoint(), size: layout.size)
-                            strongSelf.dimView?.alpha = 1.0
-                            strongSelf.dimView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                        }
                     }
                 }
             }))
@@ -251,27 +227,10 @@ public final class PresentationContext {
     private func dismiss(_ controller: ContainableController) {
         if let index = self.controllers.firstIndex(where: { $0.0 === controller }) {
             self.controllers.remove(at: index)
-            if controller.isModalWhenInOverlay, let layout = self.layout, case .regular = layout.metrics.widthClass {
-                let (controllerLayout, controllerFrame) = self.layoutForController(containerLayout: layout, controller: controller)
-                
-                let springDuration: Double = 0.52
-                let springDamping: CGFloat = 110.0
-                controller.view.layer.animateSpring(from: NSValue(cgPoint: CGPoint()), to: NSValue(cgPoint: CGPoint(x: 0.0, y: layout.size.height - controllerFrame.minY)), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false, additive: true, completion: { finished in
-                    controller.viewWillDisappear(false)
-                    controller.view.removeFromSuperview()
-                    controller.viewDidDisappear(false)
-                    self.updateViews()
-                })
-            } else {
-                controller.viewWillDisappear(false)
-                controller.view.removeFromSuperview()
-                controller.viewDidDisappear(false)
-                self.updateViews()
-            }
-            
-            let previousAlpha = self.dimView?.alpha ?? 0.0
-            self.dimView?.alpha = 0.0
-            self.dimView?.layer.animateAlpha(from: previousAlpha, to: 0.0, duration: 0.2)
+            controller.viewWillDisappear(false)
+            controller.view.removeFromSuperview()
+            controller.viewDidDisappear(false)
+            self.updateViews()
         }
     }
     
@@ -282,7 +241,6 @@ public final class PresentationContext {
         if wasReady != self.ready {
             self.readyChanged(wasReady: wasReady)
         } else if self.ready {
-            self.dimView?.frame = CGRect(origin: CGPoint(), size: layout.size)
             for (controller, _) in self.controllers {
                 let (controllerLayout, controllerFrame) = self.layoutForController(containerLayout: layout, controller: controller)
                 controller.view.frame = controllerFrame
@@ -299,21 +257,8 @@ public final class PresentationContext {
         }
     }
     
-    var dimView: UIView?
-    
     private func addViews() {
         if let view = self.view, let layout = self.layout {
-            let dimView: UIView
-            if let currentDimView = self.dimView {
-                dimView = currentDimView
-            } else {
-                dimView = UIView()
-                dimView.alpha = 0.0
-                dimView.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
-                self.dimView = dimView
-            }
-            view.addSubview(dimView)
-            
             for (controller, _) in self.controllers {
                 controller.viewWillAppear(false)
                 if let topLevelSubview = self.topLevelSubview {
@@ -345,18 +290,10 @@ public final class PresentationContext {
         }
     }
     
-    private weak var currentModalController: ContainableController?
-    
     private func updateViews() {
         self.hasOpaqueOverlay = self.currentlyBlocksBackgroundWhenInOverlay
-        var modalController: ContainableController?
         var topHasOpaque = false
         for (controller, _) in self.controllers.reversed() {
-            if controller.isModalWhenInOverlay {
-                if modalController == nil {
-                    modalController = controller
-                }
-            }
             if topHasOpaque {
                 controller.displayNode.accessibilityElementsHidden = true
             } else {
@@ -364,41 +301,6 @@ public final class PresentationContext {
                     topHasOpaque = true
                 }
                 controller.displayNode.accessibilityElementsHidden = false
-            }
-        }
-        
-        if self.currentModalController !== modalController {
-            if let currentModalController = self.currentModalController {
-                currentModalController.updateTransitionWhenPresentedAsModal = nil
-                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                    currentModalController.displayNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-                }
-                currentModalController.displayNode.layer.cornerRadius = 0.0
-            }
-            self.currentModalController = modalController
-            if let modalController = modalController {
-                if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
-                    if let layout = self.layout, case .regular = layout.metrics.widthClass {
-                        modalController.displayNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
-                    } else {
-                        modalController.displayNode.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-                    }
-                }
-                modalController.displayNode.layer.cornerRadius = 10.0
-                modalController.updateTransitionWhenPresentedAsModal = { [weak self, weak modalController] value, transition in
-                    guard let strongSelf = self, let modalController = modalController, modalController === strongSelf.currentModalController else {
-                        return
-                    }
-                    if strongSelf.modalPresentationValue != value {
-                        strongSelf.modalPresentationValue = value
-                        strongSelf.updateModalTransition?(value, transition)
-                    }
-                }
-            } else {
-                if self.modalPresentationValue != 0.0 {
-                    self.modalPresentationValue = 0.0
-                    self.updateModalTransition?(0.0, .animated(duration: 0.3, curve: .spring))
-                }
             }
         }
     }
@@ -428,33 +330,27 @@ public final class PresentationContext {
     
     func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         var mask = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
-        
         for (controller, _) in self.controllers {
             mask = mask.intersection(controller.combinedSupportedOrientations(currentOrientationToLock: currentOrientationToLock))
         }
-        
         return mask
     }
     
     func combinedDeferScreenEdgeGestures() -> UIRectEdge {
         var edges: UIRectEdge = []
-        
         for (controller, _) in self.controllers {
             edges = edges.union(controller.deferScreenEdgeGestures)
         }
-        
         return edges
     }
     
     func combinedPrefersOnScreenNavigationHidden() -> Bool {
         var hidden: Bool = false
-        
         for (controller, _) in self.controllers {
             if let controller = controller as? ViewController {
                 hidden = hidden || controller.prefersOnScreenNavigationHidden
             }
         }
-        
         return hidden
     }
 }

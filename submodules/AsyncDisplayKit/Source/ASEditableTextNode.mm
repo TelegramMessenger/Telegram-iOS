@@ -647,6 +647,7 @@
 }
 
 - (void)setInitialPrimaryLanguage:(NSString *)initialPrimaryLanguage {
+  _initialPrimaryLanguage = initialPrimaryLanguage;
   ((ASPanningOverriddenUITextView *)_textKitComponents.textView).initialPrimaryLanguage = initialPrimaryLanguage;
 }
 

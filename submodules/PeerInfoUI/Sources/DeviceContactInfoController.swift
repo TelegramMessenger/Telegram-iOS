@@ -811,6 +811,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     var addToExistingImpl: (() -> Void)?
     var openChatImpl: ((PeerId) -> Void)?
     var replaceControllerImpl: ((ViewController) -> Void)?
+    var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var openUrlImpl: ((String) -> Void)?
     var openAddressImpl: ((DeviceContactAddressData) -> Void)?
@@ -908,7 +909,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
             return state
         }
     }, updatePhoneLabel: { id, currentLabel in
-        presentControllerImpl?(phoneLabelController(context: context, currentLabel: currentLabel, completion: { value in
+        pushControllerImpl?(phoneLabelController(context: context, currentLabel: currentLabel, completion: { value in
             updateState { state in
                 var state = state
                 for i in 0 ..< state.phoneNumbers.count {
@@ -919,7 +920,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 }
                 return state
             }
-        }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }))
     }, deletePhone: { id in
         updateState { state in
             var state = state
@@ -976,14 +977,14 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                     presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             case .createContact:
-                presentControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: subject.peer, contactData: subject.contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
+                pushControllerImpl?(deviceContactInfoController(context: context, subject: .create(peer: subject.peer, contactData: subject.contactData, isSharing: false, shareViaException: false, completion: { peer, stableId, contactData in
                     dismissImpl?(false)
                     if let peer = peer {
                         
                     } else {
                         
                     }
-                }), completed: nil, cancelled: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                }), completed: nil, cancelled: nil))
             case .addToExisting:
                 addToExistingImpl?()
             case .sendMessage:
@@ -1210,6 +1211,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     }
     
     let controller = DeviceContactInfoController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     addToExistingImpl = { [weak controller] in
         guard let controller = controller else {
             return
@@ -1225,6 +1227,9 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     }
     replaceControllerImpl = { [weak controller] value in
         (controller?.navigationController as? NavigationController)?.replaceTopController(value, animated: true)
+    }
+    pushControllerImpl = { [weak controller] c in
+        (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
     presentControllerImpl = { [weak controller] value, presentationArguments in
         controller?.present(value, in: .window(.root), with: presentationArguments)
@@ -1293,7 +1298,8 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
 
 private func addContactToExisting(context: AccountContext, parentController: ViewController, contactData: DeviceContactExtendedData, completion: @escaping (Peer?, DeviceContactStableId, DeviceContactExtendedData) -> Void) {
     let contactsController = context.sharedContext.makeContactSelectionController(ContactSelectionControllerParams(context: context, title: { $0.Contacts_Title }, displayDeviceContacts: true))
-    parentController.present(contactsController, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    contactsController.navigationPresentation = .modal
+    (parentController.navigationController as? NavigationController)?.pushViewController(contactsController)
     let _ = (contactsController.result
     |> deliverOnMainQueue).start(next: { peer in
         if let peer = peer {

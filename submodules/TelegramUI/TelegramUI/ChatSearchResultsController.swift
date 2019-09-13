@@ -17,9 +17,7 @@ final class ChatSearchResultsController: ViewController {
     private var presentationData: PresentationData
     private let searchQuery: String
     private let messages: [Message]
-    
-    private var didPlayPresentationAnimation = false
-    
+        
     private let navigateToMessageIndex: (Int) -> Void
     
     private var presentationDataDisposable: Disposable?
@@ -33,7 +31,7 @@ final class ChatSearchResultsController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings))
         
-        self.isModalWhenInOverlay = true
+        self.navigationPresentation = .modal
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
@@ -47,7 +45,7 @@ final class ChatSearchResultsController: ViewController {
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = searchQuery
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(donePressed))
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(donePressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -59,27 +57,11 @@ final class ChatSearchResultsController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = ChatSearchResultsControllerNode(context: self.context, messages: self.messages)
+        self.displayNode = ChatSearchResultsControllerNode(context: self.context, searchQuery: self.searchQuery, messages: self.messages)
         self.controllerNode.resultSelected = { [weak self] messageIndex in
             self?.navigateToMessageIndex(messageIndex)
             self?.dismiss()
         }
-        self.controllerNode.dismiss = { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-        }
-    }
-    
-    override public func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        if !self.didPlayPresentationAnimation {
-            self.didPlayPresentationAnimation = true
-            self.controllerNode.animateIn()
-        }
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: completion)
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

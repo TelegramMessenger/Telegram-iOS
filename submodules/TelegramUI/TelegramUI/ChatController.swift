@@ -348,9 +348,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource)
         
         self.blocksBackgroundWhenInOverlay = true
-        if let subject = subject, case .scheduledMessages = subject {
-            //self.isModalWhenInOverlay = true
-        }
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
@@ -988,7 +985,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, openTheme: { [weak self] message in
             if let strongSelf = self, strongSelf.isNodeLoaded, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
                 strongSelf.chatDisplayNode.dismissInput()
-                openChatTheme(context: strongSelf.context, message: message, present: { [weak self] c, a in
+                openChatTheme(context: strongSelf.context, message: message, pushController: { [weak self] c in
+                    (self?.navigationController as? NavigationController)?.pushViewController(c)
+                }, present: { [weak self] c, a in
                     self?.present(c, in: .window(.root), with: a, blockInteraction: true)
                 })
             }
@@ -3183,7 +3182,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let controller = ChatSearchResultsController(context: strongSelf.context, searchQuery: searchData.query, messages: searchResult.messages, navigateToMessageIndex: { index in
                             strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
                         })
-                        strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 })
             }
@@ -5280,7 +5279,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             let _ = legacyAssetPicker(context: strongSelf.context, presentationData: strongSelf.presentationData, editingMedia: editingMedia, fileMode: fileMode, peer: peer, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, selectionLimit: selectionLimit).start(next: { generator in
                 if let strongSelf = self {
-                    let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
+                    let legacyController = LegacyController(presentation: .navigation, theme: strongSelf.presentationData.theme, initialLayout: strongSelf.validLayout)
+                    legacyController.navigationPresentation = .modal
                     legacyController.statusBar.statusBarStyle = strongSelf.presentationData.theme.rootController.statusBarStyle.style
                     legacyController.controllerLoaded = { [weak legacyController] in
                         legacyController?.view.disablesInteractiveTransitionGestureRecognizer = true
@@ -5305,7 +5305,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 })
                             }))
-                            strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                         }
                     }, presentSelectionLimitExceeded: {
                         guard let strongSelf = self else {
@@ -5345,7 +5345,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     strongSelf.chatDisplayNode.dismissInput()
-                    strongSelf.present(legacyController, in: .window(.root))
+                    legacyController.navigationPresentation = .modal
+                    (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyController)
                 }
             })
         })
@@ -5400,7 +5401,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             strongSelf.chatDisplayNode.dismissInput()
-            strongSelf.present(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue, _ in
+            (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -5437,15 +5438,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                     strongSelf.sendMessages([message])
                 }
-            }, theme: strongSelf.presentationData.theme, hasLiveLocation: !strongSelf.presentationInterfaceState.isScheduledMessages), in: .window(.root))
+            }, theme: strongSelf.presentationData.theme, hasLiveLocation: !strongSelf.presentationInterfaceState.isScheduledMessages))
         })
     }
     
     private func presentContactPicker() {
         let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: self.context, title: { $0.Contacts_Title }, displayDeviceContacts: true))
+        contactsController.navigationPresentation = .modal
         self.chatDisplayNode.dismissInput()
-        self.present(contactsController, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-        self.controllerNavigationDisposable.set((contactsController.result |> deliverOnMainQueue).start(next: { [weak self] peer in
+        (self.navigationController as? NavigationController)?.pushViewController(contactsController)
+        self.controllerNavigationDisposable.set((contactsController.result
+        |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {
                 let dataSignal: Signal<(Peer?,  DeviceContactExtendedData?), NoError>
                 switch peer {
@@ -5503,7 +5506,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
                             strongSelf.sendMessages([message])
                         } else {
-                            strongSelf.present(strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
+                            let contactController = strongSelf.context.sharedContext.makeDeviceContactInfoController(context: strongSelf.context, subject: .filter(peer: peerAndContactData.0, contactId: nil, contactData: contactData, completion: { peer, contactData in
                                 guard let strongSelf = self, !contactData.basicData.phoneNumbers.isEmpty else {
                                     return
                                 }
@@ -5521,7 +5524,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let message = EnqueueMessage.message(text: "", attributes: [], mediaReference: .standalone(media: media), replyToMessageId: replyMessageId, localGroupingKey: nil)
                                     strongSelf.sendMessages([message])
                                 }
-                            }), completed: nil, cancelled: nil), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            }), completed: nil, cancelled: nil)
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(contactController)
                         }
                     }
                 }))
@@ -5531,7 +5535,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func presentPollCreation() {
         if case let .peer(peerId) = self.chatLocation {
-            self.present(createPollController(context: self.context, peerId: peerId, completion: { [weak self] message in
+            (self.navigationController as? NavigationController)?.pushViewController(createPollController(context: self.context, peerId: peerId, completion: { [weak self] message in
                 guard let strongSelf = self else {
                     return
                 }
@@ -5544,7 +5548,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
                 strongSelf.sendMessages([message.withUpdatedReplyToMessageId(replyMessageId)])
-            }), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }))
         }
     }
     
@@ -6365,7 +6369,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         self.chatDisplayNode.dismissInput()
-        self.present(controller, in: .window(.root), blockInteraction: true)
+        (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
     private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: Message?) {
@@ -6482,7 +6486,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                             }
                             self.chatDisplayNode.dismissInput()
-                            self.present(controller, in: .window(.root))
+                            (self.navigationController as? NavigationController)?.pushViewController(controller)
                         }
                     default:
                         break
@@ -7718,17 +7722,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func openScheduledMessages() {
         let controller = ChatControllerImpl(context: self.context, chatLocation: self.chatLocation, subject: .scheduledMessages)
+        controller.navigationPresentation = .modal
         (self.navigationController as? NavigationController)?.pushViewController(controller)
-        //self.present(controller, in: .window(.root))
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        if !self.isDismissed {
-            self.isDismissed = true
-            self.chatDisplayNode.animateOut(completion: { [weak self] in
-                self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            })
-            self.updateTransitionWhenPresentedAsModal?(0.0, .animated(duration: 0.2, curve: .easeInOut))
-        }
     }
 }

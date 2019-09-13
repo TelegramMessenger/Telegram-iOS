@@ -924,7 +924,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func makePeerInfoController(context: AccountContext, peer: Peer, mode: PeerInfoControllerMode) -> ViewController? {
-        return peerInfoControllerImpl(context: context, peer: peer, mode: mode)
+        let controller = peerInfoControllerImpl(context: context, peer: peer, mode: mode)
+        controller?.navigationPresentation = .modalInLargeLayout
+        return controller
     }
     
     public func openExternalUrl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
@@ -995,8 +997,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         openAddContactImpl(context: context, firstName: firstName, lastName: lastName, phoneNumber: phoneNumber, label: label, present: present, pushController: pushController, completed: completed)
     }
     
-    public func openAddPersonContact(context: AccountContext, peerId: PeerId, present: @escaping (ViewController, Any?) -> Void) {
-        openAddPersonContactImpl(context: context, peerId: peerId, present: present)
+    public func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        openAddPersonContactImpl(context: context, peerId: peerId, pushController: pushController, present: present)
     }
     
     public func makeCreateGroupController(context: AccountContext, peerIds: [PeerId], initialTitle: String?, mode: CreateGroupMode, completion: ((PeerId, @escaping () -> Void) -> Void)?) -> ViewController {

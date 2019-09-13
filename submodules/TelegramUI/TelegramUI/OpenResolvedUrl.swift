@@ -81,7 +81,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             }
             dismissInput()
-            present(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+            navigationController?.pushViewController(controller)
         case let .channelMessage(peerId, messageId):
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
@@ -203,10 +203,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         continueWithPeer(peerId)
                     }
                 }
-                if let navigationController = navigationController {
-                    context.sharedContext.applicationBindings.dismissNativeController()
-                    (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
-                }
+                navigationController?.pushViewController(controller)
             }
         case let .wallpaper(parameter):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }

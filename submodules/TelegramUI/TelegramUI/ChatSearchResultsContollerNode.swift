@@ -115,12 +115,11 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     var resultSelected: ((Int) -> Void)?
-    var dismiss: (() -> Void)?
     
     private let presentationDataPromise: Promise<ChatListPresentationData>
     private let disposable = MetaDisposable()
     
-    init(context: AccountContext, messages: [Message]) {
+    init(context: AccountContext, searchQuery: String, messages: [Message]) {
         self.context = context
         self.messages = messages
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -173,6 +172,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, toggleArchivedFolderHiddenByDefault: {
         }, activateChatPreview: { _, _, _ in
         })
+        interaction.searchTextHighightState = searchQuery
         self.interaction = interaction
         
         let previousEntries = Atomic<[ChatListSearchEntry]?>(value: nil)
@@ -194,23 +194,6 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         self.presentationDataPromise.set(.single(ChatListPresentationData(theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, disableAnimations: self.presentationData.disableAnimations)))
     }
     
-    func animateIn() {
-        self.layer.animatePosition(from: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), to: self.layer.position, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-    }
-    
-    func animateOut(completion: (() -> Void)? = nil) {
-        let internalCompletion: () -> Void = { [weak self] in
-            if let strongSelf = self {
-                strongSelf.dismiss?()
-            }
-            completion?()
-        }
-        
-        self.layer.animatePosition(from: self.layer.position, to: CGPoint(x: self.layer.position.x, y: self.layer.position.y + self.layer.bounds.size.height), duration: 0.2, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false, completion: { _ in
-            internalCompletion()
-        })
-    }
-
     private func enqueueTransition(_ transition: ChatListSearchContainerTransition, firstTime: Bool) {
         self.enqueuedTransitions.append((transition, firstTime))
         

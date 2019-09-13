@@ -40,13 +40,13 @@ public class ComposeController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.navigationPresentation = .modal
+        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.title = self.presentationData.strings.Compose_NewMessage
-        
-        self.isModalWhenInOverlay = true
-        
-        //self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+                
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(cancelPressed))
         
@@ -263,6 +263,6 @@ public class ComposeController: ViewController {
     }
     
     @objc private func cancelPressed() {
-        self.presentingViewController?.dismiss(animated: true, completion: nil)
+        (self.navigationController as? NavigationController)?.filterController(self, animated: true)
     }
 }

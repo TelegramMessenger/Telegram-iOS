@@ -11,4 +11,6 @@ public protocol StatusBarHost {
     var keyboardView: UIView? { get }
     
     var handleVolumeControl: Signal<Bool, NoError> { get }
+    
+    func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool)
 }

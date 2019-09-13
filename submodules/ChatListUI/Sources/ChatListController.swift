@@ -752,22 +752,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             strongSelf.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
         }))
         
-        /*self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
-        |> distinctUntilChanged
-        |> deliverOnMainQueue).start(next: { [weak self] option in
-            guard let strongSelf = self else {
-                return
-            }
-            switch option {
-                case .none:
-                    strongSelf.tabBarItem.selectedImage = tabImageNone
-                case .top:
-                    strongSelf.tabBarItem.selectedImage = tabImageUp
-                case .unread:
-                    strongSelf.tabBarItem.selectedImage = tabImageUnread
-            }
-        })*/
-        
         self.ready.set(self.chatListDisplayNode.chatListNode.ready)
         
         self.displayNodeDidLoad()
@@ -1020,7 +1004,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     
     @objc private func composePressed() {
         let controller = self.context.sharedContext.makeComposeController(context: self.context)
-        self.present(controller, in: .window(.root))
+        (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {

@@ -84,9 +84,13 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
         if !isSavedMessages, let peer = peer as? TelegramUser {
             if !transaction.isPeerContact(peerId: peer.id) {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToContacts, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    context.sharedContext.openAddPersonContact(context: context, peerId: peerId, present: { controller, arguments in
+                    context.sharedContext.openAddPersonContact(context: context, peerId: peerId, pushController: { controller in
+                        if let navigationController = chatListController?.navigationController as? NavigationController {
+                            navigationController.pushViewController(controller)
+                        }
+                    }, present: { c, a in
                         if let chatListController = chatListController {
-                            chatListController.present(controller, in: .window(.root), with: arguments)
+                            chatListController.present(c, in: .window(.root), with: a)
                         }
                     })
                     f(.default)
@@ -95,7 +99,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
             }
         }
         
-        if case .chatList = source, !isSavedMessages {
+        if case .chatList = source {
             if let readState = transaction.getCombinedPeerReadState(peerId), readState.isUnread {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     let _ = togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId).start()
@@ -222,6 +226,10 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
                 }
                 f(.default)
             })))
+        }
+        
+        if let item = items.last, case .separator = item {
+            items.removeLast()
         }
         
         return items
