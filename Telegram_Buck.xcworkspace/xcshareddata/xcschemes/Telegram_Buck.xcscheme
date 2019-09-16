@@ -966,6 +966,48 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04EE09F1DE500000000"
+               BuildableName = "libReactionSelectionNode.a"
+               BlueprintName = "ReactionSelectionNode"
+               ReferencedContainer = "container:submodules/ReactionSelectionNode/ReactionSelectionNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5B33A96100000000"
+               BuildableName = "libTextSelectionNode.a"
+               BlueprintName = "TextSelectionNode"
+               ReferencedContainer = "container:submodules/TextSelectionNode/TextSelectionNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5F32B06300000000"
+               BuildableName = "libContextUI.a"
+               BlueprintName = "ContextUI"
+               ReferencedContainer = "container:submodules/ContextUI/ContextUI.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E1B72F5B100000000"
                BuildableName = "libPeerOnlineMarkerNode.a"
                BlueprintName = "PeerOnlineMarkerNode"
@@ -1026,48 +1068,6 @@
                BuildableName = "libChatTitleActivityNode.a"
                BlueprintName = "ChatTitleActivityNode"
                ReferencedContainer = "container:submodules/ChatTitleActivityNode/ChatTitleActivityNode.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E66DC04EE09F1DE500000000"
-               BuildableName = "libReactionSelectionNode.a"
-               BlueprintName = "ReactionSelectionNode"
-               ReferencedContainer = "container:submodules/ReactionSelectionNode/ReactionSelectionNode.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E66DC04E5B33A96100000000"
-               BuildableName = "libTextSelectionNode.a"
-               BlueprintName = "TextSelectionNode"
-               ReferencedContainer = "container:submodules/TextSelectionNode/TextSelectionNode.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E66DC04E5F32B06300000000"
-               BuildableName = "libContextUI.a"
-               BlueprintName = "ContextUI"
-               ReferencedContainer = "container:submodules/ContextUI/ContextUI.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry

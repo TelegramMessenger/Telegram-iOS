@@ -120,6 +120,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
     
     func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
         self.endDraggingVelocity = velocity
+        targetContentOffset.pointee = scrollView.contentOffset
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {

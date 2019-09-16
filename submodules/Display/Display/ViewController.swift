@@ -466,13 +466,22 @@ public enum ViewControllerNavigationPresentation {
         }
     }
     
+    public func push(_ controller: ViewController) {
+        (self.navigationController as? NavigationController)?.pushViewController(controller)
+    }
+    
     public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
-        controller.presentationArguments = arguments
-        switch context {
-        case .current:
-            self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0), completion: completion)
-        case let .window(level):
-            self.window?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+        if case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation {
+            controller.navigationPresentation = .modal
+            self.push(controller)
+        } else {
+            controller.presentationArguments = arguments
+            switch context {
+            case .current:
+                self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0), completion: completion)
+            case let .window(level):
+                self.window?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+            }
         }
     }
     

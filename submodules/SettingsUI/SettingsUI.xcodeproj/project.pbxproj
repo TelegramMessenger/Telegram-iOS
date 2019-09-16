@@ -4250,6 +4250,27 @@
 			<key>fileRef</key>
 			<string>1DD70E2907DC840B00000000</string>
 		</dict>
+		<key>E7A30F04AD66967300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29AD66967300000000</string>
+		</dict>
+		<key>E7A30F04F40A586F00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29F40A586F00000000</string>
+		</dict>
+		<key>E7A30F046C9831F100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E296C9831F100000000</string>
+		</dict>
 		<key>E7A30F04928D142900000000</key>
 		<dict>
 			<key>isa</key>
@@ -4284,27 +4305,6 @@
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
 			<string>1DD70E29B6F47D1F00000000</string>
-		</dict>
-		<key>E7A30F04AD66967300000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29AD66967300000000</string>
-		</dict>
-		<key>E7A30F04F40A586F00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29F40A586F00000000</string>
-		</dict>
-		<key>E7A30F046C9831F100000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E296C9831F100000000</string>
 		</dict>
 		<key>E7A30F04D233F68C00000000</key>
 		<dict>
@@ -4798,14 +4798,14 @@
 				<string>E7A30F04FD72F45600000000</string>
 				<string>E7A30F04EA9CBB5B00000000</string>
 				<string>E7A30F0407DC840B00000000</string>
+				<string>E7A30F04AD66967300000000</string>
+				<string>E7A30F04F40A586F00000000</string>
+				<string>E7A30F046C9831F100000000</string>
 				<string>E7A30F04928D142900000000</string>
 				<string>E7A30F04097DBE9200000000</string>
 				<string>E7A30F0471ED41B100000000</string>
 				<string>E7A30F047AB043C800000000</string>
 				<string>E7A30F04B6F47D1F00000000</string>
-				<string>E7A30F04AD66967300000000</string>
-				<string>E7A30F04F40A586F00000000</string>
-				<string>E7A30F046C9831F100000000</string>
 				<string>E7A30F04D233F68C00000000</string>
 				<string>E7A30F049A24C4DE00000000</string>
 				<string>E7A30F0431752C6000000000</string>
