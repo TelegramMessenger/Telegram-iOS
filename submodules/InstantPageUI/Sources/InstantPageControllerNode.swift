@@ -1219,7 +1219,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let map = media.media as? TelegramMediaMap {
-            let controller = legacyLocationController(message: nil, mapMedia: map, context: self.context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: { }, openUrl: { _ in })
+            let controller = legacyLocationController(message: nil, mapMedia: map, context: self.context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: { }, openUrl: { _ in })
             self.pushController(controller)
             return
         }

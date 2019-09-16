@@ -13,17 +13,16 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
     private(set) var isReady: Bool = false
     private(set) var dismissProgress: CGFloat = 0.0
     var isReadyUpdated: (() -> Void)?
-    var updateDismissProgress: ((CGFloat) -> Void)?
+    var updateDismissProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     var interactivelyDismissed: (() -> Void)?
     
     private var ignoreScrolling = false
-    private var animator: DisplayLinkAnimator?
+    private var isDismissed = false
     
     init(theme: NavigationControllerTheme, controllerRemoved: @escaping (ViewController) -> Void) {
         self.theme = theme
         
         self.dim = ASDisplayNode()
-        self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
         self.dim.alpha = 0.0
         
         self.scrollNode = ASScrollNode()
@@ -47,10 +46,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
                 strongSelf.isReadyUpdated?()
             }
         }
-    }
-    
-    deinit {
-        self.animator?.invalidate()
+        
+        applySmoothRoundedCorners(self.container.layer)
     }
     
     override func didLoad() {
@@ -69,64 +66,92 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        if self.ignoreScrolling {
+        if self.ignoreScrolling || self.isDismissed {
             return
         }
         var progress = (self.bounds.height - scrollView.bounds.origin.y) / self.bounds.height
         progress = max(0.0, min(1.0, progress))
         self.dismissProgress = progress
         self.dim.alpha = 1.0 - progress
-        self.updateDismissProgress?(progress)
+        self.updateDismissProgress?(progress, .immediate)
     }
     
-    func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+    private var endDraggingVelocity: CGPoint?
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        let velocity = self.endDraggingVelocity ?? CGPoint()
+        self.endDraggingVelocity = nil
+        
         var progress = (self.bounds.height - scrollView.bounds.origin.y) / self.bounds.height
         progress = max(0.0, min(1.0, progress))
         
-        self.ignoreScrolling = true
-        targetContentOffset.pointee = scrollView.contentOffset
-        scrollView.setContentOffset(scrollView.contentOffset, animated: false)
-        self.ignoreScrolling = false
-        self.animator?.invalidate()
         let targetOffset: CGFloat
-        if velocity.y < -0.5 || progress >= 0.5 {
-            targetOffset = 0.0
-        } else {
-            targetOffset = self.bounds.height
-        }
         let velocityFactor: CGFloat = 0.4 / max(1.0, abs(velocity.y))
-        self.animator = DisplayLinkAnimator(duration: Double(min(0.3, velocityFactor)), from: scrollView.contentOffset.y, to: targetOffset, update: { [weak self] value in
+        let duration = Double(min(0.3, velocityFactor))
+        let transition: ContainedViewLayoutTransition
+        let dismissProgress: CGFloat
+        if velocity.y < -0.5 || progress >= 0.5 {
+            dismissProgress = 1.0
+            targetOffset = 0.0
+            transition = .animated(duration: duration, curve: .easeInOut)
+            self.isDismissed = true
+        } else {
+            dismissProgress = 0.0
+            targetOffset = self.bounds.height
+            transition = .animated(duration: 0.5, curve: .spring)
+        }
+        self.ignoreScrolling = true
+        let deltaY = targetOffset - scrollView.contentOffset.y
+        scrollView.setContentOffset(scrollView.contentOffset, animated: false)
+        scrollView.setContentOffset(CGPoint(x: 0.0, y: targetOffset), animated: false)
+        transition.animateOffsetAdditive(layer: self.scrollNode.layer, offset: -deltaY, completion: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: value)
-        }, completion: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.animator = nil
             if targetOffset == 0.0 {
                 strongSelf.interactivelyDismissed?()
             }
         })
+        self.ignoreScrolling = false
+        self.dismissProgress = dismissProgress
+        transition.updateAlpha(node: self.dim, alpha: 1.0 - dismissProgress)
+        self.updateDismissProgress?(dismissProgress, transition)
+    }
+    
+    func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+        self.endDraggingVelocity = velocity
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
     }
     
-    func update(layout: ContainerViewLayout, controllers: [ViewController], transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
-        transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: layout.size.height * 2.0)
-        if !self.scrollNode.view.isDecelerating && !self.scrollNode.view.isDragging && self.animator == nil {
-            transition.updateBounds(node: self.scrollNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size))
+    func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
+        return false
+    }
+    
+    func update(layout: ContainerViewLayout, controllers: [ViewController], coveredByModalTransition: CGFloat, transition: ContainedViewLayoutTransition) {
+        if self.isDismissed {
+            return
         }
+        
+        transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
+        self.ignoreScrolling = true
+        self.scrollNode.frame = CGRect(origin: CGPoint(), size: layout.size)
+        self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: layout.size.height * 2.0)
+        if !self.scrollNode.view.isDecelerating && !self.scrollNode.view.isDragging {
+            let defaultBounds = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height), size: layout.size)
+            if self.scrollNode.bounds != defaultBounds {
+                self.scrollNode.bounds = defaultBounds
+            }
+        }
+        self.ignoreScrolling = false
         
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
+        let containerScale: CGFloat
         switch layout.metrics.widthClass {
         case .compact:
-            self.dim.isHidden = true
+            self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             self.container.clipsToBounds = true
             self.container.cornerRadius = 10.0
             if #available(iOS 11.0, *) {
@@ -139,9 +164,14 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
             }
             
             containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
-            containerFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset), size: containerLayout.size)
+            let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - coveredByModalTransition * 10.0), size: containerLayout.size)
+            let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
+            containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
+            let maxScaledTopInset: CGFloat = topInset - 10.0
+            let scaledTopInset: CGFloat = topInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
+            containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
         case .regular:
-            self.dim.isHidden = false
+            self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
             self.container.clipsToBounds = true
             self.container.cornerRadius = 10.0
             if #available(iOS 11.0, *) {
@@ -153,6 +183,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
             let maxSide = max(layout.size.width, layout.size.height)
             let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: layout.size.height - verticalInset * 2.0)
             containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
+            containerScale = 1.0
             
             var inputHeight: CGFloat?
             if let inputHeightValue = layout.inputHeight {
@@ -160,7 +191,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
             }
             containerLayout = ContainerViewLayout(size: containerSize, metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
         }
-        transition.updateFrame(node: self.container, frame: containerFrame.offsetBy(dx: 0.0, dy: layout.size.height))
+        transition.updateFrameAsPositionAndBounds(node: self.container, frame: containerFrame.offsetBy(dx: 0.0, dy: layout.size.height))
+        transition.updateTransformScale(node: self.container, scale: containerScale)
         self.container.update(layout: containerLayout, canBeClosed: true, controllers: controllers, transition: transition)
     }
     
@@ -192,5 +224,31 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
             completion()
             return transition
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        guard let result = super.hitTest(point, with: event) else {
+            return nil
+        }
+        var currentParent: UIView? = result
+        while true {
+            if currentParent == nil {
+                break
+            }
+            if let scrollView = currentParent as? UIScrollView {
+                if scrollView === self.scrollNode.view {
+                    break
+                }
+                if scrollView.isDecelerating && scrollView.contentOffset.y < scrollView.contentInset.top {
+                    return self.scrollNode.view
+                }
+            } else if let listView = currentParent as? ListViewBackingView, let listNode = listView.target {
+                if listNode.scroller.isDecelerating && listNode.scroller.contentOffset.y < listNode.scroller.contentInset.top {
+                    return self.scrollNode.view
+                }
+            }
+            currentParent = currentParent?.superview
+        }
+        return result
     }
 }

@@ -13,3 +13,4 @@ CGFloat springAnimationValueAt(CABasicAnimation * _Nonnull animation, CGFloat t)
 
 void testZoomBlurEffect(UIVisualEffect *effect);
 UIBlurEffect *makeCustomZoomBlurEffect();
+void applySmoothRoundedCorners(CALayer * _Nonnull layer);

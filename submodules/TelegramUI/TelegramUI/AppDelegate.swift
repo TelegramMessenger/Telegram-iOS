@@ -69,7 +69,7 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var statusBarWindow: UIView? {
-        return self.application.value(forKey: "statusBarWindow") as? UIView
+        return nil//self.application.value(forKey: "statusBarWindow") as? UIView
     }
     
     var statusBarView: UIView? {
@@ -165,7 +165,6 @@ final class SharedApplicationContext {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
-    var aboveStatusbarWindow: UIWindow?
     private var dataImportSplash: LegacyDataImportSplash?
     
     let episodeId = arc4random()
@@ -240,9 +239,8 @@ final class SharedApplicationContext {
         
         
         let statusBarHost = ApplicationStatusBarHost()
-        let (window, hostView, aboveStatusbarWindow) = nativeWindowHostView()
+        let (window, hostView) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
-        self.aboveStatusbarWindow = aboveStatusbarWindow
         hostView.containerView.backgroundColor = UIColor.white
         self.window = window
         self.nativeWindow = window
@@ -448,7 +446,6 @@ final class SharedApplicationContext {
             #endif
         #endif
         
-        self.aboveStatusbarWindow?.isHidden = false
         self.window?.makeKeyAndVisible()
         
         self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
@@ -1093,7 +1090,9 @@ final class SharedApplicationContext {
         })
         
         let pushRegistry = PKPushRegistry(queue: .main)
-        pushRegistry.desiredPushTypes = Set([.voIP])
+        if #available(iOS 9.0, *) {
+            pushRegistry.desiredPushTypes = Set([.voIP])
+        }
         self.pushRegistry = pushRegistry
         pushRegistry.delegate = self
         
@@ -1341,24 +1340,28 @@ final class SharedApplicationContext {
     }
 
     public func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
-        if case PKPushType.voIP = type {
-            Logger.shared.log("App \(self.episodeId)", "pushRegistry credentials: \(credentials.token as NSData)")
-            
-            self.voipTokenPromise.set(.single(credentials.token))
+        if #available(iOS 9.0, *) {
+            if case PKPushType.voIP = type {
+                Logger.shared.log("App \(self.episodeId)", "pushRegistry credentials: \(credentials.token as NSData)")
+                
+                self.voipTokenPromise.set(.single(credentials.token))
+            }
         }
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
-            
-            if case PKPushType.voIP = type {
-                Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
-                sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
-            }
-        })
+        if #available(iOS 9.0, *) {
+            let _ = (self.sharedContextPromise.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+                
+                if case PKPushType.voIP = type {
+                    Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
+                    sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
+                }
+            })
+        }
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {

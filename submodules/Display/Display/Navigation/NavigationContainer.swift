@@ -217,37 +217,50 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     func update(layout: ContainerViewLayout, canBeClosed: Bool, controllers: [ViewController], transition: ContainedViewLayoutTransition) {
-        let previousControllers = self.controllers
-        self.controllers = controllers
-        
-        for i in 0 ..< controllers.count {
-            if i == 0 {
-                if canBeClosed {
-                    controllers[i].navigationBar?.previousItem = .close
-                } else {
-                    controllers[i].navigationBar?.previousItem = nil
-                }
-            } else {
-                controllers[i].navigationBar?.previousItem = .item(controllers[i - 1].navigationItem)
-            }
-        }
-        
         self.state.layout = layout
         self.state.canBeClosed = canBeClosed
         
-        if controllers.last !== self.state.top?.value {
-            if controllers.last !== self.state.pending?.value.value {
-                self.state.pending = nil
-                if let last = controllers.last {
-                    let transitionType: PendingChild.TransitionType
-                    if !previousControllers.contains(where: { $0 === last }) {
-                        transitionType = .push
+        var controllersUpdated = false
+        if self.controllers.count != controllers.count {
+            controllersUpdated = true
+        } else {
+            for i in 0 ..< controllers.count {
+                if self.controllers[i] !== controllers[i] {
+                    controllersUpdated = true
+                    break
+                }
+            }
+        }
+        if controllersUpdated {
+            let previousControllers = self.controllers
+            self.controllers = controllers
+            
+            for i in 0 ..< controllers.count {
+                if i == 0 {
+                    if canBeClosed {
+                        controllers[i].navigationBar?.previousItem = .close
                     } else {
-                        transitionType = .pop
+                        controllers[i].navigationBar?.previousItem = nil
                     }
-                    self.state.pending = PendingChild(value: self.makeChild(layout: layout, value: last), transitionType: transitionType, transition: transition, update: { [weak self] pendingChild in
-                        self?.pendingChildIsReady(pendingChild)
-                    })
+                } else {
+                    controllers[i].navigationBar?.previousItem = .item(controllers[i - 1].navigationItem)
+                }
+            }
+        
+            if controllers.last !== self.state.top?.value {
+                if controllers.last !== self.state.pending?.value.value {
+                    self.state.pending = nil
+                    if let last = controllers.last {
+                        let transitionType: PendingChild.TransitionType
+                        if !previousControllers.contains(where: { $0 === last }) {
+                            transitionType = .push
+                        } else {
+                            transitionType = .pop
+                        }
+                        self.state.pending = PendingChild(value: self.makeChild(layout: layout, value: last), transitionType: transitionType, transition: transition, update: { [weak self] pendingChild in
+                            self?.pendingChildIsReady(pendingChild)
+                        })
+                    }
                 }
             }
         }
@@ -357,6 +370,10 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func applyLayout(layout: ContainerViewLayout, to child: Child, transition: ContainedViewLayoutTransition) {
+        let childFrame = CGRect(origin: CGPoint(), size: layout.size)
+        if child.value.displayNode.frame != childFrame {
+            transition.updateFrame(node: child.value.displayNode, frame: childFrame)
+        }
         if child.layout != layout {
             child.layout = layout
             child.value.containerLayoutUpdated(layout, transition: transition)

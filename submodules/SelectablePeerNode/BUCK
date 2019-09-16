@@ -15,6 +15,7 @@ static_library(
         "//submodules/PeerOnlineMarkerNode:PeerOnlineMarkerNode",
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/ContextUI:ContextUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

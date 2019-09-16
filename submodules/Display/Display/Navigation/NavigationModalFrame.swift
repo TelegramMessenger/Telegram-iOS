@@ -9,12 +9,14 @@ private func generateCornerImage(radius: CGFloat, mirror: Bool) -> UIImage? {
         context.fill(CGRect(origin: CGPoint(), size: size))
         context.setBlendMode(.copy)
         context.setFillColor(UIColor.clear.cgColor)
-        context.fillEllipse(in: CGRect(origin: CGPoint(x: mirror ? (-radius) : 0.0, y: 0.0), size: CGSize(width: radius * 2.0, height: radius * 2.0)))
+        
+        UIGraphicsPushContext(context)
+        UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: mirror ? (-radius) : 0.0, y: 0.0), size: CGSize(width: radius * 2.0, height: radius * 2.0)), cornerRadius: radius).fill()
+        UIGraphicsPopContext()
     })
 }
 
 final class NavigationModalFrame: ASDisplayNode {
-    private let dim: ASDisplayNode
     private let topShade: ASDisplayNode
     private let leftShade: ASDisplayNode
     private let rightShade: ASDisplayNode
@@ -23,14 +25,11 @@ final class NavigationModalFrame: ASDisplayNode {
     
     private var currentMaxCornerRadius: CGFloat?
     
-    private var progress: CGFloat = 0.0
+    private var progress: CGFloat = 1.0
+    private var additionalProgress: CGFloat = 0.0
     private var validLayout: ContainerViewLayout?
     
     init(theme: NavigationControllerTheme) {
-        self.dim = ASDisplayNode()
-        self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
-        self.dim.alpha = 0.0
-        
         self.topShade = ASDisplayNode()
         self.topShade.backgroundColor = .black
         self.leftShade = ASDisplayNode()
@@ -47,7 +46,6 @@ final class NavigationModalFrame: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.dim)
         self.addSubnode(self.topShade)
         self.addSubnode(self.leftShade)
         self.addSubnode(self.rightShade)
@@ -58,39 +56,29 @@ final class NavigationModalFrame: ASDisplayNode {
     func update(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.validLayout = layout
         
-        transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
-        
-        self.updateShades(layout: layout, progress: 1.0 - self.progress, transition: transition)
+        self.updateShades(layout: layout, progress: 1.0 - self.progress, additionalProgress: self.additionalProgress, transition: transition, completion: {})
     }
     
-    func animateIn(transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.dim, alpha: 1.0)
-        
-        if let layout = self.validLayout {
-            self.updateShades(layout: layout, progress: 0.0, transition: .immediate)
-            self.updateShades(layout: layout, progress: 1.0, transition: transition)
-        }
-    }
-    
-    func updateDismissal(transition: ContainedViewLayoutTransition, progress: CGFloat, completion: @escaping () -> Void) {
+    func updateDismissal(transition: ContainedViewLayoutTransition, progress: CGFloat, additionalProgress: CGFloat, completion: @escaping () -> Void) {
         self.progress = progress
+        self.additionalProgress = additionalProgress
         
-        transition.updateAlpha(node: self.dim, alpha: 1.0 - progress, completion: { _ in
-            completion()
-        })
         if let layout = self.validLayout {
-            self.updateShades(layout: layout, progress: 1.0 - progress, transition: transition)
+            self.updateShades(layout: layout, progress: 1.0 - progress, additionalProgress: additionalProgress, transition: transition, completion: completion)
+        } else {
+            completion()
         }
     }
     
-    private func updateShades(layout: ContainerViewLayout, progress: CGFloat, transition: ContainedViewLayoutTransition) {
+    private func updateShades(layout: ContainerViewLayout, progress: CGFloat, additionalProgress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         let sideInset: CGFloat = 16.0
         var topInset: CGFloat = 0.0
         if let statusBarHeight = layout.statusBarHeight {
             topInset += statusBarHeight
         }
+        let additionalTopInset: CGFloat = 10.0
         
-        let cornerRadius: CGFloat = 8.0
+        let cornerRadius: CGFloat = 9.0
         let initialCornerRadius: CGFloat
         if !layout.safeInsets.top.isZero {
             initialCornerRadius = 40.0
@@ -103,11 +91,20 @@ final class NavigationModalFrame: ASDisplayNode {
         }
         
         let cornerSize = progress * cornerRadius + (1.0 - progress) * initialCornerRadius
-        transition.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(x: progress * sideInset, y: progress * topInset), size: CGSize(width: cornerSize, height: cornerSize)))
-        transition.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - progress * sideInset - cornerSize, y: progress * topInset), size: CGSize(width: cornerSize, height: cornerSize)))
+        let cornerSideOffset: CGFloat = progress * sideInset + additionalProgress * sideInset
+        let cornerTopOffset: CGFloat = progress * topInset + additionalProgress * additionalTopInset
+        transition.updateFrame(node: self.topLeftCorner, frame: CGRect(origin: CGPoint(x: cornerSideOffset, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)))
+        transition.updateFrame(node: self.topRightCorner, frame: CGRect(origin: CGPoint(x: layout.size.width - cornerSideOffset - cornerSize, y: cornerTopOffset), size: CGSize(width: cornerSize, height: cornerSize)))
         
-        transition.updateFrame(node: self.topShade, frame: CGRect(origin: CGPoint(x: 0.0, y: (1.0 - progress) * (-topInset)), size: CGSize(width: layout.size.width, height: topInset)))
-        transition.updateFrame(node: self.leftShade, frame: CGRect(origin: CGPoint(x: (1.0 - progress) * (-sideInset), y: 0.0), size: CGSize(width: sideInset, height: layout.size.height)))
-        transition.updateFrame(node: self.rightShade, frame: CGRect(origin: CGPoint(x: layout.size.width - sideInset * progress, y: 0.0), size: CGSize(width: sideInset, height: layout.size.height)))
+        let topShadeOffset: CGFloat = progress * topInset + additionalProgress * additionalTopInset
+        let leftShadeOffset: CGFloat = progress * sideInset + additionalProgress * sideInset
+        let rightShadeWidth: CGFloat = progress * sideInset + additionalProgress * sideInset
+        let rightShadeOffset: CGFloat = layout.size.width - rightShadeWidth
+        
+        transition.updateFrame(node: self.topShade, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: topShadeOffset)))
+        transition.updateFrame(node: self.leftShade, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: leftShadeOffset, height: layout.size.height)))
+        transition.updateFrame(node: self.rightShade, frame: CGRect(origin: CGPoint(x: rightShadeOffset, y: 0.0), size: CGSize(width: rightShadeWidth, height: layout.size.height)), completion: { _ in
+            completion()
+        })
     }
 }

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import MergeLists
 import HorizontalPeerItem
 import ListSectionHeaderNode
+import ContextUI
 
 private func calculateItemCustomWidth(width: CGFloat) -> CGFloat {
     let itemInsets = UIEdgeInsets(top: 0.0, left: 6.0, bottom: 0.0, right: 6.0)
@@ -76,9 +77,9 @@ private struct ChatListSearchRecentPeersEntry: Comparable, Identifiable {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool) -> ListViewItem {
-        return HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: mode, account: account, peer: self.peer, presence: self.presence, unreadBadge: self.unreadBadge, action: peerSelected, longTapAction: { peer in
-            peerLongTapped(peer)
+    func item(account: Account, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool) -> ListViewItem {
+        return HorizontalPeerItem(theme: self.theme, strings: self.strings, mode: mode, account: account, peer: self.peer, presence: self.presence, unreadBadge: self.unreadBadge, action: peerSelected, contextAction: { peer, node, gesture in
+            peerContextAction(peer, node, gesture)
         }, isPeerSelected: isPeerSelected, customWidth: self.itemCustomWidth)
     }
 }
@@ -91,16 +92,12 @@ private struct ChatListSearchRecentNodeTransition {
     let animated: Bool
 }
 
-private func preparedRecentPeersTransition(account: Account, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false, from fromEntries: [ChatListSearchRecentPeersEntry], to toEntries: [ChatListSearchRecentPeersEntry], firstTime: Bool, animated: Bool) -> ChatListSearchRecentNodeTransition {
+private func preparedRecentPeersTransition(account: Account, mode: HorizontalPeerItemMode, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false, from fromEntries: [ChatListSearchRecentPeersEntry], to toEntries: [ChatListSearchRecentPeersEntry], firstTime: Bool, animated: Bool) -> ChatListSearchRecentNodeTransition {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, mode: mode, peerSelected: peerSelected, peerLongTapped: { peer in
-        peerLongTapped(peer)
-    }, isPeerSelected: isPeerSelected), directionHint: .Down) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, mode: mode, peerSelected: peerSelected, peerLongTapped: { peer in
-        peerLongTapped(peer)
-    }, isPeerSelected: isPeerSelected), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected), directionHint: .Down) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected), directionHint: nil) }
     
     return ChatListSearchRecentNodeTransition(deletions: deletions, insertions: insertions, updates: updates, firstTime: firstTime, animated: animated)
 }
@@ -115,7 +112,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private let share: Bool
     
     private let peerSelected: (Peer) -> Void
-    private let peerLongTapped: (Peer) -> Void
+    private let peerContextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     private let isPeerSelected: (PeerId) -> Bool
     
     private let disposable = MetaDisposable()
@@ -124,14 +121,14 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
     private var items: [ListViewItem] = []
     private var queuedTransitions: [ChatListSearchRecentNodeTransition] = []
     
-    public init(account: Account, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, peerLongTapped: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
+    public init(account: Account, theme: PresentationTheme, mode: HorizontalPeerItemMode, strings: PresentationStrings, peerSelected: @escaping (Peer) -> Void, peerContextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, share: Bool = false) {
         self.theme = theme
         self.strings = strings
         self.themeAndStringsPromise = Promise((self.theme, self.strings))
         self.mode = mode
         self.share = share
         self.peerSelected = peerSelected
-        self.peerLongTapped = peerLongTapped
+        self.peerContextAction = peerContextAction
         self.isPeerSelected = isPeerSelected
         
         self.sectionHeaderNode = ListSectionHeaderNode(theme: theme)
@@ -210,7 +207,7 @@ public final class ChatListSearchRecentPeersNode: ASDisplayNode {
                 
                 let animated = !firstTime.swap(false)
                 
-                let transition = preparedRecentPeersTransition(account: account, mode: mode, peerSelected: peerSelected, peerLongTapped: peerLongTapped, isPeerSelected: isPeerSelected, from: previous.swap(entries), to: entries, firstTime: !animated, animated: animated)
+                let transition = preparedRecentPeersTransition(account: account, mode: mode, peerSelected: peerSelected, peerContextAction: peerContextAction, isPeerSelected: isPeerSelected, from: previous.swap(entries), to: entries, firstTime: !animated, animated: animated)
 
                 strongSelf.enqueueTransition(transition)
             }

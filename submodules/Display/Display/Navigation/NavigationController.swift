@@ -232,7 +232,6 @@ open class NavigationController: UINavigationController, ContainableController, 
             self.loadView()
         }
         self.validLayout = layout
-        transition.updateFrame(view: self.view, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         self.updateContainers(layout: layout, transition: transition)
     }
     
@@ -254,10 +253,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             let modalContainer: NavigationModalContainer
-            let containerTransition: ContainedViewLayoutTransition
             if let existingModalContainer = existingModalContainer {
                 modalContainer = existingModalContainer
-                containerTransition = transition
             } else {
                 modalContainer = NavigationModalContainer(theme: self.theme, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
@@ -273,12 +270,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                         }
                     }
                 }
-                modalContainer.updateDismissProgress = { [weak self, weak modalContainer] _ in
+                modalContainer.updateDismissProgress = { [weak self, weak modalContainer] _, transition in
                     guard let strongSelf = self, let modalContainer = modalContainer else {
                         return
                     }
                     if let layout = strongSelf.validLayout {
-                        strongSelf.updateContainers(layout: layout, transition: .immediate)
+                        strongSelf.updateContainers(layout: layout, transition: transition)
                     }
                 }
                 modalContainer.interactivelyDismissed = { [weak self, weak modalContainer] in
@@ -290,11 +287,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                     strongSelf.setViewControllers(controllers, animated: false)
                 }
-                containerTransition = .immediate
             }
-            
-            containerTransition.updateFrame(node: modalContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
-            modalContainer.update(layout: layout, controllers: navigationLayout.modal[i].controllers, transition: containerTransition)
             modalContainers.append(modalContainer)
         }
         
@@ -313,6 +306,26 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         for i in (0 ..< navigationLayout.modal.count).reversed() {
             let modalContainer = self.modalContainers[i]
+            
+            let containerTransition: ContainedViewLayoutTransition
+            if modalContainer.supernode == nil {
+                containerTransition = .immediate
+            } else {
+                containerTransition = transition
+            }
+            
+            let effectiveModalTransition: CGFloat
+            if visibleModalCount == 0 {
+                effectiveModalTransition = 0.0
+            } else if visibleModalCount == 1 {
+                effectiveModalTransition = 1.0 - topModalDismissProgress
+            } else {
+                effectiveModalTransition = 1.0
+            }
+            
+            containerTransition.updateFrame(node: modalContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
+            modalContainer.update(layout: layout, controllers: navigationLayout.modal[i].controllers, coveredByModalTransition: effectiveModalTransition, transition: containerTransition)
+            
             if modalContainer.supernode == nil && modalContainer.isReady {
                 if let previousModalContainer = previousModalContainer {
                     self.displayNode.insertSubnode(modalContainer, belowSubnode: previousModalContainer)
@@ -321,6 +334,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
                 modalContainer.animateIn(transition: transition)
             }
+            
             if modalContainer.supernode != nil {
                 visibleModalCount += 1
                 if previousModalContainer == nil {
@@ -398,6 +412,19 @@ open class NavigationController: UINavigationController, ContainableController, 
         switch layout.metrics.widthClass {
         case .compact:
             if visibleModalCount != 0 {
+                let effectiveRootModalDismissProgress: CGFloat
+                let additionalModalFrameProgress: CGFloat
+                if visibleModalCount == 1 {
+                    effectiveRootModalDismissProgress = topModalDismissProgress
+                    additionalModalFrameProgress = 0.0
+                } else if visibleModalCount == 2 {
+                    effectiveRootModalDismissProgress = 0.0
+                    additionalModalFrameProgress = 1.0 - topModalDismissProgress
+                } else {
+                    effectiveRootModalDismissProgress = 0.0
+                    additionalModalFrameProgress = 1.0
+                }
+                
                 let rootModalFrame: NavigationModalFrame
                 var modalFrameTransition: ContainedViewLayoutTransition = transition
                 var forceStatusBarAnimation = false
@@ -405,14 +432,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                     rootModalFrame = current
                     transition.updateFrame(node: rootModalFrame, frame: CGRect(origin: CGPoint(), size: layout.size))
                     rootModalFrame.update(layout: layout, transition: modalFrameTransition)
-                    rootModalFrame.updateDismissal(transition: transition, progress: topModalDismissProgress, completion: {})
+                    rootModalFrame.updateDismissal(transition: transition, progress: effectiveRootModalDismissProgress, additionalProgress: additionalModalFrameProgress, completion: {})
                     forceStatusBarAnimation = true
                 } else {
                     rootModalFrame = NavigationModalFrame(theme: self.theme)
                     self.rootModalFrame = rootModalFrame
-                    rootModalFrame.frame = CGRect(origin: CGPoint(), size: layout.size)
-                    rootModalFrame.update(layout: layout, transition: .immediate)
-                    rootModalFrame.animateIn(transition: transition)
                     if let rootContainer = self.rootContainer {
                         var rootContainerNode: ASDisplayNode
                         switch rootContainer {
@@ -423,9 +447,11 @@ open class NavigationController: UINavigationController, ContainableController, 
                         }
                         self.displayNode.insertSubnode(rootModalFrame, aboveSubnode: rootContainerNode)
                     }
-                    rootModalFrame.updateDismissal(transition: transition, progress: topModalDismissProgress, completion: {})
+                    rootModalFrame.frame = CGRect(origin: CGPoint(), size: layout.size)
+                    rootModalFrame.update(layout: layout, transition: .immediate)
+                    rootModalFrame.updateDismissal(transition: transition, progress: effectiveRootModalDismissProgress, additionalProgress: additionalModalFrameProgress, completion: {})
                 }
-                if topModalDismissProgress < 0.5 {
+                if effectiveRootModalDismissProgress < 0.5 {
                     self.statusBarHost?.setStatusBarStyle(.lightContent, animated: transition.isAnimated || forceStatusBarAnimation)
                 } else {
                     let normalStatusBarStyle: UIStatusBarStyle
@@ -445,21 +471,28 @@ open class NavigationController: UINavigationController, ContainableController, 
                     case let .split(container):
                         rootContainerNode = container
                     }
-                    let maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
                     var topInset: CGFloat = 0.0
                     if let statusBarHeight = layout.statusBarHeight {
                         topInset += statusBarHeight
                     }
-                    let maxOffset: CGFloat = (topInset - (layout.size.height - layout.size.height * maxScale) / 2.0)
+                    let maxScale: CGFloat
+                    let maxOffset: CGFloat
+                    if visibleModalCount == 1 {
+                        maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
+                        maxOffset = (topInset - (layout.size.height - layout.size.height * maxScale) / 2.0)
+                    } else {
+                        maxScale = (layout.size.width - 16.0 * 2.0 * 2.0) / layout.size.width
+                        maxOffset = (topInset + 10.0 - (layout.size.height - layout.size.height * maxScale) / 2.0)
+                    }
                     
-                    let scale = 1.0 * topModalDismissProgress + (1.0 - topModalDismissProgress) * maxScale
-                    let offset = (1.0 - topModalDismissProgress) * maxOffset
+                    let scale = 1.0 * effectiveRootModalDismissProgress + (1.0 - effectiveRootModalDismissProgress) * maxScale
+                    let offset = (1.0 - effectiveRootModalDismissProgress) * maxOffset
                     transition.updateSublayerTransformScaleAndOffset(node: rootContainerNode, scale: scale, offset: CGPoint(x: 0.0, y: offset))
                 }
             } else {
                 if let rootModalFrame = self.rootModalFrame {
                     self.rootModalFrame = nil
-                    rootModalFrame.updateDismissal(transition: transition, progress: 1.0, completion: { [weak rootModalFrame] in
+                    rootModalFrame.updateDismissal(transition: transition, progress: 1.0, additionalProgress: 0.0, completion: { [weak rootModalFrame] in
                         rootModalFrame?.removeFromSupernode()
                     })
                     let normalStatusBarStyle: UIStatusBarStyle
@@ -485,7 +518,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         case .regular:
             if let rootModalFrame = self.rootModalFrame {
                 self.rootModalFrame = nil
-                rootModalFrame.updateDismissal(transition: .immediate, progress: 1.0, completion: { [weak rootModalFrame] in
+                rootModalFrame.updateDismissal(transition: .immediate, progress: 1.0, additionalProgress: 0.0, completion: { [weak rootModalFrame] in
                     rootModalFrame?.removeFromSupernode()
                 })
                 let normalStatusBarStyle: UIStatusBarStyle

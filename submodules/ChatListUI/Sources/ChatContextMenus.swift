@@ -50,7 +50,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
         if case let .search(search) = source {
             switch search {
             case .recentPeers:
-                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     let _ = (removeRecentPeer(account: context.account, peerId: peerId)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
