@@ -174,21 +174,23 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
         special = "👩‍❤️‍👨"
     } else if emoji == "\u{01f46a}" {
         special = "👨‍👩‍👦"
+    } else if emoji == "\u{01f441}\u{200d}\u{01f5e8}" {
+        special = "👁️‍🗨️"
     }
     if let special = special, let entry = emojiMapping[special] {
         return entry
     }
     
-    let manSuffix = "\u{200d}\u{2642}\u{fe0f}"
-    let womanSuffix = "\u{200d}\u{2640}\u{fe0f}"
-    var preferredSuffix = womanSuffix
+    let maleSuffix = "\u{200d}\u{2642}\u{fe0f}"
+    let femaleSuffix = "\u{200d}\u{2640}\u{fe0f}"
+    var preferredSuffix = femaleSuffix
     
     let defaultMaleEmojis = ["\u{01f46e}", "\u{01f473}", "\u{1f477}", "\u{1f482}", "\u{01f575}", "\u{01f471}", "\u{01f647}", "\u{01f6b6}", "\u{01f3c3}", "\u{01f3cc}", "\u{01f3c4}", "\u{01f3ca}", "\u{26f9}", "\u{01f3cb}", "\u{01f6b4}", "\u{01f6b5}"]
     if defaultMaleEmojis.contains(emoji) {
-        preferredSuffix = manSuffix
+        preferredSuffix = maleSuffix
     }
     if let trimmedEmoji = trimmedEmoji, defaultMaleEmojis.contains(trimmedEmoji) {
-        preferredSuffix = manSuffix
+        preferredSuffix = maleSuffix
     }
     
     if let entry = emojiMapping["\(emoji)\(preferredSuffix)"] {
