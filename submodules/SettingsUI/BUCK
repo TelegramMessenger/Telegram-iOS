@@ -76,6 +76,7 @@ static_library(
         "//submodules/InstantPageCache:InstantPageCache",
         "//submodules/AppBundle:AppBundle",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/WalletUI:WalletUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

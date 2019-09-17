@@ -2650,13 +2650,13 @@ public extension Api {
     
     }
     public enum UserFull: TypeConstructorDescription {
-        case userFull(flags: Int32, user: Api.User, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?)
+        case userFull(flags: Int32, user: Api.User, about: String?, settings: Api.PeerSettings, profilePhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, botInfo: Api.BotInfo?, pinnedMsgId: Int32?, commonChatsCount: Int32, folderId: Int32?, walletAddress: String?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId):
+                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let walletAddress):
                     if boxed {
-                        buffer.appendInt32(-302941166)
+                        buffer.appendInt32(-1684333439)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     user.serialize(buffer, true)
@@ -2668,14 +2668,15 @@ public extension Api {
                     if Int(flags) & Int(1 << 6) != 0 {serializeInt32(pinnedMsgId!, buffer: buffer, boxed: false)}
                     serializeInt32(commonChatsCount, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 11) != 0 {serializeInt32(folderId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 13) != 0 {serializeString(walletAddress!, buffer: buffer, boxed: false)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId):
-                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId)])
+                case .userFull(let flags, let user, let about, let settings, let profilePhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let walletAddress):
+                return ("userFull", [("flags", flags), ("user", user), ("about", about), ("settings", settings), ("profilePhoto", profilePhoto), ("notifySettings", notifySettings), ("botInfo", botInfo), ("pinnedMsgId", pinnedMsgId), ("commonChatsCount", commonChatsCount), ("folderId", folderId), ("walletAddress", walletAddress)])
     }
     }
     
@@ -2710,6 +2711,8 @@ public extension Api {
             _9 = reader.readInt32()
             var _10: Int32?
             if Int(_1!) & Int(1 << 11) != 0 {_10 = reader.readInt32() }
+            var _11: String?
+            if Int(_1!) & Int(1 << 13) != 0 {_11 = parseString(reader) }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
@@ -2720,8 +2723,9 @@ public extension Api {
             let _c8 = (Int(_1!) & Int(1 << 6) == 0) || _8 != nil
             let _c9 = _9 != nil
             let _c10 = (Int(_1!) & Int(1 << 11) == 0) || _10 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
-                return Api.UserFull.userFull(flags: _1!, user: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10)
+            let _c11 = (Int(_1!) & Int(1 << 13) == 0) || _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.UserFull.userFull(flags: _1!, user: _2!, about: _3, settings: _4!, profilePhoto: _5, notifySettings: _6!, botInfo: _7, pinnedMsgId: _8, commonChatsCount: _9!, folderId: _10, walletAddress: _11)
             }
             else {
                 return nil
@@ -3968,6 +3972,7 @@ public extension Api {
         case privacyKeyProfilePhoto
         case privacyKeyPhoneNumber
         case privacyKeyAddedByPhone
+        case privacyKeyWalletAddress
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -4019,6 +4024,12 @@ public extension Api {
                     }
                     
                     break
+                case .privacyKeyWalletAddress:
+                    if boxed {
+                        buffer.appendInt32(963559926)
+                    }
+                    
+                    break
     }
     }
     
@@ -4040,6 +4051,8 @@ public extension Api {
                 return ("privacyKeyPhoneNumber", [])
                 case .privacyKeyAddedByPhone:
                 return ("privacyKeyAddedByPhone", [])
+                case .privacyKeyWalletAddress:
+                return ("privacyKeyWalletAddress", [])
     }
     }
     
@@ -4066,6 +4079,9 @@ public extension Api {
         }
         public static func parse_privacyKeyAddedByPhone(_ reader: BufferReader) -> PrivacyKey? {
             return Api.PrivacyKey.privacyKeyAddedByPhone
+        }
+        public static func parse_privacyKeyWalletAddress(_ reader: BufferReader) -> PrivacyKey? {
+            return Api.PrivacyKey.privacyKeyWalletAddress
         }
     
     }
@@ -11058,6 +11074,7 @@ public extension Api {
         case inputPrivacyKeyProfilePhoto
         case inputPrivacyKeyPhoneNumber
         case inputPrivacyKeyAddedByPhone
+        case inputPrivacyKeyWalletAddress
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -11109,6 +11126,12 @@ public extension Api {
                     }
                     
                     break
+                case .inputPrivacyKeyWalletAddress:
+                    if boxed {
+                        buffer.appendInt32(-640916697)
+                    }
+                    
+                    break
     }
     }
     
@@ -11130,6 +11153,8 @@ public extension Api {
                 return ("inputPrivacyKeyPhoneNumber", [])
                 case .inputPrivacyKeyAddedByPhone:
                 return ("inputPrivacyKeyAddedByPhone", [])
+                case .inputPrivacyKeyWalletAddress:
+                return ("inputPrivacyKeyWalletAddress", [])
     }
     }
     
@@ -11156,6 +11181,9 @@ public extension Api {
         }
         public static func parse_inputPrivacyKeyAddedByPhone(_ reader: BufferReader) -> InputPrivacyKey? {
             return Api.InputPrivacyKey.inputPrivacyKeyAddedByPhone
+        }
+        public static func parse_inputPrivacyKeyWalletAddress(_ reader: BufferReader) -> InputPrivacyKey? {
+            return Api.InputPrivacyKey.inputPrivacyKeyWalletAddress
         }
     
     }

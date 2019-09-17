@@ -83,10 +83,6 @@ public final class BotReceiptController: ViewController {
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
     }
     
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: completion)
-    }
-    
     @objc private func cancelPressed() {
         self.dismiss()
     }

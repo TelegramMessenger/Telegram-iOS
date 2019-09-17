@@ -26,7 +26,7 @@ def pretty(dict, current = ""):
     return current
 
 SHARED_CONFIGS = {
-    "IPHONEOS_DEPLOYMENT_TARGET": "8.0",
+    "IPHONEOS_DEPLOYMENT_TARGET": "9.0",
     "SDKROOT": "iphoneos",
     "GCC_OPTIMIZATION_LEVEL": "0",
     "SWIFT_WHOLE_MODULE_OPTIMIZATION": "NO",

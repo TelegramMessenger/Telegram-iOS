@@ -522,7 +522,9 @@ final class ChatMediaInputNode: ChatInputNode {
             }
         }, openSettings: { [weak self] in
             if let strongSelf = self {
-                strongSelf.controllerInteraction.navigationController()?.pushViewController(installedStickerPacksController(context: context, mode: .modal))
+                let controller = installedStickerPacksController(context: context, mode: .modal)
+                controller.navigationPresentation = .modal
+                strongSelf.controllerInteraction.navigationController()?.pushViewController(controller)
             }
         }, toggleSearch: { [weak self] value, searchMode in
             if let strongSelf = self {

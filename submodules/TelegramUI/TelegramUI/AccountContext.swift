@@ -102,6 +102,8 @@ public final class AccountContextImpl: AccountContext {
     }
     public let account: Account
     
+    public let tonContext: TonContext?
+    
     public let fetchManager: FetchManager
     private let prefetchManager: PrefetchManager?
     
@@ -129,9 +131,10 @@ public final class AccountContextImpl: AccountContext {
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
     
-    public init(sharedContext: SharedAccountContextImpl, account: Account, limitsConfiguration: LimitsConfiguration) {
+    public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: TonContext?, limitsConfiguration: LimitsConfiguration) {
         self.sharedContextImpl = sharedContext
         self.account = account
+        self.tonContext = tonContext
         
         self.downloadedMediaStoreManager = DownloadedMediaStoreManagerImpl(postbox: account.postbox, accountManager: sharedContext.accountManager)
         

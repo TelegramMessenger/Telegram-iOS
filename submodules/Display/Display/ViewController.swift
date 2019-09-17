@@ -3,6 +3,9 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+public protocol StandalonePresentableController: ViewController {
+}
+
 private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     if view.isFirstResponder {
         return view
@@ -471,7 +474,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
-        if case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation {
+        if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation {
             controller.navigationPresentation = .modal
             self.push(controller)
         } else {

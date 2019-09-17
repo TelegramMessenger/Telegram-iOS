@@ -15,8 +15,8 @@
   use_swift_delegate = false
   use_header_maps_in_xcode = false
   generate_missing_umbrella_headers = true
-  iphonesimulator_target_sdk_version = 8.0
-  iphoneos_target_sdk_version = 8.0
+  iphonesimulator_target_sdk_version = 9.0
+  iphoneos_target_sdk_version = 9.0
   provisioning_profile_read_command = security cms -Di
   xctool_default_destination_specifier = platform=iOS Simulator,OS=latest
   xctool_path = tools/xctool/bin/xctool

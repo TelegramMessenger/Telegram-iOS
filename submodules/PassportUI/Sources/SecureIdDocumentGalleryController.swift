@@ -44,7 +44,7 @@ final class SecureIdDocumentGalleryControllerPresentationArguments {
     }
 }
 
-class SecureIdDocumentGalleryController: ViewController {
+class SecureIdDocumentGalleryController: ViewController, StandalonePresentableController {
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }

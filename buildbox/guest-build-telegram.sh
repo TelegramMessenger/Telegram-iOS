@@ -10,8 +10,12 @@ if [ -z "COMMIT_ID" ]; then
 	exit 1
 fi
 
-if [ "$1" == "hockeyapp" ]; then
+if [ "$1" == "hockeyapp" ] || [ "$1" == "testinghockeyapp" ]; then
 	FASTLANE_BUILD_CONFIGURATION="internalhockeyapp"
+	CERTS_PATH="codesigning_data/certs"
+	PROFILES_PATH="codesigning_data/profiles"
+elif [ "$1" == "testinghockeyapp-local" ]; then
+	FASTLANE_BUILD_CONFIGURATION="testinghockeyapp"
 	CERTS_PATH="codesigning_data/certs"
 	PROFILES_PATH="codesigning_data/profiles"
 elif [ "$1" == "appstore" ]; then

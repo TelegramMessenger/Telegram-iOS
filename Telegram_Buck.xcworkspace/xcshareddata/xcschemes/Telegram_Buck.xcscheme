@@ -84,6 +84,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E0001C15300000000"
+               BuildableName = "libton.a"
+               BlueprintName = "ton"
+               ReferencedContainer = "container:submodules/MtProtoKit/MtProtoKit.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E123A55F300000000"
                BuildableName = "libMtProtoKit.dylib"
                BlueprintName = "MtProtoKit#shared"
@@ -2202,6 +2216,20 @@
                BuildableName = "libUrlHandling.a"
                BlueprintName = "UrlHandling"
                ReferencedContainer = "container:submodules/UrlHandling/UrlHandling.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E172FA86D00000000"
+               BuildableName = "libWalletUI.a"
+               BlueprintName = "WalletUI"
+               ReferencedContainer = "container:submodules/WalletUI/WalletUI.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry

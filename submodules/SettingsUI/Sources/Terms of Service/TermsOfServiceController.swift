@@ -172,11 +172,4 @@ public class TermsOfServiceController: ViewController {
             self.controllerNode.animateIn()
         }
     }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
-    }
 }

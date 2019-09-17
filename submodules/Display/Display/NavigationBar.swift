@@ -1053,11 +1053,13 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public var intrinsicCanTransitionInline: Bool = true
+    
     public var canTransitionInline: Bool {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
             return false
         } else {
-            return true
+            return self.intrinsicCanTransitionInline
         }
     }
     

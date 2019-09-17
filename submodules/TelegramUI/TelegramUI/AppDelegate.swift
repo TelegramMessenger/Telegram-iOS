@@ -23,6 +23,7 @@ import PassportUI
 import WatchBridge
 import LegacyDataImport
 import SettingsUI
+import AppBundle
 
 private let handleVoipNotifications = false
 
@@ -646,6 +647,42 @@ final class SharedApplicationContext {
             })
         }
         
+        let tonKeychain: TonKeychain
+        
+        #if targetEnvironment(simulator)
+        tonKeychain = TonKeychain(encrypt: { data in
+            return Signal { subscriber in
+                subscriber.putNext(data)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+        }, decrypt: { data in
+            return Signal { subscriber in
+                subscriber.putNext(data)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+        })
+        #else
+        tonKeychain = TonKeychain(encrypt: { data in
+            return Signal { subscriber in
+                BuildConfig.encryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result in
+                    subscriber.putNext(result)
+                    subscriber.putCompletion()
+                })
+                return EmptyDisposable
+            }
+        }, decrypt: { data in
+            return Signal { subscriber in
+                BuildConfig.decryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result in
+                    subscriber.putNext(result)
+                    subscriber.putCompletion()
+                })
+                return EmptyDisposable
+            }
+        })
+        #endif
+        
         let sharedContextSignal = accountManagerSignal
         |> deliverOnMainQueue
         |> take(1)
@@ -884,7 +921,11 @@ final class SharedApplicationContext {
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, limitsConfiguration: limitsConfiguration)
+                    var tonContext: TonContext?
+                    if let path = getAppBundle().path(forResource: "cfg", ofType: "txt"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let config = String(data: data, encoding: .utf8) {
+                        tonContext = TonContext(instance: TonInstance(basePath: account.basePath, config: config), keychain: tonKeychain)
+                    }
+                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)

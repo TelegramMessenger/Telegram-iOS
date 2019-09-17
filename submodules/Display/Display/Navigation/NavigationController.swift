@@ -642,6 +642,17 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
     }
     
+    public func replaceController(_ controller: ViewController, with other: ViewController, animated: Bool) {
+        var controllers = self._viewControllers
+        for i in 0 ..< controllers.count {
+            if controllers[i] === controller {
+                controllers[i] = other
+                break
+            }
+        }
+        self.setViewControllers(controllers, animated: animated)
+    }
+    
     public func replaceControllersAndPush(controllers: [UIViewController], controller: ViewController, animated: Bool, options: NavigationAnimationOptions = [], ready: ValuePromise<Bool>? = nil, completion: @escaping () -> Void = {}) {
         ready?.set(true)
         var controllers = controllers
