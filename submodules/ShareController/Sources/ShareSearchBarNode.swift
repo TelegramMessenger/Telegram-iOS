@@ -51,6 +51,8 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textInputNode.textField.attributedPlaceholder = NSAttributedString(string: placeholder, font: Font.regular(16.0), textColor: theme.actionSheet.inputPlaceholderColor)
         self.textInputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
+        self.textInputNode.textField.returnKeyType = .search
+        self.textInputNode.textField.accessibilityTraits = .searchField
         
         super.init()
         

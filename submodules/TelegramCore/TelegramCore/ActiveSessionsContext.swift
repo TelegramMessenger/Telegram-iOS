@@ -92,10 +92,10 @@ public final class ActiveSessionsContext {
         }
     }
     
-    public func removeOther() -> Signal<Never, NoError> {
+    public func removeOther() -> Signal<Never, TerminateSessionError> {
         return terminateOtherAccountSessions(account: self.account)
         |> deliverOnMainQueue
-        |> mapToSignal { [weak self] _ -> Signal<Never, NoError> in
+        |> mapToSignal { [weak self] _ -> Signal<Never, TerminateSessionError> in
             guard let strongSelf = self else {
                 return .complete()
             }

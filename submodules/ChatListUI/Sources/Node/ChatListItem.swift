@@ -521,8 +521,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         self.item = item
         
         var peer: Peer?
+        var displayAsMessage = false
         switch item.content {
-            case let .peer(message, peerValue, _, _, _, _, _, _, _, _, displayAsMessage):
+            case let .peer(message, peerValue, _, _, _, _, _, _, _, _, displayAsMessageValue):
+                displayAsMessage = displayAsMessageValue
                 if displayAsMessage, let author = message?.author as? TelegramUser {
                     peer = author
                 } else {
@@ -538,7 +540,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         if let peer = peer {
             var overrideImage: AvatarNodeImageOverride?
-            if peer.id == item.context.account.peerId {
+            if peer.id == item.context.account.peerId && !displayAsMessage {
                 overrideImage = .savedMessagesIcon
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon

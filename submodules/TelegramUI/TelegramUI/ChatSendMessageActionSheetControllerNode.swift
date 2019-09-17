@@ -202,6 +202,7 @@ final class ChatSendMessageActionSheetControllerNode: ViewControllerTracingNode,
         self.sendButtonNode = HighlightableButtonNode()
         self.sendButtonNode.imageNode.displayWithoutProcessing = false
         self.sendButtonNode.imageNode.displaysAsynchronously = false
+        self.sendButtonNode.accessibilityLabel = self.presentationData.strings.MediaPicker_Send
         
         self.messageClipNode = ASDisplayNode()
         self.messageClipNode.clipsToBounds = true

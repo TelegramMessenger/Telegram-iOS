@@ -462,7 +462,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
             }
         })
-        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        pushControllerImpl?(controller)
     }, contextAction: { isCurrent, reference, node, gesture in
         let _ = (context.account.postbox.transaction { transaction in
             return makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: nil, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: .blue)
@@ -489,7 +489,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                         })
                         
                         c.dismiss(completion: {
-                            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                            pushControllerImpl?(controller)
                         })
                     })))
                 }
@@ -508,10 +508,11 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                             let _ = (cloudThemes.get() |> delay(0.5, queue: Queue.mainQueue())
                             |> take(1)
                             |> deliverOnMainQueue).start(next: { themes in
-                                if isCurrent, let themeIndex = themes.firstIndex(where: { $0.id == theme.theme.id }) {
+                                if isCurrent, let currentThemeIndex = themes.firstIndex(where: { $0.id == theme.theme.id }) {
+                                    let previousThemeIndex = themes.prefix(upTo: currentThemeIndex).reversed().firstIndex(where: { $0.file != nil })
                                     let newTheme: PresentationThemeReference
-                                    if themeIndex > 0 {
-                                        newTheme = .cloud(PresentationCloudTheme(theme: themes[themeIndex - 1], resolvedWallpaper: nil))
+                                    if let previousThemeIndex = previousThemeIndex {
+                                        newTheme = .cloud(PresentationCloudTheme(theme: themes[themes.index(before: previousThemeIndex.base)], resolvedWallpaper: nil))
                                     } else {
                                         newTheme = .builtin(.nightAccent)
                                     }
@@ -647,7 +648,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
                 }
             })
-            presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            pushControllerImpl?(controller)
         }))
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, action: { [weak actionSheet] in

@@ -66,14 +66,14 @@ public struct SharedMediaPlaybackAlbumArt: Equatable {
 }
 
 public enum SharedMediaPlaybackDisplayData: Equatable {
-    case music(title: String?, performer: String?, albumArt: SharedMediaPlaybackAlbumArt?)
+    case music(title: String?, performer: String?, albumArt: SharedMediaPlaybackAlbumArt?, long: Bool)
     case voice(author: Peer?, peer: Peer?)
     case instantVideo(author: Peer?, peer: Peer?, timestamp: Int32)
     
     public static func ==(lhs: SharedMediaPlaybackDisplayData, rhs: SharedMediaPlaybackDisplayData) -> Bool {
         switch lhs {
-        case let .music(lhsTitle, lhsPerformer, lhsAlbumArt):
-            if case let .music(rhsTitle, rhsPerformer, rhsAlbumArt) = rhs, lhsTitle == rhsTitle, lhsPerformer == rhsPerformer, lhsAlbumArt == rhsAlbumArt {
+        case let .music(lhsTitle, lhsPerformer, lhsAlbumArt, lhsDuration):
+            if case let .music(rhsTitle, rhsPerformer, rhsAlbumArt, rhsDuration) = rhs, lhsTitle == rhsTitle, lhsPerformer == rhsPerformer, lhsAlbumArt == rhsAlbumArt, lhsDuration == rhsDuration {
                 return true
             } else {
                 return false

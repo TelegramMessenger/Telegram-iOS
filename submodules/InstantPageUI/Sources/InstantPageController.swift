@@ -42,6 +42,8 @@ public final class InstantPageController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.navigationPresentation = .modal
+        
         self.statusBar.statusBarStyle = .White
         
         self.webpageDisposable = (actualizedWebpage(postbox: self.context.account.postbox, network: self.context.account.network, webpage: webPage) |> deliverOnMainQueue).start(next: { [weak self] result in

@@ -46,7 +46,9 @@ private final class NavigationButtonItemNode: ASTextNode {
             _text = value
             
             self.attributedText = NSAttributedString(string: text, attributes: self.attributesForCurrentState())
-            self.item?.accessibilityLabel = value
+            if _image == nil {
+                self.item?.accessibilityLabel = value
+            }
         }
     }
     
@@ -133,6 +135,29 @@ private final class NavigationButtonItemNode: ASTextNode {
         }
     }
     
+    override public var accessibilityLabel: String? {
+        get {
+            if let item = self.item, let accessibilityLabel = item.accessibilityLabel {
+                return accessibilityLabel
+            } else {
+                return self.attributedText?.string
+            }
+        } set(value) {
+            
+        }
+    }
+    
+    override public var accessibilityHint: String? {
+        get {
+            if let item = self.item, let accessibilityHint = item.accessibilityHint {
+                return accessibilityHint
+            } else {
+                return nil
+            }
+        } set(value) {
+            
+        }
+    }
     
     override public init() {
         super.init()
@@ -306,17 +331,8 @@ final class NavigationButtonNode: ASDisplayNode {
             self.addSubnode(node)
         }
         node.item = nil
-        node.text = text
-        
-        /*if isBack {
-            node.accessibilityHint = "Back button"
-            node.accessibilityTraits = 0
-        } else {
-            node.accessibilityHint = nil
-            node.accessibilityTraits = UIAccessibilityTraitButton
-        }*/
-        
         node.image = nil
+        node.text = text
         node.bold = false
         node.isEnabled = true
         node.node = nil
@@ -355,8 +371,8 @@ final class NavigationButtonNode: ASDisplayNode {
                 self.addSubnode(node)
             }
             node.item = items[i]
-            node.text = items[i].title ?? ""
             node.image = items[i].image
+            node.text = items[i].title ?? ""
             node.bold = items[i].style == .done
             node.isEnabled = items[i].isEnabled
             node.node = items[i].customDisplayNode

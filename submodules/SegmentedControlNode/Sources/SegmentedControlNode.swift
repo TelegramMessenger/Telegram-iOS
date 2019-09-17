@@ -74,6 +74,9 @@ public struct SegmentedControlItem: Equatable {
     }
 }
 
+private class SegmentedControlItemNode: HighlightTrackingButtonNode {
+}
+
 public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private var theme: SegmentedControlTheme
     private var _items: [SegmentedControlItem]
@@ -82,7 +85,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
     private var validLayout: SegmentedControlLayout?
     
     private let selectionNode: ASImageNode
-    private var itemNodes: [HighlightTrackingButtonNode]
+    private var itemNodes: [SegmentedControlItemNode]
     private var dividerNodes: [ASDisplayNode]
     
     private var gestureRecognizer: UIPanGestureRecognizer?
@@ -101,7 +104,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             
             self.itemNodes.forEach { $0.removeFromSupernode() }
             self.itemNodes = self._items.map { item in
-                let itemNode = HighlightTrackingButtonNode()
+                let itemNode = SegmentedControlItemNode()
                 itemNode.setTitle(item.title, with: textFont, with: self.theme.textColor, for: .normal)
                 itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: .selected)
                 itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: [.selected, .highlighted])
@@ -149,7 +152,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         self.selectionNode.displayWithoutProcessing = true
         
         self.itemNodes = items.map { item in
-            let itemNode = HighlightTrackingButtonNode()
+            let itemNode = SegmentedControlItemNode()
             itemNode.setTitle(item.title, with: textFont, with: theme.textColor, for: .normal)
             itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: .selected)
             itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: [.selected, .highlighted])
@@ -304,6 +307,11 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
                     } else {
                         itemNode.isSelected = isSelected
                     }
+                    if isSelected {
+                        itemNode.accessibilityTraits.insert(.selected)
+                    } else {
+                        itemNode.accessibilityTraits.remove(.selected)
+                    }
                 }
             }
         }
@@ -328,7 +336,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         return size
     }
     
-    @objc private func buttonPressed(_ button: HighlightTrackingButtonNode) {
+    @objc private func buttonPressed(_ button: SegmentedControlItemNode) {
         guard let index = self.itemNodes.firstIndex(of: button) else {
             return
         }
@@ -372,8 +380,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
                         self.selectedIndexChanged(self._selectedIndex)
                     }
                     self.gestureSelectedIndex = nil
-                    self.updateButtonsHighlights(highlightedIndex: nil, gestureSelectedIndex: nil)
                 }
+                self.updateButtonsHighlights(highlightedIndex: nil, gestureSelectedIndex: nil)
             default:
                 break
         }

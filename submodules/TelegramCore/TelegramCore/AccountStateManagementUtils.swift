@@ -2246,8 +2246,8 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                                 if let file = media as? TelegramMediaFile {
                                     for attribute in file.attributes {
                                         switch attribute {
-                                            case .Sticker:
-                                                if let index = message.index {
+                                            case let .Sticker(_, packReference, _):
+                                                if let index = message.index, packReference != nil {
                                                     if let (currentIndex, _) = recentlyUsedStickers[file.fileId] {
                                                         if currentIndex < index {
                                                             recentlyUsedStickers[file.fileId] = (index, file)

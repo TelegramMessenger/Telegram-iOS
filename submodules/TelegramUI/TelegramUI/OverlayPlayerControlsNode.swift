@@ -42,7 +42,7 @@ private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, them
         let titleText: String
         let subtitleText: String
         switch data {
-            case let .music(title, performer, _):
+            case let .music(title, performer, _, _):
                 titleText = title ?? "Unknown Track"
                 subtitleText = performer ?? "Unknown Artist"
             case .voice, .instantVideo:
@@ -87,6 +87,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     private var currentLooping: MusicPlaybackSettingsLooping?
     private let loopingButton: IconButtonNode
+    
+    private var currentRate: AudioPlaybackRate?
+    private let rateButton: HighlightableButtonNode
     
     let separatorNode: ASDisplayNode
     
@@ -144,6 +147,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.rightDurationLabel.mode = .reversed
         self.rightDurationLabel.alignment = .right
         
+        self.rateButton = HighlightableButtonNode()
+        self.rateButton.hitTestSlop = UIEdgeInsets(top: -8.0, left: -4.0, bottom: -8.0, right: -4.0)
+        self.rateButton.displaysAsynchronously = false
+        
         self.backwardButton = IconButtonNode()
         self.backwardButton.displaysAsynchronously = false
         
@@ -180,6 +187,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.addSubnode(self.scrubberNode)
         self.addSubnode(self.leftDurationLabel)
         self.addSubnode(self.rightDurationLabel)
+        self.addSubnode(self.rateButton)
         
         self.addSubnode(self.orderButton)
         self.addSubnode(self.loopingButton)
@@ -206,7 +214,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let mappedStatus = combineLatest(delayedStatus, self.scrubberNode.scrubbingTimestamp) |> map { value, scrubbingTimestamp -> MediaPlayerStatus in
             if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
-                return MediaPlayerStatus(generationTimestamp: value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status, soundEnabled: value.status.soundEnabled)
+                return MediaPlayerStatus(generationTimestamp: scrubbingTimestamp != nil ? 0 : value.status.generationTimestamp, duration: value.status.duration, dimensions: value.status.dimensions, timestamp: scrubbingTimestamp ?? value.status.timestamp, baseRate: value.status.baseRate, seekId: value.status.seekId, status: value.status.status, soundEnabled: value.status.soundEnabled)
             } else {
                 return MediaPlayerStatus(generationTimestamp: 0.0, duration: 0.0, dimensions: CGSize(), timestamp: 0.0, baseRate: 1.0, seekId: 0, status: .paused, soundEnabled: true)
             }
@@ -259,10 +267,28 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                         strongSelf.currentLooping = value.looping
                         strongSelf.updateLoopButton(value.looping)
                     }
+                    
+                    let baseRate: AudioPlaybackRate
+                    if !value.status.baseRate.isEqual(to: 1.0) {
+                        baseRate = .x2
+                    } else {
+                        baseRate = .x1
+                    }
+                    if baseRate != strongSelf.currentRate {
+                        strongSelf.currentRate = baseRate
+                        strongSelf.updateRateButton(baseRate)
+                    }
+                    
+                    if let displayData = displayData, case let .music(_, _, _, long) = displayData, long {
+                        strongSelf.rateButton.isHidden = false
+                    } else {
+                        strongSelf.rateButton.isHidden = true
+                    }
                 } else {
                     strongSelf.playPauseButton.isEnabled = false
                     strongSelf.backwardButton.isEnabled = false
                     strongSelf.forwardButton.isEnabled = false
+                    strongSelf.rateButton.isHidden = true
                     displayData = nil
                 }
                 
@@ -301,6 +327,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.backwardButton.addTarget(self, action: #selector(self.backwardPressed), forControlEvents: .touchUpInside)
         self.forwardButton.addTarget(self, action: #selector(self.forwardPressed), forControlEvents: .touchUpInside)
         self.playPauseButton.addTarget(self, action: #selector(self.playPausePressed), forControlEvents: .touchUpInside)
+        self.rateButton.addTarget(self, action: #selector(self.rateButtonPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
@@ -336,6 +363,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         if let looping = self.currentLooping {
             self.updateLoopButton(looping)
         }
+        if let rate = self.currentRate {
+            self.updateRateButton(rate)
+        }
         self.separatorNode.backgroundColor = theme.list.itemPlainSeparatorColor
     }
     
@@ -368,7 +398,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         var albumArt: SharedMediaPlaybackAlbumArt?
         if let displayData = self.displayData {
             switch displayData {
-                case let .music(_, _, value):
+                case let .music(_, _, value, _):
                     albumArt = value
                 default:
                     break
@@ -413,6 +443,15 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/RepeatOne"), color: self.theme.list.itemAccentColor)
             case .all:
                 self.loopingButton.icon = generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: self.theme.list.itemAccentColor)
+        }
+    }
+    
+    private func updateRateButton(_ baseRate: AudioPlaybackRate) {
+        switch baseRate {
+            case .x2:
+                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+            default:
+                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
         }
     }
     
@@ -523,8 +562,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         let scrubberVerticalOrigin: CGFloat = infoVerticalOrigin + 64.0
         
         transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: leftInset +  sideInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset, height: 10.0 + 8.0 * 2.0)))
-        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 100.0, height: 20.0)))
-        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 12.0), size: CGSize(width: 100.0, height: 20.0)))
+        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 14.0), size: CGSize(width: 100.0, height: 20.0)))
+        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 14.0), size: CGSize(width: 100.0, height: 20.0)))
+        
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0 + 24.0, y: scrubberVerticalOrigin + 10.0), size: CGSize(width: 24.0, height: 24.0)))
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: width, height: panelHeight + 8.0)))
         
@@ -605,6 +646,21 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     @objc func playPausePressed() {
         self.control?(.playback(.togglePlayPause))
+    }
+    
+    @objc func rateButtonPressed() {
+        var nextRate: AudioPlaybackRate
+        if let currentRate = self.currentRate {
+            switch currentRate {
+                case .x1:
+                    nextRate = .x2
+                default:
+                    nextRate = .x1
+            }
+        } else {
+            nextRate = .x2
+        }
+        self.control?(.setBaseRate(nextRate))
     }
     
     @objc func albumArtTap(_ recognizer: UITapGestureRecognizer) {

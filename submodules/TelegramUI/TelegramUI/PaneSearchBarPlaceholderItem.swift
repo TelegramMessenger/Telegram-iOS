@@ -74,6 +74,9 @@ final class PaneSearchBarPlaceholderNode: GridItemNode {
         
         super.init()
         
+        self.isAccessibilityElement = true
+        self.accessibilityTraits = .searchField
+        
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.iconNode)
@@ -97,7 +100,7 @@ final class PaneSearchBarPlaceholderNode: GridItemNode {
                     placeholder = strings.Gif_Search
             }
             self.labelNode.attributedText = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
-            
+            self.accessibilityLabel = placeholder
             self.currentState = (theme, strings, type)
         }
     }

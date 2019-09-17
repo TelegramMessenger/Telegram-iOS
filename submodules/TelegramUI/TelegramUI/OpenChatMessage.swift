@@ -426,7 +426,6 @@ func openChatInstantPage(context: AccountContext, message: Message, sourcePeerTy
                 }
                 
                 let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: sourcePeerType ?? .channel, anchor: anchor)
-                pageController.navigationPresentation = .modal
                 navigationController.pushViewController(pageController)
             }
             break

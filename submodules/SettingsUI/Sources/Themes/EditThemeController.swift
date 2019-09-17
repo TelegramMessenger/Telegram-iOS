@@ -561,6 +561,7 @@ public func editThemeController(context: AccountContext, mode: EditThemeControll
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

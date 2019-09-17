@@ -310,7 +310,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 if let theme = makePresentationTheme(data: dataAndTheme.0) {
                     let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
-                    present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    navigationController?.pushViewController(previewController)
                 }
             }, error: { [weak controller] error in
                 let errorText: String
