@@ -224,7 +224,6 @@ final class EmojisChatInputContextPanelNode: ChatInputContextPanelNode {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, leftInset, rightInset)
         
-        
         let sideInsets: CGFloat = 10.0 + leftInset
         let contentWidth = min(size.width - sideInsets - sideInsets, max(24.0, CGFloat(self.currentEntries?.count ?? 0) * 45.0))
         

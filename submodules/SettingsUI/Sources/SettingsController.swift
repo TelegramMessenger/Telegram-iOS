@@ -578,7 +578,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
             entries.append(.passport(presentationData.theme, PresentationResourcesSettings.passport, presentationData.strings.Settings_Passport, ""))
         }
         if experimentalUISettings.wallets {
-            entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.passport, presentationData.strings.Settings_Wallet, ""))
+            entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.passport, "Wallet", ""))
         }
         
         if hasWatchApp {

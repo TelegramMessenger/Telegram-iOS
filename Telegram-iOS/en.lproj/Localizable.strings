@@ -4753,4 +4753,4 @@ Any member of this group will be able to see messages in the channel.";
 "Channel.EditAdmin.PermissionDeleteMessagesOfOthers" = "Delete Messages of Others";
 "Channel.AdminLog.CanDeleteMessagesOfOthers" = "Delete Messages of Others";
 
-"Settings.Wallet" = "Wallet";
+"ChatSearch.ResultsTooltip" = "Tap to view as a list.";

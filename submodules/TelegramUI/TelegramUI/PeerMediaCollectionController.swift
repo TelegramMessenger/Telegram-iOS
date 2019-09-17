@@ -463,6 +463,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, beginMessageSearch: { _, _ in
         }, dismissMessageSearch: {
         }, updateMessageSearch: { _ in 
+        }, openSearchResults: {
         }, navigateMessageSearch: { _ in
         }, openCalendarSearch: {
         }, toggleMembersSearch: { _ in

@@ -94,13 +94,6 @@ public enum ViewControllerNavigationPresentation {
     public final var isOpaqueWhenInOverlay: Bool = false
     public final var blocksBackgroundWhenInOverlay: Bool = false
     public final var automaticallyControlPresentationContextLayout: Bool = true
-    public final var isModalWhenInOverlay: Bool = false {
-        didSet {
-            if self.isNodeLoaded {
-                self.displayNode.clipsToBounds = true
-            }
-        }
-    }
     public var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
@@ -115,16 +108,16 @@ public enum ViewControllerNavigationPresentation {
         }
     }
     
-    public final var preferNavigationUIHidden: Bool = false {
+    public final var prefersOnScreenNavigationHidden: Bool = false {
         didSet {
-            if self.preferNavigationUIHidden != oldValue {
-                self.window?.invalidatePreferNavigationUIHidden()
+            if self.prefersOnScreenNavigationHidden != oldValue {
+                self.window?.invalidatePrefersOnScreenNavigationHidden()
             }
         }
     }
     
     override open var prefersHomeIndicatorAutoHidden: Bool {
-        return self.preferNavigationUIHidden
+        return self.prefersOnScreenNavigationHidden
     }
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
@@ -412,10 +405,6 @@ public enum ViewControllerNavigationPresentation {
         if let backgroundColor = self.displayNode.backgroundColor, backgroundColor.alpha.isEqual(to: 1.0) {
             self.blocksBackgroundWhenInOverlay = true
             self.isOpaqueWhenInOverlay = true
-        }
-        
-        if self.isModalWhenInOverlay {
-            self.displayNode.clipsToBounds = true
         }
     }
     

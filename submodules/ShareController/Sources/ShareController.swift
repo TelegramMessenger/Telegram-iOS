@@ -297,8 +297,7 @@ public final class ShareController: ViewController {
                             self?.controllerNode.cancel?()
                             showInChat(message)
                         })
-                    }
-                    else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
+                    } else if let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, messages.count == 1 || sameGroupingKey {
                         if message.id.namespace == Namespaces.Message.Cloud {
                             self.defaultAction = ShareControllerAction(title: self.presentationData.strings.ShareMenu_CopyShareLink, action: { [weak self] in
                                 guard let strongSelf = self else {

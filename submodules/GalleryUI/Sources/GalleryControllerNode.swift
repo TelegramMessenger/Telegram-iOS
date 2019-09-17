@@ -28,6 +28,8 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     private var isDismissed = false
     
     public var areControlsHidden = false
+    public var controlsVisibilityChanged: ((Bool) -> Void)?
+    
     public var isBackgroundExtendedOverNavigationBar = true {
         didSet {
             if let (navigationBarHeight, layout) = self.containerLayout {
@@ -268,6 +270,7 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     
     open func setControlsHidden(_ hidden: Bool, animated: Bool) {
         self.areControlsHidden = hidden
+        self.controlsVisibilityChanged?(!hidden)
         if animated {
             UIView.animate(withDuration: 0.3, animations: {
                 let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0

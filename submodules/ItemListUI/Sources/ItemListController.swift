@@ -230,7 +230,6 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
         self.isOpaqueWhenInOverlay = true
-        //self.isModalWhenInOverlay = true
         self.blocksBackgroundWhenInOverlay = true
         
         self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style

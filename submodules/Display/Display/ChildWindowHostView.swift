@@ -7,7 +7,7 @@ private final class ChildWindowHostView: UIView, WindowHost {
     var hitTestImpl: ((CGPoint, UIEvent?) -> UIView?)?
     var presentController: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var invalidateDeferScreenEdgeGestureImpl: (() -> Void)?
-    var invalidatePreferNavigationUIHiddenImpl: (() -> Void)?
+    var invalidatePrefersOnScreenNavigationHiddenImpl: (() -> Void)?
     var invalidateSupportedOrientationsImpl: (() -> Void)?
     var cancelInteractiveKeyboardGesturesImpl: (() -> Void)?
     var forEachControllerImpl: (((ContainableController) -> Void) -> Void)?
@@ -35,8 +35,8 @@ private final class ChildWindowHostView: UIView, WindowHost {
         self.invalidateDeferScreenEdgeGestureImpl?()
     }
     
-    func invalidatePreferNavigationUIHidden() {
-        self.invalidatePreferNavigationUIHiddenImpl?()
+    func invalidatePrefersOnScreenNavigationHidden() {
+        self.invalidatePrefersOnScreenNavigationHiddenImpl?()
     }
     
     func invalidateSupportedOrientations() {
@@ -67,7 +67,7 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
         return false
     }, updateSupportedInterfaceOrientations: { orientations in
     }, updateDeferScreenEdgeGestures: { edges in
-    }, updatePreferNavigationUIHidden: { value in
+    }, updatePrefersOnScreenNavigationHidden: { value in
     })
     
     view.updateSize = { [weak hostView] size in
@@ -102,8 +102,8 @@ public func childWindowHostView(parent: UIView) -> WindowHostView {
         return hostView?.invalidateDeferScreenEdgeGesture?()
     }
     
-    view.invalidatePreferNavigationUIHiddenImpl = { [weak hostView] in
-        return hostView?.invalidatePreferNavigationUIHidden?()
+    view.invalidatePrefersOnScreenNavigationHiddenImpl = { [weak hostView] in
+        return hostView?.invalidatePrefersOnScreenNavigationHidden?()
     }
     
     view.invalidateSupportedOrientationsImpl = { [weak hostView] in

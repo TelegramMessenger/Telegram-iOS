@@ -95,7 +95,6 @@ private enum RootContainer {
 open class NavigationController: UINavigationController, ContainableController, UIGestureRecognizerDelegate {
     public var isOpaqueWhenInOverlay: Bool = true
     public var blocksBackgroundWhenInOverlay: Bool = true
-    public var isModalWhenInOverlay: Bool = false
     public var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     private let _ready = Promise<Bool>(true)

@@ -182,10 +182,10 @@ private final class TabBarNodeContainer {
     }
     
     deinit {
-        item.removeSetBadgeListener(self.updateBadgeListenerIndex)
-        item.removeSetTitleListener(self.updateTitleListenerIndex)
-        item.removeSetImageListener(self.updateImageListenerIndex)
-        item.removeSetSelectedImageListener(self.updateSelectedImageListenerIndex)
+        self.item.removeSetBadgeListener(self.updateBadgeListenerIndex)
+        self.item.removeSetTitleListener(self.updateTitleListenerIndex)
+        self.item.removeSetImageListener(self.updateImageListenerIndex)
+        self.item.removeSetSelectedImageListener(self.updateSelectedImageListenerIndex)
     }
 }
 

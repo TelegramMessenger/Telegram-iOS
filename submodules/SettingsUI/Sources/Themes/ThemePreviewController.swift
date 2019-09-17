@@ -50,9 +50,8 @@ public final class ThemePreviewController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
+        self.blocksBackgroundWhenInOverlay = true
         self.navigationPresentation = .modal
-        
-        self.isModalWhenInOverlay = true
         
         let themeName: String
         if case let .theme(theme) = source {

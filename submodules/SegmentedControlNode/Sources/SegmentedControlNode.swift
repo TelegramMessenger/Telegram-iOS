@@ -276,17 +276,17 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             case let .sizeToFit(maximumWidth, minimumWidth):
                 width = max(minimumWidth, min(maximumWidth, calculatedWidth))
         }
+
+        let selectedIndex: Int
+        if let gestureSelectedIndex = self.gestureSelectedIndex {
+            selectedIndex = gestureSelectedIndex
+        } else {
+            selectedIndex = self.selectedIndex
+        }
         
         let size = CGSize(width: width, height: 32.0)
         if !self.itemNodes.isEmpty {
             let itemSize = CGSize(width: floorToScreenPixels(size.width / CGFloat(self.itemNodes.count)), height: size.height)
-            
-            let selectedIndex: Int
-            if let gestureSelectedIndex = self.gestureSelectedIndex {
-                selectedIndex = gestureSelectedIndex
-            } else {
-                selectedIndex = self.selectedIndex
-            }
             
             transition.updateBounds(node: self.selectionNode, bounds: CGRect(origin: CGPoint(), size: itemSize))
             transition.updatePosition(node: self.selectionNode, position: CGPoint(x: itemSize.width / 2.0 + itemSize.width * CGFloat(selectedIndex), y: size.height / 2.0))
@@ -316,7 +316,7 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
                 transition.updateFrame(node: dividerNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels(delta * CGFloat(i + 1) - dividerSize.width / 2.0), y: (size.height - dividerSize.height) / 2.0), size: dividerSize))
                 
                 let dividerAlpha: CGFloat
-                if (self.selectedIndex - 1 ... self.selectedIndex).contains(i) {
+                if (selectedIndex - 1 ... selectedIndex).contains(i) {
                     dividerAlpha = 0.0
                 } else {
                     dividerAlpha = 1.0

@@ -837,6 +837,10 @@ public class GalleryController: ViewController, StandalonePresentableController 
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
         }
         
+        self.galleryNode.controlsVisibilityChanged = { [weak self] visible in
+            self?.prefersOnScreenNavigationHidden = !visible
+        }
+        
         let baseNavigationController = self.baseNavigationController
         self.galleryNode.baseNavigationController = { [weak baseNavigationController] in
             return baseNavigationController

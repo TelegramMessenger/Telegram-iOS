@@ -11,7 +11,6 @@ public protocol ContainableController: class {
     var displayNode: ASDisplayNode { get }
     var isViewLoaded: Bool { get }
     var isOpaqueWhenInOverlay: Bool { get }
-    var isModalWhenInOverlay: Bool { get }
     var blocksBackgroundWhenInOverlay: Bool { get }
     var ready: Promise<Bool> { get }
     var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)? { get set }

@@ -2272,8 +2272,7 @@ final class SecureIdDocumentFormControllerNode: FormControllerNode<SecureIdDocum
                 } else if useNext {
                     if case .deleteDocument = itemEntry {
                         return false
-                    }
-                    else if let inputNode = itemNode as? FormControllerTextInputItemNode {
+                    } else if let inputNode = itemNode as? FormControllerTextInputItemNode {
                         inputNode.activate()
                         return false
                     } else if let actionNode = itemNode as? FormControllerDetailActionItemNode {
