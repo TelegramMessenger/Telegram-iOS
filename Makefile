@@ -5,7 +5,7 @@ BUCK_DEBUG_OPTIONS=\
 	--config custom.other_cflags="-O0 -D DEBUG" \
   	--config custom.other_cxxflags="-O0 -D DEBUG" \
   	--config custom.optimization="-Onone" \
-  	--config custom.config_swift_compiler_flags=""
+  	--config custom.config_swift_compiler_flags="-DDEBUG"
 
 BUCK_RELEASE_OPTIONS=\
 	--config custom.other_cflags="-Os" \

@@ -42,7 +42,7 @@ public final class InstantPageController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
-        self.navigationPresentation = .modal
+        self.navigationPresentation = .modalInLargeLayout
         
         self.statusBar.statusBarStyle = .White
         

@@ -91,7 +91,7 @@ public func fetchedAvatarGalleryEntries(account: Account, peer: Peer) -> Signal<
     }
 }
 
-public class AvatarGalleryController: ViewController {
+public class AvatarGalleryController: ViewController, StandalonePresentableController {
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }

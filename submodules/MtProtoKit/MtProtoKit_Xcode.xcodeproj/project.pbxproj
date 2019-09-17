@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D00083C922DD33E500EC418C /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = D00083C822DD33E500EC418C /* libc++.tbd */; };
 		D00354681C173BF0006610DA /* MtProtoKitStabilityTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D00354671C173BF0006610DA /* MtProtoKitStabilityTests.m */; };
 		D003546A1C173BF0006610DA /* MtProtoKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CB05F71ADC4483005E298F /* MtProtoKit.framework */; };
 		D00354701C173CB9006610DA /* SSignalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0580ABE1B0F3E7100E8235B /* SSignalKit.framework */; };
@@ -34,6 +35,41 @@
 		D015E01B225CD19E00CB9E8A /* MTGzip.m in Sources */ = {isa = PBXBuildFile; fileRef = D015E017225CD19E00CB9E8A /* MTGzip.m */; };
 		D015E01C225CD19E00CB9E8A /* MTGzip.m in Sources */ = {isa = PBXBuildFile; fileRef = D015E017225CD19E00CB9E8A /* MTGzip.m */; };
 		D015E01D225CD19E00CB9E8A /* MTGzip.m in Sources */ = {isa = PBXBuildFile; fileRef = D015E017225CD19E00CB9E8A /* MTGzip.m */; };
+		D018559022DDD36C00AC458A /* Client.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558A22DDD36C00AC458A /* Client.h */; };
+		D018559122DDD36C00AC458A /* TlObject.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558B22DDD36C00AC458A /* TlObject.h */; };
+		D018559222DDD36C00AC458A /* tonlib_api.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558C22DDD36C00AC458A /* tonlib_api.h */; };
+		D018559322DDD36C00AC458A /* int_types.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558D22DDD36C00AC458A /* int_types.h */; };
+		D018559422DDD36C00AC458A /* TonlibCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558E22DDD36C00AC458A /* TonlibCallback.h */; };
+		D018559522DDD36C00AC458A /* platform.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558F22DDD36C00AC458A /* platform.h */; };
+		D018559622DDD37300AC458A /* Client.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558A22DDD36C00AC458A /* Client.h */; };
+		D018559722DDD37300AC458A /* TlObject.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558B22DDD36C00AC458A /* TlObject.h */; };
+		D018559822DDD37300AC458A /* tonlib_api.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558C22DDD36C00AC458A /* tonlib_api.h */; };
+		D018559922DDD37300AC458A /* int_types.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558D22DDD36C00AC458A /* int_types.h */; };
+		D018559A22DDD37300AC458A /* TonlibCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558E22DDD36C00AC458A /* TonlibCallback.h */; };
+		D018559B22DDD37300AC458A /* platform.h in Headers */ = {isa = PBXBuildFile; fileRef = D018558F22DDD36C00AC458A /* platform.h */; };
+		D018559C22DDD38B00AC458A /* libtdutils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D08A159322DD32CF0073B508 /* libtdutils.a */; };
+		D018559D22DDD38B00AC458A /* libtddb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D08A159522DD32CF0073B508 /* libtddb.a */; };
+		D018559E22DDD38B00AC458A /* libtdactor.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D08A159422DD32CF0073B508 /* libtdactor.a */; };
+		D01855B322DDD38D00AC458A /* libtl_lite_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D018559F22DDD38B00AC458A /* libtl_lite_api.a */; };
+		D01855B422DDD38D00AC458A /* libadnllite.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A022DDD38C00AC458A /* libadnllite.a */; };
+		D01855B522DDD38D00AC458A /* libfift.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A122DDD38C00AC458A /* libfift.a */; };
+		D01855B622DDD38D00AC458A /* libkeys.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A222DDD38C00AC458A /* libkeys.a */; };
+		D01855B722DDD38D00AC458A /* libtl-lite-utils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A322DDD38C00AC458A /* libtl-lite-utils.a */; };
+		D01855B822DDD38D00AC458A /* libtl-utils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A422DDD38C00AC458A /* libtl-utils.a */; };
+		D01855B922DDD38D00AC458A /* libton_db.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A522DDD38C00AC458A /* libton_db.a */; };
+		D01855BA22DDD38D00AC458A /* libtonlib.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A622DDD38C00AC458A /* libtonlib.a */; };
+		D01855BB22DDD38D00AC458A /* libterminal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A722DDD38C00AC458A /* libterminal.a */; };
+		D01855BC22DDD38D00AC458A /* libtonlibjson_private.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A822DDD38C00AC458A /* libtonlibjson_private.a */; };
+		D01855BD22DDD38D00AC458A /* libton_crypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855A922DDD38C00AC458A /* libton_crypto.a */; };
+		D01855BE22DDD38D00AC458A /* libtl_tonlib_api_json.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855AA22DDD38C00AC458A /* libtl_tonlib_api_json.a */; };
+		D01855BF22DDD38D00AC458A /* libtdnet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855AB22DDD38C00AC458A /* libtdnet.a */; };
+		D01855C022DDD38D00AC458A /* libtl_tonlib_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855AC22DDD38C00AC458A /* libtl_tonlib_api.a */; };
+		D01855C122DDD38D00AC458A /* libtonlibjson_static.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855AD22DDD38C00AC458A /* libtonlibjson_static.a */; };
+		D01855C222DDD38D00AC458A /* libton_block.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855AE22DDD38D00AC458A /* libton_block.a */; };
+		D01855C322DDD38D00AC458A /* libtl_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855AF22DDD38D00AC458A /* libtl_api.a */; };
+		D01855C422DDD38D00AC458A /* libcrc32c.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855B022DDD38D00AC458A /* libcrc32c.a */; };
+		D01855C522DDD38D00AC458A /* libtdtl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855B122DDD38D00AC458A /* libtdtl.a */; };
+		D01855C622DDD38D00AC458A /* libmemprof.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01855B222DDD38D00AC458A /* libmemprof.a */; };
 		D0185E722089D265005E1A6C /* MTProxyConnectivity.h in Headers */ = {isa = PBXBuildFile; fileRef = D0185E702089D265005E1A6C /* MTProxyConnectivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0185E732089D265005E1A6C /* MTProxyConnectivity.h in Headers */ = {isa = PBXBuildFile; fileRef = D0185E702089D265005E1A6C /* MTProxyConnectivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0185E742089D265005E1A6C /* MTProxyConnectivity.h in Headers */ = {isa = PBXBuildFile; fileRef = D0185E702089D265005E1A6C /* MTProxyConnectivity.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -63,6 +99,10 @@
 		D073D2D81FB5E493009E1DA2 /* MTBindingTempAuthKeyContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */; };
 		D073D2D91FB5E494009E1DA2 /* MTBindingTempAuthKeyContext.m in Sources */ = {isa = PBXBuildFile; fileRef = D0C0EAE51FB5DBEA00DCF07C /* MTBindingTempAuthKeyContext.m */; };
 		D079AB9C1AF39B8000076F59 /* MtProtoKitMac.h in Headers */ = {isa = PBXBuildFile; fileRef = D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D08A159122DD32B40073B508 /* tonlibjson_export.h in Headers */ = {isa = PBXBuildFile; fileRef = D08A158F22DD32B40073B508 /* tonlibjson_export.h */; };
+		D08A159222DD32B40073B508 /* tonlib_client_json.h in Headers */ = {isa = PBXBuildFile; fileRef = D08A159022DD32B40073B508 /* tonlib_client_json.h */; };
+		D08A159D22DD32F20073B508 /* TON.h in Headers */ = {isa = PBXBuildFile; fileRef = D08A159B22DD32F20073B508 /* TON.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D08A159E22DD32F20073B508 /* TON.mm in Sources */ = {isa = PBXBuildFile; fileRef = D08A159C22DD32F20073B508 /* TON.mm */; };
 		D09A59581B582EFF00FC3724 /* MTFileBasedKeychain.h in Headers */ = {isa = PBXBuildFile; fileRef = D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D09A59591B582EFF00FC3724 /* MTFileBasedKeychain.m in Sources */ = {isa = PBXBuildFile; fileRef = D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */; };
 		D0B0DF5D1DD7E75B003BA12D /* MTBag.m in Sources */ = {isa = PBXBuildFile; fileRef = D0B0DF5C1DD7E75B003BA12D /* MTBag.m */; };
@@ -604,6 +644,9 @@
 		93DBD23018B2D72800631ADC /* MTRequestErrorContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTRequestErrorContext.m; path = MtProtoKit/MTRequestErrorContext.m; sourceTree = "<group>"; };
 		93DBD23318B2D9AA00631ADC /* MTTime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = MTTime.h; path = MtProtoKit/MTTime.h; sourceTree = "<group>"; };
 		93DBD23418B2DA1E00631ADC /* MTTime.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTTime.m; path = MtProtoKit/MTTime.m; sourceTree = "<group>"; };
+		D00083C822DD33E500EC418C /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		D00083CA22DD42F600EC418C /* libtonlibjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtonlibjson.dylib; path = TON/libtonlibjson.dylib; sourceTree = "<group>"; };
+		D00083D722DD467100EC418C /* libtdjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libtdjson.dylib; path = TON/libtdjson.dylib; sourceTree = "<group>"; };
 		D00354651C173BF0006610DA /* MtProtoKitStabilityTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MtProtoKitStabilityTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00354671C173BF0006610DA /* MtProtoKitStabilityTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitStabilityTests.m; sourceTree = "<group>"; };
 		D00354691C173BF0006610DA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -619,6 +662,32 @@
 		D0119CC820CAD65D00895300 /* PingFoundation.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PingFoundation.m; sourceTree = "<group>"; };
 		D015E016225CD19E00CB9E8A /* MTGzip.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTGzip.h; sourceTree = "<group>"; };
 		D015E017225CD19E00CB9E8A /* MTGzip.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTGzip.m; sourceTree = "<group>"; };
+		D018558A22DDD36C00AC458A /* Client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Client.h; sourceTree = "<group>"; };
+		D018558B22DDD36C00AC458A /* TlObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TlObject.h; sourceTree = "<group>"; };
+		D018558C22DDD36C00AC458A /* tonlib_api.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tonlib_api.h; sourceTree = "<group>"; };
+		D018558D22DDD36C00AC458A /* int_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = int_types.h; sourceTree = "<group>"; };
+		D018558E22DDD36C00AC458A /* TonlibCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TonlibCallback.h; sourceTree = "<group>"; };
+		D018558F22DDD36C00AC458A /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = "<group>"; };
+		D018559F22DDD38B00AC458A /* libtl_lite_api.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtl_lite_api.a; path = TON/libtl_lite_api.a; sourceTree = "<group>"; };
+		D01855A022DDD38C00AC458A /* libadnllite.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libadnllite.a; path = TON/libadnllite.a; sourceTree = "<group>"; };
+		D01855A122DDD38C00AC458A /* libfift.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfift.a; path = TON/libfift.a; sourceTree = "<group>"; };
+		D01855A222DDD38C00AC458A /* libkeys.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libkeys.a; path = TON/libkeys.a; sourceTree = "<group>"; };
+		D01855A322DDD38C00AC458A /* libtl-lite-utils.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libtl-lite-utils.a"; path = "TON/libtl-lite-utils.a"; sourceTree = "<group>"; };
+		D01855A422DDD38C00AC458A /* libtl-utils.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libtl-utils.a"; path = "TON/libtl-utils.a"; sourceTree = "<group>"; };
+		D01855A522DDD38C00AC458A /* libton_db.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libton_db.a; path = TON/libton_db.a; sourceTree = "<group>"; };
+		D01855A622DDD38C00AC458A /* libtonlib.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtonlib.a; path = TON/libtonlib.a; sourceTree = "<group>"; };
+		D01855A722DDD38C00AC458A /* libterminal.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libterminal.a; path = TON/libterminal.a; sourceTree = "<group>"; };
+		D01855A822DDD38C00AC458A /* libtonlibjson_private.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtonlibjson_private.a; path = TON/libtonlibjson_private.a; sourceTree = "<group>"; };
+		D01855A922DDD38C00AC458A /* libton_crypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libton_crypto.a; path = TON/libton_crypto.a; sourceTree = "<group>"; };
+		D01855AA22DDD38C00AC458A /* libtl_tonlib_api_json.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtl_tonlib_api_json.a; path = TON/libtl_tonlib_api_json.a; sourceTree = "<group>"; };
+		D01855AB22DDD38C00AC458A /* libtdnet.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtdnet.a; path = TON/libtdnet.a; sourceTree = "<group>"; };
+		D01855AC22DDD38C00AC458A /* libtl_tonlib_api.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtl_tonlib_api.a; path = TON/libtl_tonlib_api.a; sourceTree = "<group>"; };
+		D01855AD22DDD38C00AC458A /* libtonlibjson_static.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtonlibjson_static.a; path = TON/libtonlibjson_static.a; sourceTree = "<group>"; };
+		D01855AE22DDD38D00AC458A /* libton_block.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libton_block.a; path = TON/libton_block.a; sourceTree = "<group>"; };
+		D01855AF22DDD38D00AC458A /* libtl_api.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtl_api.a; path = TON/libtl_api.a; sourceTree = "<group>"; };
+		D01855B022DDD38D00AC458A /* libcrc32c.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcrc32c.a; path = TON/libcrc32c.a; sourceTree = "<group>"; };
+		D01855B122DDD38D00AC458A /* libtdtl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtdtl.a; path = TON/libtdtl.a; sourceTree = "<group>"; };
+		D01855B222DDD38D00AC458A /* libmemprof.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmemprof.a; path = TON/libmemprof.a; sourceTree = "<group>"; };
 		D0185E702089D265005E1A6C /* MTProxyConnectivity.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTProxyConnectivity.h; sourceTree = "<group>"; };
 		D0185E712089D265005E1A6C /* MTProxyConnectivity.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTProxyConnectivity.m; sourceTree = "<group>"; };
 		D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTHttpRequestOperation.h; path = MTProtoKit/MTHttpRequestOperation.h; sourceTree = "<group>"; };
@@ -738,6 +807,14 @@
 		D079AB9B1AF39B8000076F59 /* MtProtoKitMac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MtProtoKitMac.h; sourceTree = "<group>"; };
 		D079ABA71AF39B8000076F59 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D079ABA81AF39B8000076F59 /* MtProtoKitMacTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitMacTests.m; sourceTree = "<group>"; };
+		D08A158F22DD32B40073B508 /* tonlibjson_export.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tonlibjson_export.h; sourceTree = "<group>"; };
+		D08A159022DD32B40073B508 /* tonlib_client_json.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tonlib_client_json.h; sourceTree = "<group>"; };
+		D08A159322DD32CF0073B508 /* libtdutils.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtdutils.a; path = TON/libtdutils.a; sourceTree = "<group>"; };
+		D08A159422DD32CF0073B508 /* libtdactor.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtdactor.a; path = TON/libtdactor.a; sourceTree = "<group>"; };
+		D08A159522DD32CF0073B508 /* libtddb.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtddb.a; path = TON/libtddb.a; sourceTree = "<group>"; };
+		D08A159622DD32CF0073B508 /* libtonlibjson.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtonlibjson.a; path = TON/libtonlibjson.a; sourceTree = "<group>"; };
+		D08A159B22DD32F20073B508 /* TON.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TON.h; sourceTree = "<group>"; };
+		D08A159C22DD32F20073B508 /* TON.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = TON.mm; sourceTree = "<group>"; };
 		D09A59561B582EFF00FC3724 /* MTFileBasedKeychain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MTFileBasedKeychain.h; path = MTProtoKit/MTFileBasedKeychain.h; sourceTree = "<group>"; };
 		D09A59571B582EFF00FC3724 /* MTFileBasedKeychain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MTFileBasedKeychain.m; path = MTProtoKit/MTFileBasedKeychain.m; sourceTree = "<group>"; };
 		D0B0DF5C1DD7E75B003BA12D /* MTBag.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MTBag.m; sourceTree = "<group>"; };
@@ -875,6 +952,30 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D01855B322DDD38D00AC458A /* libtl_lite_api.a in Frameworks */,
+				D01855B422DDD38D00AC458A /* libadnllite.a in Frameworks */,
+				D01855B522DDD38D00AC458A /* libfift.a in Frameworks */,
+				D01855B622DDD38D00AC458A /* libkeys.a in Frameworks */,
+				D01855B722DDD38D00AC458A /* libtl-lite-utils.a in Frameworks */,
+				D01855B822DDD38D00AC458A /* libtl-utils.a in Frameworks */,
+				D01855B922DDD38D00AC458A /* libton_db.a in Frameworks */,
+				D01855BA22DDD38D00AC458A /* libtonlib.a in Frameworks */,
+				D01855BB22DDD38D00AC458A /* libterminal.a in Frameworks */,
+				D01855BC22DDD38D00AC458A /* libtonlibjson_private.a in Frameworks */,
+				D01855BD22DDD38D00AC458A /* libton_crypto.a in Frameworks */,
+				D01855BE22DDD38D00AC458A /* libtl_tonlib_api_json.a in Frameworks */,
+				D01855BF22DDD38D00AC458A /* libtdnet.a in Frameworks */,
+				D01855C022DDD38D00AC458A /* libtl_tonlib_api.a in Frameworks */,
+				D01855C122DDD38D00AC458A /* libtonlibjson_static.a in Frameworks */,
+				D01855C222DDD38D00AC458A /* libton_block.a in Frameworks */,
+				D01855C322DDD38D00AC458A /* libtl_api.a in Frameworks */,
+				D01855C422DDD38D00AC458A /* libcrc32c.a in Frameworks */,
+				D01855C522DDD38D00AC458A /* libtdtl.a in Frameworks */,
+				D01855C622DDD38D00AC458A /* libmemprof.a in Frameworks */,
+				D018559C22DDD38B00AC458A /* libtdutils.a in Frameworks */,
+				D018559D22DDD38B00AC458A /* libtddb.a in Frameworks */,
+				D018559E22DDD38B00AC458A /* libtdactor.a in Frameworks */,
+				D00083C922DD33E500EC418C /* libc++.tbd in Frameworks */,
 				D0CAF2FD1D7628FD0011F558 /* libcrypto.a in Frameworks */,
 				D0CAF2F11D75F4EA0011F558 /* CFNetwork.framework in Frameworks */,
 				D0CAF2EF1D75F4E20011F558 /* UIKit.framework in Frameworks */,
@@ -915,9 +1016,23 @@
 			path = MtProtoKitStabilityTests;
 			sourceTree = "<group>";
 		};
+		D018558922DDD36C00AC458A /* include */ = {
+			isa = PBXGroup;
+			children = (
+				D018558A22DDD36C00AC458A /* Client.h */,
+				D018558B22DDD36C00AC458A /* TlObject.h */,
+				D018558C22DDD36C00AC458A /* tonlib_api.h */,
+				D018558D22DDD36C00AC458A /* int_types.h */,
+				D018558E22DDD36C00AC458A /* TonlibCallback.h */,
+				D018558F22DDD36C00AC458A /* platform.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
 		D05A830918AFB3F9007F1076 = {
 			isa = PBXGroup;
 			children = (
+				D08A158E22DD32740073B508 /* TON */,
 				D05A84E718AFF0EE007F1076 /* Third Party */,
 				D05A849B18AFCA3D007F1076 /* MTProtoKit */,
 				D05A831918AFB3F9007F1076 /* MtProtoKit iOS */,
@@ -950,6 +1065,33 @@
 		D05A831618AFB3F9007F1076 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D01855A022DDD38C00AC458A /* libadnllite.a */,
+				D01855B022DDD38D00AC458A /* libcrc32c.a */,
+				D01855A122DDD38C00AC458A /* libfift.a */,
+				D01855A222DDD38C00AC458A /* libkeys.a */,
+				D01855B222DDD38D00AC458A /* libmemprof.a */,
+				D01855AB22DDD38C00AC458A /* libtdnet.a */,
+				D01855B122DDD38D00AC458A /* libtdtl.a */,
+				D01855A722DDD38C00AC458A /* libterminal.a */,
+				D01855AF22DDD38D00AC458A /* libtl_api.a */,
+				D018559F22DDD38B00AC458A /* libtl_lite_api.a */,
+				D01855AA22DDD38C00AC458A /* libtl_tonlib_api_json.a */,
+				D01855AC22DDD38C00AC458A /* libtl_tonlib_api.a */,
+				D01855A322DDD38C00AC458A /* libtl-lite-utils.a */,
+				D01855A422DDD38C00AC458A /* libtl-utils.a */,
+				D01855AE22DDD38D00AC458A /* libton_block.a */,
+				D01855A922DDD38C00AC458A /* libton_crypto.a */,
+				D01855A522DDD38C00AC458A /* libton_db.a */,
+				D01855A622DDD38C00AC458A /* libtonlib.a */,
+				D01855A822DDD38C00AC458A /* libtonlibjson_private.a */,
+				D01855AD22DDD38C00AC458A /* libtonlibjson_static.a */,
+				D00083D722DD467100EC418C /* libtdjson.dylib */,
+				D00083CA22DD42F600EC418C /* libtonlibjson.dylib */,
+				D00083C822DD33E500EC418C /* libc++.tbd */,
+				D08A159422DD32CF0073B508 /* libtdactor.a */,
+				D08A159522DD32CF0073B508 /* libtddb.a */,
+				D08A159322DD32CF0073B508 /* libtdutils.a */,
+				D08A159622DD32CF0073B508 /* libtonlibjson.a */,
 				D0B4187C1D7E04EB004562A4 /* libcrypto.a */,
 				D0B4187A1D7E04CF004562A4 /* libz.tbd */,
 				D0B418781D7E04CB004562A4 /* Security.framework */,
@@ -1351,6 +1493,18 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		D08A158E22DD32740073B508 /* TON */ = {
+			isa = PBXGroup;
+			children = (
+				D018558922DDD36C00AC458A /* include */,
+				D08A159022DD32B40073B508 /* tonlib_client_json.h */,
+				D08A158F22DD32B40073B508 /* tonlibjson_export.h */,
+				D08A159B22DD32F20073B508 /* TON.h */,
+				D08A159C22DD32F20073B508 /* TON.mm */,
+			);
+			path = TON;
+			sourceTree = "<group>";
+		};
 		D0CB05F81ADC4483005E298F /* MtProtoKit */ = {
 			isa = PBXGroup;
 			children = (
@@ -1612,6 +1766,7 @@
 				D0D1A03A1ADD983C007D9ED6 /* MTBufferReader.h in Headers */,
 				D0CB065C1ADC45CE005E298F /* MTTcpConnection.h in Headers */,
 				D0D1A0501ADD983C007D9ED6 /* MTMsgsAckMessage.h in Headers */,
+				D018559322DDD36C00AC458A /* int_types.h in Headers */,
 				D0CAF2CB1D75E24C0011F558 /* MTSignal.h in Headers */,
 				D0CB06461ADC45A2005E298F /* MTMessageService.h in Headers */,
 				D0B0DF611DD7E7A2003BA12D /* MTBag.h in Headers */,
@@ -1620,12 +1775,14 @@
 				D0D1A0441ADD983C007D9ED6 /* MTInternalMessageParser.h in Headers */,
 				D0D1A05A1ADD983C007D9ED6 /* MTPongMessage.h in Headers */,
 				D0CFBB8A1FD718C500B65C0D /* AFHTTPRequestOperation.h in Headers */,
+				D018559422DDD36C00AC458A /* TonlibCallback.h in Headers */,
 				D0D1A0481ADD983C007D9ED6 /* MTMsgAllInfoMessage.h in Headers */,
 				D0CFBB871FD7188200B65C0D /* AFURLConnectionOperation.h in Headers */,
 				D0CAF2D71D75E2840011F558 /* MTDisposable.h in Headers */,
 				D0CB062A1ADC4575005E298F /* MTDatacenterTransferAuthAction.h in Headers */,
 				D0CB064F1ADC45B1005E298F /* MTApiEnvironment.h in Headers */,
 				D0CB06191ADC4541005E298F /* MTTimer.h in Headers */,
+				D018559122DDD36C00AC458A /* TlObject.h in Headers */,
 				D0CB06381ADC4591005E298F /* MTProto.h in Headers */,
 				D0CB06321ADC4583005E298F /* MTDatacenterAuthInfo.h in Headers */,
 				D0D1A0541ADD983C007D9ED6 /* MTMsgsStateReqMessage.h in Headers */,
@@ -1636,6 +1793,7 @@
 				D0D1A0361ADD983C007D9ED6 /* MTBadMsgNotificationMessage.h in Headers */,
 				D0529D2B21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */,
 				D0CB06581ADC45CE005E298F /* MTNetworkAvailability.h in Headers */,
+				D018559522DDD36C00AC458A /* platform.h in Headers */,
 				D0CB06211ADC454C005E298F /* MTKeychain.h in Headers */,
 				D0580AC21B0F3E9C00E8235B /* MTDiscoverConnectionSignals.h in Headers */,
 				D0C932231E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h in Headers */,
@@ -1663,6 +1821,7 @@
 				D0D1A05E1ADD983C007D9ED6 /* MTRpcError.h in Headers */,
 				D0E2E17720866780005737E8 /* MTDNS.h in Headers */,
 				D0C9322B1E095E280074F044 /* MTNetworkUsageManager.h in Headers */,
+				D018559022DDD36C00AC458A /* Client.h in Headers */,
 				D0CB063A1ADC4591005E298F /* MTTimeFixContext.h in Headers */,
 				D0CB065D1ADC45CE005E298F /* MTTcpConnectionBehaviour.h in Headers */,
 				D09A59581B582EFF00FC3724 /* MTFileBasedKeychain.h in Headers */,
@@ -1687,6 +1846,7 @@
 				D0CB066A1ADC4846005E298F /* MTResendMessageService.h in Headers */,
 				D0CB061D1ADC4541005E298F /* MTQueue.h in Headers */,
 				D0CB06171ADC4536005E298F /* MTProtoKit.h in Headers */,
+				D018559222DDD36C00AC458A /* tonlib_api.h in Headers */,
 				D0CB06391ADC4591005E298F /* MTSessionInfo.h in Headers */,
 				D0CB06331ADC4583005E298F /* MTDatacenterSaltInfo.h in Headers */,
 				D0CB062B1ADC4575005E298F /* MTDatacenterAuthAction.h in Headers */,
@@ -1716,6 +1876,7 @@
 				D0CD97F61D74B94B00F41187 /* MTRsa.h in Headers */,
 				D0CD98C11D74BA8300F41187 /* MTTcpTransport.h in Headers */,
 				D0CD98CB1D74BA9500F41187 /* MTTcpConnectionBehaviour.h in Headers */,
+				D08A159D22DD32F20073B508 /* TON.h in Headers */,
 				D0CD982D1D74B99500F41187 /* MTResPqMessage.h in Headers */,
 				D0CD98E91D75C0BB00F41187 /* MTMessageService.h in Headers */,
 				D0B0DF631DD7E7A4003BA12D /* MTBag.h in Headers */,
@@ -1733,6 +1894,8 @@
 				D0CD984C1D74B9AD00F41187 /* MTRpcError.h in Headers */,
 				D0CD98251D74B99500F41187 /* MTMsgDetailedInfoMessage.h in Headers */,
 				D0CD989D1D74BA6500F41187 /* MTIncomingMessage.h in Headers */,
+				D08A159222DD32B40073B508 /* tonlib_client_json.h in Headers */,
+				D018559722DDD37300AC458A /* TlObject.h in Headers */,
 				D0CD98011D74B96400F41187 /* MTBadMsgNotificationMessage.h in Headers */,
 				D0CD98201D74B99500F41187 /* MTFutureSaltsMessage.h in Headers */,
 				D0CD985E1D74B9BF00F41187 /* MTServerDhParamsMessage.h in Headers */,
@@ -1742,6 +1905,7 @@
 				D0CD98041D74B96400F41187 /* MTDestroySessionResponseMessage.h in Headers */,
 				D0CD97FB1D74B95100F41187 /* MTSerialization.h in Headers */,
 				D0CD98651D74B9D800F41187 /* MTFileBasedKeychain.h in Headers */,
+				D018559622DDD37300AC458A /* Client.h in Headers */,
 				D0CD98991D74BA6500F41187 /* MTSessionInfo.h in Headers */,
 				D0CD97D71D74B92000F41187 /* MTTimer.h in Headers */,
 				D0529D2D21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */,
@@ -1752,6 +1916,7 @@
 				D033873B223BC115007A2CE4 /* MTPKCS.h in Headers */,
 				D0CD985C1D74B9BF00F41187 /* MTRpcResultMessage.h in Headers */,
 				D0D225101B4D817B0085E26D /* MtProtoKitDynamic.h in Headers */,
+				D018559922DDD37300AC458A /* int_types.h in Headers */,
 				D0CD98241D74B99500F41187 /* MTMsgContainerMessage.h in Headers */,
 				D0CD98281D74B99500F41187 /* MTMsgsStateInfoMessage.h in Headers */,
 				D0CD98271D74B99500F41187 /* MTMsgsAckMessage.h in Headers */,
@@ -1760,7 +1925,9 @@
 				D0CD988D1D74BA5200F41187 /* MTDatacenterAddressListData.h in Headers */,
 				D0CD985D1D74B9BF00F41187 /* MTServerDhInnerDataMessage.h in Headers */,
 				D0CD98611D74B9D000F41187 /* MTKeychain.h in Headers */,
+				D018559822DDD37300AC458A /* tonlib_api.h in Headers */,
 				D0CD98261D74B99500F41187 /* MTMsgResendReqMessage.h in Headers */,
+				D018559B22DDD37300AC458A /* platform.h in Headers */,
 				D0CD97EE1D74B94300F41187 /* MTLogging.h in Headers */,
 				D0CD98FB1D75C0E500F41187 /* MTRequest.h in Headers */,
 				D0CAF2DA1D75E3160011F558 /* MTSubscriber.h in Headers */,
@@ -1782,6 +1949,8 @@
 				D0CD97F11D74B94300F41187 /* MTQueue.h in Headers */,
 				D0CD98051D74B96400F41187 /* MTDropRpcResultMessage.h in Headers */,
 				D0CD987C1D74BA4100F41187 /* MTDatacenterAuthAction.h in Headers */,
+				D018559A22DDD37300AC458A /* TonlibCallback.h in Headers */,
+				D08A159122DD32B40073B508 /* tonlibjson_export.h in Headers */,
 				D0CD982A1D74B99500F41187 /* MTNewSessionCreatedMessage.h in Headers */,
 				D0CD987B1D74BA4100F41187 /* MTDatacenterTransferAuthAction.h in Headers */,
 				D0CD990B1D75C0F400F41187 /* MTResendMessageService.h in Headers */,
@@ -2206,6 +2375,7 @@
 				D0CD98821D74BA4900F41187 /* MTDatacenterAuthAction.m in Sources */,
 				D0CD98961D74BA5A00F41187 /* MTDatacenterSaltInfo.m in Sources */,
 				D0CD98771D74BA0700F41187 /* MTDiscoverDatacenterAddressAction.m in Sources */,
+				D08A159E22DD32F20073B508 /* TON.mm in Sources */,
 				D0CD98CD1D74BA9700F41187 /* MTTcpConnectionBehaviour.m in Sources */,
 				D0CD98491D74B9AA00F41187 /* MTPingMessage.m in Sources */,
 				D0CD97DB1D74B93100F41187 /* MTQueue.m in Sources */,
@@ -2411,6 +2581,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -2472,6 +2643,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -2497,11 +2669,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
@@ -2681,6 +2854,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -2747,6 +2921,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -2775,11 +2950,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -2928,6 +3104,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -2995,6 +3172,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -3023,11 +3201,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -3176,6 +3355,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -3243,6 +3423,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -3271,11 +3452,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -3585,6 +3767,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -3652,6 +3835,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -3680,11 +3864,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -3822,6 +4007,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -3883,6 +4069,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -3907,11 +4094,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
@@ -4042,6 +4230,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -4103,6 +4292,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -4127,11 +4317,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
@@ -4262,6 +4453,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -4322,6 +4514,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -4346,11 +4539,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
@@ -4481,6 +4675,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -4541,6 +4736,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -4565,11 +4761,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
@@ -4711,6 +4908,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -4778,6 +4976,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -4806,11 +5005,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -4914,6 +5114,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -4968,6 +5169,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -5059,6 +5261,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -5120,6 +5323,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -5144,11 +5348,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
@@ -5210,6 +5415,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -5238,11 +5444,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -5266,6 +5473,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -5290,11 +5498,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "-DMtProtoKitDynamicFramework=1";
@@ -5444,6 +5653,7 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MACH_O_TYPE = staticlib;
 				MTL_ENABLE_DEBUG_INFO = YES;
@@ -5511,6 +5721,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -5539,11 +5750,12 @@
 				HEADER_SEARCH_PATHS = "$(PROJECT_DIR)/openssl";
 				INFOPLIST_FILE = MtProtoKitDynamic/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/iOS",
+					"$(PROJECT_DIR)/TON",
 				);
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;

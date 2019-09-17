@@ -45,6 +45,7 @@ enum SettingsSearchableItemId: Hashable {
     case language(Int32)
     case watch(Int32)
     case passport(Int32)
+    case wallet(Int32)
     case support(Int32)
     case faq(Int32)
     
@@ -74,10 +75,12 @@ enum SettingsSearchableItemId: Hashable {
                 return 11
             case .passport:
                 return 12
-            case .support:
+            case .wallet:
                 return 13
-            case .faq:
+            case .support:
                 return 14
+            case .faq:
+                return 15
         }
     }
     
@@ -95,6 +98,7 @@ enum SettingsSearchableItemId: Hashable {
                  let .language(id),
                  let .watch(id),
                  let .passport(id),
+                 let .wallet(id),
                  let .support(id),
                  let .faq(id):
                 return id
@@ -134,8 +138,10 @@ enum SettingsSearchableItemId: Hashable {
             case 12:
                 self = .passport(id)
             case 13:
-                self = .support(id)
+                self = .wallet(id)
             case 14:
+                self = .support(id)
+            case 15:
                 self = .faq(id)
             default:
                 return nil
@@ -851,6 +857,13 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
             present(.modal, SecureIdAuthController(context: context, mode: .list))
         })
         allItems.append(passport)
+
+        let wallet = SettingsSearchableItem(id: .wallet(0), title: "Wallet", alternate: synonyms("Wallet"), icon: .passport, breadcrumbs: [], present: { context, _, present in
+            openWallet(context: context, push: { c in
+                present(.push, c)
+            })
+        })
+        allItems.append(wallet)
         
         let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: synonyms(strings.SettingsSearch_Synonyms_Support), icon: .support, breadcrumbs: [], present: { context, _, present in
             let _ = (supportPeerId(account: context.account)

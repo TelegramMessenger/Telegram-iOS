@@ -443,9 +443,20 @@ public protocol SharedAccountContext: class {
     func beginNewAuth(testingEnvironment: Bool)
 }
 
+public struct TonContext {
+    public let instance: TonInstance
+    public let keychain: TonKeychain
+    
+    public init(instance: TonInstance, keychain: TonKeychain) {
+        self.instance = instance
+        self.keychain = keychain
+    }
+}
+
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
+    var tonContext: TonContext? { get }
     
     var liveLocationManager: LiveLocationManager? { get }
     var fetchManager: FetchManager { get }

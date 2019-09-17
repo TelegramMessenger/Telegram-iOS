@@ -23,6 +23,7 @@ import PassportUI
 import WatchBridge
 import LegacyDataImport
 import SettingsUI
+import AppBundle
 
 private let handleVoipNotifications = false
 
@@ -69,7 +70,7 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var statusBarWindow: UIView? {
-        return self.application.value(forKey: "statusBarWindow") as? UIView
+        return nil//self.application.value(forKey: "statusBarWindow") as? UIView
     }
     
     var statusBarView: UIView? {
@@ -165,7 +166,6 @@ final class SharedApplicationContext {
     @objc var window: UIWindow?
     var nativeWindow: (UIWindow & WindowHost)?
     var mainWindow: Window1!
-    var aboveStatusbarWindow: UIWindow?
     private var dataImportSplash: LegacyDataImportSplash?
     
     let episodeId = arc4random()
@@ -240,9 +240,8 @@ final class SharedApplicationContext {
         
         
         let statusBarHost = ApplicationStatusBarHost()
-        let (window, hostView, aboveStatusbarWindow) = nativeWindowHostView()
+        let (window, hostView) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
-        self.aboveStatusbarWindow = aboveStatusbarWindow
         hostView.containerView.backgroundColor = UIColor.white
         self.window = window
         self.nativeWindow = window
@@ -448,7 +447,6 @@ final class SharedApplicationContext {
             #endif
         #endif
         
-        self.aboveStatusbarWindow?.isHidden = false
         self.window?.makeKeyAndVisible()
         
         self.hasActiveAudioSession.set(MediaManagerImpl.globalAudioSession.isActive())
@@ -648,6 +646,42 @@ final class SharedApplicationContext {
                 subscriber.putCompletion()
             })
         }
+        
+        let tonKeychain: TonKeychain
+        
+        #if targetEnvironment(simulator)
+        tonKeychain = TonKeychain(encrypt: { data in
+            return Signal { subscriber in
+                subscriber.putNext(data)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+        }, decrypt: { data in
+            return Signal { subscriber in
+                subscriber.putNext(data)
+                subscriber.putCompletion()
+                return EmptyDisposable
+            }
+        })
+        #else
+        tonKeychain = TonKeychain(encrypt: { data in
+            return Signal { subscriber in
+                BuildConfig.encryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result in
+                    subscriber.putNext(result)
+                    subscriber.putCompletion()
+                })
+                return EmptyDisposable
+            }
+        }, decrypt: { data in
+            return Signal { subscriber in
+                BuildConfig.decryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result in
+                    subscriber.putNext(result)
+                    subscriber.putCompletion()
+                })
+                return EmptyDisposable
+            }
+        })
+        #endif
         
         let sharedContextSignal = accountManagerSignal
         |> deliverOnMainQueue
@@ -887,7 +921,11 @@ final class SharedApplicationContext {
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
-                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, limitsConfiguration: limitsConfiguration)
+                    var tonContext: TonContext?
+                    if let path = getAppBundle().path(forResource: "cfg", ofType: "txt"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let config = String(data: data, encoding: .utf8) {
+                        tonContext = TonContext(instance: TonInstance(basePath: account.basePath, config: config), keychain: tonKeychain)
+                    }
+                    let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()
                         |> take(1)
@@ -1093,7 +1131,9 @@ final class SharedApplicationContext {
         })
         
         let pushRegistry = PKPushRegistry(queue: .main)
-        pushRegistry.desiredPushTypes = Set([.voIP])
+        if #available(iOS 9.0, *) {
+            pushRegistry.desiredPushTypes = Set([.voIP])
+        }
         self.pushRegistry = pushRegistry
         pushRegistry.delegate = self
         
@@ -1341,24 +1381,28 @@ final class SharedApplicationContext {
     }
 
     public func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
-        if case PKPushType.voIP = type {
-            Logger.shared.log("App \(self.episodeId)", "pushRegistry credentials: \(credentials.token as NSData)")
-            
-            self.voipTokenPromise.set(.single(credentials.token))
+        if #available(iOS 9.0, *) {
+            if case PKPushType.voIP = type {
+                Logger.shared.log("App \(self.episodeId)", "pushRegistry credentials: \(credentials.token as NSData)")
+                
+                self.voipTokenPromise.set(.single(credentials.token))
+            }
         }
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didReceiveIncomingPushWith payload: PKPushPayload, for type: PKPushType) {
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
-            
-            if case PKPushType.voIP = type {
-                Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
-                sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
-            }
-        })
+        if #available(iOS 9.0, *) {
+            let _ = (self.sharedContextPromise.get()
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                sharedApplicationContext.wakeupManager.allowBackgroundTimeExtension(timeout: 4.0)
+                
+                if case PKPushType.voIP = type {
+                    Logger.shared.log("App \(self.episodeId)", "pushRegistry payload: \(payload.dictionaryPayload)")
+                    sharedApplicationContext.notificationManager.addNotification(payload.dictionaryPayload)
+                }
+            })
+        }
     }
     
     public func pushRegistry(_ registry: PKPushRegistry, didInvalidatePushTokenFor type: PKPushType) {

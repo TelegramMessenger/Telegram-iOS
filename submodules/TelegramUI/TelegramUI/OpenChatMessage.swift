@@ -253,7 +253,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .map(mapMedia):
                 params.dismissInput()
                 
-                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, isModal: params.modal, openPeer: { peer in
+                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
                     params.openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)

@@ -66,6 +66,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetDatabase(PresentationTheme)
     case resetHoles(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
+    case deleteWallets(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
@@ -82,7 +83,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .deleteWallets, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
             return DebugControllerSection.experiments.rawValue
         case .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -127,16 +128,18 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 16
         case .resetBiometricsData:
             return 17
-        case .optimizeDatabase:
+        case .deleteWallets:
             return 18
-        case .photoPreview:
+        case .optimizeDatabase:
             return 19
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 20
-        case .gradientBubbles:
+        case .knockoutWallpaper:
             return 21
-        case .versionInfo:
+        case .gradientBubbles:
             return 22
+        case .versionInfo:
+            return 23
         }
     }
     
@@ -464,6 +467,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                 }).start()
             })
+        case let .deleteWallets(theme):
+            return ItemListActionItem(theme: theme, title: "Delete Wallets", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let _ = debugDeleteWallets(postbox: context.account.postbox).start()
+            })
         case let .optimizeDatabase(theme):
             return ItemListActionItem(theme: theme, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -546,6 +556,9 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
+    if experimentalSettings.wallets {
+        entries.append(.deleteWallets(presentationData.theme))
+    }
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))

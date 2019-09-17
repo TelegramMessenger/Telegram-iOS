@@ -182,6 +182,7 @@ framework(
         "//submodules/MessageReactionListUI:MessageReactionListUI",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/WalletUI:WalletUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -96,7 +96,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[483104362] = { return Api.RichText.parse_textPhone($0) }
     dict[136105807] = { return Api.RichText.parse_textImage($0) }
     dict[894777186] = { return Api.RichText.parse_textAnchor($0) }
-    dict[-302941166] = { return Api.UserFull.parse_userFull($0) }
+    dict[-1684333439] = { return Api.UserFull.parse_userFull($0) }
     dict[-292807034] = { return Api.InputChannel.parse_inputChannelEmpty($0) }
     dict[-1343524562] = { return Api.InputChannel.parse_inputChannel($0) }
     dict[414687501] = { return Api.DcOption.parse_dcOption($0) }
@@ -167,6 +167,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1777000467] = { return Api.PrivacyKey.parse_privacyKeyProfilePhoto($0) }
     dict[-778378131] = { return Api.PrivacyKey.parse_privacyKeyPhoneNumber($0) }
     dict[1124062251] = { return Api.PrivacyKey.parse_privacyKeyAddedByPhone($0) }
+    dict[963559926] = { return Api.PrivacyKey.parse_privacyKeyWalletAddress($0) }
     dict[522914557] = { return Api.Update.parse_updateNewMessage($0) }
     dict[1318109142] = { return Api.Update.parse_updateMessageID($0) }
     dict[-1576161051] = { return Api.Update.parse_updateDeleteMessages($0) }
@@ -442,6 +443,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1261946036] = { return Api.NotifyPeer.parse_notifyUsers($0) }
     dict[-1073230141] = { return Api.NotifyPeer.parse_notifyChats($0) }
     dict[-703403793] = { return Api.NotifyPeer.parse_notifyBroadcasts($0) }
+    dict[-582464156] = { return Api.wallet.KeySecretSalt.parse_secretSalt($0) }
     dict[1335282456] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyStatusTimestamp($0) }
     dict[-1107622874] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyChatInvite($0) }
     dict[-88417185] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyPhoneCall($0) }
@@ -450,6 +452,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1461304012] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyProfilePhoto($0) }
     dict[55761658] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyPhoneNumber($0) }
     dict[-786326563] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyAddedByPhone($0) }
+    dict[-640916697] = { return Api.InputPrivacyKey.parse_inputPrivacyKeyWalletAddress($0) }
     dict[235081943] = { return Api.help.RecentMeUrls.parse_recentMeUrls($0) }
     dict[-1606526075] = { return Api.ReplyMarkup.parse_replyKeyboardHide($0) }
     dict[-200242528] = { return Api.ReplyMarkup.parse_replyKeyboardForceReply($0) }
@@ -641,6 +644,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[594408994] = { return Api.EmojiKeyword.parse_emojiKeywordDeleted($0) }
     dict[-290921362] = { return Api.upload.CdnFile.parse_cdnFileReuploadNeeded($0) }
     dict[-1449145777] = { return Api.upload.CdnFile.parse_cdnFile($0) }
+    dict[1984136919] = { return Api.wallet.LiteResponse.parse_liteResponse($0) }
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
     dict[-764945220] = { return Api.MessageUserReaction.parse_messageUserReaction($0) }
     dict[-1937807902] = { return Api.BotInlineMessage.parse_botInlineMessageText($0) }
@@ -1094,6 +1098,8 @@ public struct Api {
                 _1.serialize(buffer, boxed)
             case let _1 as Api.NotifyPeer:
                 _1.serialize(buffer, boxed)
+            case let _1 as Api.wallet.KeySecretSalt:
+                _1.serialize(buffer, boxed)
             case let _1 as Api.InputPrivacyKey:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.RecentMeUrls:
@@ -1275,6 +1281,8 @@ public struct Api {
             case let _1 as Api.EmojiKeyword:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.upload.CdnFile:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.wallet.LiteResponse:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.InviteText:
                 _1.serialize(buffer, boxed)

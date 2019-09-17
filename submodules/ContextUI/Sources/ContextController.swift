@@ -1287,7 +1287,7 @@ public enum ContextContentSource {
     case controller(ContextControllerContentSource)
 }
 
-public final class ContextController: ViewController {
+public final class ContextController: ViewController, StandalonePresentableController {
     private let account: Account
     private var theme: PresentationTheme
     private var strings: PresentationStrings

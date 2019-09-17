@@ -157,6 +157,7 @@ private var declaredEncodables: Void = {
     declareEncodable(UpdateMessageReactionsAction.self, f: { UpdateMessageReactionsAction(decoder: $0) })
     declareEncodable(RestrictedContentMessageAttribute.self, f: { RestrictedContentMessageAttribute(decoder: $0) })
     declareEncodable(SendScheduledMessageImmediatelyAction.self, f: { SendScheduledMessageImmediatelyAction(decoder: $0) })
+    declareEncodable(WalletCollection.self, f: { WalletCollection(decoder: $0) })
     
     return
 }()

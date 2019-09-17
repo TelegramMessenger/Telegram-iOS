@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramStringFormatting
 import PeerOnlineMarkerNode
 import SelectablePeerNode
+import ContextUI
 
 public enum HorizontalPeerItemMode {
     case list
@@ -24,20 +25,20 @@ public final class HorizontalPeerItem: ListViewItem {
     let account: Account
     public let peer: Peer
     let action: (Peer) -> Void
-    let longTapAction: (Peer) -> Void
+    let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     let isPeerSelected: (PeerId) -> Bool
     let customWidth: CGFloat?
     let presence: PeerPresence?
     let unreadBadge: (Int32, Bool)?
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, account: Account, peer: Peer, presence: PeerPresence?, unreadBadge: (Int32, Bool)?, action: @escaping (Peer) -> Void, longTapAction: @escaping (Peer) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, mode: HorizontalPeerItemMode, account: Account, peer: Peer, presence: PeerPresence?, unreadBadge: (Int32, Bool)?, action: @escaping (Peer) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void, isPeerSelected: @escaping (PeerId) -> Bool, customWidth: CGFloat?) {
         self.theme = theme
         self.strings = strings
         self.mode = mode
         self.account = account
         self.peer = peer
         self.action = action
-        self.longTapAction = longTapAction
+        self.contextAction = contextAction
         self.isPeerSelected = isPeerSelected
         self.customWidth = customWidth
         self.presence = presence
@@ -110,9 +111,9 @@ public final class HorizontalPeerItemNode: ListViewItemNode {
                 item.action(item.peer)
             }
         }
-        self.peerNode.longTapAction = { [weak self] in
+        self.peerNode.contextAction = { [weak self] node, gesture in
             if let item = self?.item {
-                item.longTapAction(item.peer)
+                item.contextAction(item.peer, node, gesture)
             }
         }
     }

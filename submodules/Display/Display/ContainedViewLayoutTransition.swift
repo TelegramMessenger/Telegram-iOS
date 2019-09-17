@@ -90,6 +90,39 @@ public extension ContainedViewLayoutTransition {
         }
     }
     
+    func updateFrameAsPositionAndBounds(node: ASDisplayNode, frame: CGRect, force: Bool = false, beginWithCurrentState: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        if node.frame.equalTo(frame) && !force {
+            completion?(true)
+        } else {
+            switch self {
+            case .immediate:
+                node.position = frame.center
+                node.bounds = CGRect(origin: CGPoint(), size: frame.size)
+                if let completion = completion {
+                    completion(true)
+                }
+            case let .animated(duration, curve):
+                let previousPosition: CGPoint
+                let previousBounds: CGRect
+                if beginWithCurrentState, let presentation = node.layer.presentation() {
+                    previousPosition = presentation.position
+                    previousBounds = presentation.bounds
+                } else {
+                    previousPosition = node.position
+                    previousBounds = node.bounds
+                }
+                node.position = frame.center
+                node.bounds = CGRect(origin: CGPoint(), size: frame.size)
+                node.layer.animateFrame(from:
+                    CGRect(origin: CGPoint(x: previousPosition.x - previousBounds.width / 2.0, y: previousPosition.y - previousBounds.height / 2.0), size: previousBounds.size), to: frame, duration: duration, timingFunction: curve.timingFunction, mediaTimingFunction: curve.mediaTimingFunction, force: force, completion: { result in
+                    if let completion = completion {
+                        completion(result)
+                    }
+                })
+            }
+        }
+    }
+    
     func updateFrameAdditive(node: ASDisplayNode, frame: CGRect, force: Bool = false, completion: ((Bool) -> Void)? = nil) {
         if node.frame.equalTo(frame) && !force {
             completion?(true)

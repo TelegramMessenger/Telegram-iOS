@@ -142,7 +142,7 @@ public final class InstantPageGalleryControllerPresentationArguments {
     }
 }
 
-public class InstantPageGalleryController: ViewController {
+public class InstantPageGalleryController: ViewController, StandalonePresentableController {
     private var galleryNode: GalleryControllerNode {
         return self.displayNode as! GalleryControllerNode
     }
