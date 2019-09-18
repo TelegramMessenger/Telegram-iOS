@@ -63,7 +63,7 @@ public final class TonInstance {
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.createKey(withLocalPassword: serverSalt, mnemonicPassword: "").start(next: { key in
+                    let cancel = ton.createKey(withLocalPassword: serverSalt, mnemonicPassword: Data()).start(next: { key in
                         guard let key = key as? TONKey else {
                             assertionFailure()
                             return
@@ -103,7 +103,7 @@ public final class TonInstance {
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.importKey(withLocalPassword: serverSalt, mnemonicPassword: "", wordList: wordList).start(next: { key in
+                    let cancel = ton.importKey(withLocalPassword: serverSalt, mnemonicPassword: Data(), wordList: wordList).start(next: { key in
                         guard let key = key as? TONKey else {
                             subscriber.putError(.generic)
                             subscriber.putCompletion()

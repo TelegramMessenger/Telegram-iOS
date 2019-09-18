@@ -556,9 +556,7 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
-    if experimentalSettings.wallets {
-        entries.append(.deleteWallets(presentationData.theme))
-    }
+    entries.append(.deleteWallets(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))

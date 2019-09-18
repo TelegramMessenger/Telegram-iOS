@@ -1,10 +1,25 @@
 #import "TON.h"
 
-#import "tonlib_client_json.h"
 #import "MTLogging.h"
-#import "Client.h"
+#import "tonlib/Client.h"
 #import "MTQueue.h"
 #import "MTSignal.h"
+
+static td::SecureString makeSecureString(NSData * _Nonnull data) {
+    if (data == nil || data.length == 0) {
+        return td::SecureString();
+    } else {
+        return td::SecureString((const char *)data.bytes, (size_t)data.length);
+    }
+}
+
+static std::string makeString(NSData * _Nonnull data) {
+    if (data == nil || data.length == 0) {
+        return std::string();
+    } else {
+        return std::string((const char *)data.bytes, ((const char *)data.bytes) + data.length);
+    }
+}
 
 @implementation TONKey
 
@@ -84,12 +99,18 @@ using tonlib_api::make_object;
 
 @end
 
+typedef enum {
+    TONInitializationStatusInitializing,
+    TONInitializationStatusReady,
+    TONInitializationStatusError
+} TONInitializationStatus;
+
 @interface TON () {
     std::shared_ptr<tonlib::Client> _client;
     uint64_t _nextRequestId;
     NSLock *_requestHandlersLock;
     NSMutableDictionary<NSNumber *, TONRequestHandler *> *_requestHandlers;
-    MTPipe *_initialized;
+    MTPipe *_initializedStatus;
 }
 
 @end
@@ -110,8 +131,8 @@ using tonlib_api::make_object;
     if (self != nil) {
         _requestHandlersLock = [[NSLock alloc] init];
         _requestHandlers = [[NSMutableDictionary alloc] init];
-        _initialized = [[MTPipe alloc] initWithReplay:true];
-        _initialized.sink(@false);
+        _initializedStatus = [[MTPipe alloc] initWithReplay:true];
+        _initializedStatus.sink(@(TONInitializationStatusInitializing));
         _nextRequestId = 1;
         
         _client = std::make_shared<tonlib::Client>();
@@ -132,8 +153,15 @@ using tonlib_api::make_object;
         
         [[NSFileManager defaultManager] createDirectoryAtPath:keystoreDirectory withIntermediateDirectories:true attributes:nil error:nil];
         
-        [[self requestInitWithConfigString:config keystoreDirectory:keystoreDirectory] startWithNext:nil completed:^{
-            _initialized.sink(@true);
+        MTPipe *initializedStatus = _initializedStatus;
+        [[self requestInitWithConfigString:config keystoreDirectory:keystoreDirectory] startWithNext:nil error:^(id error) {
+            NSString *errorText = @"Unknown error";
+            if ([error isKindOfClass:[TONError class]]) {
+                errorText = ((TONError *)error).text;
+            }
+            initializedStatus.sink(@(TONInitializationStatusError));
+        } completed:^{
+            initializedStatus.sink(@(TONInitializationStatusReady));
         }];
     }
     return self;
@@ -161,7 +189,7 @@ using tonlib_api::make_object;
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSString *)mnemonicPassword {
+- (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
@@ -172,7 +200,11 @@ using tonlib_api::make_object;
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
             } else if (object->get_id() == tonlib_api::key::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::key>(object);
-                NSString *publicKey = [[[NSData alloc] initWithBytes:result->public_key_.data() length:result->public_key_.length()] base64EncodedStringWithOptions:0];
+                NSString *publicKey = [[NSString alloc] initWithData:[[NSData alloc] initWithBytes:result->public_key_.data() length:result->public_key_.length()] encoding:NSUTF8StringEncoding];
+                if (publicKey == nil) {
+                    [subscriber putError:[[TONError alloc] initWithText:@"Error decoding UTF8 string in createKeyWithLocalPassword"]];
+                    return;
+                }
                 NSData *secret = [[NSData alloc] initWithBytes:result->secret_.data() length:result->secret_.length()];
                 [subscriber putNext:[[TONKey alloc] initWithPublicKey:publicKey secret:secret]];
                 [subscriber putCompletion];
@@ -181,9 +213,11 @@ using tonlib_api::make_object;
             }
         }];
         
-        NSString *localPasswordString = [localPassword base64EncodedStringWithOptions:0];
-        
-        auto query = make_object<tonlib_api::createNewKey>(localPasswordString.UTF8String, mnemonicPassword.UTF8String);
+        auto query = make_object<tonlib_api::createNewKey>(
+            makeSecureString(localPassword),
+            makeSecureString(mnemonicPassword),
+            td::SecureString()
+        );
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -193,6 +227,12 @@ using tonlib_api::make_object;
 
 - (MTSignal *)getTestWalletAccountAddressWithPublicKey:(NSString *)publicKey {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        NSData *publicKeyData = [publicKey dataUsingEncoding:NSUTF8StringEncoding];
+        if (publicKeyData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in getTestWalletAccountAddressWithPublicKey"]];
+            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -209,10 +249,11 @@ using tonlib_api::make_object;
             }
         }];
         
-        NSData *publicKeyData = [[NSData alloc] initWithBase64EncodedString:publicKey options:0];
-        std::string publicKeyString((uint8_t *)publicKeyData.bytes, (uint8_t *)publicKeyData.bytes + publicKeyData.length);
-        
-        auto query = make_object<tonlib_api::testWallet_getAccountAddress>(make_object<tonlib_api::testWallet_initialAccountState>(publicKeyString));
+        auto query = make_object<tonlib_api::testWallet_getAccountAddress>(
+            make_object<tonlib_api::testWallet_initialAccountState>(
+                makeString(publicKeyData)
+            )
+        );
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -300,6 +341,12 @@ using tonlib_api::make_object;
 
 - (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
+        if (publicKeyData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in sendGramsFromKey"]];
+            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -312,17 +359,18 @@ using tonlib_api::make_object;
             }
         }];
         
-        NSData *publicKeyData = [[NSData alloc] initWithBase64EncodedString:key.publicKey options:0];
-        std::string publicKeyString((uint8_t *)publicKeyData.bytes, (uint8_t *)publicKeyData.bytes + publicKeyData.length);
-        
-        NSData *secretData = key.secret;
-        std::string secretString((uint8_t *)secretData.bytes, (uint8_t *)secretData.bytes + secretData.length);
-        
-        NSString *localPasswordConvertedString = [localPassword base64EncodedStringWithOptions:0];
-        NSData *localPasswordData = [localPasswordConvertedString dataUsingEncoding:NSUTF8StringEncoding];
-        std::string localPasswordString((uint8_t *)localPasswordData.bytes, (uint8_t *)localPasswordData.bytes + localPasswordData.length);
-        
-        auto query = make_object<tonlib_api::generic_sendGrams>(make_object<tonlib_api::inputKey>(make_object<tonlib_api::key>(publicKeyString, secretString), localPasswordString), make_object<tonlib_api::accountAddress>(fromAddress.UTF8String), make_object<tonlib_api::accountAddress>(address.UTF8String), amount);
+        auto query = make_object<tonlib_api::generic_sendGrams>(
+            make_object<tonlib_api::inputKey>(
+                make_object<tonlib_api::key>(
+                    makeString(publicKeyData),
+                    makeSecureString(key.secret)
+                ),
+                makeSecureString(localPassword)
+            ),
+            make_object<tonlib_api::accountAddress>(fromAddress.UTF8String),
+            make_object<tonlib_api::accountAddress>(address.UTF8String),
+            amount
+        );
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -332,6 +380,12 @@ using tonlib_api::make_object;
 
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
+        if (publicKeyData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in exportKey"]];
+            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -342,8 +396,13 @@ using tonlib_api::make_object;
             } else if (object->get_id() == tonlib_api::exportedKey::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::exportedKey>(object);
                 NSMutableArray *wordList = [[NSMutableArray alloc] init];
-                for (auto it : result->word_list_) {
-                    [wordList addObject:[[NSString alloc] initWithUTF8String:it.c_str()]];
+                for (auto &it : result->word_list_) {
+                    NSString *string = [[NSString alloc] initWithData:[[NSData alloc] initWithBytes:it.data() length:it.size()] encoding:NSUTF8StringEncoding];
+                    if (string == nil) {
+                        [subscriber putError:[[TONError alloc] initWithText:@"Error decoding UTF8 string in exportedKey::word_list"]];
+                        return;
+                    }
+                    [wordList addObject:string];
                 }
                 [subscriber putNext:wordList];
                 [subscriber putCompletion];
@@ -351,18 +410,15 @@ using tonlib_api::make_object;
                 assert(false);
             }
         }];
-        
-        NSData *publicKeyData = [[NSData alloc] initWithBase64EncodedString:key.publicKey options:0];
-        std::string publicKeyString((uint8_t *)publicKeyData.bytes, (uint8_t *)publicKeyData.bytes + publicKeyData.length);
-        
-        NSData *secretData = key.secret;
-        std::string secretString((uint8_t *)secretData.bytes, (uint8_t *)secretData.bytes + secretData.length);
-        
-        NSString *localPasswordConvertedString = [localPassword base64EncodedStringWithOptions:0];
-        NSData *localPasswordData = [localPasswordConvertedString dataUsingEncoding:NSUTF8StringEncoding];
-        std::string localPasswordString((uint8_t *)localPasswordData.bytes, (uint8_t *)localPasswordData.bytes + localPasswordData.length);
-        
-        auto query = make_object<tonlib_api::exportKey>(make_object<tonlib_api::inputKey>(make_object<tonlib_api::key>(publicKeyString, secretString), localPasswordString));
+        auto query = make_object<tonlib_api::exportKey>(
+            make_object<tonlib_api::inputKey>(
+                make_object<tonlib_api::key>(
+                    makeString(publicKeyData),
+                    makeSecureString(key.secret)
+                ),
+                makeSecureString(localPassword)
+            )
+        );
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -372,6 +428,12 @@ using tonlib_api::make_object;
 
 - (MTSignal *)makeWalletInitialized:(TONKey *)key localPassword:(NSData *)localPassword {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
+        if (publicKeyData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in exportKey"]];
+            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -384,17 +446,15 @@ using tonlib_api::make_object;
             }
         }];
         
-        NSData *publicKeyData = [[NSData alloc] initWithBase64EncodedString:key.publicKey options:0];
-        std::string publicKeyString((uint8_t *)publicKeyData.bytes, (uint8_t *)publicKeyData.bytes + publicKeyData.length);
-        
-        NSData *secretData = key.secret;
-        std::string secretString((uint8_t *)secretData.bytes, (uint8_t *)secretData.bytes + secretData.length);
-        
-        NSString *localPasswordConvertedString = [localPassword base64EncodedStringWithOptions:0];
-        NSData *localPasswordData = [localPasswordConvertedString dataUsingEncoding:NSUTF8StringEncoding];
-        std::string localPasswordString((uint8_t *)localPasswordData.bytes, (uint8_t *)localPasswordData.bytes + localPasswordData.length);
-        
-        auto query = make_object<tonlib_api::testWallet_init>(make_object<tonlib_api::inputKey>(make_object<tonlib_api::key>(publicKeyString, secretString), localPasswordString));
+        auto query = make_object<tonlib_api::testWallet_init>(
+            make_object<tonlib_api::inputKey>(
+                make_object<tonlib_api::key>(
+                    makeString(publicKeyData),
+                    makeSecureString(key.secret)
+                ),
+                makeSecureString(localPassword)
+            )
+        );
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -402,7 +462,7 @@ using tonlib_api::make_object;
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSString *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList {
+- (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
@@ -413,7 +473,11 @@ using tonlib_api::make_object;
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
             } else if (object->get_id() == tonlib_api::key::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::key>(object);
-                NSString *publicKey = [[[NSData alloc] initWithBytes:result->public_key_.data() length:result->public_key_.length()] base64EncodedStringWithOptions:0];
+                NSString *publicKey = [[NSString alloc] initWithData:[[NSData alloc] initWithBytes:result->public_key_.data() length:result->public_key_.length()] encoding:NSUTF8StringEncoding];
+                if (publicKey == nil) {
+                    [subscriber putError:[[TONError alloc] initWithText:@"Error decoding UTF8 string in importKeyWithLocalPassword"]];
+                    return;
+                }
                 NSData *secret = [[NSData alloc] initWithBytes:result->secret_.data() length:result->secret_.length()];
                 [subscriber putNext:[[TONKey alloc] initWithPublicKey:publicKey secret:secret]];
                 [subscriber putCompletion];
@@ -422,21 +486,16 @@ using tonlib_api::make_object;
             }
         }];
         
-        NSString *localPasswordConvertedString = [localPassword base64EncodedStringWithOptions:0];
-        NSData *localPasswordData = [localPasswordConvertedString dataUsingEncoding:NSUTF8StringEncoding];
-        std::string localPasswordString((uint8_t *)localPasswordData.bytes, (uint8_t *)localPasswordData.bytes + localPasswordData.length);
-        
-        NSData *mnemonicPasswordData = [mnemonicPassword dataUsingEncoding:NSUTF8StringEncoding];
-        std::string mnemonicPasswordString((uint8_t *)mnemonicPasswordData.bytes, (uint8_t *)mnemonicPasswordData.bytes + mnemonicPasswordData.length);
-        
-        std::vector<std::string> wordVector;
+        std::vector<td::SecureString> wordVector;
         for (NSString *word in wordList) {
             NSData *wordData = [word dataUsingEncoding:NSUTF8StringEncoding];
-            std::string wordString((uint8_t *)wordData.bytes, (uint8_t *)wordData.bytes + wordData.length);
-            wordVector.push_back(wordString);
+            wordVector.push_back(makeSecureString(wordData));
         }
         
-        auto query = make_object<tonlib_api::importKey>(localPasswordString, mnemonicPasswordString, make_object<tonlib_api::exportedKey>(std::move(wordVector)));
+        auto query = make_object<tonlib_api::importKey>(
+            makeSecureString(localPassword),
+            makeSecureString(mnemonicPassword),
+            make_object<tonlib_api::exportedKey>(std::move(wordVector)));
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -446,6 +505,12 @@ using tonlib_api::make_object;
 
 - (MTSignal *)deleteKeyWithPublicKey:(NSString *)publicKey {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        NSData *publicKeyData = [publicKey dataUsingEncoding:NSUTF8StringEncoding];
+        if (publicKeyData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in deleteKeyWithPublicKey"]];
+            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -458,10 +523,9 @@ using tonlib_api::make_object;
             }
         }];
         
-        NSData *publicKeyData = [[NSData alloc] initWithBase64EncodedString:publicKey options:0];
-        std::string publicKeyString((uint8_t *)publicKeyData.bytes, (uint8_t *)publicKeyData.bytes + publicKeyData.length);
-        
-        auto query = make_object<tonlib_api::deleteKey>(publicKeyString);
+        auto query = make_object<tonlib_api::deleteKey>(
+            makeString(publicKeyData)
+        );
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{

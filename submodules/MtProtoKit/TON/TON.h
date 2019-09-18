@@ -32,14 +32,14 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config;
 
-- (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSString *)mnemonicPassword;
+- (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (MTSignal *)getTestWalletAccountAddressWithPublicKey:(NSString *)publicKey;
 - (MTSignal *)getTestGiverAccountState;
 - (MTSignal *)testGiverSendGramsWithAccountState:(TONAccountState *)accountState accountAddress:(NSString *)accountAddress amount:(int64_t)amount;
 - (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
 - (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount;
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
-- (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSString *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
+- (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
 - (MTSignal *)deleteKeyWithPublicKey:(NSString *)publicKey;
 - (MTSignal *)makeWalletInitialized:(TONKey *)key localPassword:(NSData *)localPassword;
 
