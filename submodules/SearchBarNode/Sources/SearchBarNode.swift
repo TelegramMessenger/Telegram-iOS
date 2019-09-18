@@ -347,6 +347,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.displayWithoutProcessing = true
         
         self.textField = SearchBarTextField()
+        self.textField.accessibilityTraits = .searchField
         self.textField.autocorrectionType = .no
         self.textField.returnKeyType = .search
         self.textField.font = self.fieldStyle.font

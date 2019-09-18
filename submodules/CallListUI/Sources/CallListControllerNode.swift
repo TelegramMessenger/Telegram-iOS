@@ -120,7 +120,7 @@ private func mappedInsertEntries(account: Account, showSettings: Bool, nodeInter
                 }), directionHint: entry.directionHint)
             case let .displayTabInfo(theme, text):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ItemListTextItem(theme: theme, text: .plain(text), sectionId: 0), directionHint: entry.directionHint)
-        case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
+            case let .messageEntry(topMessage, messages, theme, strings, dateTimeFormat, editing, hasActiveRevealControls):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item:  CallListCallItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, account: account, style: showSettings ? .blocks : .plain, topMessage: topMessage, messages: messages, editing: editing, revealed: hasActiveRevealControls, interaction: nodeInteraction), directionHint: entry.directionHint)
             case let .holeEntry(_, theme):
                 return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: CallListHoleItem(theme: theme), directionHint: entry.directionHint)

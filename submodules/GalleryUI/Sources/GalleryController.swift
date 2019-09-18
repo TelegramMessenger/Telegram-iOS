@@ -731,6 +731,9 @@ public class GalleryController: ViewController, StandalonePresentableController 
                 }
             }
         }
+        
+        self.blocksBackgroundWhenInOverlay = true
+        self.isOpaqueWhenInOverlay = true
     }
     
     required init(coder aDecoder: NSCoder) {

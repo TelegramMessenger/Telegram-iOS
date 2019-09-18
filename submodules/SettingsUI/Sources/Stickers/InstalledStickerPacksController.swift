@@ -637,7 +637,9 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
     }
     
     let controller = ItemListController(context: context, state: signal)
-    
+    if case .modal = mode {
+        controller.navigationPresentation = .modal
+    }
     controller.reorderEntry = { fromIndex, toIndex, entries in
         let fromEntry = entries[fromIndex]
         guard case let .pack(_, _, _, fromPackInfo, _, _, _, _, _) = fromEntry else {

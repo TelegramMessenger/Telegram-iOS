@@ -105,7 +105,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
         if let file = extractFileMedia(self.message) {
             for attribute in file.attributes {
                 switch attribute {
-                    case let .Audio(isVoice, _, title, performer, _):
+                    case let .Audio(isVoice, duration, title, performer, _):
                         if isVoice {
                             return SharedMediaPlaybackDisplayData.voice(author: self.message.effectiveAuthor, peer: self.message.peers[self.message.id.peerId])
                         } else {
@@ -114,7 +114,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                             if (title ?? "").isEmpty && (performer ?? "").isEmpty {
                                 updatedTitle = file.fileName ?? ""
                             }
-                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false)))
+                            return SharedMediaPlaybackDisplayData.music(title: updatedTitle, performer: updatedPerformer, albumArt: SharedMediaPlaybackAlbumArt(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: updatedTitle ?? "", performer: updatedPerformer ?? "", isThumbnail: false)), long: duration > 60 * 20)
                         }
                     case let .Video(_, _, flags):
                         if flags.contains(.instantRoundVideo) {
@@ -127,7 +127,7 @@ final class MessageMediaPlaylistItem: SharedMediaPlaylistItem {
                 }
             }
             
-            return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.effectiveAuthor?.displayTitle ?? "", albumArt: nil)
+            return SharedMediaPlaybackDisplayData.music(title: file.fileName ?? "", performer: self.message.effectiveAuthor?.displayTitle ?? "", albumArt: nil, long: false)
         }
         return nil
     }
@@ -211,6 +211,15 @@ enum PeerMessagesPlaylistLocation: Equatable, SharedMediaPlaylistLocation {
                 return .peer(id.peerId)
             case let .recentActions(message):
                 return .recentActions(message.id.peerId)
+        }
+    }
+    
+    var messageId: MessageId? {
+        switch self {
+            case let .messages(_, _, messageId), let .singleMessage(messageId):
+                return messageId
+            default:
+                return nil
         }
     }
     

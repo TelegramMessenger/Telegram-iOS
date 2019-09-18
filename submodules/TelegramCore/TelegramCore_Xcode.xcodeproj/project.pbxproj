@@ -171,6 +171,8 @@
 		D01AC91D1DD5DA5E00E8160F /* RequestMessageActionCallback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */; };
 		D01AC9211DD5E7E500E8160F /* RequestEditMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */; };
 		D01AC9231DD5E9A200E8160F /* ApplyUpdateMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */; };
+		D01B264923324CF900A6448B /* Wallets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B264823324CF800A6448B /* Wallets.swift */; };
+		D01B264A23324CF900A6448B /* Wallets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B264823324CF800A6448B /* Wallets.swift */; };
 		D01B27A21E394D8B0022A4C0 /* PrivacySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01B27A11E394D8B0022A4C0 /* PrivacySettings.swift */; };
 		D01C06B71FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06B61FBBA269001561AB /* CanSendMessagesToPeer.swift */; };
 		D01C06B81FBBA269001561AB /* CanSendMessagesToPeer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01C06B61FBBA269001561AB /* CanSendMessagesToPeer.swift */; };
@@ -879,6 +881,7 @@
 		D01AC91C1DD5DA5E00E8160F /* RequestMessageActionCallback.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestMessageActionCallback.swift; sourceTree = "<group>"; };
 		D01AC9201DD5E7E500E8160F /* RequestEditMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = RequestEditMessage.swift; sourceTree = "<group>"; };
 		D01AC9221DD5E9A200E8160F /* ApplyUpdateMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ApplyUpdateMessage.swift; sourceTree = "<group>"; };
+		D01B264823324CF800A6448B /* Wallets.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Wallets.swift; sourceTree = "<group>"; };
 		D01B27A11E394D8B0022A4C0 /* PrivacySettings.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrivacySettings.swift; sourceTree = "<group>"; };
 		D01C06B61FBBA269001561AB /* CanSendMessagesToPeer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanSendMessagesToPeer.swift; sourceTree = "<group>"; };
 		D01C7ED21EF5DF83008305F1 /* LimitsConfiguration.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LimitsConfiguration.swift; sourceTree = "<group>"; };
@@ -1259,6 +1262,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		D01B264723324CE600A6448B /* Wallet */ = {
+			isa = PBXGroup;
+			children = (
+				D01B264823324CF800A6448B /* Wallets.swift */,
+			);
+			name = Wallet;
+			sourceTree = "<group>";
+		};
 		D01B27A01E394D7B0022A4C0 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -1796,6 +1807,7 @@
 		D09D8C031D4FAB1D0081DBEC /* TelegramCore */ = {
 			isa = PBXGroup;
 			children = (
+				D01B264723324CE600A6448B /* Wallet */,
 				D04D21352306EC8700609388 /* Mac Internal Updater */,
 				D03B0CB71D62232000955575 /* Utils */,
 				D03B0CCF1D62242200955575 /* Objects */,
@@ -2491,6 +2503,7 @@
 				D0528E5A1E658B3600E2FEF5 /* ManagedLocalInputActivities.swift in Sources */,
 				D0879BC822F85A3E00C4D6B3 /* ImageRepresentationWithReference.swift in Sources */,
 				D0FA8BA41E1FA341001E855B /* SecretChatKeychain.swift in Sources */,
+				D01B264923324CF900A6448B /* Wallets.swift in Sources */,
 				D01749601E118FC30057C89A /* AccountIntermediateState.swift in Sources */,
 				D0E412EE206AF65500BEE4A2 /* GrantSecureIdAccess.swift in Sources */,
 				D02ABC811E310E5D00CAE539 /* ManagedCloudChatRemoveMessagesOperations.swift in Sources */,
@@ -2856,6 +2869,7 @@
 				D0FA8BBA1E2240B4001E855B /* SecretChatIncomingDecryptedOperation.swift in Sources */,
 				D033FEB41E61F3C000644997 /* ReportPeer.swift in Sources */,
 				D0FA8BAE1E1FD6E2001E855B /* MemoryBufferExtensions.swift in Sources */,
+				D01B264A23324CF900A6448B /* Wallets.swift in Sources */,
 				D0FA8BB41E201B02001E855B /* ProcessSecretChatIncomingEncryptedOperations.swift in Sources */,
 				D0F3A8A31E82C65E00B4C64C /* ManagedSynchronizeChatInputStateOperations.swift in Sources */,
 				D098908022942E3B0053F151 /* ActiveSessionsContext.swift in Sources */,

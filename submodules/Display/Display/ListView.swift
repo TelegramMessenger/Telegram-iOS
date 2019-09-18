@@ -3934,9 +3934,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         let scrollDirection: ListViewScrollDirection
         switch direction {
             case .down:
-                scrollDirection = .down
+                scrollDirection = self.rotated ? .up : .down
             default:
-                scrollDirection = .up
+                scrollDirection = self.rotated ? .down : .up
         }
         return self.scrollWithDirection(scrollDirection, distance: distance)
     }

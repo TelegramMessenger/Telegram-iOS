@@ -36,6 +36,8 @@ final class ChatSendMessageActionSheetController: ViewController {
                 
         super.init(navigationBarPresentationData: nil)
         
+        self.blocksBackgroundWhenInOverlay = true
+        
         self.presentationDataDisposable = (context.sharedContext.presentationData
         |> deliverOnMainQueue).start(next: { [weak self] presentationData in
             if let strongSelf = self {

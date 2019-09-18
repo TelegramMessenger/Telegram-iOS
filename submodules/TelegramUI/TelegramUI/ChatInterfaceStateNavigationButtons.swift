@@ -73,7 +73,7 @@ func rightNavigationButtonForChatInterfaceState(_ presentationInterfaceState: Ch
                 return nil
             } else {
                 let buttonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationCompactSearchIcon(presentationInterfaceState.theme), style: .plain, target: target, action: selector)
-                buttonItem.accessibilityLabel = strings.Conversation_Info
+                buttonItem.accessibilityLabel = strings.Conversation_Search
                 return ChatNavigationButton(action: .search, buttonItem: buttonItem)
             }
         }

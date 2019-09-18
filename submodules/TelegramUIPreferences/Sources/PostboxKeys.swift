@@ -54,12 +54,14 @@ private enum ApplicationSpecificItemCacheCollectionIdValues: Int8 {
     case instantPageStoredState = 0
     case cachedInstantPages = 1
     case cachedWallpapers = 2
+    case mediaPlaybackStoredState = 3
 }
 
 public struct ApplicationSpecificItemCacheCollectionId {
     public static let instantPageStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.instantPageStoredState.rawValue)
     public static let cachedInstantPages = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedInstantPages.rawValue)
     public static let cachedWallpapers = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.cachedWallpapers.rawValue)
+    public static let mediaPlaybackStoredState = applicationSpecificItemCacheCollectionId(ApplicationSpecificItemCacheCollectionIdValues.mediaPlaybackStoredState.rawValue)
 }
 
 private enum ApplicationSpecificOrderedItemListCollectionIdValues: Int32 {

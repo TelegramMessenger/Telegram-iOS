@@ -39,8 +39,8 @@ private class MediaHeaderItemNode: ASDisplayNode {
         var subtitleString: NSAttributedString?
         if let playbackItem = playbackItem, let displayData = playbackItem.displayData {
             switch displayData {
-                case let .music(title, performer, _):
-                    rateButtonHidden = true
+                case let .music(title, performer, _, long):
+                    rateButtonHidden = !long
                     let titleText: String = title ?? "Unknown Track"
                     let subtitleText: String = performer ?? "Unknown Artist"
                     
@@ -171,12 +171,12 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
     var playPrevious: (() -> Void)?
     var playNext: (() -> Void)?
     
-    var voiceBaseRate: AudioPlaybackRate? = nil {
+    var playbackBaseRate: AudioPlaybackRate? = nil {
         didSet {
-            guard self.voiceBaseRate != oldValue, let voiceBaseRate = self.voiceBaseRate else {
+            guard self.playbackBaseRate != oldValue, let playbackBaseRate = self.playbackBaseRate else {
                 return
             }
-            switch voiceBaseRate {
+            switch playbackBaseRate {
                 case .x1:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
                     self.rateButton.accessibilityLabel = self.strings.VoiceOver_Media_PlaybackRate
@@ -315,9 +315,9 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
                 } else {
                     baseRate = .x2
                 }
-                strongSelf.voiceBaseRate = baseRate
+                strongSelf.playbackBaseRate = baseRate
             } else {
-                strongSelf.voiceBaseRate = .x1
+                strongSelf.playbackBaseRate = .x1
             }
         }
         
@@ -373,8 +373,8 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         self.separatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
         self.scrubbingNode.updateContent(.standard(lineHeight: 2.0, lineCap: .square, scrubberHandle: .none, backgroundColor: .clear, foregroundColor: self.theme.rootController.navigationBar.accentTextColor))
         
-        if let voiceBaseRate = self.voiceBaseRate {
-            switch voiceBaseRate {
+        if let playbackBaseRate = self.playbackBaseRate {
+            switch playbackBaseRate {
                 case .x1:
                     self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
                 case .x2:
@@ -457,7 +457,7 @@ final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, UIScrollViewDeleg
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 44.0 - rightInset, y: 0.0), size: CGSize(width: 44.0, height: minHeight)))
         let rateButtonSize = CGSize(width: 24.0, height: minHeight)
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 18.0 - rateButtonSize.width - rightInset, y: 0.0), size: rateButtonSize))
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: bounds.size.width - 18.0 - closeButtonSize.width - 17.0 - rateButtonSize.width - rightInset, y: 0.0), size: rateButtonSize))
         transition.updateFrame(node: self.actionPlayNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.actionPauseNode, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))
         transition.updateFrame(node: self.actionButton, frame: CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: 40.0, height: 37.0)))

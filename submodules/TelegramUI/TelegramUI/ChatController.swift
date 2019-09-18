@@ -3182,6 +3182,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let controller = ChatSearchResultsController(context: strongSelf.context, searchQuery: searchData.query, messages: searchResult.messages, navigateToMessageIndex: { index in
                             strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
                         })
+                        strongSelf.chatDisplayNode.dismissInput()
                         (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
                     }
                 })

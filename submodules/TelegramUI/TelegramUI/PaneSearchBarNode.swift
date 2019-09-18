@@ -216,8 +216,9 @@ class PaneSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.iconNode.displayWithoutProcessing = true
         
         self.textField = PaneSearchBarTextField()
+        self.textField.accessibilityTraits = .searchField
         self.textField.autocorrectionType = .no
-        self.textField.returnKeyType = .done
+        self.textField.returnKeyType = .search
         self.textField.font = Font.regular(17.0)
         
         self.clearButton = HighlightableButtonNode()

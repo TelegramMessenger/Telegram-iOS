@@ -153,7 +153,16 @@ final class InstantPageTextItem: InstantPageItem {
             if self.opaqueBackground {
                 context.setBlendMode(.normal)
             }
-            CTLineDraw(line.line, context)
+            
+            let glyphRuns = CTLineGetGlyphRuns(line.line) as NSArray
+            if glyphRuns.count != 0 {
+                for run in glyphRuns {
+                    let run = run as! CTRun
+                    let glyphCount = CTRunGetGlyphCount(run)
+                    CTRunDraw(run, context, CFRangeMake(0, glyphCount))
+                }
+            }
+                        
             if self.opaqueBackground {
                 context.setBlendMode(.copy)
             }
