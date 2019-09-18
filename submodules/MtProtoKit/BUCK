@@ -56,7 +56,7 @@ ton_lib_flags = ["-l" + name for name in ton_lib_names]
 genrule(
     name = "ton_libs",
     srcs = glob([
-        "TON/*.a",
+        "TON/lib/ios/*.a",
     ]),
     bash = "mkdir -p $OUT; cp $SRCS $OUT/",
     out = "ton_libs",
