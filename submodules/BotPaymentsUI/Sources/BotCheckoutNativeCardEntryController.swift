@@ -148,9 +148,4 @@ final class BotCheckoutNativeCardEntryController: ViewController {
     @objc private func donePressed() {
         self.controllerNode.verify()
     }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.view.endEditing(true)
-        self.controllerNode.animateOut(completion: completion)
-    }
 }

@@ -278,7 +278,7 @@ class StatusBarManager {
         }
         self.volumeControlStatusBarNode.isDark = isDark
         
-        if let globalStatusBar = globalStatusBar, !forceHiddenBySystemWindows {
+        /*if let globalStatusBar = globalStatusBar, !forceHiddenBySystemWindows {
             let statusBarStyle: UIStatusBarStyle
             if forceInCallStatusBarText != nil {
                 statusBarStyle = .lightContent
@@ -298,6 +298,6 @@ class StatusBarManager {
             }
         } else {
             statusBarView.alpha = 0.0
-        }
+        }*/
     }
 }

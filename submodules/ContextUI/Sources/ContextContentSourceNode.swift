@@ -27,9 +27,11 @@ public final class ContextExtractedContentNode: ASDisplayNode {
 }
 
 final class ContextControllerContentNode: ASDisplayNode {
+    let sourceNode: ASDisplayNode
     let controller: ViewController
     
-    init(controller: ViewController) {
+    init(sourceNode: ASDisplayNode, controller: ViewController) {
+        self.sourceNode = sourceNode
         self.controller = controller
         
         super.init()

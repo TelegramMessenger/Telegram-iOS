@@ -670,7 +670,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 order = [
                                     (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
                                     (.canPostMessages, self.presentationData.strings.Channel_AdminLog_CanSendMessages),
-                                    (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessages),
+                                    (.canDeleteMessages, self.presentationData.strings.Channel_AdminLog_CanDeleteMessagesOfOthers),
                                     (.canEditMessages, self.presentationData.strings.Channel_AdminLog_CanEditMessages),
                                     (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsers),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),

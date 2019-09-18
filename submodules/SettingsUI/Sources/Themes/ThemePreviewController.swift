@@ -50,6 +50,9 @@ public final class ThemePreviewController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationTheme: self.previewTheme, presentationStrings: self.presentationData.strings))
         
+        self.blocksBackgroundWhenInOverlay = true
+        self.navigationPresentation = .modal
+        
         let themeName: String
         if case let .theme(theme) = source {
             themeName = theme.title
@@ -239,7 +242,7 @@ public final class ThemePreviewController: ViewController {
                         return telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
                         |> take(1)
                         |> mapToSignal { themes -> Signal<PresentationThemeReference, NoError> in
-                            let similarTheme = themes.filter { $0.isCreator && $0.title == info.title }.first
+                            let similarTheme = themes.first(where: { $0.isCreator && $0.title == info.title })
                             if let similarTheme = similarTheme {
                                 return updateTheme(account: context.account, accountManager: context.sharedContext.accountManager, theme: similarTheme, title: nil, slug: nil, resource: info.resource, thumbnailData: themeThumbnailData)
                                 |> map(Optional.init)
@@ -329,13 +332,6 @@ public final class ThemePreviewController: ViewController {
                 strongSelf.dismiss()
             }
         }))
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

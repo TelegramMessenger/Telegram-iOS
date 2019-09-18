@@ -302,22 +302,6 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         }
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
-        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments {
-            switch presentationArguments.presentationAnimation {
-                case .modalSheet:
-                    self.view.endEditing(true)
-                    self.contactsNode.animateOut(completion: { [weak self] in
-                        self?.dismissed?()
-                        completion?()
-                    })
-                case .none:
-                    self.dismissed?()
-                    completion?()
-            }
-        }
-    }
-    
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         

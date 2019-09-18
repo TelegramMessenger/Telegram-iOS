@@ -15,7 +15,8 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
 }
 
 public func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, hasLiveLocation: Bool = true, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
-    let legacyController = LegacyController(presentation: .modal(animateIn: true), theme: theme)
+    let legacyController = LegacyController(presentation: .navigation, theme: theme)
+    legacyController.navigationPresentation = .modal
     legacyController.presentationCompleted = {
         presentationCompleted()
     }

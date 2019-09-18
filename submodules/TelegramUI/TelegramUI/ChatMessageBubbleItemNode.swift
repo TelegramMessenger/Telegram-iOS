@@ -428,7 +428,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             }
             
             let reactions: [(String, String, String)] = [
-                ("😒", "Sad", "sad"),
+                ("😔", "Sad", "sad"),
                 ("😳", "Surprised", "surprised"),
                 ("😂", "Fun", "lol"),
                 ("👍", "Like", "thumbsup"),
@@ -436,18 +436,24 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             ]
             
             var reactionItems: [ReactionGestureItem] = []
-            for (value, text, name) in reactions {
+            for (value, text, name) in reactions.reversed() {
                 if let path = getAppBundle().path(forResource: name, ofType: "tgs") {
                     reactionItems.append(.reaction(value: value, text: text, path: path))
                 }
             }
             if item.controllerInteraction.canSetupReply(item.message) {
-                reactionItems.append(.reply)
+                //reactionItems.append(.reply)
             }
             return reactionItems
         }
         reactionRecognizer.getReactionContainer = { [weak self] in
             return self?.item?.controllerInteraction.reactionContainerNode()
+        }
+        reactionRecognizer.getAnchorPoint = { [weak self] in
+            guard let strongSelf = self else {
+                return nil
+            }
+            return CGPoint(x: strongSelf.backgroundNode.frame.maxX, y: strongSelf.backgroundNode.frame.minY)
         }
         reactionRecognizer.began = { [weak self] in
             guard let strongSelf = self, let item = strongSelf.item else {
@@ -497,7 +503,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 strongSelf.swipeToReplyFeedback = HapticFeedback()
             }
             strongSelf.swipeToReplyFeedback?.tap()
-            if strongSelf.swipeToReplyNode == nil, false {
+            if strongSelf.swipeToReplyNode == nil {
                 let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonFillColor, wallpaper: item.presentationData.theme.wallpaper), strokeColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonStrokeColor, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper))
                 strongSelf.swipeToReplyNode = swipeToReplyNode
                 strongSelf.insertSubnode(swipeToReplyNode, belowSubnode: strongSelf.messageAccessibilityArea)
@@ -584,6 +590,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         let weakSelf = Weak(self)
         
         return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+            let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params)
             return ChatMessageBubbleItemNode.beginLayout(selfReference: weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom,
                 currentContentClassesPropertiesAndLayouts: currentContentClassesPropertiesAndLayouts,
                 authorNameLayout: authorNameLayout,

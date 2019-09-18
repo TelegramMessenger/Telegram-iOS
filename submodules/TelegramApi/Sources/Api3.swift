@@ -975,6 +975,78 @@ public struct account {
 }
 }
 public extension Api {
+public struct wallet {
+    public enum KeySecretSalt: TypeConstructorDescription {
+        case secretSalt(salt: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .secretSalt(let salt):
+                    if boxed {
+                        buffer.appendInt32(-582464156)
+                    }
+                    serializeBytes(salt, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .secretSalt(let salt):
+                return ("secretSalt", [("salt", salt)])
+    }
+    }
+    
+        public static func parse_secretSalt(_ reader: BufferReader) -> KeySecretSalt? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.wallet.KeySecretSalt.secretSalt(salt: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+    public enum LiteResponse: TypeConstructorDescription {
+        case liteResponse(response: Buffer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .liteResponse(let response):
+                    if boxed {
+                        buffer.appendInt32(1984136919)
+                    }
+                    serializeBytes(response, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .liteResponse(let response):
+                return ("liteResponse", [("response", response)])
+    }
+    }
+    
+        public static func parse_liteResponse(_ reader: BufferReader) -> LiteResponse? {
+            var _1: Buffer?
+            _1 = parseBytes(reader)
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.wallet.LiteResponse.liteResponse(response: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+}
+public extension Api {
 public struct photos {
     public enum Photo: TypeConstructorDescription {
         case photo(photo: Api.Photo, users: [Api.User])
@@ -5814,6 +5886,49 @@ public extension Api {
                         var result: Api.account.Themes?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.account.Themes
+                        }
+                        return result
+                    })
+                }
+            
+                public static func setWalletAddress(walletAddress: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1588431790)
+                    serializeString(walletAddress, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "account.setWalletAddress", parameters: [("walletAddress", walletAddress)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+            }
+            public struct wallet {
+                public static func sendLiteRequest(body: Buffer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.LiteResponse>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-490089666)
+                    serializeBytes(body, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "wallet.sendLiteRequest", parameters: [("body", body)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.wallet.LiteResponse? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.wallet.LiteResponse?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.wallet.LiteResponse
+                        }
+                        return result
+                    })
+                }
+            
+                public static func getKeySecretSalt(revoke: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.wallet.KeySecretSalt>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(190313286)
+                    revoke.serialize(buffer, true)
+                    return (FunctionDescription(name: "wallet.getKeySecretSalt", parameters: [("revoke", revoke)]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.wallet.KeySecretSalt? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.wallet.KeySecretSalt?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.wallet.KeySecretSalt
                         }
                         return result
                     })

@@ -414,6 +414,6 @@ final class VerticalListContextResultsChatInputPanelItemNode: ListViewItemNode {
         guard let item = self.item else {
             return
         }
-        item.resultSelected(item.result, self, self.bounds)
+        let _ = item.resultSelected(item.result, self, self.bounds)
     }
 }

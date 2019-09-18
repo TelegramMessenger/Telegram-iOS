@@ -44,13 +44,16 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
     init(image: UIImage, size: CGSize) {
         self.size = size
         
-        let contextSize = size.fitted(CGSize(width: 320.0, height: 320.0))
+        let contextSize = size.aspectFilled(CGSize(width: 320.0, height: 320.0))
         let foregroundContext = DrawingContext(size: contextSize, scale: 1.0)
         let bounds = CGRect(origin: CGPoint(), size: contextSize)
         
+        let filledImageSize = image.size.aspectFilled(contextSize)
+        let filledImageRect = CGRect(origin: CGPoint(x: (contextSize.width - filledImageSize.width) / 2.0, y: (contextSize.height - filledImageSize.height) / 2.0), size: filledImageSize)
+        
         foregroundContext.withFlippedContext { c in
             c.interpolationQuality = .medium
-            c.draw(image.cgImage!, in: bounds)
+            c.draw(image.cgImage!, in: filledImageRect)
         }
         telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(foregroundContext.bytesPerRow), foregroundContext.bytes)
         telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(foregroundContext.bytesPerRow), foregroundContext.bytes)
@@ -66,7 +69,7 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
         let backgroundContext = DrawingContext(size: contextSize, scale: 1.0)
         backgroundContext.withFlippedContext { c in
             c.interpolationQuality = .medium
-            c.draw(image.cgImage!, in: bounds)
+            c.draw(image.cgImage!, in: filledImageRect)
         }
         telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(backgroundContext.bytesPerRow), backgroundContext.bytes)
         telegramFastBlurMore(Int32(contextSize.width), Int32(contextSize.height), Int32(backgroundContext.bytesPerRow), backgroundContext.bytes)

@@ -10,6 +10,7 @@ private enum ContextItemNode {
 }
 
 final class ContextActionsContainerNode: ASDisplayNode {
+    private var effectView: UIVisualEffectView?
     private var itemNodes: [ContextItemNode]
     
     init(theme: PresentationTheme, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
@@ -51,8 +52,28 @@ final class ContextActionsContainerNode: ASDisplayNode {
         })
     }
     
-    func updateLayout(constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
-        let minActionsWidth = min(constrainedWidth, max(250.0, floor(constrainedWidth / 3.0)))
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+        var minActionsWidth: CGFloat = 250.0
+        switch widthClass {
+        case .compact:
+            minActionsWidth = max(minActionsWidth, floor(constrainedWidth / 3.0))
+            if let effectView = self.effectView {
+                self.effectView = nil
+                effectView.removeFromSuperview()
+            }
+        case .regular:
+            if self.effectView == nil {
+                let effectView: UIVisualEffectView
+                if #available(iOS 10.0, *) {
+                    effectView = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
+                } else {
+                    effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+                }
+                self.effectView = effectView
+                self.view.insertSubview(effectView, at: 0)
+            }
+        }
+        minActionsWidth = min(minActionsWidth, constrainedWidth)
         let separatorHeight: CGFloat = 8.0
         
         var maxWidth: CGFloat = 0.0
@@ -111,7 +132,11 @@ final class ContextActionsContainerNode: ASDisplayNode {
             }
         }
         
-        return CGSize(width: maxWidth, height: verticalOffset)
+        let size = CGSize(width: maxWidth, height: verticalOffset)
+        if let effectView = self.effectView {
+            transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: size))
+        }
+        return size
     }
     
     func updateTheme(theme: PresentationTheme) {

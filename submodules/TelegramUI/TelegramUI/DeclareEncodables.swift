@@ -49,6 +49,7 @@ private var telegramUIDeclaredEncodables: Void = {
     declareEncodable(RecentSettingsSearchQueryItem.self, f: { RecentSettingsSearchQueryItem(decoder: $0) })
     declareEncodable(VoipDerivedState.self, f: { VoipDerivedState(decoder: $0) })
     declareEncodable(ChatArchiveSettings.self, f: { ChatArchiveSettings(decoder: $0) })
+    declareEncodable(MediaPlaybackStoredState.self, f: { MediaPlaybackStoredState(decoder: $0) })
     return
 }()
 

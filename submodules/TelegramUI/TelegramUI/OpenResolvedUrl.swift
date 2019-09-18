@@ -81,7 +81,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             }
             dismissInput()
-            present(controller, ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
+            navigationController?.pushViewController(controller)
         case let .channelMessage(peerId, messageId):
             openPeer(peerId, .chat(textInputState: nil, subject: .message(messageId)))
         case let .stickerPack(name):
@@ -203,10 +203,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         continueWithPeer(peerId)
                     }
                 }
-                if let navigationController = navigationController {
-                    context.sharedContext.applicationBindings.dismissNativeController()
-                    (navigationController.viewControllers.last as? ViewController)?.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: ViewControllerPresentationAnimation.modalSheet))
-                }
+                navigationController?.pushViewController(controller)
             }
         case let .wallpaper(parameter):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -273,7 +270,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                             }
                         }))
                     } else {
-                        subscriber.putError(.generic)
+                        subscriber.putError(.unsupported)
                     }
                     
                     return disposables
@@ -313,7 +310,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 
                 if let theme = makePresentationTheme(data: dataAndTheme.0) {
                     let previewController = ThemePreviewController(context: context, previewTheme: theme, source: .theme(dataAndTheme.1))
-                    present(previewController, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    navigationController?.pushViewController(previewController)
                 }
             }, error: { [weak controller] error in
                 let errorText: String

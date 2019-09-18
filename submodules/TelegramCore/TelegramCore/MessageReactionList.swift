@@ -93,7 +93,7 @@ private final class MessageReactionCategoryContext {
         }
         let messageId = self.messageId
         let offset = self.state.nextOffset
-        let request = self.postbox.transaction { transaction -> Api.InputPeer? in
+        var request = self.postbox.transaction { transaction -> Api.InputPeer? in
             let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
             return inputPeer
         }
@@ -107,6 +107,9 @@ private final class MessageReactionCategoryContext {
                 return .generic
             }
         }
+        //#if DEBUG
+        request = request |> delay(1.0, queue: .mainQueue())
+        //#endif
         self.loadingDisposable.set((request
         |> deliverOnMainQueue).start(next: { [weak self] result in
             guard let strongSelf = self else {

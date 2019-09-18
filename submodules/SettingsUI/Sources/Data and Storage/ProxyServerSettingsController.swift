@@ -369,6 +369,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
     }
     
     let controller = ItemListController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, state: signal, tabBarItem: nil)
+    controller.navigationPresentation = .modal
     presentImpl = { [weak controller] c, d in
         controller?.present(c, in: .window(.root), with: d)
     }

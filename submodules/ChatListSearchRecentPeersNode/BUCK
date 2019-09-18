@@ -15,6 +15,7 @@ static_library(
         "//submodules/HorizontalPeerItem:HorizontalPeerItem",
         "//submodules/MergeLists:MergeLists",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/ContextUI:ContextUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -797,8 +797,8 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                         upgradedToSupergroupImpl?(upgradedPeerId, f)
                     }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
-            }, present: { c, a in
-                presentControllerImpl?(c, a)
+            }, pushController: { c in
+                pushControllerImpl?(c)
             })
         }
         

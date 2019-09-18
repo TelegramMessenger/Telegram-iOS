@@ -508,7 +508,7 @@ open class LegacyController: ViewController, PresentableController {
             case .custom:
                 self.presentingViewController?.dismiss(animated: false, completion: completion)
             case .navigation:
-                break
+                (self.navigationController as? NavigationController)?.filterController(self, animated: true)
         }
     }
     

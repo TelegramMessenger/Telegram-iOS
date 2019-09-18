@@ -10,12 +10,12 @@ public enum StatusBarStyle {
     
     public init(systemStyle: UIStatusBarStyle) {
         switch systemStyle {
-            case .default:
-                self = .Black
-            case .lightContent:
-                self = .White
-            case .blackOpaque:
-                self = .Black
+        case .default:
+            self = .Black
+        case .lightContent:
+            self = .White
+        case .blackOpaque:
+            self = .Black
         }
     }
     

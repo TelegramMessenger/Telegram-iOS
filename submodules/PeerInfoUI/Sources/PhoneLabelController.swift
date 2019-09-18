@@ -126,6 +126,7 @@ public func phoneLabelController(context: AccountContext, currentLabel: String, 
     let controller = ItemListController(context: context, state: signal
     |> afterDisposed {
     })
+    controller.navigationPresentation = .modal
     controller.enableInteractiveDismiss = true
     
     completeImpl = { [weak controller] in

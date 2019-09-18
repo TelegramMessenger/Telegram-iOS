@@ -101,6 +101,8 @@ public final class SecureIdAuthController: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
+        self.navigationPresentation = .modal
+        
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
@@ -290,13 +292,6 @@ public final class SecureIdAuthController: ViewController {
             self.didPlayPresentationAnimation = true
             self.controllerNode.animateIn()
         }
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
     }
     
     override public func loadDisplayNode() {

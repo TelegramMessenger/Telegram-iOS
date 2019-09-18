@@ -760,6 +760,7 @@ extension PresentationThemeChatList: Codable {
         case dateText
         case authorName
         case messageText
+        case messageHighlightedText
         case messageDraftText
         case checkmark
         case pendingIndicator
@@ -796,6 +797,7 @@ extension PresentationThemeChatList: Codable {
                   dateTextColor: try decodeColor(values, .dateText),
                   authorNameColor: try decodeColor(values, .authorName),
                   messageTextColor: try decodeColor(values, .messageText),
+                  messageHighlightedTextColor: try decodeColor(values, .messageHighlightedText),
                   messageDraftTextColor: try decodeColor(values, .messageDraftText),
                   checkmarkColor: try decodeColor(values, .checkmark),
                   pendingIndicatorColor: try decodeColor(values, .pendingIndicator),
@@ -832,6 +834,7 @@ extension PresentationThemeChatList: Codable {
         try encodeColor(&values, self.dateTextColor, .dateText)
         try encodeColor(&values, self.authorNameColor, .authorName)
         try encodeColor(&values, self.messageTextColor, .messageText)
+        try encodeColor(&values, self.messageHighlightedTextColor, .messageHighlightedText)
         try encodeColor(&values, self.messageDraftTextColor, .messageDraftText)
         try encodeColor(&values, self.checkmarkColor, .checkmark)
         try encodeColor(&values, self.pendingIndicatorColor, .pendingIndicator)

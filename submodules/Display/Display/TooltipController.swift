@@ -53,7 +53,7 @@ public final class TooltipControllerPresentationArguments {
     }
 }
 
-open class TooltipController: ViewController {
+open class TooltipController: ViewController, StandalonePresentableController {
     private var controllerNode: TooltipControllerNode {
         return self.displayNode as! TooltipControllerNode
     }

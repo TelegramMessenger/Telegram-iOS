@@ -50,7 +50,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
         if case let .search(search) = source {
             switch search {
             case .recentPeers:
-                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     let _ = (removeRecentPeer(account: context.account, peerId: peerId)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)
@@ -84,9 +84,13 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
         if !isSavedMessages, let peer = peer as? TelegramUser {
             if !transaction.isPeerContact(peerId: peer.id) {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToContacts, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                    context.sharedContext.openAddPersonContact(context: context, peerId: peerId, present: { controller, arguments in
+                    context.sharedContext.openAddPersonContact(context: context, peerId: peerId, pushController: { controller in
+                        if let navigationController = chatListController?.navigationController as? NavigationController {
+                            navigationController.pushViewController(controller)
+                        }
+                    }, present: { c, a in
                         if let chatListController = chatListController {
-                            chatListController.present(controller, in: .window(.root), with: arguments)
+                            chatListController.present(c, in: .window(.root), with: a)
                         }
                     })
                     f(.default)
@@ -95,7 +99,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
             }
         }
         
-        if case .chatList = source, !isSavedMessages {
+        if case .chatList = source {
             if let readState = transaction.getCombinedPeerReadState(peerId), readState.isUnread {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     let _ = togglePeerUnreadMarkInteractively(postbox: context.account.postbox, viewTracker: context.account.viewTracker, peerId: peerId).start()
@@ -114,7 +118,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
         if let (group, index) = groupAndIndex {
             if !isSavedMessages {
                 let isArchived = group == Namespaces.PeerGroup.archive
-                items.append(.action(ContextMenuActionItem(text: isArchived ? strings.ChatList_Context_Archive : strings.ChatList_Context_Unarchive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isArchived ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: isArchived ? strings.ChatList_Context_Unarchive : strings.ChatList_Context_Archive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isArchived ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     if isArchived {
                         let _ = (context.account.postbox.transaction { transaction -> Void in
                             updatePeerGroupIdInteractively(transaction: transaction, peerId: peerId, groupId: .root)
@@ -222,6 +226,10 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
                 }
                 f(.default)
             })))
+        }
+        
+        if let item = items.last, case .separator = item {
+            items.removeLast()
         }
         
         return items

@@ -239,7 +239,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
                 strongController.dismiss()
             }))
         }
-        presentControllerImpl?(controller, nil)
+        pushControllerImpl?(controller)
     }, removePeer: { memberId in
         updateState {
             return $0.withUpdatedRemovingPeerId(memberId)

@@ -44,7 +44,7 @@ class ChatHoleItemNode: ListViewItemNode {
     let backgroundNode: ASImageNode
     let labelNode: TextNode
     
-    private let layoutConstants = ChatMessageItemLayoutConstants()
+    private let layoutConstants = ChatMessageItemLayoutConstants.default
     
     init() {
         self.backgroundNode = ASImageNode()

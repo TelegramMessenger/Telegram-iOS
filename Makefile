@@ -5,7 +5,7 @@ BUCK_DEBUG_OPTIONS=\
 	--config custom.other_cflags="-O0 -D DEBUG" \
   	--config custom.other_cxxflags="-O0 -D DEBUG" \
   	--config custom.optimization="-Onone" \
-  	--config custom.config_swift_compiler_flags=""
+  	--config custom.config_swift_compiler_flags="-DDEBUG"
 
 BUCK_RELEASE_OPTIONS=\
 	--config custom.other_cflags="-Os" \
@@ -218,6 +218,16 @@ build_buckdebug: check_env
     //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
     //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
     --verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
+build_buckdebug_one: check_env
+	BUCK_DEBUG_MODE=1 $(BUCK) build \
+	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
+build_verbose_one: check_env
+	$(BUCK) build \
+	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
 build_verbose: check_env
 	$(BUCK) build \

@@ -296,7 +296,7 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
     
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings, PresentationPersonNameOrder, PresentationPersonNameOrder, PresentationDateTimeFormat)>
     
-    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    init(context: AccountContext, peerId: PeerId, mode: ChannelMembersSearchMode, filters: [ChannelMembersSearchFilter], searchContext: GroupMembersSearchContext?, openPeer: @escaping (Peer, RenderedChannelParticipant?) -> Void, updateActivity: @escaping (Bool) -> Void, pushController: @escaping (ViewController) -> Void) {
         self.context = context
         self.openPeer = openPeer
         self.mode = mode
@@ -341,16 +341,16 @@ final class ChannelMembersSearchContainerNode: SearchDisplayControllerContentNod
                 state.revealedPeerId = nil
                 return state
             }
-            present(channelAdminController(context: context, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
-            }, upgradedToSupergroup: { _, f in f() }, transferedOwnership: { _ in }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            pushController(channelAdminController(context: context, peerId: peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
+            }, upgradedToSupergroup: { _, f in f() }, transferedOwnership: { _ in }))
         }, restrictPeer: { participant in
             updateState { state in
                 var state = state
                 state.revealedPeerId = nil
                 return state
             }
-            present(channelBannedMemberController(context: context, peerId: peerId, memberId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
-            }, upgradedToSupergroup: { _, f in f() }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            pushController(channelBannedMemberController(context: context, peerId: peerId, memberId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
+            }, upgradedToSupergroup: { _, f in f() }))
         }, removePeer: { memberId in
             updateState { state in
                 var state = state

@@ -80,6 +80,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var propertyAnimator: AnyObject?
     private var displayLinkAnimator: DisplayLinkAnimator?
     private let dimNode: ASDisplayNode
+    private let withoutBlurDimNode: ASDisplayNode
     private let dismissNode: ASDisplayNode
     
     private let clippingNode: ASDisplayNode
@@ -132,6 +133,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         self.dimNode.backgroundColor = theme.contextMenu.dimColor
         self.dimNode.alpha = 0.0
         
+        self.withoutBlurDimNode = ASDisplayNode()
+        self.withoutBlurDimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
+        self.withoutBlurDimNode.alpha = 0.0
+        
         self.dismissNode = ASDisplayNode()
         
         self.clippingNode = ASDisplayNode()
@@ -166,6 +171,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.view.addSubview(self.effectView)
         self.addSubnode(self.dimNode)
+        self.addSubnode(self.withoutBlurDimNode)
         
         self.addSubnode(self.clippingNode)
         
@@ -437,14 +443,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.originalProjectedContentViewFrame = (convertFrame(takenViewInfo.contentContainingNode.frame, from: parentSupernode.view, to: self.view), convertFrame(takenViewInfo.contentContainingNode.contentRect, from: takenViewInfo.contentContainingNode.view, to: self.view))
             }
         case let .controller(source):
-            let contentParentNode = ContextControllerContentNode(controller: source.controller)
-            self.contentContainerNode.contentNode = .controller(contentParentNode)
-            self.contentContainerNode.clipsToBounds = true
-            self.contentContainerNode.cornerRadius = 14.0
-            self.contentContainerNode.addSubnode(contentParentNode)
-            
             let transitionInfo = source.transitionInfo()
             if let transitionInfo = transitionInfo, let (sourceNode, sourceNodeRect) = transitionInfo.sourceNode() {
+                let contentParentNode = ContextControllerContentNode(sourceNode: sourceNode, controller: source.controller)
+                self.contentContainerNode.contentNode = .controller(contentParentNode)
+                self.contentContainerNode.clipsToBounds = true
+                self.contentContainerNode.cornerRadius = 14.0
+                self.contentContainerNode.addSubnode(contentParentNode)
+                
                 let projectedFrame = convertFrame(sourceNodeRect, from: sourceNode.view, to: self.view)
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
             }
@@ -483,8 +489,13 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             self.updateLayout(layout: validLayout, transition: .immediate, previousActionsContainerNode: nil)
         }
         
-        self.dimNode.alpha = 1.0
-        self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
+        if !self.dimNode.isHidden {
+            self.dimNode.alpha = 1.0
+            self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
+        } else {
+            self.withoutBlurDimNode.alpha = 1.0
+            self.withoutBlurDimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor)
+        }
         
         if #available(iOS 10.0, *) {
             if let propertyAnimator = self.propertyAnimator {
@@ -545,14 +556,29 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 self.contentContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor, completion: { [weak self] _ in
                     self?.contentContainerNode.allowsGroupOpacity = false
                 })
-                self.contentContainerNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
                 
                 if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                     let actionsSideInset: CGFloat = 11.0
                     
                     let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
-                    self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
+                    
+                    self.contentContainerNode.layer.animateSpring(from: min(localSourceFrame.width / self.contentContainerNode.frame.width, localSourceFrame.height / self.contentContainerNode.frame.height) as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping)
+                    
                     let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
+                    if let contentNode = self.contentContainerNode.contentNode, case let .controller(controller) = contentNode {
+                        let snapshotView = controller.sourceNode.view.snapshotContentTree()
+                        if let snapshotView = snapshotView {
+                            controller.sourceNode.isHidden = true
+                            
+                            self.view.insertSubview(snapshotView, belowSubview: self.contentContainerNode.view)
+                            snapshotView.layer.animateSpring(from: NSValue(cgPoint: localSourceFrame.center), to: NSValue(cgPoint: CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0)), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false)
+                            //snapshotView.layer.animateSpring(from: 1.0 as NSNumber, to: (self.contentContainerNode.frame.width / localSourceFrame.width) as NSNumber, keyPath: "transform.scale", duration: springDuration, initialVelocity: 0.0, damping: springDamping, removeOnCompletion: false)
+                            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                                snapshotView?.removeFromSuperview()
+                            })
+                        }
+                    }
+                    self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: springDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                 }
             }
@@ -662,7 +688,12 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 })
             }
             
-            self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
+            if !self.dimNode.isHidden {
+                self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
+            } else {
+                self.withoutBlurDimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
+            }
+            
             self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
                 completedActionsNode = true
                 intermediateCompletion()
@@ -743,8 +774,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             var completedEffect = false
             var completedContentNode = false
             var completedActionsNode = false
+            var targetNode: ASDisplayNode?
             
             if let transitionInfo = transitionInfo, let (sourceNode, sourceNodeRect) = transitionInfo.sourceNode() {
+                targetNode = sourceNode
                 let projectedFrame = convertFrame(sourceNodeRect, from: sourceNode.view, to: self.view)
                 self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
                 
@@ -799,7 +832,11 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 })
             }
             
-            self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
+            if !self.dimNode.isHidden {
+                self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
+            } else {
+                self.withoutBlurDimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: transitionDuration * animationDurationFactor, removeOnCompletion: false)
+            }
             self.actionsContainerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
                 completedActionsNode = true
                 intermediateCompletion()
@@ -817,19 +854,33 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 animateOutToItem = false
             }
             
-            if animateOutToItem, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
+            if animateOutToItem, let targetNode = targetNode, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
                 let actionsSideInset: CGFloat = 11.0
                 
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                 
+                if let snapshotView = targetNode.view.snapshotContentTree(unhide: true, keepTransform: true) {
+                    self.view.addSubview(snapshotView)
+                    snapshotView.layer.animatePosition(from: CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0), to: localSourceFrame.center, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
+                    snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in
+                    })
+                }
+                
                 self.actionsContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y), duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true)
                 let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
-                self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentContainerOffset, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true, completion: { _ in
+                self.contentContainerNode.layer.animatePosition(from: CGPoint(), to: contentContainerOffset, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false, additive: true, completion: { [weak self] _ in
                     completedContentNode = true
+                    if let strongSelf = self, let contentNode = strongSelf.contentContainerNode.contentNode, case let .controller(controller) = contentNode {
+                        controller.sourceNode.isHidden = false
+                    }
                     intermediateCompletion()
                 })
             } else {
-                if let snapshotView = controller.view.snapshotContentTree() {
+                if let contentNode = self.contentContainerNode.contentNode, case let .controller(controller) = contentNode {
+                    controller.sourceNode.isHidden = false
+                }
+                
+                if let snapshotView = controller.view.snapshotContentTree(keepTransform: true) {
                     self.contentContainerNode.view.addSubview(snapshotView)
                 }
                 
@@ -872,10 +923,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             strongSelf.reactionContextNode = nil
             reactionCompleted = true
             intermediateCompletion()
-            /*strongSelf.animateOut(result: .default, completion: {
-                reactionCompleted = true
-                intermediateCompletion()
-            })*/
         })
     }
     
@@ -939,6 +986,31 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         transition.updateFrame(view: self.effectView, frame: CGRect(origin: CGPoint(), size: layout.size))
         transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+        transition.updateFrame(node: self.withoutBlurDimNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+
+        switch layout.metrics.widthClass {
+        case .compact:
+            if self.effectView.superview == nil {
+                self.view.insertSubview(self.effectView, at: 0)
+                if #available(iOS 10.0, *) {
+                    if let propertyAnimator = self.propertyAnimator {
+                        let propertyAnimator = propertyAnimator as? UIViewPropertyAnimator
+                        propertyAnimator?.stopAnimation(true)
+                    }
+                }
+                self.effectView.effect = makeCustomZoomBlurEffect()
+                self.dimNode.alpha = 1.0
+            }
+            self.dimNode.isHidden = false
+            self.withoutBlurDimNode.isHidden = true
+        case .regular:
+            if self.effectView.superview != nil {
+                self.effectView.removeFromSuperview()
+                self.withoutBlurDimNode.alpha = 1.0
+            }
+            self.dimNode.isHidden = true
+            self.withoutBlurDimNode.isHidden = false
+        }
         transition.updateFrame(node: self.clippingNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -958,7 +1030,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let actionsSize = self.actionsContainerNode.updateLayout(constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
+                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
                     let contentSize = originalProjectedContentViewFrame.1.size
                     self.contentContainerNode.updateLayout(size: contentSize, scaledSize: contentSize, transition: transition)
                     
@@ -1006,65 +1078,105 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                 }
             case let .controller(contentParentNode):
-                let contentActionsSpacing: CGFloat = actionsSideInset
-                let topEdge = max(contentTopInset, self.contentAreaInScreenSpace?.minY ?? 0.0)
+                let projectedFrame = convertFrame(contentParentNode.sourceNode.bounds, from: contentParentNode.sourceNode.view, to: self.view)
+                self.originalProjectedContentViewFrame = (projectedFrame, projectedFrame)
                 
-                //contentParentNode.updateLayout(size: layout.size, transition: transition)
-                
-                let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
-                let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
-                
-                let actionsSize = self.actionsContainerNode.updateLayout(constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
-                let contentScale = (layout.size.width - actionsSideInset * 2.0) / layout.size.width
-                let contentUnscaledSize: CGSize
-                if !contentParentNode.controller.preferredContentSize.width.isZero {
-                    contentUnscaledSize = contentParentNode.controller.preferredContentSize
-                } else {
-                    let proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
-                    contentUnscaledSize = CGSize(width: layout.size.width, height: max(400.0, proposedContentHeight))
-                }
-                let contentSize = CGSize(width: floor(contentUnscaledSize.width * contentScale), height: floor(contentUnscaledSize.height * contentScale))
-                
-                self.contentContainerNode.updateLayout(size: contentUnscaledSize, scaledSize: contentSize, transition: transition)
-                
-                let maximumActionsFrameOrigin = max(60.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - actionsSize.height)
-                var originalActionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: min(maximumActionsFrameOrigin, floor((layout.size.height - contentActionsSpacing - contentSize.height) / 2.0) + contentSize.height + contentActionsSpacing)), size: actionsSize)
-                var originalContentFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: originalActionsFrame.minY - contentActionsSpacing - contentSize.height), size: contentSize)
-                if originalContentFrame.minY < topEdge {
-                    let requiredOffset = topEdge - originalContentFrame.minY
-                    let availableOffset = max(0.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - originalActionsFrame.maxY)
-                    let offset = min(requiredOffset, availableOffset)
-                    originalActionsFrame = originalActionsFrame.offsetBy(dx: 0.0, dy: offset)
-                    originalContentFrame = originalContentFrame.offsetBy(dx: 0.0, dy: offset)
-                }
-                
-                let contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalContentFrame.minY + contentTopInset)
-                
-                let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
-                if self.scrollNode.view.contentSize != scrollContentSize {
-                    self.scrollNode.view.contentSize = scrollContentSize
-                }
-                
-                let overflowOffset = min(0.0, originalContentFrame.minY - contentTopInset)
-                
-                let contentContainerFrame = originalContentFrame
-                transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame.offsetBy(dx: 0.0, dy: -overflowOffset))
-                actionsContainerTransition.updateFrame(node: self.actionsContainerNode, frame: originalActionsFrame.offsetBy(dx: 0.0, dy: -overflowOffset))
-                
-                if isInitialLayout {
-                    self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -overflowOffset)
-                    let currentContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
-                    if overflowOffset < 0.0 {
-                        transition.animateOffsetAdditive(node: self.scrollNode, offset: currentContainerFrame.minY - previousContainerFrame.minY)
+                if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
+                    let contentActionsSpacing: CGFloat = actionsSideInset
+                    let topEdge = max(contentTopInset, self.contentAreaInScreenSpace?.minY ?? 0.0)
+                    
+                    let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
+                    let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
+                    
+                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
+                    let contentScale = (layout.size.width - actionsSideInset * 2.0) / layout.size.width
+                    var contentUnscaledSize: CGSize
+                    if case .compact = layout.metrics.widthClass {
+                        let proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
+                        contentUnscaledSize = CGSize(width: layout.size.width, height: max(400.0, proposedContentHeight))
+                        
+                        if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
+                            contentUnscaledSize = preferredSize
+                        }
+                    } else {
+                        let proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
+                        contentUnscaledSize = CGSize(width: min(layout.size.width, 340.0), height: min(568.0, proposedContentHeight))
+                        
+                        if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
+                            contentUnscaledSize = preferredSize
+                        }
                     }
-                }
-                
-                let absoluteContentRect = contentContainerFrame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y)
-                
-                if let reactionContextNode = self.reactionContextNode {
-                    let insets = layout.insets(options: [.statusBar])
-                    transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-                    reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX, y: absoluteContentRect.minY), size: contentSize), transition: transition)
+                    let contentSize = CGSize(width: floor(contentUnscaledSize.width * contentScale), height: floor(contentUnscaledSize.height * contentScale))
+                    
+                    self.contentContainerNode.updateLayout(size: contentUnscaledSize, scaledSize: contentSize, transition: transition)
+                    
+                    let maximumActionsFrameOrigin = max(60.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - actionsSize.height)
+                    var originalActionsFrame: CGRect
+                    var originalContentFrame: CGRect
+                    var contentHeight: CGFloat
+                    if case .compact = layout.metrics.widthClass {
+                        originalActionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: min(maximumActionsFrameOrigin, floor((layout.size.height - contentActionsSpacing - contentSize.height) / 2.0) + contentSize.height + contentActionsSpacing)), size: actionsSize)
+                        originalContentFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: originalActionsFrame.minY - contentActionsSpacing - contentSize.height), size: contentSize)
+                        if originalContentFrame.minY < topEdge {
+                            let requiredOffset = topEdge - originalContentFrame.minY
+                            let availableOffset = max(0.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - originalActionsFrame.maxY)
+                            let offset = min(requiredOffset, availableOffset)
+                            originalActionsFrame = originalActionsFrame.offsetBy(dx: 0.0, dy: offset)
+                            originalContentFrame = originalContentFrame.offsetBy(dx: 0.0, dy: offset)
+                        }
+                        contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalContentFrame.minY + contentTopInset)
+                    } else {
+                        originalContentFrame = CGRect(origin: CGPoint(x: floor(originalProjectedContentViewFrame.1.midX - contentSize.width / 2.0), y: floor(originalProjectedContentViewFrame.1.midY - contentSize.height / 2.0)), size: contentSize)
+                        originalContentFrame.origin.x = min(originalContentFrame.origin.x, layout.size.width - actionsSideInset - contentSize.width)
+                        originalContentFrame.origin.x = max(originalContentFrame.origin.x, actionsSideInset)
+                        originalContentFrame.origin.y = min(originalContentFrame.origin.y, layout.size.height - layout.intrinsicInsets.bottom - actionsSideInset - contentSize.height)
+                        originalContentFrame.origin.y = max(originalContentFrame.origin.y, contentTopInset)
+                        if originalContentFrame.maxX <= layout.size.width - actionsSideInset - actionsSize.width - contentActionsSpacing {
+                            originalActionsFrame = CGRect(origin: CGPoint(x: originalContentFrame.maxX + contentActionsSpacing, y: originalContentFrame.minY), size: actionsSize)
+                            if originalActionsFrame.maxX > layout.size.width - actionsSideInset {
+                                let offset = originalActionsFrame.maxX - (layout.size.width - actionsSideInset)
+                                originalActionsFrame.origin.x -= offset
+                                originalContentFrame.origin.x -= offset
+                            }
+                        } else {
+                            originalActionsFrame = CGRect(origin: CGPoint(x: originalContentFrame.minX - contentActionsSpacing - actionsSize.width, y: originalContentFrame.minY), size: actionsSize)
+                            if originalActionsFrame.minX < actionsSideInset {
+                                let offset = actionsSideInset - originalActionsFrame.minX
+                                originalActionsFrame.origin.x += offset
+                                originalContentFrame.origin.x += offset
+                            }
+                        }
+                        contentHeight = layout.size.height
+                        contentHeight = max(contentHeight, originalActionsFrame.maxY + actionsBottomInset)
+                        contentHeight = max(contentHeight, originalContentFrame.maxY + actionsBottomInset)
+                    }
+                    
+                    let scrollContentSize = CGSize(width: layout.size.width, height: contentHeight)
+                    if self.scrollNode.view.contentSize != scrollContentSize {
+                        self.scrollNode.view.contentSize = scrollContentSize
+                    }
+                    
+                    let overflowOffset = min(0.0, originalContentFrame.minY - contentTopInset)
+                    
+                    let contentContainerFrame = originalContentFrame
+                    transition.updateFrame(node: self.contentContainerNode, frame: contentContainerFrame.offsetBy(dx: 0.0, dy: -overflowOffset))
+                    actionsContainerTransition.updateFrame(node: self.actionsContainerNode, frame: originalActionsFrame.offsetBy(dx: 0.0, dy: -overflowOffset))
+                    
+                    if isInitialLayout {
+                        self.scrollNode.view.contentOffset = CGPoint(x: 0.0, y: -overflowOffset)
+                        let currentContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
+                        if overflowOffset < 0.0 {
+                            transition.animateOffsetAdditive(node: self.scrollNode, offset: currentContainerFrame.minY - previousContainerFrame.minY)
+                        }
+                    }
+                    
+                    let absoluteContentRect = contentContainerFrame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y)
+                    
+                    if let reactionContextNode = self.reactionContextNode {
+                        let insets = layout.insets(options: [.statusBar])
+                        transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
+                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX, y: absoluteContentRect.minY), size: contentSize), transition: transition)
+                    }
                 }
             }
         }
@@ -1175,7 +1287,7 @@ public enum ContextContentSource {
     case controller(ContextControllerContentSource)
 }
 
-public final class ContextController: ViewController {
+public final class ContextController: ViewController, StandalonePresentableController {
     private let account: Account
     private var theme: PresentationTheme
     private var strings: PresentationStrings

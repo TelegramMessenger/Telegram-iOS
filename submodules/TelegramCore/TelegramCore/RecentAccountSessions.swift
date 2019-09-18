@@ -42,10 +42,15 @@ public func terminateAccountSession(account: Account, hash: Int64) -> Signal<Voi
     }
 }
 
-public func terminateOtherAccountSessions(account: Account) -> Signal<Void, NoError> {
+public func terminateOtherAccountSessions(account: Account) -> Signal<Void, TerminateSessionError> {
     return account.network.request(Api.functions.auth.resetAuthorizations())
-    |> retryRequest
-    |> mapToSignal { _ -> Signal<Void, NoError> in
+    |> mapError { error -> TerminateSessionError in
+        if error.errorCode == 406 {
+            return .freshReset
+        }
+        return .generic
+    }
+    |> mapToSignal { _ -> Signal<Void, TerminateSessionError> in
         return .single(Void())
     }
 }

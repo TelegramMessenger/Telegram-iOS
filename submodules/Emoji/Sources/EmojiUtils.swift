@@ -5,22 +5,9 @@ import AVFoundation
 public extension UnicodeScalar {
     var isEmoji: Bool {
         switch self.value {
-            case 0x1F600...0x1F64F, // Emoticons
-            0x1F300...0x1F5FF, // Misc Symbols and Pictographs
-            0x1F680...0x1F6FF, // Transport and Map
-            0x1F1E6...0x1F1FF, // Regional country flags
-            0xE0020...0xE007F, // Tags
-            0xFE00...0xFE0F, // Variation Selectors
-            0x1F900...0x1F9FF, // Supplemental Symbols and Pictographs
-            0x1F018...0x1F0F5,
-            0x1F200...0x1F270, // Various asian characters
-            65024...65039, // Variation selector
-            9100...9300, // Misc items
-            8400...8447: // Combining Diacritical Marks for Symbols
+            case 0x1F600...0x1F64F, 0x1F300...0x1F5FF, 0x1F680...0x1F6FF, 0x1F1E6...0x1F1FF, 0xE0020...0xE007F, 0xFE00...0xFE0F, 0x1F900...0x1F9FF, 0x1F018...0x1F0F5, 0x1F200...0x1F270, 65024...65039, 9100...9300, 8400...8447, 0x1F004, 0x1F18E, 0x1F191...0x1F19A, 0x1F5E8:
                 return true
-            case 0x1f004:
-                return true
-            case 0x270b, 0x2728:
+            case 0x265F, 0x267E, 0x2692, 0x26C8, 0x26CE, 0x26CF, 0x26D1...0x26D3, 0x26E9, 0x26F0...0x26F9, 0x2705, 0x270A, 0x270B, 0x2728, 0x274E, 0x2753...0x2755, 0x274C, 0x2795...0x2797, 0x27B0, 0x27BF:
                 return true
             default:
                 return false
@@ -29,24 +16,19 @@ public extension UnicodeScalar {
     
     var maybeEmoji: Bool {
         switch self.value {
-            case 0x2600...0x26FF, // Misc symbols
-            0x2700...0x27BF, // Dingbats
-            0x1F100...0x1F1FF: //Enclosed Alphanumeric
+            case 0x2A, 0x23, 0x30...0x39, 0xA9, 0xAE:
+                return true
+            case 0x2600...0x26FF, 0x2700...0x27BF, 0x1F100...0x1F1FF:
+                return true
+            case 0x203C, 0x2049, 0x2122, 0x2194...0x2199, 0x21A9, 0x21AA, 0x2139, 0x2328, 0x231A, 0x231B, 0x24C2, 0x25AA, 0x25AB, 0x25B6, 0x25FB...0x25FE, 0x25C0, 0x2934, 0x2935, 0x2B05...0x2B07, 0x2B1B...0x2B1E, 0x2B50, 0x2B55, 0x3030, 0x3297, 0x3299:
                 return true
             default:
                 return false
         }
     }
     
-    var isZeroWidthJoiner: Bool {
-        return self.value == 8205
-    }
-    
-    var isVariationSelector: Bool {
-        return self.value == 0xfe0f
-    }
-    
-    static var VariationSelector = UnicodeScalar(0xfe0f)!
+    static var ZeroWidthJoiner = UnicodeScalar(0x200D)!
+    static var VariationSelector = UnicodeScalar(0xFE0F)!
 }
 
 private final class FrameworkClass: NSObject {
@@ -76,7 +58,7 @@ public extension String {
         var nextShouldBeVariationSelector = false
         for scalar in self.unicodeScalars {
             if nextShouldBeVariationSelector {
-                if scalar.isVariationSelector {
+                if scalar == UnicodeScalar.VariationSelector {
                     nextShouldBeVariationSelector = false
                     continue
                 } else {
@@ -86,7 +68,7 @@ public extension String {
             if !scalar.isEmoji && scalar.maybeEmoji {
                 nextShouldBeVariationSelector = true
             }
-            else if !scalar.isEmoji && !scalar.isZeroWidthJoiner {
+            else if !scalar.isEmoji && scalar != UnicodeScalar.ZeroWidthJoiner {
                 return false
             }
         }
@@ -119,7 +101,7 @@ public extension String {
         var nextShouldBeVariationSelector = false
         for scalar in self.unicodeScalars {
             if nextShouldBeVariationSelector {
-                if !scalar.isVariationSelector{
+                if scalar != UnicodeScalar.VariationSelector {
                     string.unicodeScalars.append(UnicodeScalar.VariationSelector)
                 }
                 nextShouldBeVariationSelector = false

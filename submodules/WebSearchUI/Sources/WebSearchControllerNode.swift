@@ -344,8 +344,6 @@ class WebSearchControllerNode: ASDisplayNode {
         }
         
         if themeUpdated {
-            self.backgroundColor = self.theme.chatList.backgroundColor
-            
             self.segmentedBackgroundNode.backgroundColor = self.theme.rootController.navigationBar.backgroundColor
             self.segmentedSeparatorNode.backgroundColor = self.theme.rootController.navigationBar.separatorColor
             self.segmentedControlNode.updateTheme(SegmentedControlTheme(theme: self.theme))

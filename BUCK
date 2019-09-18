@@ -45,6 +45,7 @@ resource_dependencies = [
     "//submodules/TelegramUI:TelegramUIResources",
     "//:AppResources",
     "//:AppStringResources",
+    "//:InfoPlistStringResources",
     "//:AppIntentVocabularyResources",
     "//:Icons",
     "//:AdditionalIcons",
@@ -76,6 +77,15 @@ apple_resource(
     files = [],
     variants = glob([
         "Telegram-iOS/*.lproj/AppIntentVocabulary.plist",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "InfoPlistStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/InfoPlist.strings",
     ]),
     visibility = ["PUBLIC"],
 )

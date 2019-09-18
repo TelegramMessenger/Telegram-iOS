@@ -6,6 +6,8 @@ class ScrollToTopView: UIScrollView, UIScrollViewDelegate {
     override init(frame: CGRect) {
         super.init(frame: frame)
         
+        self.isOpaque = false
+        self.backgroundColor = .clear
         self.delegate = self
         self.scrollsToTop = true
         if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {

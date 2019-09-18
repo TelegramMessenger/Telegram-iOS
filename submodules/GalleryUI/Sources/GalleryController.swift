@@ -272,7 +272,7 @@ public enum GalleryControllerItemNodeAction {
     case timecode(Double)
 }
 
-public class GalleryController: ViewController {
+public class GalleryController: ViewController, StandalonePresentableController {
     public static let darkNavigationTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: UIColor(rgb: 0x525252), primaryTextColor: .white, backgroundColor: UIColor(white: 0.0, alpha: 0.6), separatorColor: UIColor(white: 0.0, alpha: 0.8), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     public static let lightNavigationTheme = NavigationBarTheme(buttonColor: UIColor(rgb: 0x007ee5), disabledButtonColor: UIColor(rgb: 0xd0d0d0), primaryTextColor: .black, backgroundColor: UIColor(red: 0.968626451, green: 0.968626451, blue: 0.968626451, alpha: 1.0), separatorColor: UIColor(red: 0.6953125, green: 0.6953125, blue: 0.6953125, alpha: 1.0), badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
     
@@ -731,6 +731,9 @@ public class GalleryController: ViewController {
                 }
             }
         }
+        
+        self.blocksBackgroundWhenInOverlay = true
+        self.isOpaqueWhenInOverlay = true
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -835,6 +838,10 @@ public class GalleryController: ViewController {
         self.galleryNode.completeCustomDismiss = { [weak self] in
             self?._hiddenMedia.set(.single(nil))
             self?.presentingViewController?.dismiss(animated: false, completion: nil)
+        }
+        
+        self.galleryNode.controlsVisibilityChanged = { [weak self] visible in
+            self?.prefersOnScreenNavigationHidden = !visible
         }
         
         let baseNavigationController = self.baseNavigationController
@@ -945,6 +952,14 @@ public class GalleryController: ViewController {
         self.accountInUseDisposable.set(nil)
     }
     
+    override public func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
+            return itemSize.aspectFitted(layout.size)
+        } else {
+            return nil
+        }
+    }
+    
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
@@ -955,7 +970,7 @@ public class GalleryController: ViewController {
             self.adjustedForInitialPreviewingLayout = true
             self.galleryNode.setControlsHidden(true, animated: false)
             if let centralItemNode = self.galleryNode.pager.centralItemNode(), let itemSize = centralItemNode.contentSize() {
-                self.preferredContentSize = itemSize.aspectFitted(self.view.bounds.size)
+                self.preferredContentSize = itemSize.aspectFitted(layout.size)
                 self.containerLayoutUpdated(ContainerViewLayout(size: self.preferredContentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
             }
         }

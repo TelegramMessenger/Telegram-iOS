@@ -718,7 +718,7 @@ public final class MessageHistoryView {
                     for entry in state.entries {
                         if mutableView.namespaces.contains(entry.message.id.namespace) {
                             let read: Bool
-                            if !entry.message.flags.intersection(.IsIncomingMask).isEmpty {
+                            if entry.message.flags.contains(.Incoming) {
                                 read = false
                             } else if let readState = states[entry.message.id.peerId] {
                                 read = readState.isOutgoingMessageIndexRead(entry.message.index)

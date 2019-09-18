@@ -1868,10 +1868,10 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
         let _ = (peerView.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { peerView in
-            presentControllerImpl?(channelAdminController(context: context, peerId: peerView.peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
+            pushControllerImpl?(channelAdminController(context: context, peerId: peerView.peerId, adminId: participant.peer.id, initialParticipant: participant.participant, updated: { _ in
             }, upgradedToSupergroup: { upgradedPeerId, f in
                 upgradedToSupergroupImpl?(upgradedPeerId, f)
-            }, transferedOwnership: { _ in }), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+            }, transferedOwnership: { _ in }))
         })
     }, restrictPeer: { participant in
         let _ = (peerView.get()
@@ -2028,7 +2028,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 return
             }
             let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle, address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
-            let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, isModal: false, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
+            let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
                 context.sharedContext.applicationBindings.openUrl(url)
             })
             pushControllerImpl?(controller)
@@ -2257,8 +2257,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                 if let infoController = context.sharedContext.makePeerInfoController(context: context, peer: peer, mode: .generic) {
                     arguments.pushController(infoController)
                 }
-            }, present: { c, a in
-                presentControllerImpl?(c, a)
+            }, pushController: { c in
+                pushControllerImpl?(c)
             })
         }
         

@@ -766,7 +766,7 @@ private func getUserPeer(postbox: Postbox, peerId: PeerId) -> Signal<(Peer?, Cac
     }
 }
 
-public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, present: @escaping (ViewController, Any?) -> Void) {
+public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     let _ = (getUserPeer(postbox: context.account.postbox, peerId: peerId)
     |> deliverOnMainQueue).start(next: { peer, cachedData in
         guard let user = peer as? TelegramUser, let contactData = DeviceContactExtendedData(peer: user) else {
@@ -778,7 +778,7 @@ public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pr
             shareViaException = peerStatusSettings.contains(.addExceptionWhenAddingContact)
         }
         
-        present(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
+        pushController(deviceContactInfoController(context: context, subject: .create(peer: user, contactData: contactData, isSharing: true, shareViaException: shareViaException, completion: { peer, stableId, contactData in
             if let peer = peer as? TelegramUser {
                 if let phone = peer.phone, !phone.isEmpty {
                 }
@@ -786,7 +786,7 @@ public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pr
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                 present(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
             }
-        }), completed: nil, cancelled: nil), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        }), completed: nil, cancelled: nil))
     })
 }
 
@@ -916,7 +916,9 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
     }, openChat: {
         openChatImpl?()
     }, addContact: {
-        openAddPersonContactImpl(context: context, peerId: peerId, present: { c, a in
+        openAddPersonContactImpl(context: context, peerId: peerId, pushController: { c in
+            pushControllerImpl?(c)
+        }, present: { c, a in
             presentControllerImpl?(c, a)
         })
     }, shareContact: {

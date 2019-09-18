@@ -88,11 +88,10 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
     let themeSpecificAccentColors: [Int64: PresentationThemeAccentColor]
     let currentTheme: PresentationThemeReference
     let updatedTheme: (PresentationThemeReference) -> Void
-    let longTapped: (PresentationThemeReference) -> Void
     let contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?
     let tag: ItemListItemTag?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, longTapped: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, sectionId: ItemListSectionId, themes: [PresentationThemeReference], themeSpecificAccentColors: [Int64: PresentationThemeAccentColor], currentTheme: PresentationThemeReference, updatedTheme: @escaping (PresentationThemeReference) -> Void, contextAction: ((PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void)?, tag: ItemListItemTag? = nil) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -100,7 +99,6 @@ class ThemeSettingsThemeItem: ListViewItem, ItemListItem {
         self.themeSpecificAccentColors = themeSpecificAccentColors
         self.currentTheme = currentTheme
         self.updatedTheme = updatedTheme
-        self.longTapped = longTapped
         self.contextAction = contextAction
         self.tag = tag
         self.sectionId = sectionId
@@ -146,7 +144,6 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     private let overlayNode: ASImageNode
     private let textNode: ASTextNode
     private var action: (() -> Void)?
-    private var longTapAction: (() -> Void)?
     private var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     private var theme: PresentationThemeReference?
@@ -186,7 +183,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         }
     }
     
-    func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, longTapAction: @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
+    func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
         let updatedTheme = self.currentTheme == nil || currentTheme !== self.currentTheme!
         if case let .cloud(theme) = theme, theme.theme.file == nil {
             if updatedTheme || accentColor != self.accentColor {
@@ -208,12 +205,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
             self.selected = selected
         }
         self.textNode.attributedText = title
-        self.action = {
-            action()
-        }
-        self.longTapAction = {
-            longTapAction()
-        }
+        self.action = action
         self.contextAction = contextAction
         self.containerNode.isGestureEnabled = !selected
     }
@@ -236,8 +228,6 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
                     switch gesture {
                         case .tap:
                             self.action?()
-                        case .longTap:
-                            self.longTapAction?()
                         default:
                             break
                     }
@@ -399,8 +389,6 @@ class ThemeSettingsThemeItemNode: ListViewItemNode, ItemListItemNode {
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)
                             }
-                        }, longTapAction: {
-                            item.longTapped(theme)
                         }, contextAction: item.contextAction.flatMap {
                             contextAction in
                             return { node, gesture in

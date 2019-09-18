@@ -230,7 +230,6 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
             case let .themeItem(theme, strings, themes, currentTheme, themeSpecificAccentColors):
                 return ThemeSettingsThemeItem(context: arguments.context, theme: theme, strings: strings, sectionId: self.section, themes: themes, themeSpecificAccentColors: themeSpecificAccentColors, currentTheme: currentTheme, updatedTheme: { theme in
                     arguments.updateTheme(theme)
-                }, longTapped: { _ in
                 }, contextAction: nil)
         }
     }

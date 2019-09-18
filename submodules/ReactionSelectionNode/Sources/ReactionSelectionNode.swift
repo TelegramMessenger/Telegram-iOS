@@ -227,16 +227,16 @@ final class ReactionSelectionNode: ASDisplayNode {
         super.init()
         
         self.bubbleNodes.forEach { _, shadow in
-            self.addSubnode(shadow)
+            //self.addSubnode(shadow)
         }
         self.addSubnode(self.backgroundShadowNode)
         self.bubbleNodes.forEach { foreground, _ in
-            self.addSubnode(foreground)
+            //self.addSubnode(foreground)
         }
         self.addSubnode(self.backgroundNode)
     }
     
-    func updateLayout(constrainedSize: CGSize, startingPoint: CGPoint, offsetFromStart: CGFloat, isInitial: Bool) {
+    func updateLayout(constrainedSize: CGSize, startingPoint: CGPoint, offsetFromStart: CGFloat, isInitial: Bool, touchPoint: CGPoint) {
         let initialAnchorX = startingPoint.x
         
         var isRightAligned = false
@@ -285,13 +285,33 @@ final class ReactionSelectionNode: ASDisplayNode {
         backgroundFrame.origin.x = max(0.0, backgroundFrame.minX)
         backgroundFrame.origin.x = min(constrainedSize.width - backgroundFrame.width, backgroundFrame.minX)
         
-        self.isRightAligned = isRightAligned
-        self.backgroundNode.frame = backgroundFrame
-        self.backgroundShadowNode.frame = backgroundFrame
-        
         let anchorMinX = backgroundFrame.minX + shadowBlur + backgroundHeight / 2.0
         let anchorMaxX = backgroundFrame.maxX - shadowBlur - backgroundHeight / 2.0
         let anchorX = max(anchorMinX, min(anchorMaxX, offsetFromStart))
+        
+        var maximizedIndex = -1
+        if let reaction = self.reactions.last, case .reply = reaction {
+            maximizedIndex = self.reactions.count - 1
+        }
+        if backgroundFrame.insetBy(dx: -10.0, dy: -10.0).contains(touchPoint) {
+            maximizedIndex = Int(((touchPoint.x - anchorMinX) / (anchorMaxX - anchorMinX)) * CGFloat(self.reactionNodes.count))
+            maximizedIndex = max(0, min(self.reactionNodes.count - 1, maximizedIndex))
+        }
+        if maximizedIndex == -1 {
+            backgroundFrame.size.width -= maximizedReactionSize - minimizedReactionSize
+            backgroundFrame.origin.x += maximizedReactionSize - minimizedReactionSize
+        }
+        
+        self.isRightAligned = isRightAligned
+        
+        let backgroundTransition: ContainedViewLayoutTransition
+        if isInitial {
+            backgroundTransition = .immediate
+        } else {
+            backgroundTransition = .animated(duration: 0.18, curve: .easeInOut)
+        }
+        backgroundTransition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        backgroundTransition.updateFrame(node: self.backgroundShadowNode, frame: backgroundFrame)
         
         var reactionX: CGFloat = backgroundFrame.minX + shadowBlur + reactionSpacing
         if offsetFromStart > backgroundFrame.maxX - shadowBlur || offsetFromStart < backgroundFrame.minX {
@@ -299,9 +319,6 @@ final class ReactionSelectionNode: ASDisplayNode {
         } else {
             self.hasSelectedNode = true
         }
-            
-        var maximizedIndex = Int(((anchorX - anchorMinX) / (anchorMaxX - anchorMinX)) * CGFloat(self.reactionNodes.count))
-        maximizedIndex = max(0, min(self.reactionNodes.count - 1, maximizedIndex))
         
         for iterationIndex in 0 ..< self.reactionNodes.count {
             var i = iterationIndex
@@ -484,9 +501,6 @@ final class ReactionSelectionNode: ASDisplayNode {
     }
     
     func selectedReaction() -> ReactionGestureItem? {
-        if !self.hasSelectedNode {
-            return nil
-        }
         for i in 0 ..< self.reactionNodes.count {
             if let isMaximized = self.reactionNodes[i].isMaximized, isMaximized {
                 return self.reactionNodes[i].reaction

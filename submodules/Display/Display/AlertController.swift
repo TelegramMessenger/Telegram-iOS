@@ -62,7 +62,7 @@ public final class AlertControllerTheme: Equatable {
     }
 }
 
-open class AlertController: ViewController {
+open class AlertController: ViewController, StandalonePresentableController {
     private var controllerNode: AlertControllerNode {
         return self.displayNode as! AlertControllerNode
     }

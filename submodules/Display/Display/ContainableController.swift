@@ -11,7 +11,6 @@ public protocol ContainableController: class {
     var displayNode: ASDisplayNode { get }
     var isViewLoaded: Bool { get }
     var isOpaqueWhenInOverlay: Bool { get }
-    var isModalWhenInOverlay: Bool { get }
     var blocksBackgroundWhenInOverlay: Bool { get }
     var ready: Promise<Bool> { get }
     var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)? { get set }
@@ -22,6 +21,7 @@ public protocol ContainableController: class {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition)
     func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation)
     func updateModalTransition(_ value: CGFloat, transition: ContainedViewLayoutTransition)
+    func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize?
     
     func viewWillAppear(_ animated: Bool)
     func viewWillDisappear(_ animated: Bool)

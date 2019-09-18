@@ -3,6 +3,9 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
+public protocol StandalonePresentableController: ViewController {
+}
+
 private func findCurrentResponder(_ view: UIView) -> UIResponder? {
     if view.isFirstResponder {
         return view
@@ -55,6 +58,13 @@ open class ViewControllerPresentationArguments {
     }
 }
 
+public enum ViewControllerNavigationPresentation {
+    case `default`
+    case master
+    case modal
+    case modalInLargeLayout
+}
+
 @objc open class ViewController: UIViewController, ContainableController {
     private var validLayout: ContainerViewLayout?
     public var currentlyAppliedLayout: ContainerViewLayout? {
@@ -84,13 +94,6 @@ open class ViewControllerPresentationArguments {
     public final var isOpaqueWhenInOverlay: Bool = false
     public final var blocksBackgroundWhenInOverlay: Bool = false
     public final var automaticallyControlPresentationContextLayout: Bool = true
-    public final var isModalWhenInOverlay: Bool = false {
-        didSet {
-            if self.isNodeLoaded {
-                self.displayNode.clipsToBounds = true
-            }
-        }
-    }
     public var updateTransitionWhenPresentedAsModal: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
@@ -105,17 +108,19 @@ open class ViewControllerPresentationArguments {
         }
     }
     
-    public final var preferNavigationUIHidden: Bool = false {
+    public final var prefersOnScreenNavigationHidden: Bool = false {
         didSet {
-            if self.preferNavigationUIHidden != oldValue {
-                self.window?.invalidatePreferNavigationUIHidden()
+            if self.prefersOnScreenNavigationHidden != oldValue {
+                self.window?.invalidatePrefersOnScreenNavigationHidden()
             }
         }
     }
     
     override open var prefersHomeIndicatorAutoHidden: Bool {
-        return self.preferNavigationUIHidden
+        return self.prefersOnScreenNavigationHidden
     }
+    
+    open var navigationPresentation: ViewControllerNavigationPresentation = .default
     
     public var presentationArguments: Any?
     
@@ -236,6 +241,10 @@ open class ViewControllerPresentationArguments {
         return true
     }
     
+    open func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        return nil
+    }
+    
     private func updateScrollToTopView() {
         if self.scrollToTop != nil {
             if let displayNode = self._displayNode , self.scrollToTopView == nil {
@@ -267,9 +276,20 @@ open class ViewControllerPresentationArguments {
         
         self.navigationBar?.backPressed = { [weak self] in
             if let strongSelf = self, strongSelf.attemptNavigation({
-                self?.navigationController?.popViewController(animated: true)
+                guard let strongSelf = self else {
+                    return
+                }
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigationController.filterController(strongSelf, animated: true)
+                } else {
+                    strongSelf.navigationController?.popViewController(animated: true)
+                }
             }) {
-                strongSelf.navigationController?.popViewController(animated: true)
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigationController.filterController(strongSelf, animated: true)
+                } else {
+                    strongSelf.navigationController?.popViewController(animated: true)
+                }
             }
         }
         self.navigationBar?.requestContainerLayout = { [weak self] transition in
@@ -338,7 +358,6 @@ open class ViewControllerPresentationArguments {
         if !self.isViewLoaded {
             self.loadView()
         }
-        transition.updateFrame(node: self.displayNode, frame: CGRect(origin: self.view.frame.origin, size: layout.size))
         if let _ = layout.statusBarHeight {
             self.statusBar.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: 40.0))
         }
@@ -387,10 +406,6 @@ open class ViewControllerPresentationArguments {
             self.blocksBackgroundWhenInOverlay = true
             self.isOpaqueWhenInOverlay = true
         }
-        
-        if self.isModalWhenInOverlay {
-            self.displayNode.clipsToBounds = true
-        }
     }
     
     public func requestLayout(transition: ContainedViewLayoutTransition) {
@@ -424,9 +439,9 @@ open class ViewControllerPresentationArguments {
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
-            navigationController.dismiss(animated: flag, completion: completion)
+            navigationController.filterController(self, animated: flag)
         } else {
-            super.dismiss(animated: flag, completion: completion)
+            assertionFailure()
         }
     }
     
@@ -443,13 +458,22 @@ open class ViewControllerPresentationArguments {
         }
     }
     
+    public func push(_ controller: ViewController) {
+        (self.navigationController as? NavigationController)?.pushViewController(controller)
+    }
+    
     public func present(_ controller: ViewController, in context: PresentationContextType, with arguments: Any? = nil, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
-        controller.presentationArguments = arguments
-        switch context {
+        if !(controller is StandalonePresentableController), case .window = context, let arguments = arguments as? ViewControllerPresentationArguments, case .modalSheet = arguments.presentationAnimation {
+            controller.navigationPresentation = .modal
+            self.push(controller)
+        } else {
+            controller.presentationArguments = arguments
+            switch context {
             case .current:
                 self.presentationContext.present(controller, on: PresentationSurfaceLevel(rawValue: 0), completion: completion)
             case let .window(level):
                 self.window?.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+            }
         }
     }
     
@@ -485,6 +509,7 @@ open class ViewControllerPresentationArguments {
     }
     
     open func dismiss(completion: (() -> Void)? = nil) {
+        (self.navigationController as? NavigationController)?.filterController(self, animated: true)
     }
     
     @available(iOSApplicationExtension 9.0, iOS 9.0, *)

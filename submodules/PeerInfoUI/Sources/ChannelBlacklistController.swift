@@ -486,8 +486,8 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                 if let rendered = rendered, case .member = rendered.participant {
                     arguments.openPeer(rendered)
                 }
-            }, present: { c, a in
-                presentControllerImpl?(c, a)
+            }, pushController: { c in
+                pushControllerImpl?(c)
             })
         }
         

@@ -5,7 +5,7 @@ import Display
 public extension TabBarControllerTheme {
     convenience init(rootControllerTheme: PresentationTheme) {
         let theme = rootControllerTheme.rootController.tabBar
-        self.init(backgroundColor: rootControllerTheme.list.plainBackgroundColor, tabBarBackgroundColor: theme.backgroundColor, tabBarSeparatorColor: theme.separatorColor, tabBarTextColor: theme.textColor, tabBarSelectedTextColor: theme.selectedIconColor, tabBarBadgeBackgroundColor: theme.badgeBackgroundColor, tabBarBadgeStrokeColor: theme.badgeStrokeColor, tabBarBadgeTextColor: theme.badgeTextColor)
+        self.init(backgroundColor: rootControllerTheme.list.plainBackgroundColor, tabBarBackgroundColor: theme.backgroundColor, tabBarSeparatorColor: theme.separatorColor, tabBarIconColor: theme.iconColor, tabBarSelectedIconColor: theme.selectedIconColor, tabBarTextColor: theme.textColor, tabBarSelectedTextColor: theme.selectedTextColor, tabBarBadgeBackgroundColor: theme.badgeBackgroundColor, tabBarBadgeStrokeColor: theme.badgeStrokeColor, tabBarBadgeTextColor: theme.badgeTextColor)
     }
 }
 
@@ -61,6 +61,13 @@ extension PeekControllerTheme {
 
 public extension NavigationControllerTheme {
     convenience init(presentationTheme: PresentationTheme) {
-        self.init(navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor)
+        let navigationStatusBar: NavigationStatusBarStyle
+        switch presentationTheme.rootController.statusBarStyle {
+        case .black:
+            navigationStatusBar = .black
+        case .white:
+            navigationStatusBar = .white
+        }
+        self.init(statusBar: navigationStatusBar, navigationBar: NavigationBarTheme(rootControllerTheme: presentationTheme), emptyAreaColor: presentationTheme.chatList.backgroundColor)
     }
 }

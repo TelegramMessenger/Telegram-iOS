@@ -509,6 +509,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             if let strongSelf = self {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                    chatListController.navigationPresentation = .master
                     navigationController.pushViewController(chatListController)
                     strongSelf.chatListDisplayNode.chatListNode.clearHighlightAnimated(true)
                 }
@@ -664,6 +665,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             switch item.content {
             case let .groupReference(groupReference):
                 let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupReference.groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(peer):
@@ -749,22 +751,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
             strongSelf.setToolbar(toolbar, transition: .animated(duration: 0.3, curve: .easeInOut))
         }))
-        
-        /*self.badgeIconDisposable = (self.chatListDisplayNode.chatListNode.scrollToTopOption
-        |> distinctUntilChanged
-        |> deliverOnMainQueue).start(next: { [weak self] option in
-            guard let strongSelf = self else {
-                return
-            }
-            switch option {
-                case .none:
-                    strongSelf.tabBarItem.selectedImage = tabImageNone
-                case .top:
-                    strongSelf.tabBarItem.selectedImage = tabImageUp
-                case .unread:
-                    strongSelf.tabBarItem.selectedImage = tabImageUnread
-            }
-        })*/
         
         self.ready.set(self.chatListDisplayNode.chatListNode.ready)
         
@@ -1017,7 +1003,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
     }
     
     @objc private func composePressed() {
-        (self.navigationController as? NavigationController)?.replaceAllButRootController(self.context.sharedContext.makeComposeController(context: self.context), animated: true)
+        let controller = self.context.sharedContext.makeComposeController(context: self.context)
+        (self.navigationController as? NavigationController)?.pushViewController(controller)
     }
     
     public func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
@@ -1083,7 +1070,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             var sourceRect = selectedNode.view.superview!.convert(selectedNode.frame, to: sourceView)
             sourceRect.size.height -= UIScreenPixel
             switch item.content {
-                case let .peer(_, peer, _, _, _, _, _, _, _, _):
+                case let .peer(_, peer, _, _, _, _, _, _, _, _, _):
                     if peer.peerId.namespace != Namespaces.Peer.SecretChat {
                         let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
                         chatController.canReadHistory.set(false)
@@ -1094,6 +1081,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     }
                 case let .groupReference(groupId, _, _, _, _):
                     let chatListController = ChatListControllerImpl(context: self.context, groupId: groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                    chatListController.navigationPresentation = .master
                     chatListController.containerLayoutUpdated(ContainerViewLayout(size: contentSize, metrics: LayoutMetrics(), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false), transition: .immediate)
                     return (chatListController, sourceRect)
             }

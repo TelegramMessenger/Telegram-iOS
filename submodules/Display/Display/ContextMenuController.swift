@@ -12,7 +12,7 @@ public final class ContextMenuControllerPresentationArguments {
     }
 }
 
-public final class ContextMenuController: ViewController, KeyShortcutResponder {
+public final class ContextMenuController: ViewController, KeyShortcutResponder, StandalonePresentableController {
     private var contextMenuNode: ContextMenuNode {
         return self.displayNode as! ContextMenuNode
     }

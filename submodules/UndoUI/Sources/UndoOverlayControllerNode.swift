@@ -16,6 +16,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let iconNode: ASImageNode?
     private let iconCheckNode: RadialStatusNode?
     private let animationNode: AnimationNode?
+    private let animatedStickerNode: AnimatedStickerNode?
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonTextNode: ImmediateTextNode
@@ -65,6 +66,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
+                self.animatedStickerNode = nil
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = true
                 self.originalRemainingSeconds = 5
@@ -82,6 +84,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                     self.iconCheckNode = nil
                     self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
                 }
+                self.animatedStickerNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
@@ -90,6 +93,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_archiveswipe", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
@@ -98,6 +102,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_infotip", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
                 self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = undo
@@ -106,6 +111,22 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = AnimationNode(animation: "anim_success", colors: ["info1.info1.stroke": self.animationBackgroundColor, "info2.info2.Fill": self.animationBackgroundColor], scale: 1.0)
+                self.animatedStickerNode = nil
+                
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in return nil }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+                self.textNode.maximumNumberOfLines = 2
+                displayUndo = false
+                self.originalRemainingSeconds = 5
+            case let .emoji(account, path, text):
+                self.iconNode = nil
+                self.iconCheckNode = nil
+                self.animationNode = nil
+                self.animatedStickerNode = AnimatedStickerNode()
+                self.animatedStickerNode?.visibility = true
+                self.animatedStickerNode?.setup(account: account, resource: .localFile(path), width: 100, height: 100, playbackMode: .once, mode: .direct)
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
@@ -145,12 +166,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
             case .removedChat:
                 self.panelWrapperNode.addSubnode(self.timerTextNode)
                 self.panelWrapperNode.addSubnode(self.statusNode)
-            case .archivedChat, .hidArchive, .revealedArchive, .succeed:
+            case .archivedChat, .hidArchive, .revealedArchive, .succeed, .emoji:
                 break
         }
         self.iconNode.flatMap(self.panelWrapperNode.addSubnode)
         self.iconCheckNode.flatMap(self.panelWrapperNode.addSubnode)
         self.animationNode.flatMap(self.panelWrapperNode.addSubnode)
+        self.animatedStickerNode.flatMap(self.panelWrapperNode.addSubnode)
         self.panelWrapperNode.addSubnode(self.titleNode)
         self.panelWrapperNode.addSubnode(self.textNode)
         if displayUndo {
@@ -296,6 +318,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         if let animationNode = self.animationNode, let iconSize = animationNode.preferredSize() {
             let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
             transition.updateFrame(node: animationNode, frame: iconFrame)
+        }
+        
+        if let animatedStickerNode = self.animatedStickerNode {
+            let iconSize = CGSize(width: 32.0, height: 32.0)
+            let iconFrame = CGRect(origin: CGPoint(x: floor((leftInset - iconSize.width) / 2.0), y: floor((contentHeight - iconSize.height) / 2.0)), size: iconSize)
+            animatedStickerNode.updateLayout(size: iconFrame.size)
+            transition.updateFrame(node: animatedStickerNode, frame: iconFrame)
         }
         
         let timerTextSize = self.timerTextNode.updateLayout(CGSize(width: 100.0, height: 100.0))

@@ -554,6 +554,132 @@ API_AVAILABLE(ios(10))
     return result;
 }
 
++ (LocalPrivateKey * _Nullable)getApplicationSecretKey:(NSString * _Nonnull)baseAppBundleId API_AVAILABLE(ios(10)) {
+    NSString *bundleSeedId = [self bundleSeedId];
+    if (bundleSeedId == nil) {
+        return nil;
+    }
+    
+    NSString *accessGroup = [bundleSeedId stringByAppendingFormat:@".%@", baseAppBundleId];
+    
+    NSData *applicationTag = [@"telegramApplicationSecretKey" dataUsingEncoding:NSUTF8StringEncoding];
+    
+    NSDictionary *query = @{
+        (id)kSecClass: (id)kSecClassKey,
+        (id)kSecAttrApplicationTag: applicationTag,
+        (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
+        (id)kSecAttrAccessGroup: (id)accessGroup,
+        (id)kSecReturnRef: @YES,
+    };
+    SecKeyRef privateKey = NULL;
+    OSStatus status = SecItemCopyMatching((__bridge CFDictionaryRef)query, (CFTypeRef *)&privateKey);
+    if (status != errSecSuccess) {
+        return nil;
+    }
+    
+    SecKeyRef publicKey = SecKeyCopyPublicKey(privateKey);
+    if (!publicKey) {
+        if (privateKey) {
+            CFRelease(privateKey);
+        }
+        return nil;
+    }
+    
+    LocalPrivateKey *result = [[LocalPrivateKey alloc] initWithPrivateKey:privateKey publicKey:publicKey];
+    
+    if (publicKey) {
+        CFRelease(publicKey);
+    }
+    if (privateKey) {
+        CFRelease(privateKey);
+    }
+    
+    return result;
+}
+
++ (bool)removeApplicationSecretKey:(NSString * _Nonnull)baseAppBundleId API_AVAILABLE(ios(10)) {
+    NSString *bundleSeedId = [self bundleSeedId];
+    if (bundleSeedId == nil) {
+        return nil;
+    }
+    
+    NSData *applicationTag = [@"telegramApplicationSecretKey" dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *accessGroup = [bundleSeedId stringByAppendingFormat:@".%@", baseAppBundleId];
+    
+    NSDictionary *query = @{
+        (id)kSecClass: (id)kSecClassKey,
+        (id)kSecAttrApplicationTag: applicationTag,
+        (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
+        (id)kSecAttrAccessGroup: (id)accessGroup
+    };
+    OSStatus status = SecItemDelete((__bridge CFDictionaryRef)query);
+    if (status != errSecSuccess) {
+        return false;
+    }
+    return true;
+}
+
++ (LocalPrivateKey * _Nullable)addApplicationSecretKey:(NSString * _Nonnull)baseAppBundleId API_AVAILABLE(ios(10)) {
+    NSString *bundleSeedId = [self bundleSeedId];
+    if (bundleSeedId == nil) {
+        return nil;
+    }
+    
+    NSData *applicationTag = [@"telegramApplicationSecretKey" dataUsingEncoding:NSUTF8StringEncoding];
+    NSString *accessGroup = [bundleSeedId stringByAppendingFormat:@".%@", baseAppBundleId];
+    
+    SecAccessControlRef access = SecAccessControlCreateWithFlags(kCFAllocatorDefault, kSecAttrAccessibleAlwaysThisDeviceOnly, kSecAccessControlUserPresence | kSecAccessControlPrivateKeyUsage, NULL);
+    NSDictionary *attributes = @{
+        (id)kSecAttrKeyType: (id)kSecAttrKeyTypeECSECPrimeRandom,
+        (id)kSecAttrKeySizeInBits: @256,
+        (id)kSecAttrTokenID: (id)kSecAttrTokenIDSecureEnclave,
+        (id)kSecPrivateKeyAttrs: @{
+            (id)kSecAttrIsPermanent: @YES,
+            (id)kSecAttrApplicationTag: applicationTag,
+            (id)kSecAttrAccessControl: (__bridge id)access,
+            (id)kSecAttrAccessGroup: (id)accessGroup,
+        },
+    };
+    
+    CFErrorRef error = NULL;
+    SecKeyRef privateKey = SecKeyCreateRandomKey((__bridge CFDictionaryRef)attributes, &error);
+    if (!privateKey) {
+        if (access) {
+            CFRelease(access);
+        }
+        
+        __unused NSError *err = CFBridgingRelease(error);
+        return nil;
+    }
+    
+    SecKeyRef publicKey = SecKeyCopyPublicKey(privateKey);
+    if (!publicKey) {
+        if (privateKey) {
+            CFRelease(privateKey);
+        }
+        if (access) {
+            CFRelease(access);
+        }
+        
+        __unused NSError *err = CFBridgingRelease(error);
+        return nil;
+    }
+    
+    LocalPrivateKey *result = [[LocalPrivateKey alloc] initWithPrivateKey:privateKey publicKey:publicKey];
+    
+    if (publicKey) {
+        CFRelease(publicKey);
+    }
+    if (privateKey) {
+        CFRelease(privateKey);
+    }
+    if (access) {
+        CFRelease(access);
+    }
+    
+    return result;
+}
+
 + (DeviceSpecificEncryptionParameters * _Nonnull)deviceSpecificEncryptionParameters:(NSString * _Nonnull)rootPath baseAppBundleId:(NSString * _Nonnull)baseAppBundleId {
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
     
@@ -607,6 +733,37 @@ API_AVAILABLE(ios(10))
     NSData *key = [resultData subdataWithRange:NSMakeRange(0, 32)];
     NSData *salt = [resultData subdataWithRange:NSMakeRange(32, 16)];
     return [[DeviceSpecificEncryptionParameters alloc] initWithKey:key salt:salt];
+}
+
++ (void)encryptApplicationSecret:(NSData * _Nonnull)secret baseAppBundleId:(NSString * _Nonnull)baseAppBundleId completion:(void (^)(NSData * _Nullable))completion {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        LocalPrivateKey *privateKey = [self getApplicationSecretKey:baseAppBundleId];
+        if (privateKey == nil) {
+            privateKey = [self addApplicationSecretKey:baseAppBundleId];
+        }
+        if (privateKey == nil) {
+            completion(nil);
+            return;
+        }
+        NSData *result = [privateKey encrypt:secret];
+        completion(result);
+    });
+}
+
++ (void)decryptApplicationSecret:(NSData * _Nonnull)secret baseAppBundleId:(NSString * _Nonnull)baseAppBundleId completion:(void (^)(NSData * _Nullable))completion {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        LocalPrivateKey *privateKey = [self getApplicationSecretKey:baseAppBundleId];
+        if (privateKey == nil) {
+            completion(nil);
+            return;
+        }
+        if (privateKey == nil) {
+            completion(nil);
+            return;
+        }
+        NSData *result = [privateKey decrypt:secret];
+        completion(result);
+    });
 }
 
 @end

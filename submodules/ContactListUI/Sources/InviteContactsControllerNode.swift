@@ -236,6 +236,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
     var requestDeactivateSearch: (() -> Void)?
     var requestShareTelegram: (() -> Void)?
     var requestShare: (([(DeviceContactBasicData, Int32)]) -> Void)?
+    var selectionChanged: (() -> Void)?
     
     let currentSortedContacts = Atomic<[(DeviceContactStableId, DeviceContactBasicData, Int32)]?>(value: nil)
     
@@ -249,6 +250,7 @@ final class InviteContactsControllerNode: ASDisplayNode {
                         self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, actualNavigationBarHeight: actualNavigationHeight, transition: .animated(duration: 0.3, curve: .spring))
                     }
                 }
+                self.selectionChanged?()
             }
         }
     }

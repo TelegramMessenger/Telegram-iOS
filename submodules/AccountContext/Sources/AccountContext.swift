@@ -432,7 +432,7 @@ public protocol SharedAccountContext: class {
     func resolveUrl(account: Account, url: String) -> Signal<ResolvedUrl, NoError>
     func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void)
     func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
-    func openAddPersonContact(context: AccountContext, peerId: PeerId, present: @escaping (ViewController, Any?) -> Void)
+    func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
     
     func navigateToCurrentCall()
@@ -443,9 +443,20 @@ public protocol SharedAccountContext: class {
     func beginNewAuth(testingEnvironment: Bool)
 }
 
+public struct TonContext {
+    public let instance: TonInstance
+    public let keychain: TonKeychain
+    
+    public init(instance: TonInstance, keychain: TonKeychain) {
+        self.instance = instance
+        self.keychain = keychain
+    }
+}
+
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
+    var tonContext: TonContext? { get }
     
     var liveLocationManager: LiveLocationManager? { get }
     var fetchManager: FetchManager { get }

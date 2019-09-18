@@ -253,7 +253,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
             case let .map(mapMedia):
                 params.dismissInput()
                 
-                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, isModal: params.modal, openPeer: { peer in
+                let controller = legacyLocationController(message: params.message, mapMedia: mapMedia, context: params.context, openPeer: { peer in
                     params.openPeer(peer, .info)
                 }, sendLiveLocation: { coordinate, period in
                     let outMessage: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: TelegramMediaMap(latitude: coordinate.latitude, longitude: coordinate.longitude, geoPlace: nil, venue: nil, liveBroadcastingTimeout: period)), replyToMessageId: nil, localGroupingKey: nil)
@@ -261,12 +261,8 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }, stopLiveLocation: {
                     params.context.liveLocationManager?.cancelLiveLocation(peerId: params.message.id.peerId)
                 }, openUrl: params.openUrl)
-                
-                if params.modal {
-                    params.present(controller, nil)
-                } else {
-                    params.navigationController?.pushViewController(controller)
-                }
+                controller.navigationPresentation = .modal
+                params.navigationController?.pushViewController(controller)
                 return true
             case let .stickerPack(reference):
                 let controller = StickerPackPreviewController(context: params.context, stickerPack: reference, parentNavigationController: params.navigationController)
@@ -381,7 +377,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                     return false
                 }
                 let controller = ThemePreviewController(context: params.context, previewTheme: theme, source: .media(.message(message: MessageReference(params.message), media: media)))
-                params.present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                params.navigationController?.pushViewController(controller)
         }
     }
     return false
@@ -459,7 +455,7 @@ func openChatWallpaper(context: AccountContext, message: Message, present: @esca
     }
 }
 
-func openChatTheme(context: AccountContext, message: Message, present: @escaping (ViewController, Any?) -> Void) {
+func openChatTheme(context: AccountContext, message: Message, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void) {
     for media in message.media {
         if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
             let _ = (context.sharedContext.resolveUrl(account: context.account, url: content.url)
@@ -474,7 +470,7 @@ func openChatTheme(context: AccountContext, message: Message, present: @escaping
                 if case let .theme(slug) = resolvedUrl, let file = file {
                     if let path = context.sharedContext.accountManager.mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let theme = makePresentationTheme(data: data) {
                         let controller = ThemePreviewController(context: context, previewTheme: theme, source: .slug(slug, file))
-                        present(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                        pushController(controller)
                     }
                 } else {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }

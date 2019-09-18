@@ -461,7 +461,7 @@ private func stringForRight(strings: PresentationStrings, right: TelegramChatAdm
     } else if right.contains(.canEditMessages) {
         return strings.Channel_EditAdmin_PermissionEditMessages
     } else if right.contains(.canDeleteMessages) {
-        return strings.Channel_EditAdmin_PermissionDeleteMessages
+        return isGroup ? strings.Channel_EditAdmin_PermissionDeleteMessages : strings.Channel_EditAdmin_PermissionDeleteMessagesOfOthers
     } else if right.contains(.canBanUsers) {
         return strings.Channel_EditAdmin_PermissionBanUsers
     } else if right.contains(.canInviteUsers) {
@@ -1105,6 +1105,7 @@ public func channelAdminController(context: AccountContext, peerId: PeerId, admi
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     controller.experimentalSnapScrollToItem = true
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
