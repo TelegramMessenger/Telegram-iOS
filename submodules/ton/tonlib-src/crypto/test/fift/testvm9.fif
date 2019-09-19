@@ -1,0 +1,7 @@
+"Asm.fif" include
+<{ 2 INT 3 INT 9 INT NULL CONS CONS CONS }>s dup csr. runvmcode .s
+drop =: L
+<{ ZERO WHILE:<{ OVER ISNULL NOT }>DO<{ SWAP SECOND SWAP INC }> NIP }>s dup csr. =: ListLength
+L ListLength runvmcode .s 2drop
+<{ CONT:<{ DUP ISNULL IF:<{ 2DROP ZERO }>ELSE: CDR OVER EXECUTE INC }> TUCK JMPX }>s dup csr. =: ListLengthRec
+L ListLengthRec runvmcode .s 2drop

@@ -1,0 +1,30 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <wallet-addr> <elect-utime> <max-factor> <adnl-addr> [<savefile>]" cr
+  ."Creates a request to participate in validator elections starting at <elect-utime> on behalf of smart-contract with address <wallet-addr> (prefix with '@' to load address from file) and hexadecimal adnl address <adnl-addr> (empty string or '0' for none)." cr
+  ."The result is saved into <savefile> and output in hexadecimal form, to be signed later by the validator public key" cr 1 halt
+} : usage
+
+$# dup 3 < swap 5 > or ' usage if
+$1 true parse-load-address drop swap 1+ abort"only masterchain smartcontracts may participate in validator elections"
+constant src_addr
+$2 (number) 1 <> { 0 } if dup 0<= abort"<elect-utime> must be a positive integer"
+constant elect_time
+$3 (number) dup 0= abort"<max-factor> must be a real number 1..100"
+1 = { 16 << } { 16 <</r } cond
+dup 65536 < over 6553600 > or abort"<max-factor> must be a real number 1..100"
+constant max_factor
+def? $4 { @' $4 dup $len 1 > { parse-adnl-address } { drop 0 } cond } ' 0 cond
+constant adnl_addr
+def? $5 { @' $5 } { "validator-to-sign.bin" } cond constant output_fname
+
+."Creating a request to participate in validator elections at time " elect_time .
+."from smart contract " -1 src_addr 2dup 1 .Addr ." = " .addr
+." with maximal stake factor with respect to the minimal stake " max_factor ._
+."/65536 and validator ADNL address " adnl_addr x. cr
+
+B{654c5074} elect_time 32 u>B B+ max_factor 32 u>B B+ src_addr 256 u>B B+ adnl_addr 256 u>B B+
+dup Bx. cr
+dup B>base64url type cr
+output_fname tuck B>file ."Saved to file " type cr

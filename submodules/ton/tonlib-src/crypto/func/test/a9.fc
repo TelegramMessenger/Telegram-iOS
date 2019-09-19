@@ -1,0 +1,23 @@
+int f(int x) {
+  if (2 * x + 1 == 7) {
+    return x + 17;
+  } else {
+    return 239;
+  }
+}
+
+int f2(int x) {
+  return 2 * x + 1 == 6 ? x + 17 : 239;
+}
+
+int g(int x) {
+  return x & 1 ? 3 * x + 1 : x / 2;
+}
+
+_ H(int x, int y) {
+  return (x < y, x <= y, x == y, x >= y, x > y, x != y, x <=> y);
+}
+
+int q() {
+  return 4;
+}

@@ -1,0 +1,66 @@
+"Asm.fif" include
+
+<{ 1 INT 70 INT
+   REPEAT:<{ 10 MULCONST }>
+   1 INT DUP <{ TUCK ADD DUP s3 PUSH GREATER }>UNTIL
+   MULDIVR
+ }>s
+dup csr.
+
+runvmcode .s
+
+<{ 1 INT 70 INT REPEAT:<{ 10 MULCONST }>
+   1 INT DUP <{ TUCK ADD TUCK ADD SWAP DUP s3 PUSH GREATER }>UNTIL
+   MULDIVR
+ }>s
+dup csr.
+
+runvmcode .s
+
+<{ WHILE:<{
+     DUP DEC
+   }>DO<{
+     DUP DUP 1 INT AND IF:<{
+       3 MULCONST INC
+     }>ELSE<{
+       1 RSHIFT#
+     }>
+   }>
+}>s
+dup csr.
+
+<{ WHILE:<{
+     DUP DEC
+   }>DO:
+     DUP DUP 1 INT AND IF:<{
+       3 MULCONST INC
+     }>ELSE:
+       1 RSHIFT#
+}>s
+
+dup csr.
+nip
+
+17 swap runvmcode .s
+
+<{ CONT:<{
+     TUCK DIVR SWAP DUP MUL NEGATE SWAP ZERO ONE
+     <{ SWAP s2 s1 PUSH2 DIVR ADD SWAP 2 ADDCONST
+        2SWAP OVER DIVR 2SWAP s2 PUSH ISZERO }>UNTIL
+     DROP s2 POP DROP
+   }>
+   8 PUSHPOW2 70 INT REPEAT:<{ 10 MULCONST }>
+   DUP 2 LSHIFT# 5 INT s3 PUSH EXECUTE
+   s0 s2 XCHG 239 INT SWAP EXECUTE SUB
+   6 RSHIFTR#
+}>s dup csr.
+
+runvmcode .s
+
+<{ 8 PUSHPOW2 70 INT REPEAT:<{ 10 MULCONST }>
+   ZERO DUP
+   <{ s2 PUSH ADD -ROT INC TUCK DIVR -ROT SWAP s2 PUSH ISZERO }>UNTIL
+   NIP NIP 8 RSHIFTR#
+}>s dup csr.
+
+runvmcode .s

@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:arseny30/tdutils.git
+	branch = master
+	commit = cebe6b0ee08089006ff9ed7d3c4ec38be23b22fa
+	parent = ce4bbf3c37dcc2fdce25ba07d3d8432ce2d77d85
+	cmdver = 0.4.0
+	method = merge

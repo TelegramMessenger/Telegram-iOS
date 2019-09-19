@@ -1,0 +1,323 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/config-code.fc` 
+PROGRAM{
+  DECLPROC set_conf_param
+  DECLPROC check_validator_set
+  DECLPROC send_answer
+  DECLPROC send_confirmation
+  DECLPROC send_error
+  DECLPROC recv_internal
+  DECLPROC change_elector_code
+  DECLPROC recv_external
+  DECLPROC run_ticktock
+  set_conf_param PROC:<{
+    //  index value
+    c4 PUSH	//  index value _3
+    CTOS	//  index value cs
+    LDREF	//  index value cfg_dict cs
+    s3 s3 XCHG2
+    32 PUSHINT	//  cs value index cfg_dict _9=32
+    DICTISETREF	//  cs cfg_dict
+    NEWC	//  cs cfg_dict _11
+    STREF	//  cs _12
+    SWAP	//  _12 cs
+    STSLICER	//  _13
+    ENDC	//  _14
+    c4 POP
+  }>
+  check_validator_set PROC:<{
+    //  vset
+    CTOS	//  cs
+    8 LDU	//  _4 cs
+    SWAP	//  cs _4
+    17 EQINT	//  cs _8
+    9 THROWIFNOT
+    32 LDU	//  utime_since cs
+    32 LDU	//  utime_since utime_until cs
+    16 LDU	//  utime_since utime_until total cs
+    16 LDU	//  utime_since utime_until total _42 _41
+    DROP	//  utime_since utime_until total main
+    DUP	//  utime_since utime_until total main main
+    0 GTINT	//  utime_since utime_until total main _28
+    9 THROWIFNOT
+    GEQ	//  utime_since utime_until _31
+    9 THROWIFNOT
+  }>
+  send_answer PROC:<{
+    //  addr query_id ans_tag mode
+    0 PUSHINT	//  addr query_id ans_tag mode _4=0
+    24 PUSHINT	//  addr query_id ans_tag mode _4=0 _5=24
+    NEWC	//  addr query_id ans_tag mode _4=0 _5=24 _6
+    6 STU	//  addr query_id ans_tag mode _4=0 _8
+    s0 s5 XCHG2	//  _4=0 query_id ans_tag mode _8 addr
+    STSLICER	//  _4=0 query_id ans_tag mode _9
+    s1 s4 XCHG	//  mode query_id ans_tag _4=0 _9
+    111 STU	//  mode query_id ans_tag _23
+    32 STU	//  mode query_id _25
+    64 STU	//  mode _27
+    ENDC	//  mode _28
+    SWAP	//  _28 mode
+    SENDRAWMSG
+  }>
+  send_confirmation PROC:<{
+    //  addr query_id ans_tag
+    64 PUSHINT	//  addr query_id ans_tag _3=64
+    send_answer CALLDICT
+  }>
+  send_error PROC:<{
+    //  addr query_id ans_tag
+    64 PUSHINT	//  addr query_id ans_tag _3=64
+    send_answer CALLDICT
+  }>
+  recv_internal PROC:<{
+    //  in_msg_cell in_msg
+    SWAP	//  in_msg in_msg_cell
+    CTOS	//  in_msg cs
+    4 LDU	//  in_msg flags cs
+    LDMSGADDR	//  in_msg flags _74 _73
+    DROP	//  in_msg flags s_addr
+    DUP	//  in_msg flags s_addr s_addr
+    REWRITESTDADDR	//  in_msg flags s_addr src_wc src_addr
+    SWAP	//  in_msg flags s_addr src_addr src_wc
+    INC	//  in_msg flags s_addr src_addr _15
+    s0 s3 XCHG
+    1 PUSHINT	//  in_msg _15 s_addr src_addr flags _16=1
+    AND	//  in_msg _15 s_addr src_addr _17
+    s1 s3 XCHG	//  in_msg src_addr s_addr _15 _17
+    OR	//  in_msg src_addr s_addr _18
+    s3 PUSH	//  in_msg src_addr s_addr _18 in_msg
+    SEMPTY	//  in_msg src_addr s_addr _18 _19
+    OR	//  in_msg src_addr s_addr _20
+    IFJMP:<{	//  in_msg src_addr s_addr
+      3 BLKDROP	// 
+    }>	//  in_msg src_addr s_addr
+    s0 s2 XCHG	//  s_addr src_addr in_msg
+    32 LDU	//  s_addr src_addr tag in_msg
+    64 LDU	//  s_addr src_addr tag query_id in_msg
+    s2 PUSH
+    1314280276 PUSHINT	//  s_addr src_addr tag query_id in_msg tag _29=1314280276
+    EQUAL	//  s_addr src_addr tag query_id in_msg _30
+    IFJMP:<{	//  s_addr src_addr tag query_id in_msg
+      s2 POP	//  s_addr src_addr in_msg query_id
+      SWAP	//  s_addr src_addr query_id in_msg
+      LDREF	//  s_addr src_addr query_id vset in_msg
+      ENDS
+      1 PUSHINT	//  s_addr src_addr query_id vset _36=1
+      CONFIGOPTPARAM	//  s_addr src_addr query_id vset elector_param
+      DUP	//  s_addr src_addr query_id vset elector_param elector_param
+      ISNULL	//  s_addr src_addr query_id vset elector_param _39
+      IF:<{	//  s_addr src_addr query_id vset elector_param
+        DROP	//  s_addr src_addr query_id vset
+        -1 PUSHINT	//  s_addr src_addr query_id vset _40=-1
+      }>ELSE<{	//  s_addr src_addr query_id vset elector_param
+        CTOS	//  s_addr src_addr query_id vset _42
+        256 PLDU	//  s_addr src_addr query_id vset _40
+      }>	//  s_addr src_addr query_id vset elector_addr
+      s0 s3 XCHG
+      FALSE
+      s0 s4 XCHG	//  s_addr ok query_id vset src_addr elector_addr
+      EQUAL	//  s_addr ok query_id vset _47
+      IF:<{	//  s_addr ok query_id vset
+        s2 POP	//  s_addr vset query_id
+        OVER	//  s_addr vset query_id vset
+        check_validator_set CALLDICT	//  s_addr vset query_id t_since t_until
+        OVER
+        NOW	//  s_addr vset query_id t_since t_until t_since t
+        GREATER	//  s_addr vset query_id t_since t_until _53
+        s0 s2 XCHG	//  s_addr vset query_id _53 t_until t_since
+        GREATER	//  s_addr vset query_id _53 _54
+        AND	//  s_addr vset query_id ok
+      }>ELSE<{
+        s0 s2 XCHG	//  s_addr vset query_id ok
+      }>
+      IFJMP:<{	//  s_addr vset query_id
+        36 PUSHINT	//  s_addr vset query_id _56=36
+        ROT	//  s_addr query_id _56=36 vset
+        set_conf_param CALLDICT
+        4000730955 PUSHINT	//  s_addr query_id _58=4000730955
+        send_confirmation CALLDICT
+      }>	//  s_addr vset query_id
+      NIP	//  s_addr query_id
+      4000730991 PUSHINT	//  s_addr query_id _60=4000730991
+      send_error CALLDICT
+    }>	//  s_addr src_addr tag query_id in_msg
+    s2 s4 XCHG
+    4 BLKDROP	//  tag
+    DUP	//  tag tag
+    0 EQINT	//  tag _64
+    SWAP
+    31 PUSHPOW2	//  _64 tag _67
+    AND	//  _64 _68
+    OR	//  _69
+    37 THROWIFNOT
+  }>
+  change_elector_code PROC:<{
+    //  cs
+    1 PUSHINT	//  cs _2=1
+    CONFIGOPTPARAM	//  cs _3
+    CTOS	//  cs _4
+    256 PLDU	//  cs dest_addr
+    NOW	//  cs dest_addr query_id
+    1313042276 PUSHINT	//  cs dest_addr query_id _9=1313042276
+    0 PUSHINT	//  cs dest_addr query_id _9=1313042276 _10=0
+    50431 PUSHINT	//  cs dest_addr query_id _9=1313042276 _10=0 _11=50431
+    NEWC	//  cs dest_addr query_id _9=1313042276 _10=0 _11=50431 _12
+    17 STU	//  cs dest_addr query_id _9=1313042276 _10=0 _14
+    s1 s4 XCHG	//  cs _10=0 query_id _9=1313042276 dest_addr _14
+    256 STU	//  cs _10=0 query_id _9=1313042276 _16
+    30 PUSHPOW2	//  cs _10=0 query_id _9=1313042276 _16 _19
+    STGRAMS	//  cs _10=0 query_id _9=1313042276 _20
+    s1 s3 XCHG	//  cs _9=1313042276 query_id _10=0 _20
+    107 STU	//  cs _9=1313042276 query_id _34
+    s1 s2 XCHG	//  cs query_id _9=1313042276 _34
+    32 STU	//  cs query_id _36
+    64 STU	//  cs _38
+    SWAP	//  _38 cs
+    STSLICER	//  _39
+    ENDC	//  _40
+    0 PUSHINT	//  _40 _41=0
+    SENDRAWMSG
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    9 PUSHPOW2	//  in_msg _3=512
+    LDSLICEX	//  signature in_msg
+    DUP	//  signature in_msg cs
+    32 LDU	//  signature in_msg action cs
+    32 LDU	//  signature in_msg action msg_seqno cs
+    32 LDU	//  signature in_msg action msg_seqno valid_until cs
+    NOW	//  signature in_msg action msg_seqno valid_until cs _19
+    s1 s2 XCHG	//  signature in_msg action msg_seqno cs valid_until _19
+    LESS	//  signature in_msg action msg_seqno cs _20
+    35 THROWIF
+    c4 PUSH	//  signature in_msg action msg_seqno cs _23
+    CTOS	//  signature in_msg action msg_seqno cs cs2
+    LDREF	//  signature in_msg action msg_seqno cs cfg_dict cs2
+    32 LDU	//  signature in_msg action msg_seqno cs cfg_dict stored_seqno cs2
+    256 LDU	//  signature in_msg action msg_seqno cs cfg_dict stored_seqno public_key cs2
+    ENDS
+    s4 s1 XCPU	//  signature in_msg action public_key cs cfg_dict stored_seqno msg_seqno stored_seqno
+    EQUAL	//  signature in_msg action public_key cs cfg_dict stored_seqno _38
+    33 THROWIFNOT
+    s0 s5 XCHG	//  signature stored_seqno action public_key cs cfg_dict in_msg
+    HASHSU	//  signature stored_seqno action public_key cs cfg_dict _41
+    s0 s6 s3 XC2PU	//  cfg_dict stored_seqno action public_key cs _41 signature public_key
+    CHKSIGNU	//  cfg_dict stored_seqno action public_key cs _42
+    34 THROWIFNOT
+    ACCEPT
+    s2 PUSH
+    1130778657 PUSHINT	//  cfg_dict stored_seqno action public_key cs action _45=1130778657
+    EQUAL	//  cfg_dict stored_seqno action public_key cs _46
+    IF:<{	//  cfg_dict stored_seqno action public_key cs
+      s2 POP	//  cfg_dict stored_seqno cs public_key
+      SWAP	//  cfg_dict stored_seqno public_key cs
+      32 LDU	//  cfg_dict stored_seqno public_key param_index cs
+      LDREF	//  cfg_dict stored_seqno public_key param_index param_value cs
+      ENDS
+      s0 s1 s4 XCHG3
+      32 PUSHINT	//  public_key stored_seqno param_value param_index cfg_dict _56=32
+      DICTISETREF	//  public_key stored_seqno cfg_dict
+    }>ELSE<{	//  cfg_dict stored_seqno action public_key cs
+      s2 PUSH
+      1313042276 PUSHINT	//  cfg_dict stored_seqno action public_key cs action _58=1313042276
+      EQUAL	//  cfg_dict stored_seqno action public_key cs _59
+      IF:<{	//  cfg_dict stored_seqno action public_key cs
+        s2 POP	//  cfg_dict stored_seqno cs public_key
+        SWAP	//  cfg_dict stored_seqno public_key cs
+        LDREF	//  cfg_dict stored_seqno public_key new_code cs
+        ENDS
+        SETCODE
+      }>ELSE<{	//  cfg_dict stored_seqno action public_key cs
+        s2 PUSH
+        1348619041 PUSHINT	//  cfg_dict stored_seqno action public_key cs action _65=1348619041
+        EQUAL	//  cfg_dict stored_seqno action public_key cs _66
+        IF:<{	//  cfg_dict stored_seqno action public_key cs
+          NIP
+          NIP	//  cfg_dict stored_seqno cs
+          256 LDU	//  cfg_dict stored_seqno public_key cs
+          ENDS
+        }>ELSE<{	//  cfg_dict stored_seqno action public_key cs
+          s2 PUSH
+          1313074949 PUSHINT	//  cfg_dict stored_seqno action public_key cs action _71=1313074949
+          EQUAL	//  cfg_dict stored_seqno action public_key cs _72
+          IF:<{	//  cfg_dict stored_seqno action public_key cs
+            s2 POP	//  cfg_dict stored_seqno cs public_key
+            SWAP	//  cfg_dict stored_seqno public_key cs
+            change_elector_code CALLDICT
+          }>ELSE<{	//  cfg_dict stored_seqno action public_key cs
+            DROP	//  cfg_dict stored_seqno action public_key
+            SWAP	//  cfg_dict stored_seqno public_key action
+            32 THROWIF
+          }>
+        }>
+      }>
+      s0 s2 XCHG	//  public_key stored_seqno cfg_dict
+    }>
+    SWAP	//  public_key cfg_dict stored_seqno
+    INC	//  public_key cfg_dict _77
+    NEWC	//  public_key cfg_dict _77 _78
+    s1 s2 XCHG	//  public_key _77 cfg_dict _78
+    STREF	//  public_key _77 _79
+    32 STU	//  public_key _81
+    256 STU	//  _83
+    ENDC	//  _84
+    c4 POP
+  }>
+  run_ticktock PROC:<{
+    //  is_tock
+    DROP	// 
+    c4 PUSH	//  _2
+    CTOS	//  cs
+    LDREF	//  cfg_dict cs
+    32 PUSHINT	//  cfg_dict cs kl=32
+    36 PUSHINT	//  cfg_dict cs kl=32 _10=36
+    s3 s1 PUSH2	//  cfg_dict cs kl=32 _10=36 cfg_dict kl=32
+    DICTIGETOPTREF	//  cfg_dict cs kl=32 next_vset
+    DUP	//  cfg_dict cs kl=32 next_vset next_vset
+    ISNULL	//  cfg_dict cs kl=32 next_vset _12
+    IFNOT:<{	//  cfg_dict cs kl=32 next_vset
+      DUP	//  cfg_dict cs kl=32 next_vset next_vset
+      CTOS	//  cfg_dict cs kl=32 next_vset ds
+      DUP	//  cfg_dict cs kl=32 next_vset ds ds
+      SBITS	//  cfg_dict cs kl=32 next_vset ds _15
+      39 GTINT	//  cfg_dict cs kl=32 next_vset ds _17
+      IF:<{	//  cfg_dict cs kl=32 next_vset ds
+        8 LDU	//  cfg_dict cs kl=32 next_vset tag ds
+        32 PLDU	//  cfg_dict cs kl=32 next_vset tag since
+        SWAP	//  cfg_dict cs kl=32 next_vset since tag
+        17 EQINT	//  cfg_dict cs kl=32 next_vset since _26
+        NOW	//  cfg_dict cs kl=32 next_vset since _26 _27
+        s1 s2 XCHG	//  cfg_dict cs kl=32 next_vset _26 since _27
+        GEQ	//  cfg_dict cs kl=32 next_vset _26 _28
+        AND	//  cfg_dict cs kl=32 next_vset _29
+        IF:<{	//  cfg_dict cs kl=32 next_vset
+          SWAP
+          34 PUSHINT
+          s0 s4 s4 XC2PU	//  kl=32 cs next_vset _32=34 cfg_dict kl=32
+          DICTISETGETOPTREF	//  kl=32 cs cfg_dict cur_vset
+          s3 s1 s0 PUXCPU	//  kl=32 cs cur_vset _35=32 cfg_dict kl=32
+          DICTISETGETOPTREF	//  kl=32 cs _51 _52
+          DROP	//  kl=32 cs cfg_dict
+          36 PUSHINT	//  kl=32 cs cfg_dict _38=36
+          s0 s1 s3 XCHG3	//  cs _38=36 cfg_dict kl=32
+          DICTIDEL	//  cs _53 _54
+          DROP	//  cs cfg_dict
+        }>ELSE<{
+          s2 s3 XCHG
+          2DROP	//  cs cfg_dict
+        }>
+      }>ELSE<{
+        s3 s4 XCHG
+        3 BLKDROP	//  cs cfg_dict
+      }>
+    }>ELSE<{
+      s2 s3 XCHG
+      2DROP	//  cs cfg_dict
+    }>
+    NEWC	//  cs cfg_dict _40
+    STREF	//  cs _41
+    SWAP	//  _41 cs
+    STSLICER	//  _42
+    ENDC	//  _43
+    c4 POP
+  }>
+}END>c

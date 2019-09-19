@@ -1,0 +1,24 @@
+{ bl word 1 2 ' (create) } "::" 1 (create)
+{ bl word 0 2 ' (create) } :: :
+{ bl word 2 2 ' (create) } :: :_
+{ bl word 3 2 ' (create) } :: ::_
+{ bl word 0 (create) } : create
+{ char " word 1 ' type } ::_ ."
+{ char " word 1 { swap { abort } if drop } } ::_ abort"
+{ dup * } : square
+6 square .
+{ swap ({) over 2+ -roll swap (compile) (}) } : does
+{ 1 'nop does create } : constant
+10 constant ten
+ten .
+ten ten * .
+{ 1 ' emit does create } : emits
+42 emits star
+34 emits quote
+30000 emits figna
+star star quote figna quote
+{ 0 word drop 0 'nop } ::_ //
+star quote // end-to-line comment
+{ 1 ' * does create } : mulby
+3 mulby 3*
+4 3* .

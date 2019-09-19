@@ -1,0 +1,43 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <filename-base> <seqno> [<savefile>]" cr
+  ."Creates a request to simple configuration smart contract requesting to change configuration smart contract code to the one currently stored in config-code.fif, "
+  ."with private key loaded from file <filename-base>.pk, "
+  ."and saves it into <savefile>.boc ('config-query.boc' by default)" cr 1 halt
+} : usage
+def? $# { @' $# dup 2 < swap 3 > or ' usage if } if
+
+"config-master" constant file-base
+0 constant seqno
+-1 constant idx
+true constant bounce
+"config-code.fif" constant config-source
+100 constant interval  // valid for 100 seconds
+
+def? $2 {
+  @' $1 =: file-base
+  @' $2 parse-int =: seqno
+} if
+def? $5 { @' $5 } { "config-query" } cond constant savefile
+
+file-base +".addr" load-address
+2dup 2constant config_addr
+."Configuration smart contract address = " 2dup .addr cr 6 .Addr cr
+file-base +".pk" load-keypair nip constant config_pk
+
+."Loading new configuration smart contract code from file file " config-source type cr
+"Asm.fif" include
+config-source include
+dup <s csr. cr
+
+// create a message
+<b x{4e436f64} s, seqno 32 u, now interval + 32 u, swap ref, b>
+dup ."signing message: " <s csr. cr
+dup hash config_pk ed25519_sign_uint
+<b b{1000100} s, config_addr addr, 0 Gram, b{00} s,
+   swap B, swap <s s, b>
+dup ."resulting external message: " <s csr. cr
+2 boc+>B dup Bx. cr
+savefile +".boc" tuck B>file
+."(Saved to file " type .")" cr

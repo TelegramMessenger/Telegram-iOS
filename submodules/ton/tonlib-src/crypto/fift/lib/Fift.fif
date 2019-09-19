@@ -1,0 +1,83 @@
+{ 0 word drop 0 'nop } :: //
+{ char " word 1 { swap { abort } if drop } } ::_ abort"
+{ { bl word dup "" $= abort"comment extends after end of file" "*/" $= } until 0 'nop } :: /*
+// { bl word 1 2 ' (create) } "::" 1 (create)
+// { bl word 0 2 ' (create) } :: :
+// { bl word 2 2 ' (create) } :: :_
+// { bl word 3 2 ' (create) } :: ::_
+// { bl word 0 (create) } : create
+// { bl word (forget) } : forget
+{ bl word 1 ' (forget) } :: [forget]
+{ char " word 1 ' type } ::_ ."
+{ swap ({) over 2+ -roll swap (compile) (}) } : does
+{ 1 'nop does create } : constant
+{ 2 'nop does create } : 2constant
+{ hole constant } : variable
+10 constant ten
+{ bl word 1 { find 0= abort"word not found" } } :: (')
+{ bl word find not abort"-?" 0 swap } :: [compile]
+{ bl word 1 { 
+  dup find { " -?" $+ abort } ifnot nip execute
+} } :: @'
+{ bl word 1 { swap 1 'nop does swap 0 (create) }
+} :: =:
+{ bl word 1 { -rot 2 'nop does swap 0 (create) }
+} :: 2=:
+{ <b swap s, b> } : s>c
+{ s>c hash } : shash
+// to be more efficiently re-implemented in C++ in the future
+{ dup 0< ' negate if } : abs
+{ 2dup > ' swap if } : minmax
+{ minmax drop } : min
+{ minmax nip } : max
+"" constant <#
+' $reverse : #>
+{ swap 10 /mod char 0 + rot swap hold } : #
+{ { # over 0<= } until } : #s
+{ 0< { char - hold } if } : sign
+// { dup abs <# #s rot sign #> nip } : (.)
+// { (.) type } : ._
+// { ._ space } : .
+{ bl (-trailing) } : -trailing
+{ char 0 (-trailing) } : -trailing0
+{ char " word 1 ' $+ } ::_ +"
+{ find 0<> dup ' nip if } : (def?)
+{ bl word 1 ' (def?) } :: def?
+{ bl word 1 { (def?) not } } :: undef?
+{ def? ' skip-to-eof if } : skip-ifdef
+{ bl word dup (def?) { drop skip-to-eof } { 'nop swap 0 (create) } cond } : library
+{ bl word dup (def?) { 2drop skip-to-eof } { swap 1 'nop does swap 0 (create) } cond } : library-version
+{ char ) word "$" swap $+ 1 { find 0= abort"undefined parameter" execute } } ::_ $(
+// b s -- ?
+{ sbitrefs rot brembitrefs rot >= -rot <= and } : s-fits?
+{ 0 swap ! } : 0!
+{ tuck @ + swap ! } : +!
+{ tuck @ swap - swap ! } : -!
+{ 1 swap +! } : 1+!
+{ -1 swap +! } : 1-!
+{ null swap ! } : null!
+0 tuple constant nil
+{ 1 tuple } : single
+{ 2 tuple } : pair
+{ 3 tuple } : triple
+{ 1 untuple } : unsingle
+{ 2 untuple } : unpair
+{ 3 untuple } : untriple
+{ over tuple? { swap count = } { 2drop false } cond } : tuple-len?
+{ 0 tuple-len? } : nil?
+{ 1 tuple-len? } : single?
+{ 2 tuple-len? } : pair?
+{ 3 tuple-len? } : triple?
+{ 0 [] } : first
+{ 1 [] } : second
+{ 2 [] } : third
+' pair : cons
+' unpair : uncons
+{ 0 [] } : car
+{ 1 [] } : cdr
+{ cdr car } : cadr
+{ cdr cdr } : cddr
+{ cdr cdr car } : caddr
+{ null ' cons rot times } : list
+{ true (atom) drop } : atom
+{ bl word atom 1 'nop } ::_ `

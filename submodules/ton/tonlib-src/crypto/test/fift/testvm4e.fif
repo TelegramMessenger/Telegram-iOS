@@ -1,0 +1,61 @@
+"Asm.fif" include
+
+<{ NEWDICT SWAP REPEAT:
+   s2 XCHG0 NEWC 16 STU s2 XCHG0
+   16 INT DICTUSETB }>s
+dup csr. constant mkdict(16,16).code
+
+{ mkdict(16,16).code runvmcode abort"cannot create 16->16 dictionary" } : mkdict(16,16)
+
+<{ ZERO WHILE:<{ SWAP 16 INT DICTUREMMAX }>DO<{ // n d' x i
+     SWAP 16 LDU ENDS  // n d' i s
+     2SWAP SWAP INC
+   }> DROP
+}>s dup csr. constant explode_dict(16,16).code
+
+{ explode_dict(16,16).code runvmcode abort"cannot explode 16->16 dictionary" } : xdict(16,16)
+{ xdict(16,16) ."{ " { swap x. ."-> " x. ."; " } swap times ."}" } : .dict(16,16)
+
+{ 16 { 16 u@+ s> 1+ 16 u, true } dictmap } : dict:1+
+{ 16 { 16 u@+ s> swap 16 u@+ s> + 16 u, true } dictmerge } : dict:+
+
+0x1000 0x1000
+0x1234 0x1234
+0x1357 0x1357
+0xABCD 0xABCD
+0xBFFF 0xBFFF
+5 mkdict(16,16) constant D
+D dup dict>s csr. .dict(16,16) ." <-- D" cr
+
+D <{ 0 INT 0 INT ROT 16 INT SUBDICTUGET }>s dup csr. runvmcode drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,_)" cr
+
+D <{ 0x1 INT 4 INT ROT 16 INT SUBDICTUGET }>s runvmcode drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,0001)" cr 
+
+D <{ 0x10 INT 8 INT ROT 16 INT SUBDICTUGET }>s runvmcode drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,00010000)" cr
+
+D <{ 0x12 INT 8 INT ROT 16 INT SUBDICTUGET }>s runvmcode drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,00010010)" cr
+
+D <{ 0x1357 INT 16 INT ROT OVER SUBDICTUGET }>s runvmcode drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,x1357)" cr
+
+D <{ 0 INT 2 INT ROT 16 INT SUBDICTUGET }>s runvmcode .s drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,00)" cr
+
+D <{ 1 INT 2 INT ROT 16 INT SUBDICTUGET }>s runvmcode .s drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,01)" cr
+
+D <{ 0 INT 1 INT ROT 16 INT SUBDICTUGET }>s runvmcode .s drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,0)" cr
+
+D <{ 1 INT 1 INT ROT 16 INT SUBDICTUGET }>s runvmcode .s drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,1)" cr
+
+D <{ 0xA INT 4 INT ROT 16 INT SUBDICTUGET }>s runvmcode .s drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,1010)" cr
+
+D <{ 0xB INT 4 INT ROT 16 INT SUBDICTUGET }>s runvmcode .s drop
+dup dict>s csr. .dict(16,16) ." <-- SubDict(D,1011)" cr

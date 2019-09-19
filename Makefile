@@ -249,11 +249,21 @@ build_verbose: check_env
 	//submodules/TelegramUI:TelegramUI#shared,iphoneos-arm64 \
 	//:WatchAppExtension#dwarf-and-dsym,watchos-arm64_32,watchos-armv7k \
 	//:ShareExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
-    //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
-    --verbose 8 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+	//:WidgetExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//:NotificationContentExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//:NotificationServiceExtension#dwarf-and-dsym,iphoneos-arm64 \
+	//:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
+	--verbose 8 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
+build_openssl: check_env
+	$(BUCK) build \
+	//submodules/openssl:openssl#iphoneos-arm64 \
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
+build_ton: check_env
+	$(BUCK) build \
+	//submodules/ton:ton#iphoneos-arm64 \
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
 kill_xcode:
 	killall Xcode || true

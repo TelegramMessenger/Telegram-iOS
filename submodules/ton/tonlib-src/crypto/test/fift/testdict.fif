@@ -1,0 +1,24 @@
+"Lisp.fif" include
+16 constant key-bits
+16 constant val-bits
+{ val-bits u, } : val,
+{ val-bits u@ } : val@
+{ swap unpair <b swap val, b> <s swap rot key-bits udict! not abort"cannot add key-value" } : +dictpair
+{ dictnew { over null? not } { swap uncons swap rot +dictpair } while nip } : mkdict
+{ dup null? { ."(null) " drop } { val@ . } cond } : .val
+{ key-bits { swap . ."-> " .val ."; " true } dictforeach drop cr } : show-dict
+{ key-bits { rot . ."-> " swap .val .val ."; " true } dictdiff drop cr } : show-dict-diff
+{ key-bits { val@ swap val@ + val, true } dictmerge } : dict-sum
+{ null swap key-bits { val@ pair swap cons true } dictforeach drop  } : dict>list-rev
+{ dict>list-rev list-reverse } : dict>list
+( _( 13 169 ) _( 17 289 ) _( 10 100 ) ) mkdict =: Dict
+_( 4 16 ) _( 9 81 ) Dict +dictpair +dictpair =: Dict1
+_( 4 20 ) _( 101 10201 ) Dict +dictpair +dictpair =: Dict2
+."Dict1 = " Dict1 show-dict 
+Dict1 dict>list .l cr
+Dict1 <s csr. cr
+."Dict2 = " Dict2 show-dict 
+Dict2 dict>list .l cr
+Dict2 <s csr. cr
+Dict1 Dict2 show-dict-diff
+Dict2 Dict1 show-dict-diff

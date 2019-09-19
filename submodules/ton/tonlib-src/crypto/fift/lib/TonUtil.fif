@@ -1,0 +1,125 @@
+library TonUtil // TON Blockchain Fift Library
+"Lists.fif" include
+
+-1 constant Masterchain
+0 constant Basechain
+
+// parse workchain id
+// ( S -- workchain )
+{ (number) 1- abort"workchain id must be an integer"
+  dup 32 fits not abort"workchain id must fit in 32 bits"
+} : parse-workchain-id
+
+{ (number) 1- abort"integer expected" } : parse-int
+
+// Private key load/generate
+// ( fname -- pubkey privkey )
+{ dup ."Loading private key from file " type cr 
+  file>B dup Blen 32 <> abort"Private key must be exactly 32 bytes long"
+  dup priv>pub swap 
+} : load-keypair
+// ( fname -- pubkey privkey )
+{ dup file-exists?
+  { load-keypair }
+  { dup newkeypair swap rot over swap B>file
+    rot ."Saved new private key to file " type cr 
+  } cond
+} : load-generate-keypair
+
+// Parse smart-contract address
+// ( S -- workchain addr bounce? )
+{ $>smca not abort"invalid smart-contract address"
+  1 and 0= 
+} : parse-smc-addr
+
+// ( wc addr -- )  Show address in <workchain>:<account> form
+{ swap ._ .":" x. } : .addr
+// ( wc addr flags -- )  Show address in base64url form
+{ smca>$ type } : .Addr
+// ( wc addr fname -- )  Save address to file in 36-byte format
+{ -rot 256 u>B swap 32 i>B B+ swap B>file } : save-address
+// ( wc addr fname -- )  Save address and print message
+{ dup ."(Saving address to file " type .")" cr save-address
+} : save-address-verbose
+
+// ( fname -- wc addr )  Load address from file
+{ file>B 32 B| 
+  dup Blen { 32 B>i@ } { drop Basechain } cond
+  swap 256 B>u@
+} : load-address
+// ( fname -- wc addr )  Load address from file and print message
+{ dup ."(Loading address from file " type .")" cr load-address
+} : load-address-verbose
+// Parse string as address or load address from file (if string is prefixed by @)
+// ( S default-bounce -- workchain addr bounce? )
+{ over $len 0= abort"empty smart-contract address"
+  swap dup 1 $| swap "@" $=
+  { nip load-address rot } { drop nip parse-smc-addr } cond
+} : parse-load-address
+
+// ( hex-str -- addr )  Parses ADNL address
+{ dup $len 64 <> abort"ADNL address must consist of exactly 64 hexadecimal characters"
+  (hex-number) 1 <> abort"ADNL address must consist of 64 hexadecimal characters"
+  dup 256 ufits not abort"invalid ADNL address"
+} : parse-adnl-address
+
+// ( b wc addr -- b' )  Serializes address into Builder b
+{ -rot 8 i, swap 256 u, } : addr, 
+
+// Gram utilities
+1000000000 constant Gram
+{ Gram swap */r } : Gram*/
+{ Gram * } : Gram*
+// ( S -- nanograms )
+{ (number) ?dup 0= abort"not a valid Gram amount"
+1- ' Gram*/ ' Gram* cond
+} : $>GR
+{ bl word $>GR 1 'nop } ::_ GR$
+// ( nanograms -- S )
+{ dup abs <# ' # 9 times char . hold #s rot sign #>
+nip -trailing0 } : (.GR)
+{ (.GR) ."GR$" type space } : .GR
+
+// b x -- b'  ( serializes a Gram amount )
+{ -1 { 1+ 2dup 8 * ufits } until
+  rot over 4 u, -rot 8 * u, } : Gram,
+// s -- x s'  ( deserializes a Gram amount )
+{ 4 u@+ swap 8 * u@+ } : Gram@+
+// s -- x
+{ 4 u@+ swap 8 * u@ } : Gram@
+
+// currency collections
+// b x --> b'  ( serializes a VarUInteger32 )
+{ -1 { 1+ 2dup 8 * ufits } until
+  rot over 5 u, -rot 8 * u, } : VarUInt32,
+// s --> x  ( deserializes a VarUInteger32 )
+{ 5 u@+ swap 8 * u@ } : VarUInt32@
+32 constant cc-key-bits
+' VarUInt32, : val,
+' VarUInt32@ : val@
+// d k v -- d'
+{ <b swap val, b> <s swap rot cc-key-bits idict! not abort"cannot add key-value to CurrencyCollection" } : +ccpair
+dictnew constant cc0   // zero currency collection
+// ( v k -- d )  Creates currency collection representing v units of currency k
+{ cc0 swap rot +ccpair } : of-cc
+{ dictnew { over null? not } { swap uncons -rot unpair +ccpair } while nip } : list>cc
+{ dup null? { ."(null) " drop } { val@ . } cond } dup : .maybeVarUInt32 : .val
+{ cc-key-bits { swap 32 1<< rmod . ."-> " .val ."; " true } dictforeach drop cr } : .cc
+{ cc-key-bits { rot . ."-> " swap .val .val ."; " true } dictdiff drop cr } : show-cc-diff
+{ cc-key-bits { val@ swap val@ + val, true } dictmerge } : cc+
+{ null swap cc-key-bits { val@ pair swap cons true } dictforeach drop } : cc>list-rev
+{ cc>list-rev list-reverse } : cc>list
+forget val,  forget val@  forget .val
+
+// Libraries
+// ( -- D )  New empty library collection
+' dictnew : Libs{
+// ( D -- D )  Return library collection as dictionary
+'nop : }Libs
+// ( D c x -- D' )  Add a public/private library c to collection D
+{ <b swap 1 u, over ref, b> <s swap hash rot 256 udict!+
+  0= abort"duplicate library in collection" } : lib+
+// ( D c -- D' )  Add private library c to collection D
+{ 0 lib+ } : private_lib
+// ( D c -- D' )  Add public library c to collection D
+{ 1 lib+ } : public_lib

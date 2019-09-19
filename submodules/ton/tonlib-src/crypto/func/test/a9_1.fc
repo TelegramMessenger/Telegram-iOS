@@ -1,0 +1,28 @@
+_ F(int x) {
+  x = 2;
+  return x + 1;
+}
+
+_ G(x) {
+  var y = x + 1;
+  x = 2;
+  return (x - 1, y);
+}
+
+_ H(x) {
+  var y = x + 1;
+  x = 2;
+  return (x * y, y);
+}
+
+_ I(x) {
+  int y = 17;
+  int z = x - y;
+  return (z, y);
+}
+
+_ J(x) {
+  int y = 239;
+  int z = x - y;
+  return (z, y);
+}

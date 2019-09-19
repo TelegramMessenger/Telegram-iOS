@@ -1,71 +1,4 @@
-load("//Config:buck_rule_macros.bzl", "static_library", "framework", "glob_map", "glob_sub_map", "merge_maps")
-
-genrule(
-    name = "openssl_libs",
-    srcs = [
-        "openssl/iOS/libcrypto.a",
-    ],
-    bash = "mkdir -p $OUT; cp $SRCS $OUT/",
-    out = "openssl_libs",
-    visibility = ["PUBLIC"]
-)
-
-apple_library(
-    name = "openssl",
-    visibility = [
-        "//submodules/MtProtoKit:MtProtoKit"
-    ],
-    header_namespace = "openssl",
-    exported_headers = glob([
-        "openssl/**/*.h",
-    ]),
-    exported_linker_flags = [
-        "-lcrypto",
-        "-L$(location :openssl_libs)",
-    ],
-)
-
-ton_lib_names = [
-    "adnllite",
-    "crc32c",
-    "keys",
-    "lite-client-common",
-    "tdactor",
-    "tddb",
-    "tdnet",
-    "tdutils",
-    "tl-lite-utils",
-    "tl-utils",
-    "tl_api",
-    "tl_lite_api",
-    "tl_tonlib_api",
-    "ton_block",
-    "ton_crypto",
-    "tonlib",
-]
-
-ton_lib_flags = ["-l" + name for name in ton_lib_names]
-
-genrule(
-    name = "ton_libs",
-    srcs = glob([
-        "TON/iOS/lib/*.a",
-    ]),
-    bash = "mkdir -p $OUT; cp $SRCS $OUT/",
-    out = "ton_libs",
-    visibility = ["PUBLIC"]
-)
-
-apple_library(
-    name = "ton",
-    visibility = [
-        "//submodules/MtProtoKit:MtProtoKit"
-    ],
-    exported_headers = [],
-    exported_linker_flags = [
-        "-L$(location :ton_libs)",
-    ] + ton_lib_flags,
-)
+load("//Config:buck_rule_macros.bzl", "static_library", "framework", "glob_map", "merge_maps")
 
 framework(
     name = "MtProtoKit",
@@ -84,9 +17,6 @@ framework(
             "thirdparty/AFNetworking/*.h",
             "thirdparty/AsyncSocket/*.h",
             "TON/*.h",
-        ])),
-        glob_sub_map("TON/iOS/include/", glob([
-            "TON/iOS/include/**/*.h",
         ])),
     ]),
     exported_headers = [
@@ -153,8 +83,8 @@ framework(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        ":openssl",
-        ":ton",
+        "//submodules/openssl:openssl",
+        "//submodules/ton:ton",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

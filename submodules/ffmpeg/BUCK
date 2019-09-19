@@ -106,7 +106,7 @@ ffmpeg_header_paths = [
     "libswresample/swresample.h",
 ]
 
-library_archs = "arm64 armv7 x86_64"# if native.read_config("custom", "mode") == "project" else "arm64 armv7"
+library_archs = "arm64 armv7 x86_64"
 
 genrule(
     name = "libffmpeg_build",

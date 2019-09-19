@@ -1,0 +1,436 @@
+library Lisp  // tiny Lisp (or rather Scheme) interpreter
+"Lists.fif" include
+variable lisp-dict
+{ hole dup 1 { @ execute } does create } : recursive
+{ atom>$ +" undefined" abort } : report-not-found
+// a l -- d -1 or a 0  Look up definition d of atom a in dictionary l
+{ { dup null? { drop false true }
+    { uncons -rot unpair -rot over eq?
+      { drop nip true true } { nip swap false } cond
+    } cond
+  } until
+} : lookup-in
+// a dict -- def
+{ lookup-in ' report-not-found ifnot } : lookup-or-fail
+{ lisp-dict @ lookup-or-fail } : lisp-dict-lookup
+// a d --  Defines a with definition d in dictionary lisp-dict
+{ pair lisp-dict @ cons lisp-dict ! } : lisp-dict-int-define
+{ box lisp-dict-int-define } : lisp-dict-define
+// a d -- Defines new a with defininition d
+{ over lisp-dict @ lookup-in { 2drop atom>$ +" already defined" abort }
+  { drop lisp-dict-int-define } cond
+} : lisp-dict-int-define-new
+{ box lisp-dict-int-define-new } : lisp-dict-define-new
+// a e -- Defines a with executable definition given by e
+{ single lisp-dict-define-new } : lisp-dict-define-exec
+// expr ctx def -- val
+{ dup first execute } : run-definition
+// expr ctx -- val
+recursive lisp-ctx-eval {
+  over tuple?
+  { over first over lisp-ctx-eval run-definition }
+  { over atom? { lookup-or-fail @ } { drop } cond }
+  cond
+} swap !
+// exp -- value
+{ lisp-dict @ lisp-ctx-eval } : lisp-eval
+// (exprs) ctx -- (vals)
+recursive lisp-ctx-eval-list
+{ over null? { drop } {
+  swap uncons -rot over lisp-ctx-eval -rot lisp-ctx-eval-list cons
+  } cond 
+} swap !
+// (exprs) ctx -- val
+{ null rot {
+  dup null? { drop nip true } {
+  nip uncons swap 2 pick lisp-ctx-eval swap false
+  } cond } until
+} : lisp-ctx-eval-list-last
+// l c -- (args)
+{ swap uncons nip swap lisp-ctx-eval-list } : extract-eval-arg-list
+{ drop uncons nip } : extract-arg-list
+// (x1 .. xn) e n -- x1 .. xn e
+{ { swap uncons rot } swap times
+  swap null? not abort"invalid number of arguments"
+} : unpack-list
+// l c n e -- v
+{ swap 2swap extract-eval-arg-list  // e n (args)
+  -rot unpack-list execute
+} : eval-exec-fixed
+// l c n e -- v
+{ 2 pick pair
+  swap 2swap extract-arg-list  // [e c] n (args)
+  -rot unpack-list unpair swap execute
+} : exec-fixed
+// l c e -- v
+{ -rot extract-eval-arg-list  // e (args)
+  swap execute
+} : eval-exec-list
+{ -rot tuck extract-arg-list  // e c (args)
+  swap rot execute
+} : exec-list
+// e a n --
+{ rot 2 {  // expr ctx def n e
+    rot drop eval-exec-fixed } does
+  lisp-dict-define-exec
+} : lisp-fixed-primitive
+{ rot 2 { rot drop exec-fixed } does lisp-dict-define-exec
+} : lisp-fixed-lazy-primitive
+// e a --
+{ swap 1 { nip eval-exec-list } does lisp-dict-define-exec
+} : lisp-primitive
+{ swap 1 { nip exec-list } does lisp-dict-define-exec
+} : lisp-lazy-primitive
+
+// Uncomment next line for Fift booleans
+// false constant #f  true constant #t  null constant no-answer
+// Uncomment next line for Scheme booleans
+`#f constant #f  `#t constant #t  #f constant no-answer
+{ #f eq? } : lisp-false?
+{ lisp-false? 0= } : lisp-true?
+{ ' #t ' #f cond } : lisp-bool
+
+// temp for defining a lot of primitives
+{ bl word atom lisp-primitive } : L:
+{ bl word atom swap lisp-dict-define } : L=:
+{ bl word atom swap lisp-fixed-primitive } : #L:
+{ 0 #L: } : 0L:
+{ 1 #L: } : 1L:
+{ 2 #L: } : 2L:
+
+// basic primitives
+{ sum-list } L: +
+{ - } 2L: -
+{ dup null? { drop 1 } { ' * foldl-ne } cond } L: *
+{ / } 2L: /
+{ mod } 2L: modulo
+{ abs } 1L: abs
+{ ' min foldl-ne } L: min
+{ ' max foldl-ne } L: max
+{ true ' and foldl } L: integer-and
+{ false ' or foldl } L: integer-or
+{ 0 ' xor foldl } L: integer-xor
+{ not } 1L: integer-not
+{ = lisp-bool } 2L: =
+{ <> lisp-bool } 2L: <>
+{ < lisp-bool } 2L: <
+{ <= lisp-bool } 2L: <=
+{ > lisp-bool } 2L: >
+{ >= lisp-bool } 2L: >=
+{ eq? lisp-bool } 2L: eq?
+{ eqv? lisp-bool } 2L: eqv?
+{ equal? lisp-bool } 2L: equal?
+{ cons } 2L: cons
+{ car } 1L: car
+{ cdr } 1L: cdr
+{ cadr } 1L: cadr
+{ cddr } 1L: cddr
+{ caddr } 1L: caddr
+{ cdr cddr } 1L: cdddr
+{ concat-list-lists } L: append
+{ list-reverse } 1L: reverse
+{ list-tail } 2L: list-tail
+{ list-ref } 2L: list-ref
+{ list-member-eq } 2L: memq
+{ list-member-eqv } 2L: memv
+{ list-member-equal } 2L: member
+{ assq ' #f ifnot } 2L: assq
+{ assv ' #f ifnot } 2L: assv
+{ assoc ' #f ifnot } 2L: assoc
+{ list? lisp-bool } 1L: list?
+{ pair? lisp-bool } 1L: pair?
+{ tuple? lisp-bool } 1L: tuple?
+{ string? lisp-bool } 1L: string?
+{ integer? lisp-bool } 1L: integer?
+{ integer? lisp-bool } 1L: number?
+{ count } 1L: width
+{ list-length } 1L: length
+{ [] } 2L: tuple-ref
+{ first } 1L: first
+{ second } 1L: second
+{ third } 1L: third
+{ 3 [] } 1L: fourth
+{ list>tuple } 1L: list->tuple
+{ explode list } 1L: tuple->list
+null L=: null
+{ atom? lisp-bool } 1L: symbol?
+{ atom } 1L: string->symbol
+{ atom>$ } 1L: symbol->string
+{ dup #f eq? swap #t eq? or lisp-bool } 1L: boolean?
+#t L=: else
+#f L=: #f
+#t L=: #t
+{ null? lisp-bool } 1L: null?
+{ 0= lisp-bool } 1L: zero?
+{ 0> lisp-bool } 1L: positive?
+{ 0< lisp-bool } 1L: negative?
+{ 1 and 0= lisp-bool } 1L: even?
+{ 1 and 0<> lisp-bool } 1L: odd?
+{ bye } 0L: exit
+{ .l null } 1L: write
+{ lisp-eval } 1L: eval
+{ drop } `quote 1 lisp-fixed-lazy-primitive
+'nop L: list
+{ list>tuple } L: tuple
+{ list-last } L: begin
+{ $len } 1L: string-length
+{ concat-string-list } L: string-append
+{ $= lisp-bool } 2L: string=?
+{ $cmp 0< lisp-bool } 2L: string<?
+{ $cmp 0<= lisp-bool } 2L: string<=?
+{ $cmp 0> lisp-bool } 2L: string>?
+{ $cmp 0>= lisp-bool } 2L: string>=?
+{ (number) dup 1 = { drop } { ' 2drop if no-answer } cond
+} 1L: string->number
+{ (.) } 1L: number->string
+{ box? lisp-bool } 1L: box?
+{ box } 1L: box
+{ hole } 0L: new-box
+{ @ } 1L: unbox
+{ tuck swap ! } 2L: set-box!
+{ abort } 1L: error
+{ dup find { nip execute } { +" -?" abort } cond } : find-execute
+{ explode-list 1- roll find-execute } L: fift-exec
+{ explode-list dup 1- swap roll find-execute } L: fift-exec-cnt
+{ uncons swap find-execute } L: fift-exec-list
+// end of basic primitives
+forget L:  forget #L:  forget L=:
+forget 0L:  forget 1L:  forget 2L:
+
+{ { dup tuple? ' do-quote if } list-map } : map-quote
+{ uncons ' cons foldr-ne map-quote
+  null swap cons lisp-dict @ rot run-definition
+} `apply lisp-primitive  // bad: should have preserved original context
+// e1 e2 e3 ctx
+{ 3 exch 3 pick lisp-ctx-eval lisp-true? ' swap if nip swap lisp-ctx-eval }
+`if 3 lisp-fixed-lazy-primitive
+// (e) ctx
+{ #t -rot 
+  { over null? { 2drop true } {
+    swap uncons swap 2 pick lisp-ctx-eval dup lisp-true? // v' c t v ?
+    { swap 2swap nip false } { -rot 2drop nip true } cond
+  } cond } until
+} `and lisp-lazy-primitive
+{ #f -rot
+  { over null? { 2drop true } {
+    swap uncons swap 2 pick lisp-ctx-eval dup lisp-false? // v' c t v ?
+    { swap 2swap nip false } { -rot 2drop nip true } cond
+  } cond } until
+} `or lisp-lazy-primitive
+{ lisp-false? lisp-bool } `not 1 lisp-fixed-primitive
+// cond-clause ctx -- v -1 or 0
+{ swap uncons -rot dup `else eq? {
+  drop lisp-ctx-eval-list-last true } {
+  over lisp-ctx-eval lisp-true? {
+  lisp-ctx-eval-list-last true } {
+  2drop false
+  } cond } cond
+} : eval-cond-clause
+// (clauses) ctx -- v
+{ { over null? { no-answer true } {
+    swap uncons -rot over eval-cond-clause } cond 
+  } until -rot 2drop
+} `cond lisp-lazy-primitive
+{ lisp-dict @ lookup-in { hole tuck lisp-dict-int-define } ifnot
+} : lisp-create-global-var
+// a e ctx  -- old (simple) define
+{ drop over atom? not abort"only a variable can be define'd"
+  over lisp-create-global-var swap lisp-eval swap ! 
+} drop // `define 2 lisp-fixed-lazy-primitive
+{ tuck lisp-ctx-eval rot dup atom? not abort"only a variable can be set"
+  rot lookup-or-fail dup @ -rot !
+} `set! 2 lisp-fixed-lazy-primitive
+// define lambda
+{ { dup null? { drop true true }
+    { uncons swap atom? { false } { drop false true } cond } cond
+  } until
+} : var-list?
+{ { dup null? over atom? or { drop true true }
+    { uncons swap atom? { false } { drop false true } cond } cond
+  } until
+} : lambda-var-list?
+// (quote x) -- x -1 ; else 0
+{ dup pair? { uncons swap `quote eq? { car true } { drop false } cond }
+  { drop false } cond
+} : is-quote?
+recursive match-arg-list-acc
+// l (vars) (args) -- ((var . arg) ...)+l -1 or ? 0
+{ over atom? { over `_ eq? { 2drop } { pair swap cons } cond true } { 
+  over null? { nip null? } { // (vars) (args)
+  over tuple? not { 2drop false } {
+  over is-quote? { eq? nip } { // (v) (a)
+  dup tuple? not { 2drop false } {
+  over count over count over <> { drop 2drop false } { // l [v] [a] n
+  3 roll 0 rot { // [v] [a] l i
+    dup 0< {
+      3 pick over [] swap  // [v] [a] l vi i
+      3 pick over [] 2swap rot // [v] [a] i l vi ai
+      match-arg-list-acc { // [v] [a] i l'
+        swap 1+ } { nip -1 } cond
+    } ifnot
+  } swap times
+  2swap 2drop 0>=
+  } cond } cond } cond } cond } cond } cond
+} swap !
+{ null -rot match-arg-list-acc } : match-arg-list
+// ((var . arg)...) ctx -- ctx'
+{ { over null? not }
+  { swap uncons swap unpair box pair rot cons } while
+  nip
+} : extend-ctx-by-list
+// ((vars) body) ctx
+{ swap uncons -rot 
+  dup lambda-var-list? not abort"invalid formal parameter list"
+  { // l-expr ctx' [_ body ctx (vars)]
+    -rot 2 pick 3 [] swap rot  // [_ body ...] (vars) ctx' l-expr
+    uncons nip swap lisp-ctx-eval-list  // [_ body ...] (vars) (arg-vals)
+    match-arg-list not abort"invalid arguments to lambda" // [_ body ...] ((var arg)...)
+    over third extend-ctx-by-list // [_ body ctx (vars)] ctx''
+    swap second swap lisp-ctx-eval-list-last
+  } 3 -roll 4 tuple
+} : make-lambda
+{ make-lambda } `lambda lisp-lazy-primitive
+// (a e) ctx -- more sophisticated (define a e)
+{ drop uncons swap dup atom? { // (e) a 
+    tuck lisp-create-global-var
+    swap lisp-dict @ lisp-ctx-eval-list-last swap !
+  } { // (e) (a v..)
+    uncons over atom? not abort"only variables can be define'd"  // (e) a (v..)
+    rot cons over lisp-create-global-var   // a ((v..) (e)) h
+    swap lisp-dict @ make-lambda swap !
+  } cond
+} `define lisp-lazy-primitive
+// ((x e) ..) ctx -- ((x.v) ..)
+recursive eval-assign-list
+{ over null? { drop } {
+  swap uncons swap uncons // ctx t x (e)
+  over atom? not abort"invalid variable name in assignment list"
+  3 pick lisp-ctx-eval-list-last  // ctx t x v
+  pair swap rot eval-assign-list cons
+  } cond
+} swap !
+// (((x v) ..) body) ctx  -- let construct
+{ swap uncons swap 2 pick eval-assign-list  // ctx body ((x v)...)
+  rot extend-ctx-by-list lisp-ctx-eval-list-last
+} `let lisp-lazy-primitive
+// ((x e) ..) ctx -- ctx'
+{ swap {
+  dup null? { drop true } {
+  uncons swap uncons  // ctx t x (e)
+  over atom? not abort"invalid variable name in assignment list"
+  3 pick lisp-ctx-eval-list-last  // ctx t x v
+  box pair rot cons swap false
+  } cond } until
+} : compute-let*-ctx
+// (((x v) ..) body) ctx  -- let* construct
+{ swap uncons swap rot compute-let*-ctx lisp-ctx-eval-list-last
+} `let* lisp-lazy-primitive
+// ((x e) ..) ctx -- ((h e) ..) ctx' , with x bound to h in ctx'
+recursive prepare-letrec-ctx {
+  over null? {
+  swap uncons swap uncons swap // ctx t (e) x
+  hole tuck pair swap rot cons // ctx t (x.h) (h e)
+  3 -roll rot cons prepare-letrec-ctx // (h e) t ctx'
+  -rot cons swap
+  } ifnot
+} swap !
+// (((x v) ..) body) ctx  -- letrec construct
+{ swap uncons swap rot prepare-letrec-ctx swap { // body ctx' ((h e)..)
+    dup null? { drop true } {
+    uncons -rot uncons 2 pick lisp-ctx-eval-list-last // body t ctx' h v
+    swap ! swap false
+  } cond } until
+  lisp-ctx-eval-list-last
+} `letrec lisp-lazy-primitive
+// (e (p e)...) ctx -- match construct
+{ swap uncons swap 2 pick lisp-ctx-eval swap { // ctx v ((p e)..)
+  dup null? { drop 2drop no-answer true } {
+  uncons swap uncons swap 3 pick // ctx v t e p v
+  match-arg-list { // ctx v t e ((x' . v')...)
+  2swap 2drop rot extend-ctx-by-list lisp-ctx-eval-list-last true } {
+  2drop false
+  } cond } cond } until
+} `match lisp-lazy-primitive
+//
+lisp-dict @ constant original-lisp-dict
+{ original-lisp-dict lisp-dict ! } : reset-lisp
+{ ' drop { lisp-eval .l cr } List-generic( } :_ LISP-EVAL-PRINT(
+// LISP-EVAL-PRINT((+ 3 4) (* 5 6)) computes and prints 12 and 30
+{ hole dup 1 { @ nip } does swap 
+  1 { swap lisp-eval swap ! } does 
+  List-generic(
+} :_ LISP-EVAL(
+// LISP-EVAL((+ 3 4) (* 5 6)) computes 12 and 30, returns only 30
+// /*
+LISP-EVAL-PRINT(
+  (define succ (lambda (x) (+ x 1)))
+  (define (twice f) (lambda (x) (f (f x))))
+  (define (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))
+  (fact ((twice succ) 5))
+  (define compare (lambda (x y) (cond ((< x y) 'less) ((= x y) 'equal) (else 'greater))))
+  (compare 2 3)
+  (compare 7 (+ 2 3))
+  (define next (let ((cnt 0)) (lambda () (set! cnt (+ cnt 1)) cnt)))
+  (list (next) (next))
+  (define new-counter (lambda () (let ((x 0)) (lambda () (set! x (+ x 1)) x))))
+  (define c1 (new-counter))
+  (define c2 (new-counter))
+  (list (c1) (c1) (c2) (c1) (c2) (c1) (c1) (c2) (c2))
+  (let* ((x (+ 2 3)) (y (* x x)) (z (+ x y))) (list x y z))
+  (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
+           (odd?  (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+          (even? 88))
+  (define (len l) (if (null? l) 0 (+ 1 (len (cdr l)))))
+  (len '(2 3 9))
+  (define (len2 l) (match l (() 0) ((x . t) (+ 1 (len2 t)))))
+  (len2 '(2 3 9))
+  (define (foo x) (match x
+     (('zero) 0)
+     (('succ x) (+ (foo x) 1))
+     (('plus x y) (+ (foo x) (foo y)))
+     (('minus x y) (- (foo x) (foo y)))
+     (x x)))
+  (foo '(plus (succ (zero)) (minus (succ (succ 5)) 3)))
+  (define (bar x) (match x
+     (['zero] 0)
+     (['succ x] (+ (bar x) 1))
+     (['plus x y] (+ (bar x) (bar y)))
+     (['minus x y] (- (bar x) (bar y)))
+     (['const x] x)))
+  (bar '[plus [succ [zero]] [minus [succ [succ [const 5]]] [const 3]]])
+  (define (map f l) (letrec
+    ((map-f (lambda (l) (match l
+      (() ())
+      ((h . t) (cons (f h) (map-f t)))))))
+    (map-f l)))
+  (map (lambda (x) (* x (+ 2 x))) '(2 3 9))
+  (define (make-promise proc) (let ((result-ready? #f) (result #f))
+    (lambda ()
+      (if result-ready? result
+        (let ((x (proc)))
+	  (if result-ready? result
+	    (begin (set! result x) (set! result-ready? #t) result)))))))
+  (define (force promise) (promise))
+)
+// */
+// words for invoking Lisp definitions from Fift
+// (args) def -- val
+{ null rot map-quote cons lisp-dict @ rot run-definition
+} : invoke-lisp-definition
+{ atom lisp-dict-lookup 1 { @ invoke-lisp-definition }
+} : (invoke-lisp)
+{ bl word (invoke-lisp) } :: invoke-lisp
+// ( 2 3 ) invoke-lisp compare .l
+{ atom lisp-dict-lookup 2 { @ mklist-1 invoke-lisp-definition }
+} : (invoke-lisp-fixed)
+{ bl word (invoke-lisp-fixed) } :: invoke-lisp-fixed
+// 9 8  2 invoke-lisp-fixed compare .l
+{ bl word (invoke-lisp) does } : make-lisp-invoker
+{ bl word (invoke-lisp-fixed) does } : make-lisp-fixed-invoker
+// 2 make-lisp-fixed-invoker compare : compare
+// 3 9 compare
+// import Lisp definitions as Fift words
+{ bl word dup (invoke-lisp) does swap 0 (create) } : import-lisp
+{ bl word tuck (invoke-lisp-fixed) does swap 0 (create) } : import-lisp-fixed
+// 1 import-lisp-fixed fact
+// 7 fact .

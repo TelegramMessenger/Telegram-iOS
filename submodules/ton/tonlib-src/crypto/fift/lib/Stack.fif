@@ -1,0 +1,266 @@
+library Stack  // advanced stack manupulation library
+"Lists.fif" include
+// S(a b c - a c 2 a b) would compile to code performing the requested stack manipulation
+
+// interface to low-level stack manipulation primitives
+{ (number) 1- abort"index expected" dup 0 < over 255 > or
+  abort"index 0..255 expected"
+} : (idx)
+// push(n) : a0 .. an - a0 .. an a0  equivalent to "n pick"
+// push(0) = dup, push(1) = over
+{ 0 char ) word (idx) <push> } ::_ push(
+// pop(n) : a0 a1 .. a(n-1) an - an a1 .. a(n-1)
+// pop(0) = drop, pop(1) = nip
+{ 0 char ) word (idx) <pop> } ::_ pop(
+// xchg(i,j) : equivalent to "i j exch2"
+{ 0 char , word (idx) char ) word (idx) <xchg> } ::_ xchg(
+// xchg0(i) : equivalent to "i exch" or "xchg(0,i)"
+// xchg0(1) = swap
+{ 0 char ) word (idx) 0 <xchg> } ::_ xchg0(
+forget (idx)
+
+// parser for stack notation expressions
+")" 34 hold +"  -" constant stk-delims
+anon constant stk-start
+anon constant stk-to
+variable stk-mode
+{ stk-delims 11 (word) } : stk-token
+'nop : mk-lit
+// stk-start vn ... v0 -- stk-start ... v0 i  where v[i]=v0
+{ 0 {
+  1+ 2dup 2+ pick dup stk-start eq? { 2drop drop 0 true } { eqv? } cond
+  } until
+} : stk-lookup
+// stk-start a1 .. an stk-to b1 .. bm -- [a1 .. an] [b1 .. bm]
+{ stk-mode @ 0= abort"identifier expected" } : chk-lit
+{ stk-to list-until-marker stk-mode !
+  stk-start list-until-marker stk-mode @
+  stk-mode 0!
+} : build-stk-effect
+{ stk-start stk-mode 0! {
+  stk-token dup ")" $= { drop true } {
+  dup "-" $= {
+    drop stk-mode @ abort"duplicate -" true stk-mode ! stk-to false } {
+  dup 34 chr $= { chk-lit drop char " word mk-lit false } {
+  dup (number) ?dup { chk-lit 1- { swap mk-lit -rot } if mk-lit nip false } {
+  atom dup `_ eq? { stk-mode @ abort"identifier expected" false } {
+  stk-lookup 0= stk-mode @ = {
+    stk-mode @ { atom>$ +" -?" } { atom>$ +" redefined" } cond abort } {
+  false
+  } cond } cond } cond } cond } cond } cond } until
+  stk-mode @ 0= abort"'-' expected"
+  build-stk-effect
+} :_ parse-stk-list(
+
+// stack operation list construction
+variable op-rlist
+{ op-rlist null! } : clear-op-list
+{ op-rlist @ list-reverse } : get-op-list
+{ op-rlist @ cons op-rlist ! } : issue-op
+{ minmax `xchg -rot triple } : op-xchg
+{ `push swap pair } : op-push
+{ `lit swap pair } : op-lit
+{ `pop swap pair } : op-pop
+0 op-pop constant op-drop
+{ 2dup <> { op-xchg issue-op } if } : issue-xchg
+{ op-push issue-op } : issue-push
+{ op-lit issue-op } : issue-lit
+{ op-pop issue-op } : issue-pop
+{ op-drop issue-op } : issue-drop
+{ ' issue-drop swap times } : issue-drop-#
+
+// emulated stack contents
+variable emul-stk
+{ emul-stk @ count } : emul-depth
+{ emul-depth 1- swap - } : adj-i
+{ emul-depth 1- tuck swap - swap rot - swap } : adj-ij
+// i j --
+{ adj-ij 2dup emul-stk @ tuck swap [] swap rot [] rot // i sj si j
+  emul-stk @ -rot []= swap rot []= emul-stk !
+} : emul-xchg
+{ emul-stk @ tpop drop emul-stk ! } : emul-drop
+// i --
+{ 0 emul-xchg emul-drop } : emul-pop
+// i -- s[i]
+{ emul-stk @ swap [] } : emul-stk[]
+// i -- si
+{ adj-i emul-stk[] } : emul-get
+{ 0 emul-get } : emul-tos
+// v i -- ?   Check whether s[i]=v
+{ dup emul-depth < { emul-stk[] eqv? } { 2drop false } cond } : emul[]-eq?
+// v -- i or -1   Returns maximum i with s[i]=v
+{ emul-stk @ dup count { // v s i
+  ?dup 0= { -1 true } { 1- 2dup [] 3 pick eqv? } cond  // v s i' ?
+  } until nip nip
+} : emul-stk-lookup-rev
+// i --
+{ emul-get emul-stk @ swap , emul-stk ! } : emul-push
+{ emul-stk @ swap , emul-stk ! } : emul-lit
+// show emulated stack contents similarly to .s
+{ emul-stk @ explode dup 1 reverse ' .l swap times cr } : .e
+
+// both issue an operation and emulate it
+{ 2dup issue-xchg emul-xchg } : issue-emul-xchg
+{ dup issue-push emul-push } : issue-emul-push
+{ dup issue-lit emul-lit } : issue-emul-lit
+{ dup issue-pop emul-pop } : issue-emul-pop
+{ issue-drop emul-drop } : issue-emul-drop
+{ ' issue-emul-drop swap times } : issue-emul-drop-#
+
+// b.. s -- b.. s   moves tos value to stk[s]
+{ dup emul-stk[] 2 pick cdr list-member-eqv? {
+  dup adj-i 0 issue-emul-xchg } { dup adj-i issue-emul-pop } cond
+} : move-tos-to
+
+// new s -- ops registered
+{ { over null? not } {
+  // .sl .e get-op-list .l cr 
+  // get-op-list list-length 100 > abort"too long"
+  emul-depth over >
+    { over emul-tos swap list-member-eqv? not } { false } cond {
+  // b.. s  tos unneeded
+  issue-emul-drop } {
+  over car // b.. s b1
+  2dup swap emul[]-eq? { drop swap cdr swap 1+ } {
+  dup emul-stk-lookup-rev // b.. s b1 i
+  dup 0< { // b.. s b1 i  not found, must be a literal
+    drop dup atom? abort"unavailable value"
+    issue-emul-lit } {
+  dup 3 pick < { // b.. s b1 i  found in bottom s stack values
+    nip adj-i issue-emul-push  // b.. s
+    dup emul-depth 1- < { move-tos-to } if
+  } {
+  emul-depth 1- over = { // b.. s b1 i  found in tos
+    2drop move-tos-to
+  } { // b.. s b1 i
+    nip over adj-ij issue-emul-xchg
+  } cond } cond } cond } cond } cond } while
+  nip emul-depth swap - issue-emul-drop-#
+} : generate-reorder-ops
+
+// old new -- op-list
+{ emul-stk @ op-rlist @ 2swap 
+  swap list>tuple emul-stk ! clear-op-list
+  0 generate-reorder-ops get-op-list
+  -rot op-rlist ! emul-stk !
+} : generate-reorder
+{ parse-stk-list( generate-reorder } :_ SG(
+
+// op-list rewriting according to a ruleset 
+// l f l1 l2 -- l' -1 or l f  with l' = l2 + (l - l1)
+{ push(3) rot list- { list+ nip nip true } { drop } cond
+} : try-rule
+// l f ll -- l' -1 or l f
+{ { dup null? not } { uncons 3 -roll unpair try-rule rot } while drop
+} : try-ruleset
+// l ll -- l'
+{ swap { over false swap try-ruleset 0= } until nip
+} : try-ruleset*
+// l ruleset -- l'
+recursive try-ruleset*-everywhere {
+  tuck try-ruleset* dup null? { nip } {
+    uncons rot try-ruleset*-everywhere cons } cond
+} swap !
+LIST(
+ [([xchg 0 1] [xchg 0 2]) ([rot])]
+ [([xchg 0 1] [xchg 1 2]) ([-rot])]
+ [([xchg 0 2] [xchg 1 2]) ([rot])]
+ [([xchg 0 2] [xchg 0 1]) ([-rot])]
+ [([xchg 1 2] [xchg 0 1]) ([rot])]
+ [([xchg 1 2] [xchg 0 2]) ([-rot])]
+ [([xchg 0 1] [rot]) ([xchg 0 2])]
+ [([-rot] [xchg 0 1]) ([xchg 0 2])]
+ [([xchg 0 2] [xchg 1 3]) ([2swap])]
+ [([xchg 1 3] [xchg 0 2]) ([2swap])]
+ [([push 1] [push 1]) ([2dup])]
+ [([push 3] [push 3]) ([2over])]
+ [([pop 0] [pop 0]) ([2drop])]
+ [([pop 1] [pop 0]) ([2drop])]
+ [([xchg 0 1] [push 1]) ([tuck])]
+ [([rot] [-rot]) ()]
+ [([-rot] [rot]) ()]
+) constant fift-stack-ruleset
+{ fift-stack-ruleset try-ruleset*-everywhere } : fift-ops-rewrite
+{ SG( fift-ops-rewrite } :_ SGF(
+
+// helpers for creating Fift source strings for one fift-op
+// i j -- s
+{ minmax over { "xchg(" rot (.) $+ +"," swap (.) $+ +")" }
+  { nip dup 1 = { drop "swap" } { 
+    ?dup { "xchg0(" swap (.) $+ +")" } { "" } cond
+  } cond } cond
+} : source-<xchg>
+// i -- s
+{ dup 1 = { drop "over" } {
+  ?dup { "push(" swap (.) $+ +")" } { "dup" } cond
+  } cond
+} : source-<push>
+// i -- s
+{ dup 1 = { drop "nip" } {
+  ?dup { "pop(" swap (.) $+ +")" } { "drop" } cond
+  } cond
+} : source-<pop>
+// lit -- s
+{ dup string? { char " chr swap $+ char " hold } { (.) } cond
+} : source-<lit> 
+
+// dictionary with all fift op compilation/source creation
+{ 0 swap (compile) } : fop-compile
+( _( `xchg 2 { <xchg> fop-compile } { source-<xchg> swap cons } )
+  _( `push 1 { <push> fop-compile } { source-<push> swap cons } )
+  _( `pop 1 { <pop> fop-compile } { source-<pop> swap cons } )
+  _( `lit 1 { 1 'nop (compile) } { source-<lit> swap cons } )
+  _( `rot 0 { ' rot fop-compile } { "rot" swap cons } )
+  _( `-rot 0 { ' -rot fop-compile } { "-rot" swap cons } )
+  _( `tuck 0 { ' tuck fop-compile } { "tuck" swap cons } )
+  _( `2swap 0 { ' 2swap fop-compile } { "2swap" swap cons } )
+  _( `2drop 0 { ' 2drop fop-compile } { "2drop" swap cons } )
+  _( `2dup 0 { ' 2dup fop-compile } { "2dup" swap cons } )
+  _( `2over 0 { ' 2over fop-compile } { "2over" swap cons } )
+) box constant fift-op-dict
+
+{ dup atom? { atom>$ } { drop "" } cond
+  "unknown operation " swap $+ abort
+} : report-unknown-op
+variable 'fop-entry-exec
+// process fift-op according to 'fop-entry-exec
+// ... op - ...
+{ dup first dup fift-op-dict @ assq { report-unknown-op } ifnot
+  dup second 1+ push(3) count <> abort"incorrect param count"
+  nip swap explode dup roll drop 1- roll // o2 .. on entry
+  'fop-entry-exec @ execute 
+} : process-fift-op
+
+// compile op-list into Fift wordlist
+// wl op-list -- wl'
+{ { third execute } 'fop-entry-exec !
+  swap ' process-fift-op foldl } : compile-fift-op*
+// op-list -- e
+{ fift-ops-rewrite ({) swap compile-fift-op* (}) } : ops>wdef
+
+// S(<orig-stack> - <new-stack>) compiles a "word" performing required action
+{ SG( ops>wdef 0 swap } ::_ S(
+// 1 2 3 S(a b c - c a b a) .s  would print 3 1 2 1
+
+// transform op-list into Fift source
+// ls op -- ls'
+{ fift-ops-rewrite 
+  { 3 [] execute } 'fop-entry-exec !
+  null ' process-fift-op foldl
+  dup null? { drop "" } { { +" " swap $+ } foldr-ne } cond
+} : ops>$
+{ SG( ops>$ 1 'nop } ::_ $S(
+{ SG( ops>$ type } :_ .$S(
+// $S(a b c - b c a c a c) => string "rot 2dup over"
+// S(a b c - b c a c a c) => compile/execute block { rot 2dup over }
+// $S(_ x y _ - y x) => string "drop pop(2)"
+// .$S(x1 x2 - 17 x1) => print string "drop 17 swap"
+
+// simplify/transform sequences of stack manipulation operations
+LIST(. [a b c d e f g h i j]) constant std-stack
+{ stk-start std-stack explode drop stk-to std-stack explode drop
+} : simplify<{
+{ build-stk-effect generate-reorder ops>$ } : }>stack
+// simplify<{ drop drop over over -13 }>stack => string "2drop 2dup -13"
+// simplify<{ 17 rot }>stack => string "swap 17 swap"
+// simplify<{ 5 1 reverse }>stack => string "xchg(1,5) xchg(2,4)"

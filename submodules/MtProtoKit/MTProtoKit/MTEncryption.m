@@ -10,6 +10,7 @@
 
 #include <openssl/bn.h>
 #include <openssl/err.h>
+#include <openssl/rsa.h>
 
 #import "MTAes.h"
 #import "MTRsa.h"
@@ -800,17 +801,20 @@ uint64_t MTRsaFingerprint(NSString *key) {
     BIO_write(keyBio, keyData.bytes, (int)keyData.length);
     RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
     
-    int nBytes = BN_num_bytes(rsaKey->n);
-    int eBytes = BN_num_bytes(rsaKey->e);
+    BIGNUM *rsaKeyN = RSA_get0_n(rsaKey);
+    BIGNUM *rsaKeyE = RSA_get0_e(rsaKey);
+    
+    int nBytes = BN_num_bytes(rsaKeyN);
+    int eBytes = BN_num_bytes(rsaKeyE);
     
     MTBuffer *buffer = [[MTBuffer alloc] init];
     
     NSMutableData *nData = [[NSMutableData alloc] initWithLength:nBytes];
-    BN_bn2bin(rsaKey->n, nData.mutableBytes);
+    BN_bn2bin(rsaKeyN, nData.mutableBytes);
     [buffer appendTLBytes:nData];
     
     NSMutableData *eData = [[NSMutableData alloc] initWithLength:eBytes];
-    BN_bn2bin(rsaKey->e, eData.mutableBytes);
+    BN_bn2bin(rsaKeyE, eData.mutableBytes);
     [buffer appendTLBytes:eData];
     
     NSData *sha1Data = MTSha1(buffer.data);
@@ -877,32 +881,33 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
         return nil;
     }
     
-    BIGNUM x, y;
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
     BN_CTX *bnContext = BN_CTX_new();
     uint8_t *bytes = buffer;
-    BN_init(&x);
-    BN_init(&y);
-    BN_bin2bn(bytes, 256, &x);
+    BN_bin2bn(bytes, 256, x);
+    
+    BIGNUM *rsaKeyN = RSA_get0_n(rsaKey);
+    BIGNUM *rsaKeyE = RSA_get0_e(rsaKey);
     
     NSData *result = nil;
-    if (BN_mod_exp(&y, &x, rsaKey->e, rsaKey->n, bnContext) == 1) {
-        unsigned l = 256 - BN_num_bytes(&y);
+    if (BN_mod_exp(y, x, rsaKeyE, rsaKeyN, bnContext) == 1) {
+        unsigned l = 256 - BN_num_bytes(y);
         memset(bytes, 0, l);
-        if (BN_bn2bin(&y, bytes + l) == 256 - l) {
+        if (BN_bn2bin(y, bytes + l) == 256 - l) {
             AES_KEY aeskey;
             unsigned char iv[16];
             memcpy(iv, bytes + 16, 16);
             AES_set_decrypt_key(bytes, 256, &aeskey);
             AES_cbc_encrypt(bytes + 32, bytes + 32, 256 - 32, &aeskey, iv, AES_DECRYPT);
             
-            EVP_MD_CTX ctx;
+            EVP_MD_CTX *ctx = EVP_MD_CTX_new();
             unsigned char sha256_out[32];
             unsigned olen = 0;
-            EVP_MD_CTX_init(&ctx);
-            EVP_DigestInit_ex(&ctx, EVP_sha256(), NULL);
-            EVP_DigestUpdate(&ctx, bytes + 32, 256 - 32 - 16);
-            EVP_DigestFinal_ex(&ctx, sha256_out, &olen);
-            EVP_MD_CTX_cleanup(&ctx);
+            EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
+            EVP_DigestUpdate(ctx, bytes + 32, 256 - 32 - 16);
+            EVP_DigestFinal_ex(ctx, sha256_out, &olen);
+            EVP_MD_CTX_free(ctx);
             if (olen == 32) {
                 if (memcmp(bytes + 256 - 16, sha256_out, 16) == 0) {
                     unsigned data_len = *(unsigned *) (bytes + 32);
@@ -921,8 +926,8 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
             }
         }
     }
-    BN_free(&x);
-    BN_free(&y);
+    BN_free(x);
+    BN_free(y);
     RSA_free(rsaKey);
     BIO_free(keyBio);
     BN_CTX_free(bnContext);

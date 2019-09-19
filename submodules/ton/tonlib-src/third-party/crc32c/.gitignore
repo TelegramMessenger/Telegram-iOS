@@ -1,0 +1,7 @@
+# Editors.
+*.sw*
+.DS_Store
+
+# Build directory.
+build/
+out/

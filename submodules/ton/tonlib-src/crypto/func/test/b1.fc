@@ -1,0 +1,63 @@
+int now() asm "NOW";
+
+int cell_hash(cell c)
+asm "HASHCU";
+
+int slice_hash(slice s)
+asm "HASHSU";
+
+int check_signature(int hash, slice signature, int public_key)
+asm "CHKSIGNU";
+
+;; () throw_if(int excno, int cond) impure
+;; asm "THROWARGIF";
+
+cell get_data() asm "c4 PUSH";
+() set_data(cell c) impure asm "c4 POP";
+() accept_message() impure asm "ACCEPT";
+
+slice begin_parse(cell c) asm "CTOS";
+() end_parse(slice s) impure asm "ENDS";
+(cell, slice) load_ref(slice s) asm "LDREF";
+(int, slice) zload_int(slice s, int len) asm "LDIX";
+(int, slice) zload_uint(slice s, int len) asm "LDUX";
+int zpreload_int(slice s, int len) asm "PLDIX";
+int zpreload_uint(slice s, int len) asm "PLDUX";
+(slice, slice) load_bits(slice s, int len) asm "LDSLICEX";
+slice preload_bits(slice s, int len) asm "PLDSLICEX";
+cell set_idict_ref(cell value, int index, cell dict, int key_len) asm "DICTISETREF";
+builder begin_cell() asm "NEWC";
+builder store_ref(cell c, builder b) asm "STREF";
+builder zstore_uint(int x, builder b, int len) asm "STUX";
+builder zstore_int(int x, builder b, int len) asm "STIX";
+cell end_cell(builder b) asm "ENDC";
+
+;; Simple configuration smart contract
+
+() recv_internal(cell in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+() recv_external(cell in_msg) impure {
+  var (signature, cs0) = load_bits(begin_parse(in_msg), 512);
+  var (msg_seqno, cs) = zload_uint(cs0, 32);
+  (var valid_until, cs) = zload_uint(cs, 32);
+  throw_if(35, valid_until < now());
+  var (cfg_dict, cs2) = load_ref(begin_parse(get_data()));
+  (var stored_seqno, cs2) = zload_uint(cs2, 32);
+  (var public_key, cs2) = zload_uint(cs2, 256);
+  end_parse(cs2);
+  throw_unless(33, msg_seqno == stored_seqno);
+  throw_unless(34, check_signature(slice_hash(cs0), signature, public_key));
+  accept_message();
+  (var param_index, cs) = zload_uint(cs, 32);
+  (var param_value, cs) = load_ref(cs);
+  end_parse(cs);
+;;  cfg_dict = set_idict_ref(param_value, param_index, cfg_dict, 32);
+;;  var cb = begin_cell();
+;;  cb = store_ref(cfg_dict, cb);
+  var cb = store_ref(set_idict_ref(param_value, param_index, cfg_dict, 32), begin_cell());
+  cb = zstore_uint(stored_seqno + 1, cb, 32);
+  cb = zstore_uint(public_key, cb, 256);
+  set_data(end_cell(cb));
+}

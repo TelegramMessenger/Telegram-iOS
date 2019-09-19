@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/alex85k/wingetopt
+	branch = master
+	commit = fed839a02eca9abaebb834d3e53c583ff4304e1c
+	parent = 0615991cbf4014fddd7be014dfb112b812c5a089
+	cmdver = 0.3.1

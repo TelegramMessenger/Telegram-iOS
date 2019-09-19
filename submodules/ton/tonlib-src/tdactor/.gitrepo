@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:arseny30/tdactor.git
+	branch = master
+	commit = 023418469da909416b067660cc44bb4d9e9a4739
+	parent = da0d81f9227112f21b00dfcd060e19b44f12f1f8
+	cmdver = 0.3.1

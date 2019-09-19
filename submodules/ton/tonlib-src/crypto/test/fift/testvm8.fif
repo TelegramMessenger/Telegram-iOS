@@ -1,0 +1,5 @@
+"Asm.fif" include
+<{ 7 INT -4 INT NEWC 64 STI 4 STU ENDC
+   CTOS 64 LDI 4 LDU ENDS }>s
+dup csr.
+runvmcode .s

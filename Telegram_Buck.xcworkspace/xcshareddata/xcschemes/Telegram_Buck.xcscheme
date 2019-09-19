@@ -73,7 +73,7 @@
                BlueprintIdentifier = "E66DC04EB4B57B8200000000"
                BuildableName = "libopenssl.a"
                BlueprintName = "openssl"
-               ReferencedContainer = "container:submodules/MtProtoKit/MtProtoKit.xcodeproj">
+               ReferencedContainer = "container:submodules/openssl/openssl.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -87,7 +87,7 @@
                BlueprintIdentifier = "E66DC04E0001C15300000000"
                BuildableName = "libton.a"
                BlueprintName = "ton"
-               ReferencedContainer = "container:submodules/MtProtoKit/MtProtoKit.xcodeproj">
+               ReferencedContainer = "container:submodules/ton/ton.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry

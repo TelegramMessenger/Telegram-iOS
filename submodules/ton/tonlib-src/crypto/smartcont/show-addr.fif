@@ -1,0 +1,21 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <filename-base>" cr
+  ."Shows the address of a simple wallet created by new-wallet.fif, with address in <filename-base>.addr "
+  ."and private key in file <filename-base>.pk" cr 1 halt
+} : usage
+def? $# { @' $# 1 > ' usage if } if
+def? $1 { @' $1 } { "new-wallet" } cond constant file-base
+
+file-base +".addr" dup ."Loading wallet address from " type cr file>B 32 B| 
+dup Blen { 32 B>i@ } { drop Basechain } cond constant wallet_wc
+256 B>u@ dup constant wallet_addr
+."Source wallet address = " wallet_wc ._ .":" x. cr
+wallet_wc wallet_addr 2dup 7 smca>$ ."Non-bounceable address (for init only): " type cr
+6 smca>$ ."Bounceable address (for later access): " type cr
+
+file-base +".pk" dup file-exists? {
+  dup file>B dup Blen 32 <> abort"Private key must be exactly 32 bytes long"
+  =: wallet_pk ."Private key available in file " type cr
+} { ."Private key file " type ." not found" cr } cond
