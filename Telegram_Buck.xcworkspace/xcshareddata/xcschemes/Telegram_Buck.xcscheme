@@ -1988,6 +1988,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E928346B000000000"
+               BuildableName = "libPasscodeInputFieldNode.a"
+               BlueprintName = "PasscodeInputFieldNode"
+               ReferencedContainer = "container:submodules/PasscodeInputFieldNode/PasscodeInputFieldNode.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04EA1B020B200000000"
                BuildableName = "libPasscodeUI.a"
                BlueprintName = "PasscodeUI"

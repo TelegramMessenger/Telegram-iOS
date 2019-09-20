@@ -832,6 +832,19 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E2989A0042800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libPasscodeInputFieldNode.a</string>
+			<key>path</key>
+			<string>libPasscodeInputFieldNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E29D0DBC52A00000000</key>
 		<dict>
 			<key>isa</key>
@@ -1602,6 +1615,7 @@
 				<string>1DD70E2937C1167400000000</string>
 				<string>1DD70E29AF00DC4900000000</string>
 				<string>1DD70E29BBAF750C00000000</string>
+				<string>1DD70E2989A0042800000000</string>
 				<string>1DD70E29D0DBC52A00000000</string>
 				<string>1DD70E29300245BE00000000</string>
 				<string>1DD70E299856EB2400000000</string>
@@ -4691,6 +4705,13 @@
 			<key>fileRef</key>
 			<string>1DD70E2937C1167400000000</string>
 		</dict>
+		<key>E7A30F0489A0042800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2989A0042800000000</string>
+		</dict>
 		<key>E7A30F04D0DBC52A00000000</key>
 		<dict>
 			<key>isa</key>
@@ -4899,6 +4920,7 @@
 				<string>E7A30F04A889192100000000</string>
 				<string>E7A30F04A3994F2C00000000</string>
 				<string>E7A30F0437C1167400000000</string>
+				<string>E7A30F0489A0042800000000</string>
 				<string>E7A30F04D0DBC52A00000000</string>
 				<string>E7A30F0479E58A0000000000</string>
 				<string>E7A30F049856EB2400000000</string>

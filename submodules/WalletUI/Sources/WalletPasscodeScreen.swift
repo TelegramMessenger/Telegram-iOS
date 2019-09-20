@@ -10,7 +10,7 @@ import TelegramCore
 import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
-import PasscodeUI
+import PasscodeInputFieldNode
 
 public enum WalletPasscodeMode {
     case setup
@@ -118,7 +118,7 @@ private final class WalletPasscodeScreenNode: ViewControllerTracingNode {
     private let titleNode: ImmediateTextNode
     private let biometricsActionTitleNode: ImmediateTextNode
     private let biometricsActionButtonNode: HighlightTrackingButtonNode
-    private let inputFieldNode: PasscodeEntryInputFieldNode
+    private let inputFieldNode: PasscodeInputFieldNode
     
     private let hapticFeedback = HapticFeedback()
     
@@ -154,7 +154,7 @@ private final class WalletPasscodeScreenNode: ViewControllerTracingNode {
         
         self.biometricsActionButtonNode = HighlightTrackingButtonNode()
         
-        self.inputFieldNode = PasscodeEntryInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, accentColor: self.presentationData.theme.list.itemAccentColor, fieldType: .digits4, keyboardAppearance: self.presentationData.theme.rootController.keyboardColor.keyboardAppearance)
+        self.inputFieldNode = PasscodeInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, accentColor: self.presentationData.theme.list.itemAccentColor, fieldType: .digits4, keyboardAppearance: self.presentationData.theme.rootController.keyboardColor.keyboardAppearance)
         
         super.init()
         
@@ -221,8 +221,7 @@ private final class WalletPasscodeScreenNode: ViewControllerTracingNode {
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         
-        let passcodeLayout = PasscodeLayout(layout: layout, titleOffset: 0.0, subtitleOffset: 0.0, inputFieldOffset: titleFrame.maxY + titleSpacing)
-        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: passcodeLayout, transition: transition)
+        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: layout, topOffset: titleFrame.maxY + titleSpacing, transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let minimalBottomInset: CGFloat = 60.0

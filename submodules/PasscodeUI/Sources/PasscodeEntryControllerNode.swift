@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import LocalAuth
 import AppBundle
+import PasscodeInputFieldNode
 
 private let titleFont = Font.regular(20.0)
 private let subtitleFont = Font.regular(15.0)
@@ -29,7 +30,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private let iconNode: PasscodeLockIconNode
     private let titleNode: PasscodeEntryLabelNode
-    private let inputFieldNode: PasscodeEntryInputFieldNode
+    private let inputFieldNode: PasscodeInputFieldNode
     private let subtitleNode: PasscodeEntryLabelNode
     private let keyboardNode: PasscodeEntryKeyboardNode
     private let cancelButtonNode: HighlightableButtonNode
@@ -62,7 +63,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
 
         self.iconNode = PasscodeLockIconNode()
         self.titleNode = PasscodeEntryLabelNode()
-        self.inputFieldNode = PasscodeEntryInputFieldNode(color: .white, accentColor: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
+        self.inputFieldNode = PasscodeInputFieldNode(color: .white, accentColor: .white, fieldType: passcodeType, keyboardAppearance: .dark, useCustomNumpad: true)
         self.subtitleNode = PasscodeEntryLabelNode()
         self.keyboardNode = PasscodeEntryKeyboardNode()
         self.cancelButtonNode = HighlightableButtonNode()
@@ -188,7 +189,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         if let background = self.background {
             self.backgroundNode.image = background.backgroundImage
             self.keyboardNode.updateBackground(background)
-            self.inputFieldNode.updateBackground(background)
+            self.inputFieldNode.updateBackground(background.foregroundImage, size: background.size)
         }
     }
     
@@ -346,7 +347,7 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         
         let passcodeLayout = PasscodeLayout(layout: layout)
         
-        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: passcodeLayout, transition: transition)
+        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: passcodeLayout.layout, topOffset: passcodeLayout.inputFieldOffset, transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let titleSize = self.titleNode.updateLayout(layout: layout, transition: transition)

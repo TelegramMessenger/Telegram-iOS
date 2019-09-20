@@ -24,19 +24,19 @@ private func generateDotImage(color: UIColor, filled: Bool) -> UIImage? {
     })
 }
 
-private func generateFieldBackgroundImage(background: PasscodeBackground, frame: CGRect) -> UIImage? {
+private func generateFieldBackgroundImage(backgroundImage: UIImage, backgroundSize: CGSize, frame: CGRect) -> UIImage? {
     return generateImage(frame.size, contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
-        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - background.size.height + frame.size.height
-            , width: background.size.width, height: background.size.height)
+        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - backgroundSize.height + frame.size.height
+            , width: backgroundSize.width, height: backgroundSize.height)
         
         let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height), cornerRadius: 6.0)
         context.addPath(path.cgPath)
         context.clip()
         
-        context.draw(background.foregroundImage.cgImage!, in: relativeFrame)
+        context.draw(backgroundImage.cgImage!, in: relativeFrame)
         
         context.setBlendMode(.clear)
         context.setFillColor(UIColor.clear.cgColor)
@@ -128,8 +128,8 @@ private class PasscodeEntryDotNode: ASImageNode {
     }
 }
 
-public final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
-    private var background: PasscodeBackground?
+public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
+    private var background: (UIImage, CGSize)?
     private var color: UIColor
     private var accentColor: UIColor
     private var fieldType: PasscodeEntryFieldType
@@ -139,7 +139,7 @@ public final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelega
     private let borderNode: ASImageNode
     private let dotNodes: [PasscodeEntryDotNode]
     
-    private var validLayout: PasscodeLayout?
+    private var validLayout: (ContainerViewLayout, CGFloat)?
     
     public var complete: ((String) -> Void)?
     
@@ -202,15 +202,15 @@ public final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelega
         
         self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
         
-        if let validLayout = self.validLayout {
-            let _ = self.updateLayout(layout: validLayout, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
+        if let (layout, topOffset) = self.validLayout {
+            let _ = self.updateLayout(layout: layout, topOffset: topOffset, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
         }
     }
     
-    func updateBackground(_ background: PasscodeBackground) {
-        self.background = background
-        if let validLayout = self.validLayout {
-            let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+    func updateBackground(_ image: UIImage, size: CGSize) {
+        self.background = (image, size)
+        if let (layout, topOffset) = self.validLayout {
+            let _ = self.updateLayout(layout: layout, topOffset: topOffset, transition: .immediate)
         }
     }
     
@@ -302,13 +302,13 @@ public final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelega
             self.textFieldNode.textField.text = ""
         }
         self.fieldType = fieldType
-        if let validLayout = self.validLayout {
-            let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+        if let (layout, topOffset) = self.validLayout {
+            let _ = self.updateLayout(layout: layout, topOffset: topOffset, transition: .immediate)
         }
     }
     
-    public func updateLayout(layout: PasscodeLayout, transition: ContainedViewLayoutTransition) -> CGRect {
-        self.validLayout = layout
+    public func updateLayout(layout: ContainerViewLayout, topOffset: CGFloat, transition: ContainedViewLayoutTransition) -> CGRect {
+        self.validLayout = (layout, topOffset)
         
         let fieldAlpha: CGFloat
         switch self.fieldType {
@@ -321,7 +321,7 @@ public final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelega
         transition.updateAlpha(node: self.textFieldNode, alpha: fieldAlpha)
         transition.updateAlpha(node: self.borderNode, alpha: fieldAlpha)
         
-        let origin = CGPoint(x: floor((layout.layout.size.width - dotDiameter * 6 - dotSpacing * 5) / 2.0), y: layout.inputFieldOffset)
+        let origin = CGPoint(x: floor((layout.size.width - dotDiameter * 6 - dotSpacing * 5) / 2.0), y: topOffset)
         for i in 0 ..< self.dotNodes.count {
             let node = self.dotNodes[i]
             let dotAlpha: CGFloat
@@ -343,11 +343,11 @@ public final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelega
         if !self.useCustomNumpad {
             inset = 16.0
         }
-        let fieldFrame = CGRect(x: inset, y: origin.y, width: layout.layout.size.width - inset * 2.0, height: fieldHeight)
+        let fieldFrame = CGRect(x: inset, y: origin.y, width: layout.size.width - inset * 2.0, height: fieldHeight)
         transition.updateFrame(node: self.borderNode, frame: fieldFrame)
         transition.updateFrame(node: self.textFieldNode, frame: fieldFrame.insetBy(dx: 13.0, dy: 0.0))
-        if let background = self.background {
-            self.borderNode.image = generateFieldBackgroundImage(background: background, frame: fieldFrame)
+        if let (backgroundImage, backgroundSize) = self.background {
+            self.borderNode.image = generateFieldBackgroundImage(backgroundImage: backgroundImage, backgroundSize: backgroundSize, frame: fieldFrame)
         }
         
         return fieldFrame
