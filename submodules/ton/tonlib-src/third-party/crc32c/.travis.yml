@@ -1,0 +1,60 @@
+# Build matrix / environment variable are explained on:
+# http://about.travis-ci.org/docs/user/build-configuration/
+# This file can be validated on: http://lint.travis-ci.org/
+
+sudo: false
+dist: trusty
+language: cpp
+
+compiler:
+  - gcc
+  - clang
+os:
+  - linux
+  - osx
+
+env:
+  - GLOG=1 BUILD_TYPE=Debug
+  - GLOG=1 BUILD_TYPE=RelWithDebInfo
+  - GLOG=0 BUILD_TYPE=Debug
+  - GLOG=0 BUILD_TYPE=RelWithDebInfo
+
+addons:
+  apt:
+    # List of whitelisted in travis packages for ubuntu-trusty can be found here:
+    #   https://github.com/travis-ci/apt-package-whitelist/blob/master/ubuntu-trusty
+    # List of whitelisted in travis apt-sources:
+    #   https://github.com/travis-ci/apt-source-whitelist/blob/master/ubuntu.json
+    sources:
+    - ubuntu-toolchain-r-test
+    - llvm-toolchain-trusty-6.0
+    packages:
+    - cmake
+    - gcc-8
+    - g++-8
+    - clang-6.0
+
+install:
+# Travis doesn't have a nice way to install homebrew packages yet.
+# https://github.com/travis-ci/travis-ci/issues/5377
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew update; fi
+# https://github.com/Homebrew/brew/issues/1742
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then rm -f /usr/local/include/c++ ; fi
+- if [ "$TRAVIS_OS_NAME" == "osx" ]; then brew install gcc@8; fi
+# /usr/bin/gcc is stuck to old versions by on both Linux and OSX.
+- if [ "$CXX" = "g++" ]; then export CXX="g++-8" CC="gcc-8"; fi
+- echo ${CC}
+- echo ${CXX}
+- ${CXX} --version
+- cmake --version
+
+before_script:
+- mkdir -p build && cd build
+- cmake .. -DCRC32C_USE_GLOG=$GLOG -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+- cmake --build .
+- cd ..
+
+script:
+- build/crc32c_tests
+- build/crc32c_capi_tests
+- build/crc32c_bench

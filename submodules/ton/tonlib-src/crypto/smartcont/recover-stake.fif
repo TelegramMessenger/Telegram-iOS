@@ -1,0 +1,17 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." [<savefile>]" cr
+  ."Creates the message body to be sent from a validator controlling smart contract (wallet) to recover its share of unfrozen stakes and bonuses." cr
+  ."The result is saved into <savefile> (`recover-query.boc` by default) and output in hexadecimal form, to be sent later as the body of a message from the wallet to elections smart contract, along with a small value (say, one Gram) to cover forwarding and processing fees" cr 1 halt
+} : usage
+
+$# dup 0 < swap 1 > or ' usage if
+def? $1 { @' $1 } { "recover-query.boc" } cond constant output_fname
+now constant query_id
+."query_id for stake recovery message is set to " query_id . cr
+
+<b x{47657424} s, query_id 64 u, b>
+cr ."Message body is " dup <s csr. cr
+
+2 boc+>B output_fname tuck B>file ."Saved to file " type cr

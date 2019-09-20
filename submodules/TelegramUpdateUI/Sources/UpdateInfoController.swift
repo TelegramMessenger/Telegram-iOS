@@ -128,6 +128,7 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
     }
     
     let controller = ItemListController(sharedContext: context.sharedContext, state: signal)
+    controller.navigationPresentation = .modal
     linkActionImpl = { [weak controller, weak context] action, itemLink in
         if let strongController = controller, let context = context {
             context.sharedContext.handleTextLinkAction(context: context, peerId: nil, navigateDisposable: navigateDisposable, controller: strongController, action: action, itemLink: itemLink)

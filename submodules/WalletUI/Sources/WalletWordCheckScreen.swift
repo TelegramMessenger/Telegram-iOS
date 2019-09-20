@@ -2244,6 +2244,7 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
 private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
     private let next: (WordCheckInputNode) -> Void
     private let focused: (WordCheckInputNode) -> Void
+    private let pasteWords: ([String]) -> Void
     
     private let backgroundNode: ASImageNode
     private let labelNode: ImmediateTextNode
@@ -2251,12 +2252,18 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
     private let clearButtonNode: HighlightableButtonNode
     
     var text: String {
-        return self.inputNode.textField.text ?? ""
+        get {
+            return self.inputNode.textField.text ?? ""
+        } set(value) {
+            self.inputNode.textField.text = value
+            self.textFieldChanged(self.inputNode.textField)
+        }
     }
     
-    init(theme: PresentationTheme, index: Int, possibleWordList: [String], next: @escaping (WordCheckInputNode) -> Void, isLast: Bool, focused: @escaping (WordCheckInputNode) -> Void) {
+    init(theme: PresentationTheme, index: Int, possibleWordList: [String], next: @escaping (WordCheckInputNode) -> Void, isLast: Bool, focused: @escaping (WordCheckInputNode) -> Void, pasteWords: @escaping ([String]) -> Void) {
         self.next = next
         self.focused = focused
+        self.pasteWords = pasteWords
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -2328,6 +2335,15 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         self.next(self)
         return false
+    }
+    
+    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        let wordList = string.split(separator: " ")
+        if wordList.count == 24 {
+            self.pasteWords(wordList.map(String.init))
+            return false
+        }
+        return true
     }
     
     @objc private func textFieldChanged(_ textField: UITextField) {
@@ -2617,18 +2633,21 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         var nextWord: ((WordCheckInputNode) -> Void)?
         var focused: ((WordCheckInputNode) -> Void)?
+        var pasteWords: (([String]) -> Void)?
         
         for i in 0 ..< wordIndices.count {
             inputNodes.append(WordCheckInputNode(theme: presentationData.theme, index: wordIndices[i], possibleWordList: possibleWordList, next: { node in
                 nextWord?(node)
             }, isLast: i == wordIndices.count - 1, focused: { node in
                 focused?(node)
+            }, pasteWords: { wordList in
+                pasteWords?(wordList)
             }))
         }
         
         self.inputNodes = inputNodes
         
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: self.presentationData.theme, height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         super.init()
         
@@ -2687,6 +2706,16 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
                 return
             }
             strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+        }
+        pasteWords = { [weak self] wordList in
+            guard let strongSelf = self else {
+                return
+            }
+            if strongSelf.inputNodes.count == wordList.count {
+                for i in 0 ..< strongSelf.inputNodes.count {
+                    strongSelf.inputNodes[i].text = wordList[i]
+                }
+            }
         }
     }
     

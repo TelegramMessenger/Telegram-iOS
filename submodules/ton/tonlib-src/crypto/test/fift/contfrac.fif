@@ -1,0 +1,18 @@
+{ dup 2over rot } : 3dup
+{ 2drop drop } : 3drop
+{ { 5 roll } 3 times } : 3swap
+{ -rot over + rot over + -rot over + rot } : step1
+{ negate -rot negate swap negate } : step2
+{ 0 3 -roll { 3dup step1 dup 0> } { 3swap 3drop 3 roll 1+ 3 -roll } while 3drop step2 } : nsteps1
+{ ' nsteps1 swap times 3drop } : qcontfrac
+{ -1 0 2swap qcontfrac } : sqrtcontfrac
+{ rot 2 pick * + swap } : revstep1
+{ 1 0 rot ' revstep1 swap times } : computecontfrac
+1 { 10 * } 74 times constant One
+{ 100 sqrtcontfrac 100 computecontfrac */r } : *sqrtint
+{ One swap *sqrtint } : sqrtint
+2 sqrtint .
+3 sqrtint .
+6 sqrtint .
+7 sqrtint .
+239 sqrtint .

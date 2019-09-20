@@ -1,0 +1,47 @@
+"Asm.fif" include
+<{ -1 INT ZERO ROT
+   100 INT REPEAT:<{
+     ZERO WHILE:<{
+       3 3 BLKPUSH
+       // -ROT OVER ADD ROT OVER ADD -ROT OVER ADD ROT
+       s2 s1 PUXC ADD TUCK ADD s2 s1 PUXC ADD SWAP
+       DUP ISPOS 
+     }>DO<{
+       s4 POP s4 POP s4 POP INC
+     }>
+     3 BLKDROP
+     s3 XCHG0 NEGATE s2 XCHG0 NEGATE SWAP NEGATE s2 XCHG0
+   }>
+   3 BLKDROP
+}>s dup csr.
+// 61 swap runvmcode .s
+drop
+
+<{ -1 INT ZERO ROT  ONE ZERO s0 s1 PUSH2
+  <{ 3 6 BLKPUSH  // a b c m11 m12 m21 m22 a' b' c'
+     s2 s1 PUXC ADD TUCK ADD s2 s1 PUXC ADD SWAP
+     DUP ISPOS IF:<{
+       s7 POP s7 POP s7 POP   // a' b' c' m11 m12 m21 m22
+       s2 PUSH ADD SWAP s3 PUSH ADD SWAP
+     }>ELSE<{
+       3 BLKDROP // a b c m11 m12 m21 m22
+       2SWAP
+       3 4 BLKSWAP  // m m m m a b c
+       NEGATE SWAP NEGATE // .. a -c -b
+       ROT NEGATE   // -c -b -a
+       4 3 BLKSWAP
+     }>
+     DUP 250 QFITS ISNAN
+   }>UNTIL
+   2DROP s3 POP s3 POP DROP 
+}>s dup csr.
+1 { 10 * } 75 times constant One
+{ One swap */r } : frac*One
+61 over runvmcode drop frac*One swap
+2 over runvmcode drop frac*One swap
+3 over runvmcode drop frac*One swap
+5 over runvmcode drop frac*One swap
+6 over runvmcode drop frac*One swap
+7 over runvmcode drop frac*One swap
+8 over runvmcode drop frac*One swap
+.s

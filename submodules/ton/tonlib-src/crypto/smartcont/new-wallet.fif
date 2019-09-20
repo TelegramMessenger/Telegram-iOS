@@ -1,0 +1,62 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <workchain-id> [<filename-base>]" cr
+  ."Creates a new wallet in specified workchain, with private key saved to or loaded from <filename-base>.pk" cr
+  ."('new-wallet.pk' by default)" cr 1 halt
+} : usage
+$# 1- -2 and ' usage if
+
+$1 parse-workchain-id =: wc    // set workchain id from command line argument
+def? $2 { @' $2 } { "new-wallet" } cond constant file-base
+
+."Creating new wallet in workchain " wc . cr
+
+// Create new simple wallet
+<{ SETCP0 DUP IFNOTRET // return if recv_internal
+   DUP 85143 INT EQUAL IFJMP:<{ // "seqno" get-method
+     DROP c4 PUSHCTR CTOS 32 PLDU  // cnt
+   }>
+   INC 32 THROWIF  // fail unless recv_external
+   512 INT LDSLICEX DUP 32 PLDU   // sign cs cnt
+   c4 PUSHCTR CTOS 32 LDU 256 LDU ENDS  // sign cs cnt cnt' pubk
+   s1 s2 XCPU            // sign cs cnt pubk cnt' cnt
+   EQUAL 33 THROWIFNOT   // ( seqno mismatch? )
+   s2 PUSH HASHSU        // sign cs cnt pubk hash
+   s0 s4 s4 XC2PU        // pubk cs cnt hash sign pubk
+   CHKSIGNU              // pubk cs cnt ?
+   34 THROWIFNOT         // signature mismatch
+   ACCEPT
+   SWAP 32 LDU NIP 
+   DUP SREFS IF:<{
+     // 3 INT 35 LSHIFT# 3 INT RAWRESERVE    // reserve all but 103 Grams from the balance
+     8 LDU LDREF         // pubk cnt mode msg cs
+     s0 s2 XCHG SENDRAWMSG  // pubk cnt cs ; ( message sent )
+   }>
+   ENDS
+   INC NEWC 32 STU 256 STU ENDC c4 POPCTR
+}>c // >libref
+// code
+<b 0 32 u, 
+   file-base +".pk" load-generate-keypair
+   constant wallet_pk
+   B, 
+b> // data
+null // no libraries
+// Libs{ x{ABACABADABACABA} drop x{AAAA} s>c public_lib x{1234} x{5678} |_ s>c public_lib }Libs
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hash wc swap 2dup 2constant wallet_addr
+."new wallet address = " 2dup .addr cr
+2dup file-base +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b 0 32 u, b>
+dup ."signing message: " <s csr. cr
+dup hash wallet_pk ed25519_sign_uint rot
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, swap B, swap <s s, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved wallet creating query to file " type .")" cr

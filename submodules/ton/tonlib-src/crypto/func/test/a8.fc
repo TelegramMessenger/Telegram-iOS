@@ -1,0 +1,28 @@
+int A(int a, int b, int c, int d, int e, int f) {
+  return muldiv(a, b, c) + muldiv(d, e, f);
+}
+
+int B(int a, int b, int c, int d, int e, int f) {
+  return muldiv(a, b, c) + muldiv(b, d, e) + f;
+}
+
+int C(int a, int b, int c, int d, int e, int f) {
+  return muldiv(a, b, c) + muldiv(b, d, c) + muldiv(d, d, f);
+}
+
+int D(int a, int b, int c, int d, int e, int f) {
+  return muldiv(a, b, c) + muldiv(b, d, c) + muldiv(e, e, f);
+}
+
+int E(int a, int b, int c, int d, int e, int f) {
+  return muldiv(a, b, c) + muldiv(c, d, e) + muldiv(c, c, f);
+}
+
+int F(int a, int b, int c, int d, int e, int f) {
+  return muldiv(a, b, c) + muldiv(a, d, c) + muldiv(f, f, e);
+}
+
+int G(int a, int b, int c, int d, int e, int f) {
+  return muldiv(a, b, c) + muldiv(b, c, d) + muldiv(b, c, e) + f;
+}
+

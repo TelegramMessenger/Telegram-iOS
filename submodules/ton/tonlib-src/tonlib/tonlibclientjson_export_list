@@ -1,0 +1,5 @@
+_tonlib_client_json_create
+_tonlib_client_json_destroy
+_tonlib_client_json_send
+_tonlib_client_json_receive
+_tonlib_client_json_execute

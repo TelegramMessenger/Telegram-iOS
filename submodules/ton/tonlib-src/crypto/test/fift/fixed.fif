@@ -1,0 +1,19 @@
+1 { 10 * } 70 times constant One
+{ bl word (number) dup 0= abort"invalid fixed-point constant"  
+  1- { One swap */r } { One * } cond 1 'nop } ::_ F$
+' + : F+
+' - : F-
+{ One */r } : F*
+{ One swap */r } : F/
+{ One dup rot */r } : Finv
+{ One { 2dup F/ F+ 2/ } 9 times nip } : Fsqrt
+{ ' Fsqrt 128 times One F- 128 << } : Fln
+{ dup abs <# ' # 70 times char . hold #s rot sign #>
+  nip -trailing0 type space } : .F
+F$17/12 .F
+F$3.14159265 .F
+{ 1 0 rot { -rot over + swap rot 2dup >= } until drop
+} : fib-gtr
+One fib-gtr F/ .F
+F$2 Fsqrt .F
+F$2 Fln .F

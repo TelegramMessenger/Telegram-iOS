@@ -1,0 +1,180 @@
+"Asm.fif" include
+
+31 -1<< constant wc_undef
+0 constant wc_base
+-1 constant wc_master
+
+{ wcid@ 2dup <> swap wc_undef <> and
+  abort"workchain_id already set to another value"
+  wcid! } : setworkchain
+{ globalid@ 2dup <> swap and
+  abort"global_id already set to another value"
+  dup 0= abort"global_id cannot be zero"
+  globalid! } : setglobalid
+
+<b b> constant empty_cell
+
+// b x --> b'  ( serializes a Gram amount )
+{ -1 { 1+ 2dup 8 * ufits } until
+  rot over 4 u, -rot 8 * u, } : Gram,
+
+// workchain-id -- wc-zero-state
+{ <b x{9023afe2} s, globalid@ 32 i, 0 8 i, swap 32 i, 1 63 << 64 u,
+  0 64 i, now 32 u, 0 64 i, -1 32 i, <b 0 67 u, b> ref, 0 1 u,
+  <b 0 11 u, b> ref,
+  <b 0 128 10 + 1+ 1+ u, b> ref, 0 1 u, b>
+  dup isShardState? not abort"invalid ShardState created"
+} : mkemptyShardState
+
+' dictnew : Libs{
+'nop : }Libs
+{ <b swap 1 u, over ref, b> <s swap hash rot 256 udict!+
+  0= abort"duplicate library in collection" } : lib+
+{ 0 lib+ } : private_lib
+{ 1 lib+ } : public_lib
+
+{ (configdict) 0= abort"Configuration dictionary is empty" } : configdict
+
+// version capabilities --
+{ <b x{c4} s, rot 32 u, swap 64 u, b> 8 config! } : config.version!
+1 constant capIhr
+2 constant capCreateStats
+
+// max-validators masterchain-validators min-validators --
+{ swap rot <b swap 16 u, swap 16 u, swap 16 u, b> 16 config! } : config.validator_num!
+
+// min-stake max-stake min-total-stake max-factor --
+{ 4 0 reverse <b swap Gram, swap Gram, swap Gram, swap 32 u, b>
+  17 config!
+} : config.validator_stake_limits!
+
+// elected-for elections-begin-before elections-end-before stakes-frozen
+{ 4 0 reverse <b { swap 32 u, } 4 times b> 15 config! } : config.election_params!
+
+dictnew 0 2constant validator-dict
+{ @' validator-dict } : validator-dict@
+{ validator-dict@ nip } : validator#
+// val-pubkey weight --
+{ dup 0<= abort"validator weight must be non-negative"
+  dup 64 ufits not abort"validator weight must fit into 64 bits"
+  over Blen 32 <> abort"validator public key must be 32 bytes long"
+  <b x{538e81278a} s, rot B, swap 64 u, b> <s
+  validator-dict@ dup 1+ 3 -roll swap 
+  16 udict!+ 0= abort"cannot add validator"
+  swap 2 'nop does : validator-dict
+} : add-validator
+// since-ut until-ut main-val-cnt-or-0 --
+{ ?dup 0= { validator# } if 
+  validator# 0= abort"no initial validators defined"
+  rot <b x{11} s, swap 32 u, rot 32 u, validator# 16 u, swap 16 u,
+  validator-dict@ drop <s s, b>
+  34 config!
+} : config.validators!
+
+dictnew constant workchain-dict
+// root-hash file-hash enable-utime actual-min-split min-split max-split workchain-id --
+{ <b x{a6} s, 5 roll 32 u, 4 roll 8 u, 3 roll 8 u, rot 8 u, x{e000} s,
+  3 roll 256 u, rot 256 u, 0 32 u, x{1} s, -1 32 i, 0 64 u, b>
+  dup isWorkchainDescr? not abort"invalid WorkchainDescr created"
+  <s swap @' workchain-dict 32 idict!+ 0= abort"cannot add workchain"
+  =: workchain-dict
+} : add-std-workchain
+// --
+{ @' workchain-dict dict>s s>c 12 config! } : config.workchains!
+
+dictnew constant special-dict
+// special-smc-addr --
+{ x{} swap @' special-dict 256 udict! not abort"cannot add a new special smart contract"
+  =: special-dict
+} : make_special
+{ @' special-dict dict>s s>c 31 config! } : config.special!
+
+// bit-pps cell-pps mc-bit-pps mc-cell-pps --
+{ <b x{cc} s, 0 32 u, 4 roll 64 u, 3 roll 64 u, rot 64 u, swap 64 u,
+  0 dictnew 32 b>udict! 0= abort"cannot create storage prices dictionary"
+  <b swap <s s, b> 18 config!
+} : config.storage_prices!
+{ 16 << } : sg*
+{ 16 <</r } : sg*/
+{ bl word (number) ?dup 0= abort"not a valid 2^16-based fraction" 
+  1- { sg*/ } { sg* } cond 
+  1 'nop
+} ::_ sg~
+
+// gas_price gas_limit spec_limit gas_credit block_gas_limit freeze_due_limit delete_due_limit -- c
+{ 7 0 reverse <b x{de} s, { swap 64 u, } 7 times b>
+} : make-gas-prices
+{ make-gas-prices 20 config! } : config.mc_gas_prices!
+{ make-gas-prices 21 config! } : config.gas_prices!
+
+// lump_price bit_price cell_price ihr_factor first_frac next_frac
+{ 6 0 reverse <b x{ea} s, swap 64 u, swap 64 u, swap 64 u, swap 32 u, swap 16 u, swap 16 u, b>
+} : make-msg-fwd-prices
+{ make-msg-fwd-prices 24 config! } : config.mc_fwd_prices!
+{ make-msg-fwd-prices 25 config! } : config.fwd_prices!
+
+// mc-cc-lifetime sh-cc-lifetime sh-val-lifetime sh-val-num
+{ 4 0 reverse <b x{c1} s, swap 32 u, swap 32 u, swap 32 u, swap 32 u, b> 
+} : make-catchain-params
+{ make-catchain-params 28 config! } : config.catchain_params!
+// round-candidates next-cand-delay-ms consensus-timeout-ms fast-attempts attempt-duration cc-max-deps max-block-size max-collated-size
+{ 8 0 reverse <b x{d6} s, { swap 32 u, } 8 times b> } : make-vsession-params
+{ make-vsession-params 29 config! } : config.consensus_params!
+
+// b [underload soft hard] -- b'
+{ untriple 3 roll x{c3} s, 3 roll 32 u, rot 32 u, swap 32 u, } : param_limits,
+// bytes-limits gas-limits lt-limits -- c
+{ <b x{5d} s, 3 roll param_limits, rot param_limits, swap param_limits, b>
+} : make-block-limits
+{ make-block-limits 22 config! } : config.mc_block_limits!
+{ make-block-limits 23 config! } : config.block_limits!
+
+// mc-block-create-fee bc-block-create-fee
+{ <b x{6b} s, rot Gram, swap Gram, b> } : make-block-create-fees
+{ make-block-create-fees 14 config! } : config.block_create_fees!
+
+{ <b swap 256 u, b> } : make-smc-addr-cell
+{ make-smc-addr-cell 0 config! } : config.config_smc!
+{ make-smc-addr-cell 1 config! } : config.elector_smc!
+{ make-smc-addr-cell 2 config! } : config.minter_smc!
+{ make-smc-addr-cell 3 config! } : config.collector_smc!
+
+{ <b swap dict, b> 7 config! } : config.to_mint!
+
+1000000000 constant Gram
+1000000 constant mGram
+1000 constant uGram
+1 constant nGram
+{ Gram * } : Gram*
+{ mGram * } : mGram*
+{ uGram * } : uGram*
+'nop : nGram*
+{ Gram swap */r } : Gram*/
+{ mGram swap */r } : mGram*/
+{ uGram swap */r } : uGram*/
+{ /r } : nGram*/
+
+// GR$.17 is equivalent to 170000000
+{ bl word (number) ?dup 0= abort"not a valid Gram amount" 
+  1- { Gram swap */r } { Gram * } cond 
+  1 'nop
+} ::_ GR$
+
+{ 10 << } : *Ki
+{ 20 << } : *Mi
+{ 30 << } : *Gi
+{ 10 <</r } : */Ki
+{ 20 <</r } : */Mi
+{ 30 <</r } : */Gi
+{ 1000 * } : *K
+{ 1000000 * } : *M
+{ 1000000000 * } : *G
+{ 1000 swap */r } : */K
+{ 1000000 swap */r } : */M
+{ 1000000000 swap */r } : */G
+
+0 constant recv_internal
+-1 constant recv_external
+-2 constant run_ticktock
+-3 constant split_prepare
+-4 constant split_install

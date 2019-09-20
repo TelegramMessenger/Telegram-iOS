@@ -1,0 +1,238 @@
+"TonUtil.fif" include
+"Asm.fif" include
+
+def? $1 { @' $1 } { "" } cond constant suffix 
+{ suffix $+ } : +suffix
+
+wc_master setworkchain
+-17 setglobalid   // negative value means a test instance of the blockchain
+
+// Initial state of Workchain 0 (Basic workchain)
+
+0 mkemptyShardState 
+
+cr ."initial basechain state is:" cr dup <s csr. cr
+dup dup 31 boc+>B dup Bx. cr
+dup "basestate0" +suffix +".boc" tuck B>file
+."(Initial basechain state saved to file " type .")" cr
+Bhash dup =: basestate0_fhash
+."file hash=" dup x. space 256 u>B dup B>base64url type cr
+"basestate0" +suffix +".fhash" B>file
+hash dup =: basestate0_rhash
+."root hash=" dup x. space 256 u>B dup B>base64url type cr
+"basestate0" +suffix +".rhash" B>file
+
+basestate0_rhash basestate0_fhash now 0 2 32 0 add-std-workchain
+config.workchains!
+
+// SmartContract #1 (Simple wallet)
+
+<{  SETCP0 DUP IFNOTRET INC 32 THROWIF  // return if recv_internal, fail unless recv_external
+    512 INT LDSLICEX DUP 32 PLDU   // sign cs cnt
+    c4 PUSHCTR CTOS 32 LDU 256 LDU ENDS  // sign cs cnt cnt' pubk
+    s1 s2 XCPU            // sign cs cnt pubk cnt' cnt
+    EQUAL 33 THROWIFNOT   // ( seqno mismatch? )
+    s2 PUSH HASHSU        // sign cs cnt pubk hash
+    s0 s4 s4 XC2PU        // pubk cs cnt hash sign pubk
+    CHKSIGNU              // pubk cs cnt ?
+    34 THROWIFNOT         // signature mismatch
+    ACCEPT
+    SWAP 32 LDU NIP 8 LDU LDREF ENDS      // pubk cnt mode msg
+    SWAP SENDRAWMSG       // pubk cnt ; ( message sent )
+    INC NEWC 32 STU 256 STU ENDC c4 POPCTR
+}>c
+// code
+<b 0 32 u, 
+   "main-wallet" +suffix +".pk" load-generate-keypair drop
+   B, 
+b> // data
+Libs{
+  x{ABACABADABACABA} s>c public_lib
+  x{1234} x{5678} |_ s>c private_lib
+}Libs  // libraries
+GR$1700000000 // balance
+0 // split_depth
+0 // ticktock
+2 // mode: create
+register_smc
+dup make_special dup constant smc1_addr  
+Masterchain over 
+2dup ."wallet address = " .addr cr 2dup 6 .Addr cr
+"main-wallet" +suffix +".addr" save-address-verbose
+
+// SmartContract #2 (Simple money giver for test network)
+<{ SETCP0 DUP IFNOTRET INC 32 THROWIF  // return if recv_internal, fail unless recv_external
+   32 LDU SWAP                         // cs cnt
+   c4 PUSHCTR CTOS 32 LDU ENDS         // cs cnt cnt'
+   TUCK EQUAL 33 THROWIFNOT            // ( seqno mismatch? )
+   ACCEPT                              // cs cnt'
+   SWAP 8 LDU LDREF ENDS               // cnt'' mode msg
+   GR$20 INT 3 INT RAWRESERVE          // reserve all but 20 Grams from the balance
+   SWAP SENDRAWMSG
+   INC NEWC 32 STU ENDC c4 POPCTR      // store cnt''
+}>c
+// code
+<b 0 32 u, b> // data
+empty_cell    // libraries
+GR$1000000    // initial balance (1m test Grams)
+0 0 2 register_smc
+dup make_special dup constant smc2_addr
+Masterchain over 
+2dup ."free test gram giver address = " .addr cr 2dup 6 .Addr cr
+"testgiver" +suffix +".addr" save-address-verbose
+
+// SmartContract #3
+PROGRAM{
+  recv_internal x{} PROC
+  run_ticktock PROC:<{
+    c4 PUSHCTR CTOS 32 LDU 256 LDU ENDS
+    NEWC ROT INC 32 STUR OVER 256 STUR ENDC
+    c4 POPCTR
+    // first 32 bits of persistent data have been increased
+    // remaining 256 bits with an address have been fetched
+    // create new empty message with 0.1 Grams to that address
+    NEWC b{00100010011111111} STSLICECONST TUCK 256 STU
+    100000000 INT STGRAMS  // store 0.1 Grams
+    1 4 + 4 + 64 + 32 + 1+ 1+ INT STZEROES ENDC
+    // send raw message from Cell
+    ZERO SENDRAWMSG
+    -17 INT 256 STIR 130000000 INT STGRAMS
+    107 INT STZEROES ENDC 
+    ZERO // another message with 0.13 Grams to account -17
+    NEWC b{11000100100000} "test" $>s |+ STSLICECONST
+    123456789 INT STGRAMS
+    107 INT STZEROES "Hello, world!" $>s STSLICECONST ENDC
+    ZERO SENDRAWMSG SENDRAWMSG // external message to address "test"
+  }>
+}END>c
+// code
+<b x{11EF55AA} s, smc1_addr 256 u, b> // data
+// empty_cell // libraries
+Libs{
+  x{ABACABADABACABA} s>c public_lib
+  x{1234} x{5678} |_ s>c public_lib
+}Libs  // libraries
+0x333333333 // balance
+0 // split_depth
+3 // ticktock: tick
+2 // mode: create
+register_smc
+dup make_special dup constant smc3_addr
+."address = " x. cr
+
+// SmartContract #4 (elector)
+"elector-code.fif" include   // code in separate source file
+<b 0 1 1+ 1+ 5 + u, 0 256 u, b>  // data
+GR$10  // balance: 10 grams
+0 // split_depth
+1 // ticktock: tick
+2 // mode: create
+register_smc
+dup make_special dup constant smc4_addr dup constant elector_addr
+
+// Configuration Parameters
+
+// max-validators max-main-validators min-validators
+// 9 3 2 config.validator_num!
+1000 100 5 config.validator_num!
+// min-stake max-stake min-total-stake max-factor
+GR$10000 GR$10000000 GR$1000000 sg~10 config.validator_stake_limits!
+// elected-for elect-start-before elect-end-before stakes-frozen-for
+400000 200000 4000 400000 config.election_params!
+// elector-addr
+elector_addr config.elector_smc!
+
+1 sg* 100 sg* 1000 sg* 1000000 sg* config.storage_prices!
+config.special!
+
+// gas_price gas_limit gas_credit block_gas_limit freeze_due_limit delete_due_limit -- 
+1000 sg* 1000000 10000 10000000 GR$0.1 GR$1.0 config.gas_prices!
+10000 sg* 1000000 10000 10000000 GR$0.1 GR$1.0 config.mc_gas_prices!
+// lump_price bit_price cell_price ihr_factor first_frac next_frac
+1000000 1000 sg* 100000 sg* 3/2 sg*/ 1/3 sg*/ 1/3 sg*/ config.fwd_prices!
+10000000 10000 sg* 1000000 sg* 3/2 sg*/ 1/3 sg*/ 1/3 sg*/ config.mc_fwd_prices!
+// mc-cc-lifetime sh-cc-lifetime sh-val-lifetime sh-val-num
+250 250 1000 7 config.catchain_params!
+
+128 *Ki 512 *Ki 1 *Mi triple  // [ underload soft hard ] : block bytes limit
+100000 500000 1000000 triple  // gas limits
+1000 5000 10000 triple        // lt limits
+triple dup untriple config.mc_block_limits!
+untriple config.block_limits!
+
+GR$1.7 GR$1 config.block_create_fees!
+smc1_addr config.collector_smc!
+smc1_addr config.minter_smc!
+
+1000000000000 -17 of-cc 666666666666 239 of-cc cc+ config.to_mint!
+
+"validator-keys" +suffix +".pub" file>B
+{ dup Blen } { 32 B| swap dup ."Validator public key = " Bx. cr
+  17 add-validator } while drop
+// newkeypair nip dup ."Validator #1 public key = " Bx. cr 
+// 17 add-validator
+// newkeypair nip dup ."Validator #2 public key = " Bx. cr
+// 239 add-validator
+now dup 1000000 + 0 config.validators!
+
+// SmartContract #5 (Config)
+PROGRAM{
+  recv_internal x{} PROC
+  recv_external PROC:<{
+    512 INT LDSLICEX DUP 32 LDU 32 PLDU   // sign cs cnt valid-until
+    NOW LEQ 35 THROWIF    // ( fail if now >= valid-until )   
+    c4 PUSH CTOS LDREF 32 LDU 256 LDU ENDS  // sign cs cnt dict cnt' pubk
+    s1 s3 XCPU            // sign cs cnt dict pubk cnt' cnt 
+    EQUAL 33 THROWIFNOT   // ( seqno mismatch? )
+    s3 PUSH HASHSU        // sign cs cnt dict pubk hash
+    s0 s5 s5 XC2PU        // pubk cs cnt dict hash sign pubk
+    CHKSIGNU              // pubk cs cnt dict ?
+    34 THROWIFNOT         // signature mismatch
+    ACCEPT
+    ROT 64 LDU NIP 32 LDI LDREF ENDS      // pubk cnt dict index value
+    s0 s2 XCHG 32 INT     // pubk cnt value index dict 32
+    DICTISETREF ROTREV    // dict' pubk cnt
+    INC NEWC 32 STU 256 STU STREF ENDC c4 POP
+  }>
+  run_ticktock PROC:<{
+    // store (now >> 8) into config param #-17, if the new value is different
+    c4 PUSH CTOS LDREF SWAP  // s' D
+    NOW 8 RSHIFT# TUCK       // s' t D t
+    NEWC 32 STU ENDC         // s' t D c
+    -17 INT ROT 32 INT       // s' t c -17 D 32 
+    DICTISETGETREF           // s' t D' c' -1 or s' t D' 0
+    IF:<{ CTOS 32 LDU ENDS }>ELSE<{ ZERO }>  // s' t D' y'
+    ROT EQUAL IFNOT:         // s' D'
+    NEWC STREF STSLICE ENDC  // c
+    c4 POP
+  }>
+}END>c
+// code
+<b 0 32 u, 
+   "config-master" +suffix +".pk" load-generate-keypair drop
+   B,
+   configdict ref,
+b> // data
+empty_cell  // libraries
+1  // balance
+0 1 2 register_smc  // tock
+dup set_config_smc
+Masterchain swap
+."config smart contract address = " 2dup .addr cr 2dup 7 .Addr cr
+"config-master" +suffix +".addr" save-address-verbose
+// Other data
+
+create_state
+cr cr ."new state is:" cr dup <s csr. cr
+dup 31 boc+>B dup Bx. cr
+dup "zerostate" +suffix +".boc" tuck B>file
+."(Initial masterchain state saved to file " type .")" cr
+Bhash dup =: zerostate_fhash
+."file hash=" dup x. space 256 u>B dup B>base64url type cr
+"zerostate" +suffix +".fhash" B>file
+hash dup =: zerostate_rhash ."root hash=" dup x. space 256 u>B dup B>base64url type cr
+"zerostate" +suffix +".rhash" B>file
+basestate0_rhash ."Basestate0 root hash=" dup x. space 256 u>B B>base64url type cr
+basestate0_fhash ."Basestate0 file hash=" dup x. space 256 u>B B>base64url type cr
+zerostate_rhash ."Zerostate root hash=" dup x. space 256 u>B B>base64url type cr
+zerostate_fhash ."Zerostate file hash=" dup x. space 256 u>B B>base64url type cr

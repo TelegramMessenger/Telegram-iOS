@@ -1,0 +1,1101 @@
+library TVM_Asm
+// simple TVM Assembler
+variable @atend
+'nop @atend !
+{ `normal eq? not abort"must be terminated by }>" } : @normal?
+{ @atend @ 1 { @atend ! @normal? } does @atend ! } : @pushatend
+{ @pushatend <b } : <{
+{ @atend @ execute } : @endblk
+{ `normal @endblk } : }>
+{ }> b> } : }>c
+{ }>c <s } : }>s
+{ @atend @ 2 { @atend ! rot b> ref, swap @endblk } does @atend ! <b } : @|
+{ @atend @ 3 { @atend ! 2swap rot execute } does @atend ! <b } : @doafter<{
+{ over brembits <= } : @havebits
+{ rot >= -rot <= and } : 2x<=
+{ 2 pick brembitrefs 1- 2x<= } : @havebitrefs
+{ @havebits not ' @| if } : @ensurebits
+{ @havebitrefs not ' @| if } : @ensurebitrefs
+{ rot over @ensurebits -rot u, } : @simpleuop
+{ tuck sbitrefs @ensurebitrefs swap s, } : @addop
+{ tuck bbitrefs @ensurebitrefs swap b+ } : @addopb
+' @addopb : @inline
+{ 1 ' @addop does create } : @Defop
+{ 1 { <b swap s, swap 8 u, @addopb } does create } : @Defop(8u)
+{ 1 { <b swap s, swap 8 i, @addopb } does create } : @Defop(8i)
+{ 1 { <b swap s, swap 1- 8 u, @addopb } does create } : @Defop(8u+1)
+{ 1 { <b swap s, swap 4 u, @addopb } does create } : @Defop(4u)
+{ 1 { <b swap s, rot 4 u, swap 4 u, @addopb } does create } : @Defop(4u,4u)
+{ 1 { <b swap s, swap ref, @addopb } does create } : @Defop(ref)
+{ <b 0xef 8 u, swap 12 i, b> } : si()
+// x mi ma -- ?
+{ rot tuck >= -rot <= and } : @range
+{ rot tuck < -rot > or } : @-range
+{ @-range abort"Out of range" } : @rangechk
+{ dup 0 < over 255 > or abort"Invalid stack register number" si() } : s()
+{ si() constant } : @Sreg
+-2 @Sreg s(-2)
+-1 @Sreg s(-1)
+0 @Sreg s0
+1 @Sreg s1
+2 @Sreg s2
+3 @Sreg s3
+4 @Sreg s4
+5 @Sreg s5
+6 @Sreg s6
+7 @Sreg s7
+8 @Sreg s8
+9 @Sreg s9
+10 @Sreg s10
+11 @Sreg s11
+12 @Sreg s12
+13 @Sreg s13
+14 @Sreg s14
+15 @Sreg s15
+{ dup 0 < over 7 > or abort"Invalid control register number" <b 0xcc 8 u, swap 4 u, b> } : c()
+{ c() constant } : @Creg
+0 @Creg c0
+1 @Creg c1
+2 @Creg c2
+3 @Creg c3
+4 @Creg c4
+5 @Creg c5
+7 @Creg c7
+{ <s 8 u@+ swap 0xef <> abort"not a stack register" 12 i@+ s> } : @bigsridx
+{ @bigsridx dup 16 >= over 0< or abort"stack register s0..s15 expected" } : @sridx
+{ rot @bigsridx tuck < -rot tuck > rot or abort"stack register out of range" } : @sridxrange
+{ swap @bigsridx + dup 16 >= over 0< or abort"stack register out of range" } : @sridx+
+{ <s 8 u@+ 4 u@+ s> swap 0xcc <> over 7 > or over 6 = or abort"not a control register c0..c5 or c7" } : @cridx
+{ <s 8 u@ 0xcc = } : @iscr?
+{ <b swap s, 1 { swap @sridx 4 u, @addopb } does create } : @Defop(s)
+{ <b swap s, 1 { rot @sridx 4 u, swap @sridx 4 u, @addopb } does create } : @Defop(s,s)
+{ <b swap s, 1 { swap @cridx 4 u, @addopb } does create } : @Defop(c)
+//
+// stack manipulation primitives
+// (simple stack primitives)
+//
+x{00} @Defop NOP
+x{01} @Defop SWAP
+x{0} @Defop(s) XCHG0
+{ @bigsridx swap @bigsridx 2dup =
+  { 2drop <b }
+  { 2dup < { swap } if dup 0=
+    { drop dup 16 <
+      { <b x{0} s, swap 4 u, }
+      { <b x{11} s, swap 8 u, }
+      cond
+    }
+    { over 16 >=
+      { tuck 16 >=
+        { <b x{11} s, 2 pick 8 u, x{11} s, swap 8 u, x{11} s, swap 8 u, }
+	{ <b x{0} s, 2 pick 4 u, x{11} s, swap 8 u, x{0} s, swap 4 u, } cond
+      }
+      { dup 1 =
+        { drop <b x{1} s, swap 4 u, }
+        { <b x{10} s, swap 4 u, swap 4 u, }
+        cond
+      } cond
+    } cond
+  } cond
+  @addopb } : XCHG
+x{ED4} @Defop(c) PUSHCTR
+x{ED5} @Defop(c) POPCTR
+{ dup @iscr?
+  ' PUSHCTR
+  { @bigsridx dup 16 <
+    { <b x{2} s, swap 4 u, }
+    { <b x{56} s, swap 8 u,
+    } cond
+  @addopb
+  } cond
+} : PUSH
+x{20} @Defop DUP
+x{21} @Defop OVER
+{ dup @iscr?
+  ' POPCTR
+  { @bigsridx dup 16 <
+    { <b x{3} s, swap 4 u, }
+    { <b x{57} s, swap 8 u,
+    } cond
+  @addopb
+  } cond
+} : POP
+x{30} @Defop DROP
+x{31} @Defop NIP
+
+// compound stack primitives
+{ @sridx rot @sridx rot @sridx swap <b x{4} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : XCHG3
+x{50} @Defop(s,s) XCHG2
+x{51} @Defop(s,s) XCPU
+{ <b x{52} s, rot @sridx 4 u, swap 1 @sridx+ 4 u, @addopb } : PUXC
+x{53} @Defop(s,s) PUSH2
+{ @sridx rot @sridx rot @sridx swap <b x{540} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : XCHG3_l
+{ @sridx rot @sridx rot @sridx swap <b x{541} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : XC2PU
+{ 1 @sridx+ rot @sridx rot @sridx swap <b x{542} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : XCPUXC
+{ @sridx rot @sridx rot @sridx swap <b x{543} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : XCPU2
+{ 1 @sridx+ rot @sridx rot 1 @sridx+ swap <b x{544} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : PUXC2
+{ 1 @sridx+ rot @sridx rot 1 @sridx+ swap <b x{545} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : PUXCPU
+{ 2 @sridx+ rot @sridx rot 1 @sridx+ swap <b x{546} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : PU2XC
+{ @sridx rot @sridx rot @sridx swap <b x{547} s, swap 4 u, swap 4 u, swap 4 u, @addopb } : PUSH3
+{ <b x{55} s, rot 1- 4 u, swap 1- 4 u, @addopb } : BLKSWAP
+{ dup { 1 swap BLKSWAP } { drop } cond } : ROLL
+{ dup { 1 BLKSWAP } { drop } cond } dup : -ROLL : ROLLREV
+x{5513} dup @Defop 2ROT @Defop ROT2
+
+// exotic stack primitives
+x{58} @Defop ROT
+x{59} dup @Defop -ROT @Defop ROTREV
+x{5A} dup @Defop 2SWAP @Defop SWAP2
+x{5B} dup @Defop 2DROP @Defop DROP2
+x{5C} dup @Defop 2DUP @Defop DUP2
+x{5D} dup @Defop 2OVER @Defop OVER2
+{ <b x{5E} s, rot 2 - 4 u, swap 4 u, @addopb } : REVERSE
+{ <b x{5F0} s, swap 4 u, @addopb } : BLKDROP
+{ over 0= abort"first argument must be non-zero"
+  <b x{5F} s, rot 4 u, swap 4 u, @addopb } : BLKPUSH
+x{60} dup @Defop PICK @Defop PUSHX
+x{61} @Defop ROLLX
+x{62} dup @Defop -ROLLX @Defop ROLLREVX
+x{63} @Defop BLKSWX
+x{64} @Defop REVX
+x{65} @Defop DROPX
+x{66} @Defop TUCK
+x{67} @Defop XCHGX
+x{68} @Defop DEPTH
+x{69} @Defop CHKDEPTH
+x{6A} @Defop ONLYTOPX
+x{6B} @Defop ONLYX
+
+// null primitives
+x{6D} dup @Defop NULL @Defop PUSHNULL
+x{6E} @Defop ISNULL
+// tuple primitives
+x{6F0} @Defop(4u) TUPLE
+x{6F00} @Defop NIL
+x{6F01} @Defop SINGLE
+x{6F02} dup @Defop PAIR @Defop CONS 
+x{6F03} @Defop TRIPLE
+x{6F1} @Defop(4u) INDEX
+x{6F10} dup @Defop FIRST @Defop CAR
+x{6F11} dup @Defop SECOND @Defop CDR
+x{6F12} @Defop THIRD
+x{6F2} @Defop(4u) UNTUPLE
+x{6F21} @Defop UNSINGLE
+x{6F22} dup @Defop UNPAIR @Defop UNCONS
+x{6F23} @Defop UNTRIPLE
+x{6F3} @Defop(4u) UNPACKFIRST
+x{6F30} @Defop CHKTUPLE
+x{6F4} @Defop(4u) EXPLODE
+x{6F5} @Defop(4u) SETINDEX
+x{6F50} @Defop SETFIRST
+x{6F51} @Defop SETSECOND
+x{6F52} @Defop SETTHIRD
+x{6F6} @Defop(4u) INDEXQ
+x{6F60} dup @Defop FIRSTQ @Defop CARQ
+x{6F61} dup @Defop SECONDQ @Defop CDRQ
+x{6F62} @Defop THIRDQ
+x{6F7} @Defop(4u) SETINDEXQ
+x{6F70} @Defop SETFIRSTQ
+x{6F71} @Defop SETSECONDQ
+x{6F72} @Defop SETTHIRDQ
+x{6F80} @Defop TUPLEVAR
+x{6F81} @Defop INDEXVAR
+x{6F82} @Defop UNTUPLEVAR
+x{6F83} @Defop UNPACKFIRSTVAR
+x{6F84} @Defop EXPLODEVAR
+x{6F85} @Defop SETINDEXVAR
+x{6F86} @Defop INDEXVARQ
+x{6F87} @Defop SETINDEXVARQ
+x{6F88} @Defop TLEN
+x{6F89} @Defop QTLEN
+x{6F8A} @Defop ISTUPLE
+x{6F8B} @Defop LAST
+x{6F8C} dup @Defop TPUSH @Defop COMMA
+x{6F8D} @Defop TPOP
+x{6FA0} @Defop NULLSWAPIF
+x{6FA1} @Defop NULLSWAPIFNOT
+x{6FA2} @Defop NULLROTRIF
+x{6FA3} @Defop NULLROTRIFNOT
+{ <b x{6FB} s, rot 2 u, swap 2 u, @addopb } : INDEX2
+x{6FB4} @Defop CADR
+x{6FB5} @Defop CDDR
+{ <b x{6FE_} s, 3 roll 2 u, rot 2 u, swap 2 u, @addopb } : INDEX3
+x{6FD4} @Defop CADDR
+x{6FD5} @Defop CDDDR
+
+// integer constants
+x{70} dup @Defop ZERO @Defop FALSE
+x{71} @Defop ONE
+x{72} @Defop TWO
+x{7A} @Defop TEN
+x{7F} @Defop TRUE
+{ dup 10 <= over -5 >= and
+  { 15 and <b x{7} s, swap 4 u, }
+  { dup 8 fits
+    { <b x{80} s, swap 8 i, }
+    { dup 16 fits
+      { <b x{81} s, swap 16 i, }
+      { 11 { dup 259 > abort"integer too large" 8 + 2dup fits } until
+        <b x{82} s, over 3 >> 2- 5 u, -rot i, 
+      } cond
+    } cond
+  } cond
+  @addopb } dup : PUSHINT : INT
+{ <b x{83} s, swap 1- 8 u, @addopb } : PUSHPOW2
+x{83FF} @Defop PUSHNAN
+{ <b x{84} s, swap 1- 8 u, @addopb } : PUSHPOW2DEC
+{ <b x{85} s, swap 1- 8 u, @addopb } : PUSHNEGPOW2
+//
+// other constants
+x{88} @Defop(ref) PUSHREF
+x{89} @Defop(ref) PUSHREFSLICE
+x{8A} @Defop(ref) PUSHREFCONT
+{ 1- dup 0< over 8 >= or abort"invalid slice padding"
+  swap 1 1 u, 0 rot u, } : @scomplete
+{ tuck sbitrefs swap 17 + swap @havebitrefs not
+  { <b rot s, b> PUSHREFSLICE }
+  { over sbitrefs 2dup 123 0 2x<=
+    { drop tuck 4 + 3 >> swap x{8B} s, over 4 u, 3 roll s,
+      -rot 3 << 4 + swap - @scomplete }
+    { 2dup 1 >= swap 248 <= and
+      { rot x{8C} s, swap 1- 2 u, over 7 + 3 >> tuck 5 u, 3 roll s,
+        -rot 3 << 1 + swap - @scomplete }
+      { rot x{8D} s, swap 3 u, over 2 + 3 >> tuck 7 u, 3 roll s,
+        -rot 3 << 6 + swap - @scomplete
+      } cond
+    } cond
+  } cond
+} dup : PUSHSLICE : SLICE
+{ tuck bbitrefs swap 16 + dup 7 and 3 -roll swap @havebitrefs
+  not rot or
+  { swap b> PUSHREFCONT }
+  { over bbitrefs 2dup 120 0 2x<=
+    { drop swap x{9} s, swap 3 >> 4 u, swap b+ }
+    { rot x{8F_} s, swap 2 u, swap 3 >> 7 u, swap b+ } cond
+  } cond
+} dup : PUSHCONT : CONT
+{ }> PUSHCONT } : }>CONT
+{ { @normal? PUSHCONT } @doafter<{ } : CONT:<{
+
+// arithmetic operations
+{ 2 { rot dup 8 fits
+      { nip <b rot s, swap 8 i, }
+      { rot drop <b swap PUSHINT swap s, }
+      cond @addopb
+    } does create
+} : @Defop(8i,alt)
+x{A0} @Defop ADD
+x{A1} @Defop SUB
+x{A2} @Defop SUBR
+x{A3} @Defop NEGATE
+x{A4} @Defop INC
+x{A5} @Defop DEC
+x{A6} x{A0} @Defop(8i,alt) ADDCONST
+{ negate ADDCONST } : SUBCONST
+x{A7} x{A8} @Defop(8i,alt) MULCONST
+' ADDCONST : ADDINT
+' SUBCONST : SUBINT
+' MULCONST : MULINT
+x{A8} @Defop MUL
+x{A904} @Defop DIV
+x{A905} @Defop DIVR
+x{A906} @Defop DIVC
+x{A908} @Defop MOD
+x{A90C} @Defop DIVMOD
+x{A90D} @Defop DIVMODR
+x{A90E} @Defop DIVMODC
+x{A925} @Defop RSHIFTR
+x{A935} @Defop(8u+1) RSHIFTR#
+x{A938} @Defop(8u+1) MODPOW2#
+x{A984} @Defop MULDIV
+x{A985} @Defop MULDIVR
+x{A98C} @Defop MULDIVMOD
+x{A9C4} @Defop LSHIFTDIV
+x{A9C5} @Defop LSHIFTDIVR
+x{A9D4} @Defop(8u+1) LSHIFT#DIV
+x{A9D5} @Defop(8u+1) LSHIFT#DIVR
+x{A9E4} @Defop MULRSHIFT
+x{A9E5} @Defop MULRSHIFTR
+x{A9F4} @Defop(8u+1) MULRSHIFT#
+x{A9F5} @Defop(8u+1) MULRSHIFTR#
+x{AA} @Defop(8u+1) LSHIFT#
+x{AB} @Defop(8u+1) RSHIFT#
+x{AC} @Defop LSHIFT
+x{AD} @Defop RSHIFT
+x{AE} @Defop POW2
+x{B0} @Defop AND
+x{B1} @Defop OR
+x{B2} @Defop XOR
+x{B3} @Defop NOT
+x{B4} @Defop(8u+1) FITS
+x{B400} @Defop CHKBOOL
+x{B5} @Defop(8u+1) UFITS
+x{B500} @Defop CHKBIT
+x{B600} @Defop FITSX
+x{B601} @Defop UFITSX
+x{B602} @Defop BITSIZE
+x{B603} @Defop UBITSIZE
+x{B608} @Defop MIN
+x{B609} @Defop MAX
+x{B60A} dup @Defop MINMAX @Defop INTSORT2
+x{B60B} @Defop ABS
+x{B7} @Defop QUIET
+x{B7A0} @Defop QADD
+x{B7A1} @Defop QSUB
+x{B7A2} @Defop QSUBR
+x{B7A3} @Defop QNEGATE
+x{B7A4} @Defop QINC
+x{B7A5} @Defop QDEC
+x{B7A8} @Defop QMUL
+x{B7A904} @Defop QDIV
+x{B7A905} @Defop QDIVR
+x{B7A906} @Defop QDIVC
+x{B7A908} @Defop QMOD
+x{B7A90C} @Defop QDIVMOD
+x{B7A90D} @Defop QDIVMODR
+x{B7A90E} @Defop QDIVMODC
+x{B7A985} @Defop QMULDIVR
+x{B7A98C} @Defop QMULDIVMOD
+x{B7AC} @Defop QLSHIFT
+x{B7AD} @Defop QRSHIFT
+x{B7AE} @Defop QPOW2
+x{B7B0} @Defop QAND
+x{B7B1} @Defop QOR
+x{B7B2} @Defop QXOR
+x{B7B3} @Defop QNOT
+x{B7B4} @Defop(8u+1) QFITS
+x{B7B5} @Defop(8u+1) QUFITS
+x{B7B600} @Defop QFITSX
+x{B7B601} @Defop QUFITSX
+
+// integer comparison
+x{B8} @Defop SGN
+x{B9} @Defop LESS
+x{BA} @Defop EQUAL
+x{BB} @Defop LEQ
+x{BC} @Defop GREATER
+x{BD} @Defop NEQ
+x{BE} @Defop GEQ
+x{BF} @Defop CMP
+x{C0} x{BA} @Defop(8i,alt) EQINT
+x{C000} @Defop ISZERO
+x{C1} x{B9} @Defop(8i,alt) LESSINT
+{ 1+ LESSINT } : LEQINT
+x{C100} @Defop ISNEG
+x{C101} @Defop ISNPOS
+x{C2} x{BC} @Defop(8i,alt) GTINT
+{ 1- GTINT } : GEQINT
+x{C200} @Defop ISPOS
+x{C2FF} @Defop ISNNEG
+x{C3} x{BD} @Defop(8i,alt) NEQINT
+x{C300} @Defop ISNZERO
+x{C4} @Defop ISNAN
+x{C5} @Defop CHKNAN
+
+// other comparison
+x{C700} @Defop SEMPTY
+x{C701} @Defop SDEMPTY
+x{C702} @Defop SREMPTY
+x{C703} @Defop SDFIRST
+x{C704} @Defop SDLEXCMP
+x{C705} @Defop SDEQ
+x{C708} @Defop SDPFX
+x{C709} @Defop SDPFXREV
+x{C70A} @Defop SDPPFX
+x{C70B} @Defop SDPPFXREV
+x{C70C} @Defop SDSFX
+x{C70D} @Defop SDSFXREV
+x{C70E} @Defop SDPSFX
+x{C70F} @Defop SDPSFXREV
+x{C710} @Defop SDCNTLEAD0
+x{C711} @Defop SDCNTLEAD1
+x{C712} @Defop SDCNTTRAIL0
+x{C713} @Defop SDCNTTRAIL1
+
+// cell serialization (Builder manipulation primitives)
+x{C8} @Defop NEWC
+x{C9} @Defop ENDC
+x{CA} @Defop(8u+1) STI
+x{CB} @Defop(8u+1) STU
+x{CC} @Defop STREF
+x{CD} dup @Defop STBREFR @Defop ENDCST
+x{CE} @Defop STSLICE
+x{CF00} @Defop STIX
+x{CF01} @Defop STUX
+x{CF02} @Defop STIXR
+x{CF03} @Defop STUXR
+x{CF04} @Defop STIXQ
+x{CF05} @Defop STUXQ
+x{CF06} @Defop STIXRQ
+x{CF07} @Defop STUXRQ
+x{CF08} @Defop(8u+1) STI_l
+x{CF09} @Defop(8u+1) STU_l
+x{CF0A} @Defop(8u+1) STIR
+x{CF0B} @Defop(8u+1) STUR
+x{CF0C} @Defop(8u+1) STIQ
+x{CF0D} @Defop(8u+1) STUQ
+x{CF0E} @Defop(8u+1) STIRQ
+x{CF0F} @Defop(8u+1) STURQ
+x{CF10} @Defop STREF_l
+x{CF11} @Defop STBREF
+x{CF12} @Defop STSLICE_l
+x{CF13} @Defop STB
+x{CF14} @Defop STREFR
+x{CF15} @Defop STBREFR_l
+x{CF16} @Defop STSLICER
+x{CF17} dup @Defop STBR @Defop BCONCAT
+x{CF18} @Defop STREFQ
+x{CF19} @Defop STBREFQ
+x{CF1A} @Defop STSLICEQ
+x{CF1B} @Defop STBQ
+x{CF1C} @Defop STREFRQ
+x{CF1D} @Defop STBREFRQ
+x{CF1E} @Defop STSLICERQ
+x{CF1F} dup @Defop STBRQ @Defop BCONCATQ
+x{CF20} @Defop(ref) STREFCONST
+{ <b x{CF21} s, rot ref, swap ref, @addopb } : STREF2CONST
+x{CF28} @Defop STILE4
+x{CF29} @Defop STULE4
+x{CF2A} @Defop STILE8
+x{CF2B} @Defop STULE8
+x{CF31} @Defop BBITS
+x{CF32} @Defop BREFS
+x{CF33} @Defop BBITREFS
+x{CF35} @Defop BREMBITS
+x{CF36} @Defop BREMREFS
+x{CF37} @Defop BREMBITREFS
+x{CF38} @Defop(8u+1) BCHKBITS#
+x{CF39} @Defop BCHKBITS
+x{CF3A} @Defop BCHKREFS
+x{CF3B} @Defop BCHKBITREFS
+x{CF3C} @Defop(8u+1) BCHKBITSQ#
+x{CF3D} @Defop BCHKBITSQ
+x{CF3E} @Defop BCHKREFSQ
+x{CF3F} @Defop BCHKBITREFSQ
+x{CF40} @Defop STZEROES
+x{CF41} @Defop STONES
+x{CF42} @Defop STSAME
+{ tuck sbitrefs swap 15 + swap @havebitrefs not
+  { swap PUSHSLICE STSLICER }
+  { over sbitrefs 2dup 57 3 2x<=
+    { rot x{CFC_} s, swap 2 u, over 6 + 3 >> tuck 3 u, 3 roll s,
+      -rot 3 << 2 + swap - @scomplete }
+    { 2drop swap PUSHSLICE STSLICER } cond
+  } cond
+} : STSLICECONST
+x{CF81} @Defop STZERO
+x{CF83} @Defop STONE
+// cell deserialization (CellSlice primitives)
+x{D0} @Defop CTOS
+x{D1} @Defop ENDS
+x{D2} @Defop(8u+1) LDI
+x{D3} @Defop(8u+1) LDU
+x{D4} @Defop LDREF
+x{D5} @Defop LDREFRTOS
+x{D6} @Defop(8u+1) LDSLICE
+x{D700} @Defop LDIX
+x{D701} @Defop LDUX
+x{D702} @Defop PLDIX
+x{D703} @Defop PLDUX
+x{D704} @Defop LDIXQ
+x{D705} @Defop LDUXQ
+x{D706} @Defop PLDIXQ
+x{D707} @Defop PLDUXQ
+x{D708} @Defop(8u+1) LDI_l
+x{D709} @Defop(8u+1) LDU_l
+x{D70A} @Defop(8u+1) PLDI
+x{D70B} @Defop(8u+1) PLDU
+x{D70C} @Defop(8u+1) LDIQ
+x{D70D} @Defop(8u+1) LDUQ
+x{D70E} @Defop(8u+1) PLDIQ
+x{D70F} @Defop(8u+1) PLDUQ
+{ dup 31 and abort"argument must be a multiple of 32" 5 >> 1-
+  <b x{D714_} s, swap 3 u, @addopb
+} : PLDUZ
+x{D718} @Defop LDSLICEX
+x{D719} @Defop PLDSLICEX
+x{D71A} @Defop LDSLICEXQ
+x{D71B} @Defop PLDSLICEXQ
+x{D71C} @Defop(8u+1) LDSLICE_l
+x{D71D} @Defop(8u+1) PLDSLICE
+x{D71E} @Defop(8u+1) LDSLICEQ
+x{D71F} @Defop(8u+1) PLDSLICEQ
+x{D720} @Defop SDCUTFIRST
+x{D721} @Defop SDSKIPFIRST
+x{D722} @Defop SDCUTLAST
+x{D723} @Defop SDSKIPLAST
+x{D724} @Defop SDSUBSTR
+x{D726} @Defop SDBEGINSX
+x{D727} @Defop SDBEGINSXQ
+{ tuck sbits tuck 5 + 3 >> swap x{D72A_} s, over 7 u, 3 roll s,
+  -rot 3 << 3 + swap - @scomplete } : SDBEGINS:imm
+{ tuck sbitrefs abort"no references allowed in slice" dup 26 <=
+  { drop <b rot SDBEGINS:imm @addopb }
+  { @havebits
+    { swap SDBEGINS:imm }
+    { swap PUSHSLICE SDBEGINSX
+    } cond
+  } cond
+} : SDBEGINS
+{ tuck sbits tuck 5 + 3 >> swap x{D72E_} s, over 7 u, 3 roll s,
+  -rot 3 << 3 + swap - @scomplete } : SDBEGINSQ:imm
+{ tuck sbitrefs abort"no references allowed in slice" dup 26 <=
+  { drop <b rot SDBEGINSQ:imm @addopb }
+  { @havebits
+    { swap SDBEGINSQ:imm }
+    { swap PUSHSLICE SDBEGINSXQ
+    } cond
+  } cond
+} : SDBEGINSQ
+x{D730} @Defop SCUTFIRST
+x{D731} @Defop SSKIPFIRST
+x{D732} @Defop SCUTLAST
+x{D733} @Defop SSKIPLAST
+x{D734} @Defop SUBSLICE
+x{D736} @Defop SPLIT
+x{D737} @Defop SPLITQ
+x{D741} @Defop SCHKBITS
+x{D742} @Defop SCHKREFS
+x{D743} @Defop SCHKBITREFS
+x{D745} @Defop SCHKBITSQ
+x{D746} @Defop SCHKREFSQ
+x{D747} @Defop SCHKBITREFSQ
+x{D748} @Defop PLDREFVAR
+x{D749} @Defop SBITS
+x{D74A} @Defop SREFS
+x{D74B} @Defop SBITREFS
+{ <b x{D74E_} s, swap 2 u, @addopb } : PLDREFIDX
+x{D74C} @Defop PLDREF
+x{D750} @Defop LDILE4
+x{D751} @Defop LDULE4
+x{D752} @Defop LDILE8
+x{D753} @Defop LDULE8
+x{D754} @Defop PLDILE4
+x{D755} @Defop PLDULE4
+x{D756} @Defop PLDILE8
+x{D757} @Defop PLDULE8
+x{D758} @Defop LDILE4Q
+x{D759} @Defop LDULE4Q
+x{D75A} @Defop LDILE8Q
+x{D75B} @Defop LDULE8Q
+x{D75C} @Defop PLDILE4Q
+x{D75D} @Defop PLDULE4Q
+x{D75E} @Defop PLDILE8Q
+x{D75F} @Defop PLDULE8Q
+x{D760} @Defop LDZEROES
+x{D761} @Defop LDONES
+x{D762} @Defop LDSAME
+//
+// continuation / flow control primitives
+x{D8} dup @Defop EXECUTE @Defop CALLX
+x{D9} @Defop JMPX
+{ dup 1+
+  { <b x{DA} s, rot 4 u, swap 4 u, }
+  { drop <b x{DB0} s, swap 4 u,
+  } cond @addopb
+} : CALLXARGS
+x{DB1} @Defop(4u) JMPXARGS
+x{DB2} @Defop(4u) RETARGS
+x{DB30} dup @Defop RET @Defop RETTRUE
+x{DB31} dup @Defop RETALT @Defop RETFALSE
+x{DB32} dup @Defop BRANCH @Defop RETBOOL
+x{DB34} @Defop CALLCC
+x{DB35} @Defop JMPXDATA
+{ dup 1+ 0= { 16 + } if
+  <b x{DB36} rot 4 u, swap 4 u, @addopb
+} : CALLCCARGS
+x{DB38} @Defop CALLXVARARGS
+x{DB39} @Defop RETVARARGS
+x{DB3A} @Defop JMPXVARARGS
+x{DB3B} @Defop CALLCCVARARGS
+x{DB3C} @Defop(ref) CALLREF
+x{DB3D} @Defop(ref) JMPREF
+x{DB3E} @Defop(ref) JMPREFDATA
+x{DB3F} @Defop RETDATA
+// conditional and iterated execution primitives
+x{DC} @Defop IFRET
+x{DD} @Defop IFNOTRET
+x{DE} @Defop IF
+{ }> PUSHCONT IF } : }>IF
+x{DF} @Defop IFNOT
+{ }> PUSHCONT IFNOT } : }>IFNOT
+' IFNOTRET : IF:
+' IFRET : IFNOT:
+x{E0} @Defop IFJMP
+{ }> PUSHCONT IFJMP } : }>IFJMP
+{ { @normal? PUSHCONT IFJMP } @doafter<{ } : IFJMP:<{
+x{E1} @Defop IFNOTJMP
+{ }> PUSHCONT IFNOTJMP } : }>IFNOTJMP
+{ { @normal? PUSHCONT IFNOTJMP } @doafter<{ } : IFNOTJMP:<{
+x{E2} @Defop IFELSE
+{ `else @endblk } : }>ELSE<{
+{ `else: @endblk } : }>ELSE:
+{ PUSHCONT { @normal? PUSHCONT IFELSE } @doafter<{ } : @doifelse
+{ 1 { swap @normal? -rot PUSHCONT swap PUSHCONT IFELSE } does @doafter<{ } : @doifnotelse
+{ 
+  { dup `else eq? 
+    { drop @doifelse }
+    { dup `else: eq?
+      { drop PUSHCONT IFJMP }
+      { @normal? PUSHCONT IF
+      } cond 
+    } cond 
+  } @doafter<{ 
+} : IF:<{
+{ 
+  { dup `else eq? 
+    { drop @doifnotelse }
+    { dup `else: eq?
+      { drop PUSHCONT IFNOTJMP }
+      { @normal? PUSHCONT IFNOT
+      } cond 
+    } cond 
+  } @doafter<{ 
+} : IFNOT:<{
+x{E300} @Defop(ref) IFREF
+x{E301} @Defop(ref) IFNOTREF
+x{E302} @Defop(ref) IFJMPREF
+x{E303} @Defop(ref) IFNOTJMPREF
+x{E304} @Defop CONDSEL
+x{E305} @Defop CONDSELCHK
+x{E308} @Defop IFRETALT
+x{E309} @Defop IFNOTRETALT
+{ <b x{E39_} swap 5 u, @addopb } : IFBITJMP
+{ <b x{E3B_} swap 5 u, @addopb } : IFNBITJMP
+{ <b x{E3D_} swap 5 u, swap ref, @addopb } : IFBITJMPREF
+{ <b x{E3F_} swap 5 u, swap ref, @addopb } : IFNBITJMPREF
+x{E4} @Defop REPEAT
+{ }> PUSHCONT REPEAT } : }>REPEAT
+{ { @normal? PUSHCONT REPEAT } @doafter<{ } : REPEAT:<{
+x{E5} dup @Defop REPEATEND @Defop REPEAT:
+x{E6} @Defop UNTIL
+{ }> PUSHCONT UNTIL } : }>UNTIL
+{ { @normal? PUSHCONT UNTIL } @doafter<{ } : UNTIL:<{
+x{E7} dup @Defop UNTILEND @Defop UNTIL:
+x{E8} @Defop WHILE
+x{E9} @Defop WHILEEND
+{ `do @endblk } : }>DO<{
+{ `do: @endblk } : }>DO:
+{ PUSHCONT { @normal? PUSHCONT WHILE } @doafter<{ } : @dowhile
+{ 
+  { dup `do eq? 
+    { drop @dowhile } 
+    { `do: eq? not abort"`}>DO<{` expected" PUSHCONT WHILEEND 
+    } cond 
+  } @doafter<{ 
+} : WHILE:<{
+x{EA} @Defop AGAIN
+{ }> PUSHCONT AGAIN } : }>AGAIN
+{ { @normal? PUSHCONT AGAIN } @doafter<{ } : AGAIN:<{
+x{EB} dup @Defop AGAINEND @Defop AGAIN:
+//
+// continuation stack manipulation and continuation creation
+//
+{ <b x{EC} s, rot 4 u, swap dup 1+ { 16 + } ifnot 4 u, @addopb } : SETCONTARGS
+{ 0 swap SETCONTARGS } : SETNUMARGS
+x{ED0} @Defop(4u) RETURNARGS
+x{ED10} @Defop RETURNVARARGS
+x{ED11} @Defop SETCONTVARARGS
+x{ED12} @Defop SETNUMVARARGS
+x{ED1E} @Defop BLESS
+x{ED1F} @Defop BLESSVARARGS
+{ <b x{EE} s, rot 4 u, swap dup 1+ { 16 + } ifnot 4 u, @addopb } : BLESSARGS
+{ 0 swap BLESSARGS } : BLESSNUMARGS
+//
+// control register and continuation savelist manipulation
+// x{ED4} Defop(c) PUSHCTR
+// x{ED5} Defop(c) POPCTR
+{ c4 PUSHCTR } : PUSHROOT
+{ c4 POPCTR } : POPROOT
+x{ED6} dup @Defop(c) SETCONTCTR @Defop(c) SETCONT
+x{ED7} @Defop(c) SETRETCTR 
+x{ED8} @Defop(c) SETALTCTR 
+x{ED9} dup @Defop(c) POPSAVE @Defop(c) POPCTRSAVE
+x{EDA} dup @Defop(c) SAVE @Defop(c) SAVECTR
+x{EDB} dup @Defop(c) SAVEALT @Defop(c) SAVEALTCTR
+x{EDC} dup @Defop(c) SAVEBOTH @Defop(c) SAVEBOTHCTR
+x{EDE0} @Defop PUSHCTRX
+x{EDE1} @Defop POPCTRX
+x{EDE2} @Defop SETCONTCTRX
+x{EDF0} dup @Defop BOOLAND @Defop COMPOS
+x{EDF1} dup @Defop BOOLOR @Defop COMPOSALT
+x{EDF2} @Defop COMPOSBOTH
+x{EDF3} @Defop ATEXIT
+{ }> PUSHCONT ATEXIT } : }>ATEXIT
+{ { @normal? PUSHCONT ATEXIT } @doafter<{ } : ATEXIT:<{
+x{EDF4} @Defop ATEXITALT
+{ }> PUSHCONT ATEXITALT } : }>ATEXITALT
+{ { @normal? PUSHCONT ATEXITALT } @doafter<{ } : ATEXITALT:<{
+x{EDF5} @Defop SETEXITALT
+{ }> PUSHCONT SETEXITALT } : }>SETEXITALT
+{ { @normal? PUSHCONT SETEXITALT } @doafter<{ } : SETEXITALT:<{
+x{EDF6} @Defop THENRET
+x{EDF7} @Defop THENRETALT
+x{EDF8} @Defop INVERT
+x{EDF9} @Defop BOOLEVAL
+// x{EE} is BLESSARGS
+//
+// dictionary subroutine call/jump primitives
+{ c3 PUSH EXECUTE } : CALLVAR
+{ c3 PUSH JMPX } : JMPVAR
+{ c3 PUSH } : PREPAREVAR
+{ dup 14 ufits {
+    dup 8 ufits {
+      <b x{F0} s, swap 8 u, } {
+      <b x{F12_} s, swap 14 u,
+    } cond @addopb } {
+    PUSHINT CALLVAR
+  } cond
+} dup : CALL : CALLDICT
+{ dup 14 ufits
+  { <b x{F16_} s, swap 14 u, @addopb }
+  { PUSHINT JMPVAR } cond
+} dup : JMP : JMPDICT
+{ dup 14 ufits
+  { <b x{F1A_} s, swap 14 u, @addopb }
+  { PUSHINT c3 PREPAREVAR } cond
+} dup : PREPARE : PREPAREDICT
+//
+// throwing and handling exceptions
+{ dup 6 ufits
+  { <b x{F22_} s, swap 6 u, }
+  { <b x{F2C4_} s, swap 11 u,
+  } cond
+@addopb } : THROW
+{ dup 6 ufits
+  { <b x{F26_} s, swap 6 u, }
+  { <b x{F2D4_} s, swap 11 u,
+  } cond
+@addopb } : THROWIF
+{ dup 6 ufits
+  { <b x{F2A_} s, swap 6 u, }
+  { <b x{F2E4_} s, swap 11 u,
+  } cond
+@addopb } : THROWIFNOT
+{ <b x{F2CC_} s, swap 11 u, @addopb } : THROWARG
+{ <b x{F2DC_} s, swap 11 u, @addopb } : THROWARGIF
+{ <b x{F2EC_} s, swap 11 u, @addopb } : THROWARGIFNOT
+x{F2F0} @Defop THROWANY
+x{F2F1} @Defop THROWARGANY
+x{F2F2} @Defop THROWANYIF
+x{F2F3} @Defop THROWARGANYIF
+x{F2F4} @Defop THROWANYIFNOT
+x{F2F5} @Defop THROWARGANYIFNOT
+x{F2FF} @Defop TRY
+x{F3} @Defop(4u,4u) TRYARGS
+{ `catch @endblk } : }>CATCH<{
+{ PUSHCONT { @normal? PUSHCONT TRY } @doafter<{ } : @trycatch
+{ 
+  { `catch eq? not abort"`}>CATCH<{` expected" @trycatch
+  } @doafter<{ 
+} : TRY:<{
+//
+// dictionary manipulation
+' NULL : NEWDICT
+' ISNULL : DICTEMPTY
+' STSLICE : STDICTS
+x{F400} dup @Defop STDICT @Defop STOPTREF
+x{F401} dup @Defop SKIPDICT @Defop SKIPOPTREF
+x{F402} @Defop LDDICTS
+x{F403} @Defop PLDDICTS
+x{F404} dup @Defop LDDICT @Defop LDOPTREF
+x{F405} dup @Defop PLDDICT @Defop PLDOPTREF
+x{F406} @Defop LDDICTQ
+x{F407} @Defop PLDDICTQ
+
+x{F40A} @Defop DICTGET
+x{F40B} @Defop DICTGETREF
+x{F40C} @Defop DICTIGET
+x{F40D} @Defop DICTIGETREF
+x{F40E} @Defop DICTUGET
+x{F40F} @Defop DICTUGETREF
+
+x{F412} @Defop DICTSET
+x{F413} @Defop DICTSETREF
+x{F414} @Defop DICTISET
+x{F415} @Defop DICTISETREF
+x{F416} @Defop DICTUSET
+x{F417} @Defop DICTUSETREF
+x{F41A} @Defop DICTSETGET
+x{F41B} @Defop DICTSETGETREF
+x{F41C} @Defop DICTISETGET
+x{F41D} @Defop DICTISETGETREF
+x{F41E} @Defop DICTUSETGET
+x{F41F} @Defop DICTUSETGETREF
+
+x{F422} @Defop DICTREPLACE
+x{F423} @Defop DICTREPLACEREF
+x{F424} @Defop DICTIREPLACE
+x{F425} @Defop DICTIREPLACEREF
+x{F426} @Defop DICTUREPLACE
+x{F427} @Defop DICTUREPLACEREF
+x{F42A} @Defop DICTREPLACEGET
+x{F42B} @Defop DICTREPLACEGETREF
+x{F42C} @Defop DICTIREPLACEGET
+x{F42D} @Defop DICTIREPLACEGETREF
+x{F42E} @Defop DICTUREPLACEGET
+x{F42F} @Defop DICTUREPLACEGETREF
+
+x{F432} @Defop DICTADD
+x{F433} @Defop DICTADDREF
+x{F434} @Defop DICTIADD
+x{F435} @Defop DICTIADDREF
+x{F436} @Defop DICTUADD
+x{F437} @Defop DICTUADDREF
+x{F43A} @Defop DICTADDGET
+x{F43B} @Defop DICTADDGETREF
+x{F43C} @Defop DICTIADDGET
+x{F43D} @Defop DICTIADDGETREF
+x{F43E} @Defop DICTUADDGET
+x{F43F} @Defop DICTUADDGETREF
+
+x{F441} @Defop DICTSETB
+x{F442} @Defop DICTISETB
+x{F443} @Defop DICTUSETB
+x{F445} @Defop DICTSETGETB
+x{F446} @Defop DICTISETGETB
+x{F447} @Defop DICTUSETGETB
+
+x{F449} @Defop DICTREPLACEB
+x{F44A} @Defop DICTIREPLACEB
+x{F44B} @Defop DICTUREPLACEB
+x{F44D} @Defop DICTREPLACEGETB
+x{F44E} @Defop DICTIREPLACEGETB
+x{F44F} @Defop DICTUREPLACEGETB
+
+x{F451} @Defop DICTADDB
+x{F452} @Defop DICTIADDB
+x{F453} @Defop DICTUADDB
+x{F455} @Defop DICTADDGETB
+x{F456} @Defop DICTIADDGETB
+x{F457} @Defop DICTUADDGETB
+
+x{F459} @Defop DICTDEL
+x{F45A} @Defop DICTIDEL
+x{F45B} @Defop DICTUDEL
+
+x{F462} @Defop DICTDELGET
+x{F463} @Defop DICTDELGETREF
+x{F464} @Defop DICTIDELGET
+x{F465} @Defop DICTIDELGETREF
+x{F466} @Defop DICTUDELGET
+x{F467} @Defop DICTUDELGETREF
+
+x{F469} @Defop DICTGETOPTREF
+x{F46A} @Defop DICTIGETOPTREF
+x{F46B} @Defop DICTUGETOPTREF
+x{F46D} @Defop DICTSETGETOPTREF
+x{F46E} @Defop DICTISETGETOPTREF
+x{F46F} @Defop DICTUSETGETOPTREF
+
+x{F470} @Defop PFXDICTSET
+x{F471} @Defop PFXDICTREPLACE
+x{F472} @Defop PFXDICTADD
+x{F473} @Defop PFXDICTDEL
+
+x{F474} @Defop DICTGETNEXT
+x{F475} @Defop DICTGETNEXTEQ
+x{F476} @Defop DICTGETPREV
+x{F477} @Defop DICTGETPREVEQ
+x{F478} @Defop DICTIGETNEXT
+x{F479} @Defop DICTIGETNEXTEQ
+x{F47A} @Defop DICTIGETPREV
+x{F47B} @Defop DICTIGETPREVEQ
+x{F47C} @Defop DICTUGETNEXT
+x{F47D} @Defop DICTUGETNEXTEQ
+x{F47E} @Defop DICTUGETPREV
+x{F47F} @Defop DICTUGETPREVEQ
+
+x{F482} @Defop DICTMIN
+x{F483} @Defop DICTMINREF
+x{F484} @Defop DICTIMIN
+x{F485} @Defop DICTIMINREF
+x{F486} @Defop DICTUMIN
+x{F487} @Defop DICTUMINREF
+x{F48A} @Defop DICTMAX
+x{F48B} @Defop DICTMAXREF
+x{F48C} @Defop DICTIMAX
+x{F48D} @Defop DICTIMAXREF
+x{F48E} @Defop DICTUMAX
+x{F48F} @Defop DICTUMAXREF
+
+x{F492} @Defop DICTREMMIN
+x{F493} @Defop DICTREMMINREF
+x{F494} @Defop DICTIREMMIN
+x{F495} @Defop DICTIREMMINREF
+x{F496} @Defop DICTUREMMIN
+x{F497} @Defop DICTUREMMINREF
+x{F49A} @Defop DICTREMMAX
+x{F49B} @Defop DICTREMMAXREF
+x{F49C} @Defop DICTIREMMAX
+x{F49D} @Defop DICTIREMMAXREF
+x{F49E} @Defop DICTUREMMAX
+x{F49F} @Defop DICTUREMMAXREF
+
+x{F4A0} @Defop DICTIGETJMP
+x{F4A1} @Defop DICTUGETJMP
+x{F4A2} @Defop DICTIGETEXEC
+x{F4A3} @Defop DICTUGETEXEC
+{ dup sbitrefs tuck 1 > swap 1 <> or abort"not a dictionary" swap 1 u@ over <> abort"not a dictionary" } : @chkdicts
+{ dup null? tuck { <s } ifnot drop not } : @chkdict 
+{ over @chkdict
+  { swap <b x{F4A6_} s, swap ref, swap 10 u, @addopb }
+  { nip swap NEWDICT swap PUSHINT }
+  cond
+} : DICTPUSHCONST
+x{F4A8} @Defop PFXDICTGETQ
+x{F4A9} @Defop PFXDICTGET
+x{F4AA} @Defop PFXDICTGETJMP
+x{F4AB} @Defop PFXDICTGETEXEC
+{ over @chkdict
+  { swap <b x{F4AE_} s, swap ref, swap 10 u, @addopb
+  } if
+} dup : PFXDICTCONSTGETJMP : PFXDICTSWITCH
+
+x{F4B1} @Defop SUBDICTGET
+x{F4B2} @Defop SUBDICTIGET
+x{F4B3} @Defop SUBDICTUGET
+x{F4B5} @Defop SUBDICTRPGET
+x{F4B6} @Defop SUBDICTIRPGET
+x{F4B7} @Defop SUBDICTURPGET
+
+//
+// blockchain-specific primitives
+
+x{F800} @Defop ACCEPT
+x{F801} @Defop SETGASLIMIT
+
+x{F82} @Defop(4u) GETPARAM
+x{F823} @Defop NOW
+x{F824} @Defop BLOCKLT
+x{F825} @Defop LTIME
+x{F828} @Defop MYADDR
+x{F829} @Defop CONFIGROOT
+x{F830} @Defop CONFIGDICT
+x{F832} @Defop CONFIGPARAM
+x{F833} @Defop CONFIGOPTPARAM
+
+x{F840} @Defop GETGLOBVAR
+{ dup 1 31 @rangechk <b x{F85_} s, swap 5 u, @addopb } : GETGLOB
+x{F860} @Defop SETGLOBVAR
+{ dup 1 31 @rangechk <b x{F87_} s, swap 5 u, @addopb } : SETGLOB
+
+x{F900} @Defop HASHCU
+x{F901} @Defop HASHSU
+x{F902} @Defop SHA256U
+x{F910} @Defop CHKSIGNU
+x{F911} @Defop CHKSIGNS
+
+x{FA00} dup @Defop LDGRAMS @Defop LDVARUINT16
+x{FA01} @Defop LDVARINT16
+x{FA02} dup @Defop STGRAMS @Defop STVARUINT16
+x{FA03} @Defop STVARINT16
+
+x{FA40} @Defop LDMSGADDR
+x{FA41} @Defop LDMSGADDRQ
+x{FA42} @Defop PARSEMSGADDR
+x{FA43} @Defop PARSEMSGADDRQ
+x{FA44} @Defop REWRITESTDADDR
+x{FA45} @Defop REWRITESTDADDRQ
+x{FA46} @Defop REWRITEVARADDR
+x{FA47} @Defop REWRITEVARADDRQ
+
+x{FB00} @Defop SENDRAWMSG
+x{FB02} @Defop RAWRESERVE
+x{FB03} @Defop RAWRESERVEX
+x{FB04} @Defop SETCODE
+
+//
+// debug primitives
+
+{ dup 0 239 @-range abort"debug selector out of range"
+  <b x{FE} s, swap 8 u, @addopb
+} : DEBUG
+{ dup $len 1- <b x{FEF} s, swap 4 u, swap $, @addopb
+} : DEBUGSTR
+{ over $len <b x{FEF} s, swap 4 u, swap 8 u, swap $, @addopb
+} : DEBUGSTRI
+
+x{FE00} @Defop DUMPSTK
+{ 1 15 @rangechk <b x{FE0} s, swap 4 u, @addopb
+} : DUMPSTKTOP
+x{FE10} @Defop HEXDUMP
+x{FE11} @Defop HEXPRINT
+x{FE12} @Defop BINDUMP
+x{FE13} @Defop BINPRINT
+x{FE14} @Defop STRDUMP
+x{FE15} @Defop STRPRINT
+x{FE1E} @Defop DEBUGOFF
+x{FE1F} @Defop DEBUGON
+x{FE2} @Defop(s) DUMP
+x{FE3} @Defop(s) PRINT
+' DEBUGSTR : DUMPTOSFMT
+{ 0 DEBUGSTRI } : LOGSTR
+{ 1 DEBUGSTRI } : PRINTSTR
+x{FEF000} @Defop LOGFLUSH
+
+//
+// codepage primitives
+x{FF00} @Defop SETCP0
+x{FFF0} @Defop SETCPX
+{ dup -14 239 @-range abort"codepage out of range"
+  255 and <b x{FF} s, swap 8 u, @addopb
+} : SETCP
+
+//
+// provisions for defining programs consisting of several mutually-recursive procedures
+//
+variable @proccnt
+variable @proclist
+19 constant @procdictkeylen
+{ @proclist @ cons @proclist ! } : @proclistadd
+{ dup @procdictkeylen fits not abort"procedure index out of range"
+  1 'nop does swap dup @proclistadd 0 (create)
+} : @declproc
+{ @proccnt @ 1+ dup @proccnt ! @declproc } : @newproc
+{ 0 =: main  @proclist null!  @proccnt 0!
+  { bl word @newproc } : NEWPROC
+  { bl word dup (def?) ' drop ' @newproc cond } : DECLPROC
+  { bl word dup find
+    { nip execute <> abort"method redefined with different id" }
+    { swap @declproc }
+  cond } : DECLMETHOD
+  "main" @proclistadd
+  dictnew
+} : PROGRAM{
+{ dup sbits 1000 > { s>c <b swap ref, b> <s } if } : @adj-long-proc
+{ // d i s
+  @adj-long-proc swap rot @procdictkeylen idict!+ not abort"cannot define procedure, redefined?"
+} : PROC
+{ 2dup swap @procdictkeylen idict@ abort"procedure already defined"
+  1 { -rot @normal? b> <s PROC } does @doafter<{
+} : PROC:<{
+{ 0 swap @procdictkeylen idict@ not abort"`main` procedure not defined" drop
+} : @chkmaindef
+{ dup @chkmaindef
+  @proclist @ { dup null? not } {
+    uncons swap dup find not
+    { +": undefined procedure name in list" abort } if
+    execute 3 pick @procdictkeylen idict@ not
+    { +": procedure declared but left undefined" abort } if
+    drop (forget)
+  } while
+  drop @proclist null! @proccnt 0!
+} : }END
+forget @proclist  forget @proccnt
+{ }END <{ SETCP0 swap @procdictkeylen DICTPUSHCONST DICTIGETJMP 11 THROWARG }> } : }END>
+{ }END> b> } : }END>c
+{ }END>c <s } : }END>s
+
+0 constant recv_internal
+-1 constant recv_external
+-2 constant run_ticktock
+-3 constant split_prepare
+-4 constant split_install
+
+// ( c -- )   add vm library for later use with runvmcode
+{ <b over ref, b> <s swap hash vmlibs @ 256 udict! not abort"cannot add library" vmlibs ! } : add-lib
+// ( x -- c ) make library reference cell
+{ <b 2 8 u, swap 256 u, b>spec } : hash>libref
+// ( c -- c' )
+{ hash hash>libref } : >libref

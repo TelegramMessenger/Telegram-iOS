@@ -238,6 +238,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         let navigationLayout = makeNavigationLayout(layout: layout, controllers: self._viewControllers)
         
         var transition = transition
+        var statusBarStyle: StatusBarStyle = .Ignore
+        var animateStatusBarStyleTransition = transition.isAnimated
         
         var modalContainers: [NavigationModalContainer] = []
         for i in 0 ..< navigationLayout.modal.count {
@@ -408,6 +410,15 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
+        if let rootContainer = self.rootContainer {
+            switch rootContainer {
+            case let .flat(container):
+                statusBarStyle = container.statusBarStyle
+            case .split:
+                break
+            }
+        }
+        
         switch layout.metrics.widthClass {
         case .compact:
             if visibleModalCount != 0 {
@@ -451,16 +462,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     rootModalFrame.updateDismissal(transition: transition, progress: effectiveRootModalDismissProgress, additionalProgress: additionalModalFrameProgress, completion: {})
                 }
                 if effectiveRootModalDismissProgress < 0.5 {
-                    self.statusBarHost?.setStatusBarStyle(.lightContent, animated: transition.isAnimated || forceStatusBarAnimation)
-                } else {
-                    let normalStatusBarStyle: UIStatusBarStyle
-                    switch self.theme.statusBar {
-                    case .black:
-                        normalStatusBarStyle = .default
-                    case .white:
-                        normalStatusBarStyle = .lightContent
+                    statusBarStyle = .White
+                    if forceStatusBarAnimation {
+                        animateStatusBarStyleTransition = true
                     }
-                    self.statusBarHost?.setStatusBarStyle(normalStatusBarStyle, animated: transition.isAnimated || forceStatusBarAnimation)
+                } else {
+                    if forceStatusBarAnimation {
+                        animateStatusBarStyleTransition = true
+                    }
                 }
                 if let rootContainer = self.rootContainer {
                     var rootContainerNode: ASDisplayNode
@@ -494,14 +503,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                     rootModalFrame.updateDismissal(transition: transition, progress: 1.0, additionalProgress: 0.0, completion: { [weak rootModalFrame] in
                         rootModalFrame?.removeFromSupernode()
                     })
-                    let normalStatusBarStyle: UIStatusBarStyle
-                    switch self.theme.statusBar {
-                    case .black:
-                        normalStatusBarStyle = .default
-                    case .white:
-                        normalStatusBarStyle = .lightContent
-                    }
-                    self.statusBarHost?.setStatusBarStyle(normalStatusBarStyle, animated: transition.isAnimated)
                 }
                 if let rootContainer = self.rootContainer {
                     var rootContainerNode: ASDisplayNode
@@ -520,14 +521,6 @@ open class NavigationController: UINavigationController, ContainableController, 
                 rootModalFrame.updateDismissal(transition: .immediate, progress: 1.0, additionalProgress: 0.0, completion: { [weak rootModalFrame] in
                     rootModalFrame?.removeFromSupernode()
                 })
-                let normalStatusBarStyle: UIStatusBarStyle
-                switch self.theme.statusBar {
-                case .black:
-                    normalStatusBarStyle = .default
-                case .white:
-                    normalStatusBarStyle = .lightContent
-                }
-                self.statusBarHost?.setStatusBarStyle(normalStatusBarStyle, animated: false)
             }
             if let rootContainer = self.rootContainer {
                 var rootContainerNode: ASDisplayNode
@@ -541,16 +534,26 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
         }
         
-        if self.validStatusBarStyle != self.theme.statusBar {
-            self.validStatusBarStyle = self.theme.statusBar
+        let resolvedStatusBarStyle: NavigationStatusBarStyle
+        switch statusBarStyle {
+        case .Ignore, .Hide:
+            resolvedStatusBarStyle = self.theme.statusBar
+        case .Black:
+            resolvedStatusBarStyle = .black
+        case .White:
+            resolvedStatusBarStyle = .white
+        }
+        
+        if self.validStatusBarStyle != resolvedStatusBarStyle {
+            self.validStatusBarStyle = resolvedStatusBarStyle
             let normalStatusBarStyle: UIStatusBarStyle
-            switch self.theme.statusBar {
+            switch resolvedStatusBarStyle {
             case .black:
                 normalStatusBarStyle = .default
             case .white:
                 normalStatusBarStyle = .lightContent
             }
-            self.statusBarHost?.setStatusBarStyle(normalStatusBarStyle, animated: false)
+            self.statusBarHost?.setStatusBarStyle(normalStatusBarStyle, animated: animateStatusBarStyleTransition)
         }
     }
     

@@ -18,7 +18,7 @@
 }
 
 - (int32_t)size {
-    return _qrCode->getSize()
+    return _qrCode->getSize();
 }
 
 - (BOOL)getModuleAtX:(int32_t)x y:(int32_t)y {

@@ -1,0 +1,26 @@
+"Asm.fif" include
+
+<{ NEWDICT SWAP REPEAT:
+   s2 XCHG0 NEWC 16 STU s2 XCHG0
+   16 INT DICTISETB }>s
+dup csr. constant mkdict(16,16).code
+
+{ mkdict(16,16).code runvmcode abort"cannot create 16->16 dictionary" } : mkdict(16,16)
+
+<{ ZERO WHILE:<{ SWAP 16 INT DICTIREMMAX }>DO<{ // n d' x i
+     SWAP 16 LDU ENDS  // n d' i s
+     2SWAP SWAP INC
+   }> DROP
+}>s dup csr. constant explode_dict(16,16).code
+
+{ explode_dict(16,16).code runvmcode abort"cannot explode 16->16 dictionary" } : xdict(16,16)
+{ xdict(16,16) ."{ " { swap . ."-> " . ."; " } swap times ."}" cr } : .dict(16,16)
+
+{ 16 { 16 i@+ s> 1+ 16 i, true } dictmap } : dict:1+
+{ 16 { 16 i@+ s> swap 16 i@+ s> + 16 i, true } dictmerge } : dict:+
+
+{ 1 swap dup 1 { 2dup dup * + 2 swap 2swap 1+ } 100 times nip mkdict(16,16) } : mdisqpb
+
+0 mdisqpb 0 { 1+ tuck dup * mdisqpb tuck dict:+ dict:+ swap } 100 times drop
+dup <s csr. .dict(16,16)
+

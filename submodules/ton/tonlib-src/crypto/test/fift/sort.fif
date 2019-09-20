@@ -1,0 +1,27 @@
+{ null null rot
+  { dup null? not }
+  { uncons swap rot cons -rot } while drop
+} : split
+variable 'sort  variable 'merge  variable 'compare       
+{ 'sort @ execute } : sort
+{ 'merge @ execute } : merge
+{ 'compare @ execute } : compare
+' < 'compare !
+{ dup null? { drop } {
+    over null? { nip } {
+      over car over car compare ' swap if
+      uncons rot merge cons
+    } cond
+  } cond
+} 'merge !
+{ dup null? {
+    dup cdr null? {
+      split sort swap sort merge
+    } ifnot
+  } ifnot
+} 'sort !
+3 1 4 1 5 9 2 6 5  9 list
+dup .l cr sort .l cr
+"once" "upon" "a" "time" "there" "lived" "a" "very" "little" "kitten"  10 list
+{ $cmp 0< } 'compare !
+dup .l cr sort .l cr

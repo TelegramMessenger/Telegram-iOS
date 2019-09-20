@@ -1,0 +1,6 @@
+(int, int) f(int a, int b, int c, int d, int e, int f) {
+  int D = a * d - b * c;
+  int Dx = e * d - b * f;
+  int Dy = a * f - e * c;
+  return (Dx / D, Dy / D);
+}

@@ -1,0 +1,798 @@
+;; Elector smartcontract
+
+;; cur_elect credits past_elect grams active_id active_hash
+(cell, cell, cell, int, int, int) load_data() {
+  var cs = get_data().begin_parse();
+  var res = (cs~load_dict(), cs~load_dict(), cs~load_dict(), cs~load_grams(), cs~load_uint(32), cs~load_uint(256));
+  cs.end_parse();
+  return res;
+}
+
+;; cur_elect credits past_elect grams active_id active_hash
+() store_data(elect, credits, past_elect, grams, active_id, active_hash) impure {
+  set_data(begin_cell()
+    .store_dict(elect)
+    .store_dict(credits)
+    .store_dict(past_elect)
+    .store_grams(grams)
+    .store_uint(active_id, 32)
+    .store_uint(active_hash, 256)
+  .end_cell());
+}
+
+;; elect -> elect_at elect_close min_stake total_stake members failed finished
+_ unpack_elect(elect) {
+  var es = elect.begin_parse();
+  var res = (es~load_uint(32), es~load_uint(32), es~load_grams(), es~load_grams(), es~load_dict(), es~load_int(1), es~load_int(1));
+  es.end_parse();
+  return res;
+}
+
+cell pack_elect(elect_at, elect_close, min_stake, total_stake, members, failed, finished) {
+  return begin_cell()
+    .store_uint(elect_at, 32)
+    .store_uint(elect_close, 32)
+    .store_grams(min_stake)
+    .store_grams(total_stake)
+    .store_dict(members)
+    .store_int(failed, 1)
+    .store_int(finished, 1)
+  .end_cell();
+}
+
+;; elected_for elections_begin_before elections_end_before stake_held_for
+(int, int, int, int) get_validator_conf() {
+  var cs = config_param(15).begin_parse();
+  return (cs~load_int(32), cs~load_int(32), cs~load_int(32), cs.preload_int(32));
+}
+
+() send_message_back(addr, ans_tag, query_id, body, grams, mode) impure {
+  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+  var msg = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(addr)
+    .store_grams(grams)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(ans_tag, 32)
+    .store_uint(query_id, 64);
+  if (body >= 0) {
+    msg~store_uint(body, 32);
+  }
+  send_raw_message(msg.end_cell(), mode);
+}
+
+() return_stake(addr, query_id, reason) impure {
+  return send_message_back(addr, 0xee6f454c, query_id, reason, 0, 64);
+}
+
+() send_confirmation(addr, query_id, comment) impure {
+  return send_message_back(addr, 0xf374484c, query_id, comment, 1000000000, 2);
+}
+
+() send_validator_set_to_config(config_addr, vset, query_id) impure {
+  var msg = begin_cell()
+    .store_uint(0xc4ff, 17)   ;; 0 11000100 0xff 
+    .store_uint(config_addr, 256)
+    .store_grams(1 << 30)     ;; ~1 gram of value to process and obtain answer
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(0x4e565354, 32)
+    .store_uint(query_id, 64)
+    .store_ref(vset);
+  send_raw_message(msg.end_cell(), 1);
+}
+
+;; credits 'amount' to 'addr' inside credit dictionary 'credits'
+_ ~credit_to(credits, addr, amount) {
+  var (val, f) = credits.udict_get?(256, addr);
+  if (f) {
+    amount += val~load_grams();
+  }
+  credits~udict_set_builder(256, addr, begin_cell().store_grams(amount));
+  return (credits, ());
+}
+
+() process_new_stake(s_addr, msg_value, cs, query_id) impure {
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+  var ds = get_data().begin_parse();
+  var elect = ds~load_dict();
+  if (null?(elect) | (src_wc + 1)) {
+    ;; no elections active, or source is not in masterchain
+    ;; bounce message
+    return return_stake(s_addr, query_id, 0);
+  }
+  ;; parse the remainder of new stake message
+  var validator_pubkey = cs~load_uint(256);
+  var stake_at = cs~load_uint(32);
+  var max_factor = cs~load_uint(32);
+  var adnl_addr = cs~load_uint(256);
+  var signature = cs~load_ref().begin_parse().preload_bits(512);
+  cs.end_parse();
+  ifnot (check_data_signature(begin_cell()
+      .store_uint(0x654c5074, 32)
+      .store_uint(stake_at, 32)
+      .store_uint(max_factor, 32)
+      .store_uint(src_addr, 256)
+      .store_uint(adnl_addr, 256)
+    .end_cell().begin_parse(), signature, validator_pubkey)) {
+    ;; incorrect signature, return stake
+    return return_stake(s_addr, query_id, 1);
+  }
+  if (max_factor < 0x10000) {
+    ;; factor must be >= 1. = 65536/65536
+    return return_stake(s_addr, query_id, 6);
+  }
+  ;; parse current election data
+  var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
+  elect_at~dump();
+  msg_value -= 1000000000;   ;; deduct GR$1 for sending confirmation
+  if ((msg_value << 12) < total_stake) {
+    ;; stake smaller than 1/4096 of the total accumulated stakes, return
+    return return_stake(s_addr, query_id, 2);
+  }
+  total_stake += msg_value;  ;; (provisionally) increase total stake
+  if (stake_at != elect_at) {
+    ;; stake for some other elections, return
+    return return_stake(s_addr, query_id, 3);
+  }
+  if (finished) {
+    ;; elections already finished, return stake
+    return return_stake(s_addr, query_id, 0);
+  }
+  var (mem, found) = members.udict_get?(256, validator_pubkey);
+  if (found) {
+    ;; entry found, merge stakes
+    msg_value += mem~load_grams();
+    mem~load_uint(64);   ;; skip timestamp and max_factor
+    found = (src_addr != mem~load_uint(256));
+  }
+  if (found) {
+    ;; can make stakes for a public key from one address only
+    return return_stake(s_addr, query_id, 4);
+  }
+  if (msg_value < min_stake) {
+    ;; stake too small, return it
+    return return_stake(s_addr, query_id, 5);
+  }
+  throw_unless(44, msg_value);
+  accept_message();
+  ;; store stake in the dictionary
+  members~udict_set_builder(256, validator_pubkey, begin_cell()
+    .store_grams(msg_value)
+    .store_uint(now(), 32)
+    .store_uint(max_factor, 32)
+    .store_uint(src_addr, 256)
+    .store_uint(adnl_addr, 256));
+  ;; gather and save election data
+  elect = pack_elect(elect_at, elect_close, min_stake, total_stake, members, false, false);
+  set_data(begin_cell().store_dict(elect).store_slice(ds).end_cell());
+  ;; return confirmation message
+  if (query_id) {
+    return send_confirmation(s_addr, query_id, 0);
+  }
+  return ();
+}
+
+(cell, int) unfreeze_without_bonuses(credits, freeze_dict, tot_stakes) {
+  var total = var recovered = 0;
+  var pubkey = -1;
+  do {
+    (pubkey, var cs, var f) = freeze_dict.udict_get_next?(256, pubkey);
+    if (f) {
+      var (addr, weight, stake, banned) = (cs~load_uint(256), cs~load_uint(64), cs~load_grams(), cs~load_int(1));
+      cs.end_parse();
+      if (banned) {
+        recovered += stake;
+      } else {
+        credits~credit_to(addr, stake);
+      }
+      total += stake;
+    }
+  } until (~ f);
+  throw_unless(59, total == tot_stakes);
+  return (credits, recovered);
+}
+
+(cell, int) unfreeze_with_bonuses(credits, freeze_dict, tot_stakes, tot_bonuses) {
+  var total = var recovered = var returned_bonuses = 0;
+  var pubkey = -1;
+  do {
+    (pubkey, var cs, var f) = freeze_dict.udict_get_next?(256, pubkey);
+    if (f) {
+      var (addr, weight, stake, banned) = (cs~load_uint(256), cs~load_uint(64), cs~load_grams(), cs~load_int(1));
+      cs.end_parse();
+      if (banned) {
+        recovered += stake;
+      } else {
+        var bonus = muldiv(tot_bonuses, stake, tot_stakes);
+        returned_bonuses += bonus;
+        credits~credit_to(addr, stake + bonus);
+      }
+      total += stake;
+    }
+  } until (~ f);
+  throw_unless(59, (total == tot_stakes) & (returned_bonuses <= tot_bonuses));
+  return (credits, recovered + tot_bonuses - returned_bonuses);
+}
+
+_ unfreeze_all(credits, past_elections, elect_id) {
+  var (fs, f) = past_elections~udict_delete_get?(32, elect_id);
+  ifnot (f) {
+    ;; no elections with this id
+    return (credits, past_elections, 0);
+  }
+  var (data1, vset_hash, fdict, tot_stakes, bonuses, complaints) = (fs~load_uint(64), fs~load_uint(256), fs~load_dict(), fs~load_grams(), fs~load_grams(), fs~load_dict());
+  fs.end_parse();
+  var unused_prizes = (bonuses > 0) ?
+    credits~unfreeze_with_bonuses(fdict, tot_stakes, bonuses) :
+    credits~unfreeze_without_bonuses(fdict, tot_stakes);
+  return (credits, past_elections, unused_prizes);
+}
+
+() config_set_confirmed(s_addr, cs, query_id, ok) impure {
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+  var config_addr = config_param(0).begin_parse().preload_uint(256);
+  var ds = get_data().begin_parse();
+  var elect = ds~load_dict();
+  if ((src_wc + 1) | (src_addr != config_addr) | elect.null?()) {
+    ;; not from config smc, somebody's joke?
+    ;; or no elections active (or just completed)
+    return ();
+  }
+  var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
+  if ((elect_at != query_id) | ~ finished) {
+    ;; not these elections, or elections not finished yet
+    return ();
+  }
+  accept_message();
+  ifnot (ok) {
+    ;; cancel elections, return stakes
+    var (credits, past_elections, grams) = (ds~load_dict(), ds~load_dict(), ds~load_grams());
+    (credits, past_elections, var unused_prizes) = unfreeze_all(credits, past_elections, elect_at);
+    set_data(begin_cell()
+      .store_int(false, 1)
+      .store_dict(credits)
+      .store_dict(past_elections)
+      .store_grams(grams + unused_prizes)
+      .store_slice(ds)
+    .end_cell());
+  }
+  ;; ... do not remove elect until we see this set as the next elected validator set
+}
+
+() process_simple_transfer(s_addr, msg_value) impure {
+  var (elect, credits, past_elect, grams, active_id, active_hash) = load_data();
+  (int src_wc, int src_addr) = parse_std_addr(s_addr);
+  if (src_addr | (src_wc + 1) | (active_id == 0)) {
+    ;; simple transfer to us (credit "nobody's" account)
+    ;; (or no known active validator set)
+    grams += msg_value;
+    return store_data(elect, credits, past_elect, grams, active_id, active_hash);
+  }
+  ;; zero source address -1:00..00 (collecting validator fees)
+  var (fs, f) = past_elect.udict_get?(32, active_id);
+  ifnot (f) {
+    ;; active validator set not found (?)
+    grams += msg_value;
+  } else {
+    ;; credit active validator set bonuses
+    var (data, hash, dict, total_stake, bonuses) = (fs~load_uint(64), fs~load_uint(256), fs~load_dict(), fs~load_grams(), fs~load_grams());
+    bonuses += msg_value;
+    past_elect~udict_set_builder(32, active_id, begin_cell()
+      .store_uint(data, 64)
+      .store_uint(hash, 256)
+      .store_dict(dict)
+      .store_grams(total_stake)
+      .store_grams(bonuses)
+      .store_slice(fs));
+  }
+  store_data(elect, credits, past_elect, grams, active_id, active_hash);
+  return ();
+}
+
+() recover_stake(op, s_addr, cs, query_id) impure {
+  (int src_wc, int src_addr) = parse_std_addr(s_addr);
+  if (src_wc + 1) {
+    ;; not from masterchain, return error
+    return send_message_back(s_addr, 0xfffffffe, query_id, op, 0, 64);
+  }
+  var ds = get_data().begin_parse();
+  var (elect, credits) = (ds~load_dict(), ds~load_dict());
+  var (cs, f) = credits~udict_delete_get?(256, src_addr);
+  ifnot (f) {
+    ;; no credit for sender, return error
+    return send_message_back(s_addr, 0xfffffffe, query_id, op, 0, 64);
+  }
+  var amount = cs~load_grams();
+  cs.end_parse();
+  ;; save data
+  set_data(begin_cell().store_dict(elect).store_dict(credits).store_slice(ds).end_cell());
+  ;; send amount to sender in a new message
+  send_raw_message(begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(s_addr)
+    .store_grams(amount)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(0xf96f7324, 32)
+    .store_uint(query_id, 64)
+  .end_cell(), 64);
+}
+
+() after_code_upgrade(slice s_addr, slice cs, int query_id) impure method_id(1666) {
+  var op = 0x4e436f64;
+  return send_message_back(s_addr, 0xce436f64, query_id, op, 0, 64);
+}
+
+int upgrade_code(s_addr, cs, query_id) {
+  var c_addr = config_param(0);
+  if (c_addr.null?()) {
+    ;; no configuration smart contract known
+    return false;
+  }
+  var config_addr = c_addr.begin_parse().preload_uint(256);
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+  if ((src_wc + 1) | (src_addr != config_addr)) {
+    ;; not from configuration smart contract, return error
+    return false;
+  }
+  accept_message();
+  var code = cs~load_ref();
+  set_code(code);
+  ifnot(cs.slice_empty?()) {
+    set_c3(code);
+    ;; run_method3(1666, s_addr, cs, query_id);
+    after_code_upgrade(s_addr, cs, query_id);
+    throw(0);
+  }
+  return true;
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+  ;; do nothing for internal messages
+  var cs = in_msg_cell.begin_parse();
+  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+  if (flags & 1) {
+    ;; ignore all bounced messages
+    return ();
+  }
+  var s_addr = cs~load_msg_addr();
+  if (in_msg.slice_empty?()) {
+    ;; inbound message has empty body
+    return process_simple_transfer(s_addr, msg_value);
+  }
+  int op = in_msg~load_uint(32);
+  if (op == 0) {
+    ;; simple transfer with comment, return
+    return process_simple_transfer(s_addr, msg_value);
+  }
+  int query_id = in_msg~load_uint(64);
+  if (op == 0x4e73744b) {
+    ;; new stake message
+    return process_new_stake(s_addr, msg_value, in_msg, query_id);
+  }
+  if (op == 0x47657424) {
+    ;; recover stake request
+    return recover_stake(op, s_addr, in_msg, query_id);
+  }
+  if (op == 0x4e436f64) {
+    ;; upgrade code (accepted only from configuration smart contract)
+    var ok = upgrade_code(s_addr, in_msg, query_id);
+    return send_message_back(s_addr, ok ? 0xce436f64 : 0xffffffff, query_id, op, 0, 64);
+  }
+  var cfg_ok = (op == 0xee764f4b);
+  if (cfg_ok | (op == 0xee764f6f)) {
+    ;; confirmation from configuration smart contract
+    return config_set_confirmed(s_addr, in_msg, query_id, cfg_ok);
+  }
+  ifnot (op & (1 << 31)) {
+    ;; unknown query, return error
+    return send_message_back(s_addr, 0xffffffff, query_id, op, 0, 64);
+  }
+  ;; unknown answer, ignore
+  return ();
+}
+
+int postpone_elections() impure {
+  return false;
+}
+
+;; computes the total stake out of the first n entries of list l
+_ compute_total_stake(l, n, m_stake) {
+  int tot_stake = 0;
+  repeat (n) {
+    (var h, l) = uncons(l);
+    var stake = h.at(0);
+    var max_f = h.at(1);
+    stake = min(stake, (max_f * m_stake) >> 16);
+    tot_stake += stake;
+  }
+  return tot_stake;
+}
+
+(cell, cell, cell, int, int) try_elect(credits, members, min_stake, max_stake, min_total_stake, max_stake_factor) {
+  var cs = 16.config_param().begin_parse();
+  var (max_validators, _, min_validators) = (cs~load_uint(16), cs~load_uint(16), cs~load_uint(16));
+  cs.end_parse();
+  min_validators = max(min_validators, 1);
+  int n = 0;
+  var sdict = new_dict();
+  var pubkey = -1;
+  do {
+    (pubkey, var cs, var f) = members.udict_get_next?(256, pubkey);
+    if (f) {
+      var (stake, time, max_factor, addr, adnl_addr) = (cs~load_grams(), cs~load_uint(32), cs~load_uint(32), cs~load_uint(256), cs~load_uint(256));
+      cs.end_parse();
+      var key = begin_cell()
+        .store_uint(stake, 128)
+        .store_int(- time, 32)
+        .store_uint(pubkey, 256)
+      .end_cell().begin_parse();
+      sdict~dict_set_builder(128 + 32 + 256, key, begin_cell()
+          .store_uint(min(max_factor, max_stake_factor), 32)
+          .store_uint(addr, 256)
+          .store_uint(adnl_addr, 256));
+      n += 1;
+    }
+  } until (~ f);
+  n = min(n, max_validators);
+  if (n < min_validators) {
+    return (credits, new_dict(), new_dict(), 0, 0);
+  }
+  var l = nil;
+  do {
+    var (key, cs, f) = sdict~dict::delete_get_min(128 + 32 + 256);
+    if (f) {
+      var (stake, _, pubkey) = (min(key~load_uint(128), max_stake), key~load_uint(32), key.preload_uint(256));
+      var (max_f, _, adnl_addr) = (cs~load_uint(32), cs~load_uint(256), cs.preload_uint(256));
+      l = cons(tuple4(stake, max_f, pubkey, adnl_addr), l);
+    }
+  } until (~ f);
+  ;; l is the list of all stakes in decreasing order
+  int i = min_validators - 1;
+  var l1 = l;
+  repeat (i) {
+    l1 = cdr(l1);
+  }
+  var (best_stake, m) = (0, 0);
+  do {
+    var stake = l1~list_next().at(0);
+    i += 1;
+    if (stake >= min_stake) {
+      var tot_stake = compute_total_stake(l, i, stake);
+      if (tot_stake > best_stake) {
+        (best_stake, m) = (tot_stake, i);
+      }
+    }
+  } until (i >= n);
+  if ((m == 0) | (best_stake < min_total_stake)) {
+    return (credits, new_dict(), new_dict(), 0, 0);
+  }
+  ;; we have to select first m validators from list l
+  l1 = touch(l);
+  l1~dump();  ;; DEBUG
+  repeat (m - 1) {
+    l1 = cdr(l1);
+  }
+  var m_stake = car(l1).at(0);  ;; minimal stake
+  ;; create both the new validator set and the refund set
+  int i = 0;
+  var tot_stake = 0;
+  var vset = new_dict();
+  var frozen = new_dict();
+  do {
+    var (stake, max_f, pubkey, adnl_addr) = l~list_next().untuple4();
+    ;; lookup source address first
+    var (val, f) = members.udict_get?(256, pubkey);
+    throw_unless(61, f);
+    (_, _, var src_addr) = (val~load_grams(), val~load_uint(64), val.preload_uint(256));
+    if (i < m) {
+      ;; one of the first m members, include into validator set
+      var true_stake = min(stake, (max_f * m_stake) >> 16);
+      stake -= true_stake;
+      ;; ed25519_pubkey#8e81278a pubkey:bits256 = SigPubKey;  // 288 bits
+      ;; validator_addr#73 public_key:SigPubKey weight:uint64 adnl_addr:bits256 = ValidatorDescr;
+      var weight = (true_stake << 60) / best_stake;
+      tot_stake += true_stake;
+      var vinfo = begin_cell()
+        .store_uint(adnl_addr ? 0x73 : 0x53, 8)  ;; validator_addr#73 or validator#53
+        .store_uint(0x8e81278a, 32)    ;; ed25519_pubkey#8e81278a
+        .store_uint(pubkey, 256)       ;; pubkey:bits256
+        .store_uint(weight, 64);       ;; weight:uint64
+      if (adnl_addr) {
+        vinfo~store_uint(adnl_addr, 256);  ;; adnl_addr:bits256
+      }
+      vset~udict_set_builder(16, i, vinfo);
+      frozen~udict_set_builder(256, pubkey, begin_cell()
+        .store_uint(src_addr, 256)
+        .store_uint(weight, 64)
+        .store_grams(true_stake)
+        .store_int(false, 1));
+    }
+    if (stake) {
+      ;; non-zero unused part of the stake, credit to the source address
+      credits~credit_to(src_addr, stake);
+    }
+    i += 1;
+  } until (l.null?());
+  throw_unless(49, tot_stake == best_stake);
+  return (credits, vset, frozen, tot_stake, m); 
+}
+
+int conduct_elections(ds, elect, credits) impure {
+  var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
+  if (now() < elect_close) {
+    ;; elections not finished yet
+    return false;
+  }
+  if (config_param(0).null?()) {
+    ;; no configuration smart contract to send result to
+    return postpone_elections();
+  }
+  var cs = config_param(17).begin_parse();
+  min_stake = cs~load_grams();
+  var max_stake = cs~load_grams();
+  var min_total_stake = cs~load_grams();
+  var max_stake_factor = cs~load_uint(32);
+  cs.end_parse();
+  if (total_stake < min_total_stake) {
+    ;; insufficient total stake, postpone elections
+    return postpone_elections();
+  }
+  if (failed) {
+    ;; do not retry failed elections until new stakes arrive
+    return postpone_elections();
+  }
+  if (finished) {
+    ;; elections finished
+    return false;
+  }
+  (credits, var vdict, var frozen, var total_stakes, var cnt) = try_elect(credits, members, min_stake, max_stake, min_total_stake, max_stake_factor);
+  ;; pack elections; if cnt==0, set failed=true, finished=false.
+  failed = (cnt == 0);
+  finished = ~ failed;
+  elect = pack_elect(elect_at, elect_close, min_stake, total_stake, members, failed, finished);
+  ifnot (cnt) {
+    ;; elections failed, set elect_failed to true
+    set_data(begin_cell().store_dict(elect).store_dict(credits).store_slice(ds).end_cell());
+    return postpone_elections();
+  }
+  ;; serialize a query to the configuration smart contract
+  ;; to install the computed validator set as the next validator set
+  var (elect_for, elect_begin_before, elect_end_before, stake_held) = get_validator_conf();
+  var start = max(now() + elect_end_before - 60, elect_at);
+  var main_validators = config_param(16).begin_parse().skip_bits(16).preload_uint(16);
+  var vset = begin_cell()
+    .store_uint(0x11, 8)      ;; validators#11
+    .store_uint(start, 32)    ;; utime_since:uint32
+    .store_uint(start + elect_for, 32)  ;; utime_until:uint32
+    .store_uint(cnt, 16)      ;; total:(## 16) 
+    .store_uint(min(cnt, main_validators), 16)  ;; main:(## 16) 
+    .store_slice(vdict.begin_parse())  ;; list:(Hashmap 16 ValidatorDescr)
+  .end_cell();
+  var config_addr = config_param(0).begin_parse().preload_uint(256);
+  send_validator_set_to_config(config_addr, vset, elect_at);
+  ;; add frozen to the dictionary of past elections
+  var past_elect = ds~load_dict();
+  past_elect~udict_set_builder(32, elect_at, begin_cell()
+    .store_uint(start + elect_for + stake_held, 32)
+    .store_uint(stake_held, 32)
+    .store_uint(cell_hash(vset), 256)
+    .store_dict(frozen)
+    .store_grams(total_stakes)
+    .store_grams(0)
+    .store_int(false, 1));
+  ;; store credits and frozen until end
+  set_data(begin_cell()
+    .store_dict(elect)
+    .store_dict(credits)
+    .store_dict(past_elect)
+    .store_slice(ds)
+  .end_cell());
+  return true;
+}
+
+int update_active_vset_id() impure {
+  var (elect, credits, past_elect, grams, active_id, active_hash) = load_data();
+  var cur_hash = config_param(34).cell_hash();
+  if (cur_hash == active_hash) {
+    ;; validator set unchanged
+    return false;
+  }
+  if (active_id) {
+    ;; active_id becomes inactive
+    var (fs, f) = past_elect.udict_get?(32, active_id);
+    if (f) {
+      ;; adjust unfreeze time of this validator set
+      var unfreeze_time = fs~load_uint(32);
+      var fs0 = fs;
+      var (stake_held, hash) = (fs~load_uint(32), fs~load_uint(256));
+      throw_unless(57, hash == active_hash);
+      unfreeze_time = now() + stake_held;
+      past_elect~udict_set_builder(32, active_id, begin_cell()
+        .store_uint(unfreeze_time, 32)
+        .store_slice(fs0));
+    }
+  }
+  ;; look up new active_id by hash
+  var id = -1;
+  do {
+    (id, var fs, var f) = past_elect.udict_get_next?(32, id);
+    if (f) {
+      var (tm, hash) = (fs~load_uint(64), fs~load_uint(256));
+      if (hash == cur_hash) {
+        ;; parse more of this record
+        var (dict, total_stake, bonuses) = (fs~load_dict(), fs~load_grams(), fs~load_grams());
+        ;; transfer 1/8 of accumulated everybody's grams to this validator set as bonuses
+        var amount = (grams >> 3);
+        grams -= amount;
+        bonuses += amount;
+        ;; serialize back
+        past_elect~udict_set_builder(32, id, begin_cell()
+          .store_uint(tm, 64)
+          .store_uint(hash, 256)
+          .store_dict(dict)
+          .store_grams(total_stake)
+          .store_grams(bonuses)
+          .store_slice(fs));
+        ;; found
+        f = false;
+      }
+    }
+  } until (~ f);
+  active_id = (id.null?() ? 0 : id);
+  active_hash = cur_hash;
+  store_data(elect, credits, past_elect, grams, active_id, active_hash);
+  return true;
+}
+
+int cell_hash_eq?(cell vset, int expected_vset_hash) {
+  return vset.null?() ? false : cell_hash(vset) == expected_vset_hash;
+}
+
+int validator_set_installed(ds, elect, credits) impure {
+  var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
+  ifnot (finished) {
+    ;; elections not finished yet
+    return false;
+  }
+  var past_elections = ds~load_dict();
+  var (fs, f) = past_elections.udict_get?(32, elect_at);
+  ifnot (f) {
+    ;; no election data in dictionary
+    return false;
+  }
+  ;; recover validator set hash
+  var vset_hash = fs.skip_bits(64).preload_uint(256);
+  if (config_param(34).cell_hash_eq?(vset_hash) | config_param(36).cell_hash_eq?(vset_hash)) {
+    ;; this validator set has been installed, forget elections
+    set_data(begin_cell()
+      .store_int(false, 1)   ;; forget current elections
+      .store_dict(credits)
+      .store_dict(past_elections)
+      .store_slice(ds)
+    .end_cell());
+    update_active_vset_id();
+    return true;
+  }
+  return false;
+}
+
+int check_unfreeze() impure {
+  var (elect, credits, past_elect, grams, active_id, active_hash) = load_data();
+  int id = -1;
+  do {
+    (id, var fs, var f) = past_elect.udict_get_next?(32, id);
+    if (f) {
+      var unfreeze_at = fs~load_uint(32);
+      if ((unfreeze_at <= now()) & (id != active_id)) {
+        ;; unfreeze!
+        (credits, past_elect, var unused_prizes) = unfreeze_all(credits, past_elect, id);
+        grams += unused_prizes;
+        ;; unfreeze only one at time, exit loop
+        store_data(elect, credits, past_elect, grams, active_id, active_hash);
+        ;; exit loop
+        f = false;
+      }
+    }
+  } until (~ f);
+  return ~ id.null?();
+}
+
+int announce_new_elections(ds, elect, credits) {
+  var next_vset = config_param(36);   ;; next validator set
+  ifnot (next_vset.null?()) {
+    ;; next validator set exists, no elections needed
+    return false;
+  }
+  var elector_addr = config_param(1).begin_parse().preload_uint(256);
+  var (my_wc, my_addr) = my_address().parse_std_addr();
+  if ((my_wc + 1) | (my_addr != elector_addr)) {
+    ;; this smart contract is not the elections smart contract anymore, no new elections
+    return false;
+  }
+  var cur_vset = config_param(34);  ;; current validator set
+  if (cur_vset.null?()) {
+    return false;
+  }
+  var (elect_for, elect_begin_before, elect_end_before, stake_held) = get_validator_conf();
+  var cur_valid_until = cur_vset.begin_parse().skip_bits(8 + 32).preload_uint(32);
+  var t = now();
+  var t0 = cur_valid_until - elect_begin_before;
+  if (t < t0) {
+    ;; too early for the next elections
+    return false;
+  }
+  ;; less than elect_before_begin seconds left, create new elections
+  if (t - t0 < 60) {
+    ;; pretend that the elections started at t0
+    t = t0;
+  }
+  ;; get stake parameters
+  (_, var min_stake) = config_param(17).begin_parse().load_grams();
+  ;; announce new elections
+  var elect_at = t + elect_begin_before;
+  elect_at~dump();
+  var elect_close = elect_at - elect_end_before;
+  elect = pack_elect(elect_at, elect_close, min_stake, 0, new_dict(), false, false);
+  set_data(begin_cell().store_dict(elect).store_dict(credits).store_slice(ds).end_cell());
+  return true;
+}
+
+() run_ticktock(int is_tock) impure {
+  ;; check whether an election is being conducted
+  var ds = get_data().begin_parse();
+  var (elect, credits) = (ds~load_dict(), ds~load_dict());
+  ifnot (elect.null?()) {
+    ;; have an active election
+    throw_if(0, conduct_elections(ds, elect, credits));  ;; elections conducted, exit
+    throw_if(0, validator_set_installed(ds, elect, credits));  ;; validator set installed, current elections removed
+  } else {
+    throw_if(0, announce_new_elections(ds, elect, credits));  ;; new elections announced, exit
+  }
+  throw_if(0, update_active_vset_id());  ;; active validator set id updated, exit
+  check_unfreeze();
+}
+
+;; Get methods
+
+;; returns active election id or 0
+int active_election_id() method_id {
+  var elect = get_data().begin_parse().preload_dict();
+  return elect.null?() ? 0 : elect.begin_parse().preload_uint(32);
+}
+
+;; checks whether a public key participates in current elections
+int participates_in(int validator_pubkey) method_id {
+  var elect = get_data().begin_parse().preload_dict();
+  if (elect.null?()) {
+    return 0;
+  }
+  var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
+  var (mem, found) = members.udict_get?(256, validator_pubkey);
+  return found ? mem~load_grams() : 0;
+}
+
+;; returns the list of all participants of current elections with their stakes
+_ participant_list() method_id {
+  var elect = get_data().begin_parse().preload_dict();
+  if (elect.null?()) {
+    return nil;
+  }
+  var (elect_at, elect_close, min_stake, total_stake, members, failed, finished) = elect.unpack_elect();
+  var l = nil;
+  var id = (1 << 255) + ((1 << 255) - 1);
+  do {
+    (id, var fs, var f) = members.udict_get_prev?(256, id);
+    if (f) {
+      l = cons(pair(id, fs~load_grams()), l);
+    }
+  } until (~ f);
+  return l;
+}
+
+;; computes the return stake
+int compute_returned_stake(int wallet_addr) method_id {
+  var cs = get_data().begin_parse();
+  (_, var credits) = (cs~load_dict(), cs~load_dict());
+  var (val, f) = credits.udict_get?(256, wallet_addr);
+  return f ? val~load_grams() : 0;
+}

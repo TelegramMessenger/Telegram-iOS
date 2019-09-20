@@ -1,0 +1,149 @@
+;; Simple configuration smart contract
+
+() set_conf_param(int index, cell value) impure {
+  var cs = begin_parse(get_data());
+  var cfg_dict = cs~load_ref();
+  cfg_dict~idict_set_ref(32, index, value);
+  set_data(begin_cell().store_ref(cfg_dict).store_slice(cs).end_cell());
+}
+
+(int, int) check_validator_set(cell vset) {
+  var cs = vset.begin_parse();
+  throw_unless(9, cs~load_uint(8) == 0x11);  ;; validators#11
+  int utime_since = cs~load_uint(32);
+  int utime_until = cs~load_uint(32);
+  int total = cs~load_uint(16);
+  int main = cs~load_uint(16);
+  throw_unless(9, main > 0);
+  throw_unless(9, total >= main);
+  return (utime_since, utime_until);
+}
+
+() send_answer(addr, query_id, ans_tag, mode) impure {
+  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+  send_raw_message(begin_cell().store_uint(0x18, 6).store_slice(addr).store_uint(0, 5 + 4 + 4 + 64 + 32 + 1 + 1).store_uint(ans_tag, 32).store_uint(query_id, 64).end_cell(), mode);
+}
+
+() send_confirmation(addr, query_id, ans_tag) impure {
+  return send_answer(addr, query_id, ans_tag, 64);
+}
+
+() send_error(addr, query_id, ans_tag) impure {
+  return send_answer(addr, query_id, ans_tag, 64);
+}
+
+() recv_internal(cell in_msg_cell, slice in_msg) impure {
+  var cs = in_msg_cell.begin_parse();
+  var flags = cs~load_uint(4);  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool
+  var s_addr = cs~load_msg_addr();
+  (int src_wc, int src_addr) = s_addr.parse_std_addr();
+  if ((src_wc + 1) | (flags & 1) | in_msg.slice_empty?()) {
+    ;; source not in masterchain, or a bounced message, or a simple transfer
+    return ();
+  }
+  int tag = in_msg~load_uint(32);
+  int query_id = in_msg~load_uint(64);
+  if (tag == 0x4e565354) {
+    ;; set next validator set
+    var vset = in_msg~load_ref();
+    in_msg.end_parse();
+    var elector_param = config_param(1);
+    var elector_addr = cell_null?(elector_param) ? -1 : elector_param.begin_parse().preload_uint(256);
+    var ok = false;
+    if (src_addr == elector_addr) {
+      ;; message from elector smart contract
+      ;; set next validator set
+      (var t_since, var t_until) = check_validator_set(vset);
+      var t = now();
+      ok = (t_since > t) & (t_until > t_since);
+    }
+    if (ok) {
+      set_conf_param(36, vset);
+      ;; send confirmation
+      return send_confirmation(s_addr, query_id, 0xee764f4b);
+    } else {
+      return send_error(s_addr, query_id, 0xee764f6f);
+    }
+  }
+  ;; if tag is non-zero and its higher bit is zero, throw an exception (the message is an unsupported query)
+  ;; to bounce message back to sender
+  throw_unless(37, (tag == 0) | (tag & (1 << 31)));
+  ;; do nothing for other internal messages
+}
+
+;; forward a message to elector smart contract to make it upgrade its code
+() change_elector_code(slice cs) impure {
+  var dest_addr = config_param(1).begin_parse().preload_uint(256);
+  var query_id = now();
+  send_raw_message(begin_cell()
+   .store_uint(0xc4ff, 17)
+   .store_uint(dest_addr, 256)
+   .store_grams(1 << 30)         ;; ~ 1 Gram (will be returned back)
+   .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+   .store_uint(0x4e436f64, 32)   ;; action
+   .store_uint(query_id, 64)
+   .store_slice(cs)
+  .end_cell(), 0);
+}
+
+() recv_external(slice in_msg) impure {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  int action = cs~load_uint(32);
+  int msg_seqno = cs~load_uint(32);
+  var valid_until = cs~load_uint(32);
+  throw_if(35, valid_until < now());
+  var cs2 = begin_parse(get_data());
+  var cfg_dict = cs2~load_ref();
+  var stored_seqno = cs2~load_uint(32);
+  var public_key = cs2~load_uint(256);
+  cs2.end_parse();
+  throw_unless(33, msg_seqno == stored_seqno);
+  throw_unless(34, check_signature(slice_hash(in_msg), signature, public_key));
+  accept_message();
+  if (action == 0x43665021) {
+    ;; change one configuration parameter
+    var param_index = cs~load_uint(32);
+    var param_value = cs~load_ref();
+    cs.end_parse();
+    cfg_dict~idict_set_ref(32, param_index, param_value);
+  } elseif (action == 0x4e436f64) {
+    ;; change configuration smart contract code
+    var new_code = cs~load_ref();
+    cs.end_parse();
+    set_code(new_code);
+  } elseif (action == 0x50624b21) {
+    ;; change configuration master public key
+    public_key = cs~load_uint(256);
+    cs.end_parse();
+  } elseif (action == 0x4e43ef05) {
+    ;; change election smart contract code
+    change_elector_code(cs);
+  } else {
+    throw_if(32, action);
+  }
+  set_data(begin_cell().store_ref(cfg_dict).store_uint(stored_seqno + 1, 32).store_uint(public_key, 256).end_cell());
+}
+
+() run_ticktock(int is_tock) impure {
+  var cs = begin_parse(get_data());
+  var cfg_dict = cs~load_ref();
+  int kl = 32;
+  ;; cfg_dict~idict_set_ref(kl, -17, begin_cell().store_uint(now() >> 16, 32).end_cell());
+  var next_vset = cfg_dict.idict_get_ref(kl, 36);
+  ifnot (next_vset.null?()) {
+    ;; check whether we have to set next_vset as the current validator set
+    var ds = next_vset.begin_parse();
+    if (ds.slice_bits() >= 40) {
+      var tag = ds~load_uint(8);
+      var since = ds.preload_uint(32);
+      if ((tag == 0x11) & (since >= now())) {
+        ;; next validator set becomes active!
+        var cur_vset = cfg_dict~idict_set_get_ref(kl, 34, next_vset);  ;; next_vset -> cur_vset
+        cfg_dict~idict_set_get_ref(kl, 32, cur_vset);   ;; cur_vset -> prev_vset
+        cfg_dict~idict_delete?(kl, 36);             ;; (null) -> next_vset
+      }
+    }
+  }
+  set_data(begin_cell().store_ref(cfg_dict).store_slice(cs).end_cell());
+}

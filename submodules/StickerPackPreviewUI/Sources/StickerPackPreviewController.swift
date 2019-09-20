@@ -16,7 +16,7 @@ public enum StickerPackPreviewControllerMode {
     case settings
 }
 
-public final class StickerPackPreviewController: ViewController {
+public final class StickerPackPreviewController: ViewController, StandalonePresentableController {
     private var controllerNode: StickerPackPreviewControllerNode {
         return self.displayNode as! StickerPackPreviewControllerNode
     }

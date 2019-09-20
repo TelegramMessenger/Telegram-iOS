@@ -843,6 +843,17 @@
 			<key>explicitFileType</key>
 			<string>text.script.python</string>
 		</dict>
+		<key>1DD70E298B98CCED00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletInfoEmptyNode.swift</string>
+			<key>path</key>
+			<string>Sources/WalletInfoEmptyNode.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E29D2B1401800000000</key>
 		<dict>
 			<key>isa</key>
@@ -851,6 +862,17 @@
 			<string>WalletInfoScreen.swift</string>
 			<key>path</key>
 			<string>Sources/WalletInfoScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
+		<key>1DD70E2900657ECF00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletInfoTransactionItem.swift</string>
+			<key>path</key>
+			<string>Sources/WalletInfoTransactionItem.swift</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
@@ -909,6 +931,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E2986544B8D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletSettingsScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletSettingsScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E2964068E1100000000</key>
 		<dict>
 			<key>isa</key>
@@ -917,6 +950,17 @@
 			<string>WalletSplashScreen.swift</string>
 			<key>path</key>
 			<string>Sources/WalletSplashScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
+		<key>1DD70E290467090400000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletTransactionInfoScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletTransactionInfoScreen.swift</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
@@ -952,13 +996,17 @@
 			<string><![CDATA[<group>]]></string>
 			<key>children</key>
 			<array>
+				<string>1DD70E298B98CCED00000000</string>
 				<string>1DD70E29D2B1401800000000</string>
+				<string>1DD70E2900657ECF00000000</string>
 				<string>1DD70E29E336006800000000</string>
 				<string>1DD70E296D49CFFF00000000</string>
 				<string>1DD70E29DE28A96800000000</string>
 				<string>1DD70E2979DDEBBB00000000</string>
 				<string>1DD70E2948FA33F200000000</string>
+				<string>1DD70E2986544B8D00000000</string>
 				<string>1DD70E2964068E1100000000</string>
+				<string>1DD70E290467090400000000</string>
 				<string>1DD70E2936794EB600000000</string>
 				<string>1DD70E290678D03000000000</string>
 			</array>
@@ -993,12 +1041,26 @@
 				<string>B401C979172FA86D00000000</string>
 			</array>
 		</dict>
+		<key>E7A30F048B98CCED00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E298B98CCED00000000</string>
+		</dict>
 		<key>E7A30F04D2B1401800000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
 			<string>1DD70E29D2B1401800000000</string>
+		</dict>
+		<key>E7A30F0400657ECF00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2900657ECF00000000</string>
 		</dict>
 		<key>E7A30F04E336006800000000</key>
 		<dict>
@@ -1035,12 +1097,26 @@
 			<key>fileRef</key>
 			<string>1DD70E2948FA33F200000000</string>
 		</dict>
+		<key>E7A30F0486544B8D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2986544B8D00000000</string>
+		</dict>
 		<key>E7A30F0464068E1100000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
 			<string>1DD70E2964068E1100000000</string>
+		</dict>
+		<key>E7A30F040467090400000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E290467090400000000</string>
 		</dict>
 		<key>E7A30F0436794EB600000000</key>
 		<dict>
@@ -1062,13 +1138,17 @@
 			<string>PBXSourcesBuildPhase</string>
 			<key>files</key>
 			<array>
+				<string>E7A30F048B98CCED00000000</string>
 				<string>E7A30F04D2B1401800000000</string>
+				<string>E7A30F0400657ECF00000000</string>
 				<string>E7A30F04E336006800000000</string>
 				<string>E7A30F046D49CFFF00000000</string>
 				<string>E7A30F04DE28A96800000000</string>
 				<string>E7A30F0479DDEBBB00000000</string>
 				<string>E7A30F0448FA33F200000000</string>
+				<string>E7A30F0486544B8D00000000</string>
 				<string>E7A30F0464068E1100000000</string>
+				<string>E7A30F040467090400000000</string>
 				<string>E7A30F0436794EB600000000</string>
 				<string>E7A30F040678D03000000000</string>
 			</array>

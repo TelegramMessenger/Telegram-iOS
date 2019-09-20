@@ -25,12 +25,14 @@ private final class TonInstanceImpl {
     private let queue: Queue
     private let basePath: String
     private let config: String
+    private let network: Network
     private var instance: TON?
     
-    init(queue: Queue, basePath: String, config: String) {
+    init(queue: Queue, basePath: String, config: String, network: Network) {
         self.queue = queue
         self.basePath = basePath
         self.config = config
+        self.network = network
     }
     
     func withInstance(_ f: (TON) -> Void) {
@@ -38,7 +40,17 @@ private final class TonInstanceImpl {
         if let current = self.instance {
             instance = current
         } else {
-            instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config)
+            let network = self.network
+            instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, performExternalRequest: { request in
+                let _ = (network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))).start(next: { result in
+                    switch result {
+                    case let .liteResponse(response):
+                        request.onResult(response.makeData(), nil)
+                    }
+                }, error: { error in
+                    request.onResult(nil, error.errorDescription)
+                })
+            })
             self.instance = instance
         }
         f(instance)
@@ -49,11 +61,11 @@ public final class TonInstance {
     private let queue: Queue
     private let impl: QueueLocalObject<TonInstanceImpl>
     
-    public init(basePath: String, config: String) {
+    public init(basePath: String, config: String, network: Network) {
         self.queue = .mainQueue()
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return TonInstanceImpl(queue: queue, basePath: basePath, config: config)
+            return TonInstanceImpl(queue: queue, basePath: basePath, config: config, network: network)
         })
     }
     
@@ -63,7 +75,7 @@ public final class TonInstance {
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.createKey(withLocalPassword: serverSalt, mnemonicPassword: "").start(next: { key in
+                    let cancel = ton.createKey(withLocalPassword: serverSalt, mnemonicPassword: Data()).start(next: { key in
                         guard let key = key as? TONKey else {
                             assertionFailure()
                             return
@@ -103,7 +115,7 @@ public final class TonInstance {
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.importKey(withLocalPassword: serverSalt, mnemonicPassword: "", wordList: wordList).start(next: { key in
+                    let cancel = ton.importKey(withLocalPassword: serverSalt, mnemonicPassword: Data(), wordList: wordList).start(next: { key in
                         guard let key = key as? TONKey else {
                             subscriber.putError(.generic)
                             subscriber.putCompletion()
@@ -158,6 +170,31 @@ public final class TonInstance {
         }
     }
     
+    fileprivate func testGiverWalletAddress() -> Signal<String, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.getTestGiverAddress().start(next: { address in
+                        guard let address = address as? String else {
+                            return
+                        }
+                        subscriber.putNext(address)
+                        subscriber.putCompletion()
+                    }, error: { _ in
+                    }, completed: {
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
     fileprivate func walletBalance(publicKey: WalletPublicKey) -> Signal<WalletBalance, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -181,6 +218,92 @@ public final class TonInstance {
                             cancel?.dispose()
                         })
                     }, error: { _ in
+                    }, completed: {
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func walletLastTransactionId(address: String) -> Signal<WalletTransactionId?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.getAccountState(withAddress: address).start(next: { state in
+                        guard let state = state as? TONAccountState else {
+                            subscriber.putNext(nil)
+                            return
+                        }
+                        subscriber.putNext(state.lastTransactionId.flatMap(WalletTransactionId.init(tonTransactionId:)))
+                    }, error: { _ in
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func getWalletTransactions(address: String, previousId: WalletTransactionId) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.getTransactionList(withAddress: address, lt: previousId.lt, hash: previousId.transactionHash).start(next: { transactions in
+                        guard let transactions = transactions as? [TONTransaction] else {
+                            subscriber.putError(.generic)
+                            return
+                        }
+                        subscriber.putNext(transactions.map(WalletTransaction.init(tonTransaction:)))
+                    }, error: { _ in
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func getGramsFromTestGiver(address: String, amount: Int64) -> Signal<Void, GetGramsFromTestGiverError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.getTestGiverAccountState().start(next: { state in
+                        guard let state = state as? TONAccountState else {
+                            subscriber.putError(.generic)
+                            return
+                        }
+                        let cancel = ton.testGiverSendGrams(with: state, accountAddress: address, amount: amount).start(next: { _ in
+                        }, error: { _ in
+                            subscriber.putError(.generic)
+                        }, completed: {
+                            subscriber.putCompletion()
+                        })
+                        disposable.set(ActionDisposable {
+                            cancel?.dispose()
+                        })
+                    }, error: { _ in
+                        subscriber.putError(.generic)
                     }, completed: {
                     })
                     disposable.set(ActionDisposable {
@@ -385,8 +508,143 @@ public func walletAddress(publicKey: WalletPublicKey, tonInstance: TonInstance) 
     return tonInstance.walletAddress(publicKey: publicKey)
 }
 
+public func testGiverWalletAddress(tonInstance: TonInstance) -> Signal<String, NoError> {
+    return tonInstance.testGiverWalletAddress()
+}
+
 public func currentWalletBalance(publicKey: WalletPublicKey, tonInstance: TonInstance) -> Signal<WalletBalance, NoError> {
     return tonInstance.walletBalance(publicKey: publicKey)
+}
+
+public enum GetGramsFromTestGiverError {
+    case generic
+}
+
+public func getGramsFromTestGiver(address: String, amount: Int64, tonInstance: TonInstance) -> Signal<Void, GetGramsFromTestGiverError> {
+    return tonInstance.getGramsFromTestGiver(address: address, amount: amount)
+}
+
+public struct WalletTransactionId: Hashable {
+    public var lt: Int64
+    public var transactionHash: Data
+}
+
+private extension WalletTransactionId {
+    init(tonTransactionId: TONTransactionId) {
+        self.lt = tonTransactionId.lt
+        self.transactionHash = tonTransactionId.transactionHash
+    }
+}
+
+public final class WalletTransactionMessage: Equatable {
+    public let value: Int64
+    public let source: String
+    public let destination: String
+    
+    init(value: Int64, source: String, destination: String) {
+        self.value = value
+        self.source = source
+        self.destination = destination
+    }
+    
+    public static func ==(lhs: WalletTransactionMessage, rhs: WalletTransactionMessage) -> Bool {
+        if lhs.value != rhs.value {
+            return false
+        }
+        if lhs.source != rhs.source {
+            return false
+        }
+        if lhs.destination != rhs.destination {
+            return false;
+        }
+        return true
+    }
+}
+
+private extension WalletTransactionMessage {
+    convenience init(tonTransactionMessage: TONTransactionMessage) {
+        self.init(value: tonTransactionMessage.value, source: tonTransactionMessage.source, destination: tonTransactionMessage.destination)
+    }
+}
+
+public final class WalletTransaction: Equatable {
+    public let data: Data
+    public let transactionId: WalletTransactionId
+    public let timestamp: Int64
+    public let fee: Int64
+    public let inMessage: WalletTransactionMessage?
+    public let outMessages: [WalletTransactionMessage]
+    
+    public var transferredValue: Int64 {
+        var value: Int64 = 0
+        if let inMessage = self.inMessage {
+            value += inMessage.value
+        }
+        for message in self.outMessages {
+            value -= message.value
+        }
+        value -= self.fee
+        return value
+    }
+    
+    init(data: Data, transactionId: WalletTransactionId, timestamp: Int64, fee: Int64, inMessage: WalletTransactionMessage?, outMessages: [WalletTransactionMessage]) {
+        self.data = data
+        self.transactionId = transactionId
+        self.timestamp = timestamp
+        self.fee = fee
+        self.inMessage = inMessage
+        self.outMessages = outMessages
+    }
+    
+    public static func ==(lhs: WalletTransaction, rhs: WalletTransaction) -> Bool {
+        if lhs.data != rhs.data {
+            return false
+        }
+        if lhs.transactionId != rhs.transactionId {
+            return false
+        }
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.fee != rhs.fee {
+            return false
+        }
+        if lhs.inMessage != rhs.inMessage {
+            return false
+        }
+        if lhs.outMessages != rhs.outMessages {
+            return false
+        }
+        return true
+    }
+}
+
+private extension WalletTransaction {
+    convenience init(tonTransaction: TONTransaction) {
+        self.init(data: tonTransaction.data, transactionId: WalletTransactionId(tonTransactionId: tonTransaction.transactionId), timestamp: tonTransaction.timestamp, fee: tonTransaction.fee, inMessage: tonTransaction.inMessage.flatMap(WalletTransactionMessage.init(tonTransactionMessage:)), outMessages: tonTransaction.outMessages.map(WalletTransactionMessage.init(tonTransactionMessage:)))
+    }
+}
+
+public enum GetWalletTransactionsError {
+    case generic
+}
+
+public func getWalletTransactions(address: String, previousId: WalletTransactionId?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
+    let previousIdValue: Signal<WalletTransactionId?, GetWalletTransactionsError>
+    if let previousId = previousId {
+        previousIdValue = .single(previousId)
+    } else {
+        previousIdValue = tonInstance.walletLastTransactionId(address: address)
+        |> introduceError(GetWalletTransactionsError.self)
+    }
+    return previousIdValue
+    |> mapToSignal { previousId in
+        if let previousId = previousId {
+            return tonInstance.getWalletTransactions(address: address, previousId: previousId)
+        } else {
+            return .single([])
+        }
+    }
 }
 
 public enum GetServerWalletSaltError {
@@ -394,10 +652,6 @@ public enum GetServerWalletSaltError {
 }
 
 private func getServerWalletSalt(network: Network) -> Signal<Data, GetServerWalletSaltError> {
-    #if DEBUG
-    return .single(Data())
-    #endif
-    
     return network.request(Api.functions.wallet.getKeySecretSalt(revoke: .boolFalse))
     |> mapError { _ -> GetServerWalletSaltError in
         return .generic

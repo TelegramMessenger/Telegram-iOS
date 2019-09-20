@@ -1,0 +1,12 @@
+"Asm.fif" include
+
+1000 1 /r
+
+x{7A71A905} runvmcode
+
+<{ 1000 INT 1 INT DIVR }>s
+dup csr.
+runvmcode
+
+.s
+

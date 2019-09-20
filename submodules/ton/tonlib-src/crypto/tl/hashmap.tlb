@@ -1,0 +1,60 @@
+bit#_ _:(## 1) = Bit;
+
+// ordinary Hashmap / HashmapE, with fixed length keys
+//
+hm_edge#_ {n:#} {X:Type} {l:#} {m:#} label:(HmLabel ~l n) 
+          {n = (~m) + l} node:(HashmapNode m X) = Hashmap n X;
+
+hmn_leaf#_ {X:Type} value:X = HashmapNode 0 X;
+hmn_fork#_ {n:#} {X:Type} left:^(Hashmap n X) 
+           right:^(Hashmap n X) = HashmapNode (n + 1) X;
+
+hml_short$0 {m:#} {n:#} len:(Unary ~n) s:(n * Bit) = HmLabel ~n m;
+hml_long$10 {m:#} n:(#<= m) s:(n * Bit) = HmLabel ~n m;
+hml_same$11 {m:#} v:Bit n:(#<= m) = HmLabel ~n m;
+
+unary_zero$0 = Unary ~0;
+unary_succ$1 {n:#} x:(Unary ~n) = Unary ~(n + 1);
+
+hme_empty$0 {n:#} {X:Type} = HashmapE n X;
+hme_root$1 {n:#} {X:Type} root:^(Hashmap n X) = HashmapE n X;
+
+true#_ = True;
+_ {n:#} _:(Hashmap n True) = BitstringSet n;
+
+
+// VarHashmap / VarHashmapE, with variable-length keys
+//
+vhm_edge#_ {n:#} {X:Type} {l:#} {m:#} label:(HmLabel ~l n) 
+           {n = (~m) + l} node:(VarHashmapNode m X) 
+           = VarHashmap n X;
+vhmn_leaf$00 {n:#} {X:Type} value:X = VarHashmapNode n X;
+vhmn_fork$01 {n:#} {X:Type} left:^(VarHashmap n X) 
+             right:^(VarHashmap n X) value:(Maybe X) 
+             = VarHashmapNode (n + 1) X;
+vhmn_cont$1 {n:#} {X:Type} branch:Bit child:^(VarHashmap n X) 
+            value:X = VarHashmapNode (n + 1) X;
+
+nothing$0 {X:Type} = Maybe X;
+just$1 {X:Type} value:X = Maybe X;
+
+vhme_empty$0 {n:#} {X:Type} = VarHashmapE n X;
+vhme_root$1 {n:#} {X:Type} root:^(VarHashmap n X) 
+            = VarHashmapE n X;
+
+//
+// PfxHashmap / PfxHashmapE, with variable-length keys
+//                           constituting a prefix code
+//
+
+phm_edge#_ {n:#} {X:Type} {l:#} {m:#} label:(HmLabel ~l n) 
+           {n = (~m) + l} node:(PfxHashmapNode m X) 
+           = PfxHashmap n X;
+
+phmn_leaf$0 {n:#} {X:Type} value:X = PfxHashmapNode n X;
+phmn_fork$1 {n:#} {X:Type} left:^(PfxHashmap n X) 
+            right:^(PfxHashmap n X) = PfxHashmapNode (n + 1) X;
+
+phme_empty$0 {n:#} {X:Type} = PfxHashmapE n X;
+phme_root$1 {n:#} {X:Type} root:^(PfxHashmap n X) 
+            = PfxHashmapE n X;

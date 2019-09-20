@@ -1,0 +1,102 @@
+"Asm.fif" include
+
+PROGRAM{
+
+NEWPROC load_dict
+NEWPROC generate_dict
+NEWPROC save_dict
+
+NEWPROC do_get
+NEWPROC do_set
+NEWPROC do_erase
+
+main PROC:<{
+  DUP 1 INT EQUAL IF:<{
+   DROP
+   do_get CALL
+  }>ELSE<{
+  DUP 2 INT EQUAL IF:<{
+   DROP
+   do_set CALL
+  }>ELSE<{
+  DUP 3 INT EQUAL IF:<{
+   DROP
+   do_erase CALL
+  }> }> }>
+  -1 INT
+}>
+
+do_get PROC:<{
+ load_dict CALL
+ 32 INT
+ DICTIGET
+}>
+
+do_set PROC:<{
+ load_dict CALL
+ 32 INT
+ DICTISET
+ save_dict CALL
+}>
+
+do_erase PROC:<{
+ load_dict CALL
+ 32 INT
+ DICTIDEL
+ DROP
+ save_dict CALL
+}>
+
+generate_dict PROC:<{
+  4 INT 100 INT REPEAT:<{
+    DUP 2DUP MUL ROT 617 INT ADD 1000 INT MOD
+  }>
+  DROP 100 INT
+  NEWDICT
+  SWAP REPEAT:<{
+    s0 s2 XCHG
+    NEWC
+    16 STU
+    s0 s2 XCHG
+    32 INT
+    DICTISETB
+  }>
+}>
+
+load_dict PROC:<{
+  PUSHROOT
+  CTOS DUP SEMPTY IF:<{
+    DROP
+    generate_dict CALL
+  }>
+}>
+
+save_dict PROC:<{
+  NEWC
+  STSLICE
+  ENDC
+  POPROOT
+}>
+
+}END>s constant pmc_prog
+
+{ 1 2 rot pmc_prog } : task_pmc_get
+{ 2 3 rot pmc_prog } : task_pmc_set
+{ 3 2 rot pmc_prog } : task_pmc_erase
+
+{ task_pmc_get dbrunvm 2drop } : pmc_get
+{ task_pmc_set dbrunvm 2drop } : pmc_set
+{ task_pmc_erase dbrunvm 2drop } : pmc_erase
+
+<b x{abacaba} s, <b x{dead} s, x{1dead} sr, b> <s sr, b> <s constant test_value
+
+// 123 "a" pmc_get
+// { csr. } if
+//  123 "a" pmc_set
+
+// test_value 123 x{a} task_pmc_set test_value 123 x{b} task_pmc_set test_value 123 x{c} task_pmc_set 3 3 dbrunvm-parallel
+
+{ test_value 150 rot task_pmc_set } 0 { 1 + 2dup swap execute 7 roll 7 roll } 10000 times 2drop 10000 4 dbrunvm-parallel
+
+// 123 "a" task_pmc_get 123 "b" task_pmc_get 123 "c" task_pmc_get 3 dbrunvm-parallel
+

@@ -1,0 +1,28 @@
+{ hole dup 1 { @ execute } does create 1 ' ! does create } : defvect
+defvect sort :sort
+defvect merge :merge
+defvect less :less
+' < :less
+{ null null rot
+  { dup null? not }
+  { uncons swap rot cons -rot } while drop
+} : split
+{ dup null? { drop } {
+    over null? { nip } {
+      over car over car less ' swap if
+      uncons rot merge cons
+    } cond
+  } cond
+} :merge
+{ dup null? {
+    dup cdr null? {
+      split sort swap sort merge
+    } ifnot
+  } ifnot
+} :sort
+3 1 4 1 5 9 2 6 5  9 list
+dup .l cr sort .l cr
+"once" "upon" "a" "time" "there" "lived" "a" "very" "little" "kitten"  10 list
+{ $cmp 0< } :less
+dup .l cr sort .l cr
+

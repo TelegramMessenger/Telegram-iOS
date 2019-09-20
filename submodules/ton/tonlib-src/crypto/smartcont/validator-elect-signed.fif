@@ -1,0 +1,43 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <wallet-addr> <elect-utime> <max-factor> <adnl-addr> <validator-pubkey> <validator-signature> [<savefile>]" cr
+  ."Creates a message body for participating in validator elections starting at <elect-utime> on behalf of smart-contract with address <wallet-addr> (prefix with '@' to load address from file) and hexadecimal adnl address <adnl-addr> (empty string or '0' for none)." cr
+  ."<validator-pubkey> is the main public key of the future validator (as a Base64 string), and <validator-signature> is the signature of the previously created validator request by that key (also Base64)" cr
+  ."The result is saved into <savefile> (`validator-query.boc` by default) and output in hexadecimal form, to be sent later as the body of a message from <wallet-addr> to elections smart contract, along with the desired stake" cr 1 halt
+} : usage
+
+$# dup 6 < swap 7 > or ' usage if
+$1 true parse-load-address drop swap 1+ abort"only masterchain smartcontracts may participate in validator elections"
+constant src_addr
+$2 (number) 1 <> { 0 } if dup 0<= abort"<elect-utime> must be a positive integer"
+constant elect_time
+$3 (number) dup 0= abort"<max-factor> must be a real number 1..100"
+1 = { 16 << } { 16 <</r } cond
+dup 65536 < over 6553600 > or abort"<max-factor> must be a real number 1..100"
+constant max_factor
+$4 dup $len 1 > { parse-adnl-address } { drop 0 } cond constant adnl_addr
+$5 base64>B dup Blen 36 <> abort"validator Ed25519 public key must be exactly 36 bytes long"
+  32 B>u@+ 0xC6B41348 <> abort"invalid Ed25519 public key: unknown magic number"
+  constant pubkey
+$6 base64>B dup Blen 64 <> abort"validator Ed25519 signature must be exactly 64 bytes long"
+constant signature
+def? $7 { @' $7 } { "validator-query.boc" } cond constant output_fname
+
+."Creating a request to participate in validator elections at time " elect_time .
+."from smart contract " -1 src_addr 2dup 1 .Addr ." = " .addr
+." with maximal stake factor with respect to the minimal stake " max_factor ._
+."/65536 and validator ADNL address " adnl_addr x. cr
+
+B{654c5074} elect_time 32 u>B B+ max_factor 32 u>B B+ src_addr 256 u>B B+ adnl_addr 256 u>B B+
+."String to sign is: " dup Bx. cr constant to_sign
+
+to_sign signature pubkey ed25519_chksign not abort"Ed25519 signature is invalid"
+."Provided a valid Ed25519 signature " signature Bx. ." with validator public key " pubkey Bx. cr
+now dup constant query_id ."query_id set to " . cr
+
+<b x{4e73744b} s, query_id 64 u, pubkey B, elect_time 32 u, max_factor 32 u, adnl_addr 256 u, 
+  <b signature B, b> ref, b>
+cr ."Message body is " dup <s csr. cr
+
+2 boc+>B output_fname tuck B>file ."Saved to file " type cr

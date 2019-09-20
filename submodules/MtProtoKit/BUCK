@@ -1,81 +1,4 @@
-load("//Config:buck_rule_macros.bzl", "static_library", "framework")
-
-genrule(
-    name = "openssl_libs",
-    srcs = [
-        "openssl/iOS/libcrypto.a",
-    ],
-    bash = "mkdir -p $OUT; cp $SRCS $OUT/",
-    out = "openssl_libs",
-    visibility = ["PUBLIC"]
-)
-
-apple_library(
-    name = "openssl",
-    visibility = [
-        "//submodules/MtProtoKit:MtProtoKit"
-    ],
-    header_namespace = "openssl",
-    exported_headers = glob([
-        "openssl/**/*.h",
-    ]),
-    exported_linker_flags = [
-        "-lcrypto",
-        "-L$(location :openssl_libs)",
-    ],
-)
-
-ton_lib_names = [
-    "adnllite",
-    "crc32c",
-    "fift",
-    "keys",
-    "memprof",
-    "tdactor",
-    "tddb",
-    "tdnet",
-    "tdtl",
-    "tdutils",
-    "terminal",
-    "tl-lite-utils",
-    "tl-utils",
-    "tl_api",
-    "tl_lite_api",
-    "tl_tonlib_api",
-    "tl_tonlib_api_json",
-    "ton_block",
-    "ton_crypto",
-    "ton_db",
-    "tonlib",
-    "tonlibjson_private",
-    "tonlibjson_static",
-]
-
-ton_lib_flags = ["-l" + name for name in ton_lib_names]
-
-genrule(
-    name = "ton_libs",
-    srcs = glob([
-        "TON/*.a",
-    ]),
-    bash = "mkdir -p $OUT; cp $SRCS $OUT/",
-    out = "ton_libs",
-    visibility = ["PUBLIC"]
-)
-
-apple_library(
-    name = "ton",
-    visibility = [
-        "//submodules/MtProtoKit:MtProtoKit"
-    ],
-    header_namespace = "ton",
-    exported_headers = glob([
-        "TON/include/*.h",
-    ]),
-    exported_linker_flags = [
-        "-L$(location :ton_libs)",
-    ] + ton_lib_flags,
-)
+load("//Config:buck_rule_macros.bzl", "static_library", "framework", "glob_map", "merge_maps")
 
 framework(
     name = "MtProtoKit",
@@ -87,13 +10,14 @@ framework(
         "TON/*.m",
         "TON/*.mm",
     ]),
-    headers = glob([
-        "*.h",
-        "MtProtoKit/*.h",
-        "thirdparty/AFNetworking/*.h",
-        "thirdparty/AsyncSocket/*.h",
-        "TON/*.h",
-        "TON/include/*.h",
+    headers = merge_maps([
+        glob_map(glob([
+            "*.h",
+            "MtProtoKit/*.h",
+            "thirdparty/AFNetworking/*.h",
+            "thirdparty/AsyncSocket/*.h",
+            "TON/*.h",
+        ])),
     ]),
     exported_headers = [
         "MtProtoKit/MTTime.h",
@@ -159,8 +83,8 @@ framework(
     ],
     visibility = ["PUBLIC"],
     deps = [
-        ":openssl",
-        ":ton",
+        "//submodules/openssl:openssl",
+        "//submodules/ton:ton",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

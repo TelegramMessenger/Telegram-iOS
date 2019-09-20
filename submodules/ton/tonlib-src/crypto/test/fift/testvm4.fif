@@ -1,0 +1,14 @@
+169 13 
+239 dup dup * swap
+289 17 
+3
+x{6D01E502C8CB0F028010F442} runvmcode .s drop dup <s csr.
+
+1 { dup 2dup * swap rot 1+ } 100 times drop 100 .s
+x{6D01E502C8CB0FC9D0028010F414} runvmcode .s drop dup <s csr.
+
+0 { dup 2dup * rot 617 + 1000 mod } 1000 times drop 1000 .s
+x{6D01E502C8CB0F028020F442} runvmcode .s drop dup <s csr.
+
+<b x{C_} s, over ref, b> dup 15 boc+>B .s
+B>boc .s

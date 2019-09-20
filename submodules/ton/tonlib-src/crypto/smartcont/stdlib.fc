@@ -1,0 +1,101 @@
+;; Standard library for funC
+;;
+
+int now() asm "NOW";
+slice my_address() asm "MYADDR";
+
+int cell_hash(cell c) asm "HASHCU";
+int slice_hash(slice s) asm "HASHSU";
+int string_hash(slice s) asm "SHA256U";
+
+int check_signature(int hash, slice signature, int public_key) asm "CHKSIGNU";
+int check_data_signature(slice data, slice signature, int public_key) asm "CHKSIGNS";
+
+;; () throw_if(int excno, int cond) impure asm "THROWARGIF";
+
+() dump_stack() impure asm "DUMPSTK";
+
+cell get_data() asm "c4 PUSH";
+() set_data(cell c) impure asm "c4 POP";
+() set_c3(cell c) impure asm "c3 POP";
+() accept_message() impure asm "ACCEPT";
+
+int min(int x, int y) asm "MIN";
+int max(int x, int y) asm "MAX";
+
+slice begin_parse(cell c) asm "CTOS";
+() end_parse(slice s) impure asm "ENDS";
+(slice, cell) load_ref(slice s) asm( -> 1 0) "LDREF";
+cell preload_ref(slice s) asm "PLDREF";
+;; (slice, int) ~load_int(slice s, int len) asm(s len -> 1 0) "LDIX";
+;; (slice, int) ~load_uint(slice s, int len) asm( -> 1 0) "LDUX";
+;; int preload_int(slice s, int len) asm "PLDIX";
+;; int preload_uint(slice s, int len) asm "PLDUX";
+;; (slice, slice) load_bits(slice s, int len) asm(s len -> 1 0) "LDSLICEX";
+;; slice preload_bits(slice s, int len) asm "PLDSLICEX";
+(slice, int) load_grams(slice s) asm( -> 1 0) "LDGRAMS";
+slice skip_bits(slice s, int len) asm "SDSKIPFIRST";
+slice first_bits(slice s, int len) asm "SDCUTFIRST";
+(slice, cell) load_dict(slice s) asm( -> 1 0) "LDDICT";
+cell preload_dict(slice s) asm "PLDDICT";
+slice skip_dict(slice s) asm "SKIPDICT";
+
+int slice_refs(slice s) asm "SREFS";
+int slice_bits(slice s) asm "SBITS";
+(int, int) slice_bits_refs(slice s) asm "SBITREFS";
+int slice_empty?(slice s) asm "SEMPTY";
+int slice_data_empty?(slice s) asm "SDEMPTY";
+int slice_refs_empty?(slice s) asm "SREMPTY";
+
+builder begin_cell() asm "NEWC";
+cell end_cell(builder b) asm "ENDC";
+builder store_ref(builder b, cell c) asm(c b) "STREF";
+;; builder store_uint(builder b, int x, int len) asm(x b len) "STUX";
+;; builder store_int(builder b, int x, int len) asm(x b len) "STIX";
+builder store_slice(builder b, slice s) asm "STSLICER";
+builder store_grams(builder b, int x) asm "STGRAMS";
+builder store_dict(builder b, cell c) asm(c b) "STDICT";
+
+(slice, slice) load_msg_addr(slice s) asm( -> 1 0) "LDMSGADDR";
+tuple parse_addr(slice s) asm "PARSEMSGADDR";
+(int, int) parse_std_addr(slice s) asm "REWRITESTDADDR";
+(int, slice) parse_var_addr(slice s) asm "REWRITEVARADDR";
+
+cell idict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETREF";
+(cell, ()) ~idict_set_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETREF";
+cell idict_get_ref(cell dict, int key_len, int index) asm(index dict key_len) "DICTIGETOPTREF";
+(cell, cell) idict_set_get_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETGETOPTREF";
+(cell, int) idict_delete?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIDEL";
+(slice, int) idict_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIGET" "NULLSWAPIFNOT";
+(slice, int) udict_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUGET" "NULLSWAPIFNOT";
+(cell, slice, int) idict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIDELGET" "NULLSWAPIFNOT";
+(cell, slice, int) udict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGET" "NULLSWAPIFNOT";
+(cell, (slice, int)) ~idict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTIDELGET" "NULLSWAPIFNOT";
+(cell, (slice, int)) ~udict_delete_get?(cell dict, int key_len, int index) asm(index dict key_len) "DICTUDELGET" "NULLSWAPIFNOT";
+cell udict_set_builder(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUSETB";
+(cell, ()) ~udict_set_builder(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUSETB";
+cell idict_set_builder(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTISETB";
+(cell, ()) ~idict_set_builder(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTISETB";
+cell dict_set_builder(cell dict, int key_len, slice index, builder value) asm(value index dict key_len) "DICTSETB";
+(cell, ()) ~dict_set_builder(cell dict, int key_len, slice index, builder value) asm(value index dict key_len) "DICTSETB";
+(cell, int) udict_add_builder?(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUADDB";
+(cell, int) udict_replace_builder?(cell dict, int key_len, int index, builder value) asm(value index dict key_len) "DICTUREPLACEB";
+(cell, int, slice, int) udict_delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTUREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, (int, slice, int)) ~udict::delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTUREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, slice, slice, int) dict_delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(cell, (slice, slice, int)) ~dict::delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) udict_get_next?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETNEXT" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) udict_get_prev?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETPREV" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+cell new_dict() asm "NEWDICT";
+int dict_empty?(cell c) asm "DICTEMPTY";
+
+cell config_param(int x) asm "CONFIGOPTPARAM";
+int cell_null?(cell c) asm "ISNULL";
+
+() raw_reserve(int amount, int mode) impure asm "RAWRESERVE";
+() raw_reserve_extra(slice currencies, int mode) impure asm "RAWRESERVEX";
+() send_raw_message(cell msg, int mode) impure asm "SENDRAWMSG";
+() set_code(cell new_code) impure asm "SETCODE";
+
+slice touch_slice(slice s) asm "NOP";
+(slice,()) ~touch_slice(slice s) asm "NOP";

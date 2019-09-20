@@ -1,0 +1,62 @@
+int now() asm "NOW";
+
+int cell_hash(cell c)
+asm "HASHCU";
+
+int slice_hash(slice s)
+asm "HASHSU";
+
+int check_signature(int hash, slice signature, int public_key)
+asm "CHKSIGNU";
+
+;; () throw_if(int excno, int cond) impure
+;; asm "THROWARGIF";
+
+cell get_data() asm "c4 PUSH";
+() set_data(cell c) impure asm "c4 POP";
+() accept_message() impure asm "ACCEPT";
+
+slice begin_parse(cell c) asm "CTOS";
+() end_parse(slice s) impure asm "ENDS";
+(slice, cell) load_ref(slice s) asm( -> 1 0) "LDREF";
+;; (slice, int) ~load_int(slice s, int len) asm(s len -> 1 0) "LDIX";
+;; (slice, int) ~load_uint(slice s, int len) asm( -> 1 0) "LDUX";
+;; int preload_int(slice s, int len) asm "PLDIX";
+;; int preload_uint(slice s, int len) asm "PLDUX";
+(slice, slice) load_bits(slice s, int len) asm(s len -> 1 0) "LDSLICEX";
+slice preload_bits(slice s, int len) asm "PLDSLICEX";
+cell set_idict_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETREF";
+(cell, ()) ~set_idict_ref(cell dict, int key_len, int index, cell value) asm(value index dict key_len) "DICTISETREF";
+builder begin_cell() asm "NEWC";
+builder store_ref(builder b, cell c) asm(c b) "STREF";
+;; builder store_uint(builder b, int x, int len) asm(x b len) "STUX";
+;; builder store_int(builder b, int x, int len) asm(x b len) "STIX";
+cell end_cell(builder b) asm "ENDC";
+
+;; Simple configuration smart contract
+
+() recv_internal(cell in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+() recv_external(cell in_msg) impure {
+  var cs = begin_parse(in_msg);
+  var signature = cs~load_bits(512);
+  var cs0 = cs;
+  int msg_seqno = cs~load_uint(32);
+  var valid_until = cs~load_uint(32);
+  throw_if(35, valid_until < now());
+  var cs2 = begin_parse(get_data());
+  var cfg_dict = cs2~load_ref();
+  var stored_seqno = cs2~load_uint(32);
+  var public_key = cs2~load_uint(256);
+  cs2.end_parse();
+  throw_unless(33, msg_seqno == stored_seqno);
+  throw_unless(34, check_signature(slice_hash(cs0), signature, public_key));
+  accept_message();
+  var param_index = cs~load_uint(32);
+  var param_value = cs~load_ref();
+  cs.end_parse();
+  cfg_dict~set_idict_ref(32, param_index, param_value);
+  set_data(begin_cell().store_ref(cfg_dict).store_uint(stored_seqno + 1, 32).store_uint(public_key, 256).end_cell());
+}

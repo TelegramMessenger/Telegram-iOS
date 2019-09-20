@@ -1,0 +1,11 @@
+"Asm.fif" include
+<{ 2SWAP ADD s2 POP FALSE }>s b{00}
+<{ 2SWAP MUL s2 POP FALSE }>s b{1}
+<{ 2SWAP SUB s2 POP FALSE }>s b{01}
+3
+<{ NEWDICT SWAP REPEAT: 8 INT PFXDICTADD 11 THROWIFNOT }>s runvmcode 
+abort"cannot create prefix code dictionary"
+dup dict>s csr. 
+<{ <{ rot 8 PFXDICTSWITCH TRUE }>UNTIL SDEMPTY 11 THROWIFNOT }>s
+dup csr.
+1 2 3 4 5 b{001011} 6 roll runvmcode .s

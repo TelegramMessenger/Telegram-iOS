@@ -1,0 +1,53 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <workchain-id> <dest-addr> [<filename-base>]" cr
+  ."Creates a new pinger in specified workchain, with destination address <dest-addr>. " cr
+  ."Resulting initialization query is saved into <filename-base>-query.boc ('new-pinger-query.boc' by default)" cr 1 halt
+} : usage
+def? $# { @' $# dup 1 < swap 3 > or ' usage if } if
+
+Basechain 256 1<<1- 3 15 */ 2constant dest-addr
+
+Basechain constant wc  // create a wallet in workchain 0 (basechain)
+def? $1 { @' $1 parse-workchain-id =: wc } if   // set workchain id from command line argument
+def? $2 { @' $2 false parse-load-address drop 2=: dest-addr } if
+def? $3 { @' $3 } { "new-pinger" } cond constant file-base
+
+."Creating new pinger in workchain " wc . cr
+
+// Create new simple pinger
+<{  SETCP0 DUP INC 1 RSHIFT# 32 THROWIF  // fail unless recv_internal or recv_external
+    c4 PUSHCTR CTOS 32 LDU TUCK 8 LDI 256 LDU ENDS     // body sel s seqno wc addr : destination address loaded
+    s4 PUSH IF:<{
+      s2 s5 XCHG2    // addr sel s wc seqno body
+      32 PLDU OVER EQUAL 33 THROWIFNOT   // seqno mismatch?
+      ACCEPT         // addr sel s wc seqno
+      INC NEWC 32 STU  // addr sel s wc b
+      s1 s2 XCHG STSLICE  // addr sel wc b'
+      ENDC c4 POPCTR  // addr sel wc ; persistent data updated
+      ROT             // sel wc addr
+    }>
+    // create new empty message with 0.1 Grams to that address
+    SWAP NEWC b{001000100} STSLICECONST 8 STI 256 STU
+    GR$10/9 INT STGRAMS  // store 1.111..1 Grams
+    1 4 + 4 + 64 + 32 + 1+ 1+ INT STZEROES ENDC
+    // send raw message from Cell
+    ZERO SENDRAWMSG
+}>c
+// code
+<b 0 32 u, dest-addr addr, b> // data
+// no libraries
+<b b{00110} s, rot ref, swap ref, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hash wc swap 2dup 2constant pinger_addr
+."new pinger address = " 2dup .addr cr
+2dup file-base +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b b{1000100} s, pinger_addr addr, b{000010} s, swap <s s, b{0} s, 0 32 u, "PING" $, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved pinger creating query to file " type .")" cr

@@ -1053,7 +1053,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 if self.stackFromBottom {
                     topOffset = 0.0
                 } else {
-                    topOffset = self.visibleSize.height
+                    topOffset = 0.0
                 }
             } else {
                 if self.stackFromBottom {

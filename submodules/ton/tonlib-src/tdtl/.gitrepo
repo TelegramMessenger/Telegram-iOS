@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/arseny30/tdtl
+	branch = master
+	commit = c6c23a5a9e3f13b576116a0e7bf5a032faa33ff2
+	parent = 004e7575cf77d514c77bbab3b764568621f7d140
+	cmdver = 0.3.1

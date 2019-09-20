@@ -1,0 +1,10 @@
+{ bl word 0 (create) } : create
+{ swap ({) over 2+ -roll swap (compile) (}) } : does
+{ 1 'nop does create } : constant
+1 2 3 <b 0x01 8 u, 0x58 8 u, b> .s <s .s runvmcode .s
+x{5352A85354A8A15224A8460525A8A104A85042A8A15112A90402A904} constant solvelineq_code
+x{2523A82525A8A10322A80521A815A103A80314A80102A10122A90402A904} constant solvelineq_simple_code
+x{2523A82525A8A1220104A80521A815A11504A81402A8A10122A90402A904} constant solvelineq_compiled_code
+2 3 1 1 29 12 solvelineq_code runvmcode .s
+2 3 1 1 29 12 solvelineq_simple_code runvmcode .s
+2 3 1 1 29 12 solvelineq_compiled_code runvmcode .s
