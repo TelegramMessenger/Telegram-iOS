@@ -4718,12 +4718,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             completion(.immediate)
         }
         
-//        if let selectionState = self.presentationInterfaceState.interfaceState.selectionState, !selectionState.selectedIds.isEmpty {
-//            self.chatTitleView?.titleContent = .custom(self.presentationData.strings.Conversation_SelectedMessages(Int32(selectionState.selectedIds.count)))
-//        } else {
-//
-//        }
-        
         if let button = leftNavigationButtonForChatInterfaceState(updatedChatPresentationInterfaceState, subject: self.subject, strings: updatedChatPresentationInterfaceState.strings, currentButton: self.leftNavigationButton, target: self, selector: #selector(self.leftNavigationButtonAction))  {
             if self.leftNavigationButton != button {
                 var animated = transition.isAnimated

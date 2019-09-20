@@ -53,7 +53,7 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
     let rootNavigationBar = PresentationThemeRootNavigationBar(
         buttonColor: accentColor,
         disabledButtonColor: accentColor.withMultiplied(hue: 1.033, saturation: 0.219, brightness: 0.44),
-        primaryTextColor: UIColor(rgb: 0xffffff),
+        primaryTextColor: .white,
         secondaryTextColor: mainSecondaryColor,
         controlColor: mainSecondaryColor,
         accentTextColor: accentColor,
@@ -77,6 +77,9 @@ private func makeDarkPresentationTheme(accentColor: UIColor, baseColor: Presenta
 
     let intro = PresentationThemeIntro(
         statusBarStyle: .white,
+        primaryTextColor: .white,
+        accentTextColor: accentColor,
+        disabledTextColor: accentColor.withMultiplied(hue: 1.033, saturation: 0.219, brightness: 0.44),
         startButtonColor: accentColor,
         dotColor: mainSecondaryColor
     )

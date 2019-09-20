@@ -20,11 +20,17 @@ public final class PresentationThemeGradientColors {
 
 public final class PresentationThemeIntro {
     public let statusBarStyle: PresentationThemeStatusBarStyle
+    public let primaryTextColor: UIColor
+    public let accentTextColor: UIColor
+    public let disabledTextColor: UIColor
     public let startButtonColor: UIColor
     public let dotColor: UIColor
     
-    public init(statusBarStyle: PresentationThemeStatusBarStyle, startButtonColor: UIColor, dotColor: UIColor) {
+    public init(statusBarStyle: PresentationThemeStatusBarStyle, primaryTextColor: UIColor, accentTextColor: UIColor, disabledTextColor: UIColor, startButtonColor: UIColor, dotColor: UIColor) {
         self.statusBarStyle = statusBarStyle
+        self.primaryTextColor = primaryTextColor
+        self.accentTextColor = accentTextColor
+        self.disabledTextColor = disabledTextColor
         self.startButtonColor = startButtonColor
         self.dotColor = dotColor
     }
