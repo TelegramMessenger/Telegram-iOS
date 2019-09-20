@@ -16,7 +16,7 @@ vector {t:Type} # [ t ] = Vector t;
 error code:int32 message:string = Error;
 ok = Ok;
 
-options config:string keystore_directory:string = Options;
+options config:string keystore_directory:string use_callbacks_for_network:Bool = Options;
 
 key public_key:string secret:secureBytes = Key;
 inputKey key:key local_password:secureBytes = InputKey;
@@ -31,17 +31,17 @@ accountAddress account_address:string = AccountAddress;
 internal.transactionId lt:int64 hash:bytes = internal.TransactionId;
 
 raw.initialAccountState code:bytes data:bytes = raw.InitialAccountState;
-raw.accountState balance:int64 code:bytes data:bytes last_transaction_id:internal.transactionId = raw.AccountState;
+raw.accountState balance:int64 code:bytes data:bytes last_transaction_id:internal.transactionId sync_utime:int53 = raw.AccountState;
 raw.message source:string destination:string value:int64 = raw.Message;
-raw.transaction data:bytes previous_transaction_id:internal.transactionId fee:int64 in_msg:raw.message out_msgs:vector<raw.message> = raw.Transaction;
-raw.transactions transactions:vector<raw.Transaction> = raw.Transactions;
+raw.transaction utime:int53 data:bytes transaction_id:internal.transactionId fee:int64 in_msg:raw.message out_msgs:vector<raw.message> = raw.Transaction;
+raw.transactions transactions:vector<raw.Transaction> previous_transaction_id:internal.transactionId = raw.Transactions;
 
 testWallet.initialAccountState public_key:string = testWallet.InitialAccountState;
-testWallet.accountState balance:int64 seqno:int32 last_transaction_id:internal.transactionId = testWallet.AccountState;
+testWallet.accountState balance:int64 seqno:int32 last_transaction_id:internal.transactionId sync_utime:int53 = testWallet.AccountState;
 
-testGiver.accountState balance:int64 seqno:int32 last_transaction_id:internal.transactionId = testGiver.AccountState;
+testGiver.accountState balance:int64 seqno:int32 last_transaction_id:internal.transactionId sync_utime:int53= testGiver.AccountState;
 
-uninited.accountState balance:int64 = uninited.AccountState;
+uninited.accountState balance:int64 last_transaction_id:internal.transactionId sync_utime:int53 = uninited.AccountState;
 
 generic.initialAccountStateRaw initital_account_state:raw.initialAccountState = generic.InitialAccountState;
 generic.initialAccountStateTestWallet initital_account_state:testWallet.initialAccountState = generic.InitialAccountState;
@@ -50,6 +50,8 @@ generic.accountStateRaw account_state:raw.accountState = generic.AccountState;
 generic.accountStateTestWallet account_state:testWallet.accountState = generic.AccountState;
 generic.accountStateTestGiver account_state:testGiver.accountState = generic.AccountState;
 generic.accountStateUninited account_state:uninited.accountState = generic.AccountState;
+
+updateSendLiteServerQuery id:int64 data:bytes = Update;
 
 ---functions---
 
@@ -89,5 +91,7 @@ testGiver.sendGrams destination:accountAddress seqno:int32 amount:int64 = Ok;
 generic.getAccountState account_address:accountAddress = generic.AccountState;
 generic.sendGrams private_key:inputKey source:accountAddress destination:accountAddress amount:int64 = Ok;
 
-runTests dir:string = Ok;
+onLiteServerQueryResult id:int64 bytes:bytes = Ok;
+onLiteServerQueryError id:int64 error:error = Ok;
 
+runTests dir:string = Ok;

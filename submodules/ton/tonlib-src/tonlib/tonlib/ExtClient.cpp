@@ -21,10 +21,10 @@
 #include "tonlib/LastBlock.h"
 
 namespace tonlib {
-void ExtClient::with_last_block(td::Promise<ton::BlockIdExt> promise) {
+void ExtClient::with_last_block(td::Promise<LastBlockInfo> promise) {
   auto query_id = last_block_queries_.create(std::move(promise));
-  td::Promise<ton::BlockIdExt> P = [query_id, self = this,
-                                    actor_id = td::actor::actor_id()](td::Result<ton::BlockIdExt> result) {
+  td::Promise<LastBlockInfo> P = [query_id, self = this,
+                                  actor_id = td::actor::actor_id()](td::Result<LastBlockInfo> result) {
     send_lambda(actor_id, [self, query_id, result = std::move(result)]() mutable {
       self->last_block_queries_.extract(query_id).set_result(std::move(result));
     });

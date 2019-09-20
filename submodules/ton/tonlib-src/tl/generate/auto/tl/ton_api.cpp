@@ -334,6 +334,10 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return engine_validator_dhtServersStatus::fetch(p);
     case engine_validator_electionBid::ID:
       return engine_validator_electionBid::fetch(p);
+    case engine_validator_fullNodeMaster::ID:
+      return engine_validator_fullNodeMaster::fetch(p);
+    case engine_validator_fullNodeSlave::ID:
+      return engine_validator_fullNodeSlave::fetch(p);
     case validator_groupMember::ID:
       return validator_groupMember::fetch(p);
     case engine_validator_jsonConfig::ID:
@@ -650,6 +654,10 @@ object_ptr<Function> Function::fetch(td::TlParser &p) {
       return tonNode_preparePersistentState::fetch(p);
     case tonNode_prepareZeroState::ID:
       return tonNode_prepareZeroState::fetch(p);
+    case tonNode_query::ID:
+      return tonNode_query::fetch(p);
+    case tonNode_slave_sendExtMessage::ID:
+      return tonNode_slave_sendExtMessage::fetch(p);
     case validatorSession_downloadCandidate::ID:
       return validatorSession_downloadCandidate::fetch(p);
     case validatorSession_ping::ID:
@@ -7635,18 +7643,22 @@ engine_validator_config::engine_validator_config()
   , dht_()
   , validators_()
   , fullnode_()
+  , fullnodeslave_()
+  , fullnodemasters_()
   , liteservers_()
   , control_()
   , gc_()
 {}
 
-engine_validator_config::engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_)
+engine_validator_config::engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, object_ptr<engine_validator_fullNodeSlave> &&fullnodeslave_, std::vector<object_ptr<engine_validator_fullNodeMaster>> &&fullnodemasters_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_)
   : out_port_(out_port_)
   , addrs_(std::move(addrs_))
   , adnl_(std::move(adnl_))
   , dht_(std::move(dht_))
   , validators_(std::move(validators_))
   , fullnode_(fullnode_)
+  , fullnodeslave_(std::move(fullnodeslave_))
+  , fullnodemasters_(std::move(fullnodemasters_))
   , liteservers_(std::move(liteservers_))
   , control_(std::move(control_))
   , gc_(std::move(gc_))
@@ -7666,6 +7678,8 @@ engine_validator_config::engine_validator_config(td::TlParser &p)
   , dht_(TlFetchVector<TlFetchObject<engine_dht>>::parse(p))
   , validators_(TlFetchVector<TlFetchObject<engine_validator>>::parse(p))
   , fullnode_(TlFetchInt256::parse(p))
+  , fullnodeslave_(TlFetchObject<engine_validator_fullNodeSlave>::parse(p))
+  , fullnodemasters_(TlFetchVector<TlFetchObject<engine_validator_fullNodeMaster>>::parse(p))
   , liteservers_(TlFetchVector<TlFetchObject<engine_liteServer>>::parse(p))
   , control_(TlFetchVector<TlFetchObject<engine_controlInterface>>::parse(p))
   , gc_(TlFetchObject<engine_gc>::parse(p))
@@ -7680,6 +7694,8 @@ void engine_validator_config::store(td::TlStorerCalcLength &s) const {
   TlStoreVector<TlStoreObject>::store(dht_, s);
   TlStoreVector<TlStoreObject>::store(validators_, s);
   TlStoreBinary::store(fullnode_, s);
+  TlStoreObject::store(fullnodeslave_, s);
+  TlStoreVector<TlStoreObject>::store(fullnodemasters_, s);
   TlStoreVector<TlStoreObject>::store(liteservers_, s);
   TlStoreVector<TlStoreObject>::store(control_, s);
   TlStoreObject::store(gc_, s);
@@ -7693,6 +7709,8 @@ void engine_validator_config::store(td::TlStorerUnsafe &s) const {
   TlStoreVector<TlStoreObject>::store(dht_, s);
   TlStoreVector<TlStoreObject>::store(validators_, s);
   TlStoreBinary::store(fullnode_, s);
+  TlStoreObject::store(fullnodeslave_, s);
+  TlStoreVector<TlStoreObject>::store(fullnodemasters_, s);
   TlStoreVector<TlStoreObject>::store(liteservers_, s);
   TlStoreVector<TlStoreObject>::store(control_, s);
   TlStoreObject::store(gc_, s);
@@ -7707,6 +7725,8 @@ void engine_validator_config::store(td::TlStorerToString &s, const char *field_n
     { const std::vector<object_ptr<engine_dht>> &v = dht_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("dht", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     { const std::vector<object_ptr<engine_validator>> &v = validators_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("validators", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     s.store_field("fullnode", fullnode_);
+    if (fullnodeslave_ == nullptr) { s.store_field("fullnodeslave", "null"); } else { fullnodeslave_->store(s, "fullnodeslave"); }
+    { const std::vector<object_ptr<engine_validator_fullNodeMaster>> &v = fullnodemasters_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("fullnodemasters", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     { const std::vector<object_ptr<engine_liteServer>> &v = liteservers_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("liteservers", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     { const std::vector<object_ptr<engine_controlInterface>> &v = control_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("control", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     if (gc_ == nullptr) { s.store_field("gc", "null"); } else { gc_->store(s, "gc"); }
@@ -7892,6 +7912,100 @@ void engine_validator_electionBid::store(td::TlStorerToString &s, const char *fi
     s.store_field("perm_key", perm_key_);
     s.store_field("adnl_addr", adnl_addr_);
     s.store_bytes_field("to_send_payload", to_send_payload_);
+    s.store_class_end();
+  }
+}
+
+engine_validator_fullNodeMaster::engine_validator_fullNodeMaster()
+  : port_()
+  , adnl_()
+{}
+
+engine_validator_fullNodeMaster::engine_validator_fullNodeMaster(std::int32_t port_, td::Bits256 const &adnl_)
+  : port_(port_)
+  , adnl_(adnl_)
+{}
+
+const std::int32_t engine_validator_fullNodeMaster::ID;
+
+object_ptr<engine_validator_fullNodeMaster> engine_validator_fullNodeMaster::fetch(td::TlParser &p) {
+  return make_object<engine_validator_fullNodeMaster>(p);
+}
+
+engine_validator_fullNodeMaster::engine_validator_fullNodeMaster(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : port_(TlFetchInt::parse(p))
+  , adnl_(TlFetchInt256::parse(p))
+#undef FAIL
+{}
+
+void engine_validator_fullNodeMaster::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(port_, s);
+  TlStoreBinary::store(adnl_, s);
+}
+
+void engine_validator_fullNodeMaster::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(port_, s);
+  TlStoreBinary::store(adnl_, s);
+}
+
+void engine_validator_fullNodeMaster::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "engine_validator_fullNodeMaster");
+    s.store_field("port", port_);
+    s.store_field("adnl", adnl_);
+    s.store_class_end();
+  }
+}
+
+engine_validator_fullNodeSlave::engine_validator_fullNodeSlave()
+  : ip_()
+  , port_()
+  , adnl_()
+{}
+
+engine_validator_fullNodeSlave::engine_validator_fullNodeSlave(std::int32_t ip_, std::int32_t port_, object_ptr<PublicKey> &&adnl_)
+  : ip_(ip_)
+  , port_(port_)
+  , adnl_(std::move(adnl_))
+{}
+
+const std::int32_t engine_validator_fullNodeSlave::ID;
+
+object_ptr<engine_validator_fullNodeSlave> engine_validator_fullNodeSlave::fetch(td::TlParser &p) {
+  return make_object<engine_validator_fullNodeSlave>(p);
+}
+
+engine_validator_fullNodeSlave::engine_validator_fullNodeSlave(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : ip_(TlFetchInt::parse(p))
+  , port_(TlFetchInt::parse(p))
+  , adnl_(TlFetchObject<PublicKey>::parse(p))
+#undef FAIL
+{}
+
+void engine_validator_fullNodeSlave::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(ip_, s);
+  TlStoreBinary::store(port_, s);
+  TlStoreBoxedUnknown<TlStoreObject>::store(adnl_, s);
+}
+
+void engine_validator_fullNodeSlave::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(ip_, s);
+  TlStoreBinary::store(port_, s);
+  TlStoreBoxedUnknown<TlStoreObject>::store(adnl_, s);
+}
+
+void engine_validator_fullNodeSlave::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "engine_validator_fullNodeSlave");
+    s.store_field("ip", ip_);
+    s.store_field("port", port_);
+    if (adnl_ == nullptr) { s.store_field("adnl", "null"); } else { adnl_->store(s, "adnl"); }
     s.store_class_end();
   }
 }
@@ -15368,6 +15482,91 @@ void tonNode_prepareZeroState::store(td::TlStorerToString &s, const char *field_
 tonNode_prepareZeroState::ReturnType tonNode_prepareZeroState::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchObject<tonNode_PreparedState>::parse(p);
+#undef FAIL
+}
+
+tonNode_query::tonNode_query() {
+}
+
+const std::int32_t tonNode_query::ID;
+
+object_ptr<tonNode_query> tonNode_query::fetch(td::TlParser &p) {
+  return make_object<tonNode_query>(p);
+}
+
+tonNode_query::tonNode_query(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+#undef FAIL
+{
+  (void)p;
+}
+
+void tonNode_query::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1777542355);
+}
+
+void tonNode_query::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1777542355);
+}
+
+void tonNode_query::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_query");
+    s.store_class_end();
+  }
+}
+
+tonNode_query::ReturnType tonNode_query::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<Object>, 695225504>::parse(p);
+#undef FAIL
+}
+
+tonNode_slave_sendExtMessage::tonNode_slave_sendExtMessage()
+  : message_()
+{}
+
+tonNode_slave_sendExtMessage::tonNode_slave_sendExtMessage(object_ptr<tonNode_externalMessage> &&message_)
+  : message_(std::move(message_))
+{}
+
+const std::int32_t tonNode_slave_sendExtMessage::ID;
+
+object_ptr<tonNode_slave_sendExtMessage> tonNode_slave_sendExtMessage::fetch(td::TlParser &p) {
+  return make_object<tonNode_slave_sendExtMessage>(p);
+}
+
+tonNode_slave_sendExtMessage::tonNode_slave_sendExtMessage(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : message_(TlFetchObject<tonNode_externalMessage>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_slave_sendExtMessage::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(2067425040);
+  TlStoreObject::store(message_, s);
+}
+
+void tonNode_slave_sendExtMessage::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(2067425040);
+  TlStoreObject::store(message_, s);
+}
+
+void tonNode_slave_sendExtMessage::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_slave_sendExtMessage");
+    if (message_ == nullptr) { s.store_field("message", "null"); } else { message_->store(s, "message"); }
+    s.store_class_end();
+  }
+}
+
+tonNode_slave_sendExtMessage::ReturnType tonNode_slave_sendExtMessage::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchTrue, 1072550713>::parse(p);
 #undef FAIL
 }
 

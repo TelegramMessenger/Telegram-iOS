@@ -258,6 +258,7 @@ td::Result<Transaction::Info> Transaction::validate() {
   }
   Info res;
   res.blkid = blkid;
+  res.now = trans.now;
   res.prev_trans_lt = trans.prev_trans_lt;
   res.prev_trans_hash = trans.prev_trans_hash;
   res.transaction = root;
@@ -281,6 +282,8 @@ td::Result<TransactionList::Info> TransactionList::validate() const {
   Info res;
   auto current_lt = lt;
   auto current_hash = hash;
+  res.lt = lt;
+  res.hash = hash;
   for (auto& root : list) {
     const auto& blkid = blkids[c++];
     Transaction transaction;

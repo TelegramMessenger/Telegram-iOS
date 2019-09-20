@@ -51,18 +51,28 @@ NS_ASSUME_NONNULL_BEGIN
 @interface TONTransaction : NSObject
 
 @property (nonatomic, strong, readonly) NSData * _Nonnull data;
-@property (nonatomic, strong, readonly) TONTransactionId * _Nonnull previousTransactionId;
+@property (nonatomic, strong, readonly) TONTransactionId * _Nonnull transactionId;
+@property (nonatomic, readonly) int64_t timestamp;
 @property (nonatomic, readonly) int64_t fee;
 @property (nonatomic, strong, readonly) TONTransactionMessage * _Nullable inMessage;
 @property (nonatomic, strong, readonly) NSArray<TONTransactionMessage *> * _Nonnull outMessages;
 
-- (instancetype)initWithData:(NSData * _Nonnull)data previousTransactionId:(TONTransactionId * _Nonnull)previousTransactionId inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages;
+- (instancetype)initWithData:(NSData * _Nonnull)data transactionId:(TONTransactionId * _Nonnull)transactionId timestamp:(int64_t)timestamp fee:(int64_t)fee inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages;
+
+@end
+
+@interface TONExternalRequest : NSObject
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull data;
+@property (nonatomic, copy, readonly) void (^onResult)(NSData * _Nullable, NSString * _Nullable);
+
+- (instancetype)initWithData:(NSData * _Nonnull)data onResult:(void (^)(NSData * _Nullable, NSString * _Nullable))onResult;
 
 @end
 
 @interface TON : NSObject
 
-- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config;
+- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest;
 
 - (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (MTSignal *)getTestWalletAccountAddressWithPublicKey:(NSString *)publicKey;

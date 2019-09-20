@@ -172,16 +172,17 @@ TEST(Tonlib, InitClose) {
   {
     Client client;
     sync_send(client, make_object<tonlib_api::close>()).ensure();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", "."))).ensure_error();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", ".", false))).ensure_error();
   }
   {
     Client client;
     sync_send(client, make_object<tonlib_api::init>(nullptr)).ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("fdajkfldsjkafld", ".")))
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("fdajkfldsjkafld", ".", false)))
         .ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", "fdhskfds"))).ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", "."))).ensure();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", "."))).ensure_error();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", "fdhskfds", false)))
+        .ensure_error();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", ".", false))).ensure();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", ".", false))).ensure_error();
 
     td::Slice bad_config = R"abc(
 {
@@ -194,7 +195,7 @@ TEST(Tonlib, InitClose) {
     sync_send(client, make_object<tonlib_api::testGiver_getAccountState>()).ensure_error();
     sync_send(client, make_object<tonlib_api::close>()).ensure();
     sync_send(client, make_object<tonlib_api::close>()).ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", "."))).ensure_error();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", ".", false))).ensure_error();
   }
 }
 
@@ -289,7 +290,7 @@ TEST(Tonlib, KeysApi) {
   Client client;
 
   // init
-  sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", "."))).ensure();
+  sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>("", ".", false))).ensure();
   auto local_password = td::SecureString("local password");
   auto mnemonic_password = td::SecureString("mnemonic password");
   {

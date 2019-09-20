@@ -234,6 +234,10 @@ class engine_validator_dhtServersStatus;
 
 class engine_validator_electionBid;
 
+class engine_validator_fullNodeMaster;
+
+class engine_validator_fullNodeSlave;
+
 class validator_groupMember;
 
 class engine_validator_jsonConfig;
@@ -4210,15 +4214,17 @@ class engine_validator_config final : public Object {
   std::vector<object_ptr<engine_dht>> dht_;
   std::vector<object_ptr<engine_validator>> validators_;
   td::Bits256 fullnode_;
+  object_ptr<engine_validator_fullNodeSlave> fullnodeslave_;
+  std::vector<object_ptr<engine_validator_fullNodeMaster>> fullnodemasters_;
   std::vector<object_ptr<engine_liteServer>> liteservers_;
   std::vector<object_ptr<engine_controlInterface>> control_;
   object_ptr<engine_gc> gc_;
 
   engine_validator_config();
 
-  engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_);
+  engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, object_ptr<engine_validator_fullNodeSlave> &&fullnodeslave_, std::vector<object_ptr<engine_validator_fullNodeMaster>> &&fullnodemasters_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_);
 
-  static const std::int32_t ID = -1061804008;
+  static const std::int32_t ID = 17126390;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -4327,6 +4333,57 @@ class engine_validator_electionBid final : public Object {
   static object_ptr<engine_validator_electionBid> fetch(td::TlParser &p);
 
   explicit engine_validator_electionBid(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class engine_validator_fullNodeMaster final : public Object {
+ public:
+  std::int32_t port_;
+  td::Bits256 adnl_;
+
+  engine_validator_fullNodeMaster();
+
+  engine_validator_fullNodeMaster(std::int32_t port_, td::Bits256 const &adnl_);
+
+  static const std::int32_t ID = -2071595416;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<engine_validator_fullNodeMaster> fetch(td::TlParser &p);
+
+  explicit engine_validator_fullNodeMaster(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class engine_validator_fullNodeSlave final : public Object {
+ public:
+  std::int32_t ip_;
+  std::int32_t port_;
+  object_ptr<PublicKey> adnl_;
+
+  engine_validator_fullNodeSlave();
+
+  engine_validator_fullNodeSlave(std::int32_t ip_, std::int32_t port_, object_ptr<PublicKey> &&adnl_);
+
+  static const std::int32_t ID = -2010813575;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<engine_validator_fullNodeSlave> fetch(td::TlParser &p);
+
+  explicit engine_validator_fullNodeSlave(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -8449,6 +8506,59 @@ class tonNode_prepareZeroState final : public Function {
   static object_ptr<tonNode_prepareZeroState> fetch(td::TlParser &p);
 
   explicit tonNode_prepareZeroState(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_query final : public Function {
+ public:
+
+  tonNode_query();
+
+  static const std::int32_t ID = 1777542355;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<Object>;
+
+  static object_ptr<tonNode_query> fetch(td::TlParser &p);
+
+  explicit tonNode_query(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_slave_sendExtMessage final : public Function {
+ public:
+  object_ptr<tonNode_externalMessage> message_;
+
+  tonNode_slave_sendExtMessage();
+
+  explicit tonNode_slave_sendExtMessage(object_ptr<tonNode_externalMessage> &&message_);
+
+  static const std::int32_t ID = 2067425040;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = bool;
+
+  static object_ptr<tonNode_slave_sendExtMessage> fetch(td::TlParser &p);
+
+  explicit tonNode_slave_sendExtMessage(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 

@@ -22,21 +22,35 @@
 #include "tonlib/ExtClient.h"
 
 namespace tonlib {
+struct LastBlockInfo {
+  ton::BlockIdExt id;
+  td::int64 utime{0};
+};
 class LastBlock : public td::actor::Actor {
  public:
-  explicit LastBlock(ExtClientRef client, ton::ZeroStateIdExt zero_state_id, ton::BlockIdExt last_block_id,
-                     td::actor::ActorShared<> parent);
+  struct State {
+    ton::ZeroStateIdExt zero_state_id;
+    ton::BlockIdExt last_key_block_id;
+    ton::BlockIdExt last_block_id;
+    td::int64 utime{0};
+  };
 
-  void get_last_block(td::Promise<ton::BlockIdExt> promise);
+  class Callback {
+   public:
+    virtual ~Callback() {
+    }
+    virtual void on_state_changes(State state) = 0;
+  };
+
+  explicit LastBlock(ExtClientRef client, State state, td::unique_ptr<Callback> callback);
+  void get_last_block(td::Promise<LastBlockInfo> promise);
 
  private:
   ExtClient client_;
-  ton::ZeroStateIdExt zero_state_id_;
-  ton::BlockIdExt mc_last_block_id_;
+  State state_;
+  td::unique_ptr<Callback> callback_;
 
-  std::vector<td::Promise<ton::BlockIdExt>> promises_;
-
-  td::actor::ActorShared<> parent_;
+  std::vector<td::Promise<LastBlockInfo>> promises_;
 
   void do_get_last_block();
   void on_masterchain_info(td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_masterchainInfo>> r_info);
@@ -49,5 +63,7 @@ class LastBlock : public td::actor::Actor {
   void update_zero_state(ton::ZeroStateIdExt zero_state_id);
 
   void update_mc_last_block(ton::BlockIdExt mc_block_id);
+  void update_mc_last_key_block(ton::BlockIdExt mc_key_block_id);
+  void update_utime(td::int64 utime);
 };
 }  // namespace tonlib

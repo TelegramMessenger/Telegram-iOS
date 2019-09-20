@@ -105,13 +105,28 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONTransaction
 
-- (instancetype)initWithData:(NSData * _Nonnull)data previousTransactionId:(TONTransactionId * _Nonnull)previousTransactionId inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages {
+- (instancetype)initWithData:(NSData * _Nonnull)data transactionId:(TONTransactionId * _Nonnull)transactionId timestamp:(int64_t)timestamp fee:(int64_t)fee inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages {
     self = [super init];
     if (self != nil) {
         _data = data;
-        _previousTransactionId = previousTransactionId;
+        _transactionId = transactionId;
+        _timestamp = timestamp;
+        _fee = fee;
         _inMessage = inMessage;
         _outMessages = outMessages;
+    }
+    return self;
+}
+
+@end
+
+@implementation TONExternalRequest
+
+- (instancetype)initWithData:(NSData * _Nonnull)data onResult:(void (^)(NSData * _Nullable, NSString * _Nullable))onResult {
+    self = [super init];
+    if (self != nil) {
+        _data = data;
+        _onResult = [onResult copy];
     }
     return self;
 }
@@ -197,7 +212,7 @@ typedef enum {
     }
 }
 
-- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config {
+- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest {
     self = [super init];
     if (self != nil) {
         _requestHandlersLock = [[NSLock alloc] init];
@@ -208,9 +223,40 @@ typedef enum {
         
         _client = std::make_shared<tonlib::Client>();
         
+        std::weak_ptr<tonlib::Client> weakClient = _client;
+        
         NSLock *requestHandlersLock = _requestHandlersLock;
         NSMutableDictionary *requestHandlers = _requestHandlers;
         NSThread *thread = [[NSThread alloc] initWithTarget:[self class] selector:@selector(receiveThread:) object:[[TONReceiveThreadParams alloc] initWithClient:_client received:^(tonlib::Client::Response &response) {
+            if (response.object->get_id() == tonlib_api::updateSendLiteServerQuery::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::updateSendLiteServerQuery>(response.object);
+                int64_t requestId = result->id_;
+                NSData *data = makeData(result->data_);
+                if (performExternalRequest) {
+                    performExternalRequest([[TONExternalRequest alloc] initWithData:data onResult:^(NSData * _Nullable result, NSString * _Nullable error) {
+                        auto strongClient = weakClient.lock();
+                        if (strongClient != nullptr) {
+                            if (result != nil) {
+                                auto query = make_object<tonlib_api::onLiteServerQueryResult>(
+                                    requestId,
+                                    makeString(result)
+                                );
+                                strongClient->send({ 1, std::move(query) });
+                            } else if (error != nil) {
+                                auto query = make_object<tonlib_api::onLiteServerQueryError>(
+                                    requestId,
+                                    make_object<tonlib_api::error>(
+                                        400,
+                                        error.UTF8String
+                                    )
+                                );
+                                strongClient->send({ 1, std::move(query) });
+                            }
+                        }
+                    }]);
+                }
+                return;
+            }
             NSNumber *requestId = @(response.id);
             [requestHandlersLock lock];
             TONRequestHandler *handler = requestHandlers[requestId];
@@ -252,7 +298,11 @@ typedef enum {
             }
         }];
         
-        auto query = make_object<tonlib_api::init>(make_object<tonlib_api::options>(configString.UTF8String, keystoreDirectory.UTF8String));
+        auto query = make_object<tonlib_api::init>(make_object<tonlib_api::options>(
+            configString.UTF8String,
+            keystoreDirectory.UTF8String,
+            false
+        ));
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -656,7 +706,7 @@ typedef enum {
                 auto result = tonlib_api::move_object_as<tonlib_api::raw_transactions>(object);
                 NSMutableArray<TONTransaction *> *transactions = [[NSMutableArray alloc] init];
                 for (auto &it : result->transactions_) {
-                    TONTransactionId *previousTransactionId = [[TONTransactionId alloc] initWithLt:it->previous_transaction_id_->lt_ transactionHash:makeData(it->previous_transaction_id_->hash_)];
+                    TONTransactionId *transactionId = [[TONTransactionId alloc] initWithLt:it->transaction_id_->lt_ transactionHash:makeData(it->transaction_id_->hash_)];
                     TONTransactionMessage *inMessage = parseTransactionMessage(it->in_msg_);
                     NSMutableArray<TONTransactionMessage *> * outMessages = [[NSMutableArray alloc] init];
                     for (auto &messageIt : it->out_msgs_) {
@@ -665,7 +715,7 @@ typedef enum {
                             [outMessages addObject:outMessage];
                         }
                     }
-                    [transactions addObject:[[TONTransaction alloc] initWithData:makeData(it->data_) previousTransactionId:previousTransactionId inMessage:inMessage outMessages:outMessages]];
+                    [transactions addObject:[[TONTransaction alloc] initWithData:makeData(it->data_) transactionId:transactionId timestamp:it->utime_ fee:it->fee_ inMessage:inMessage outMessages:outMessages]];
                 }
                 [subscriber putNext:transactions];
                 [subscriber putCompletion];

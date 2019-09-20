@@ -204,6 +204,8 @@ Status from_json(ton_api::engine_validator_controlQueryError &to, JsonObject &fr
 Status from_json(ton_api::engine_validator_dhtServerStatus &to, JsonObject &from);
 Status from_json(ton_api::engine_validator_dhtServersStatus &to, JsonObject &from);
 Status from_json(ton_api::engine_validator_electionBid &to, JsonObject &from);
+Status from_json(ton_api::engine_validator_fullNodeMaster &to, JsonObject &from);
+Status from_json(ton_api::engine_validator_fullNodeSlave &to, JsonObject &from);
 Status from_json(ton_api::validator_groupMember &to, JsonObject &from);
 Status from_json(ton_api::engine_validator_jsonConfig &to, JsonObject &from);
 Status from_json(ton_api::engine_validator_keyHash &to, JsonObject &from);
@@ -357,6 +359,8 @@ Status from_json(ton_api::tonNode_prepareBlock &to, JsonObject &from);
 Status from_json(ton_api::tonNode_prepareBlockProof &to, JsonObject &from);
 Status from_json(ton_api::tonNode_preparePersistentState &to, JsonObject &from);
 Status from_json(ton_api::tonNode_prepareZeroState &to, JsonObject &from);
+Status from_json(ton_api::tonNode_query &to, JsonObject &from);
+Status from_json(ton_api::tonNode_slave_sendExtMessage &to, JsonObject &from);
 Status from_json(ton_api::validatorSession_downloadCandidate &to, JsonObject &from);
 Status from_json(ton_api::validatorSession_ping &to, JsonObject &from);
 void to_json(JsonValueScope &jv, const ton_api::Hashable &object);
@@ -534,6 +538,8 @@ void to_json(JsonValueScope &jv, const ton_api::engine_validator_controlQueryErr
 void to_json(JsonValueScope &jv, const ton_api::engine_validator_dhtServerStatus &object);
 void to_json(JsonValueScope &jv, const ton_api::engine_validator_dhtServersStatus &object);
 void to_json(JsonValueScope &jv, const ton_api::engine_validator_electionBid &object);
+void to_json(JsonValueScope &jv, const ton_api::engine_validator_fullNodeMaster &object);
+void to_json(JsonValueScope &jv, const ton_api::engine_validator_fullNodeSlave &object);
 void to_json(JsonValueScope &jv, const ton_api::validator_groupMember &object);
 void to_json(JsonValueScope &jv, const ton_api::engine_validator_jsonConfig &object);
 void to_json(JsonValueScope &jv, const ton_api::engine_validator_keyHash &object);
@@ -703,6 +709,8 @@ void to_json(JsonValueScope &jv, const ton_api::tonNode_prepareBlock &object);
 void to_json(JsonValueScope &jv, const ton_api::tonNode_prepareBlockProof &object);
 void to_json(JsonValueScope &jv, const ton_api::tonNode_preparePersistentState &object);
 void to_json(JsonValueScope &jv, const ton_api::tonNode_prepareZeroState &object);
+void to_json(JsonValueScope &jv, const ton_api::tonNode_query &object);
+void to_json(JsonValueScope &jv, const ton_api::tonNode_slave_sendExtMessage &object);
 void to_json(JsonValueScope &jv, const ton_api::validatorSession_downloadCandidate &object);
 void to_json(JsonValueScope &jv, const ton_api::validatorSession_ping &object);
 inline void to_json(JsonValueScope &jv, const ton::ton_api::Object &object) {

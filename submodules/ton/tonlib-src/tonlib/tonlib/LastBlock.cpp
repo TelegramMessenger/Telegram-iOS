@@ -23,15 +23,12 @@
 #include "lite-client/lite-client-common.h"
 
 namespace tonlib {
-LastBlock::LastBlock(ExtClientRef client, ton::ZeroStateIdExt zero_state_id, ton::BlockIdExt last_block_id,
-                     td::actor::ActorShared<> parent) {
-  zero_state_id_ = std::move(zero_state_id);
-  mc_last_block_id_ = std::move(last_block_id);
+LastBlock::LastBlock(ExtClientRef client, State state, td::unique_ptr<Callback> callback)
+    : state_(std::move(state)), callback_(std::move(callback)) {
   client_.set_client(client);
-  parent_ = std::move(parent);
 }
 
-void LastBlock::get_last_block(td::Promise<ton::BlockIdExt> promise) {
+void LastBlock::get_last_block(td::Promise<LastBlockInfo> promise) {
   if (promises_.empty()) {
     do_get_last_block();
   }
@@ -39,13 +36,16 @@ void LastBlock::get_last_block(td::Promise<ton::BlockIdExt> promise) {
 }
 
 void LastBlock::do_get_last_block() {
-  client_.send_query(ton::lite_api::liteServer_getMasterchainInfo(),
-                     [this](auto r_info) { this->on_masterchain_info(std::move(r_info)); });
-  return;
+  //client_.send_query(ton::lite_api::liteServer_getMasterchainInfo(),
+  //[this](auto r_info) { this->on_masterchain_info(std::move(r_info)); });
+  //return;
+
   //liteServer.getBlockProof mode:# known_block:tonNode.blockIdExt target_block:mode.0?tonNode.blockIdExt = liteServer.PartialBlockProof;
   client_.send_query(
-      ton::lite_api::liteServer_getBlockProof(0, create_tl_lite_block_id(mc_last_block_id_), nullptr),
-      [this, from = mc_last_block_id_](auto r_block_proof) { this->on_block_proof(from, std::move(r_block_proof)); });
+      ton::lite_api::liteServer_getBlockProof(0, create_tl_lite_block_id(state_.last_key_block_id), nullptr),
+      [this, from = state_.last_key_block_id](auto r_block_proof) {
+        this->on_block_proof(from, std::move(r_block_proof));
+      });
 }
 
 td::Result<bool> LastBlock::process_block_proof(
@@ -60,6 +60,12 @@ td::Result<bool> LastBlock::process_block_proof(
   }
   TRY_STATUS(chain->validate());
   update_mc_last_block(chain->to);
+  if (chain->has_key_block) {
+    update_mc_last_key_block(chain->key_blkid);
+  }
+  if (chain->has_utime) {
+    update_utime(chain->last_utime);
+  }
   return chain->complete;
 }
 
@@ -68,14 +74,16 @@ void LastBlock::on_block_proof(
     td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_partialBlockProof>> r_block_proof) {
   auto r_is_ready = process_block_proof(from, std::move(r_block_proof));
   if (r_is_ready.is_error()) {
-    LOG(WARNING) << "Failed liteServer_getBlockProof " << r_block_proof.error();
+    LOG(WARNING) << "Failed liteServer_getBlockProof " << r_is_ready.error();
     return;
   }
   auto is_ready = r_is_ready.move_as_ok();
   if (is_ready) {
     for (auto& promise : promises_) {
-      auto copy = mc_last_block_id_;
-      promise.set_value(std::move(copy));
+      LastBlockInfo res;
+      res.id = state_.last_block_id;
+      res.utime = state_.utime;
+      promise.set_value(std::move(res));
     }
     promises_.clear();
   } else {
@@ -93,8 +101,10 @@ void LastBlock::on_masterchain_info(
     LOG(WARNING) << "Failed liteServer_getMasterchainInfo " << r_info.error();
   }
   for (auto& promise : promises_) {
-    auto copy = mc_last_block_id_;
-    promise.set_value(std::move(copy));
+    LastBlockInfo res;
+    res.id = state_.last_block_id;
+    res.utime = state_.utime;
+    promise.set_value(std::move(res));
   }
   promises_.clear();
 }
@@ -105,17 +115,17 @@ void LastBlock::update_zero_state(ton::ZeroStateIdExt zero_state_id) {
     return;
   }
 
-  if (!zero_state_id_.is_valid()) {
+  if (!state_.zero_state_id.is_valid()) {
     LOG(INFO) << "Init zerostate: " << zero_state_id.to_str();
-    zero_state_id_ = std::move(zero_state_id);
+    state_.zero_state_id = std::move(zero_state_id);
     return;
   }
 
-  if (zero_state_id_ == zero_state_id_) {
+  if (state_.zero_state_id == state_.zero_state_id) {
     return;
   }
 
-  LOG(FATAL) << "Masterchain zerostate mismatch: expected: " << zero_state_id_.to_str() << ", found "
+  LOG(FATAL) << "Masterchain zerostate mismatch: expected: " << state_.zero_state_id.to_str() << ", found "
              << zero_state_id.to_str();
   // TODO: all other updates will be inconsitent.
   // One will have to restart ton client
@@ -126,9 +136,25 @@ void LastBlock::update_mc_last_block(ton::BlockIdExt mc_block_id) {
     LOG(ERROR) << "Ignore invalid masterchain block";
     return;
   }
-  if (!mc_last_block_id_.is_valid() || mc_last_block_id_.id.seqno < mc_block_id.id.seqno) {
-    mc_last_block_id_ = mc_block_id;
-    LOG(INFO) << "Update masterchain block id: " << mc_last_block_id_.to_str();
+  if (!state_.last_block_id.is_valid() || state_.last_block_id.id.seqno < mc_block_id.id.seqno) {
+    state_.last_block_id = mc_block_id;
+    LOG(INFO) << "Update masterchain block id: " << state_.last_block_id.to_str();
+  }
+}
+void LastBlock::update_mc_last_key_block(ton::BlockIdExt mc_key_block_id) {
+  if (!mc_key_block_id.is_valid()) {
+    LOG(ERROR) << "Ignore invalid masterchain block";
+    return;
+  }
+  if (!state_.last_key_block_id.is_valid() || state_.last_key_block_id.id.seqno < mc_key_block_id.id.seqno) {
+    state_.last_key_block_id = mc_key_block_id;
+    LOG(INFO) << "Update masterchain key block id: " << state_.last_key_block_id.to_str();
+  }
+}
+
+void LastBlock::update_utime(td::int64 utime) {
+  if (state_.utime < utime) {
+    state_.utime = utime;
   }
 }
 }  // namespace tonlib

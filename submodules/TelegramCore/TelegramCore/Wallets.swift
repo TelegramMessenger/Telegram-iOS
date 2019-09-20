@@ -25,12 +25,14 @@ private final class TonInstanceImpl {
     private let queue: Queue
     private let basePath: String
     private let config: String
+    private let network: Network
     private var instance: TON?
     
-    init(queue: Queue, basePath: String, config: String) {
+    init(queue: Queue, basePath: String, config: String, network: Network) {
         self.queue = queue
         self.basePath = basePath
         self.config = config
+        self.network = network
     }
     
     func withInstance(_ f: (TON) -> Void) {
@@ -38,7 +40,17 @@ private final class TonInstanceImpl {
         if let current = self.instance {
             instance = current
         } else {
-            instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config)
+            let network = self.network
+            instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, performExternalRequest: { request in
+                let _ = (network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))).start(next: { result in
+                    switch result {
+                    case let .liteResponse(response):
+                        request.onResult(response.makeData(), nil)
+                    }
+                }, error: { error in
+                    request.onResult(nil, error.errorDescription)
+                })
+            })
             self.instance = instance
         }
         f(instance)
@@ -49,11 +61,11 @@ public final class TonInstance {
     private let queue: Queue
     private let impl: QueueLocalObject<TonInstanceImpl>
     
-    public init(basePath: String, config: String) {
+    public init(basePath: String, config: String, network: Network) {
         self.queue = .mainQueue()
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return TonInstanceImpl(queue: queue, basePath: basePath, config: config)
+            return TonInstanceImpl(queue: queue, basePath: basePath, config: config, network: network)
         })
     }
     
@@ -557,7 +569,8 @@ private extension WalletTransactionMessage {
 
 public final class WalletTransaction: Equatable {
     public let data: Data
-    public let previousTransactionId: WalletTransactionId
+    public let transactionId: WalletTransactionId
+    public let timestamp: Int64
     public let fee: Int64
     public let inMessage: WalletTransactionMessage?
     public let outMessages: [WalletTransactionMessage]
@@ -574,9 +587,10 @@ public final class WalletTransaction: Equatable {
         return value
     }
     
-    init(data: Data, previousTransactionId: WalletTransactionId, fee: Int64, inMessage: WalletTransactionMessage?, outMessages: [WalletTransactionMessage]) {
+    init(data: Data, transactionId: WalletTransactionId, timestamp: Int64, fee: Int64, inMessage: WalletTransactionMessage?, outMessages: [WalletTransactionMessage]) {
         self.data = data
-        self.previousTransactionId = previousTransactionId
+        self.transactionId = transactionId
+        self.timestamp = timestamp
         self.fee = fee
         self.inMessage = inMessage
         self.outMessages = outMessages
@@ -586,7 +600,10 @@ public final class WalletTransaction: Equatable {
         if lhs.data != rhs.data {
             return false
         }
-        if lhs.previousTransactionId != rhs.previousTransactionId {
+        if lhs.transactionId != rhs.transactionId {
+            return false
+        }
+        if lhs.timestamp != rhs.timestamp {
             return false
         }
         if lhs.fee != rhs.fee {
@@ -604,7 +621,7 @@ public final class WalletTransaction: Equatable {
 
 private extension WalletTransaction {
     convenience init(tonTransaction: TONTransaction) {
-        self.init(data: tonTransaction.data, previousTransactionId: WalletTransactionId(tonTransactionId: tonTransaction.previousTransactionId), fee: tonTransaction.fee, inMessage: tonTransaction.inMessage.flatMap(WalletTransactionMessage.init(tonTransactionMessage:)), outMessages: tonTransaction.outMessages.map(WalletTransactionMessage.init(tonTransactionMessage:)))
+        self.init(data: tonTransaction.data, transactionId: WalletTransactionId(tonTransactionId: tonTransaction.transactionId), timestamp: tonTransaction.timestamp, fee: tonTransaction.fee, inMessage: tonTransaction.inMessage.flatMap(WalletTransactionMessage.init(tonTransactionMessage:)), outMessages: tonTransaction.outMessages.map(WalletTransactionMessage.init(tonTransactionMessage:)))
     }
 }
 

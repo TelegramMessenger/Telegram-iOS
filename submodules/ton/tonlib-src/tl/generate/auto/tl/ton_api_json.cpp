@@ -625,11 +625,13 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"engine.adnlProxy.config", 1848000769},
     {"engine.adnlProxy.port", -117344950},
     {"engine.dht.config", -197295930},
-    {"engine.validator.config", -1061804008},
+    {"engine.validator.config", 17126390},
     {"engine.validator.controlQueryError", 1999018527},
     {"engine.validator.dhtServerStatus", -1323440290},
     {"engine.validator.dhtServersStatus", 725155112},
     {"engine.validator.electionBid", 598899261},
+    {"engine.validator.fullNodeMaster", -2071595416},
+    {"engine.validator.fullNodeSlave", -2010813575},
     {"validator.groupMember", -1953208860},
     {"engine.validator.jsonConfig", 321753611},
     {"engine.validator.keyHash", -1027168946},
@@ -792,6 +794,8 @@ Result<int32> tl_constructor_from_string(ton_api::Function *object, const std::s
     {"tonNode.prepareBlockProof", -2024000760},
     {"tonNode.preparePersistentState", -18209122},
     {"tonNode.prepareZeroState", 1104021541},
+    {"tonNode.query", 1777542355},
+    {"tonNode.slave.sendExtMessage", 2067425040},
     {"validatorSession.downloadCandidate", -520274443},
     {"validatorSession.ping", 1745111469}
   };
@@ -3095,6 +3099,18 @@ Status from_json(ton_api::engine_validator_config &to, JsonObject &from) {
     }
   }
   {
+    TRY_RESULT(value, get_json_object_field(from, "fullnodeslave", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.fullnodeslave_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "fullnodemasters", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.fullnodemasters_, value));
+    }
+  }
+  {
     TRY_RESULT(value, get_json_object_field(from, "liteservers", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.liteservers_, value));
@@ -3176,6 +3192,42 @@ Status from_json(ton_api::engine_validator_electionBid &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "to_send_payload", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json_bytes(to.to_send_payload_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::engine_validator_fullNodeMaster &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "port", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.port_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "adnl", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.adnl_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::engine_validator_fullNodeSlave &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "ip", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.ip_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "port", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.port_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "adnl", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.adnl_, value));
     }
   }
   return Status::OK();
@@ -5505,6 +5557,18 @@ Status from_json(ton_api::tonNode_prepareZeroState &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::tonNode_query &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(ton_api::tonNode_slave_sendExtMessage &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.message_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::validatorSession_downloadCandidate &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "round", JsonValue::Type::Null, true));
@@ -6647,6 +6711,10 @@ void to_json(JsonValueScope &jv, const ton_api::engine_validator_config &object)
   jo << ctie("dht", ToJson(object.dht_));
   jo << ctie("validators", ToJson(object.validators_));
   jo << ctie("fullnode", ToJson(object.fullnode_));
+  if (object.fullnodeslave_) {
+    jo << ctie("fullnodeslave", ToJson(object.fullnodeslave_));
+  }
+  jo << ctie("fullnodemasters", ToJson(object.fullnodemasters_));
   jo << ctie("liteservers", ToJson(object.liteservers_));
   jo << ctie("control", ToJson(object.control_));
   if (object.gc_) {
@@ -6677,6 +6745,21 @@ void to_json(JsonValueScope &jv, const ton_api::engine_validator_electionBid &ob
   jo << ctie("perm_key", ToJson(object.perm_key_));
   jo << ctie("adnl_addr", ToJson(object.adnl_addr_));
   jo << ctie("to_send_payload", ToJson(JsonBytes{object.to_send_payload_}));
+}
+void to_json(JsonValueScope &jv, const ton_api::engine_validator_fullNodeMaster &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "engine.validator.fullNodeMaster");
+  jo << ctie("port", ToJson(object.port_));
+  jo << ctie("adnl", ToJson(object.adnl_));
+}
+void to_json(JsonValueScope &jv, const ton_api::engine_validator_fullNodeSlave &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "engine.validator.fullNodeSlave");
+  jo << ctie("ip", ToJson(object.ip_));
+  jo << ctie("port", ToJson(object.port_));
+  if (object.adnl_) {
+    jo << ctie("adnl", ToJson(object.adnl_));
+  }
 }
 void to_json(JsonValueScope &jv, const ton_api::validator_groupMember &object) {
   auto jo = jv.enter_object();
@@ -7743,6 +7826,17 @@ void to_json(JsonValueScope &jv, const ton_api::tonNode_prepareZeroState &object
   jo << ctie("@type", "tonNode.prepareZeroState");
   if (object.block_) {
     jo << ctie("block", ToJson(object.block_));
+  }
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_query &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.query");
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_slave_sendExtMessage &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.slave.sendExtMessage");
+  if (object.message_) {
+    jo << ctie("message", ToJson(object.message_));
   }
 }
 void to_json(JsonValueScope &jv, const ton_api::validatorSession_downloadCandidate &object) {

@@ -44,6 +44,9 @@ bool downcast_call(Object &obj, const T &func) {
     case options::ID:
       func(static_cast<options &>(obj));
       return true;
+    case updateSendLiteServerQuery::ID:
+      func(static_cast<updateSendLiteServerQuery &>(obj));
+      return true;
     case generic_accountStateRaw::ID:
       func(static_cast<generic_accountStateRaw &>(obj));
       return true;
@@ -147,6 +150,12 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case init::ID:
       func(static_cast<init &>(obj));
+      return true;
+    case onLiteServerQueryError::ID:
+      func(static_cast<onLiteServerQueryError &>(obj));
+      return true;
+    case onLiteServerQueryResult::ID:
+      func(static_cast<onLiteServerQueryResult &>(obj));
       return true;
     case options_setConfig::ID:
       func(static_cast<options_setConfig &>(obj));

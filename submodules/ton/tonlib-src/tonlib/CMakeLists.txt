@@ -9,6 +9,7 @@ set(TONLIB_SOURCE
   tonlib/Config.cpp
   tonlib/ExtClient.cpp
   tonlib/ExtClientLazy.cpp
+  tonlib/ExtClientOutbound.cpp
   tonlib/GenericAccount.cpp
   tonlib/KeyStorage.cpp
   tonlib/LastBlock.cpp
@@ -21,6 +22,7 @@ set(TONLIB_SOURCE
   tonlib/Config.h
   tonlib/ExtClient.h
   tonlib/ExtClientLazy.h
+  tonlib/ExtClientOutbound.h
   tonlib/GenericAccount.h
   tonlib/KeyStorage.h
   tonlib/LastBlock.h

@@ -280,16 +280,16 @@ private struct WalletInfoListEntry: Equatable, Comparable, Identifiable {
     let item: WalletTransaction
     
     var stableId: WalletTransactionId {
-        return self.item.previousTransactionId
+        return self.item.transactionId
     }
     
     static func <(lhs: WalletInfoListEntry, rhs: WalletInfoListEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(theme: PresentationTheme, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
+    func item(theme: PresentationTheme, strings: PresentationStrings, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
         let item = self.item
-        return WalletInfoTransactionItem(theme: theme, walletTransaction: self.item, action: {
+        return WalletInfoTransactionItem(theme: theme, strings: strings, walletTransaction: self.item, action: {
             action(item)
         })
     }
@@ -299,8 +299,8 @@ private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEn
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, action: action), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, action: action), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, action: action), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, action: action), directionHint: nil) }
     
     return WalletInfoListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -460,7 +460,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             listViewCurve = .Default(duration: duration)
         }
         
-        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), scrollIndicatorInsets: UIEdgeInsets(top: topInset + 3.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), headerInsets: UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), scrollIndicatorInsets: UIEdgeInsets(top: topInset + 3.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         let emptyNodeHeight = self.emptyNode.updateLayout(width: layout.size.width, transition: transition)
         let maxEmptyNodeHeight: CGFloat = max(100.0, layout.size.height - headerHeight)
@@ -496,7 +496,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             return
         }
         self.loadingMoreTransactions = true
-        self.transactionListDisposable.set((getWalletTransactions(address: self.address, previousId: self.currentEntries?.last?.item.previousTransactionId, tonInstance: self.tonContext.instance)
+        self.transactionListDisposable.set((getWalletTransactions(address: self.address, previousId: self.currentEntries?.last?.item.transactionId, tonInstance: self.tonContext.instance)
         |> deliverOnMainQueue).start(next: { [weak self] transactions in
             guard let strongSelf = self else {
                 return
@@ -522,10 +522,10 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             }
         } else {
             updatedEntries = self.currentEntries ?? []
-            var existingIds = Set(updatedEntries.map { $0.item.previousTransactionId })
+            var existingIds = Set(updatedEntries.map { $0.item.transactionId })
             for transaction in transactions {
-                if !existingIds.contains(transaction.previousTransactionId) {
-                    existingIds.insert(transaction.previousTransactionId)
+                if !existingIds.contains(transaction.transactionId) {
+                    existingIds.insert(transaction.transactionId)
                     updatedEntries.append(WalletInfoListEntry(index: updatedEntries.count, item: transaction))
                 }
             }
@@ -575,7 +575,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
 }
 
 func formatBalanceText(_ value: Int64) -> String {
-    var balanceText = "\(value)"
+    var balanceText = "\(abs(value))"
     while balanceText.count < 10 {
         balanceText.insert("0", at: balanceText.startIndex)
     }
@@ -590,6 +590,9 @@ func formatBalanceText(_ value: Int64) -> String {
         } else {
             break
         }
+    }
+    if value < 0 {
+        balanceText.insert("-", at: balanceText.startIndex)
     }
     return balanceText
 }

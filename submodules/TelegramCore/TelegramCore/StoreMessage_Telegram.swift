@@ -111,7 +111,10 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
 
 func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
     switch messsage {
-        case let .message(flags, _, fromId, toId, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(message):
+            let flags = message.flags
+            let fromId = message.fromId
+            let toId = message.toId
             switch toId {
                 case let .peerUser(userId):
                     return PeerId(namespace: Namespaces.Peer.CloudUser, id: (flags & Int32(2)) != 0 ? userId : (fromId ?? userId))
@@ -136,7 +139,7 @@ func apiMessagePeerId(_ messsage: Api.Message) -> PeerId? {
 
 func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     switch message {
-        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, fwdHeader, viaBotId, _, _, _, media, _, entities, _, _, _, _, _):
             let peerId: PeerId
             switch toId {
                 case let .peerUser(userId):
@@ -240,7 +243,7 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
 
 func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
     switch message {
-        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(flags, _, fromId, toId, _, _, replyToMsgId, _, _, _, _, _, _, _, _, _, _):
             if let replyToMsgId = replyToMsgId {
                 let peerId: PeerId
                     switch toId {
@@ -382,7 +385,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 extension StoreMessage {
     convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
-            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, reactions, restrictionReason):
+            case let .message(flags, id, fromId, toId, fwdFrom, viaBotId, replyToMsgId, date, message, media, replyMarkup, entities, views, editDate, postAuthor, groupingId, restrictionReason):
                 let peerId: PeerId
                 var authorId: PeerId?
                 switch toId {
@@ -537,9 +540,9 @@ extension StoreMessage {
                     attributes.append(ContentRequiresValidationMessageAttribute())
                 }
                 
-                if let reactions = reactions {
+                /*if let reactions = reactions {
                     attributes.append(ReactionsMessageAttribute(apiReactions: reactions))
-                }
+                }*/
                 
                 if let restrictionReason = restrictionReason {
                     attributes.append(RestrictedContentMessageAttribute(rules: restrictionReason.map(RestrictionRule.init(apiReason:))))

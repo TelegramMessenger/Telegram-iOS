@@ -22,6 +22,7 @@
 
 #include "tonlib/Config.h"
 #include "tonlib/ExtClient.h"
+#include "tonlib/ExtClientOutbound.h"
 #include "tonlib/KeyStorage.h"
 
 #include "td/actor/actor.h"
@@ -44,6 +45,9 @@ class TonlibClient : public td::actor::Actor {
   td::unique_ptr<TonlibCallback> callback_;
   Config config_;
 
+  bool use_callbacks_for_network_{false};
+  td::actor::ActorId<ExtClientOutbound> ext_client_outbound_;
+
   // KeyStorage
   KeyStorage key_storage_;
 
@@ -54,6 +58,7 @@ class TonlibClient : public td::actor::Actor {
 
   ExtClientRef get_client_ref();
   void init_ext_client();
+  void init_last_block();
 
   bool is_closing_{false};
   td::uint32 ref_cnt_{1};
@@ -130,5 +135,12 @@ class TonlibClient : public td::actor::Actor {
 
   td::Status do_request(const tonlib_api::changeLocalPassword& request,
                         td::Promise<object_ptr<tonlib_api::key>>&& promise);
+
+  td::Status do_request(const tonlib_api::onLiteServerQueryResult& request,
+                        td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+  td::Status do_request(const tonlib_api::onLiteServerQueryError& request,
+                        td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+
+  void proxy_request(td::int64 query_id, std::string data);
 };
 }  // namespace tonlib

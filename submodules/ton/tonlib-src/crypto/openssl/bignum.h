@@ -79,7 +79,7 @@ class Bignum {
   }
   Bignum(const bin_string& bs) {
     val = BN_new();
-    set_dec_str(bs.str);
+    set_raw_bytes(bs.str);
   }
   Bignum(const dec_string& ds) {
     val = BN_new();

@@ -29,6 +29,7 @@
 
 namespace tonlib {
 class LastBlock;
+struct LastBlockInfo;
 struct ExtClientRef {
   td::actor::ActorId<ton::adnl::AdnlExtClient> andl_ext_client_;
   td::actor::ActorId<LastBlock> last_block_actor_;
@@ -49,7 +50,7 @@ class ExtClient {
     return client_;
   }
 
-  void with_last_block(td::Promise<ton::BlockIdExt> promise);
+  void with_last_block(td::Promise<LastBlockInfo> promise);
 
   template <class QueryT>
   void send_query(QueryT query, td::Promise<typename QueryT::ReturnType> promise) {
@@ -74,7 +75,7 @@ class ExtClient {
  private:
   ExtClientRef client_;
   td::Container<td::Promise<td::BufferSlice>> queries_;
-  td::Container<td::Promise<ton::BlockIdExt>> last_block_queries_;
+  td::Container<td::Promise<LastBlockInfo>> last_block_queries_;
 
   void send_raw_query(td::BufferSlice query, td::Promise<td::BufferSlice> promise);
 };

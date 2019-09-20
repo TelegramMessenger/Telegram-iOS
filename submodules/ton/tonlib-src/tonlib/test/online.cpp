@@ -170,12 +170,12 @@ void dump_transaction_history(Client& client, std::string address) {
                                                   make_object<tonlib_api::accountAddress>(address), std::move(tid)))
                                 .move_as_ok();
     CHECK(got_transactions->transactions_.size() > 0);
-    CHECK(got_transactions->transactions_[0]->previous_transaction_id_->lt_ < lt);
+    CHECK(got_transactions->previous_transaction_id_->lt_ < lt);
     for (auto& txn : got_transactions->transactions_) {
       LOG(ERROR) << to_string(txn);
       cnt++;
     }
-    tid = std::move(got_transactions->transactions_.back()->previous_transaction_id_);
+    tid = std::move(got_transactions->previous_transaction_id_);
   }
   LOG(ERROR) << cnt;
 }
@@ -196,7 +196,8 @@ int main(int argc, char* argv[]) {
 
   Client client;
   {
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(global_config_str, "."))).ensure();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(global_config_str, ".", false)))
+        .ensure();
   }
   //dump_transaction_history(client, get_test_giver_address(client));
   auto wallet_a = create_wallet(client);
@@ -208,7 +209,8 @@ int main(int argc, char* argv[]) {
   return 0;
   {
     // init
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(global_config_str, "."))).ensure();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(global_config_str, ".", false)))
+        .ensure();
 
     auto key = sync_send(client, make_object<tonlib_api::createNewKey>(
                                      td::SecureString("local"), td::SecureString("mnemonic"), td::SecureString()))

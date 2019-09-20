@@ -209,7 +209,8 @@ Bignum& Bignum::import_lsb(const unsigned char* buffer, std::size_t size) {
     size--;
   }
   if (!size) {
-    bn_assert(BN_zero(val));
+    // Use BN_set_word, because from 1.1.0 BN_zero may return void
+    bn_assert(BN_set_word(val, 0));
     return *this;
   }
   unsigned char tmp_buff[1024];

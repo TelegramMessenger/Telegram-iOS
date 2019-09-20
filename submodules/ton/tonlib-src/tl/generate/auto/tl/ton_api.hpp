@@ -479,6 +479,12 @@ bool downcast_call(Object &obj, const T &func) {
     case engine_validator_electionBid::ID:
       func(static_cast<engine_validator_electionBid &>(obj));
       return true;
+    case engine_validator_fullNodeMaster::ID:
+      func(static_cast<engine_validator_fullNodeMaster &>(obj));
+      return true;
+    case engine_validator_fullNodeSlave::ID:
+      func(static_cast<engine_validator_fullNodeSlave &>(obj));
+      return true;
     case validator_groupMember::ID:
       func(static_cast<validator_groupMember &>(obj));
       return true;
@@ -951,6 +957,12 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case tonNode_prepareZeroState::ID:
       func(static_cast<tonNode_prepareZeroState &>(obj));
+      return true;
+    case tonNode_query::ID:
+      func(static_cast<tonNode_query &>(obj));
+      return true;
+    case tonNode_slave_sendExtMessage::ID:
+      func(static_cast<tonNode_slave_sendExtMessage &>(obj));
       return true;
     case validatorSession_downloadCandidate::ID:
       func(static_cast<validatorSession_downloadCandidate &>(obj));

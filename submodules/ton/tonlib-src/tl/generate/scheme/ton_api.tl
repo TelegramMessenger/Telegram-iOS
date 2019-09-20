@@ -367,6 +367,10 @@ tonNode.downloadZeroState block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlockProof block:tonNode.blockIdExt = tonNode.Data;
 tonNode.downloadBlockProofLink block:tonNode.blockIdExt = tonNode.Data;
 
+tonNode.slave.sendExtMessage message:tonNode.externalMessage = True;
+
+tonNode.query = Object;
+
 ---types---
 
 // bit 0 - started
@@ -482,9 +486,12 @@ engine.controlInterface id:int256 port:int allowed:(vector engine.controlProcess
 engine.gc ids:(vector int256) = engine.Gc;
 
 engine.dht.config dht:(vector engine.dht) gc:engine.gc = engine.dht.Config;
+engine.validator.fullNodeMaster port:int adnl:int256 = engine.validator.FullNodeMaster;
+engine.validator.fullNodeSlave ip:int port:int adnl:PublicKey = engine.validator.FullNodeSlave;
 engine.validator.config out_port:int addrs:(vector engine.Addr) adnl:(vector engine.adnl) 
         dht:(vector engine.dht)
-        validators:(vector engine.validator) fullnode:int256  
+        validators:(vector engine.validator) fullnode:int256 fullnodeslave:engine.validator.fullNodeSlave
+        fullnodemasters:(vector engine.validator.fullNodeMaster)
         liteservers:(vector engine.liteServer) control:(vector engine.controlInterface)
         gc:engine.gc = engine.validator.Config; 
 

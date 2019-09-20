@@ -187,11 +187,13 @@ void ok::store(td::TlStorerToString &s, const char *field_name) const {
 options::options()
   : config_()
   , keystore_directory_()
+  , use_callbacks_for_network_()
 {}
 
-options::options(std::string const &config_, std::string const &keystore_directory_)
+options::options(std::string const &config_, std::string const &keystore_directory_, bool use_callbacks_for_network_)
   : config_(std::move(config_))
   , keystore_directory_(std::move(keystore_directory_))
+  , use_callbacks_for_network_(use_callbacks_for_network_)
 {}
 
 const std::int32_t options::ID;
@@ -201,6 +203,28 @@ void options::store(td::TlStorerToString &s, const char *field_name) const {
     s.store_class_begin(field_name, "options");
     s.store_field("config", config_);
     s.store_field("keystore_directory", keystore_directory_);
+    s.store_field("use_callbacks_for_network", use_callbacks_for_network_);
+    s.store_class_end();
+  }
+}
+
+updateSendLiteServerQuery::updateSendLiteServerQuery()
+  : id_()
+  , data_()
+{}
+
+updateSendLiteServerQuery::updateSendLiteServerQuery(std::int64_t id_, std::string const &data_)
+  : id_(id_)
+  , data_(std::move(data_))
+{}
+
+const std::int32_t updateSendLiteServerQuery::ID;
+
+void updateSendLiteServerQuery::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "updateSendLiteServerQuery");
+    s.store_field("id", id_);
+    s.store_bytes_field("data", data_);
     s.store_class_end();
   }
 }
@@ -339,13 +363,15 @@ raw_accountState::raw_accountState()
   , code_()
   , data_()
   , last_transaction_id_()
+  , sync_utime_()
 {}
 
-raw_accountState::raw_accountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_)
+raw_accountState::raw_accountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
   : balance_(balance_)
   , code_(std::move(code_))
   , data_(std::move(data_))
   , last_transaction_id_(std::move(last_transaction_id_))
+  , sync_utime_(sync_utime_)
 {}
 
 const std::int32_t raw_accountState::ID;
@@ -357,6 +383,7 @@ void raw_accountState::store(td::TlStorerToString &s, const char *field_name) co
     s.store_bytes_field("code", code_);
     s.store_bytes_field("data", data_);
     if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    s.store_field("sync_utime", sync_utime_);
     s.store_class_end();
   }
 }
@@ -407,16 +434,18 @@ void raw_message::store(td::TlStorerToString &s, const char *field_name) const {
 }
 
 raw_transaction::raw_transaction()
-  : data_()
-  , previous_transaction_id_()
+  : utime_()
+  , data_()
+  , transaction_id_()
   , fee_()
   , in_msg_()
   , out_msgs_()
 {}
 
-raw_transaction::raw_transaction(std::string const &data_, object_ptr<internal_transactionId> &&previous_transaction_id_, std::int64_t fee_, object_ptr<raw_message> &&in_msg_, std::vector<object_ptr<raw_message>> &&out_msgs_)
-  : data_(std::move(data_))
-  , previous_transaction_id_(std::move(previous_transaction_id_))
+raw_transaction::raw_transaction(std::int64_t utime_, std::string const &data_, object_ptr<internal_transactionId> &&transaction_id_, std::int64_t fee_, object_ptr<raw_message> &&in_msg_, std::vector<object_ptr<raw_message>> &&out_msgs_)
+  : utime_(utime_)
+  , data_(std::move(data_))
+  , transaction_id_(std::move(transaction_id_))
   , fee_(fee_)
   , in_msg_(std::move(in_msg_))
   , out_msgs_(std::move(out_msgs_))
@@ -427,8 +456,9 @@ const std::int32_t raw_transaction::ID;
 void raw_transaction::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "raw_transaction");
+    s.store_field("utime", utime_);
     s.store_bytes_field("data", data_);
-    if (previous_transaction_id_ == nullptr) { s.store_field("previous_transaction_id", "null"); } else { previous_transaction_id_->store(s, "previous_transaction_id"); }
+    if (transaction_id_ == nullptr) { s.store_field("transaction_id", "null"); } else { transaction_id_->store(s, "transaction_id"); }
     s.store_field("fee", fee_);
     if (in_msg_ == nullptr) { s.store_field("in_msg", "null"); } else { in_msg_->store(s, "in_msg"); }
     { const std::vector<object_ptr<raw_message>> &v = out_msgs_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("out_msgs", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
@@ -438,10 +468,12 @@ void raw_transaction::store(td::TlStorerToString &s, const char *field_name) con
 
 raw_transactions::raw_transactions()
   : transactions_()
+  , previous_transaction_id_()
 {}
 
-raw_transactions::raw_transactions(std::vector<object_ptr<raw_transaction>> &&transactions_)
+raw_transactions::raw_transactions(std::vector<object_ptr<raw_transaction>> &&transactions_, object_ptr<internal_transactionId> &&previous_transaction_id_)
   : transactions_(std::move(transactions_))
+  , previous_transaction_id_(std::move(previous_transaction_id_))
 {}
 
 const std::int32_t raw_transactions::ID;
@@ -450,6 +482,7 @@ void raw_transactions::store(td::TlStorerToString &s, const char *field_name) co
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "raw_transactions");
     { const std::vector<object_ptr<raw_transaction>> &v = transactions_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("transactions", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    if (previous_transaction_id_ == nullptr) { s.store_field("previous_transaction_id", "null"); } else { previous_transaction_id_->store(s, "previous_transaction_id"); }
     s.store_class_end();
   }
 }
@@ -458,12 +491,14 @@ testGiver_accountState::testGiver_accountState()
   : balance_()
   , seqno_()
   , last_transaction_id_()
+  , sync_utime_()
 {}
 
-testGiver_accountState::testGiver_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_)
+testGiver_accountState::testGiver_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
   : balance_(balance_)
   , seqno_(seqno_)
   , last_transaction_id_(std::move(last_transaction_id_))
+  , sync_utime_(sync_utime_)
 {}
 
 const std::int32_t testGiver_accountState::ID;
@@ -474,6 +509,7 @@ void testGiver_accountState::store(td::TlStorerToString &s, const char *field_na
     s.store_field("balance", balance_);
     s.store_field("seqno", seqno_);
     if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    s.store_field("sync_utime", sync_utime_);
     s.store_class_end();
   }
 }
@@ -482,12 +518,14 @@ testWallet_accountState::testWallet_accountState()
   : balance_()
   , seqno_()
   , last_transaction_id_()
+  , sync_utime_()
 {}
 
-testWallet_accountState::testWallet_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_)
+testWallet_accountState::testWallet_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
   : balance_(balance_)
   , seqno_(seqno_)
   , last_transaction_id_(std::move(last_transaction_id_))
+  , sync_utime_(sync_utime_)
 {}
 
 const std::int32_t testWallet_accountState::ID;
@@ -498,6 +536,7 @@ void testWallet_accountState::store(td::TlStorerToString &s, const char *field_n
     s.store_field("balance", balance_);
     s.store_field("seqno", seqno_);
     if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    s.store_field("sync_utime", sync_utime_);
     s.store_class_end();
   }
 }
@@ -522,10 +561,14 @@ void testWallet_initialAccountState::store(td::TlStorerToString &s, const char *
 
 uninited_accountState::uninited_accountState()
   : balance_()
+  , last_transaction_id_()
+  , sync_utime_()
 {}
 
-uninited_accountState::uninited_accountState(std::int64_t balance_)
+uninited_accountState::uninited_accountState(std::int64_t balance_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
   : balance_(balance_)
+  , last_transaction_id_(std::move(last_transaction_id_))
+  , sync_utime_(sync_utime_)
 {}
 
 const std::int32_t uninited_accountState::ID;
@@ -534,6 +577,8 @@ void uninited_accountState::store(td::TlStorerToString &s, const char *field_nam
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "uninited_accountState");
     s.store_field("balance", balance_);
+    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    s.store_field("sync_utime", sync_utime_);
     s.store_class_end();
   }
 }
@@ -822,6 +867,48 @@ void init::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "init");
     if (options_ == nullptr) { s.store_field("options", "null"); } else { options_->store(s, "options"); }
+    s.store_class_end();
+  }
+}
+
+onLiteServerQueryError::onLiteServerQueryError()
+  : id_()
+  , error_()
+{}
+
+onLiteServerQueryError::onLiteServerQueryError(std::int64_t id_, object_ptr<error> &&error_)
+  : id_(id_)
+  , error_(std::move(error_))
+{}
+
+const std::int32_t onLiteServerQueryError::ID;
+
+void onLiteServerQueryError::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "onLiteServerQueryError");
+    s.store_field("id", id_);
+    if (error_ == nullptr) { s.store_field("error", "null"); } else { error_->store(s, "error"); }
+    s.store_class_end();
+  }
+}
+
+onLiteServerQueryResult::onLiteServerQueryResult()
+  : id_()
+  , bytes_()
+{}
+
+onLiteServerQueryResult::onLiteServerQueryResult(std::int64_t id_, std::string const &bytes_)
+  : id_(id_)
+  , bytes_(std::move(bytes_))
+{}
+
+const std::int32_t onLiteServerQueryResult::ID;
+
+void onLiteServerQueryResult::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "onLiteServerQueryResult");
+    s.store_field("id", id_);
+    s.store_bytes_field("bytes", bytes_);
     s.store_class_end();
   }
 }

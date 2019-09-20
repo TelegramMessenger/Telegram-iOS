@@ -5,11 +5,16 @@
 #include "td/utils/Parser.h"
 #include "td/utils/port/signals.h"
 #include "td/utils/port/path.h"
+#include "td/utils/Random.h"
 
 #include "terminal/terminal.h"
 
 #include "tonlib/TonlibClient.h"
 #include "tonlib/TonlibCallback.h"
+
+#include "tonlib/ExtClientLazy.h"
+
+#include "auto/tl/tonlib_api.hpp"
 
 #include <iostream>
 #include <map>
@@ -20,6 +25,7 @@ class TonlibCli : public td::actor::Actor {
     bool enable_readline{true};
     std::string config;
     std::string key_dir{"."};
+    bool use_callbacks_for_network{false};
   };
   TonlibCli(Options options) : options_(std::move(options)) {
   }
@@ -38,6 +44,8 @@ class TonlibCli : public td::actor::Actor {
   std::vector<KeyInfo> keys_;
 
   std::map<std::uint64_t, td::Promise<tonlib_api::object_ptr<tonlib_api::Object>>> query_handlers_;
+
+  td::actor::ActorOwn<ton::adnl::AdnlExtClient> raw_client_;
 
   bool is_closing_{false};
   td::uint32 ref_cnt_{1};
@@ -79,8 +87,28 @@ class TonlibCli : public td::actor::Actor {
 
     load_keys();
 
+    if (options_.use_callbacks_for_network) {
+      auto config = tonlib::Config::parse(options_.config).move_as_ok();
+      auto lite_clients_size = config.lite_clients.size();
+      CHECK(lite_clients_size != 0);
+      auto lite_client_id = td::Random::fast(0, td::narrow_cast<int>(lite_clients_size) - 1);
+      auto& lite_client = config.lite_clients[lite_client_id];
+      class Callback : public tonlib::ExtClientLazy::Callback {
+       public:
+        explicit Callback(td::actor::ActorShared<> parent) : parent_(std::move(parent)) {
+        }
+
+       private:
+        td::actor::ActorShared<> parent_;
+      };
+      ref_cnt_++;
+      raw_client_ = tonlib::ExtClientLazy::create(lite_client.adnl_id, lite_client.address,
+                                                  td::make_unique<Callback>(td::actor::actor_shared()));
+    }
+
     using tonlib_api::make_object;
-    send_query(make_object<tonlib_api::init>(make_object<tonlib_api::options>(options_.config, options_.key_dir)),
+    send_query(make_object<tonlib_api::init>(make_object<tonlib_api::options>(options_.config, options_.key_dir,
+                                                                              options_.use_callbacks_for_network)),
                [](auto r_ok) {
                  LOG_IF(ERROR, r_ok.is_error()) << r_ok.error();
                  td::TerminalIO::out() << "Tonlib is inited\n";
@@ -121,6 +149,8 @@ class TonlibCli : public td::actor::Actor {
       td::TerminalIO::out() << "exportkey [key_id] - export key\n";
       td::TerminalIO::out() << "setconfig <path> - set lite server config\n";
       td::TerminalIO::out() << "getstate <key_id> - get state of simple wallet with requested key\n";
+      td::TerminalIO::out()
+          << "gethistory <key_id> - get history fo simple wallet with requested key (last 10 transactions)\n";
       td::TerminalIO::out() << "init <key_id> - init simple wallet with requested key\n";
       td::TerminalIO::out() << "transfer <from_key_id> <to_key_id> <amount> - transfer <amount> of grams from "
                                "<from_key_id> to <to_key_id>.\n"
@@ -145,6 +175,8 @@ class TonlibCli : public td::actor::Actor {
       set_config(parser.read_word());
     } else if (cmd == "getstate") {
       get_state(parser.read_word());
+    } else if (cmd == "gethistory") {
+      get_history(parser.read_word());
     } else if (cmd == "init") {
       init_simple_wallet(parser.read_word());
     } else if (cmd == "transfer") {
@@ -157,7 +189,31 @@ class TonlibCli : public td::actor::Actor {
     }
   }
 
+  void on_adnl_result(td::uint64 id, td::Result<td::BufferSlice> res) {
+    using tonlib_api::make_object;
+    if (res.is_ok()) {
+      send_query(make_object<tonlib_api::onLiteServerQueryResult>(id, res.move_as_ok().as_slice().str()),
+                 [](auto r_ok) { LOG_IF(ERROR, r_ok.is_error()) << r_ok.error(); });
+      LOG(ERROR) << "!!!";
+    } else {
+      send_query(make_object<tonlib_api::onLiteServerQueryError>(
+                     id, make_object<tonlib_api::error>(res.error().code(), res.error().message().str())),
+                 [](auto r_ok) { LOG_IF(ERROR, r_ok.is_error()) << r_ok.error(); });
+    }
+  }
+
   void on_tonlib_result(std::uint64_t id, tonlib_api::object_ptr<tonlib_api::Object> result) {
+    if (id == 0) {
+      if (result->get_id() == tonlib_api::updateSendLiteServerQuery::ID) {
+        auto update = tonlib_api::move_object_as<tonlib_api::updateSendLiteServerQuery>(std::move(result));
+        CHECK(!raw_client_.empty());
+        send_closure(raw_client_, &ton::adnl::AdnlExtClient::send_query, "query", td::BufferSlice(update->data_),
+                     td::Timestamp::in(5),
+                     [actor_id = actor_id(this), id = update->id_](td::Result<td::BufferSlice> res) {
+                       send_closure(actor_id, &TonlibCli::on_adnl_result, id, std::move(res));
+                     });
+      }
+    }
     auto it = query_handlers_.find(id);
     if (it == query_handlers_.end()) {
       return;
@@ -468,6 +524,53 @@ class TonlibCli : public td::actor::Actor {
                  td::TerminalIO::out() << to_string(r_res.ok());
                });
   }
+  void get_history(td::Slice key) {
+    if (key.empty()) {
+      dump_keys();
+      td::TerminalIO::out() << "Choose public key (hex prefix or #N)";
+      cont_ = [this](td::Slice key) { this->get_state(key); };
+      return;
+    }
+    auto r_address = to_account_address(key, false);
+    if (r_address.is_error()) {
+      td::TerminalIO::out() << "Unknown key id: [" << key << "]\n";
+      return;
+    }
+    auto address = r_address.move_as_ok();
+    using tonlib_api::make_object;
+    send_query(make_object<tonlib_api::generic_getAccountState>(
+                   ton::move_tl_object_as<tonlib_api::accountAddress>(std::move(address.address))),
+               [this, key = key.str()](auto r_res) {
+                 if (r_res.is_error()) {
+                   td::TerminalIO::out() << "Can't get state: " << r_res.error() << "\n";
+                   return;
+                 }
+                 this->get_history(key, *r_res.move_as_ok());
+               });
+  }
+
+  void get_history(td::Slice key, tonlib_api::generic_AccountState& state) {
+    auto r_address = to_account_address(key, false);
+    if (r_address.is_error()) {
+      td::TerminalIO::out() << "Unknown key id: [" << key << "]\n";
+      return;
+    }
+    auto address = r_address.move_as_ok();
+
+    tonlib_api::object_ptr<tonlib_api::internal_transactionId> transaction_id;
+    downcast_call(state, [&](auto& state) { transaction_id = std::move(state.account_state_->last_transaction_id_); });
+
+    send_query(
+        tonlib_api::make_object<tonlib_api::raw_getTransactions>(
+            ton::move_tl_object_as<tonlib_api::accountAddress>(std::move(address.address)), std::move(transaction_id)),
+        [](auto r_res) {
+          if (r_res.is_error()) {
+            td::TerminalIO::out() << "Can't get transactions: " << r_res.error() << "\n";
+            return;
+          }
+          td::TerminalIO::out() << to_string(r_res.move_as_ok()) << "\n";
+        });
+  }
 
   void transfer(td::Slice from, td::Slice to, td::Slice grams) {
     auto r_from_address = to_account_address(from, true);
@@ -589,6 +692,10 @@ int main(int argc, char* argv[]) {
   p.add_option('C', "config", "set lite server config", [&](td::Slice arg) {
     TRY_RESULT(data, td::read_file_str(arg.str()));
     options.config = std::move(data);
+    return td::Status::OK();
+  });
+  p.add_option('c', "use_callbacks_for_network (for debug)", "do not use this", [&]() {
+    options.use_callbacks_for_network = true;
     return td::Status::OK();
   });
 

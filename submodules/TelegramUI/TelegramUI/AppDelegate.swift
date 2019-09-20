@@ -923,7 +923,7 @@ final class SharedApplicationContext {
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
                     var tonContext: TonContext?
                     if let path = getAppBundle().path(forResource: "cfg", ofType: "txt"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let config = String(data: data, encoding: .utf8) {
-                        tonContext = TonContext(instance: TonInstance(basePath: account.basePath, config: config), keychain: tonKeychain)
+                        tonContext = TonContext(instance: TonInstance(basePath: account.basePath, config: config, network: account.network), keychain: tonKeychain)
                     }
                     let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {

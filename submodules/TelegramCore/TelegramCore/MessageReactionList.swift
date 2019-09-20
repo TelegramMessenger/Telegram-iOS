@@ -82,7 +82,7 @@ private final class MessageReactionCategoryContext {
         self.state.loadingMore = true
         self.statePromise.set(self.state)
         
-        var flags: Int32 = 0
+        /*var flags: Int32 = 0
         var reaction: String?
         switch self.category {
         case .all:
@@ -150,7 +150,7 @@ private final class MessageReactionCategoryContext {
             })
         }, error: { _ in
             
-        }))
+        }))*/
     }
 }
 

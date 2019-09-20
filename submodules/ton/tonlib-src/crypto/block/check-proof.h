@@ -60,6 +60,7 @@ struct Transaction {
 
   struct Info {
     ton::BlockIdExt blkid;
+    td::uint32 now;
     ton::LogicalTime prev_trans_lt;
     ton::Bits256 prev_trans_hash;
     td::Ref<vm::Cell> transaction;
@@ -74,19 +75,10 @@ struct TransactionList {
   td::BufferSlice transactions_boc;
 
   struct Info {
+    ton::LogicalTime lt;
+    ton::Bits256 hash;
     std::vector<Transaction::Info> transactions;
   };
-
-  td::Result<Info> validate() const;
-};
-
-struct BlockChain {
-  ton::BlockIdExt from;
-  ton::BlockIdExt to;
-  td::int32 mode;
-  td::BufferSlice proof;
-
-  using Info = std::unique_ptr<block::BlockProofChain>;
 
   td::Result<Info> validate() const;
 };
