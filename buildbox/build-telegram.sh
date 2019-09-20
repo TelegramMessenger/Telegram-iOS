@@ -2,6 +2,8 @@
 
 set -e
 
+brew install cmake
+
 BUILD_TELEGRAM_VERSION="1"
 
 MACOS_VERSION="10.14"
