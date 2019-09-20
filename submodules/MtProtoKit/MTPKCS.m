@@ -54,7 +54,6 @@
     X509_NAME *name = X509_get_subject_name(cert);
     EVP_PKEY *publicKey = X509_get_pubkey(cert);
     
-    assert(false);
     //result = [[MTPKCS alloc] initWithName:[NSString stringWithUTF8String:cert->name] data:[NSData dataWithBytes:cert->cert_info->key->public_key->data length:cert->cert_info->key->public_key->length]];
     
     return result;
