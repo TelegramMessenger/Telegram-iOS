@@ -572,7 +572,7 @@ TEST(bits256_scan, main) {
 }
 
 bool check_exp(std::ostream& stream, const td::NegExpBinTable& tab, double x) {
-  long long xx = lround(x * (1LL << 52));
+  long long xx = llround(x * (1LL << 52));
   td::BigInt256 yy;
   if (!tab.nexpf(yy, -xx, 52)) {
     stream << "cannot compute exp(" << x << ") = exp(" << xx << " * 2^(-52))" << std::endl;

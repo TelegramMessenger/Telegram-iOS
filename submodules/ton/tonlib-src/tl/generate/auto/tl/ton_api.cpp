@@ -634,6 +634,8 @@ object_ptr<Function> Function::fetch(td::TlParser &p) {
       return tonNode_downloadBlockProofLink::fetch(p);
     case tonNode_downloadPersistentState::ID:
       return tonNode_downloadPersistentState::fetch(p);
+    case tonNode_downloadPersistentStateSlice::ID:
+      return tonNode_downloadPersistentStateSlice::fetch(p);
     case tonNode_downloadZeroState::ID:
       return tonNode_downloadZeroState::fetch(p);
     case tonNode_getNextBlockDescription::ID:
@@ -14960,6 +14962,70 @@ void tonNode_downloadPersistentState::store(td::TlStorerToString &s, const char 
 }
 
 tonNode_downloadPersistentState::ReturnType tonNode_downloadPersistentState::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_data>, 1443505284>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadPersistentStateSlice::tonNode_downloadPersistentStateSlice()
+  : block_()
+  , masterchain_block_()
+  , offset_()
+  , max_size_()
+{}
+
+tonNode_downloadPersistentStateSlice::tonNode_downloadPersistentStateSlice(object_ptr<tonNode_blockIdExt> &&block_, object_ptr<tonNode_blockIdExt> &&masterchain_block_, std::int64_t offset_, std::int64_t max_size_)
+  : block_(std::move(block_))
+  , masterchain_block_(std::move(masterchain_block_))
+  , offset_(offset_)
+  , max_size_(max_size_)
+{}
+
+const std::int32_t tonNode_downloadPersistentStateSlice::ID;
+
+object_ptr<tonNode_downloadPersistentStateSlice> tonNode_downloadPersistentStateSlice::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadPersistentStateSlice>(p);
+}
+
+tonNode_downloadPersistentStateSlice::tonNode_downloadPersistentStateSlice(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+  , masterchain_block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+  , offset_(TlFetchLong::parse(p))
+  , max_size_(TlFetchLong::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadPersistentStateSlice::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-169220381);
+  TlStoreObject::store(block_, s);
+  TlStoreObject::store(masterchain_block_, s);
+  TlStoreBinary::store(offset_, s);
+  TlStoreBinary::store(max_size_, s);
+}
+
+void tonNode_downloadPersistentStateSlice::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-169220381);
+  TlStoreObject::store(block_, s);
+  TlStoreObject::store(masterchain_block_, s);
+  TlStoreBinary::store(offset_, s);
+  TlStoreBinary::store(max_size_, s);
+}
+
+void tonNode_downloadPersistentStateSlice::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadPersistentStateSlice");
+    if (block_ == nullptr) { s.store_field("block", "null"); } else { block_->store(s, "block"); }
+    if (masterchain_block_ == nullptr) { s.store_field("masterchain_block", "null"); } else { masterchain_block_->store(s, "masterchain_block"); }
+    s.store_field("offset", offset_);
+    s.store_field("max_size", max_size_);
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadPersistentStateSlice::ReturnType tonNode_downloadPersistentStateSlice::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchBoxed<TlFetchObject<tonNode_data>, 1443505284>::parse(p);
 #undef FAIL

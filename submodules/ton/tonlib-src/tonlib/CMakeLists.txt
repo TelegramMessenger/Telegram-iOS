@@ -119,7 +119,10 @@ install(TARGETS tonlibjson TonlibJson EXPORT Tonlib
 )
 
 if (NOT TON_USE_ABSEIL)
-install(TARGETS tdnet keys crc32c tdactor adnllite tl_api tl-utils tl_lite_api tl-lite-utils ton_crypto ton_block
+if (WIN32)
+  set(WINGETOPT_TARGET wingetopt)
+endif()
+install(TARGETS tdnet keys crc32c tdactor adnllite tl_api tl-utils tl_lite_api tl-lite-utils ton_crypto ton_block ${WINGETOPT_TARGET}
   tdutils tl_tonlib_api tonlib lite-client-common Tonlib EXPORT Tonlib
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

@@ -23,6 +23,7 @@
 
 #include <openssl/bn.h>
 #include "td/utils/bits.h"
+#include "td/utils/misc.h"
 
 namespace arith {
 struct dec_string {
@@ -34,6 +35,12 @@ struct dec_string {
 struct hex_string {
   std::string str;
   explicit hex_string(const std::string& s) : str(s) {
+  }
+};
+
+struct bin_string {
+  std::string str;
+  explicit bin_string(const std::string& s) : str(s) {
   }
 };
 }  // namespace arith
@@ -69,6 +76,10 @@ class Bignum {
   }
   ~Bignum() {
     BN_free(val);
+  }
+  Bignum(const bin_string& bs) {
+    val = BN_new();
+    set_dec_str(bs.str);
   }
   Bignum(const dec_string& ds) {
     val = BN_new();
@@ -147,6 +158,11 @@ class Bignum {
 
   Bignum& set_dec_str(std::string s) {
     bn_assert(BN_dec2bn(&val, s.c_str()));
+    return *this;
+  }
+
+  Bignum& set_raw_bytes(std::string s) {
+    CHECK(BN_bin2bn(reinterpret_cast<const td::uint8*>(s.c_str()), td::narrow_cast<td::uint32>(s.size()), val));
     return *this;
   }
 

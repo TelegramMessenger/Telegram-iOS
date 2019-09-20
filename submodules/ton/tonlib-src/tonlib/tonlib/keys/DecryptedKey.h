@@ -48,7 +48,7 @@ struct RawDecryptedKey {
 
 struct EncryptedKey;
 struct DecryptedKey {
-  DecryptedKey() = default;
+  DecryptedKey() = delete;
   explicit DecryptedKey(const Mnemonic &mnemonic);
   DecryptedKey(std::vector<td::SecureString> mnemonic_words, td::Ed25519::PrivateKey key);
   DecryptedKey(RawDecryptedKey key);

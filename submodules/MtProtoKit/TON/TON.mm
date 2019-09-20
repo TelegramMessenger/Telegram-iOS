@@ -21,6 +21,34 @@ static std::string makeString(NSData * _Nonnull data) {
     }
 }
 
+static NSData * _Nonnull makeData(std::string &string) {
+    if (string.size() == 0) {
+        return [NSData data];
+    } else {
+        return [[NSData alloc] initWithBytes:string.data() length:string.size()];
+    }
+}
+
+static NSString * _Nullable readString(std::string &string) {
+    if (string.size() == 0) {
+        return @"";
+    } else {
+        return [[NSString alloc] initWithBytes:string.data() length:string.size() encoding:NSUTF8StringEncoding];
+    }
+}
+
+static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::object_ptr<tonlib_api::raw_message> &message) {
+    if (message == nullptr) {
+        return nil;
+    }
+    NSString *source = readString(message->source_);
+    NSString *destination = readString(message->source_);
+    if (source == nil || destination == nil) {
+        return nil;
+    }
+    return [[TONTransactionMessage alloc] initWithValue:message->value_ source:source destination:destination];
+}
+
 @implementation TONKey
 
 - (instancetype)initWithPublicKey:(NSString *)publicKey secret:(NSData *)secret {
@@ -36,11 +64,54 @@ static std::string makeString(NSData * _Nonnull data) {
 
 @implementation TONAccountState
 
-- (instancetype)initWithBalance:(int64_t)balance seqno:(int32_t)seqno {
+- (instancetype)initWithBalance:(int64_t)balance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId {
     self = [super init];
     if (self != nil) {
         _balance = balance;
         _seqno = seqno;
+        _lastTransactionId = lastTransactionId;
+    }
+    return self;
+}
+
+@end
+
+@implementation TONTransactionId
+
+- (instancetype)initWithLt:(int64_t)lt transactionHash:(NSData *)transactionHash {
+    self = [super init];
+    if (self != nil) {
+        _lt = lt;
+        _transactionHash = transactionHash;
+    }
+    return self;
+}
+
+@end
+
+@implementation TONTransactionMessage
+
+- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination {
+    self = [super init];
+    if (self != nil) {
+        _value = value;
+        _source = source;
+        _destination = destination;
+    }
+    return self;
+}
+
+@end
+
+@implementation TONTransaction
+
+- (instancetype)initWithData:(NSData * _Nonnull)data previousTransactionId:(TONTransactionId * _Nonnull)previousTransactionId inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages {
+    self = [super init];
+    if (self != nil) {
+        _data = data;
+        _previousTransactionId = previousTransactionId;
+        _inMessage = inMessage;
+        _outMessages = outMessages;
     }
     return self;
 }
@@ -272,7 +343,8 @@ typedef enum {
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
             } else if (object->get_id() == tonlib_api::testGiver_accountState::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::testGiver_accountState>(object);
-                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->balance_ seqno:result->seqno_]];
+                TONTransactionId *lastTransactionId = [[TONTransactionId alloc] initWithLt:result->last_transaction_id_->lt_ transactionHash:makeData(result->last_transaction_id_->hash_)];
+                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->balance_ seqno:result->seqno_ lastTransactionId:lastTransactionId]];
                 [subscriber putCompletion];
             } else {
                 assert(false);
@@ -280,6 +352,32 @@ typedef enum {
         }];
         
         auto query = make_object<tonlib_api::testGiver_getAccountState>();
+        _client->send({ requestId, std::move(query) });
+        
+        return [[MTBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+}
+
+- (MTSignal *)getTestGiverAddress {
+    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::accountAddress::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::accountAddress>(object);
+                [subscriber putNext:[[NSString alloc] initWithUTF8String:result->account_address_.c_str()]];
+                [subscriber putCompletion];
+            } else {
+                assert(false);
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::testGiver_getAccountAddress>();
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -320,11 +418,17 @@ typedef enum {
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
             } else if (object->get_id() == tonlib_api::generic_accountStateUninited::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateUninited>(object);
-                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:-1]];
+                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:-1 lastTransactionId:nil]];
                 [subscriber putCompletion];
             } else if (object->get_id() == tonlib_api::generic_accountStateTestWallet::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateTestWallet>(object);
-                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:result->account_state_->seqno_]];
+                TONTransactionId *lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
+                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId]];
+                [subscriber putCompletion];
+            } else if (object->get_id() == tonlib_api::generic_accountStateTestGiver::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateTestGiver>(object);
+                TONTransactionId *lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
+                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId]];
                 [subscriber putCompletion];
             } else {
                 assert(false);
@@ -525,6 +629,59 @@ typedef enum {
         
         auto query = make_object<tonlib_api::deleteKey>(
             makeString(publicKeyData)
+        );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[MTBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+}
+
+- (MTSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash {
+    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        NSData *addressData = [address dataUsingEncoding:NSUTF8StringEncoding];
+        if (addressData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in getTransactionListWithAddress"]];
+            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+        }
+        
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::raw_transactions::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::raw_transactions>(object);
+                NSMutableArray<TONTransaction *> *transactions = [[NSMutableArray alloc] init];
+                for (auto &it : result->transactions_) {
+                    TONTransactionId *previousTransactionId = [[TONTransactionId alloc] initWithLt:it->previous_transaction_id_->lt_ transactionHash:makeData(it->previous_transaction_id_->hash_)];
+                    TONTransactionMessage *inMessage = parseTransactionMessage(it->in_msg_);
+                    NSMutableArray<TONTransactionMessage *> * outMessages = [[NSMutableArray alloc] init];
+                    for (auto &messageIt : it->out_msgs_) {
+                        TONTransactionMessage *outMessage = parseTransactionMessage(messageIt);
+                        if (outMessage != nil) {
+                            [outMessages addObject:outMessage];
+                        }
+                    }
+                    [transactions addObject:[[TONTransaction alloc] initWithData:makeData(it->data_) previousTransactionId:previousTransactionId inMessage:inMessage outMessages:outMessages]];
+                }
+                [subscriber putNext:transactions];
+                [subscriber putCompletion];
+            } else {
+                assert(false);
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::raw_getTransactions>(
+            make_object<tonlib_api::accountAddress>(
+                makeString(addressData)
+            ),
+            make_object<tonlib_api::internal_transactionId>(
+                lt,
+                makeString(hash)
+            )
         );
         _client->send({ requestId, std::move(query) });
         

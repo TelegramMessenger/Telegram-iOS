@@ -22,14 +22,14 @@ Example:
 
 The "test giver" (a special smart contract residing in the masterchain of the Test Network that gives up to 20 test Grams to anybody who asks) has the address
 
--1:8156775b79325e5d62e742d9b96c30b6515a5cd2f1f64c5da4b193c03f070e0d
+-1:fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260
 
 in the "raw" form (notice that uppercase Latin letters 'A'..'F' may be used instead of 'a'..'f')
 
 and
 
-Ef+BVndbeTJeXWLnQtm5bDC2UVpc0vH2TF2ksZPAPwcODSkb (base64) or
-Ef-BVndbeTJeXWLnQtm5bDC2UVpc0vH2TF2ksZPAPwcODSkb (base64url)
+kf/8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny (base64) 
+kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny (base64url)
 
 in the "user-friendly" form (to be displayed by user-friendly clients). Notice that both forms (base64 and base64url) are valid and must be accepted.
 
@@ -50,27 +50,27 @@ Inspecting the state of smart contracts with the aid of the TON Lite Client is e
 
 > last
 ...
-> getaccount -1:8156775b79325e5d62e742d9b96c30b6515a5cd2f1f64c5da4b193c03f070e0d
+> getaccount -1:fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260
 or
-> getaccount Ef-BVndbeTJeXWLnQtm5bDC2UVpc0vH2TF2ksZPAPwcODSkb
+> getaccount kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny
 
 You will see something like this:
 
 ------------------------------------
-got account state for -1:8156775B79325E5D62E742D9B96C30B6515A5CD2F1F64C5DA4B193C03F070E0D with respect to blocks (-1,8000000000000000,1645):4D5E1B928490BE34A4F03C9BC996661B8AD4E988F1460DB69BE3634B1E843DAF:9D85BB116D1DA4BFD999E9092BBD43B3A9F96EC9C9ED7AFDC81B27B08D3861A0 and (-1,8000000000000000,1645):4D5E1B928490BE34A4F03C9BC996661B8AD4E988F1460DB69BE3634B1E843DAF:9D85BB116D1DA4BFD999E9092BBD43B3A9F96EC9C9ED7AFDC81B27B08D3861A0
+got account state for -1 : FCB91A3A3816D0F7B8C2C76108B8A9BC5A6B7A55BD79F8AB101C52DB29232260 with respect to blocks (-1,8000000000000000,2075):BFE876CE2085274FEDAF1BD80F3ACE50F42B5A027DF230AD66DCED1F09FB39A7:522C027A721FABCB32574E3A809ABFBEE6A71DE929C1FA2B1CD0DDECF3056505
 account state is (account
   addr:(addr_std
-    anycast:nothing workchain_id:-1 address:x8156775B79325E5D62E742D9B96C30B6515A5CD2F1F64C5DA4B193C03F070E0D)
+    anycast:nothing workchain_id:-1 address:xFCB91A3A3816D0F7B8C2C76108B8A9BC5A6B7A55BD79F8AB101C52DB29232260)
   storage_stat:(storage_info
     used:(storage_used
       cells:(var_uint len:1 value:3)
-      bits:(var_uint len:2 value:539)
-      public_cells:(var_uint len:0 value:0)) last_paid:0
+      bits:(var_uint len:2 value:707)
+      public_cells:(var_uint len:0 value:0)) last_paid:1568899526
     due_payment:nothing)
-  storage:(account_storage last_trans_lt:0
+  storage:(account_storage last_trans_lt:2310000003
     balance:(currencies
       grams:(nanograms
-        amount:(var_uint len:7 value:1000000000000000))
+        amount:(var_uint len:6 value:9998859500889))
       other:(extra_currencies
         dict:hme_empty))
     state:(account_active
@@ -80,7 +80,7 @@ account state is (account
         code:(just
           value:(raw@^Cell 
             x{}
-             x{FF0020DDA4F260D31F01ED44D0D31FD166BAF2A1F80001D307D4D1821804A817C80073FB0201FB00A4C8CB1FC9ED54}
+             x{FF0020DD2082014C97BA9730ED44D0D70B1FE0A4F260D31F01ED44D0D31FD166BAF2A1F8000120D74A8E11D307D459821804A817C80073FB0201FB00DED1A4C8CB1FC9ED54}
             ))
         data:(just
           value:(raw@^Cell 
@@ -88,9 +88,10 @@ account state is (account
              x{00009A15}
             ))
         library:hme_empty))))
-x{CFF8156775B79325E5D62E742D9B96C30B6515A5CD2F1F64C5DA4B193C03F070E0D2068086C0000000000000000000000001C0E35FA931A000134_}
- x{FF0020DDA4F260D31F01ED44D0D31FD166BAF2A1F80001D307D4D1821804A817C80073FB0201FB00A4C8CB1FC9ED54}
- x{00000000}
+x{CFFFCB91A3A3816D0F7B8C2C76108B8A9BC5A6B7A55BD79F8AB101C52DB2923226020680B0C2EC1C0E300000000226BF360D8246029DFF56534_}
+ x{FF0020DD2082014C97BA9730ED44D0D70B1FE0A4F260D31F01ED44D0D31FD166BAF2A1F8000120D74A8E11D307D459821804A817C80073FB0201FB00DED1A4C8CB1FC9ED54}
+ x{00000003}
+last transaction lt = 2310000001 hash = 73F89C6F8910F598AD84504A777E5945C798AC8C847FF861C090109665EAC6BA
 ------------------------------------
 
 The first information line "got account state ... for ..." shows the account address and the masterchain block identifier with respect to which the account state has been dumped. Notice that even if the account state changes in a subsequent block, the `getaccount xxx` command will return the same result until the reference block is updated to a newer value by a `last` command. In this way one can study the state of all accounts and obtain consistent results.
@@ -99,7 +100,7 @@ The "account state is (account ... " line begins the pretty-printed deserialized
 
 Finally, the last several lines beginning with x{CFF538... (the "raw dump") contain the same information displayed as a tree of cells. In this case, we have one root cell containing the data bits CFF...134_ (the underscore means that the last binary one and all subsequent binary zeroes are to be removed, so hexadecimal "4_" corresponds to binary "0"), and two cells that are its children (displayed with one-space indentation).
 
-We can see that x{FF0020DDA4F260...} is the code of this smart contract. If we consult the Appendix A of the TON Virtual Machine documentation, we can even disassemble this code: FF00 is SETCP 0, 20 is DUP, DD is IFNOTRET, A4 is INC, F260 is THROWIF 32, and so on. (Incidentally, you can find the source code of this smartcontract in the source file crypto/block/mc0.fif .)
+We can see that x{FF0020DD20...} is the code of this smart contract. If we consult the Appendix A of the TON Virtual Machine documentation, we can even disassemble this code: FF00 is SETCP 0, 20 is DUP, DD is IFNOTRET, 20 is DUP, and so on. (Incidentally, you can find the source code of this smartcontract in the source file crypto/block/new-testgiver.fif .)
 
 We can also see that x{00009A15} (the actual value you see may be different) is the persistent data of this smart contract. It is actually an unsigned 32-bit integer, used by the smart contract as the counter of operations performed so far. Notice that this value is big-endian (i.e., 3 is encoded as x{00000003}, not as x{03000000}), as are all integers inside the TON Blockchain. In this case the counter is equal to 0x9A15 = 39445.
 
@@ -246,12 +247,26 @@ In the Test Network, you have another option: you can ask the "test giver" to gi
 5. Using the test giver smart contract
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You need to know the address of the test giver smart contract. We'll assume that it is -1:8156775b79325e5d62e742d9b96c30b6515a5cd2f1f64c5da4b193c03f070e0d, or, equivalently, Ef-BVndbeTJeXWLnQtm5bDC2UVpc0vH2TF2ksZPAPwcODSkb, as indicated in one of the previous examples. You inspect the state of this smart contract in the Lite Client by typing
+You need to know the address of the test giver smart contract. We'll assume that it is -1:fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260, or, equivalently, kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny, as indicated in one of the previous examples. You inspect the state of this smart contract in the Lite Client by typing
 
 > last
-> getaccount Ef-BVndbeTJeXWLnQtm5bDC2UVpc0vH2TF2ksZPAPwcODSkb
+> getaccount kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny
 
-as explained above in Section 2. The only number you need from the output is the 32-bit sequence number stored in the smart contract data (it is zero in the example above, but generally it will be non-zero).
+as explained above in Section 2. The only number you need from the output is the 32-bit sequence number stored in the smart contract data (it is 0x9A15 in the example above, but generally it will be different). A simpler way of obtaining the current value of this sequence number is by typing
+
+> last
+> runmethod kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny seqno
+
+producing the correct value 39445 = 0x9A15:
+
+--------------------------------------------
+got account state for -1 : FCB91A3A3816D0F7B8C2C76108B8A9BC5A6B7A55BD79F8AB101C52DB29232260 with respect to blocks (-1,8000000000000000,2240):18E6DA7707191E76C71EABBC5277650666B7E2CFA2AEF2CE607EAFE8657A3820:4EFA2540C5D1E4A1BA2B529EE0B65415DF46BFFBD27A8EB74C4C0E17770D03B1
+creating VM
+starting VM to run method `seqno` (85143) of smart contract -1:FCB91A3A3816D0F7B8C2C76108B8A9BC5A6B7A55BD79F8AB101C52DB29232260
+...
+arguments:  [ 85143 ] 
+result:  [ 39445 ] 
+--------------------------------------------
 
 Next, you create an external message to the test giver asking it to send another message to your (uninitialized) smart contract carrying a specified amount of test Grams. There is a special Fift script for generating this external message located at crypto/smartcont/testgiver.fif:
 
@@ -267,7 +282,7 @@ Next, you create an external message to the test giver asking it to send another
 $# 3 - -2 and ' usage if
 
 // "testgiver.addr" load-address 
-Masterchain 0x8156775b79325e5d62e742d9b96c30b6515a5cd2f1f64c5da4b193c03f070e0d
+Masterchain 0xfcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260
 2constant giver_addr
  ."Test giver address = " giver_addr 2dup .addr cr 6 .Addr cr
 
@@ -314,8 +329,8 @@ This Fift code creates an internal message from the test giver smart contract to
 The external message is serialized and saved into the file `wallet-query.boc`. Some output is generated in the process:
 
 ---------------------------------------------
-Test giver address = -1:8156775b79325e5d62e742d9b96c30b6515a5cd2f1f64c5da4b193c03f070e0d 
-kf-BVndbeTJeXWLnQtm5bDC2UVpc0vH2TF2ksZPAPwcODZKR
+Test giver address = -1:fcb91a3a3816d0f7b8c2c76108b8a9bc5a6b7a55bd79f8ab101c52db29232260 
+kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny
 Requesting GR$6.666 to account 0QAu6bT9Twd8myIygMNXY9-e2rC0GsINNvQAlnfflcOv4uVb = 0:2ee9b4fd4f077c9b223280c35763df9edab0b41ac20d36f4009677df95c3afe2 seqno=0x9a15 bounce=0 
 enveloping message: x{00009A1501}
  x{42001774DA7EA783BE4D91194061ABB1EFCF6D585A0D61069B7A004B3BEFCAE1D7F1280C6A98B4000000000000000000000000000047494654}
@@ -340,19 +355,19 @@ We will see some output:
 which means that the external message has been delivered to the collator pool. Afterwards one of the collators might choose to include this external message in a block, creating a transaction for the test giver smart contract to process this external message. We can check whether the state of the test giver has changed:
 
 > last
-> getaccount Ef-BVndbeTJeXWLnQtm5bDC2UVpc0vH2TF2ksZPAPwcODSkb
+> getaccount kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny
 
 (If you forget to type `last`, you are likely to see the unchanged state of the test giver smart contract.) The resulting output would be:
 
 ---------------------------------------------
-got account state for -1:8156775B79325E5D62E742D9B96C30B6515A5CD2F1F64C5DA4B193C03F070E0D with respect to blocks (-1,8000000000000000,10441):2DCFB7F734913261B85B8866DFF7CBEF07205EAA0769F4EE15E242AB520A2CC5:4F96F417BCD74D5DAE0CC3CCC285E513B85652002D9AD8CC884781D8465E3591 and (-1,8000000000000000,10441):2DCFB7F734913261B85B8866DFF7CBEF07205EAA0769F4EE15E242AB520A2CC5:4F96F417BCD74D5DAE0CC3CCC285E513B85652002D9AD8CC884781D8465E3591
+got account state for -1 : FCB91A3A3816D0F7B8C2C76108B8A9BC5A6B7A55BD79F8AB101C52DB29232260 with respect to blocks (-1,8000000000000000,2240):18E6DA7707191E76C71EABBC5277650666B7E2CFA2AEF2CE607EAFE8657A3820:4EFA2540C5D1E4A1BA2B529EE0B65415DF46BFFBD27A8EB74C4C0E17770D03B1
 account state is (account
   addr:(addr_std
-    anycast:nothing workchain_id:-1 address:x8156775B79325E5D62E742D9B96C30B6515A5CD2F1F64C5DA4B193C03F070E0D)
+    anycast:nothing workchain_id:-1 address:xFCB91A3A3816D0F7B8C2C76108B8A9BC5A6B7A55BD79F8AB101C52DB29232260)
   storage_stat:(storage_info
     used:(storage_used
       cells:(var_uint len:1 value:3)
-      bits:(var_uint len:2 value:539)
+      bits:(var_uint len:2 value:707)
       public_cells:(var_uint len:0 value:0)) last_paid:0
     due_payment:nothing)
   storage:(account_storage last_trans_lt:10697000003

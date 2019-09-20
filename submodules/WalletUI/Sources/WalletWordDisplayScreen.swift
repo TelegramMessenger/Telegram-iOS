@@ -88,6 +88,7 @@ public final class WalletWordDisplayScreen: ViewController {
 
 private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private var presentationData: PresentationData
+    private let wordList: [String]
     private let action: () -> Void
     
     private let navigationBackgroundNode: ASDisplayNode
@@ -104,6 +105,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     
     init(presentationData: PresentationData, wordList: [String], action: @escaping () -> Void) {
         self.presentationData = presentationData
+        self.wordList = wordList
         self.action = action
         
         self.navigationBackgroundNode = ASDisplayNode()
@@ -169,7 +171,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         self.wordNodes = wordNodes
         
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: self.presentationData.theme, height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         super.init()
         
@@ -207,6 +209,17 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
             self.scrollNode.view.contentInsetAdjustmentBehavior = .never
         }
         self.scrollNode.view.delegate = self
+        
+       
+        #if DEBUG
+        self.textNode.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.textLongPressGesture(_:))))
+        #endif
+    }
+    
+    @objc func textLongPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if case .began = recognizer.state {
+            UIPasteboard.general.string = self.wordList.joined(separator: "\n")
+        }
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

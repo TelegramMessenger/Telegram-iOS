@@ -66,8 +66,7 @@ class ExtClient {
           auto f = r_error.move_as_ok();
           return td::Status::Error(f->code_, f->message_);
         }
-        auto res = ton::fetch_result<QueryT>(std::move(data));
-        return std::move(res);
+        return ton::fetch_result<QueryT>(std::move(data));
       }());
     });
   }

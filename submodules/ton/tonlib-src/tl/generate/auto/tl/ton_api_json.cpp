@@ -784,6 +784,7 @@ Result<int32> tl_constructor_from_string(ton_api::Function *object, const std::s
     {"tonNode.downloadBlockProof", 1272334218},
     {"tonNode.downloadBlockProofLink", 632488134},
     {"tonNode.downloadPersistentState", 2140791736},
+    {"tonNode.downloadPersistentStateSlice", -169220381},
     {"tonNode.downloadZeroState", -1379131814},
     {"tonNode.getNextBlockDescription", 341160179},
     {"tonNode.getNextKeyBlockIds", -219689029},
@@ -5396,6 +5397,33 @@ Status from_json(ton_api::tonNode_downloadPersistentState &to, JsonObject &from)
   }
   return Status::OK();
 }
+Status from_json(ton_api::tonNode_downloadPersistentStateSlice &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "block", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.block_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "masterchain_block", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.masterchain_block_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "offset", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.offset_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "max_size", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.max_size_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::tonNode_downloadZeroState &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "block", JsonValue::Type::Null, true));
@@ -7650,6 +7678,18 @@ void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadPersistentState 
   if (object.masterchain_block_) {
     jo << ctie("masterchain_block", ToJson(object.masterchain_block_));
   }
+}
+void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadPersistentStateSlice &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "tonNode.downloadPersistentStateSlice");
+  if (object.block_) {
+    jo << ctie("block", ToJson(object.block_));
+  }
+  if (object.masterchain_block_) {
+    jo << ctie("masterchain_block", ToJson(object.masterchain_block_));
+  }
+  jo << ctie("offset", ToJson(JsonInt64{object.offset_}));
+  jo << ctie("max_size", ToJson(JsonInt64{object.max_size_}));
 }
 void to_json(JsonValueScope &jv, const ton_api::tonNode_downloadZeroState &object) {
   auto jo = jv.enter_object();

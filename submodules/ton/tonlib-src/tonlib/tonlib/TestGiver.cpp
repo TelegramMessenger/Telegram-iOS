@@ -23,15 +23,13 @@
 
 namespace tonlib {
 const block::StdAddress& TestGiver::address() {
-  //static block::StdAddress res =
-  //block::StdAddress::parse("-1:8156775b79325e5d62e742d9b96c30b6515a5cd2f1f64c5da4b193c03f070e0d").move_as_ok();
   static block::StdAddress res =
-      block::StdAddress::parse("kf9cW6egIIUMvWKfGOWfopbU4zLTUzrsNAwm87SUXnE5UcEG").move_as_ok();
+      block::StdAddress::parse("kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny").move_as_ok();
   return res;
 }
 
 vm::CellHash TestGiver::get_init_code_hash() {
-  return vm::CellHash::from_slice(td::base64_decode("s7RouN9wfJ4Avx8h0uw6X3ZEJfN3MYOUmzrC8JXfMAw=").move_as_ok());
+  return vm::CellHash::from_slice(td::base64_decode("wDkZp0yR4xo+9+BnuAPfGVjBzK6FPzqdv2DwRq3z3KE=").move_as_ok());
 }
 
 td::Ref<vm::Cell> TestGiver::make_a_gift_message(td::uint32 seqno, td::uint64 gramms,

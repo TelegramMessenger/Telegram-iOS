@@ -66,9 +66,10 @@ Masterchain over
 
 // SmartContract #2 (Simple money giver for test network)
 <{ SETCP0 DUP IFNOTRET // return if recv_internal
-   DUP 85143 INT EQUAL IFJMP:<{ // "seqno" get-method
+   DUP 85143 INT EQUAL IFJMP:<{    // "seqno" get-method
      DROP c4 PUSHCTR CTOS 32 PLDU  // cnt
    }>
+   INC 32 THROWIF    // fail unless recv_external
    32 LDU SWAP                         // cs cnt
    c4 PUSHCTR CTOS 32 LDU ENDS         // cs cnt cnt'
    TUCK EQUAL 33 THROWIFNOT            // ( seqno mismatch? )

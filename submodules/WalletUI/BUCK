@@ -18,6 +18,8 @@ static_library(
 	"//submodules/AccountContext:AccountContext",
 	"//submodules/UndoUI:UndoUI",
 	"//submodules/AlertUI:AlertUI",
+	"//submodules/MergeLists:MergeLists",
+	"//submodules/ItemListUI:ItemListUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

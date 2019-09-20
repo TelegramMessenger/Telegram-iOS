@@ -366,6 +366,16 @@ struct Ed25519_PublicKey {
   bool operator==(const Ed25519_PublicKey& other) const {
     return _pubkey == other._pubkey;
   }
+  bool clear() {
+    _pubkey.set_zero();
+    return true;
+  }
+  bool is_zero() const {
+    return _pubkey.is_zero();
+  }
+  bool non_zero() const {
+    return !is_zero();
+  }
 };
 
 // represents (the contents of) a block

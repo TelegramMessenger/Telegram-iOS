@@ -8229,6 +8229,37 @@ class tonNode_downloadPersistentState final : public Function {
   static ReturnType fetch_result(td::TlParser &p);
 };
 
+class tonNode_downloadPersistentStateSlice final : public Function {
+ public:
+  object_ptr<tonNode_blockIdExt> block_;
+  object_ptr<tonNode_blockIdExt> masterchain_block_;
+  std::int64_t offset_;
+  std::int64_t max_size_;
+
+  tonNode_downloadPersistentStateSlice();
+
+  tonNode_downloadPersistentStateSlice(object_ptr<tonNode_blockIdExt> &&block_, object_ptr<tonNode_blockIdExt> &&masterchain_block_, std::int64_t offset_, std::int64_t max_size_);
+
+  static const std::int32_t ID = -169220381;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_data>;
+
+  static object_ptr<tonNode_downloadPersistentStateSlice> fetch(td::TlParser &p);
+
+  explicit tonNode_downloadPersistentStateSlice(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
 class tonNode_downloadZeroState final : public Function {
  public:
   object_ptr<tonNode_blockIdExt> block_;

@@ -6,13 +6,30 @@ import TelegramPresentationData
 
 private let textFont: UIFont = Font.regular(16.0)
 
+public final class SolidRoundedButtonTheme {
+    public let backgroundColor: UIColor
+    public let foregroundColor: UIColor
+    
+    public init(backgroundColor: UIColor, foregroundColor: UIColor) {
+        self.backgroundColor = backgroundColor
+        self.foregroundColor = foregroundColor
+    }
+}
+
+public extension SolidRoundedButtonTheme {
+    convenience init(theme: PresentationTheme) {
+        self.init(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor)
+    }
+}
+
 public final class SolidRoundedButtonNode: ASDisplayNode {
-    private var theme: PresentationTheme
+    private var theme: SolidRoundedButtonTheme
     
     private let buttonBackgroundNode: ASImageNode
     private let buttonGlossNode: SolidRoundedButtonGlossNode
     private let buttonNode: HighlightTrackingButtonNode
     private let labelNode: ImmediateTextNode
+    private let iconNode: ASImageNode
     
     private let buttonHeight: CGFloat
     private let buttonCornerRadius: CGFloat
@@ -28,7 +45,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
-    public init(title: String? = nil, theme: PresentationTheme, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
+    public init(title: String? = nil, icon: UIImage? = nil, theme: SolidRoundedButtonTheme, height: CGFloat = 48.0, cornerRadius: CGFloat = 24.0, gloss: Bool = false) {
         self.theme = theme
         self.buttonHeight = height
         self.buttonCornerRadius = cornerRadius
@@ -38,14 +55,19 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         self.buttonBackgroundNode.isLayerBacked = true
         self.buttonBackgroundNode.displayWithoutProcessing = true
         self.buttonBackgroundNode.displaysAsynchronously = false
-        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.list.itemCheckColors.fillColor)
+        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: cornerRadius, color: theme.backgroundColor)
         
-        self.buttonGlossNode = SolidRoundedButtonGlossNode(color: theme.list.itemCheckColors.foregroundColor, cornerRadius: cornerRadius)
+        self.buttonGlossNode = SolidRoundedButtonGlossNode(color: theme.foregroundColor, cornerRadius: cornerRadius)
         
         self.buttonNode = HighlightTrackingButtonNode()
         
         self.labelNode = ImmediateTextNode()
         self.labelNode.isUserInteractionEnabled = false
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displayWithoutProcessing = true
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = icon
         
         super.init()
         
@@ -55,6 +77,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.labelNode)
+        self.addSubnode(self.iconNode)
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
@@ -70,15 +93,15 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
-    public func updateTheme(_ theme: PresentationTheme) {
+    public func updateTheme(_ theme: SolidRoundedButtonTheme) {
         guard theme !== self.theme else {
             return
         }
         self.theme = theme
         
-        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: self.buttonCornerRadius, color: theme.list.itemCheckColors.fillColor)
-        self.buttonGlossNode.color = theme.list.itemCheckColors.foregroundColor
-        self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(17.0), textColor: theme.list.itemCheckColors.foregroundColor)
+        self.buttonBackgroundNode.image = generateStretchableFilledCircleImage(radius: self.buttonCornerRadius, color: theme.backgroundColor)
+        self.buttonGlossNode.color = theme.foregroundColor
+        self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(17.0), textColor: theme.foregroundColor)
     }
     
     public func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
@@ -91,11 +114,25 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.labelNode.attributedText?.string {
-            self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.medium(17.0), textColor: self.theme.list.itemCheckColors.foregroundColor)
+            self.labelNode.attributedText = NSAttributedString(string: self.title ?? "", font: Font.semibold(17.0), textColor: self.theme.foregroundColor)
         }
         
+        let iconSize = self.iconNode.image?.size ?? CGSize()
         let labelSize = self.labelNode.updateLayout(buttonSize)
-        let labelFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + floor((buttonFrame.width - labelSize.width) / 2.0), y: buttonFrame.minY + floor((buttonFrame.height - labelSize.height) / 2.0)), size: labelSize)
+        
+        let iconSpacing: CGFloat = 8.0
+        
+        var contentWidth: CGFloat = labelSize.width
+        if !iconSize.width.isZero {
+            contentWidth += iconSize.width + iconSpacing
+        }
+        var nextContentOrigin = floor((buttonFrame.width - contentWidth) / 2.0)
+        transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: floor((buttonFrame.height - iconSize.height) / 2.0)), size: iconSize))
+        if !iconSize.width.isZero {
+            nextContentOrigin += iconSize.width + iconSpacing
+        }
+        
+        let labelFrame = CGRect(origin: CGPoint(x: buttonFrame.minX + nextContentOrigin, y: buttonFrame.minY + floor((buttonFrame.height - labelSize.height) / 2.0)), size: labelSize)
         transition.updateFrame(node: self.labelNode, frame: labelFrame)
         
         return buttonSize.height

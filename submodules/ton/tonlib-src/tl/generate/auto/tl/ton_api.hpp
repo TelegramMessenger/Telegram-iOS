@@ -928,6 +928,9 @@ bool downcast_call(Function &obj, const T &func) {
     case tonNode_downloadPersistentState::ID:
       func(static_cast<tonNode_downloadPersistentState &>(obj));
       return true;
+    case tonNode_downloadPersistentStateSlice::ID:
+      func(static_cast<tonNode_downloadPersistentStateSlice &>(obj));
+      return true;
     case tonNode_downloadZeroState::ID:
       func(static_cast<tonNode_downloadZeroState &>(obj));
       return true;

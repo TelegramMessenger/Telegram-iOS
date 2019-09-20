@@ -1580,39 +1580,6 @@ void interpret_pfx_dict_get(vm::Stack& stack) {
   }
 }
 
-void interpret_bytes_hex_literal(IntCtx& ctx) {
-  auto s = ctx.scan_word_to('}');
-  std::string t;
-  t.reserve(s.size() >> 1);
-  int v = 1;
-  for (char c : s) {
-    if (c == ' ' || c == '\t') {
-      continue;
-    }
-    v <<= 4;
-    if (c >= '0' && c <= '9') {
-      v += c - '0';
-    } else {
-      c |= 0x20;
-      if (c >= 'a' && c <= 'f') {
-        v += c - ('a' - 10);
-      } else {
-        v = -1;
-        break;
-      }
-    }
-    if (v & 0x100) {
-      t.push_back((char)v);
-      v = 1;
-    }
-  }
-  if (v != 1) {
-    throw IntError{"Invalid bytes hexstring constant"};
-  }
-  ctx.stack.push_bytes(std::move(t));
-  push_argcount(ctx.stack, 1);
-}
-
 void interpret_bitstring_hex_literal(IntCtx& ctx) {
   auto s = ctx.scan_word_to('}');
   unsigned char buff[128];
@@ -2601,7 +2568,6 @@ void init_words_common(Dictionary& d) {
   d.def_ctx_word("dictmerge ", interpret_dict_merge);
   d.def_ctx_word("dictdiff ", interpret_dict_diff);
   // slice/bitstring constants
-  d.def_active_word("B{", interpret_bytes_hex_literal);
   d.def_active_word("x{", interpret_bitstring_hex_literal);
   d.def_active_word("b{", interpret_bitstring_binary_literal);
   // boxes/holes/variables

@@ -1,13 +1,11 @@
 {
-  "@type": "config.global",
   "liteservers": [
     {
-      "@type": "liteserver.config.global",
-      "ip": -1304504083,
+      "ip": 1137658550,
       "port": 4924,
       "id": {
         "@type": "pub.ed25519",
-        "key": "keoMMlpiIJPaY4SeXQlie8cOL6XNo81zJqrqbyVrPAQ="
+        "key": "peJTw/arlRfssgTuf9BMypJzqOi7SXEqSPSWiEw2U1M="
       }
     }
   ],
@@ -17,8 +15,8 @@
       "workchain": -1,
       "shard": -9223372036854775808,
       "seqno": 0,
-      "root_hash": "XV54jYRsGWJ301YvzibvM4ygmDrxxn4LwcyMa/0NOQ0=",
-      "file_hash": "9nhKiv4g5fmliP9HayeebodXxjLw+J5sYDWblE75p9U="
+      "root_hash": "VCSXxDHhTALFxReyTZRd8E4Ya3ySOmpOWAS4rBX9XBY=",
+      "file_hash": "eh9yveSz1qMdJ7mOsO+I+H77jkLr9NpAuEkoJuseXBo="
     }
   }
 }

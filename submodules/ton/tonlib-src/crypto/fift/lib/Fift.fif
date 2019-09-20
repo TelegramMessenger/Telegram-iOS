@@ -9,6 +9,7 @@
 // { bl word (forget) } : forget
 { bl word 1 ' (forget) } :: [forget]
 { char " word 1 ' type } ::_ ."
+{ char } word x>B 1 'nop } ::_ B{
 { swap ({) over 2+ -roll swap (compile) (}) } : does
 { 1 'nop does create } : constant
 { 2 'nop does create } : 2constant

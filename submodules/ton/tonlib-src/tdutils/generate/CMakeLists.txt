@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.0.2 FATAL_ERROR)
 # Generates files for MIME type <-> extension conversions
 # DEPENDS ON: gperf grep bash/powershell
 
+if (NOT TDUTILS_MIME_TYPE)
+  return()
+endif()
+
 file(MAKE_DIRECTORY auto)
 
 set(TDMIME_SOURCE

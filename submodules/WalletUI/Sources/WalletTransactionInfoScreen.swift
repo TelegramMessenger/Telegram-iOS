@@ -1,0 +1,310 @@
+import Foundation
+import UIKit
+import AppBundle
+import AccountContext
+import TelegramPresentationData
+import AsyncDisplayKit
+import Display
+import Postbox
+import TelegramCore
+import SolidRoundedButtonNode
+import AnimationUI
+import SwiftSignalKit
+import OverlayStatusController
+import ItemListUI
+
+private final class WalletTransactionInfoControllerArguments {
+    let copyWalletAddress: () -> Void
+    let sendGrams: () -> Void
+    
+    init(copyWalletAddress: @escaping () -> Void, sendGrams: @escaping () -> Void) {
+        self.copyWalletAddress = copyWalletAddress
+        self.sendGrams = sendGrams
+    }
+}
+
+private enum WalletTransactionInfoSection: Int32 {
+    case amount
+    case info
+}
+
+private enum WalletTransactionInfoEntry: ItemListNodeEntry {
+    case amount(PresentationTheme, WalletTransaction)
+    case infoHeader(PresentationTheme, String)
+    case infoAddress(PresentationTheme, String)
+    case infoCopyAddress(PresentationTheme, String)
+    case infoSendGrams(PresentationTheme, String)
+    
+    var section: ItemListSectionId {
+        switch self {
+        case .amount:
+            return WalletTransactionInfoSection.amount.rawValue
+        case .infoHeader, .infoAddress, .infoCopyAddress, .infoSendGrams:
+            return WalletTransactionInfoSection.info.rawValue
+        }
+    }
+    
+    var stableId: Int32 {
+        switch self {
+        case .amount:
+            return 0
+        case .infoHeader:
+            return 1
+        case .infoAddress:
+            return 2
+        case .infoCopyAddress:
+            return 3
+        case .infoSendGrams:
+            return 4
+        }
+    }
+    
+    static func <(lhs: WalletTransactionInfoEntry, rhs: WalletTransactionInfoEntry) -> Bool {
+        return lhs.stableId < rhs.stableId
+    }
+    
+    func item(_ arguments: WalletTransactionInfoControllerArguments) -> ListViewItem {
+        switch self {
+        case let .amount(theme, walletTransaction):
+            return WalletTransactionHeaderItem(theme: theme, walletTransaction: walletTransaction, sectionId: self.section)
+        case let .infoHeader(theme, text):
+            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+        case let .infoAddress(theme, text):
+            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
+        case let .infoCopyAddress(theme, text):
+            return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.copyWalletAddress()
+            })
+        case let .infoSendGrams(theme, text):
+            return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                arguments.sendGrams()
+            })
+        }
+    }
+}
+
+private struct WalletTransactionInfoControllerState: Equatable {
+}
+
+private func extractAddress(_ walletTransaction: WalletTransaction) -> String {
+    let transferredValue = walletTransaction.transferredValue
+    var text = ""
+    if transferredValue <= 0 {
+        if walletTransaction.outMessages.isEmpty {
+            text = "No Address"
+        } else {
+            for message in walletTransaction.outMessages {
+                if !text.isEmpty {
+                    text.append("\n\n")
+                }
+                text.append(message.destination)
+            }
+        }
+    } else {
+        if let inMessage = walletTransaction.inMessage {
+            text = inMessage.source
+        } else {
+            text = "<unknown>"
+        }
+    }
+    return text
+}
+
+private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState) -> [WalletTransactionInfoEntry] {
+    var entries: [WalletTransactionInfoEntry] = []
+    
+    entries.append(.amount(presentationData.theme, walletTransaction))
+    
+    let transferredValue = walletTransaction.transferredValue
+    let text = extractAddress(walletTransaction)
+    
+    if transferredValue <= 0 {
+        entries.append(.infoHeader(presentationData.theme, "RECIPIENT"))
+    } else {
+        entries.append(.infoHeader(presentationData.theme, "SENDER"))
+    }
+    entries.append(.infoAddress(presentationData.theme, text))
+    entries.append(.infoCopyAddress(presentationData.theme, "Copy Address"))
+    entries.append(.infoSendGrams(presentationData.theme, "Send Grams"))
+    
+    return entries
+}
+
+func walletTransactionInfoController(context: AccountContext, walletTransaction: WalletTransaction) -> ViewController {
+    let statePromise = ValuePromise(WalletTransactionInfoControllerState(), ignoreRepeated: true)
+    let stateValue = Atomic(value: WalletTransactionInfoControllerState())
+    let updateState: ((WalletTransactionInfoControllerState) -> WalletTransactionInfoControllerState) -> Void = { f in
+        statePromise.set(stateValue.modify { f($0) })
+    }
+    
+    var dismissImpl: (() -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    
+    let arguments = WalletTransactionInfoControllerArguments(copyWalletAddress: {
+        let address = extractAddress(walletTransaction)
+        UIPasteboard.general.string = address
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+    }, sendGrams: {
+    })
+    
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<WalletTransactionInfoEntry>, WalletTransactionInfoEntry.ItemGenerationArguments)) in
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Transaction"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(entries: walletTransactionInfoControllerEntries(presentationData: presentationData, walletTransaction: walletTransaction, state: state), style: .blocks, animateChanges: false)
+        
+        return (controllerState, (listState, arguments))
+    }
+    |> afterDisposed {
+    }
+    
+    let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
+    controller.enableInteractiveDismiss = true
+    dismissImpl = { [weak controller] in
+        controller?.view.endEditing(true)
+        controller?.dismiss()
+    }
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
+    }
+    
+    return controller
+}
+
+class WalletTransactionHeaderItem: ListViewItem, ItemListItem {
+    let theme: PresentationTheme
+    let walletTransaction: WalletTransaction
+    let sectionId: ItemListSectionId
+    let isAlwaysPlain: Bool = true
+    
+    init(theme: PresentationTheme, walletTransaction: WalletTransaction, sectionId: ItemListSectionId) {
+        self.theme = theme
+        self.walletTransaction = walletTransaction
+        self.sectionId = sectionId
+    }
+    
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+        async {
+            let node = WalletTransactionHeaderItemNode()
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+            
+            node.contentSize = layout.contentSize
+            node.insets = layout.insets
+            
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { _ in apply() })
+                })
+            }
+        }
+    }
+    
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+        Queue.mainQueue().async {
+            guard let nodeValue = node() as? WalletTransactionHeaderItemNode else {
+                assertionFailure()
+                return
+            }
+            
+            let makeLayout = nodeValue.asyncLayout()
+            
+            async {
+                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
+                Queue.mainQueue().async {
+                    completion(layout, { _ in
+                        apply()
+                    })
+                }
+            }
+        }
+    }
+}
+
+private let titleFont = Font.regular(14.0)
+private let titleBoldFont = Font.semibold(14.0)
+
+private class WalletTransactionHeaderItemNode: ListViewItemNode {
+    private let titleNode: TextNode
+    private let iconNode: ASImageNode
+    private let activateArea: AccessibilityAreaNode
+    
+    private var item: WalletTransactionHeaderItem?
+    
+    init() {
+        self.titleNode = TextNode()
+        self.titleNode.isUserInteractionEnabled = false
+        self.titleNode.contentMode = .left
+        self.titleNode.contentsScale = UIScreen.main.scale
+        
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        self.iconNode.image = UIImage(bundleImageName: "Wallet/BalanceGem")?.precomposed()
+        
+        self.activateArea = AccessibilityAreaNode()
+        self.activateArea.accessibilityTraits = .staticText
+        
+        super.init(layerBacked: false, dynamicBounce: false)
+        
+        self.addSubnode(self.titleNode)
+        self.addSubnode(self.iconNode)
+        self.addSubnode(self.activateArea)
+    }
+    
+    func asyncLayout() -> (_ item: WalletTransactionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let iconSize = self.iconNode.image?.size ?? CGSize(width: 10.0, height: 10.0)
+        
+        return { item, params, neighbors in
+            let leftInset: CGFloat = 15.0 + params.leftInset
+            let verticalInset: CGFloat = 24.0
+            
+            let title: String
+            let titleColor: UIColor
+            let transferredValue = item.walletTransaction.transferredValue
+            if transferredValue <= 0 {
+                title = "\(formatBalanceText(transferredValue))"
+                titleColor = item.theme.list.itemPrimaryTextColor
+            } else {
+                title = "+\(formatBalanceText(transferredValue))"
+                titleColor = item.theme.chatList.secretTitleColor
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.semibold(39.0), textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let contentSize: CGSize
+            
+            contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset + verticalInset)
+            let insets = itemListNeighborsGroupedInsets(neighbors)
+            
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            
+            return (layout, { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.item = item
+                    
+                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
+                    //strongSelf.activateArea.accessibilityLabel = attributedText.string
+                    
+                    let _ = titleApply()
+                    
+                    let iconSpacing: CGFloat = 8.0
+                    let contentWidth = titleLayout.size.width + iconSpacing + iconSize.width / 2.0
+                    let titleFrame = CGRect(origin: CGPoint(x: floor((params.width - contentWidth) / 2.0), y: verticalInset), size: titleLayout.size)
+                    strongSelf.titleNode.frame = titleFrame
+                    strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + iconSpacing, y: titleFrame.minY + floor((titleFrame.height - iconSize.height) / 2.0)), size: iconSize)
+                }
+            })
+        }
+    }
+    
+    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
+        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+    }
+    
+    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+    }
+}
+

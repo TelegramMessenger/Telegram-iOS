@@ -313,6 +313,7 @@ function(target_link_libraries_system target)
   endforeach(lib)
 endfunction(target_link_libraries_system)
 
+set(TDUTILS_MIME_TYPE OFF CACHE BOOL "Generate mime type conversion")
 add_subdirectory(tdutils)
 add_subdirectory(memprof)
 add_subdirectory(tdactor)
@@ -336,7 +337,10 @@ add_subdirectory(tonlib)
 
 
 if (NOT CMAKE_CROSSCOMPILING)
-  add_custom_target(prepare_cross_compiling DEPENDS tl_generate_common tdmime_auto tlb_generate_block)
+  if (TDUTILS_MIME_TYPE)
+    set(TDMIME_AUTO tdmime_auto)
+  endif()
+  add_custom_target(prepare_cross_compiling DEPENDS tl_generate_common tlb_generate_block ${TDMIME_AUTO})
 endif()
 
 #TESTS

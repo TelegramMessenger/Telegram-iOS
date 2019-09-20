@@ -326,10 +326,10 @@ if (WINGETOPT_FOUND)
   target_link_libraries_system(create-state wingetopt)
 endif()
 
-add_executable(test-block block/test-block.cpp)
-target_include_directories(test-block PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+add_executable(dump-block block/dump-block.cpp)
+target_include_directories(dump-block PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>)
-target_link_libraries(test-block PUBLIC ton_crypto fift-lib ton_block)
+target_link_libraries(dump-block PUBLIC ton_crypto fift-lib ton_block)
 if (WINGETOPT_FOUND)
-  target_link_libraries_system(test-block wingetopt)
+  target_link_libraries_system(dump-block wingetopt)
 endif()

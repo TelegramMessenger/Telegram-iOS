@@ -247,7 +247,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         
         self.secondaryActionButtonNode = HighlightTrackingButtonNode()
         
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: self.presentationData.theme, height: 50.0, cornerRadius: 10.0, gloss: true)
+        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: true)
         
         super.init()
         

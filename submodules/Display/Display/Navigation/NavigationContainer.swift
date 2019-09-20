@@ -85,6 +85,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
+    var statusBarStyle: StatusBarStyle = .Ignore
+    var statusBarStyleUpdated: (() -> Void)?
+    
     init(controllerRemoved: @escaping (ViewController) -> Void) {
         self.controllerRemoved = controllerRemoved
         
@@ -286,6 +289,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         
         if let top = self.state.top {
             self.applyLayout(layout: layout, to: top, transition: transition)
+            self.statusBarStyle = top.value.statusBar.statusBarStyle
+        } else {
+            self.statusBarStyle = .Ignore
         }
         
         if self.state.transition == nil {

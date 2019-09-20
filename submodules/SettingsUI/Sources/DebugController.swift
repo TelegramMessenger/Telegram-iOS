@@ -15,6 +15,7 @@ import TelegramUIPreferences
 import ItemListUI
 import OverlayStatusController
 import AccountContext
+import WalletUI
 
 @objc private final class DebugControllerMailComposeDelegate: NSObject, MFMailComposeViewControllerDelegate {
     public func mailComposeController(_ controller: MFMailComposeViewController, didFinishWith result: MFMailComposeResult, error: Error?) {
@@ -66,7 +67,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetDatabase(PresentationTheme)
     case resetHoles(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
-    case deleteWallets(PresentationTheme)
+    case openDebugWallet(PresentationTheme)
+    case getGrams(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
@@ -83,7 +85,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .deleteWallets, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .openDebugWallet, .getGrams, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
             return DebugControllerSection.experiments.rawValue
         case .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -128,18 +130,20 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 16
         case .resetBiometricsData:
             return 17
-        case .deleteWallets:
+        case .openDebugWallet:
             return 18
-        case .optimizeDatabase:
+        case .getGrams:
             return 19
-        case .photoPreview:
+        case .optimizeDatabase:
             return 20
-        case .knockoutWallpaper:
+        case .photoPreview:
             return 21
-        case .gradientBubbles:
+        case .knockoutWallpaper:
             return 22
-        case .versionInfo:
+        case .gradientBubbles:
             return 23
+        case .versionInfo:
+            return 24
         }
     }
     
@@ -467,12 +471,44 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                 }).start()
             })
-        case let .deleteWallets(theme):
+        case let .openDebugWallet(theme):
             return ItemListActionItem(theme: theme, title: "Delete Wallets", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
                     return
                 }
-                let _ = debugDeleteWallets(postbox: context.account.postbox).start()
+                let _ = (availableWallets(postbox: context.account.postbox)
+                |> deliverOnMainQueue).start(next: { wallets in
+                    if let tonContext = context.tonContext {
+                        if !wallets.wallets.isEmpty {
+                            let _ = (testGiverWalletAddress(tonInstance: tonContext.instance)
+                            |> deliverOnMainQueue).start(next: { address in
+                                arguments.pushController(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: wallets.wallets[0], address: address))
+                            })
+                        }
+                    }
+                })
+            })
+        case let .getGrams(theme):
+            return ItemListActionItem(theme: theme, title: "Update Wallet", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
+                guard let context = arguments.context else {
+                    return
+                }
+                let _ = (availableWallets(postbox: context.account.postbox)
+                |> deliverOnMainQueue).start(next: { wallets in
+                    if let tonContext = context.tonContext {
+                        if !wallets.wallets.isEmpty {
+                            let _ = (walletAddress(publicKey: wallets.wallets[0].publicKey, tonInstance: tonContext.instance)
+                            |> deliverOnMainQueue).start(next: { address in
+                                let _ = (getGramsFromTestGiver(address: address, amount: 1500000000, tonInstance: tonContext.instance)
+                                |> deliverOnMainQueue).start(completed: {
+                                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
+                                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
+                                    arguments.presentController(controller, nil)
+                                })
+                            })
+                        }
+                    }
+                })
             })
         case let .optimizeDatabase(theme):
             return ItemListActionItem(theme: theme, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -556,7 +592,8 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
-    entries.append(.deleteWallets(presentationData.theme))
+    entries.append(.openDebugWallet(presentationData.theme))
+    entries.append(.getGrams(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))

@@ -72,7 +72,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         self.cancelButton = HighlightableButtonNode()
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
         
-        self.doneButton = SolidRoundedButtonNode(theme: self.presentationData.theme, height: 52.0, cornerRadius: 11.0, gloss: false)
+        self.doneButton = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 52.0, cornerRadius: 11.0, gloss: false)
         
         self.dateFormatter = DateFormatter()
         self.dateFormatter.timeStyle = .none
@@ -152,7 +152,7 @@ class ChatScheduleTimeControllerNode: ViewControllerTracingNode, UIScrollViewDel
         }
         
         self.cancelButton.setTitle(self.presentationData.strings.Common_Cancel, with: Font.regular(17.0), with: self.presentationData.theme.actionSheet.controlAccentColor, for: .normal)
-        self.doneButton.updateTheme(self.presentationData.theme)
+        self.doneButton.updateTheme(SolidRoundedButtonTheme(theme: self.presentationData.theme))
     }
     
     private func updateMinimumDate(currentTime: Int32? = nil) {

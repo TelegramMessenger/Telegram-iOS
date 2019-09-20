@@ -1,0 +1,50 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <workchain-id> [<filename-base>]" cr
+  ."Creates a new money giver in specified workchain, with address saved to <filename-base>.addr" cr
+  ."('new-testgiver.addr' by default)" cr 1 halt
+} : usage
+$# 1- -2 and ' usage if
+
+$1 parse-workchain-id =: wc    // set workchain id from command line argument
+def? $2 { @' $2 } { "new-testgiver" } cond constant file-base
+
+."Creating new money giver in workchain " wc . cr
+0 constant init_seqno
+
+// Create new simple money giver
+<{ SETCP0 DUP IFNOTRET // return if recv_internal
+   DUP 85143 INT EQUAL IFJMP:<{    // "seqno" get-method
+     DROP c4 PUSHCTR CTOS 32 PLDU  // cnt
+   }>
+   INC 32 THROWIF    // fail unless recv_external
+   32 LDU SWAP                  // cs cnt
+   c4 PUSHCTR CTOS 32 LDU ENDS  // cs cnt cnt'
+   TUCK EQUAL 33 THROWIFNOT     // ( seqno mismatch? )
+   ACCEPT                       // cs cnt'
+   SWAP DUP SREFS          // cnt' cs msg?
+   IF:<{
+     8 LDU LDREF -ROT             // cnt'' cs mode msg
+     GR$20 INT 3 INT RAWRESERVE   // reserve all but 20 Grams from the balance
+     SWAP SENDRAWMSG
+   }>
+   ENDS INC NEWC 32 STU ENDC c4 POPCTR      // store cnt''
+}>c
+// code
+<b init_seqno 32 u, b> // data
+null // no libraries
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hash wc swap 2dup 2constant wallet_addr
+."new money giver address = " 2dup .addr cr
+2dup file-base +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+// ???
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, init_seqno 32 u, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved money giver creating query to file " type .")" cr
