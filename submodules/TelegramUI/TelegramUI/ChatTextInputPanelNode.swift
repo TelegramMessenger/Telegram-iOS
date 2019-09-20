@@ -1604,7 +1604,12 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             }
             
             if isPNG && images.count == 1, let image = images.first, let cgImage = image.cgImage {
-                if imageHasTransparency(cgImage) {
+                let maxSide = max(image.size.width, image.size.height)
+                if maxSide.isZero {
+                    return false
+                }
+                let aspectRatio = min(image.size.width, image.size.height) / maxSide
+                if imageHasTransparency(cgImage), aspectRatio > 0.85 {
                     self.paste(.sticker(image))
                     return false
                 }
