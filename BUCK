@@ -397,6 +397,15 @@ apple_bundle(
 
 # Watch
 
+apple_resource(
+    name = "WatchAppStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/Localizable.strings",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
 apple_binary(
     name = "WatchAppExtensionBinary",
     srcs = glob([
@@ -425,6 +434,9 @@ apple_binary(
         "$SDKROOT/System/Library/Frameworks/UserNotifications.framework",
         "$SDKROOT/System/Library/Frameworks/CoreLocation.framework",
         "$SDKROOT/System/Library/Frameworks/CoreGraphics.framework",
+    ],
+    deps = [
+        ":WatchAppStringResources",
     ],
 )
 
@@ -457,15 +469,6 @@ apple_resource(
     files = [
         "Watch/App/Base.lproj/Interface.storyboard",
     ],
-    visibility = ["PUBLIC"],
-)
-
-apple_resource(
-    name = "WatchAppStringResources",
-    files = [],
-    variants = glob([
-        "Telegram-iOS/*.lproj/Localizable.strings",
-    ]),
     visibility = ["PUBLIC"],
 )
 

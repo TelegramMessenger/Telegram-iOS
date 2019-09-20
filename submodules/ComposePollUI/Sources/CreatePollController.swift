@@ -135,7 +135,7 @@ private enum CreatePollEntry: ItemListNodeEntry {
             case let .text(theme, placeholder, text, maxLength):
                 return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: maxLength, display: false), sectionId: self.section, style: .blocks, textUpdated: { value in
                     arguments.updatePollText(value)
-                }, tag: CreatePollEntryTag.text, action: {})
+                }, tag: CreatePollEntryTag.text)
             case let .optionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .option(theme, strings, id, _, placeholder, text, revealed, hasNext):

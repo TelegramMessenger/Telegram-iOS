@@ -202,7 +202,7 @@
 		</dict>
 		<dict>
 			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
+			<string>Viewer</string>
 			<key>CFBundleURLName</key>
 			<string>$(PRODUCT_BUNDLE_IDENTIFIER).compatibility</string>
 			<key>CFBundleURLSchemes</key>
@@ -215,10 +215,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>CFBundleURLName</key>
-			<string>$(PRODUCT_BUNDLE_IDENTIFIER).dropbox</string>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER).ton</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>db-pa9wtoz9l514anx</string>
+				<string>ton</string>
 			</array>
 		</dict>
 	</array>

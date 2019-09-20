@@ -5,6 +5,9 @@ static_library(
     srcs = glob([
         "Sources/**/*.swift",
     ]),
+    deps = [
+        "//submodules/TextFormat:TextFormat",
+    ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",

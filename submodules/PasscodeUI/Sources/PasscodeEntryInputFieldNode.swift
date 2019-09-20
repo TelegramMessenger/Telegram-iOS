@@ -128,7 +128,7 @@ private class PasscodeEntryDotNode: ASImageNode {
     }
 }
 
-final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
+public final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var background: PasscodeBackground?
     private var color: UIColor
     private var accentColor: UIColor
@@ -141,19 +141,19 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     
     private var validLayout: PasscodeLayout?
     
-    var complete: ((String) -> Void)?
+    public var complete: ((String) -> Void)?
     
-    var text: String {
+    public var text: String {
         return self.textFieldNode.textField.text ?? ""
     }
     
-    var keyboardAppearance: UIKeyboardAppearance {
+    public var keyboardAppearance: UIKeyboardAppearance {
         didSet {
             self.textFieldNode.textField.keyboardAppearance = self.keyboardAppearance
         }
     }
     
-    init(color: UIColor, accentColor: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
+    public init(color: UIColor, accentColor: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
         self.color = color
         self.accentColor = accentColor
         self.fieldType = fieldType
@@ -175,7 +175,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.borderNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.textFieldNode.textField.isSecureTextEntry = true
@@ -214,7 +214,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func activateInput() {
+    public func activateInput() {
         self.textFieldNode.textField.becomeFirstResponder()
     }
     
@@ -245,7 +245,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func reset(animated: Bool = true) {
+    public func reset(animated: Bool = true) {
         var delay: Double = 0.0
         for node in self.dotNodes.reversed() {
             if node.alpha < 1.0 {
@@ -297,7 +297,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func update(fieldType: PasscodeEntryFieldType) {
+    public func update(fieldType: PasscodeEntryFieldType) {
         if fieldType != self.fieldType {
             self.textFieldNode.textField.text = ""
         }
@@ -307,7 +307,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func updateLayout(layout: PasscodeLayout, transition: ContainedViewLayoutTransition) -> CGRect {
+    public func updateLayout(layout: PasscodeLayout, transition: ContainedViewLayoutTransition) -> CGRect {
         self.validLayout = layout
         
         let fieldAlpha: CGFloat
@@ -353,7 +353,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         return fieldFrame
     }
     
-    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+    public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         let currentText = textField.text ?? ""
         let text = (currentText as NSString).replacingCharacters(in: range, with: string)
         if let maxLength = self.fieldType.maxLength, text.count > maxLength {

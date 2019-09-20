@@ -135,7 +135,7 @@ public func updateInfoController(context: AccountContext, appUpdateInfo: AppUpda
     }
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
-        controller?.dismiss()
+        controller?.presentingViewController?.dismiss(animated: true, completion: nil)
     }
     return controller
 }

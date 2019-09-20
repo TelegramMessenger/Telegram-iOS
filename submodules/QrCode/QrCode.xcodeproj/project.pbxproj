@@ -157,16 +157,120 @@
 			<key>explicitFileType</key>
 			<string>text.script.python</string>
 		</dict>
-		<key>1DD70E29213163D300000000</key>
+		<key>1DD70E2905A53BC200000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXFileReference</string>
 			<key>name</key>
-			<string>QRCode.swift</string>
+			<string>BitBuffer.cpp</string>
 			<key>path</key>
-			<string>Sources/QRCode.swift</string>
+			<string>Sources/BitBuffer.cpp</string>
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.cpp.cpp</string>
+		</dict>
+		<key>1DD70E2905A54E8700000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>BitBuffer.hpp</string>
+			<key>path</key>
+			<string>Sources/BitBuffer.hpp</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.cpp.h</string>
+		</dict>
+		<key>1DD70E2921C2F78300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>QrCode.cpp</string>
+			<key>path</key>
+			<string>Sources/QrCode.cpp</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.cpp.cpp</string>
+		</dict>
+		<key>1DD70E2921C30A4800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>QrCode.hpp</string>
+			<key>path</key>
+			<string>Sources/QrCode.hpp</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.cpp.h</string>
+		</dict>
+		<key>1DD70E29BDC7BBF300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>QrCode.swift</string>
+			<key>path</key>
+			<string>Sources/QrCode.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
+		<key>1DD70E2956ECDFBD00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>QrCodeInstance.h</string>
+			<key>path</key>
+			<string>Sources/QrCodeInstance.h</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.c.h</string>
+		</dict>
+		<key>1DD70E2986AF18EB00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>QrCodeInstance.mm</string>
+			<key>path</key>
+			<string>Sources/QrCodeInstance.mm</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.cpp.objcpp</string>
+		</dict>
+		<key>1DD70E290F1C936700000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>QrSegment.cpp</string>
+			<key>path</key>
+			<string>Sources/QrSegment.cpp</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.cpp.cpp</string>
+		</dict>
+		<key>1DD70E290F1CA62C00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>QrSegment.hpp</string>
+			<key>path</key>
+			<string>Sources/QrSegment.hpp</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.cpp.h</string>
 		</dict>
 		<key>B401C979EAB5339800000000</key>
 		<dict>
@@ -178,7 +282,15 @@
 			<string><![CDATA[<group>]]></string>
 			<key>children</key>
 			<array>
-				<string>1DD70E29213163D300000000</string>
+				<string>1DD70E2905A53BC200000000</string>
+				<string>1DD70E2905A54E8700000000</string>
+				<string>1DD70E2921C2F78300000000</string>
+				<string>1DD70E2921C30A4800000000</string>
+				<string>1DD70E29BDC7BBF300000000</string>
+				<string>1DD70E2956ECDFBD00000000</string>
+				<string>1DD70E2986AF18EB00000000</string>
+				<string>1DD70E290F1C936700000000</string>
+				<string>1DD70E290F1CA62C00000000</string>
 			</array>
 		</dict>
 		<key>B401C979909F23CE00000000</key>
@@ -211,12 +323,40 @@
 				<string>B401C979909F23CE00000000</string>
 			</array>
 		</dict>
-		<key>E7A30F04213163D300000000</key>
+		<key>E7A30F0405A53BC200000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
-			<string>1DD70E29213163D300000000</string>
+			<string>1DD70E2905A53BC200000000</string>
+		</dict>
+		<key>E7A30F0421C2F78300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2921C2F78300000000</string>
+		</dict>
+		<key>E7A30F04BDC7BBF300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29BDC7BBF300000000</string>
+		</dict>
+		<key>E7A30F0486AF18EB00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2986AF18EB00000000</string>
+		</dict>
+		<key>E7A30F040F1C936700000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E290F1C936700000000</string>
 		</dict>
 		<key>1870857F0000000000000000</key>
 		<dict>
@@ -224,7 +364,11 @@
 			<string>PBXSourcesBuildPhase</string>
 			<key>files</key>
 			<array>
-				<string>E7A30F04213163D300000000</string>
+				<string>E7A30F0405A53BC200000000</string>
+				<string>E7A30F0421C2F78300000000</string>
+				<string>E7A30F04BDC7BBF300000000</string>
+				<string>E7A30F0486AF18EB00000000</string>
+				<string>E7A30F040F1C936700000000</string>
 			</array>
 		</dict>
 		<key>E7A30F04FF334B1F00000000</key>

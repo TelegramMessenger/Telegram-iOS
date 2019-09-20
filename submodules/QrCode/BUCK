@@ -4,10 +4,22 @@ static_library(
     name = "QrCode",
     srcs = glob([
         "Sources/**/*.swift",
-    ]),
+        "Sources/**/*.cpp",
+    ]) + [
+        "Sources/QrCodeInstance.mm"
+    ],
+    has_cpp = True,
     deps = [
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
     	"//submodules/Display:Display#shared",
+    ],
+    headers = glob([ 
+        "Sources/**/*.hpp",
+    ]) + [
+        "Sources/QrCodeInstance.h"
+    ],
+    exported_headers = [
+        "Sources/QrCodeInstance.h"
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

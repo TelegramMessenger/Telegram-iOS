@@ -11,12 +11,15 @@ import SolidRoundedButtonNode
 import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
+import ItemListUI
 
 public enum WalletSplashMode {
     case intro
     case created(WalletInfo, [String])
     case success(WalletInfo)
     case restoreFailed
+    case sending(WalletInfo, String, Int64, String)
+    case sent(WalletInfo, Int64)
 }
 
 public final class WalletSplashScreen: ViewController {
@@ -45,6 +48,33 @@ public final class WalletSplashScreen: ViewController {
         case .intro:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "Not Now", style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: "Import existing wallet", style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
+        case let .sending(walletInfo, address, amount, comment):
+            self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
+            let _ = (Signal<Never, NoError>.complete() |> delay(3.0, queue: Queue.mainQueue())).start(completed: { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    var controllers = navigationController.viewControllers
+                    controllers = controllers.filter { controller in
+                        if controller is WalletSplashScreen {
+                            return false
+                        }
+                        if controller is WalletSendScreen {
+                            return false
+                        }
+                        if controller is WalletInfoScreen {
+                            return false
+                        }
+                        return true
+                    }
+                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount)))
+                    strongSelf.view.endEditing(true)
+                    navigationController.setViewControllers(controllers, animated: true)
+                }
+            })
+        case .sent:
+            self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
         case .created, .success, .restoreFailed:
             break
         }
@@ -83,7 +113,7 @@ public final class WalletSplashScreen: ViewController {
                 })
             case let .created(walletInfo, wordList):
                 strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList))
-            case let .success(walletInfo):
+            case let .success(walletInfo), let .sent(walletInfo, _):
                 let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
                 |> deliverOnMainQueue).start(next: { address in
                     guard let strongSelf = self else {
@@ -127,6 +157,8 @@ public final class WalletSplashScreen: ViewController {
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 }
+            case .sending:
+                break
             }
         }, secondaryAction: { [weak self] in
             guard let strongSelf = self else {
@@ -182,7 +214,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         let buttonText: String
         let termsText: String
         let secondaryActionText: String
-        
+    
         switch mode {
         case .intro:
             title = "Gram Wallet"
@@ -220,6 +252,24 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
                 self.animationNode.visibility = true
             }
             secondaryActionText = "Enter 24 words"
+        case .sending:
+            title = "Sending Grams"
+            text = "Please wait a few seconds for your transaction to be processed..."
+            buttonText = ""
+            termsText = ""
+            self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/SendingIcon")
+            secondaryActionText = ""
+        case let .sent(_, amount):
+            title = "Done!"
+            text = "\(amount) Grams have been sent."
+            buttonText = "View My Wallet"
+            termsText = ""
+            self.iconNode.image = nil
+            if let path = getAppBundle().path(forResource: "celebrate", ofType: "tgs") {
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.visibility = true
+            }
+            secondaryActionText = ""
         }
         
         self.titleNode = ImmediateTextNode()
@@ -248,6 +298,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         self.secondaryActionButtonNode = HighlightTrackingButtonNode()
         
         self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: self.presentationData.theme, height: 50.0, cornerRadius: 10.0, gloss: true)
+        self.buttonNode.isHidden = buttonText.isEmpty
         
         super.init()
         

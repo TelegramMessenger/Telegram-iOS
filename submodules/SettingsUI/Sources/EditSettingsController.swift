@@ -201,8 +201,7 @@ private enum SettingsEntry: ItemListNodeEntry {
             case let .bioText(theme, currentText, placeholder):
                 return ItemListMultilineInputItem(theme: theme, text: currentText, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 70, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateBioText(currentText, updatedText)
-                }, tag: EditSettingsEntryTag.bio, action: {
-                })
+                }, tag: EditSettingsEntryTag.bio)
             case let .bioInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
             case let .phoneNumber(theme, text, number):

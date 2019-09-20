@@ -36,6 +36,8 @@ public final class WalletInfoScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Receive", style: .plain, target: self, action: #selector(receivePressed))
+        
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
     }
     
@@ -45,6 +47,10 @@ public final class WalletInfoScreen: ViewController {
     
     @objc private func backPressed() {
         self.dismiss()
+    }
+    
+    @objc private func receivePressed() {
+        self.push(walletReceiveScreen(context: self.context, tonContext: self.tonContext, walletInfo: self.walletInfo, address: self.address))
     }
     
     override public func loadDisplayNode() {
@@ -57,7 +63,8 @@ public final class WalletInfoScreen: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, wordList: wordList))
+                strongSelf.push(walletSendScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo))
+                //strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, wordList: wordList))
             }, error: { _ in
                 guard let strongSelf = self else {
                     return
@@ -104,7 +111,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         
         let title: String = address
         let text: String = "..."
-        let buttonText: String = "Export"
+        let buttonText: String = "Send"
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false

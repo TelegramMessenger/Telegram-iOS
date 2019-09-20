@@ -271,6 +271,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E29C71C514500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>StringPadding.swift</string>
+			<key>path</key>
+			<string>Sources/StringPadding.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E294ED72F2C00000000</key>
 		<dict>
 			<key>isa</key>
@@ -307,6 +318,7 @@
 				<string>1DD70E29D54426E100000000</string>
 				<string>1DD70E294757B6A800000000</string>
 				<string>1DD70E29080E447400000000</string>
+				<string>1DD70E29C71C514500000000</string>
 				<string>1DD70E294ED72F2C00000000</string>
 				<string>1DD70E29E70765FD00000000</string>
 			</array>
@@ -369,6 +381,13 @@
 			<key>fileRef</key>
 			<string>1DD70E29080E447400000000</string>
 		</dict>
+		<key>E7A30F04C71C514500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29C71C514500000000</string>
+		</dict>
 		<key>E7A30F044ED72F2C00000000</key>
 		<dict>
 			<key>isa</key>
@@ -393,6 +412,7 @@
 				<string>E7A30F04D54426E100000000</string>
 				<string>E7A30F044757B6A800000000</string>
 				<string>E7A30F04080E447400000000</string>
+				<string>E7A30F04C71C514500000000</string>
 				<string>E7A30F044ED72F2C00000000</string>
 				<string>E7A30F04E70765FD00000000</string>
 			</array>

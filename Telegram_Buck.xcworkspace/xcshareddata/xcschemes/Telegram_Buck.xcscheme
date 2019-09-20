@@ -2226,6 +2226,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E77DEAF4500000000"
+               BuildableName = "libCamera.a"
+               BlueprintName = "Camera"
+               ReferencedContainer = "container:submodules/Camera/Camera.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04E172FA86D00000000"
                BuildableName = "libWalletUI.a"
                BlueprintName = "WalletUI"

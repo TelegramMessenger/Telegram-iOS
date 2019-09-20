@@ -36,10 +36,15 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.toolbarSeparatorNode = ASDisplayNode()
         self.toolbarSeparatorNode.backgroundColor = theme.rootController.navigationBar.separatorColor
         
-        let items = [
-            peer?.displayTitle ?? "",
-            strings.HashtagSearch_AllChats
-        ]
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        var items: [String] = []
+        if peer?.id == context.account.peerId {
+            items.append(presentationData.strings.Conversation_SavedMessages)
+        } else {
+            items.append(peer?.displayTitle ?? "")
+        }
+        items.append(strings.HashtagSearch_AllChats)
         self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
         
         if let peer = peer {

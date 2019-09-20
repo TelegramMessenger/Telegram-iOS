@@ -10,6 +10,7 @@ public enum ItemListSingleLineInputItemType: Equatable {
     case password
     case email
     case number
+    case decimal
     case username
 }
 
@@ -262,6 +263,11 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
                             } else {
                                 keyboardType = .numberPad
                             }
+                        case .decimal:
+                            secureEntry = false
+                            capitalizationType = .none
+                            autocorrectionType = .no
+                            keyboardType = .decimalPad
                         case .username:
                             secureEntry = false
                             capitalizationType = .none
@@ -393,8 +399,12 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     }
     
     @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        if let item = self.item, !item.shouldUpdateText(string) {
-            return false
+        if let item = self.item {
+            var newText = textField.text ?? ""
+            newText.replaceSubrange(newText.index(newText.startIndex, offsetBy: range.lowerBound) ..< newText.index(newText.startIndex, offsetBy: range.upperBound), with: string)
+            if !item.shouldUpdateText(newText) {
+                return false
+            }
         }
         
         if string.count > 1, let item = self.item, let processPaste = item.processPaste {

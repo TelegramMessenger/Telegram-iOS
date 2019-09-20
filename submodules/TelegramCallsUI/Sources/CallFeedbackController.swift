@@ -158,7 +158,7 @@ private enum CallFeedbackControllerEntry: ItemListNodeEntry {
         case let .comment(theme, text, placeholder):
             return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                 arguments.updateComment(updatedText)
-            }, action: {})
+            })
         case let .includeLogs(theme, title, value):
             return ItemListSwitchItem(theme: theme, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
                 arguments.toggleIncludeLogs(value)

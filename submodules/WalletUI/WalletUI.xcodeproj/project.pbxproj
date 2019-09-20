@@ -91,6 +91,32 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E291E16CC6C00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libActionSheetPeerItem.a</string>
+			<key>path</key>
+			<string>libActionSheetPeerItem.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29BF0846EE00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libActivityIndicator.a</string>
+			<key>path</key>
+			<string>libActivityIndicator.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E29F523B9DE00000000</key>
 		<dict>
 			<key>isa</key>
@@ -112,6 +138,84 @@
 			<string>libAnimationUI.a</string>
 			<key>path</key>
 			<string>libAnimationUI.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29A54A195300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libAvatarNode.a</string>
+			<key>path</key>
+			<string>libAvatarNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29BFBD457D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libCamera.a</string>
+			<key>path</key>
+			<string>libCamera.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E297AB043C800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libChatListSearchRecentPeersNode.a</string>
+			<key>path</key>
+			<string>libChatListSearchRecentPeersNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E2997B4D6D800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libCheckNode.a</string>
+			<key>path</key>
+			<string>libCheckNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E296C9831F100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libContextUI.a</string>
+			<key>path</key>
+			<string>libContextUI.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E292417E0B200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libDeviceAccess.a</string>
+			<key>path</key>
+			<string>libDeviceAccess.a</string>
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 			<key>explicitFileType</key>
@@ -143,6 +247,19 @@
 			<key>explicitFileType</key>
 			<string>compiled.mach-o.dylib</string>
 		</dict>
+		<key>1DD70E2971ED41B100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libHorizontalPeerItem.a</string>
+			<key>path</key>
+			<string>libHorizontalPeerItem.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E29D6F14E1000000000</key>
 		<dict>
 			<key>isa</key>
@@ -151,6 +268,45 @@
 			<string>libImageBlur.a</string>
 			<key>path</key>
 			<string>libImageBlur.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E295A26607D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libItemListUI.a</string>
+			<key>path</key>
+			<string>libItemListUI.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29AC43662400000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libListSectionHeaderNode.a</string>
+			<key>path</key>
+			<string>libListSectionHeaderNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29A889192100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libLocalAuth.a</string>
+			<key>path</key>
+			<string>libLocalAuth.a</string>
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 			<key>explicitFileType</key>
@@ -182,6 +338,19 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E29C37F741500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libMergeLists.a</string>
+			<key>path</key>
+			<string>libMergeLists.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E29BBAF750C00000000</key>
 		<dict>
 			<key>isa</key>
@@ -190,6 +359,45 @@
 			<string>libOverlayStatusController.a</string>
 			<key>path</key>
 			<string>libOverlayStatusController.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29D0DBC52A00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libPasscodeUI.a</string>
+			<key>path</key>
+			<string>libPasscodeUI.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29928D142900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libPeerOnlineMarkerNode.a</string>
+			<key>path</key>
+			<string>libPeerOnlineMarkerNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29D233F68C00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libPeerPresenceStatusManager.a</string>
+			<key>path</key>
+			<string>libPeerPresenceStatusManager.a</string>
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 			<key>explicitFileType</key>
@@ -221,6 +429,32 @@
 			<key>explicitFileType</key>
 			<string>compiled.mach-o.dylib</string>
 		</dict>
+		<key>1DD70E29CBE117ED00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libProgressNavigationButtonNode.a</string>
+			<key>path</key>
+			<string>libProgressNavigationButtonNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29AA32BBC600000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libQrCode.a</string>
+			<key>path</key>
+			<string>libQrCode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E293E4DE92B00000000</key>
 		<dict>
 			<key>isa</key>
@@ -229,6 +463,71 @@
 			<string>libRadialStatusNode.a</string>
 			<key>path</key>
 			<string>libRadialStatusNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29AD66967300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libReactionSelectionNode.a</string>
+			<key>path</key>
+			<string>libReactionSelectionNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E291D58331200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libSaveToCameraRoll.a</string>
+			<key>path</key>
+			<string>libSaveToCameraRoll.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E2957B5522500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libSegmentedControlNode.a</string>
+			<key>path</key>
+			<string>libSegmentedControlNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E29097DBE9200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libSelectablePeerNode.a</string>
+			<key>path</key>
+			<string>libSelectablePeerNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
+		<key>1DD70E2981AE180900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libShareController.a</string>
+			<key>path</key>
+			<string>libShareController.a</string>
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 			<key>explicitFileType</key>
@@ -272,6 +571,19 @@
 			<string>BUILT_PRODUCTS_DIR</string>
 			<key>explicitFileType</key>
 			<string>compiled.mach-o.dylib</string>
+		</dict>
+		<key>1DD70E2925BBFEEE00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libSwitchNode.a</string>
+			<key>path</key>
+			<string>libSwitchNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
 		</dict>
 		<key>1DD70E29F33FDAC300000000</key>
 		<dict>
@@ -364,6 +676,19 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E29F40A586F00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libTextSelectionNode.a</string>
+			<key>path</key>
+			<string>libTextSelectionNode.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>1DD70E29CD296A8300000000</key>
 		<dict>
 			<key>isa</key>
@@ -403,6 +728,19 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E29597BAFBB00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libUrlEscaping.a</string>
+			<key>path</key>
+			<string>libUrlEscaping.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>B401C97968022A5500000000</key>
 		<dict>
 			<key>isa</key>
@@ -414,20 +752,44 @@
 			<key>children</key>
 			<array>
 				<string>1DD70E299D2580DA00000000</string>
+				<string>1DD70E291E16CC6C00000000</string>
+				<string>1DD70E29BF0846EE00000000</string>
 				<string>1DD70E29F523B9DE00000000</string>
 				<string>1DD70E292420028600000000</string>
+				<string>1DD70E29A54A195300000000</string>
+				<string>1DD70E29BFBD457D00000000</string>
+				<string>1DD70E297AB043C800000000</string>
+				<string>1DD70E2997B4D6D800000000</string>
+				<string>1DD70E296C9831F100000000</string>
+				<string>1DD70E292417E0B200000000</string>
 				<string>1DD70E295915423000000000</string>
 				<string>1DD70E29FF334B1F00000000</string>
+				<string>1DD70E2971ED41B100000000</string>
 				<string>1DD70E29D6F14E1000000000</string>
+				<string>1DD70E295A26607D00000000</string>
+				<string>1DD70E29AC43662400000000</string>
+				<string>1DD70E29A889192100000000</string>
 				<string>1DD70E29CE34063500000000</string>
 				<string>1DD70E2936DE2CF900000000</string>
+				<string>1DD70E29C37F741500000000</string>
 				<string>1DD70E29BBAF750C00000000</string>
+				<string>1DD70E29D0DBC52A00000000</string>
+				<string>1DD70E29928D142900000000</string>
+				<string>1DD70E29D233F68C00000000</string>
 				<string>1DD70E290F1A3C6400000000</string>
 				<string>1DD70E29DB6520C800000000</string>
+				<string>1DD70E29CBE117ED00000000</string>
+				<string>1DD70E29AA32BBC600000000</string>
 				<string>1DD70E293E4DE92B00000000</string>
+				<string>1DD70E29AD66967300000000</string>
+				<string>1DD70E291D58331200000000</string>
+				<string>1DD70E2957B5522500000000</string>
+				<string>1DD70E29097DBE9200000000</string>
+				<string>1DD70E2981AE180900000000</string>
 				<string>1DD70E29524F478E00000000</string>
 				<string>1DD70E293594DCC000000000</string>
 				<string>1DD70E29D65BA68200000000</string>
+				<string>1DD70E2925BBFEEE00000000</string>
 				<string>1DD70E29F33FDAC300000000</string>
 				<string>1DD70E29119CDA0700000000</string>
 				<string>1DD70E2984A59C1D00000000</string>
@@ -435,9 +797,11 @@
 				<string>1DD70E292395015100000000</string>
 				<string>1DD70E29BA06E3A600000000</string>
 				<string>1DD70E29F0C15F9C00000000</string>
+				<string>1DD70E29F40A586F00000000</string>
 				<string>1DD70E29CD296A8300000000</string>
 				<string>1DD70E29AE67341000000000</string>
 				<string>1DD70E2951398CF200000000</string>
+				<string>1DD70E29597BAFBB00000000</string>
 			</array>
 		</dict>
 		<key>1DD70E29D097476500000000</key>
@@ -490,6 +854,61 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E29E336006800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletPasscodeScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletPasscodeScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
+		<key>1DD70E296D49CFFF00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletQrCodeItem.swift</string>
+			<key>path</key>
+			<string>Sources/WalletQrCodeItem.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
+		<key>1DD70E29DE28A96800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletQrScanScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletQrScanScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
+		<key>1DD70E2979DDEBBB00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletReceiveScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletReceiveScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
+		<key>1DD70E2948FA33F200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletSendScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletSendScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E2964068E1100000000</key>
 		<dict>
 			<key>isa</key>
@@ -534,6 +953,11 @@
 			<key>children</key>
 			<array>
 				<string>1DD70E29D2B1401800000000</string>
+				<string>1DD70E29E336006800000000</string>
+				<string>1DD70E296D49CFFF00000000</string>
+				<string>1DD70E29DE28A96800000000</string>
+				<string>1DD70E2979DDEBBB00000000</string>
+				<string>1DD70E2948FA33F200000000</string>
 				<string>1DD70E2964068E1100000000</string>
 				<string>1DD70E2936794EB600000000</string>
 				<string>1DD70E290678D03000000000</string>
@@ -576,6 +1000,41 @@
 			<key>fileRef</key>
 			<string>1DD70E29D2B1401800000000</string>
 		</dict>
+		<key>E7A30F04E336006800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29E336006800000000</string>
+		</dict>
+		<key>E7A30F046D49CFFF00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E296D49CFFF00000000</string>
+		</dict>
+		<key>E7A30F04DE28A96800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29DE28A96800000000</string>
+		</dict>
+		<key>E7A30F0479DDEBBB00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2979DDEBBB00000000</string>
+		</dict>
+		<key>E7A30F0448FA33F200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2948FA33F200000000</string>
+		</dict>
 		<key>E7A30F0464068E1100000000</key>
 		<dict>
 			<key>isa</key>
@@ -604,6 +1063,11 @@
 			<key>files</key>
 			<array>
 				<string>E7A30F04D2B1401800000000</string>
+				<string>E7A30F04E336006800000000</string>
+				<string>E7A30F046D49CFFF00000000</string>
+				<string>E7A30F04DE28A96800000000</string>
+				<string>E7A30F0479DDEBBB00000000</string>
+				<string>E7A30F0448FA33F200000000</string>
 				<string>E7A30F0464068E1100000000</string>
 				<string>E7A30F0436794EB600000000</string>
 				<string>E7A30F040678D03000000000</string>
@@ -728,19 +1192,12 @@
 			<key>fileRef</key>
 			<string>1DD70E29F523B9DE00000000</string>
 		</dict>
-		<key>E7A30F04BBAF750C00000000</key>
+		<key>E7A30F04BFBD457D00000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
-			<string>1DD70E29BBAF750C00000000</string>
-		</dict>
-		<key>E7A30F04524F478E00000000</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-			<key>fileRef</key>
-			<string>1DD70E29524F478E00000000</string>
+			<string>1DD70E29BFBD457D00000000</string>
 		</dict>
 		<key>E7A30F04D6F14E1000000000</key>
 		<dict>
@@ -770,12 +1227,201 @@
 			<key>fileRef</key>
 			<string>1DD70E292420028600000000</string>
 		</dict>
+		<key>E7A30F0497B4D6D800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2997B4D6D800000000</string>
+		</dict>
+		<key>E7A30F04C37F741500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29C37F741500000000</string>
+		</dict>
+		<key>E7A30F04BF0846EE00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29BF0846EE00000000</string>
+		</dict>
+		<key>E7A30F04CBE117ED00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29CBE117ED00000000</string>
+		</dict>
+		<key>E7A30F0457B5522500000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2957B5522500000000</string>
+		</dict>
+		<key>E7A30F0425BBFEEE00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2925BBFEEE00000000</string>
+		</dict>
+		<key>E7A30F045A26607D00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E295A26607D00000000</string>
+		</dict>
+		<key>E7A30F04BBAF750C00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29BBAF750C00000000</string>
+		</dict>
+		<key>E7A30F04A889192100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29A889192100000000</string>
+		</dict>
+		<key>E7A30F04D0DBC52A00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29D0DBC52A00000000</string>
+		</dict>
+		<key>E7A30F04AA32BBC600000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29AA32BBC600000000</string>
+		</dict>
+		<key>E7A30F04A54A195300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29A54A195300000000</string>
+		</dict>
+		<key>E7A30F041E16CC6C00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E291E16CC6C00000000</string>
+		</dict>
+		<key>E7A30F04AD66967300000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29AD66967300000000</string>
+		</dict>
+		<key>E7A30F04F40A586F00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29F40A586F00000000</string>
+		</dict>
+		<key>E7A30F046C9831F100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E296C9831F100000000</string>
+		</dict>
+		<key>E7A30F04928D142900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29928D142900000000</string>
+		</dict>
+		<key>E7A30F04097DBE9200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29097DBE9200000000</string>
+		</dict>
+		<key>E7A30F0471ED41B100000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2971ED41B100000000</string>
+		</dict>
+		<key>E7A30F04AC43662400000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29AC43662400000000</string>
+		</dict>
+		<key>E7A30F047AB043C800000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E297AB043C800000000</string>
+		</dict>
+		<key>E7A30F04D233F68C00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29D233F68C00000000</string>
+		</dict>
 		<key>E7A30F043E4DE92B00000000</key>
 		<dict>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
 			<string>1DD70E293E4DE92B00000000</string>
+		</dict>
+		<key>E7A30F042417E0B200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E292417E0B200000000</string>
+		</dict>
+		<key>E7A30F041D58331200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E291D58331200000000</string>
+		</dict>
+		<key>E7A30F04597BAFBB00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29597BAFBB00000000</string>
+		</dict>
+		<key>E7A30F0481AE180900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E2981AE180900000000</string>
+		</dict>
+		<key>E7A30F04524F478E00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29524F478E00000000</string>
 		</dict>
 		<key>E7A30F04AE67341000000000</key>
 		<dict>
@@ -807,13 +1453,39 @@
 				<string>E7A30F04BA06E3A600000000</string>
 				<string>E7A30F049D2580DA00000000</string>
 				<string>E7A30F04F523B9DE00000000</string>
-				<string>E7A30F04BBAF750C00000000</string>
-				<string>E7A30F04524F478E00000000</string>
+				<string>E7A30F04BFBD457D00000000</string>
 				<string>E7A30F04D6F14E1000000000</string>
 				<string>E7A30F04CD296A8300000000</string>
 				<string>E7A30F043594DCC000000000</string>
 				<string>E7A30F042420028600000000</string>
+				<string>E7A30F0497B4D6D800000000</string>
+				<string>E7A30F04C37F741500000000</string>
+				<string>E7A30F04BF0846EE00000000</string>
+				<string>E7A30F04CBE117ED00000000</string>
+				<string>E7A30F0457B5522500000000</string>
+				<string>E7A30F0425BBFEEE00000000</string>
+				<string>E7A30F045A26607D00000000</string>
+				<string>E7A30F04BBAF750C00000000</string>
+				<string>E7A30F04A889192100000000</string>
+				<string>E7A30F04D0DBC52A00000000</string>
+				<string>E7A30F04AA32BBC600000000</string>
+				<string>E7A30F04A54A195300000000</string>
+				<string>E7A30F041E16CC6C00000000</string>
+				<string>E7A30F04AD66967300000000</string>
+				<string>E7A30F04F40A586F00000000</string>
+				<string>E7A30F046C9831F100000000</string>
+				<string>E7A30F04928D142900000000</string>
+				<string>E7A30F04097DBE9200000000</string>
+				<string>E7A30F0471ED41B100000000</string>
+				<string>E7A30F04AC43662400000000</string>
+				<string>E7A30F047AB043C800000000</string>
+				<string>E7A30F04D233F68C00000000</string>
 				<string>E7A30F043E4DE92B00000000</string>
+				<string>E7A30F042417E0B200000000</string>
+				<string>E7A30F041D58331200000000</string>
+				<string>E7A30F04597BAFBB00000000</string>
+				<string>E7A30F0481AE180900000000</string>
+				<string>E7A30F04524F478E00000000</string>
 				<string>E7A30F04AE67341000000000</string>
 			</array>
 			<key>name</key>
