@@ -848,17 +848,20 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let interaction = ChatListNodeInteraction(activateSearch: {
         }, peerSelected: { [weak self] peer in
+            self?.view.endEditing(true)
             openPeer(peer, false)
             let _ = addRecentlySearchedPeer(postbox: context.account.postbox, peerId: peer.id).start()
             self?.listNode.clearHighlightAnimated(true)
         }, togglePeerSelected: { _ in
         }, messageSelected: { [weak self] peer, message, _ in
+            self?.view.endEditing(true)
             if let peer = message.peers[message.id.peerId] {
                 openMessage(peer, message.id)
             }
             self?.listNode.clearHighlightAnimated(true)
         }, groupSelected: { _ in 
         }, addContact: { [weak self] phoneNumber in
+            self?.view.endEditing(true)
             addContact?(phoneNumber)
             self?.listNode.clearHighlightAnimated(true)
         }, setPeerIdWithRevealedOptions: { [weak self] peerId, fromPeerId in

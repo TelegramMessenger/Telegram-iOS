@@ -28,9 +28,9 @@ func canEditMessage(context: AccountContext, limitsConfiguration: LimitsConfigur
     return canEditMessage(accountPeerId: context.account.peerId, limitsConfiguration: limitsConfiguration, message: message)
 }
 
-private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsConfiguration, message: Message) -> Bool {
+private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsConfiguration, message: Message, reschedule: Bool = false) -> Bool {
     var hasEditRights = false
-    var unlimitedInterval = false
+    var unlimitedInterval = reschedule
     
     if message.id.namespace == Namespaces.Message.ScheduledCloud {
         if let peer = message.peers[message.id.peerId], let channel = peer as? TelegramChannel {
@@ -67,12 +67,6 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
     
     var hasUneditableAttributes = false
     
-    if let peer = message.peers[message.id.peerId] as? TelegramChannel {
-        if !peer.hasPermission(.sendMessages) {
-            //hasUneditableAttributes = true
-        }
-    }
-    
     if hasEditRights {
         for attribute in message.attributes {
             if let _ = attribute as? InlineBotMessageAttribute {
@@ -105,7 +99,7 @@ private func canEditMessage(accountPeerId: PeerId, limitsConfiguration: LimitsCo
             }
         }
         
-        if !hasUneditableAttributes {
+        if !hasUneditableAttributes || reschedule {
             if canPerformEditingActions(limits: limitsConfiguration, accountPeerId: accountPeerId, message: message, unlimitedInterval: unlimitedInterval) {
                 return true
             }
@@ -768,7 +762,7 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                 }
                 if id.namespace == Namespaces.Message.ScheduledCloud {
                     optionsMap[id]!.insert(.sendScheduledNow)
-                    if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message) {
+                    if canEditMessage(accountPeerId: accountPeerId, limitsConfiguration: limitsConfiguration, message: message, reschedule: true) {
                         optionsMap[id]!.insert(.editScheduledTime)
                     }
                     if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel {

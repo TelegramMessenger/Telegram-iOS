@@ -14,6 +14,8 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
     return context.account.postbox.transaction { [weak contactsController] transaction -> [ContextMenuItem] in
         var items: [ContextMenuItem] = []
         
+        let peer = transaction.getPeer(peerId)
+        
         items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_SendMessage, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.contextMenu.primaryColor) }, action: { _, f in
             if let contactsController = contactsController, let navigationController = contactsController.navigationController as? NavigationController {
                 context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
@@ -21,82 +23,89 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
             f(.default)
         })))
         
-        items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_StartSecretChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-            let _ = (context.account.postbox.transaction { transaction -> PeerId? in
-                let filteredPeerIds = Array(transaction.getAssociatedPeerIds(peerId)).filter { $0.namespace == Namespaces.Peer.SecretChat }
-                var activeIndices: [ChatListIndex] = []
-                for associatedId in filteredPeerIds {
-                    if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
-                        switch state {
-                        case .active, .handshake:
-                            if let (_, index) = transaction.getPeerChatListIndex(associatedId) {
-                                activeIndices.append(index)
-                            }
-                        default:
-                            break
-                        }
-                    }
-                }
-                activeIndices.sort()
-                if let index = activeIndices.last {
-                    return index.messageIndex.id.peerId
-                } else {
-                    return nil
-                }
-            }
-            |> deliverOnMainQueue).start(next: { currentPeerId in
-                if let currentPeerId = currentPeerId {
-                    if let contactsController = contactsController, let navigationController = (contactsController.navigationController as? NavigationController) {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(currentPeerId)))
-                    }
-                } else {
-                    var createSignal = createSecretChat(account: context.account, peerId: peerId)
-                    var cancelImpl: (() -> Void)?
-                    let progressSignal = Signal<Never, NoError> { subscriber in
-                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
-                            cancelImpl?()
-                        }))
-                        contactsController?.present(controller, in: .window(.root))
-                        return ActionDisposable { [weak controller] in
-                            Queue.mainQueue().async() {
-                                controller?.dismiss()
+        var canStartSecretChat = true
+        if let user = peer as? TelegramUser, user.flags.contains(.isSupport) {
+            canStartSecretChat = false
+        }
+        
+        if canStartSecretChat {
+            items.append(.action(ContextMenuActionItem(text: strings.ContactList_Context_StartSecretChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                let _ = (context.account.postbox.transaction { transaction -> PeerId? in
+                    let filteredPeerIds = Array(transaction.getAssociatedPeerIds(peerId)).filter { $0.namespace == Namespaces.Peer.SecretChat }
+                    var activeIndices: [ChatListIndex] = []
+                    for associatedId in filteredPeerIds {
+                        if let state = (transaction.getPeer(associatedId) as? TelegramSecretChat)?.embeddedState {
+                            switch state {
+                            case .active, .handshake:
+                                if let (_, index) = transaction.getPeerChatListIndex(associatedId) {
+                                    activeIndices.append(index)
+                                }
+                            default:
+                                break
                             }
                         }
                     }
-                    |> runOn(Queue.mainQueue())
-                    |> delay(0.15, queue: Queue.mainQueue())
-                    let progressDisposable = progressSignal.start()
-                    
-                    createSignal = createSignal
-                    |> afterDisposed {
-                        Queue.mainQueue().async {
-                            progressDisposable.dispose()
-                        }
+                    activeIndices.sort()
+                    if let index = activeIndices.last {
+                        return index.messageIndex.id.peerId
+                    } else {
+                        return nil
                     }
-                    let createSecretChatDisposable = MetaDisposable()
-                    cancelImpl = {
-                        createSecretChatDisposable.set(nil)
-                    }
-                    
-                    createSecretChatDisposable.set((createSignal
-                    |> deliverOnMainQueue).start(next: { peerId in
-                        if let navigationController = (contactsController?.navigationController as? NavigationController) {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                }
+                |> deliverOnMainQueue).start(next: { currentPeerId in
+                    if let currentPeerId = currentPeerId {
+                        if let contactsController = contactsController, let navigationController = (contactsController.navigationController as? NavigationController) {
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(currentPeerId)))
                         }
-                    }, error: { _ in
-                        if let contactsController = contactsController {
+                    } else {
+                        var createSignal = createSecretChat(account: context.account, peerId: peerId)
+                        var cancelImpl: (() -> Void)?
+                        let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            contactsController.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                                cancelImpl?()
+                            }))
+                            contactsController?.present(controller, in: .window(.root))
+                            return ActionDisposable { [weak controller] in
+                                Queue.mainQueue().async() {
+                                    controller?.dismiss()
+                                }
+                            }
                         }
-                    }))
-                }
-            })
-            f(.default)
-        })))
+                        |> runOn(Queue.mainQueue())
+                        |> delay(0.15, queue: Queue.mainQueue())
+                        let progressDisposable = progressSignal.start()
+                        
+                        createSignal = createSignal
+                        |> afterDisposed {
+                            Queue.mainQueue().async {
+                                progressDisposable.dispose()
+                            }
+                        }
+                        let createSecretChatDisposable = MetaDisposable()
+                        cancelImpl = {
+                            createSecretChatDisposable.set(nil)
+                        }
+                        
+                        createSecretChatDisposable.set((createSignal
+                        |> deliverOnMainQueue).start(next: { peerId in
+                            if let navigationController = (contactsController?.navigationController as? NavigationController) {
+                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peerId)))
+                            }
+                        }, error: { _ in
+                            if let contactsController = contactsController {
+                                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                                contactsController.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                            }
+                        }))
+                    }
+                })
+                f(.default)
+            })))
+        }
         
         var canCall = true
-        if peerId.namespace == Namespaces.Peer.CloudUser, let cachedUserData = transaction.getPeerCachedData(peerId: peerId) as? CachedUserData, cachedUserData.callsPrivate {
+        if let user = peer as? TelegramUser, let cachedUserData = transaction.getPeerCachedData(peerId: peerId) as? CachedUserData, !user.flags.contains(.isSupport) && cachedUserData.callsPrivate {
             canCall = false
         }
         
