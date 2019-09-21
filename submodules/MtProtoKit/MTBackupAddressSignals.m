@@ -69,7 +69,7 @@ static NSData *base64_decode(NSString *str) {
     }
 }
 
-+ (MTSignal *)fetchBackupIpsResolveGoogle:(bool)isTesting phoneNumber:(NSString *)phoneNumber currentContext:(MTContext *)currentContext {
++ (MTSignal *)fetchBackupIpsResolveGoogle:(bool)isTesting phoneNumber:(NSString *)phoneNumber currentContext:(MTContext *)currentContext addressOverride:(NSString *)addressOverride {
     NSArray *hosts = @[
         @"google.com",
         @"www.google.com",
@@ -79,7 +79,11 @@ static NSData *base64_decode(NSString *str) {
     
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     for (NSString *host in hosts) {
-        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/resolve?name=%@&type=16", host, isTesting ? @"tapv3.stel.com" : @"apv3.stel.com"]] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
+        NSString *apvHost = @"apv3.stel.com";
+        if (addressOverride != nil) {
+            apvHost = addressOverride;
+        }
+        MTSignal *signal = [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://%@/resolve?name=%@&type=16", host, isTesting ? @"tapv3.stel.com" : apvHost]] headers:headers] mapToSignal:^MTSignal *(NSData *data) {
             NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([dict respondsToSelector:@selector(objectForKey:)]) {
                 NSArray *answer = dict[@"Answer"];
@@ -205,7 +209,7 @@ static NSData *base64_decode(NSString *str) {
 
 + (MTSignal * _Nonnull)fetchBackupIps:(bool)isTestingEnvironment currentContext:(MTContext * _Nonnull)currentContext additionalSource:(MTSignal * _Nullable)additionalSource phoneNumber:(NSString * _Nullable)phoneNumber {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
-    [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext]];
+    [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext addressOverride:currentContext.apiEnvironment.accessHostOverride]];
     if (additionalSource != nil) {
         [signals addObject:additionalSource];
     }

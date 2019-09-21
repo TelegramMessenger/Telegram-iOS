@@ -3,12 +3,23 @@
 #include <openssl/x509.h>
 #include <openssl/pkcs7.h>
 
+static NSString * _Nullable readName(X509_NAME *subject) {
+    BIO *subjectBio = BIO_new(BIO_s_mem());
+    X509_NAME_print_ex(subjectBio, subject, 0, XN_FLAG_RFC2253);
+    char *dataStart = NULL;
+    long nameLength = BIO_get_mem_data(subjectBio, &dataStart);
+    NSString *result = [[NSString alloc] initWithBytes:dataStart length:nameLength encoding:NSUTF8StringEncoding];
+    BIO_free(subjectBio);
+    return result;
+}
+
 @implementation MTPKCS
 
-- (instancetype)initWithName:(NSString *)name data:(NSData *)data {
+- (instancetype)initWithIssuerName:(NSString *)issuerName subjectName:(NSString *)subjectName data:(NSData *)data {
     self = [super init];
     if (self != nil) {
-        _name = name;
+        _issuerName = issuerName;
+        _subjectName = subjectName;
         _data = data;
     }
     return self;
@@ -51,10 +62,13 @@
         return nil;
     }
     
-    X509_NAME *name = X509_get_subject_name(cert);
-    EVP_PKEY *publicKey = X509_get_pubkey(cert);
+    X509_NAME *issuerName = X509_get_issuer_name(cert);
+    X509_NAME *subjectName = X509_get_subject_name(cert);
     
-    //result = [[MTPKCS alloc] initWithName:[NSString stringWithUTF8String:cert->name] data:[NSData dataWithBytes:cert->cert_info->key->public_key->data length:cert->cert_info->key->public_key->length]];
+    NSString *issuerNameString = readName(issuerName);
+    NSString *subjectNameString = readName(subjectName);
+    
+    result = [[MTPKCS alloc] initWithIssuerName:issuerNameString subjectName:subjectNameString data:[NSData data]];
     
     return result;
 }

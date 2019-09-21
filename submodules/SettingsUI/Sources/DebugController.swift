@@ -73,6 +73,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
     case gradientBubbles(PresentationTheme, Bool)
+    case hostInfo(PresentationTheme, String)
     case versionInfo(PresentationTheme)
     
     var section: ItemListSectionId {
@@ -87,7 +88,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.experiments.rawValue
         case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .openDebugWallet, .getGrams, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
             return DebugControllerSection.experiments.rawValue
-        case .versionInfo:
+        case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
         }
     }
@@ -142,8 +143,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 22
         case .gradientBubbles:
             return 23
-        case .versionInfo:
+        case .hostInfo:
             return 24
+        case .versionInfo:
+            return 25
         }
     }
     
@@ -556,6 +559,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .hostInfo(theme, string):
+            return ItemListTextItem(theme: theme, text: .plain(string), sectionId: self.section)
         case let .versionInfo(theme):
             let bundle = Bundle.main
             let bundleId = bundle.bundleIdentifier ?? ""
@@ -566,7 +571,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, hasLegacyAppData: Bool) -> [DebugControllerEntry] {
+private func debugControllerEntries(presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
     
     entries.append(.sendLogs(presentationData.theme))
@@ -599,6 +604,9 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))
     entries.append(.gradientBubbles(presentationData.theme, experimentalSettings.gradientBubbles))
 
+    if let backupHostOverride = networkSettings?.backupHostOverride {
+        entries.append(.hostInfo(presentationData.theme, "Host: \(backupHostOverride)"))
+    }
     entries.append(.versionInfo(presentationData.theme))
     
     return entries
@@ -627,35 +635,45 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         hasLegacyAppData = FileManager.default.fileExists(atPath: statusPath)
     }
     
-    let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])))
-        |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
-            let loggingSettings: LoggingSettings
-            if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {
-                loggingSettings = value
-            } else {
-                loggingSettings = LoggingSettings.defaultSettings
-            }
-            
-            let mediaInputSettings: MediaInputSettings
-            if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings] as? MediaInputSettings {
-                mediaInputSettings = value
-            } else {
-                mediaInputSettings = MediaInputSettings.defaultSettings
-            }
-            
-            let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
-            
-            var leftNavigationButton: ItemListNavigationButton?
-            if modal {
-                leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                    dismissImpl?()
-                })
-            }
-            
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-            let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
-            
-            return (controllerState, (listState, arguments))
+    let preferencesSignal: Signal<PreferencesView?, NoError>
+    if let context = context {
+        preferencesSignal = context.account.postbox.preferencesView(keys: [PreferencesKeys.networkSettings])
+        |> map(Optional.init)
+    } else {
+        preferencesSignal = .single(nil)
+    }
+    
+    let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])), preferencesSignal)
+    |> map { presentationData, sharedData, preferences -> (ItemListControllerState, (ItemListNodeState<DebugControllerEntry>, DebugControllerEntry.ItemGenerationArguments)) in
+        let loggingSettings: LoggingSettings
+        if let value = sharedData.entries[SharedDataKeys.loggingSettings] as? LoggingSettings {
+            loggingSettings = value
+        } else {
+            loggingSettings = LoggingSettings.defaultSettings
+        }
+        
+        let mediaInputSettings: MediaInputSettings
+        if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.mediaInputSettings] as? MediaInputSettings {
+            mediaInputSettings = value
+        } else {
+            mediaInputSettings = MediaInputSettings.defaultSettings
+        }
+        
+        let experimentalSettings: ExperimentalUISettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.experimentalUISettings] as? ExperimentalUISettings) ?? ExperimentalUISettings.defaultSettings
+        
+        let networkSettings: NetworkSettings? = preferences?.values[PreferencesKeys.networkSettings] as? NetworkSettings
+        
+        var leftNavigationButton: ItemListNavigationButton?
+        if modal {
+            leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+                dismissImpl?()
+            })
+        }
+        
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let listState = ItemListNodeState(entries: debugControllerEntries(presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
+        
+        return (controllerState, (listState, arguments))
     }
     
     

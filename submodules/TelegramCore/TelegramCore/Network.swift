@@ -437,6 +437,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             }
             
             apiEnvironment = apiEnvironment.withUpdatedNetworkSettings((networkSettings ?? NetworkSettings.defaultSettings).mtNetworkSettings)
+            apiEnvironment.accessHostOverride = networkSettings?.backupHostOverride
             
             var appDataUpdatedImpl: ((Data?) -> Void)?
             let syncValue = Atomic<Data?>(value: nil)
