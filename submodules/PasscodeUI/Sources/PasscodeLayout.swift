@@ -108,7 +108,7 @@ struct PasscodeKeyboardLayout {
     }
 }
 
-struct PasscodeLayout {
+public struct PasscodeLayout {
     let layout: ContainerViewLayout
     let keyboard: PasscodeKeyboardLayout
     let titleOffset: CGFloat
@@ -155,7 +155,7 @@ struct PasscodeLayout {
         }
     }
     
-    init(layout: ContainerViewLayout, titleOffset: CGFloat, subtitleOffset: CGFloat, inputFieldOffset: CGFloat) {
+    public init(layout: ContainerViewLayout, titleOffset: CGFloat, subtitleOffset: CGFloat, inputFieldOffset: CGFloat) {
         self.layout = layout
         self.keyboard = PasscodeKeyboardLayout(layout: layout)
         self.titleOffset = titleOffset

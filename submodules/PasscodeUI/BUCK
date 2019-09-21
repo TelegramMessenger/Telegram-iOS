@@ -19,6 +19,7 @@ static_library(
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/ImageBlur:ImageBlur",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

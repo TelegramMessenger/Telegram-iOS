@@ -355,8 +355,6 @@ private enum ChannelInfoEntry: ItemListNodeEntry {
             case let .channelDescriptionSetup(theme, placeholder, value):
                 return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .plain, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
-                }, action: {
-                    
                 })
             case let .admins(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .plain, action: {

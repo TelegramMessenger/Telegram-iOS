@@ -146,8 +146,6 @@ private enum CreateChannelEntry: ItemListNodeEntry {
             case let .descriptionSetup(theme, text, value):
                 return ItemListMultilineInputItem(theme: theme, text: value, placeholder: text, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
-                }, action: {
-                    
                 })
             case let .descriptionInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)

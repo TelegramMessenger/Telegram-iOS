@@ -21,19 +21,29 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let placeholder: String
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
-    let action: () -> Void
+    let capitalization: Bool
+    let autocorrection: Bool
+    let returnKeyType: UIReturnKeyType
+    let action: (() -> Void)?
     let textUpdated: (String) -> Void
+    let shouldUpdateText: (String) -> Bool
     public let tag: ItemListItemTag?
     let maxLength: ItemListMultilineInputItemTextLimit?
+    let minimalHeight: CGFloat?
     
-    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, textUpdated: @escaping (String) -> Void, tag: ItemListItemTag? = nil, action: @escaping () -> Void) {
+    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil) {
         self.theme = theme
         self.text = text
         self.placeholder = placeholder
         self.maxLength = maxLength
         self.sectionId = sectionId
         self.style = style
+        self.capitalization = capitalization
+        self.autocorrection = autocorrection
+        self.returnKeyType = returnKeyType
+        self.minimalHeight = minimalHeight
         self.textUpdated = textUpdated
+        self.shouldUpdateText = shouldUpdateText
         self.tag = tag
         self.action = action
     }
@@ -188,7 +198,12 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             let textTopInset: CGFloat = 11.0
             let textBottomInset: CGFloat = 11.0
             
-            let contentSize = CGSize(width: params.width, height: textLayout.size.height + textTopInset + textBottomInset)
+            var contentHeight: CGFloat = textLayout.size.height + textTopInset + textBottomInset
+            if let minimalHeight = item.minimalHeight {
+                contentHeight = max(minimalHeight, contentHeight)
+            }
+            
+            let contentSize = CGSize(width: params.width, height: contentHeight)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
@@ -210,6 +225,19 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                             strongSelf.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
                             strongSelf.textNode.tintColor = item.theme.list.itemAccentColor
                         }
+                    }
+                    
+                    let capitalizationType: UITextAutocapitalizationType = item.capitalization ? .sentences : .none
+                    let autocorrectionType: UITextAutocorrectionType = item.autocorrection ? .default : .no
+
+                    if strongSelf.textNode.textView.autocapitalizationType != capitalizationType {
+                        strongSelf.textNode.textView.autocapitalizationType = capitalizationType
+                    }
+                    if strongSelf.textNode.textView.autocorrectionType != autocorrectionType {
+                        strongSelf.textNode.textView.autocorrectionType = autocorrectionType
+                    }
+                    if strongSelf.textNode.textView.returnKeyType != item.returnKeyType {
+                        strongSelf.textNode.textView.returnKeyType = item.returnKeyType
                     }
                     
                     let _ = textApply()
@@ -297,6 +325,22 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         self.bottomStripeNode.frame = CGRect(origin: CGPoint(x: self.bottomStripeNode.frame.minX, y: contentSize.height), size: CGSize(width: self.bottomStripeNode.frame.size.width, height: separatorHeight))
         
         self.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: max(0.0, params.width - leftInset - params.rightInset), height: max(0.0, contentSize.height - textTopInset - textBottomInset)))
+    }
+    
+    public func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
+        if let item = self.item {
+            if let action = item.action, text == "\n" {
+                action()
+                return false
+            }
+            
+            var newText: String = editableTextNode.textView.text
+            newText.replaceSubrange(newText.index(newText.startIndex, offsetBy: range.lowerBound) ..< newText.index(newText.startIndex, offsetBy: range.upperBound), with: text)
+            if !item.shouldUpdateText(newText) {
+                return false
+            }
+        }
+        return true
     }
     
     public func editableTextNodeDidUpdateText(_ editableTextNode: ASEditableTextNode) {

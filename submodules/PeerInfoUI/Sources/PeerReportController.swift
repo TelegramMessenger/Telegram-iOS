@@ -254,7 +254,7 @@ private enum PeerReportControllerEntry: ItemListNodeEntry {
             case let .text(theme, title, value):
                 return ItemListMultilineInputItem(theme: theme, text: value, placeholder: title, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { text in
                     arguments.updateText(text)
-                }, tag: PeerReportControllerEntryTag.text, action: {})
+                }, tag: PeerReportControllerEntryTag.text)
         }
     }
 }

@@ -1278,34 +1278,56 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     }
     |> distinctUntilChanged
     
-    let accountTabBarAvatar: Signal<UIImage?, NoError> = accountsAndPeers.get()
-    |> map { primary, other -> (Account, Peer)? in
-        if let primary = primary, !other.isEmpty {
-            return (primary.0, primary.1)
+    let accountTabBarAvatar: Signal<(UIImage, UIImage)?, NoError> = combineLatest(accountsAndPeers.get(), updatedPresentationData)
+    |> map { primaryAndOther, presentationData -> (Account, Peer, PresentationTheme)? in
+        if let primary = primaryAndOther.0, !primaryAndOther.1.isEmpty {
+            return (primary.0, primary.1, presentationData.theme)
         } else {
             return nil
         }
     }
     |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && arePeersEqual($0?.1, $1?.1) })
-    |> mapToSignal { primary -> Signal<UIImage?, NoError> in
+    |> mapToSignal { primary -> Signal<(UIImage, UIImage)?, NoError> in
         if let primary = primary {
-            if let signal = peerAvatarImage(account: primary.0, peer: primary.1, authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: CGSize(width: 31.0, height: 31.0), inset: 3.0, emptyColor: nil, synchronousLoad: false) {
+            let size = CGSize(width: 31.0, height: 31.0)
+            let inset: CGFloat = 3.0
+            if let signal = peerAvatarImage(account: primary.0, peer: primary.1, authorOfMessage: nil, representation: primary.1.profileImageRepresentations.first, displayDimensions: size, inset: 3.0, emptyColor: nil, synchronousLoad: false) {
                 return signal
-                |> map { image -> UIImage? in
-                    return image.flatMap { image -> UIImage in
-                        return image.withRenderingMode(.alwaysOriginal)
+                |> map { image -> (UIImage, UIImage)? in
+                    if let image = image, let selectedImage = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+                        context.scaleBy(x: 1.0, y: -1.0)
+                        context.translateBy(x: -size.width / 2.0, y: -size.height / 2.0)
+                        context.draw(image.cgImage!, in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+                        context.setLineWidth(1.0)
+                        context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
+                        context.strokeEllipse(in: CGRect(x: 1.5, y: 1.5, width: 28.0, height: 28.0))
+                    }) {
+                        return (image.withRenderingMode(.alwaysOriginal), selectedImage.withRenderingMode(.alwaysOriginal))
+                    } else {
+                        return nil
                     }
                 }
             } else {
                 return Signal { subscriber in
-                    let size = CGSize(width: 31.0, height: 31.0)
-                    let inset: CGFloat = 3.0
                     let image = generateImage(size, rotatedContext: { size, context in
                         context.clear(CGRect(origin: CGPoint(), size: size))
                         context.translateBy(x: inset, y: inset)
                         drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, accountPeerId: primary.1.id, peerId: primary.1.id)
                     })?.withRenderingMode(.alwaysOriginal)
-                    subscriber.putNext(image)
+                    
+                    let selectedImage = generateImage(size, rotatedContext: { size, context in
+                        context.clear(CGRect(origin: CGPoint(), size: size))
+                        context.translateBy(x: inset, y: inset)
+                        drawPeerAvatarLetters(context: context, size: CGSize(width: size.width - inset * 2.0, height: size.height - inset * 2.0), font: avatarFont, letters: primary.1.displayLetters, accountPeerId: primary.1.id, peerId: primary.1.id)
+                        context.translateBy(x: -inset, y: -inset)
+                        context.setLineWidth(1.0)
+                        context.setStrokeColor(primary.2.rootController.tabBar.selectedIconColor.cgColor)
+                        context.strokeEllipse(in: CGRect(x: 1.0, y: 1.0, width: 27.0, height: 27.0))
+                    })?.withRenderingMode(.alwaysOriginal)
+                    
+                    subscriber.putNext(image.flatMap { ($0, $0) })
                     subscriber.putCompletion()
                     return EmptyDisposable
                 }
@@ -1316,7 +1338,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         }
     }
     |> distinctUntilChanged(isEqual: { lhs, rhs in
-        if lhs !== rhs {
+        if let lhs = lhs, let rhs = rhs {
+            if lhs.0 !== rhs.0 || lhs.1 !== rhs.1 {
+                return false
+            } else {
+                return true
+            }
+        } else if (lhs == nil) != (rhs == nil) {
             return false
         }
         return true
@@ -1329,7 +1357,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         if accountTabBarAvatarBadge > 0 {
             otherAccountsBadge = compactNumericCountString(Int(accountTabBarAvatarBadge), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
         }
-        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: accountTabBarAvatar ?? icon, selectedImage: accountTabBarAvatar ?? icon, tintImages: accountTabBarAvatar == nil, badgeValue: notificationsWarning ? "!" : otherAccountsBadge)
+        return ItemListControllerTabBarItem(title: presentationData.strings.Settings_Title, image: accountTabBarAvatar?.0 ?? icon, selectedImage: accountTabBarAvatar?.1 ?? icon, tintImages: accountTabBarAvatar == nil, badgeValue: notificationsWarning ? "!" : otherAccountsBadge)
     }
     
     let controller = SettingsControllerImpl(currentContext: context, contextValue: contextValue, state: signal, tabBarItem: tabBarItem, accountsAndPeers: accountsAndPeers.get())

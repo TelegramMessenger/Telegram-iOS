@@ -406,7 +406,7 @@ func chatTextLinkEditController(sharedContext: SharedAccountContext, account: Ac
             return
         }
         let updatedLink = explicitUrl(contentNode.link)
-        if !updatedLink.isEmpty && isValidUrl(updatedLink) {
+        if !updatedLink.isEmpty && isValidUrl(updatedLink, validSchemes: ["http": true, "https": true, "tg": false, "ton": false]) {
             dismissImpl?(true)
             apply(updatedLink)
         } else {

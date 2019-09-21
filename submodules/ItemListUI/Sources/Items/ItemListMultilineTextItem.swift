@@ -7,10 +7,16 @@ import TelegramPresentationData
 import TextFormat
 import AccountContext
 
+public enum ItemListMultilineTextBaseFont {
+    case `default`
+    case monospace
+}
+
 public class ItemListMultilineTextItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
     let enabledEntityTypes: EnabledEntityTypes
+    let font: ItemListMultilineTextBaseFont
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: (() -> Void)?
@@ -21,10 +27,11 @@ public class ItemListMultilineTextItem: ListViewItem, ItemListItem {
     
     public let selectable: Bool
     
-    public init(theme: PresentationTheme, text: String, enabledEntityTypes: EnabledEntityTypes, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    public init(theme: PresentationTheme, text: String, enabledEntityTypes: EnabledEntityTypes, font: ItemListMultilineTextBaseFont = .default, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.text = text
         self.enabledEntityTypes = enabledEntityTypes
+        self.font = font
         self.sectionId = sectionId
         self.style = style
         self.action = action
@@ -175,8 +182,21 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
                     leftInset = 16.0 + params.rightInset
             }
             
+            var baseFont = titleFont
+            var linkFont = titleFont
+            var boldFont = titleBoldFont
+            var italicFont = titleItalicFont
+            var boldItalicFont = titleBoldItalicFont
+            if case .monospace = item.font {
+                baseFont = Font.monospace(17.0)
+                linkFont = Font.monospace(17.0)
+                boldFont = Font.semiboldMonospace(17.0)
+                italicFont = Font.italicMonospace(17.0)
+                boldItalicFont = Font.semiboldItalicMonospace(17.0)
+            }
+            
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntityTypes)
-            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: titleFont, linkFont: titleFont, boldFont: titleBoldFont, italicFont: titleItalicFont, boldItalicFont: titleBoldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: titleFont)
+            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: titleFont)
             
             let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

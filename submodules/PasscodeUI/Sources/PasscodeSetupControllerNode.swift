@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramCore
 import TelegramPresentationData
+import PasscodeInputFieldNode
 
 enum PasscodeSetupInitialState {
     case createPasscode
@@ -36,7 +37,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
     
     private let titleNode: ASTextNode
     private let subtitleNode: ASTextNode
-    private let inputFieldNode: PasscodeEntryInputFieldNode
+    private let inputFieldNode: PasscodeInputFieldNode
     private let inputFieldBackgroundNode: ASImageNode
     private let modeButtonNode: HighlightableButtonNode
     
@@ -82,7 +83,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 passcodeType = .digits6
         }
         
-        self.inputFieldNode = PasscodeEntryInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, accentColor: self.presentationData.theme.list.itemAccentColor, fieldType: passcodeType, keyboardAppearance: self.presentationData.theme.rootController.keyboardColor.keyboardAppearance)
+        self.inputFieldNode = PasscodeInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, accentColor: self.presentationData.theme.list.itemAccentColor, fieldType: passcodeType, keyboardAppearance: self.presentationData.theme.rootController.keyboardColor.keyboardAppearance)
         self.inputFieldBackgroundNode = ASImageNode()
         self.inputFieldBackgroundNode.alpha = passcodeType == .alphanumeric ? 1.0 : 0.0
         self.inputFieldBackgroundNode.contentMode = .scaleToFill
@@ -145,8 +146,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         
         self.wrapperNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         
-        let passcodeLayout = PasscodeLayout(layout: layout, titleOffset: 0.0, subtitleOffset: 0.0, inputFieldOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 24.0) / 2.0))
-        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: passcodeLayout, transition: transition)
+        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: layout, topOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 24.0) / 2.0), transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         transition.updateFrame(node: self.inputFieldBackgroundNode, frame: CGRect(x: 0.0, y: inputFieldFrame.minY - 6.0, width: layout.size.width, height: 48.0))

@@ -185,11 +185,13 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
     
     func setup(context: AccountContext, theme: PresentationThemeReference, accentColor: UIColor?, currentTheme: PresentationTheme, title: NSAttributedString, bordered: Bool, selected: Bool, action: @escaping () -> Void, contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?) {
         let updatedTheme = self.currentTheme == nil || currentTheme !== self.currentTheme!
+        var contextActionEnabled = true
         if case let .cloud(theme) = theme, theme.theme.file == nil {
             if updatedTheme || accentColor != self.accentColor {
                 self.imageNode.setSignal(createThemeImage(theme: currentTheme))
                 self.currentTheme = currentTheme
                 self.accentColor = accentColor
+                contextActionEnabled = false
             }
         } else {
             if theme != self.theme || accentColor != self.accentColor {
@@ -207,7 +209,7 @@ private final class ThemeSettingsThemeItemIconNode : ASDisplayNode {
         self.textNode.attributedText = title
         self.action = action
         self.contextAction = contextAction
-        self.containerNode.isGestureEnabled = !selected
+        self.containerNode.isGestureEnabled = contextActionEnabled
     }
     
     override func didLoad() {

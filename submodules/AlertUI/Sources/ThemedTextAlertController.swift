@@ -17,14 +17,16 @@ public func textAlertController(context: AccountContext, title: String?, text: S
     return controller
 }
 
-public func richTextAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
+public func richTextAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, dismissAutomatically: Bool = true) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     
     var dismissImpl: (() -> Void)?
     let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions.map { action in
         return TextAlertAction(type: action.type, title: action.title, action: {
-            dismissImpl?()
+            if dismissAutomatically {
+                dismissImpl?()
+            }
             action.action()
         })
     }, actionLayout: actionLayout))

@@ -473,12 +473,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             let themeController = ThemePreviewController(context: context, previewTheme: theme, source: .settings(reference))
             var items: [ContextMenuItem] = []
             
-            items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_Apply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
-                c.dismiss(completion: {
-                    updateThemeImpl?(reference)
-                })
-            })))
-            
+            if !isCurrent {
+                items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_Apply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
+                    c.dismiss(completion: {
+                        updateThemeImpl?(reference)
+                    })
+                })))
+            }
             if case let .cloud(theme) = reference {
                 if theme.theme.isCreator {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_EditTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor) }, action: { c, f in

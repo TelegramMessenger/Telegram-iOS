@@ -541,8 +541,6 @@ private enum GroupInfoEntry: ItemListNodeEntry {
             case let .groupDescriptionSetup(theme, placeholder, text):
                 return ItemListMultilineInputItem(theme: theme, text: text, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 255, display: true), sectionId: self.section, style: .blocks, textUpdated: { updatedText in
                     arguments.updateEditingDescriptionText(updatedText)
-                }, action: {
-                    
                 })
             case let .permissions(theme, title, text):
                 return ItemListDisclosureItem(theme: theme, icon: PresentationResourcesChat.groupInfoPermissionsIcon(theme), title: title, label: text, sectionId: self.section, style: .blocks, action: {

@@ -81,7 +81,8 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
                 peer = chatPeer
             }
         }
-        if !isSavedMessages, let peer = peer as? TelegramUser {
+        
+        if !isSavedMessages, let peer = peer as? TelegramUser, !peer.flags.contains(.isSupport) && peer.botInfo == nil {
             if !transaction.isPeerContact(peerId: peer.id) {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToContacts, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     context.sharedContext.openAddPersonContact(context: context, peerId: peerId, pushController: { controller in
@@ -115,8 +116,9 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
         
         let groupAndIndex = transaction.getPeerChatListIndex(peerId)
         
+        let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: 777000) && peerId == context.account.peerId
         if let (group, index) = groupAndIndex {
-            if !isSavedMessages {
+            if archiveEnabled {
                 let isArchived = group == Namespaces.PeerGroup.archive
                 items.append(.action(ContextMenuActionItem(text: isArchived ? strings.ChatList_Context_Unarchive : strings.ChatList_Context_Archive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isArchived ? "Chat/Context Menu/Unarchive" : "Chat/Context Menu/Archive"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     if isArchived {

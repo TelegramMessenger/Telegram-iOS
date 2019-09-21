@@ -70,7 +70,7 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var statusBarWindow: UIView? {
-        return nil//self.application.value(forKey: "statusBarWindow") as? UIView
+        return self.application.value(forKey: "statusBarWindow") as? UIView
     }
     
     var statusBarView: UIView? {

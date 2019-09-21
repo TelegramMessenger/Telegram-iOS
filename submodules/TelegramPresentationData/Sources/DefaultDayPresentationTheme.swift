@@ -84,6 +84,9 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
     
     let intro = PresentationThemeIntro(
         statusBarStyle: .black,
+        primaryTextColor: .black,
+        accentTextColor: accentColor,
+        disabledTextColor: UIColor(rgb: 0xd0d0d0),
         startButtonColor: UIColor(rgb: 0x2ca5e0),
         dotColor: UIColor(rgb: 0xd9d9d9)
     )

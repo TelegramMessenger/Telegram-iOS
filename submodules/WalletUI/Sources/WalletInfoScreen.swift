@@ -59,10 +59,16 @@ public final class WalletInfoScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletInfoScreenNode(account: self.context.account, tonContext: self.tonContext, presentationData: self.presentationData, walletInfo: self.walletInfo, address: self.address, sendAction: {
-            
-        }, receiveAction: {
-            
+        self.displayNode = WalletInfoScreenNode(account: self.context.account, tonContext: self.tonContext, presentationData: self.presentationData, walletInfo: self.walletInfo, address: self.address, sendAction: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.push(walletSendScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo))
+        }, receiveAction: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.push(walletReceiveScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, address: strongSelf.address))
         }, openTransaction: { [weak self] transaction in
             guard let strongSelf = self else {
                 return

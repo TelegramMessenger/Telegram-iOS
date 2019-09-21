@@ -38,7 +38,7 @@ public final class ShareProxyServerActionSheetController: ActionSheetController 
         }))
         items.append(ActionSheetButtonItem(title: strings.SocksProxySetup_ShareQRCode, action: { [weak self] in
             self?.dismissAnimated()
-            let _ = (qrCode(string: link, color: .black, backgroundColor: .white, scale: 1.0)
+            let _ = (qrCode(string: link, color: .black, backgroundColor: .white, icon: .proxy, scale: 1.0)
             |> map { generator -> UIImage? in
                 let imageSize = CGSize(width: 512.0, height: 512.0)
                 let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets()))
@@ -126,7 +126,7 @@ private final class ProxyServerQRCodeItemNode: ActionSheetItemNode {
         self.label.attributedText = NSAttributedString(string: strings.SocksProxySetup_ShareQRCodeInfo, font: ActionSheetTextNode.defaultFont, textColor: self.theme.secondaryTextColor, paragraphAlignment: .center)
         
         self.imageNode = TransformImageNode()
-        self.imageNode.setSignal(qrCode(string: link, color: .black, backgroundColor: .white), attemptSynchronously: true)
+        self.imageNode.setSignal(qrCode(string: link, color: .black, backgroundColor: .white, icon: .proxy), attemptSynchronously: true)
 
         super.init(theme: theme)
         

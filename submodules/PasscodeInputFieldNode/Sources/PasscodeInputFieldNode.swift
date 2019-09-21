@@ -24,19 +24,19 @@ private func generateDotImage(color: UIColor, filled: Bool) -> UIImage? {
     })
 }
 
-private func generateFieldBackgroundImage(background: PasscodeBackground, frame: CGRect) -> UIImage? {
+private func generateFieldBackgroundImage(backgroundImage: UIImage, backgroundSize: CGSize, frame: CGRect) -> UIImage? {
     return generateImage(frame.size, contextGenerator: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
         
-        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - background.size.height + frame.size.height
-            , width: background.size.width, height: background.size.height)
+        let relativeFrame = CGRect(x: -frame.minX, y: frame.minY - backgroundSize.height + frame.size.height
+            , width: backgroundSize.width, height: backgroundSize.height)
         
         let path = UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height), cornerRadius: 6.0)
         context.addPath(path.cgPath)
         context.clip()
         
-        context.draw(background.foregroundImage.cgImage!, in: relativeFrame)
+        context.draw(backgroundImage.cgImage!, in: relativeFrame)
         
         context.setBlendMode(.clear)
         context.setFillColor(UIColor.clear.cgColor)
@@ -128,8 +128,8 @@ private class PasscodeEntryDotNode: ASImageNode {
     }
 }
 
-final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
-    private var background: PasscodeBackground?
+public final class PasscodeInputFieldNode: ASDisplayNode, UITextFieldDelegate {
+    private var background: (UIImage, CGSize)?
     private var color: UIColor
     private var accentColor: UIColor
     private var fieldType: PasscodeEntryFieldType
@@ -139,21 +139,21 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
     private let borderNode: ASImageNode
     private let dotNodes: [PasscodeEntryDotNode]
     
-    private var validLayout: PasscodeLayout?
+    private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    var complete: ((String) -> Void)?
+    public var complete: ((String) -> Void)?
     
-    var text: String {
+    public var text: String {
         return self.textFieldNode.textField.text ?? ""
     }
     
-    var keyboardAppearance: UIKeyboardAppearance {
+    public var keyboardAppearance: UIKeyboardAppearance {
         didSet {
             self.textFieldNode.textField.keyboardAppearance = self.keyboardAppearance
         }
     }
     
-    init(color: UIColor, accentColor: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
+    public init(color: UIColor, accentColor: UIColor, fieldType: PasscodeEntryFieldType, keyboardAppearance: UIKeyboardAppearance, useCustomNumpad: Bool = false) {
         self.color = color
         self.accentColor = accentColor
         self.fieldType = fieldType
@@ -175,7 +175,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.borderNode)
     }
     
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         
         self.textFieldNode.textField.isSecureTextEntry = true
@@ -202,19 +202,19 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         
         self.textFieldNode.textField.keyboardType = self.fieldType.keyboardType
         
-        if let validLayout = self.validLayout {
-            let _ = self.updateLayout(layout: validLayout, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
+        if let (layout, topOffset) = self.validLayout {
+            let _ = self.updateLayout(layout: layout, topOffset: topOffset, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
         }
     }
     
-    func updateBackground(_ background: PasscodeBackground) {
-        self.background = background
-        if let validLayout = self.validLayout {
-            let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+    func updateBackground(_ image: UIImage, size: CGSize) {
+        self.background = (image, size)
+        if let (layout, topOffset) = self.validLayout {
+            let _ = self.updateLayout(layout: layout, topOffset: topOffset, transition: .immediate)
         }
     }
     
-    func activateInput() {
+    public func activateInput() {
         self.textFieldNode.textField.becomeFirstResponder()
     }
     
@@ -245,7 +245,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func reset(animated: Bool = true) {
+    public func reset(animated: Bool = true) {
         var delay: Double = 0.0
         for node in self.dotNodes.reversed() {
             if node.alpha < 1.0 {
@@ -297,18 +297,18 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    func update(fieldType: PasscodeEntryFieldType) {
+    public func update(fieldType: PasscodeEntryFieldType) {
         if fieldType != self.fieldType {
             self.textFieldNode.textField.text = ""
         }
         self.fieldType = fieldType
-        if let validLayout = self.validLayout {
-            let _ = self.updateLayout(layout: validLayout, transition: .immediate)
+        if let (layout, topOffset) = self.validLayout {
+            let _ = self.updateLayout(layout: layout, topOffset: topOffset, transition: .immediate)
         }
     }
     
-    func updateLayout(layout: PasscodeLayout, transition: ContainedViewLayoutTransition) -> CGRect {
-        self.validLayout = layout
+    public func updateLayout(layout: ContainerViewLayout, topOffset: CGFloat, transition: ContainedViewLayoutTransition) -> CGRect {
+        self.validLayout = (layout, topOffset)
         
         let fieldAlpha: CGFloat
         switch self.fieldType {
@@ -321,7 +321,7 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         transition.updateAlpha(node: self.textFieldNode, alpha: fieldAlpha)
         transition.updateAlpha(node: self.borderNode, alpha: fieldAlpha)
         
-        let origin = CGPoint(x: floor((layout.layout.size.width - dotDiameter * 6 - dotSpacing * 5) / 2.0), y: layout.inputFieldOffset)
+        let origin = CGPoint(x: floor((layout.size.width - dotDiameter * 6 - dotSpacing * 5) / 2.0), y: topOffset)
         for i in 0 ..< self.dotNodes.count {
             let node = self.dotNodes[i]
             let dotAlpha: CGFloat
@@ -343,17 +343,17 @@ final class PasscodeEntryInputFieldNode: ASDisplayNode, UITextFieldDelegate {
         if !self.useCustomNumpad {
             inset = 16.0
         }
-        let fieldFrame = CGRect(x: inset, y: origin.y, width: layout.layout.size.width - inset * 2.0, height: fieldHeight)
+        let fieldFrame = CGRect(x: inset, y: origin.y, width: layout.size.width - inset * 2.0, height: fieldHeight)
         transition.updateFrame(node: self.borderNode, frame: fieldFrame)
         transition.updateFrame(node: self.textFieldNode, frame: fieldFrame.insetBy(dx: 13.0, dy: 0.0))
-        if let background = self.background {
-            self.borderNode.image = generateFieldBackgroundImage(background: background, frame: fieldFrame)
+        if let (backgroundImage, backgroundSize) = self.background {
+            self.borderNode.image = generateFieldBackgroundImage(backgroundImage: backgroundImage, backgroundSize: backgroundSize, frame: fieldFrame)
         }
         
         return fieldFrame
     }
     
-    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+    public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         let currentText = textField.text ?? ""
         let text = (currentText as NSString).replacingCharacters(in: range, with: string)
         if let maxLength = self.fieldType.maxLength, text.count > maxLength {

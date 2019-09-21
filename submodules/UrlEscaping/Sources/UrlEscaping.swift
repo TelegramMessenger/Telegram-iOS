@@ -34,12 +34,14 @@ public extension CharacterSet {
     }()
 }
 
-public func isValidUrl(_ url: String) -> Bool {
-    if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: escapedUrl), ["http", "https"].contains(url.scheme), let host = url.host, host.contains(".") && url.user == nil {
-        let components = host.components(separatedBy: ".")
-        let domain = (components.first ?? "")
-        if domain.isEmpty {
-            return false
+public func isValidUrl(_ url: String, validSchemes: [String: Bool] = ["http": true, "https": true]) -> Bool {
+    if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let url = URL(string: escapedUrl), let scheme = url.scheme, let requiresTopLevelDomain = validSchemes[scheme], let host = url.host, (!requiresTopLevelDomain || host.contains(".")) && url.user == nil {
+        if requiresTopLevelDomain {
+            let components = host.components(separatedBy: ".")
+            let domain = (components.first ?? "")
+            if domain.isEmpty {
+                return false
+            }
         }
         return true
     } else {

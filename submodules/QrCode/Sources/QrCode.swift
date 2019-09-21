@@ -4,11 +4,17 @@ import CoreImage
 import SwiftSignalKit
 import Display
 
-public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, scale: CGFloat = 0.0) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public enum QrCodeIcon {
+    case none
+    case proxy
+    case custom(UIImage?)
+}
+
+public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, icon: QrCodeIcon, ecl: String = "M", scale: CGFloat = 0.0) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return Signal<CIImage, NoError> { subscriber in
         if let data = string.data(using: .isoLatin1, allowLossyConversion: false), let filter = CIFilter(name: "CIQRCodeGenerator") {
             filter.setValue(data, forKey: "inputMessage")
-            filter.setValue("M", forKey: "inputCorrectionLevel")
+            filter.setValue(ecl, forKey: "inputCorrectionLevel")
             
             if let output = filter.outputImage {
                 subscriber.putNext(output)
@@ -67,28 +73,50 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
                 }
                 
                 let clipSide = 81.0 * fittedRect.width / 267.0 * codeScale
-                c.fill(CGRect(x: fittedRect.midX - clipSide / 2.0, y: fittedRect.midY - clipSide / 2.0, width: clipSide, height: clipSide))
-                c.setBlendMode(.normal)
-                
-                let iconScale = fittedRect.width / 308.0 * codeScale
-                let iconSize = CGSize(width: 65.0 * iconScale, height: 79.0 * iconScale)
-                let point = CGPoint(x: fittedRect.midX - iconSize.width / 2.0, y: fittedRect.midY - iconSize.height / 2.0)
-                c.translateBy(x: point.x, y: point.y)
-                c.scaleBy(x: iconScale, y: iconScale)
-                c.setFillColor(color.cgColor)
-                let _ = try? drawSvgPath(c, path: "M0.0,40 C0,20.3664202 20.1230605,0.0 32.5,0.0 C44.8769395,0.0 65,20.3664202 65,40 C65,47.217934 65,55.5505326 65,64.9977957 L32.5,79 L0.0,64.9977957 C0.0,55.0825772 0.0,46.7499786 0.0,40 Z")
-                
-                if let backgroundColor = backgroundColor {
-                    c.setFillColor(backgroundColor.cgColor)
-                } else {
-                    c.setBlendMode(.clear)
-                    c.setFillColor(UIColor.clear.cgColor)
+                let clipRect = CGRect(x: fittedRect.midX - clipSide / 2.0, y: fittedRect.midY - clipSide / 2.0, width: clipSide, height: clipSide)
+                switch icon {
+                    case .proxy, .custom:
+                        c.fill(clipRect)
+                    default:
+                        break
                 }
-                let _ = try? drawSvgPath(c, path: "M7.03608247,43.556701 L18.9836689,32.8350515 L32.5,39.871134 L45.8888139,32.8350515 L57.9639175,43.556701 L57.9639175,60.0 L32.5,71.0 L7.03608247,60.0 Z")
-                
+
                 c.setBlendMode(.normal)
-                c.setFillColor(color.cgColor)
-                let _ = try? drawSvgPath(c, path: "M24.1237113,50.5927835 L40.8762887,50.5927835 L40.8762887,60.9793814 L32.5,64.0928525 L24.1237113,60.9793814 Z")
+                
+                switch icon {
+                    case .proxy:
+                        let iconScale = fittedRect.width / 308.0 * codeScale
+                        let iconSize = CGSize(width: 65.0 * iconScale, height: 79.0 * iconScale)
+                        let point = CGPoint(x: fittedRect.midX - iconSize.width / 2.0, y: fittedRect.midY - iconSize.height / 2.0)
+                        c.translateBy(x: point.x, y: point.y)
+                        c.scaleBy(x: iconScale, y: iconScale)
+                        c.setFillColor(color.cgColor)
+                        let _ = try? drawSvgPath(c, path: "M0.0,40 C0,20.3664202 20.1230605,0.0 32.5,0.0 C44.8769395,0.0 65,20.3664202 65,40 C65,47.217934 65,55.5505326 65,64.9977957 L32.5,79 L0.0,64.9977957 C0.0,55.0825772 0.0,46.7499786 0.0,40 Z")
+                        
+                        if let backgroundColor = backgroundColor {
+                            c.setFillColor(backgroundColor.cgColor)
+                        } else {
+                            c.setBlendMode(.clear)
+                            c.setFillColor(UIColor.clear.cgColor)
+                        }
+                        let _ = try? drawSvgPath(c, path: "M7.03608247,43.556701 L18.9836689,32.8350515 L32.5,39.871134 L45.8888139,32.8350515 L57.9639175,43.556701 L57.9639175,60.0 L32.5,71.0 L7.03608247,60.0 Z")
+                        
+                        c.setBlendMode(.normal)
+                        c.setFillColor(color.cgColor)
+                        let _ = try? drawSvgPath(c, path: "M24.1237113,50.5927835 L40.8762887,50.5927835 L40.8762887,60.9793814 L32.5,64.0928525 L24.1237113,60.9793814 Z")
+                    case let .custom(image):
+                        if let image = image {
+                            let fittedSize = image.size.fitted(clipRect.size)
+                            let fittedRect = CGRect(origin: CGPoint(x: fittedRect.midX - fittedSize.width / 2.0, y: fittedRect.midY - fittedSize.height / 2.0), size: fittedSize)
+                            c.translateBy(x: fittedRect.midX, y: fittedRect.midY)
+                            c.scaleBy(x: 1.0, y: -1.0)
+                            c.translateBy(x: -fittedRect.midX, y: -fittedRect.midY)
+                            c.draw(image.cgImage!, in: fittedRect)
+                        }
+                        break
+                    default:
+                        break
+                }
             }
             return context
         }
