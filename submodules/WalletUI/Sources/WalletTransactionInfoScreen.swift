@@ -12,6 +12,7 @@ import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
 import ItemListUI
+import TelegramStringFormatting
 
 private final class WalletTransactionInfoControllerArguments {
     let copyWalletAddress: () -> Void
@@ -29,7 +30,7 @@ private enum WalletTransactionInfoSection: Int32 {
 }
 
 private enum WalletTransactionInfoEntry: ItemListNodeEntry {
-    case amount(PresentationTheme, WalletTransaction)
+    case amount(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, WalletTransaction)
     case infoHeader(PresentationTheme, String)
     case infoAddress(PresentationTheme, String)
     case infoCopyAddress(PresentationTheme, String)
@@ -65,8 +66,8 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
     
     func item(_ arguments: WalletTransactionInfoControllerArguments) -> ListViewItem {
         switch self {
-        case let .amount(theme, walletTransaction):
-            return WalletTransactionHeaderItem(theme: theme, walletTransaction: walletTransaction, sectionId: self.section)
+        case let .amount(theme, strings, dateTimeFormat, walletTransaction):
+            return WalletTransactionHeaderItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: walletTransaction, sectionId: self.section)
         case let .infoHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .infoAddress(theme, text):
@@ -113,7 +114,7 @@ private func extractAddress(_ walletTransaction: WalletTransaction) -> String {
 private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState) -> [WalletTransactionInfoEntry] {
     var entries: [WalletTransactionInfoEntry] = []
     
-    entries.append(.amount(presentationData.theme, walletTransaction))
+    entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, walletTransaction))
     
     let transferredValue = walletTransaction.transferredValue
     let text = extractAddress(walletTransaction)
@@ -174,12 +175,16 @@ func walletTransactionInfoController(context: AccountContext, walletTransaction:
 
 class WalletTransactionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
+    let dateTimeFormat: PresentationDateTimeFormat
     let walletTransaction: WalletTransaction
     let sectionId: ItemListSectionId
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, walletTransaction: WalletTransaction, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletTransaction, sectionId: ItemListSectionId) {
         self.theme = theme
+        self.strings = strings
+        self.dateTimeFormat = dateTimeFormat
         self.walletTransaction = walletTransaction
         self.sectionId = sectionId
     }
@@ -226,6 +231,7 @@ private let titleBoldFont = Font.semibold(14.0)
 
 private class WalletTransactionHeaderItemNode: ListViewItemNode {
     private let titleNode: TextNode
+    private let subtitleNode: TextNode
     private let iconNode: ASImageNode
     private let activateArea: AccessibilityAreaNode
     
@@ -236,6 +242,11 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
         self.titleNode.contentsScale = UIScreen.main.scale
+        
+        self.subtitleNode = TextNode()
+        self.subtitleNode.isUserInteractionEnabled = false
+        self.subtitleNode.contentMode = .left
+        self.subtitleNode.contentsScale = UIScreen.main.scale
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
@@ -248,12 +259,14 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.titleNode)
+        self.addSubnode(self.subtitleNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.activateArea)
     }
     
     func asyncLayout() -> (_ item: WalletTransactionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let iconSize = self.iconNode.image?.size ?? CGSize(width: 10.0, height: 10.0)
         
         return { item, params, neighbors in
@@ -271,7 +284,11 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
                 titleColor = item.theme.chatList.secretTitleColor
             }
             
+            let subtitle: String = stringForFullDate(timestamp: Int32(clamping: item.walletTransaction.timestamp), strings: item.strings, dateTimeFormat: item.dateTimeFormat)
+            
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.semibold(39.0), textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: item.theme.list.freeTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             
@@ -288,11 +305,14 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
                     //strongSelf.activateArea.accessibilityLabel = attributedText.string
                     
                     let _ = titleApply()
+                    let _ = subtitleApply()
                     
                     let iconSpacing: CGFloat = 8.0
                     let contentWidth = titleLayout.size.width + iconSpacing + iconSize.width / 2.0
                     let titleFrame = CGRect(origin: CGPoint(x: floor((params.width - contentWidth) / 2.0), y: verticalInset), size: titleLayout.size)
+                    let subtitleFrame = CGRect(origin: CGPoint(x: floor((params.width - subtitleLayout.size.width) / 2.0), y: titleFrame.maxY - 5.0), size: subtitleLayout.size)
                     strongSelf.titleNode.frame = titleFrame
+                    strongSelf.subtitleNode.frame = subtitleFrame
                     strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + iconSpacing, y: titleFrame.minY + floor((titleFrame.height - iconSize.height) / 2.0)), size: iconSize)
                 }
             })
