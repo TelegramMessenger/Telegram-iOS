@@ -16,6 +16,7 @@ typedef enum
     TGMediaAssetGroupSubtypeTimelapses,
     TGMediaAssetGroupSubtypeBursts,
     TGMediaAssetGroupSubtypeScreenshots,
+    TGMediaAssetGroupSubtypeAnimated,
     TGMediaAssetGroupSubtypeRegular
 } TGMediaAssetGroupSubtype;
 
