@@ -162,6 +162,8 @@ private func collectExternalShareItems(strings: PresentationStrings, postbox: Po
                 text.append("\n\(strings.MessagePoll_VotedCount(totalVoters))")
             }
             signals.append(.single(.done(.text(text))))
+        } else if let mediaReference = item.mediaReference, let contact = mediaReference.media as? TelegramMediaContact {
+            
         }
         if let url = item.url, let parsedUrl = URL(string: url) {
             if signals.isEmpty {

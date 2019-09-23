@@ -613,9 +613,9 @@ final class ListMessageFileItemNode: ListMessageNode {
                     }
                     
                     let statusSize = CGSize(width: 28.0, height: 28.0)
-                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - statusSize.width, y: floor((nodeLayout.contentSize.height - statusSize.height) / 2.0)), size: statusSize))
+                    transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - statusSize.width + leftOffset, y: floor((nodeLayout.contentSize.height - statusSize.height) / 2.0)), size: statusSize))
                     
-                    strongSelf.statusButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - 40.0, y: 0.0), size: CGSize(width: 40.0, height: nodeLayout.contentSize.height))
+                    strongSelf.statusButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - rightInset - 40.0 + leftOffset, y: 0.0), size: CGSize(width: 40.0, height: nodeLayout.contentSize.height))
                     
                     if let updatedStatusSignal = updatedStatusSignal {
                         strongSelf.statusDisposable.set((updatedStatusSignal

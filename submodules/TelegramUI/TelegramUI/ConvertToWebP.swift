@@ -8,7 +8,7 @@ import WebPImage
 import WebP
 #endif
 
-private func scaleImage(_ image: UIImage, dimensions: CGSize) -> UIImage? {
+private func scaleImage(_ image: UIImage, size: CGSize, boundiingSize: CGSize) -> UIImage? {
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1.0
@@ -21,7 +21,7 @@ private func scaleImage(_ image: UIImage, dimensions: CGSize) -> UIImage? {
     }
 }
 
-func convertToWebP(image: UIImage, targetSize: CGSize?, quality: CGFloat) -> Signal<Data, NoError> {
+func convertToWebP(image: UIImage, targetSize: CGSize?, targetBoundingSize: CGSize?, quality: CGFloat) -> Signal<Data, NoError> {
     var image = image
     if let targetSize = targetSize, let scaledImage = scaleImage(image, dimensions: targetSize) {
         image = scaledImage
