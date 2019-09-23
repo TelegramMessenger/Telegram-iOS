@@ -73,7 +73,7 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(walletTransactionInfoController(context: strongSelf.context, walletTransaction: transaction))
+            strongSelf.push(walletTransactionInfoController(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, walletTransaction: transaction))
         })
         
         self.displayNodeDidLoad()
@@ -320,12 +320,12 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
         }
     }
     
-    func item(theme: PresentationTheme, strings: PresentationStrings, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
+    func item(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
         switch self {
         case let .empty(address):
             return WalletInfoEmptyItem(theme: theme, strings: strings, address: address)
         case let .transaction(_, transaction):
-            return WalletInfoTransactionItem(theme: theme, strings: strings, walletTransaction: transaction, action: {
+            return WalletInfoTransactionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: transaction, action: {
                 action(transaction)
             })
         }
@@ -336,8 +336,8 @@ private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEn
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, action: action), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, action: action), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
     
     return WalletInfoListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -390,7 +390,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 return
             }
             let firstTime = strongSelf.headerNode.balance == nil
-            strongSelf.headerNode.balanceNode.balance = formatBalanceText(max(0, value.rawValue))
+            strongSelf.headerNode.balanceNode.balance = formatBalanceText(max(0, value.rawValue), decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             strongSelf.headerNode.balance = max(0, value.rawValue)
             if let (layout, navigationHeight) = strongSelf.validLayout {
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
@@ -399,6 +399,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 strongSelf.headerNode.animateIn()
             }
         }))
+        
+        let _ = initializeWallet(network: account.network, tonInstance: tonContext.instance, keychain: tonContext.keychain, walletInfo: walletInfo).start()
         
         self.addSubnode(self.listNode)
         self.addSubnode(self.headerNode)
@@ -621,15 +623,15 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     }
 }
 
-func formatBalanceText(_ value: Int64) -> String {
+func formatBalanceText(_ value: Int64, decimalSeparator: String) -> String {
     var balanceText = "\(abs(value))"
     while balanceText.count < 10 {
         balanceText.insert("0", at: balanceText.startIndex)
     }
-    balanceText.insert(".", at: balanceText.index(balanceText.endIndex, offsetBy: -9))
+    balanceText.insert(contentsOf: decimalSeparator, at: balanceText.index(balanceText.endIndex, offsetBy: -9))
     while true {
         if balanceText.hasSuffix("0") {
-            if balanceText.hasSuffix(".0") {
+            if balanceText.hasSuffix("\(decimalSeparator)0") {
                 break
             } else {
                 balanceText.removeLast()

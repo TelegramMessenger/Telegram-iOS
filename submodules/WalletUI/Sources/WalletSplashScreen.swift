@@ -12,6 +12,7 @@ import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
 import ItemListUI
+import AlertUI
 
 public enum WalletSplashMode {
     case intro
@@ -50,7 +51,19 @@ public final class WalletSplashScreen: ViewController {
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: "Import existing wallet", style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
         case let .sending(walletInfo, address, amount, comment):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
-            let _ = (Signal<Never, NoError>.complete() |> delay(3.0, queue: Queue.mainQueue())).start(completed: { [weak self] in
+            
+            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount)
+            |> deliverOnMainQueue).start(error: { [weak self] error in
+                guard let strongSelf = self else {
+                    return
+                }
+                let controller = textAlertController(context: strongSelf.context, title: nil, text: "Error", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {
+                    if let navigationController = strongSelf.navigationController as? NavigationController {
+                        navigationController.popViewController(animated: true)
+                    }
+                })])
+                strongSelf.present(controller, in: .window(.root))
+            }, completed: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }

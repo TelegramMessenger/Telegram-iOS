@@ -2294,6 +2294,7 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         } else {
             self.inputNode.textField.returnKeyType = .next
         }
+        self.inputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
         
         self.clearButtonNode = HighlightableButtonNode()
         self.clearButtonNode.setImage(generateClearIcon(color: theme.actionSheet.inputClearButtonColor.withAlphaComponent(0.7)), for: [])

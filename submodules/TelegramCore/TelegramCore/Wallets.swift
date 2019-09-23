@@ -316,6 +316,58 @@ public final class TonInstance {
         }
     }
     
+    fileprivate func initializeWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo) -> Signal<Never, InitializeWalletError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.getTestWalletAccountAddress(withPublicKey: walletInfo.publicKey.rawValue).start(next: { address in
+                        guard let address = address as? String else {
+                            return
+                        }
+                        let cancel = ton.getAccountState(withAddress: address).start(next: { state in
+                            guard let state = state as? TONAccountState else {
+                                return
+                            }
+                            if state.seqno == -1 {
+                                disposable.set((keychain.decrypt(walletInfo.encryptedSecret.rawValue))
+                                .start(next: { decryptedSecret in
+                                    guard let decryptedSecret = decryptedSecret else {
+                                        subscriber.putError(.generic)
+                                        return
+                                    }
+                                    let cancel = ton.makeWalletInitialized(TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret), localPassword: serverSalt).start(next: { next in
+                                    }, error: { error in
+                                        subscriber.putError(.generic)
+                                    }, completed: {
+                                    })
+                                    disposable.set(ActionDisposable {
+                                        cancel?.dispose()
+                                    })
+                                }))
+                            } else {
+                                subscriber.putCompletion()
+                            }
+                        }, error: { _ in
+                        }, completed: {
+                        })
+                        disposable.set(ActionDisposable {
+                            cancel?.dispose()
+                        })
+                    }, error: { _ in
+                    }, completed: {
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
     fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64) -> Signal<Never, SendGramsFromWalletError> {
         return keychain.decrypt(walletInfo.encryptedSecret.rawValue)
         |> introduceError(SendGramsFromWalletError.self)
@@ -570,6 +622,20 @@ public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keyc
         |> mapToSignal { fromAddress in
             return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount)
         }
+    }
+}
+
+public enum InitializeWalletError {
+    case generic
+}
+
+public func initializeWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo) -> Signal<Never, InitializeWalletError> {
+    return getServerWalletSalt(network: network)
+    |> mapError { _ -> InitializeWalletError in
+        return .generic
+    }
+    |> mapToSignal { serverSalt in
+        return tonInstance.initializeWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo)
     }
 }
 

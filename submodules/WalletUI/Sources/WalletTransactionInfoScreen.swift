@@ -87,28 +87,43 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
 private struct WalletTransactionInfoControllerState: Equatable {
 }
 
-private func extractAddress(_ walletTransaction: WalletTransaction) -> String {
+private enum WalletTransactionAddress {
+    case list([String])
+    case none
+    case unknown
+}
+
+private func stringForAddress(strings: PresentationStrings, address: WalletTransactionAddress) -> String {
+    switch address {
+        case let .list(addresses):
+            return addresses.joined(separator: "\n\n")
+        case .none:
+            return "No Address"
+        case .unknown:
+            return "<unknown>"
+    }
+}
+
+private func extractAddress(_ walletTransaction: WalletTransaction) -> WalletTransactionAddress {
     let transferredValue = walletTransaction.transferredValue
-    var text = ""
     if transferredValue <= 0 {
         if walletTransaction.outMessages.isEmpty {
-            text = "No Address"
+            return .none
         } else {
+            var addresses: [String] = []
             for message in walletTransaction.outMessages {
-                if !text.isEmpty {
-                    text.append("\n\n")
-                }
-                text.append(message.destination)
+                addresses.append(message.destination)
             }
+            return .list(addresses)
         }
     } else {
         if let inMessage = walletTransaction.inMessage {
-            text = inMessage.source
+            return .list([inMessage.source])
         } else {
-            text = "<unknown>"
+            return .unknown
         }
     }
-    return text
+    return .none
 }
 
 private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState) -> [WalletTransactionInfoEntry] {
@@ -117,7 +132,8 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, walletTransaction))
     
     let transferredValue = walletTransaction.transferredValue
-    let text = extractAddress(walletTransaction)
+    let address = extractAddress(walletTransaction)
+    let text = stringForAddress(strings: presentationData.strings, address: address)
     
     if transferredValue <= 0 {
         entries.append(.infoHeader(presentationData.theme, "RECIPIENT"))
@@ -125,13 +141,15 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
         entries.append(.infoHeader(presentationData.theme, "SENDER"))
     }
     entries.append(.infoAddress(presentationData.theme, text))
-    entries.append(.infoCopyAddress(presentationData.theme, "Copy Address"))
-    entries.append(.infoSendGrams(presentationData.theme, "Send Grams"))
+    if case .list = address {
+        entries.append(.infoCopyAddress(presentationData.theme, "Copy Address"))
+        entries.append(.infoSendGrams(presentationData.theme, "Send Grams"))
+    }
     
     return entries
 }
 
-func walletTransactionInfoController(context: AccountContext, walletTransaction: WalletTransaction) -> ViewController {
+func walletTransactionInfoController(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, walletTransaction: WalletTransaction) -> ViewController {
     let statePromise = ValuePromise(WalletTransactionInfoControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: WalletTransactionInfoControllerState())
     let updateState: ((WalletTransactionInfoControllerState) -> WalletTransactionInfoControllerState) -> Void = { f in
@@ -140,13 +158,20 @@ func walletTransactionInfoController(context: AccountContext, walletTransaction:
     
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushImpl: ((ViewController) -> Void)?
     
     let arguments = WalletTransactionInfoControllerArguments(copyWalletAddress: {
         let address = extractAddress(walletTransaction)
-        UIPasteboard.general.string = address
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+        if case let .list(addresses) = address, let address = addresses.first {
+            UIPasteboard.general.string = address
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess("Address copied to clipboard.", false)), nil)
+        }
     }, sendGrams: {
+        let address = extractAddress(walletTransaction)
+        if case let .list(addresses) = address, let address = addresses.first {
+            pushImpl?(walletSendScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
+        }
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
@@ -168,6 +193,9 @@ func walletTransactionInfoController(context: AccountContext, walletTransaction:
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushImpl = { [weak controller] c in
+        controller?.push(c)
     }
     
     return controller
@@ -277,10 +305,10 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             let titleColor: UIColor
             let transferredValue = item.walletTransaction.transferredValue
             if transferredValue <= 0 {
-                title = "\(formatBalanceText(transferredValue))"
+                title = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.list.itemPrimaryTextColor
             } else {
-                title = "+\(formatBalanceText(transferredValue))"
+                title = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
             }
             

@@ -150,7 +150,6 @@ private final class WalletReceiveScreenImpl: ItemListController<WalletReceiveScr
 
 func walletReceiveScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String) -> ViewController {
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
-    var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
     
     let arguments = WalletReceiveScreenArguments(context: context, copyAddress: {
@@ -158,7 +157,7 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
         
         UIPasteboard.general.string = address
 
-        presentInGlobalOverlayImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess("Address copied to clipboard.", false)), nil)
+        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess("Address copied to clipboard.", false)), nil)
     }, shareAddressLink: {
         guard let address = address.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
             return
@@ -185,9 +184,6 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
     controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
-    }
-    presentInGlobalOverlayImpl = { [weak controller] c, a in
-        controller?.presentInGlobalOverlay(c, with: a)
     }
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()

@@ -1595,7 +1595,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     images.append(image)
                     isPNG = true
                     isMemoji = true
-                } else eif let image = item[kUTTypePNG as String] as? UIImage {
+                } else if let image = item[kUTTypePNG as String] as? UIImage {
                     images.append(image)
                     isPNG = true
                 } else if let image = item["com.apple.uikit.image"] as? UIImage {

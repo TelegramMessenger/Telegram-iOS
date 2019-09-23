@@ -85,19 +85,19 @@ private func isValidAmount(_ amount: String) -> Bool {
         decimalIndex = index
     }
     
-    if let decimalIndex = decimalIndex, amount.distance(from: decimalIndex, to: amount.endIndex) > 4 {
+    if let decimalIndex = decimalIndex, amount.distance(from: decimalIndex, to: amount.endIndex) > 10 {
         return false
     }
     
     return true
 }
 
-private func stringForGramsAmount(_ amount: Int64, decimalSeparator: String = ".") -> String {
-    if amount < 1000 {
-        return "0\(decimalSeparator)\(String(amount).rightJustified(width: 3, pad: "0"))"
+private func formatAmountText(_ amount: Int64, decimalSeparator: String = ".") -> String {
+    if amount < 10000000000 {
+        return "0\(decimalSeparator)\(String(amount).rightJustified(width: 10, pad: "0"))"
     } else {
         var string = String(amount)
-        string.insert(contentsOf: decimalSeparator, at: string.index(string.endIndex, offsetBy: -3))
+        string.insert(contentsOf: decimalSeparator, at: string.index(string.endIndex, offsetBy: -9))
         return string
     }
 }
@@ -107,7 +107,7 @@ private func amountValue(_ string: String) -> Int64 {
 }
 
 private func normalizedStringForGramsString(_ string: String, decimalSeparator: String = ".") -> String {
-    return stringForGramsAmount(amountValue(string), decimalSeparator: decimalSeparator)
+    return formatAmountText(amountValue(string), decimalSeparator: decimalSeparator)
 }
 
 private enum WalletSendScreenEntry: ItemListNodeEntry {
@@ -254,7 +254,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, placeholder, value):
-            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: nil, sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { comment in
+            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 128, display: true), sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { comment in
                 arguments.updateState { state in
                     var state = state
                     state.comment = comment
@@ -280,7 +280,7 @@ private func walletSendScreenEntries(presentationData: PresentationData, balance
     entries.append(.addressInfo(presentationData.theme, "Copy the 48-letter address of the recipient here or ask them to send you a ton:// link."))
     
     let amount = amountValue(state.amount)
-    entries.append(.amountHeader(presentationData.theme, "AMOUNT", "BALANCE: \(stringForGramsAmount(balance ?? 0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))💎", amount > 0 && (balance ?? 0) < amount))
+    entries.append(.amountHeader(presentationData.theme, "AMOUNT", "BALANCE: \(formatBalanceText(balance ?? 0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))💎", amount > 0 && (balance ?? 0) < amount))
     entries.append(.amount(presentationData.theme, presentationData.strings, "Grams to send", state.amount ?? ""))
     
     entries.append(.commentHeader(presentationData.theme, "COMMENT"))
@@ -298,7 +298,7 @@ private final class WalletSendScreenImpl: ItemListController<WalletSendScreenEnt
 
 func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String? = nil, amount: Int64? = nil) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { stringForGramsAmount($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: "")
+    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatAmountText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: "")
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -323,7 +323,7 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
         
         updateState { state in
             var state = state
-            state.amount = stringForGramsAmount(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+            state.amount = formatAmountText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
             return state
         }
         
@@ -331,7 +331,7 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
         
         let address = state.address[state.address.startIndex..<state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)] + " \n " + state.address[state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)..<state.address.endIndex]
         
-        let text = "Do you want to send **\(stringForGramsAmount(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))** Grams to\n\(address)?"
+        let text = "Do you want to send **\(formatAmountText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))** Grams to\n\(address)?"
         let bodyAttributes = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
         let boldAttributes = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
         let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center))
