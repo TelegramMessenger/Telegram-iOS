@@ -5,59 +5,95 @@ import AsyncDisplayKit
 import TelegramPresentationData
 import TelegramCore
 import AnimationUI
+import SwiftSignalKit
 
-final class WalletInfoEmptyNode: ASDisplayNode {
-    private var presentationData: PresentationData
+class WalletInfoEmptyItem: ListViewItem {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let address: String
     
+    let selectable: Bool = false
+    
+    init(theme: PresentationTheme, strings: PresentationStrings, address: String) {
+        self.theme = theme
+        self.strings = strings
+        self.address = address
+    }
+    
+    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
+        async {
+            let node = WalletInfoEmptyItemNode()
+            node.insets = UIEdgeInsets()
+            node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
+            Queue.mainQueue().async {
+                completion(node, {
+                    return (nil, { _ in })
+                })
+            }
+        }
+    }
+    
+    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
+        Queue.mainQueue().async {
+            assert(node() is WalletInfoEmptyItemNode)
+            if let nodeValue = node() as? WalletInfoEmptyItemNode {
+                
+                let layout = nodeValue.asyncLayout()
+                async {
+                    let (nodeLayout, apply) = layout(self, params)
+                    Queue.mainQueue().async {
+                        completion(nodeLayout, { _ in
+                            apply()
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+final class WalletInfoEmptyItemNode: ListViewItemNode {
+    private let offsetContainer: ASDisplayNode
     private let iconNode: ASImageNode
     private let animationNode: AnimatedStickerNode
-    private let titleNode: ImmediateTextNode
-    private let textNode: ImmediateTextNode
-    private let addressNode: ImmediateTextNode
+    private let titleNode: TextNode
+    private let textNode: TextNode
+    private let addressNode: TextNode
     
-    init(presentationData: PresentationData, address: String) {
-        self.presentationData = presentationData
+    init() {
+        self.offsetContainer = ASDisplayNode()
         
         self.iconNode = ASImageNode()
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.displaysAsynchronously = false
+        self.iconNode.image = UIImage(bundleImageName: "Wallet/DuckIcon")
         
         self.animationNode = AnimatedStickerNode()
         
-        let title = "Wallet Created"
-        let text = "Your wallet address"
-        self.iconNode.image = UIImage(bundleImageName: "Wallet/DuckIcon")
-        
-        self.titleNode = ImmediateTextNode()
+        self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(32.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-        self.titleNode.maximumNumberOfLines = 0
-        self.titleNode.textAlignment = .center
+        self.textNode = TextNode()
+        self.addressNode = TextNode()
         
-        self.textNode = ImmediateTextNode()
-        self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-        self.textNode.maximumNumberOfLines = 0
-        self.textNode.lineSpacing = 0.1
-        self.textNode.textAlignment = .center
+        super.init(layerBacked: false)
         
-        self.addressNode = ImmediateTextNode()
-        self.addressNode.displaysAsynchronously = false
-        self.addressNode.attributedText = NSAttributedString(string: address, font: Font.monospace(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-        self.addressNode.maximumNumberOfLines = 0
-        self.addressNode.lineSpacing = 0.1
-        self.addressNode.textAlignment = .center
+        self.wantsTrailingItemSpaceUpdates = true
         
-        super.init()
-        
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.animationNode)
-        self.addSubnode(self.titleNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.addressNode)
+        self.offsetContainer.addSubnode(self.iconNode)
+        self.offsetContainer.addSubnode(self.animationNode)
+        self.offsetContainer.addSubnode(self.titleNode)
+        self.offsetContainer.addSubnode(self.textNode)
+        self.offsetContainer.addSubnode(self.addressNode)
+        self.addSubnode(self.offsetContainer)
     }
     
-    func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
+        let layout = self.asyncLayout()
+        let (_, apply) = layout(item as! WalletInfoEmptyItem, params)
+        apply()
+    }
+    
+    func asyncLayout() -> (_ item: WalletInfoEmptyItem, _ params: ListViewItemLayoutParams) -> (ListViewItemNodeLayout, () -> Void) {
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
         let iconSpacing: CGFloat = 5.0
@@ -66,26 +102,65 @@ final class WalletInfoEmptyNode: ASDisplayNode {
         let buttonHeight: CGFloat = 50.0
         
         let iconSize: CGSize
-        var iconOffset = CGPoint()
         iconSize = self.iconNode.image?.size ?? CGSize(width: 140.0, height: 140.0)
         
-        let titleSize = self.titleNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
-        let textSize = self.textNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
-        let addressSize = self.addressNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeTextLayout = TextNode.asyncLayout(self.textNode)
+        let makeAddressLayout = TextNode.asyncLayout(self.addressNode)
         
-        let contentVerticalOrigin: CGFloat = 0.0
-        
-        let iconFrame = CGRect(origin: CGPoint(x: floor((width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
-        transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
-        self.animationNode.updateLayout(size: iconFrame.size)
-        transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
-        let titleFrame = CGRect(origin: CGPoint(x: floor((width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
-        transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
-        let textFrame = CGRect(origin: CGPoint(x: floor((width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
-        transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
-        let addressFrame = CGRect(origin: CGPoint(x: floor((width - addressSize.width) / 2.0), y: textFrame.maxY + titleSpacing), size: addressSize)
-        transition.updateFrameAdditive(node: self.addressNode, frame: addressFrame)
-        
-        return addressFrame.maxY
+        return { [weak self] item, params in
+            let sideInset: CGFloat = 16.0
+            var iconOffset = CGPoint()
+            
+            let title = "Wallet Created"
+            let text = "Your wallet address"
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.bold(32.0), textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(16.0), textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.address, font: Font.monospace(16.0), textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
+            
+            let contentVerticalOrigin: CGFloat = 32.0
+            
+            let iconFrame = CGRect(origin: CGPoint(x: floor((params.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
+            let titleFrame = CGRect(origin: CGPoint(x: floor((params.width - titleLayout.size.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleLayout.size)
+            let textFrame = CGRect(origin: CGPoint(x: floor((params.width - textLayout.size.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textLayout.size)
+            let addressFrame = CGRect(origin: CGPoint(x: floor((params.width - addressLayout.size.width) / 2.0), y: textFrame.maxY + titleSpacing), size: addressLayout.size)
+            
+            let layout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: addressFrame.maxY + 32.0), insets: UIEdgeInsets())
+            
+            return (layout, {
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
+                
+                let _ = titleApply()
+                let _ = textApply()
+                let _ = addressApply()
+                    
+                let transition: ContainedViewLayoutTransition = .immediate
+                
+                transition.updateFrameAdditive(node: strongSelf.iconNode, frame: iconFrame)
+                strongSelf.animationNode.updateLayout(size: iconFrame.size)
+                transition.updateFrameAdditive(node: strongSelf.animationNode, frame: iconFrame)
+                transition.updateFrameAdditive(node: strongSelf.titleNode, frame: titleFrame)
+                transition.updateFrameAdditive(node: strongSelf.textNode, frame: textFrame)
+                transition.updateFrameAdditive(node: strongSelf.addressNode, frame: addressFrame)
+                    
+                strongSelf.contentSize = layout.contentSize
+                strongSelf.insets = layout.insets
+            })
+        }
+    }
+    
+    override func updateTrailingItemSpace(_ height: CGFloat, transition: ContainedViewLayoutTransition) {
+        if height.isLessThanOrEqualTo(0.0) {
+            transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(), size: self.offsetContainer.bounds.size))
+        } else {
+            transition.updateFrame(node: self.offsetContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels(height / 2.0)), size: self.offsetContainer.bounds.size))
+        }
     }
 }

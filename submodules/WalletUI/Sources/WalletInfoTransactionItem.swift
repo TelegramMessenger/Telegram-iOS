@@ -340,11 +340,14 @@ private let timezoneOffset: Int32 = {
     return Int32(timeinfoNow.tm_gmtoff)
 }()
 
+private let granularity: Int32 = 60 * 60 * 24
+
 private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
     private let timestamp: Int32
     private let roundedTimestamp: Int32
     private let month: Int32
     private let year: Int32
+    private let localTimestamp: Int32
     
     let id: Int64
     let theme: PresentationTheme
@@ -364,6 +367,12 @@ private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
         self.year = timeinfo.tm_year
         
         self.id = Int64(self.roundedTimestamp)
+        
+        if timestamp == Int32.max {
+            self.localTimestamp = timestamp / (granularity) * (granularity)
+        } else {
+            self.localTimestamp = ((timestamp + timezoneOffset) / (granularity)) * (granularity)
+        }
     }
     
     let stickDirection: ListViewItemHeaderStickDirection = .top
@@ -371,11 +380,42 @@ private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
     let height: CGFloat = 40.0
     
     func node() -> ListViewItemHeaderNode {
-        return WalletInfoTransactionDateHeaderNode(theme: self.theme, strings: self.strings, roundedTimestamp: self.roundedTimestamp, month: self.month, year: self.year)
+        return WalletInfoTransactionDateHeaderNode(theme: self.theme, strings: self.strings, roundedTimestamp: self.localTimestamp, month: self.month, year: self.year)
     }
 }
 
 private let sectionTitleFont = Font.semibold(17.0)
+
+private func monthAtIndex(_ index: Int, strings: PresentationStrings) -> String {
+    switch index {
+    case 0:
+        return strings.Month_GenJanuary
+    case 1:
+        return strings.Month_GenFebruary
+    case 2:
+        return strings.Month_GenMarch
+    case 3:
+        return strings.Month_GenApril
+    case 4:
+        return strings.Month_GenMay
+    case 5:
+        return strings.Month_GenJune
+    case 6:
+        return strings.Month_GenJuly
+    case 7:
+        return strings.Month_GenAugust
+    case 8:
+        return strings.Month_GenSeptember
+    case 9:
+        return strings.Month_GenOctober
+    case 10:
+        return strings.Month_GenNovember
+    case 11:
+        return strings.Month_GenDecember
+    default:
+        return ""
+    }
+}
 
 final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
     var theme: PresentationTheme
@@ -396,11 +436,30 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         
         super.init()
         
-        let dateText = stringForMonth(strings: strings, month: month, ofYear: year)
+        let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+        
+        var t: time_t = time_t(roundedTimestamp)
+        var timeinfo: tm = tm()
+        gmtime_r(&t, &timeinfo)
+        
+        var now: time_t = time_t(nowTimestamp)
+        var timeinfoNow: tm = tm()
+        localtime_r(&now, &timeinfoNow)
+        
+        var text: String
+        if timeinfo.tm_year == timeinfoNow.tm_year {
+            if timeinfo.tm_yday == timeinfoNow.tm_yday {
+                text = strings.Weekday_Today
+            } else {
+                text = strings.Date_ChatDateHeader(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)").0
+            }
+        } else {
+            text = strings.Date_ChatDateHeaderYear(monthAtIndex(Int(timeinfo.tm_mon), strings: strings), "\(timeinfo.tm_mday)", "\(1900 + timeinfo.tm_year)").0
+        }
         
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
-        self.titleNode.attributedText = NSAttributedString(string: dateText, font: sectionTitleFont, textColor: theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: text, font: sectionTitleFont, textColor: theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 1
         self.titleNode.truncationMode = .byTruncatingTail
     }

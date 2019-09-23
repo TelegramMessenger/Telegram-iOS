@@ -596,6 +596,27 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         convertedUrl = result
                     }
                 }
+            } else if parsedUrl.host == "hostOverride" {
+                if let components = URLComponents(string: "/?" + query) {
+                    var host: String?
+                    if let queryItems = components.queryItems {
+                        for queryItem in queryItems {
+                            if let value = queryItem.value {
+                                if queryItem.name == "host" {
+                                    host = value
+                                }
+                            }
+                        }
+                    }
+                    if let host = host {
+                        let _ = updateNetworkSettingsInteractively(postbox: context.account.postbox, network: context.account.network, { settings in
+                            var settings = settings
+                            settings.backupHostOverride = host
+                            return settings
+                        }).start()
+                        return
+                    }
+                }
             }
             
             if let convertedUrl = convertedUrl {

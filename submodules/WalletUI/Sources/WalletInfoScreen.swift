@@ -208,7 +208,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         let minHeaderHeight: CGFloat = balanceSize.height + balanceSubtitleSize.height + balanceSubtitleSpacing
         
         let minHeaderY = navigationHeight - 44.0 + floor((44.0 - minHeaderHeight) / 2.0)
-        let maxHeaderY = floor((size.height - balanceSize.height) / 2.0)
+        let maxHeaderY = floor((size.height - balanceSize.height) / 2.0 - balanceSubtitleSize.height)
         let headerScaleTransition: CGFloat = max(0.0, min(1.0, (effectiveOffset - minHeaderOffset) / (maxHeaderOffset - minHeaderOffset)))
         let headerPositionTransition: CGFloat = max(0.0, (effectiveOffset - minHeaderOffset) / (maxOffset - minHeaderOffset))
         let headerY = headerPositionTransition * maxHeaderY + (1.0 - headerPositionTransition) * minHeaderY
@@ -223,9 +223,11 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         let headerHeight: CGFloat = 1000.0
         transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset + 10.0 - headerHeight), size: CGSize(width: size.width, height: headerHeight)))
         
-        let leftButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: effectiveOffset - sideInset - buttonHeight), size: CGSize(width: floor((size.width - sideInset * 3.0) / 2.0), height: buttonHeight))
+        let buttonOffset = effectiveOffset
+        
+        let leftButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight), size: CGSize(width: floor((size.width - sideInset * 3.0) / 2.0), height: buttonHeight))
         let sendButtonFrame = CGRect(origin: CGPoint(x: leftButtonFrame.maxX + sideInset, y: leftButtonFrame.minY), size: CGSize(width: size.width - leftButtonFrame.maxX - sideInset * 2.0, height: buttonHeight))
-        let fullButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: effectiveOffset - sideInset - buttonHeight), size: CGSize(width: size.width - sideInset * 2.0, height: buttonHeight))
+        let fullButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight), size: CGSize(width: size.width - sideInset * 2.0, height: buttonHeight))
         
         var receiveButtonFrame: CGRect
         if let balance = self.balance, balance > 0 {
@@ -281,23 +283,52 @@ private struct WalletInfoListTransaction {
     let updates: [ListViewUpdateItem]
 }
 
-private struct WalletInfoListEntry: Equatable, Comparable, Identifiable {
-    let index: Int
-    let item: WalletTransaction
+private enum WalletInfoListEntryId: Hashable {
+    case empty
+    case transaction(WalletTransactionId)
+}
+
+private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
+    case empty(String)
+    case transaction(Int, WalletTransaction)
     
-    var stableId: WalletTransactionId {
-        return self.item.transactionId
+    var stableId: WalletInfoListEntryId {
+        switch self {
+        case .empty:
+            return .empty
+        case let .transaction(_, transaction):
+            return .transaction(transaction.transactionId)
+        }
     }
     
     static func <(lhs: WalletInfoListEntry, rhs: WalletInfoListEntry) -> Bool {
-        return lhs.index < rhs.index
+        switch lhs {
+        case .empty:
+            switch rhs {
+            case .empty:
+                return false
+            case .transaction:
+                return true
+            }
+        case let .transaction(lhsIndex, _):
+            switch rhs {
+            case .empty:
+                return false
+            case let .transaction(rhsIndex, _):
+                return lhsIndex < rhsIndex
+            }
+        }
     }
     
     func item(theme: PresentationTheme, strings: PresentationStrings, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
-        let item = self.item
-        return WalletInfoTransactionItem(theme: theme, strings: strings, walletTransaction: self.item, action: {
-            action(item)
-        })
+        switch self {
+        case let .empty(address):
+            return WalletInfoEmptyItem(theme: theme, strings: strings, address: address)
+        case let .transaction(_, transaction):
+            return WalletInfoTransactionItem(theme: theme, strings: strings, walletTransaction: transaction, action: {
+                action(transaction)
+            })
+        }
     }
 }
 
@@ -321,7 +352,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private let headerNode: WalletInfoHeaderNode
     private let listNode: ListView
-    private let emptyNode: WalletInfoEmptyNode
     
     private var enqueuedTransactions: [WalletInfoListTransaction] = []
     
@@ -350,9 +380,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         
-        self.emptyNode = WalletInfoEmptyNode(presentationData: self.presentationData, address: self.address)
-        self.emptyNode.isHidden = true
-        
         super.init()
         
         self.backgroundColor = .white
@@ -374,7 +401,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         }))
         
         self.addSubnode(self.listNode)
-        self.addSubnode(self.emptyNode)
         self.addSubnode(self.headerNode)
         
         self.listNode.updateFloatingHeaderOffset = { [weak self] offset, listTransition in
@@ -468,11 +494,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: UIEdgeInsets(top: topInset, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), headerInsets: UIEdgeInsets(top: navigationHeight, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), scrollIndicatorInsets: UIEdgeInsets(top: topInset + 3.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0), duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        let emptyNodeHeight = self.emptyNode.updateLayout(width: layout.size.width, transition: transition)
-        let maxEmptyNodeHeight: CGFloat = max(100.0, layout.size.height - headerHeight)
-        let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: headerHeight + floor((maxEmptyNodeHeight - emptyNodeHeight) / 2.0)), size: CGSize(width: layout.size.width, height: emptyNodeHeight))
-        transition.updateFrame(node: self.emptyNode, frame: emptyNodeFrame)
-        
         if isFirstLayout {
             while !self.enqueuedTransactions.isEmpty {
                 self.dequeueTransaction()
@@ -502,7 +523,16 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             return
         }
         self.loadingMoreTransactions = true
-        self.transactionListDisposable.set((getWalletTransactions(address: self.address, previousId: self.currentEntries?.last?.item.transactionId, tonInstance: self.tonContext.instance)
+        var lastTransactionId: WalletTransactionId?
+        if let last = self.currentEntries?.last {
+            switch last {
+            case let .transaction(_, transaction):
+                lastTransactionId = transaction.transactionId
+            case .empty:
+                break
+            }
+        }
+        self.transactionListDisposable.set((getWalletTransactions(address: self.address, previousId: lastTransactionId, tonInstance: self.tonContext.instance)
         |> deliverOnMainQueue).start(next: { [weak self] transactions in
             guard let strongSelf = self else {
                 return
@@ -524,16 +554,37 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         var updatedEntries: [WalletInfoListEntry] = []
         if isReload {
             for transaction in transactions {
-                updatedEntries.append(WalletInfoListEntry(index: updatedEntries.count, item: transaction))
+                updatedEntries.append(.transaction(updatedEntries.count, transaction))
+            }
+            if updatedEntries.isEmpty {
+                updatedEntries.append(.empty(self.address))
             }
         } else {
             updatedEntries = self.currentEntries ?? []
-            var existingIds = Set(updatedEntries.map { $0.item.transactionId })
+            updatedEntries = updatedEntries.filter { entry in
+                if case .empty = entry {
+                    return false
+                } else {
+                    return true
+                }
+            }
+            var existingIds = Set<WalletTransactionId>()
+            for entry in updatedEntries {
+                switch entry {
+                case let .transaction(_, transaction):
+                    existingIds.insert(transaction.transactionId)
+                case .empty:
+                    break
+                }
+            }
             for transaction in transactions {
                 if !existingIds.contains(transaction.transactionId) {
                     existingIds.insert(transaction.transactionId)
-                    updatedEntries.append(WalletInfoListEntry(index: updatedEntries.count, item: transaction))
+                    updatedEntries.append(.transaction(updatedEntries.count, transaction))
                 }
+            }
+            if updatedEntries.isEmpty {
+                updatedEntries.append(.empty(self.address))
             }
         }
         
@@ -548,18 +599,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.enqueuedTransactions.append(transaction)
         self.dequeueTransaction()
         
-        if updatedEntries.isEmpty {
-            self.emptyNode.isHidden = false
-        } else {
-            self.emptyNode.isHidden = true
-        }
-        
         if isFirst {
-            if !updatedEntries.isEmpty {
-                self.emptyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            } else {
-                self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            }
+            self.listNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
     }
     

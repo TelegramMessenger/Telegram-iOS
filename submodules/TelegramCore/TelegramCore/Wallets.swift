@@ -316,6 +316,36 @@ public final class TonInstance {
         }
     }
     
+    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64) -> Signal<Never, SendGramsFromWalletError> {
+        return keychain.decrypt(walletInfo.encryptedSecret.rawValue)
+        |> introduceError(SendGramsFromWalletError.self)
+        |> mapToSignal { decryptedSecret -> Signal<Never, SendGramsFromWalletError> in
+            guard let decryptedSecret = decryptedSecret else {
+                return .fail(.secretDecryptionFailed)
+            }
+            return Signal { subscriber in
+                let disposable = MetaDisposable()
+                
+                self.impl.with { impl in
+                    impl.withInstance { ton in
+                        let cancel = ton.sendGrams(from: TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret), localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount).start(next: { _ in
+                            preconditionFailure()
+                        }, error: { _ in
+                            subscriber.putError(.generic)
+                        }, completed: {
+                            subscriber.putCompletion()
+                        })
+                        disposable.set(ActionDisposable {
+                            cancel?.dispose()
+                        })
+                    }
+                }
+                
+                return disposable
+            }
+        }
+    }
+    
     fileprivate func walletRestoreWords(walletInfo: WalletInfo, keychain: TonKeychain, serverSalt: Data) -> Signal<[String], WalletRestoreWordsError> {
         return keychain.decrypt(walletInfo.encryptedSecret.rawValue)
         |> introduceError(WalletRestoreWordsError.self)
@@ -522,6 +552,25 @@ public enum GetGramsFromTestGiverError {
 
 public func getGramsFromTestGiver(address: String, amount: Int64, tonInstance: TonInstance) -> Signal<Void, GetGramsFromTestGiverError> {
     return tonInstance.getGramsFromTestGiver(address: address, amount: amount)
+}
+
+public enum SendGramsFromWalletError {
+    case generic
+    case secretDecryptionFailed
+}
+
+public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo, toAddress: String, amount: Int64) -> Signal<Never, SendGramsFromWalletError> {
+    return getServerWalletSalt(network: network)
+    |> mapError { _ -> SendGramsFromWalletError in
+        return .generic
+    }
+    |> mapToSignal { serverSalt in
+        return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
+        |> introduceError(SendGramsFromWalletError.self)
+        |> mapToSignal { fromAddress in
+            return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount)
+        }
+    }
 }
 
 public struct WalletTransactionId: Hashable {

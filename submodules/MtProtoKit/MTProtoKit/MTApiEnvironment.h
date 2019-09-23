@@ -69,6 +69,7 @@
 @property (nonatomic) bool disableUpdates;
 @property (nonatomic) NSData *tcpPayloadPrefix;
 @property (nonatomic) NSDictionary *datacenterAddressOverrides;
+@property (nonatomic) NSString *accessHostOverride;
 
 @property (nonatomic, strong, readonly) MTSocksProxySettings *socksProxySettings;
 @property (nonatomic, strong, readonly) MTNetworkSettings *networkSettings;

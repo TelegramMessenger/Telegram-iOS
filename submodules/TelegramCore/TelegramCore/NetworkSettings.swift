@@ -16,19 +16,22 @@ import SwiftSignalKit
 public struct NetworkSettings: PreferencesEntry, Equatable {
     public var reducedBackupDiscoveryTimeout: Bool
     public internal(set) var applicationUpdateUrlPrefix: String?
+    public var backupHostOverride: String?
     
     public static var defaultSettings: NetworkSettings {
-        return NetworkSettings(reducedBackupDiscoveryTimeout: false, applicationUpdateUrlPrefix: nil)
+        return NetworkSettings(reducedBackupDiscoveryTimeout: false, applicationUpdateUrlPrefix: nil, backupHostOverride: nil)
     }
     
-    public init(reducedBackupDiscoveryTimeout: Bool, applicationUpdateUrlPrefix: String?) {
+    public init(reducedBackupDiscoveryTimeout: Bool, applicationUpdateUrlPrefix: String?, backupHostOverride: String?) {
         self.reducedBackupDiscoveryTimeout = reducedBackupDiscoveryTimeout
         self.applicationUpdateUrlPrefix = applicationUpdateUrlPrefix
+        self.backupHostOverride = backupHostOverride
     }
     
     public init(decoder: PostboxDecoder) {
         self.reducedBackupDiscoveryTimeout = decoder.decodeInt32ForKey("reducedBackupDiscoveryTimeout", orElse: 0) != 0
         self.applicationUpdateUrlPrefix = decoder.decodeOptionalStringForKey("applicationUpdateUrlPrefix")
+        self.backupHostOverride = decoder.decodeOptionalStringForKey("backupHostOverride")
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -37,6 +40,11 @@ public struct NetworkSettings: PreferencesEntry, Equatable {
             encoder.encodeString(applicationUpdateUrlPrefix, forKey: "applicationUpdateUrlPrefix")
         } else {
             encoder.encodeNil(forKey: "applicationUpdateUrlPrefix")
+        }
+        if let backupHostOverride = self.backupHostOverride {
+            encoder.encodeString(backupHostOverride, forKey: "backupHostOverride")
+        } else {
+            encoder.encodeNil(forKey: "backupHostOverride")
         }
     }
     
@@ -69,6 +77,9 @@ public func updateNetworkSettingsInteractively(transaction: Transaction, network
         let updated = f(previous)
         updatedSettings = updated
         if updated.reducedBackupDiscoveryTimeout != previous.reducedBackupDiscoveryTimeout {
+            updateNetwork = true
+        }
+        if updated.backupHostOverride != previous.backupHostOverride {
             updateNetwork = true
         }
         return updated

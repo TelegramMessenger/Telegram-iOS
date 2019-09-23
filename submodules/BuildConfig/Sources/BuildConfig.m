@@ -357,8 +357,11 @@ API_AVAILABLE(ios(10))
         if (baseAppBundleId != nil) {
             _dataDict[@"bundleId"] = baseAppBundleId;
         }
-        if (signature.name != nil) {
-            _dataDict[@"name"] = signature.name;
+        if (signature.issuerName != nil) {
+            _dataDict[@"issuerName"] = signature.issuerName;
+        }
+        if (signature.subjectName != nil) {
+            _dataDict[@"subjectName"] = signature.subjectName;
         }
         if (signature.data != nil) {
             _dataDict[@"data"] = [MTSha1(signature.data) base64EncodedStringWithOptions:0];
