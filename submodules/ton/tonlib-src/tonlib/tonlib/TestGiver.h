@@ -23,7 +23,7 @@ class TestGiver {
  public:
   static const block::StdAddress& address();
   static vm::CellHash get_init_code_hash();
-  static td::Ref<vm::Cell> make_a_gift_message(td::uint32 seqno, td::uint64 gramms,
+  static td::Ref<vm::Cell> make_a_gift_message(td::uint32 seqno, td::uint64 gramms, td::Slice message,
                                                const block::StdAddress& dest_address);
 };
 }  // namespace tonlib

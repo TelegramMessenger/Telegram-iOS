@@ -60,7 +60,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"internal.transactionId", -989527262},
     {"raw.accountState", 461615898},
     {"raw.initialAccountState", 777456197},
-    {"raw.message", -1131081640},
+    {"raw.message", -259956097},
     {"raw.transaction", -1159530820},
     {"raw.transactions", 240548986},
     {"testGiver.accountState", 860930426},
@@ -84,7 +84,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"exportKey", 399723440},
     {"exportPemKey", -2047752448},
     {"generic.getAccountState", -657000446},
-    {"generic.sendGrams", 799772985},
+    {"generic.sendGrams", 1523427648},
     {"getBip39Hints", -1889640982},
     {"importEncryptedKey", 656724958},
     {"importKey", -1607900903},
@@ -100,11 +100,11 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"runTests", -2039925427},
     {"testGiver.getAccountAddress", -540100768},
     {"testGiver.getAccountState", 267738275},
-    {"testGiver.sendGrams", -178493799},
+    {"testGiver.sendGrams", -1361914347},
     {"testWallet.getAccountAddress", -1557748223},
     {"testWallet.getAccountState", 654082364},
     {"testWallet.init", 419055225},
-    {"testWallet.sendGrams", -1716705044}
+    {"testWallet.sendGrams", 43200674}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -377,6 +377,12 @@ Status from_json(tonlib_api::raw_message &to, JsonObject &from) {
       TRY_STATUS(from_json(to.value_, value));
     }
   }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.message_, value));
+    }
+  }
   return Status::OK();
 }
 Status from_json(tonlib_api::raw_transaction &to, JsonObject &from) {
@@ -638,6 +644,12 @@ Status from_json(tonlib_api::generic_sendGrams &to, JsonObject &from) {
       TRY_STATUS(from_json(to.amount_, value));
     }
   }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.message_, value));
+    }
+  }
   return Status::OK();
 }
 Status from_json(tonlib_api::getBip39Hints &to, JsonObject &from) {
@@ -848,6 +860,12 @@ Status from_json(tonlib_api::testGiver_sendGrams &to, JsonObject &from) {
       TRY_STATUS(from_json(to.amount_, value));
     }
   }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.message_, value));
+    }
+  }
   return Status::OK();
 }
 Status from_json(tonlib_api::testWallet_getAccountAddress &to, JsonObject &from) {
@@ -900,6 +918,12 @@ Status from_json(tonlib_api::testWallet_sendGrams &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "amount", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.amount_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.message_, value));
     }
   }
   return Status::OK();
@@ -1043,6 +1067,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::raw_message &object) {
   jo << ctie("source", ToJson(object.source_));
   jo << ctie("destination", ToJson(object.destination_));
   jo << ctie("value", ToJson(JsonInt64{object.value_}));
+  jo << ctie("message", ToJson(JsonBytes{object.message_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::raw_transaction &object) {
   auto jo = jv.enter_object();
@@ -1167,6 +1192,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::generic_sendGrams &object) {
     jo << ctie("destination", ToJson(object.destination_));
   }
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
+  jo << ctie("message", ToJson(JsonBytes{object.message_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::getBip39Hints &object) {
   auto jo = jv.enter_object();
@@ -1280,6 +1306,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::testGiver_sendGrams &object) 
   }
   jo << ctie("seqno", ToJson(object.seqno_));
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
+  jo << ctie("message", ToJson(JsonBytes{object.message_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::testWallet_getAccountAddress &object) {
   auto jo = jv.enter_object();
@@ -1313,6 +1340,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::testWallet_sendGrams &object)
   }
   jo << ctie("seqno", ToJson(object.seqno_));
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
+  jo << ctie("message", ToJson(JsonBytes{object.message_}));
 }
 }  // namespace tonlib_api
 }  // namespace ton

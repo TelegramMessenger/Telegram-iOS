@@ -24,6 +24,7 @@
 #include "tonlib/ExtClient.h"
 #include "tonlib/ExtClientOutbound.h"
 #include "tonlib/KeyStorage.h"
+#include "tonlib/LastBlockStorage.h"
 
 #include "td/actor/actor.h"
 
@@ -50,6 +51,7 @@ class TonlibClient : public td::actor::Actor {
 
   // KeyStorage
   KeyStorage key_storage_;
+  LastBlockStorage last_block_storage_;
 
   // network
   td::actor::ActorOwn<ton::adnl::AdnlExtClient> raw_client_;
@@ -73,6 +75,7 @@ class TonlibClient : public td::actor::Actor {
     }
   }
 
+  void update_last_block_state(LastBlockState state);
   void on_result(td::uint64 id, object_ptr<tonlib_api::Object> response);
   static bool is_static_request(td::int32 id);
   static bool is_uninited_request(td::int32 id);

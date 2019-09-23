@@ -28,7 +28,7 @@ td::Ref<vm::Cell> GenericAccount::get_init_state(td::Ref<vm::Cell> code, td::Ref
       .finalize();
 }
 block::StdAddress GenericAccount::get_address(ton::WorkchainId workchain_id, const td::Ref<vm::Cell>& init_state) {
-  return block::StdAddress(workchain_id, init_state->get_hash().bits());
+  return block::StdAddress(workchain_id, init_state->get_hash().bits(), false);
 }
 td::Ref<vm::Cell> GenericAccount::create_ext_message(const block::StdAddress& address, td::Ref<vm::Cell> new_state,
                                                      td::Ref<vm::Cell> body) {

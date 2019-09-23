@@ -28,7 +28,8 @@ class TestWallet {
   static td::Ref<vm::Cell> get_init_state(const td::Ed25519::PublicKey& public_key);
   static td::Ref<vm::Cell> get_init_message(const td::Ed25519::PrivateKey& private_key);
   static td::Ref<vm::Cell> make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 seqno,
-                                               td::int64 gramms, const block::StdAddress& dest_address);
+                                               td::int64 gramms, td::Slice message,
+                                               const block::StdAddress& dest_address);
 
   static td::Ref<vm::Cell> get_init_code();
   static vm::CellHash get_init_code_hash();

@@ -355,7 +355,7 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
         }
     })
     
-    let balance: Signal<WalletBalance?, NoError> = Signal.single(WalletBalance(rawValue: 2500))
+    let balance: Signal<WalletState?, NoError> = Signal.single(WalletState(balance: 2500, lastTransactionId: nil))
     
     var focusItemTag: ItemListItemTag?
     if address == nil {
@@ -373,14 +373,14 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
         let amount = amountValue(state.amount)
         var sendEnabled = false
         if let balance = balance {
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= balance.rawValue
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= balance.balance
         }
         let rightNavigationButton = ItemListNavigationButton(content: .text("Send"), style: .bold, enabled: sendEnabled, action: {
             arguments.proceed()
         })
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Send Grams"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: balance?.rawValue, state: state), style: .blocks, focusItemTag: focusItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: balance?.balance, state: state), style: .blocks, focusItemTag: focusItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

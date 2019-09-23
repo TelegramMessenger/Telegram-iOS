@@ -38,7 +38,9 @@ td::Ref<vm::Cell> TestWallet::get_init_message(const td::Ed25519::PrivateKey& pr
 }
 
 td::Ref<vm::Cell> TestWallet::make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 seqno,
-                                                  td::int64 gramms, const block::StdAddress& dest_address) {
+                                                  td::int64 gramms, td::Slice message,
+                                                  const block::StdAddress& dest_address) {
+  CHECK(message.size() <= 128);
   td::BigInt256 dest_addr;
   dest_addr.import_bits(dest_address.addr.as_bitslice());
   vm::CellBuilder cb;
@@ -46,11 +48,11 @@ td::Ref<vm::Cell> TestWallet::make_a_gift_message(const td::Ed25519::PrivateKey&
       .store_long(dest_address.workchain, 8)
       .store_int256(dest_addr, 256);
   block::tlb::t_Grams.store_integer_value(cb, td::BigInt256(gramms));
-  auto message_inner = cb.store_zeroes(9 + 64 + 32 + 1 + 1).store_bytes("GIFT").finalize();
-  auto message = vm::CellBuilder().store_long(seqno, 32).store_long(1, 8).store_ref(message_inner).finalize();
+  auto message_inner = cb.store_zeroes(9 + 64 + 32 + 1 + 1).store_bytes(message).finalize();
+  auto message_outer = vm::CellBuilder().store_long(seqno, 32).store_long(1, 8).store_ref(message_inner).finalize();
   std::string seq_no(4, 0);
-  auto signature = private_key.sign(message->get_hash().as_slice()).move_as_ok();
-  return vm::CellBuilder().store_bytes(signature).append_cellslice(vm::load_cell_slice(message)).finalize();
+  auto signature = private_key.sign(message_outer->get_hash().as_slice()).move_as_ok();
+  return vm::CellBuilder().store_bytes(signature).append_cellslice(vm::load_cell_slice(message_outer)).finalize();
 }
 
 td::Ref<vm::Cell> TestWallet::get_init_code() {

@@ -4214,7 +4214,7 @@ class engine_validator_config final : public Object {
   std::vector<object_ptr<engine_dht>> dht_;
   std::vector<object_ptr<engine_validator>> validators_;
   td::Bits256 fullnode_;
-  object_ptr<engine_validator_fullNodeSlave> fullnodeslave_;
+  std::vector<object_ptr<engine_validator_fullNodeSlave>> fullnodeslaves_;
   std::vector<object_ptr<engine_validator_fullNodeMaster>> fullnodemasters_;
   std::vector<object_ptr<engine_liteServer>> liteservers_;
   std::vector<object_ptr<engine_controlInterface>> control_;
@@ -4222,9 +4222,9 @@ class engine_validator_config final : public Object {
 
   engine_validator_config();
 
-  engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, object_ptr<engine_validator_fullNodeSlave> &&fullnodeslave_, std::vector<object_ptr<engine_validator_fullNodeMaster>> &&fullnodemasters_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_);
+  engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, std::vector<object_ptr<engine_validator_fullNodeSlave>> &&fullnodeslaves_, std::vector<object_ptr<engine_validator_fullNodeMaster>> &&fullnodemasters_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_);
 
-  static const std::int32_t ID = 17126390;
+  static const std::int32_t ID = -826140252;
   std::int32_t get_id() const final {
     return ID;
   }

@@ -6,6 +6,7 @@
 #include "td/utils/port/signals.h"
 #include "td/utils/port/path.h"
 #include "td/utils/Random.h"
+#include "td/utils/as.h"
 
 #include "terminal/terminal.h"
 
@@ -327,6 +328,8 @@ class TonlibCli : public td::actor::Actor {
                           << "\n";
     for (size_t i = 0; i < keys_.size(); i++) {
       td::TerminalIO::out() << "  #" << i << ": " << keys_[i].public_key << "\n";
+      td::TerminalIO::out() << "    " << to_account_address(PSLICE() << i, false).move_as_ok().address->account_address_
+                            << "\n";
     }
   }
 
@@ -598,13 +601,21 @@ class TonlibCli : public td::actor::Actor {
   }
 
   void transfer(Address from, Address to, td::uint64 grams, td::Slice password) {
+    td::TerminalIO::out() << "Enter message (could be empty)";
+    cont_ = [this, from = std::move(from), to = std::move(to), grams,
+             password = password.str()](td::Slice message) mutable {
+      this->transfer(std::move(from), std::move(to), grams, password, message);
+    };
+    return;
+  }
+  void transfer(Address from, Address to, td::uint64 grams, td::Slice password, td::Slice message) {
     using tonlib_api::make_object;
     auto key = !from.secret.empty()
                    ? make_object<tonlib_api::inputKey>(
                          make_object<tonlib_api::key>(from.public_key, from.secret.copy()), td::SecureString(password))
                    : nullptr;
     send_query(make_object<tonlib_api::generic_sendGrams>(std::move(key), std::move(from.address),
-                                                          std::move(to.address), grams),
+                                                          std::move(to.address), grams, message.str()),
                [](auto r_res) {
                  if (r_res.is_error()) {
                    td::TerminalIO::out() << "Can't get state: " << r_res.error() << "\n";

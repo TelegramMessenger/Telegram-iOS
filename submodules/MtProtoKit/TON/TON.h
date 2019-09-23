@@ -43,8 +43,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) int64_t value;
 @property (nonatomic, strong, readonly) NSString * _Nonnull source;
 @property (nonatomic, strong, readonly) NSString * _Nonnull destination;
+@property (nonatomic, strong, readonly) NSString * _Nonnull textMessage;
 
-- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination;
+- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage;
 
 @end
 
@@ -80,7 +81,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (MTSignal *)getTestGiverAddress;
 - (MTSignal *)testGiverSendGramsWithAccountState:(TONAccountState *)accountState accountAddress:(NSString *)accountAddress amount:(int64_t)amount;
 - (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount;
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString *)textMessage;
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
 - (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
 - (MTSignal *)deleteKeyWithPublicKey:(NSString *)publicKey;

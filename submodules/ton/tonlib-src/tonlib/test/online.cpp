@@ -118,7 +118,7 @@ void transfer_grams(Client& client, std::string from, std::string to, td::int64 
   auto balance = get_balance(client, to);
   sync_send(client, tonlib_api::make_object<tonlib_api::generic_sendGrams>(
                         std::move(input_key), tonlib_api::make_object<tonlib_api::accountAddress>(from),
-                        tonlib_api::make_object<tonlib_api::accountAddress>(to), amount))
+                        tonlib_api::make_object<tonlib_api::accountAddress>(to), amount, "GIFT"))
       .ensure();
   while (balance == get_balance(client, to)) {
     client.receive(1);
@@ -270,7 +270,7 @@ int main(int argc, char* argv[]) {
     {
       sync_send(client, make_object<tonlib_api::testGiver_sendGrams>(
                             make_object<tonlib_api::accountAddress>(wallet_addr.rserialize()), seqno,
-                            1000000000ll * 6666 / 1000))
+                            1000000000ll * 6666 / 1000, "GIFT"))
           .ensure();
     }
 
@@ -307,9 +307,10 @@ int main(int argc, char* argv[]) {
     }
 
     {
-      sync_send(client, make_object<tonlib_api::generic_sendGrams>(
-                            create_input_key(), make_object<tonlib_api::accountAddress>(wallet_addr.rserialize()),
-                            make_object<tonlib_api::accountAddress>(test_giver_address), 1000000000ll * 3333 / 1000))
+      sync_send(client,
+                make_object<tonlib_api::generic_sendGrams>(
+                    create_input_key(), make_object<tonlib_api::accountAddress>(wallet_addr.rserialize()),
+                    make_object<tonlib_api::accountAddress>(test_giver_address), 1000000000ll * 3333 / 1000, "GIFT"))
           .ensure();
     }
     while (true) {

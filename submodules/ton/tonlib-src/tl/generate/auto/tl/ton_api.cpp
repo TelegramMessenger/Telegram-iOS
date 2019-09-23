@@ -7643,21 +7643,21 @@ engine_validator_config::engine_validator_config()
   , dht_()
   , validators_()
   , fullnode_()
-  , fullnodeslave_()
+  , fullnodeslaves_()
   , fullnodemasters_()
   , liteservers_()
   , control_()
   , gc_()
 {}
 
-engine_validator_config::engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, object_ptr<engine_validator_fullNodeSlave> &&fullnodeslave_, std::vector<object_ptr<engine_validator_fullNodeMaster>> &&fullnodemasters_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_)
+engine_validator_config::engine_validator_config(std::int32_t out_port_, std::vector<object_ptr<engine_Addr>> &&addrs_, std::vector<object_ptr<engine_adnl>> &&adnl_, std::vector<object_ptr<engine_dht>> &&dht_, std::vector<object_ptr<engine_validator>> &&validators_, td::Bits256 const &fullnode_, std::vector<object_ptr<engine_validator_fullNodeSlave>> &&fullnodeslaves_, std::vector<object_ptr<engine_validator_fullNodeMaster>> &&fullnodemasters_, std::vector<object_ptr<engine_liteServer>> &&liteservers_, std::vector<object_ptr<engine_controlInterface>> &&control_, object_ptr<engine_gc> &&gc_)
   : out_port_(out_port_)
   , addrs_(std::move(addrs_))
   , adnl_(std::move(adnl_))
   , dht_(std::move(dht_))
   , validators_(std::move(validators_))
   , fullnode_(fullnode_)
-  , fullnodeslave_(std::move(fullnodeslave_))
+  , fullnodeslaves_(std::move(fullnodeslaves_))
   , fullnodemasters_(std::move(fullnodemasters_))
   , liteservers_(std::move(liteservers_))
   , control_(std::move(control_))
@@ -7678,7 +7678,7 @@ engine_validator_config::engine_validator_config(td::TlParser &p)
   , dht_(TlFetchVector<TlFetchObject<engine_dht>>::parse(p))
   , validators_(TlFetchVector<TlFetchObject<engine_validator>>::parse(p))
   , fullnode_(TlFetchInt256::parse(p))
-  , fullnodeslave_(TlFetchObject<engine_validator_fullNodeSlave>::parse(p))
+  , fullnodeslaves_(TlFetchVector<TlFetchObject<engine_validator_fullNodeSlave>>::parse(p))
   , fullnodemasters_(TlFetchVector<TlFetchObject<engine_validator_fullNodeMaster>>::parse(p))
   , liteservers_(TlFetchVector<TlFetchObject<engine_liteServer>>::parse(p))
   , control_(TlFetchVector<TlFetchObject<engine_controlInterface>>::parse(p))
@@ -7694,7 +7694,7 @@ void engine_validator_config::store(td::TlStorerCalcLength &s) const {
   TlStoreVector<TlStoreObject>::store(dht_, s);
   TlStoreVector<TlStoreObject>::store(validators_, s);
   TlStoreBinary::store(fullnode_, s);
-  TlStoreObject::store(fullnodeslave_, s);
+  TlStoreVector<TlStoreObject>::store(fullnodeslaves_, s);
   TlStoreVector<TlStoreObject>::store(fullnodemasters_, s);
   TlStoreVector<TlStoreObject>::store(liteservers_, s);
   TlStoreVector<TlStoreObject>::store(control_, s);
@@ -7709,7 +7709,7 @@ void engine_validator_config::store(td::TlStorerUnsafe &s) const {
   TlStoreVector<TlStoreObject>::store(dht_, s);
   TlStoreVector<TlStoreObject>::store(validators_, s);
   TlStoreBinary::store(fullnode_, s);
-  TlStoreObject::store(fullnodeslave_, s);
+  TlStoreVector<TlStoreObject>::store(fullnodeslaves_, s);
   TlStoreVector<TlStoreObject>::store(fullnodemasters_, s);
   TlStoreVector<TlStoreObject>::store(liteservers_, s);
   TlStoreVector<TlStoreObject>::store(control_, s);
@@ -7725,7 +7725,7 @@ void engine_validator_config::store(td::TlStorerToString &s, const char *field_n
     { const std::vector<object_ptr<engine_dht>> &v = dht_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("dht", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     { const std::vector<object_ptr<engine_validator>> &v = validators_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("validators", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     s.store_field("fullnode", fullnode_);
-    if (fullnodeslave_ == nullptr) { s.store_field("fullnodeslave", "null"); } else { fullnodeslave_->store(s, "fullnodeslave"); }
+    { const std::vector<object_ptr<engine_validator_fullNodeSlave>> &v = fullnodeslaves_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("fullnodeslaves", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     { const std::vector<object_ptr<engine_validator_fullNodeMaster>> &v = fullnodemasters_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("fullnodemasters", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     { const std::vector<object_ptr<engine_liteServer>> &v = liteservers_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("liteservers", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     { const std::vector<object_ptr<engine_controlInterface>> &v = control_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("control", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }

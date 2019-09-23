@@ -69,10 +69,33 @@ public final class TonInstance {
         })
     }
     
-    fileprivate func createWallet(keychain: TonKeychain, serverSalt: Data) -> Signal<(WalletInfo, [String]), NoError> {
+    fileprivate func exportKey(key: TONKey, serverSalt: Data) -> Signal<[String], NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.export(key, localPassword: serverSalt).start(next: { wordList in
+                        guard let wordList = wordList as? [String] else {
+                            assertionFailure()
+                            return
+                        }
+                        subscriber.putNext(wordList)
+                        subscriber.putCompletion()
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func createWallet(keychain: TonKeychain, serverSalt: Data) -> Signal<(WalletInfo, [String]), NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
             self.impl.with { impl in
                 impl.withInstance { ton in
                     let cancel = ton.createKey(withLocalPassword: serverSalt, mnemonicPassword: Data()).start(next: { key in
@@ -85,13 +108,11 @@ public final class TonInstance {
                                 assertionFailure()
                                 return
                             }
-                            let cancel = ton.export(key, localPassword: serverSalt).start(next: { wordList in
-                                guard let wordList = wordList as? [String] else {
-                                    assertionFailure()
-                                    return
-                                }
+                            let _ = self.exportKey(key: key, serverSalt: serverSalt).start(next: { wordList in
                                 subscriber.putNext((WalletInfo(publicKey: WalletPublicKey(rawValue: key.publicKey), encryptedSecret: EncryptedWalletSecret(rawValue: encryptedSecretData)), wordList))
                                 subscriber.putCompletion()
+                            }, error: { _ in
+                                preconditionFailure()
                             })
                         }, error: { _ in
                         }, completed: {
@@ -195,30 +216,20 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func walletBalance(publicKey: WalletPublicKey) -> Signal<WalletBalance, NoError> {
+    fileprivate func getWalletState(address: String) -> Signal<WalletState, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.getTestWalletAccountAddress(withPublicKey: publicKey.rawValue).start(next: { address in
-                        guard let address = address as? String else {
+                    let cancel = ton.getAccountState(withAddress: address).start(next: { state in
+                        guard let state = state as? TONAccountState else {
                             return
                         }
-                        let cancel = ton.getAccountState(withAddress: address).start(next: { state in
-                            guard let state = state as? TONAccountState else {
-                                return
-                            }
-                            subscriber.putNext(WalletBalance(rawValue: state.balance))
-                        }, error: { _ in
-                        }, completed: {
-                            subscriber.putCompletion()
-                        })
-                        disposable.set(ActionDisposable {
-                            cancel?.dispose()
-                        })
+                        subscriber.putNext(WalletState(balance: state.balance, lastTransactionId: state.lastTransactionId.flatMap(WalletTransactionId.init(tonTransactionId:))))
                     }, error: { _ in
                     }, completed: {
+                        subscriber.putCompletion()
                     })
                     disposable.set(ActionDisposable {
                         cancel?.dispose()
@@ -282,17 +293,39 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func getGramsFromTestGiver(address: String, amount: Int64) -> Signal<Void, GetGramsFromTestGiverError> {
+    fileprivate func getTestGiverAccountState() -> Signal<TONAccountState?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
                 impl.withInstance { ton in
                     let cancel = ton.getTestGiverAccountState().start(next: { state in
-                        guard let state = state as? TONAccountState else {
-                            subscriber.putError(.generic)
-                            return
-                        }
+                        subscriber.putNext(state as? TONAccountState)
+                        subscriber.putCompletion()
+                    }, error: { _ in
+                        subscriber.putNext(nil)
+                        subscriber.putCompletion()
+                    }, completed: {
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func getGramsFromTestGiver(address: String, amount: Int64) -> Signal<Void, GetGramsFromTestGiverError> {
+        return self.getTestGiverAccountState()
+        |> introduceError(GetGramsFromTestGiverError.self)
+        |> mapToSignal { state in
+            guard let state = state else {
+                return .fail(.generic)
+            }
+            return Signal { subscriber in
+                let disposable = MetaDisposable()
+                
+                self.impl.with { impl in
+                    impl.withInstance { ton in
                         let cancel = ton.testGiverSendGrams(with: state, accountAddress: address, amount: amount).start(next: { _ in
                         }, error: { _ in
                             subscriber.putError(.generic)
@@ -302,21 +335,15 @@ public final class TonInstance {
                         disposable.set(ActionDisposable {
                             cancel?.dispose()
                         })
-                    }, error: { _ in
-                        subscriber.putError(.generic)
-                    }, completed: {
-                    })
-                    disposable.set(ActionDisposable {
-                        cancel?.dispose()
-                    })
+                    }
                 }
+                
+                return disposable
             }
-            
-            return disposable
         }
     }
     
-    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64) -> Signal<Never, SendGramsFromWalletError> {
+    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String) -> Signal<Never, SendGramsFromWalletError> {
         return keychain.decrypt(walletInfo.encryptedSecret.rawValue)
         |> introduceError(SendGramsFromWalletError.self)
         |> mapToSignal { decryptedSecret -> Signal<Never, SendGramsFromWalletError> in
@@ -328,7 +355,7 @@ public final class TonInstance {
                 
                 self.impl.with { impl in
                     impl.withInstance { ton in
-                        let cancel = ton.sendGrams(from: TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret), localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount).start(next: { _ in
+                        let cancel = ton.sendGrams(from: TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret), localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage).start(next: { _ in
                             preconditionFailure()
                         }, error: { _ in
                             subscriber.putError(.generic)
@@ -526,11 +553,13 @@ public func walletRestoreWords(network: Network, walletInfo: WalletInfo, tonInst
     }
 }
 
-public struct WalletBalance: Hashable {
-    public var rawValue: Int64
+public struct WalletState: Equatable {
+    public let balance: Int64
+    public let lastTransactionId: WalletTransactionId?
     
-    public init(rawValue: Int64) {
-        self.rawValue = rawValue
+    public init(balance: Int64, lastTransactionId: WalletTransactionId?) {
+        self.balance = balance
+        self.lastTransactionId = lastTransactionId
     }
 }
 
@@ -542,8 +571,8 @@ public func testGiverWalletAddress(tonInstance: TonInstance) -> Signal<String, N
     return tonInstance.testGiverWalletAddress()
 }
 
-public func currentWalletBalance(publicKey: WalletPublicKey, tonInstance: TonInstance) -> Signal<WalletBalance, NoError> {
-    return tonInstance.walletBalance(publicKey: publicKey)
+public func getWalletState(address: String, tonInstance: TonInstance) -> Signal<WalletState, NoError> {
+    return tonInstance.getWalletState(address: address)
 }
 
 public enum GetGramsFromTestGiverError {
@@ -559,7 +588,7 @@ public enum SendGramsFromWalletError {
     case secretDecryptionFailed
 }
 
-public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo, toAddress: String, amount: Int64) -> Signal<Never, SendGramsFromWalletError> {
+public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo, toAddress: String, amount: Int64, textMessage: String) -> Signal<Never, SendGramsFromWalletError> {
     return getServerWalletSalt(network: network)
     |> mapError { _ -> SendGramsFromWalletError in
         return .generic
@@ -568,7 +597,7 @@ public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keyc
         return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
         |> introduceError(SendGramsFromWalletError.self)
         |> mapToSignal { fromAddress in
-            return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount)
+            return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage)
         }
     }
 }
@@ -589,11 +618,13 @@ public final class WalletTransactionMessage: Equatable {
     public let value: Int64
     public let source: String
     public let destination: String
+    public let textMessage: String
     
-    init(value: Int64, source: String, destination: String) {
+    init(value: Int64, source: String, destination: String, textMessage: String) {
         self.value = value
         self.source = source
         self.destination = destination
+        self.textMessage = textMessage
     }
     
     public static func ==(lhs: WalletTransactionMessage, rhs: WalletTransactionMessage) -> Bool {
@@ -604,7 +635,10 @@ public final class WalletTransactionMessage: Equatable {
             return false
         }
         if lhs.destination != rhs.destination {
-            return false;
+            return false
+        }
+        if lhs.textMessage != rhs.textMessage {
+            return false
         }
         return true
     }
@@ -612,7 +646,7 @@ public final class WalletTransactionMessage: Equatable {
 
 private extension WalletTransactionMessage {
     convenience init(tonTransactionMessage: TONTransactionMessage) {
-        self.init(value: tonTransactionMessage.value, source: tonTransactionMessage.source, destination: tonTransactionMessage.destination)
+        self.init(value: tonTransactionMessage.value, source: tonTransactionMessage.source, destination: tonTransactionMessage.destination, textMessage: tonTransactionMessage.textMessage)
     }
 }
 

@@ -53,17 +53,20 @@ SecureString create_empty<SecureString>(size_t size) {
 template <class T>
 Result<T> read_file_impl(CSlice path, int64 size, int64 offset) {
   TRY_RESULT(from_file, FileFd::open(path, FileFd::Read));
+  TRY_RESULT(file_size, from_file.get_size());
+  if (offset < 0 || offset > file_size) {
+    return Status::Error("Failed to read file: invalid offset");
+  }
   if (size == -1) {
-    TRY_RESULT(file_size, from_file.get_size());
-    size = file_size;
+    size = file_size - offset;
+  } else if (size >= 0) {
+    if (size + offset > file_size) {
+      size = file_size - offset;
+    }
   }
   if (size < 0) {
     return Status::Error("Failed to read file: invalid size");
   }
-  if (offset < 0 || offset > size) {
-    return Status::Error("Failed to read file: invalid offset");
-  }
-  size -= offset;
   auto content = create_empty<T>(narrow_cast<size_t>(size));
   TRY_RESULT(got_size, from_file.pread(as_mutable_slice(content), offset));
   if (got_size != static_cast<size_t>(size)) {

@@ -490,7 +490,7 @@ engine.validator.fullNodeMaster port:int adnl:int256 = engine.validator.FullNode
 engine.validator.fullNodeSlave ip:int port:int adnl:PublicKey = engine.validator.FullNodeSlave;
 engine.validator.config out_port:int addrs:(vector engine.Addr) adnl:(vector engine.adnl) 
         dht:(vector engine.dht)
-        validators:(vector engine.validator) fullnode:int256 fullnodeslave:engine.validator.fullNodeSlave
+        validators:(vector engine.validator) fullnode:int256 fullnodeslaves:(vector engine.validator.fullNodeSlave)
         fullnodemasters:(vector engine.validator.fullNodeMaster)
         liteservers:(vector engine.liteServer) control:(vector engine.controlInterface)
         gc:engine.gc = engine.validator.Config; 

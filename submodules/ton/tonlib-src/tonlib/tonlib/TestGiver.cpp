@@ -32,8 +32,9 @@ vm::CellHash TestGiver::get_init_code_hash() {
   return vm::CellHash::from_slice(td::base64_decode("wDkZp0yR4xo+9+BnuAPfGVjBzK6FPzqdv2DwRq3z3KE=").move_as_ok());
 }
 
-td::Ref<vm::Cell> TestGiver::make_a_gift_message(td::uint32 seqno, td::uint64 gramms,
+td::Ref<vm::Cell> TestGiver::make_a_gift_message(td::uint32 seqno, td::uint64 gramms, td::Slice message,
                                                  const block::StdAddress& dest_address) {
+  CHECK(message.size() <= 128);
   td::BigInt256 dest_addr;
   dest_addr.import_bits(dest_address.addr.as_bitslice());
   vm::CellBuilder cb;
@@ -44,7 +45,7 @@ td::Ref<vm::Cell> TestGiver::make_a_gift_message(td::uint32 seqno, td::uint64 gr
       .store_int256(dest_addr, 256);
   block::tlb::t_Grams.store_integer_value(cb, td::BigInt256(gramms));
 
-  auto message_inner = cb.store_zeroes(9 + 64 + 32 + 1 + 1).store_bytes("GIFT").finalize();
+  auto message_inner = cb.store_zeroes(9 + 64 + 32 + 1 + 1).store_bytes(message).finalize();
   return vm::CellBuilder().store_long(seqno, 32).store_long(1, 8).store_ref(message_inner).finalize();
 }
 }  // namespace tonlib
