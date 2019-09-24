@@ -147,7 +147,7 @@ public func updatePeerPhotoInternal(postbox: Postbox, network: Network, stateMan
                                         }
                                         
                                         return mapResourceToAvatarSizes(result.resource, groupOrChannel.profileImageRepresentations)
-                                        |> introduceError(UploadPeerPhotoError.self)
+                                        |> castError(UploadPeerPhotoError.self)
                                         |> mapToSignal { generatedData -> Signal<(UpdatePeerPhotoStatus, MediaResource?), UploadPeerPhotoError> in
                                             stateManager?.addUpdates(updates)
                                             

@@ -839,7 +839,7 @@ final class MediaReferenceRevalidationContext {
                 return .complete()
             }
             |> then(loadRecentGifs)
-            |> introduceError(RevalidateMediaReferenceError.self)).start(next: { value in
+            |> castError(RevalidateMediaReferenceError.self)).start(next: { value in
                 next(value)
             }, error: { _ in
                 error(.generic)

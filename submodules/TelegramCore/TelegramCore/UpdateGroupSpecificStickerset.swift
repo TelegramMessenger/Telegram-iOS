@@ -15,7 +15,7 @@ public enum UpdateGroupSpecificStickersetError {
 
 public func updateGroupSpecificStickerset(postbox: Postbox, network: Network, peerId: PeerId, info: StickerPackCollectionInfo?) -> Signal<Void, UpdateGroupSpecificStickersetError> {
     return postbox.loadedPeerWithId(peerId)
-    |> introduceError(UpdateGroupSpecificStickersetError.self)
+    |> castError(UpdateGroupSpecificStickersetError.self)
     |> mapToSignal { peer -> Signal<Void, UpdateGroupSpecificStickersetError> in
         let inputStickerset: Api.InputStickerSet
         if let info = info {
@@ -36,7 +36,7 @@ public func updateGroupSpecificStickerset(postbox: Postbox, network: Network, pe
                                 return (current as? CachedChannelData)?.withUpdatedStickerPack(info)
                             })
                         }
-                    |> introduceError(UpdateGroupSpecificStickersetError.self)
+                    |> castError(UpdateGroupSpecificStickersetError.self)
                     default:
                         return .complete()
                 }

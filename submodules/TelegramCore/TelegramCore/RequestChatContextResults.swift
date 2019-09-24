@@ -28,7 +28,7 @@ public func requestChatContextResults(account: Account, botId: PeerId, peerId: P
             return nil
         }
     }, location)
-    |> introduceError(RequestChatContextResultsError.self)
+    |> castError(RequestChatContextResultsError.self)
     |> mapToSignal { botAndPeer, location -> Signal<ChatContextResultCollection?, RequestChatContextResultsError> in
         if let (bot, peer) = botAndPeer, let inputBot = apiInputUser(bot) {
             var flags: Int32 = 0

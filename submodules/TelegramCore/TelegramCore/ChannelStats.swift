@@ -17,7 +17,7 @@ public func channelStatsUrl(postbox: Postbox, network: Network, peerId: PeerId, 
     return postbox.transaction { transaction -> Api.InputPeer? in
         return transaction.getPeer(peerId).flatMap(apiInputPeer)
     }
-    |> introduceError(ChannelStatsUrlError.self)
+    |> castError(ChannelStatsUrlError.self)
     |> mapToSignal { inputPeer -> Signal<String, ChannelStatsUrlError> in
         guard let inputPeer = inputPeer else {
             return .fail(.generic)

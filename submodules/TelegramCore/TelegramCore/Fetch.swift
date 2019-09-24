@@ -53,14 +53,14 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
         |> then(fetchCloudMediaLocation(account: account, resource: cloudResource, datacenterId: cloudResource.datacenterId, size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: parameters))
     } else if let webFileResource = resource as? WebFileReferenceMediaResource {
         return currentWebDocumentsHostDatacenterId(postbox: account.postbox, isTestingEnvironment: account.testingEnvironment)
-        |> introduceError(MediaResourceDataFetchError.self)
+        |> castError(MediaResourceDataFetchError.self)
         |> mapToSignal { datacenterId -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
             return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
             |> then(fetchCloudMediaLocation(account: account, resource: webFileResource, datacenterId: Int(datacenterId), size: resource.size == 0 ? nil : resource.size, intervals: intervals, parameters: parameters))
         }
     } else if let localFileResource = resource as? LocalFileReferenceMediaResource {
         return fetchLocalFileResource(path: localFileResource.localFilePath, move: localFileResource.isUniquelyReferencedTemporaryFile)
-        |> introduceError(MediaResourceDataFetchError.self)
+        |> castError(MediaResourceDataFetchError.self)
     } else if let httpReference = resource as? HttpReferenceMediaResource {
         return .single(.dataPart(resourceOffset: 0, data: Data(), range: 0 ..< 0, complete: false))
         |> then(fetchHttpResource(url: httpReference.url))

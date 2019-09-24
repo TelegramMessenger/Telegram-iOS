@@ -219,7 +219,7 @@ public func addChannelMembers(account: Account, peerId: PeerId, memberIds: [Peer
         }
         
     }
-    |> introduceError(AddChannelMemberError.self)
+    |> castError(AddChannelMemberError.self)
     
     return signal
     |> switchToLatest

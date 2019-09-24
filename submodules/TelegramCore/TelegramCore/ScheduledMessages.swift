@@ -161,7 +161,7 @@ private func sendScheduledMessageNow(postbox: Postbox, network: Network, stateMa
         }
         return peer
     }
-    |> introduceError(SendScheduledMessageNowError.self)
+    |> castError(SendScheduledMessageNowError.self)
     |> mapToSignal { peer -> Signal<Never, SendScheduledMessageNowError> in
         guard let peer = peer else {
             return .fail(.generic)

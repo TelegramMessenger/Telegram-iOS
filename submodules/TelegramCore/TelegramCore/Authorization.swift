@@ -468,12 +468,12 @@ public func signUpWithName(accountManager: AccountManager, account: Unauthorized
                         initializedAppSettingsAfterLogin(transaction: transaction, appVersion: account.networkArguments.appVersion, syncContacts: syncContacts)
                         transaction.setState(state)
                         }
-                        |> introduceError(SignUpError.self)
+                        |> castError(SignUpError.self)
                     
                     let switchedAccounts = accountManager.transaction { transaction -> Void in
                         switchToAuthorizedAccount(transaction: transaction, account: account)
                         }
-                        |> introduceError(SignUpError.self)
+                        |> castError(SignUpError.self)
                     
                     if let avatarData = avatarData {
                         let resource = LocalFileMediaResource(fileId: arc4random64())

@@ -17,7 +17,7 @@ public func updateChannelHistoryAvailabilitySettingsInteractively(postbox: Postb
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
-    |> introduceError(ChannelHistoryAvailabilityError.self)
+    |> castError(ChannelHistoryAvailabilityError.self)
     |> mapToSignal { peer in
         
         guard let peer = peer, let inputChannel = apiInputChannel(peer) else {
@@ -47,7 +47,7 @@ public func updateChannelHistoryAvailabilitySettingsInteractively(postbox: Postb
                             return currentData
                         }
                     })
-                } |> introduceError(ChannelHistoryAvailabilityError.self)
+                } |> castError(ChannelHistoryAvailabilityError.self)
         }
         
     }

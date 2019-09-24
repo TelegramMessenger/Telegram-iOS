@@ -147,7 +147,7 @@ public final class BlockedPeersContext {
         return self.account.postbox.transaction { transaction -> Api.InputUser? in
             return transaction.getPeer(peerId).flatMap(apiInputUser)
         }
-        |> introduceError(BlockedPeersContextAddError.self)
+        |> castError(BlockedPeersContextAddError.self)
         |> mapToSignal { [weak self] inputUser -> Signal<Never, BlockedPeersContextAddError> in
             guard let inputUser = inputUser else {
                 return .fail(.generic)
@@ -169,7 +169,7 @@ public final class BlockedPeersContext {
                     })
                     return transaction.getPeer(peerId)
                 }
-                |> introduceError(BlockedPeersContextAddError.self)
+                |> castError(BlockedPeersContextAddError.self)
             }
             |> deliverOnMainQueue
             
@@ -204,7 +204,7 @@ public final class BlockedPeersContext {
         return self.account.postbox.transaction { transaction -> Api.InputUser? in
             return transaction.getPeer(peerId).flatMap(apiInputUser)
         }
-        |> introduceError(BlockedPeersContextRemoveError.self)
+        |> castError(BlockedPeersContextRemoveError.self)
         |> mapToSignal { [weak self] inputUser -> Signal<Never, BlockedPeersContextRemoveError> in
             guard let inputUser = inputUser else {
                 return .fail(.generic)
@@ -226,7 +226,7 @@ public final class BlockedPeersContext {
                     })
                     return transaction.getPeer(peerId)
                 }
-                |> introduceError(BlockedPeersContextRemoveError.self)
+                |> castError(BlockedPeersContextRemoveError.self)
             }
             |> deliverOnMainQueue
             |> mapToSignal { _ -> Signal<Never, BlockedPeersContextRemoveError> in

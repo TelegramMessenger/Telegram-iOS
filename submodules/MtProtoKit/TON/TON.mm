@@ -68,12 +68,14 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONAccountState
 
-- (instancetype)initWithBalance:(int64_t)balance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId {
+- (instancetype)initWithIsInitialized:(bool)isInitialized balance:(int64_t)balance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId syncUtime:(int64_t)syncUtime {
     self = [super init];
     if (self != nil) {
+        _isInitialized = isInitialized;
         _balance = balance;
         _seqno = seqno;
         _lastTransactionId = lastTransactionId;
+        _syncUtime = syncUtime;
     }
     return self;
 }
@@ -398,8 +400,11 @@ typedef enum {
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
             } else if (object->get_id() == tonlib_api::testGiver_accountState::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::testGiver_accountState>(object);
-                TONTransactionId *lastTransactionId = [[TONTransactionId alloc] initWithLt:result->last_transaction_id_->lt_ transactionHash:makeData(result->last_transaction_id_->hash_)];
-                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->balance_ seqno:result->seqno_ lastTransactionId:lastTransactionId]];
+                TONTransactionId *lastTransactionId = nil;
+                if (result->last_transaction_id_ != nullptr) {
+                    lastTransactionId = [[TONTransactionId alloc] initWithLt:result->last_transaction_id_->lt_ transactionHash:makeData(result->last_transaction_id_->hash_)];
+                }
+                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:true balance:result->balance_ seqno:result->seqno_ lastTransactionId:lastTransactionId syncUtime:result->sync_utime_]];
                 [subscriber putCompletion];
             } else {
                 assert(false);
@@ -478,17 +483,27 @@ typedef enum {
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
             } else if (object->get_id() == tonlib_api::generic_accountStateUninited::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateUninited>(object);
-                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:-1 lastTransactionId:nil]];
+                TONTransactionId *lastTransactionId = nil;
+                if (result->account_state_->last_transaction_id_ != nullptr) {
+                    lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
+                }
+                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:false balance:result->account_state_->balance_ seqno:-1 lastTransactionId:lastTransactionId syncUtime:result->account_state_->sync_utime_]];
                 [subscriber putCompletion];
             } else if (object->get_id() == tonlib_api::generic_accountStateTestWallet::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateTestWallet>(object);
-                TONTransactionId *lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
-                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId]];
+                TONTransactionId *lastTransactionId = nil;
+                if (result->account_state_->last_transaction_id_ != nullptr) {
+                    lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
+                }
+                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:true balance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId syncUtime:result->account_state_->sync_utime_]];
                 [subscriber putCompletion];
             } else if (object->get_id() == tonlib_api::generic_accountStateTestGiver::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateTestGiver>(object);
-                TONTransactionId *lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
-                [subscriber putNext:[[TONAccountState alloc] initWithBalance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId]];
+                TONTransactionId *lastTransactionId = nil;
+                if (result->account_state_->last_transaction_id_ != nullptr) {
+                    lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
+                }
+                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:true balance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId syncUtime:result->account_state_->sync_utime_]];
                 [subscriber putCompletion];
             } else {
                 assert(false);

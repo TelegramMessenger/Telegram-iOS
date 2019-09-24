@@ -65,14 +65,14 @@ private func createChannel(account: Account, title: String, description: String?
                 |> map { _ in
                     return peerId
                 }
-                |> introduceError(CreateChannelError.self)
+                |> castError(CreateChannelError.self)
                 |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .fail(.generic))
             } else {
                 return .fail(.generic)
             }
         }
     }
-    |> introduceError(CreateChannelError.self)
+    |> castError(CreateChannelError.self)
     |> switchToLatest
 }
 

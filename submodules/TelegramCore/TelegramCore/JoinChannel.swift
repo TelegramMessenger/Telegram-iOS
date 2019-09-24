@@ -17,7 +17,7 @@ public enum JoinChannelError {
 public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChannelParticipant?, JoinChannelError> {
     return account.postbox.loadedPeerWithId(peerId)
     |> take(1)
-    |> introduceError(JoinChannelError.self)
+    |> castError(JoinChannelError.self)
     |> mapToSignal { peer -> Signal<RenderedChannelParticipant?, JoinChannelError> in
         if let inputChannel = apiInputChannel(peer) {
             return account.network.request(Api.functions.channels.joinChannel(channel: inputChannel))
@@ -64,7 +64,7 @@ public func joinChannel(account: Account, peerId: PeerId) -> Signal<RenderedChan
                         }
                         return RenderedChannelParticipant(participant: updatedParticipant, peer: peer, peers: peers, presences: presences)
                     }
-                    |> introduceError(JoinChannelError.self)
+                    |> castError(JoinChannelError.self)
                 }
             }
         } else {

@@ -115,7 +115,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
     return postbox.transaction { transaction -> (Peer?, [Peer]?) in
         return (transaction.getPeer(peerId), admins?.compactMap { transaction.getPeer($0) })
     }
-    |> introduceError(ChannelAdminLogEventError.self)
+    |> castError(ChannelAdminLogEventError.self)
     |> mapToSignal { (peer, admins) -> Signal<AdminLogEventsResult, ChannelAdminLogEventError> in
         if let peer = peer, let inputChannel = apiInputChannel(peer) {
             let inputAdmins = admins?.compactMap { apiInputUser($0) }
@@ -231,7 +231,7 @@ public func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: Pe
                     return postbox.transaction { transaction -> AdminLogEventsResult in
                         updatePeers(transaction: transaction, peers: peers.map { $0.1 }, update: { return $1 })
                         return AdminLogEventsResult(peerId: peerId, peers: peers, events: events)
-                    } |> introduceError(MTRpcError.self)
+                    } |> castError(MTRpcError.self)
                 }
                 
             } |> mapError {_ in return .generic}

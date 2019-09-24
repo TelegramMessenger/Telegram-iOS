@@ -30,7 +30,7 @@ public func checkOwnershipTranfserAvailability(postbox: Postbox, network: Networ
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(memberId)
     }
-    |> introduceError(ChannelOwnershipTransferError.self)
+    |> castError(ChannelOwnershipTransferError.self)
     |> mapToSignal { user -> Signal<Never, ChannelOwnershipTransferError> in
         guard let user = user else {
             return .fail(.generic)
