@@ -401,7 +401,7 @@ private func synchronizeInstalledStickerPacks(transaction: Transaction, postbox:
                                 )
                                 |> then(.fail(.done))
                             }
-                            |> introduceError(SynchronizeInstalledStickerPacksError.self)
+                            |> castError(SynchronizeInstalledStickerPacksError.self)
                             |> switchToLatest
                         }
                     }

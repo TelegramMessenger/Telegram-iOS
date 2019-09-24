@@ -330,7 +330,7 @@ public func createTheme(account: Account, title: String, resource: MediaResource
                                 transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
                                 return .result(theme)
                             }
-                            |> introduceError(CreateThemeError.self)
+                            |> castError(CreateThemeError.self)
                         } else {
                             return .fail(.generic)
                         }
@@ -426,7 +426,7 @@ public func updateTheme(account: Account, accountManager: AccountManager, theme:
                     transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudThemes, items: updatedEntries)
                     return .result(updatedTheme)
                 }
-                |> introduceError(CreateThemeError.self)
+                |> castError(CreateThemeError.self)
             } else {
                 return .fail(.generic)
             }

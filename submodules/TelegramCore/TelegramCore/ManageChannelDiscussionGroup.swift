@@ -33,7 +33,7 @@ public func availableGroupsForChannelDiscussion(postbox: Postbox, network: Netwo
             updatePeers(transaction: transation, peers: peers, update: { _, updated in updated })
             return peers
         }
-        |> introduceError(AvailableChannelDiscussionGroupError.self)
+        |> castError(AvailableChannelDiscussionGroupError.self)
     }
 }
 
@@ -104,7 +104,7 @@ public func updateGroupDiscussionForChannel(network: Network, postbox: Postbox, 
                     }
                 }
             }
-            |> introduceError(ChannelDiscussionGroupError.self)
+            |> castError(ChannelDiscussionGroupError.self)
             |> map { _ in
                 return result
             }

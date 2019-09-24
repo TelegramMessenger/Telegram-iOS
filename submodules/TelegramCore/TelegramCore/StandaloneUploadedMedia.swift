@@ -97,7 +97,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
                     }
                     return nil
                 }
-                |> introduceError(StandaloneUploadMediaError.self)
+                |> castError(StandaloneUploadMediaError.self)
                 |> mapToSignal { inputChat -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                     guard let inputChat = inputChat else {
                         return .fail(.generic)
@@ -191,7 +191,7 @@ public func standaloneUploadedFile(account: Account, peerId: PeerId, text: Strin
                                     }
                                     return nil
                                 }
-                                |> introduceError(StandaloneUploadMediaError.self)
+                                |> castError(StandaloneUploadMediaError.self)
                                 |> mapToSignal { inputChat -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                                     guard let inputChat = inputChat else {
                                         return .fail(.generic)

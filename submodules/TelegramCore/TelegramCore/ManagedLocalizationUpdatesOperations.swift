@@ -165,7 +165,7 @@ private func synchronizeLocalizationUpdates(accountManager: AccountManager, post
     }
     
     let poll = currentLanguageAndVersion
-    |> introduceError(SynchronizeLocalizationUpdatesError.self)
+    |> castError(SynchronizeLocalizationUpdatesError.self)
     |> mapToSignal { (primary, secondary) -> Signal<Void, SynchronizeLocalizationUpdatesError> in
         var differences: [Signal<Api.LangPackDifference, MTRpcError>] = []
         differences.append(network.request(Api.functions.langpack.getDifference(langCode: primary.code, fromVersion: primary.version)))
@@ -242,7 +242,7 @@ private func synchronizeLocalizationUpdates(accountManager: AccountManager, post
                         return Void()
                     }
                 }
-                |> introduceError(Void.self)
+                |> castError(Void.self)
                 |> switchToLatest
         }
     }) |> restart) |> `catch` { _ -> Signal<Void, NoError> in

@@ -650,7 +650,9 @@ final class SharedApplicationContext {
         let tonKeychain: TonKeychain
         
         #if targetEnvironment(simulator)
-        tonKeychain = TonKeychain(encrypt: { data in
+        tonKeychain = TonKeychain(encryptionPublicKey: {
+            return .single(Data())
+        }, encrypt: { data in
             return Signal { subscriber in
                 subscriber.putNext(data)
                 subscriber.putCompletion()
@@ -664,18 +666,34 @@ final class SharedApplicationContext {
             }
         })
         #else
-        tonKeychain = TonKeychain(encrypt: { data in
+        tonKeychain = TonKeychain(encryptionPublicKey: {
             return Signal { subscriber in
-                BuildConfig.encryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result in
-                    subscriber.putNext(result)
+                BuildConfig.getHardwareEncryptionAvailable(withBaseAppBundleId: baseAppBundleId, completion: { value in
+                    subscriber.putNext(value)
                     subscriber.putCompletion()
                 })
                 return EmptyDisposable
             }
-        }, decrypt: { data in
+        }, encrypt: { data in
             return Signal { subscriber in
-                BuildConfig.decryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result in
-                    subscriber.putNext(result)
+                BuildConfig.encryptApplicationSecret(data, baseAppBundleId: baseAppBundleId, completion: { result, publicKey in
+                    if let result = result, let publicKey = publicKey {
+                        subscriber.putNext(TonKeychainEncryptedData(publicKey: publicKey, data: result))
+                        subscriber.putCompletion()
+                    } else {
+                        subscriber.putError(.generic)
+                    }
+                })
+                return EmptyDisposable
+            }
+        }, decrypt: { encryptedData in
+            return Signal { subscriber in
+                BuildConfig.decryptApplicationSecret(encryptedData.data, publicKey: encryptedData.publicKey, baseAppBundleId: baseAppBundleId, completion: { result in
+                    if let result = result {
+                        subscriber.putNext(result)
+                    } else {
+                        subscriber.putError(.generic)
+                    }
                     subscriber.putCompletion()
                 })
                 return EmptyDisposable
@@ -1319,14 +1337,6 @@ final class SharedApplicationContext {
         self.isInForegroundPromise.set(true)
         self.isActiveValue = true
         self.isActivePromise.set(true)
-        
-        let configuration = URLSessionConfiguration.background(withIdentifier: "org.telegram.Telegram-iOS.background")
-        let session = URLSession(configuration: configuration)
-        if #available(iOS 9.0, *) {
-            session.getAllTasks(completionHandler: { tasks in
-                print(tasks)
-            })
-        }
     }
     
     func applicationWillTerminate(_ application: UIApplication) {

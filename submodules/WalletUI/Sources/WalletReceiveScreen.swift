@@ -12,6 +12,12 @@ import SwiftSignalKit
 import OverlayStatusController
 import ShareController
 
+private func formatAddress(_ address: String) -> String {
+    var address = address
+    address.insert("\n", at: address.index(address.startIndex, offsetBy: address.count / 2))
+    return address
+}
+
 private final class WalletReceiveScreenArguments {
     let context: AccountContext
     let copyAddress: () -> Void
@@ -130,10 +136,8 @@ private enum WalletReceiveScreenEntry: ItemListNodeEntry {
 private func walletReceiveScreenEntries(presentationData: PresentationData, address: String) -> [WalletReceiveScreenEntry] {
     var entries: [WalletReceiveScreenEntry] = []
     entries.append(.addressHeader(presentationData.theme, "YOUR WALLET ADDRESS"))
-    
-    let formattedAddress = String(address[address.startIndex..<address.index(address.startIndex, offsetBy: 24)] + "\n" + address[address.index(address.startIndex, offsetBy: 24)..<address.endIndex])
     entries.append(.addressCode(presentationData.theme, address))
-    entries.append(.address(presentationData.theme, formattedAddress))
+    entries.append(.address(presentationData.theme, formatAddress(address)))
     entries.append(.copyAddress(presentationData.theme, "Copy Wallet Address"))
     entries.append(.shareAddressLink(presentationData.theme, "Share Wallet Address"))
     entries.append(.addressInfo(presentationData.theme, "Share this link with other Gram wallet owners to receive Grams from them."))

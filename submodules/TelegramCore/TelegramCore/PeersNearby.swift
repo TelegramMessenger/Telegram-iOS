@@ -38,7 +38,7 @@ public final class PeersNearbyContext {
         |> `catch` { _ -> Signal<Api.Updates?, NoError> in
             return .single(nil)
         }
-        |> introduceError(Void.self)
+        |> castError(Void.self)
         |> mapToSignal { updates -> Signal<[PeerNearby], Void> in
             var peersNearby: [PeerNearby] = []
             if let updates = updates {
@@ -59,7 +59,7 @@ public final class PeersNearbyContext {
             return .single(peersNearby)
             |> then(
                 accountStateManager.updatedPeersNearby()
-                |> introduceError(Void.self)
+                |> castError(Void.self)
             )
         }
         

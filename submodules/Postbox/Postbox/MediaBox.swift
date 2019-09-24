@@ -508,7 +508,7 @@ public final class MediaBox {
                 let fetchResource = self.wrappedFetchResource.get()
                 let fetchedDisposable = fileContext.fetched(range: Int32(range.lowerBound) ..< Int32(range.upperBound), priority: priority, fetch: { intervals in
                     return fetchResource
-                    |> introduceError(MediaResourceDataFetchError.self)
+                    |> castError(MediaResourceDataFetchError.self)
                     |> mapToSignal { fetch in
                         return fetch(resource, intervals, parameters)
                     }
@@ -621,7 +621,7 @@ public final class MediaBox {
                         let fetchResource = self.wrappedFetchResource.get()
                         let fetchedDisposable = fileContext.fetchedFullRange(fetch: { ranges in
                             return fetchResource
-                            |> introduceError(MediaResourceDataFetchError.self)
+                            |> castError(MediaResourceDataFetchError.self)
                             |> mapToSignal { fetch in
                                 return fetch(resource, ranges, parameters)
                             }

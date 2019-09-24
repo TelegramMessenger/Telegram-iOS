@@ -11,11 +11,32 @@ import MtProtoKit
 import TelegramApi
 #endif
 
-public struct TonKeychain {
-    public let encrypt: (Data) -> Signal<Data?, NoError>
-    public let decrypt: (Data) -> Signal<Data?, NoError>
+public struct TonKeychainEncryptedData: Codable, Equatable {
+    public let publicKey: Data
+    public let data: Data
     
-    public init(encrypt: @escaping (Data) -> Signal<Data?, NoError>, decrypt: @escaping (Data) -> Signal<Data?, NoError>) {
+    public init(publicKey: Data, data: Data) {
+        self.publicKey = publicKey
+        self.data = data
+    }
+}
+
+public enum TonKeychainEncryptDataError {
+    case generic
+}
+
+public enum TonKeychainDecryptDataError {
+    case generic
+    case publicKeyMismatch
+}
+
+public struct TonKeychain {
+    public let encryptionPublicKey: () -> Signal<Data?, NoError>
+    public let encrypt: (Data) -> Signal<TonKeychainEncryptedData, TonKeychainEncryptDataError>
+    public let decrypt: (TonKeychainEncryptedData) -> Signal<Data, TonKeychainDecryptDataError>
+    
+    public init(encryptionPublicKey: @escaping () -> Signal<Data?, NoError>, encrypt: @escaping (Data) -> Signal<TonKeychainEncryptedData, TonKeychainEncryptDataError>, decrypt: @escaping (TonKeychainEncryptedData) -> Signal<Data, TonKeychainDecryptDataError>) {
+        self.encryptionPublicKey = encryptionPublicKey
         self.encrypt = encrypt
         self.decrypt = decrypt
     }
@@ -93,7 +114,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func createWallet(keychain: TonKeychain, serverSalt: Data) -> Signal<(WalletInfo, [String]), NoError> {
+    fileprivate func createWallet(keychain: TonKeychain, serverSalt: Data) -> Signal<(WalletInfo, [String]), CreateWalletError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             self.impl.with { impl in
@@ -104,17 +125,14 @@ public final class TonInstance {
                             return
                         }
                         let cancel = keychain.encrypt(key.secret).start(next: { encryptedSecretData in
-                            guard let encryptedSecretData = encryptedSecretData else {
-                                assertionFailure()
-                                return
-                            }
                             let _ = self.exportKey(key: key, serverSalt: serverSalt).start(next: { wordList in
-                                subscriber.putNext((WalletInfo(publicKey: WalletPublicKey(rawValue: key.publicKey), encryptedSecret: EncryptedWalletSecret(rawValue: encryptedSecretData)), wordList))
+                                subscriber.putNext((WalletInfo(publicKey: WalletPublicKey(rawValue: key.publicKey), encryptedSecret: encryptedSecretData), wordList))
                                 subscriber.putCompletion()
-                            }, error: { _ in
-                                preconditionFailure()
+                            }, error: { error in
+                                subscriber.putError(.generic)
                             })
                         }, error: { _ in
+                            subscriber.putError(.generic)
                         }, completed: {
                         })
                     }, error: { _ in
@@ -130,7 +148,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func importWallet(keychain: TonKeychain, wordList: [String], serverSalt: Data) -> Signal<WalletInfo, ImportWalletError> {
+    fileprivate func importWallet(keychain: TonKeychain, wordList: [String], serverSalt: Data) -> Signal<WalletInfo, ImportWalletInternalError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -139,21 +157,17 @@ public final class TonInstance {
                     let cancel = ton.importKey(withLocalPassword: serverSalt, mnemonicPassword: Data(), wordList: wordList).start(next: { key in
                         guard let key = key as? TONKey else {
                             subscriber.putError(.generic)
-                            subscriber.putCompletion()
                             return
                         }
                         let cancel = keychain.encrypt(key.secret).start(next: { encryptedSecretData in
-                            guard let encryptedSecretData = encryptedSecretData else {
-                                subscriber.putError(.generic)
-                                subscriber.putCompletion()
-                                return
-                            }
-                            subscriber.putNext(WalletInfo(publicKey: WalletPublicKey(rawValue: key.publicKey), encryptedSecret: EncryptedWalletSecret(rawValue: encryptedSecretData)))
+                            subscriber.putNext(WalletInfo(publicKey: WalletPublicKey(rawValue: key.publicKey), encryptedSecret: encryptedSecretData))
                             subscriber.putCompletion()
                         }, error: { _ in
+                            subscriber.putError(.generic)
                         }, completed: {
                         })
                     }, error: { _ in
+                        subscriber.putError(.generic)
                     }, completed: {
                     })
                     disposable.set(ActionDisposable {
@@ -216,7 +230,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func getWalletState(address: String) -> Signal<WalletState, NoError> {
+    private func getWalletStateRaw(address: String) -> Signal<TONAccountState, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -226,7 +240,7 @@ public final class TonInstance {
                         guard let state = state as? TONAccountState else {
                             return
                         }
-                        subscriber.putNext(WalletState(balance: state.balance, lastTransactionId: state.lastTransactionId.flatMap(WalletTransactionId.init(tonTransactionId:))))
+                        subscriber.putNext(state)
                     }, error: { _ in
                     }, completed: {
                         subscriber.putCompletion()
@@ -238,6 +252,13 @@ public final class TonInstance {
             }
             
             return disposable
+        }
+    }
+    
+    fileprivate func getWalletState(address: String) -> Signal<(WalletState, Int64), NoError> {
+        return self.getWalletStateRaw(address: address)
+        |> map { state in
+            return (WalletState(balance: state.balance, lastTransactionId: state.lastTransactionId.flatMap(WalletTransactionId.init(tonTransactionId:))), state.syncUtime)
         }
     }
     
@@ -316,7 +337,7 @@ public final class TonInstance {
     
     fileprivate func getGramsFromTestGiver(address: String, amount: Int64) -> Signal<Void, GetGramsFromTestGiverError> {
         return self.getTestGiverAccountState()
-        |> introduceError(GetGramsFromTestGiverError.self)
+        |> castError(GetGramsFromTestGiverError.self)
         |> mapToSignal { state in
             guard let state = state else {
                 return .fail(.generic)
@@ -343,47 +364,22 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func initializeWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo) -> Signal<Never, InitializeWalletError> {
+    private enum MakeWalletInitializedError {
+        case generic
+    }
+    
+    private func makeWalletInitialized(key: TONKey, serverSalt: Data) -> Signal<Never, MakeWalletInitializedError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.getTestWalletAccountAddress(withPublicKey: walletInfo.publicKey.rawValue).start(next: { address in
-                        guard let address = address as? String else {
-                            return
-                        }
-                        let cancel = ton.getAccountState(withAddress: address).start(next: { state in
-                            guard let state = state as? TONAccountState else {
-                                return
-                            }
-                            if state.seqno == -1 {
-                                disposable.set((keychain.decrypt(walletInfo.encryptedSecret.rawValue))
-                                .start(next: { decryptedSecret in
-                                    guard let decryptedSecret = decryptedSecret else {
-                                        subscriber.putError(.generic)
-                                        return
-                                    }
-                                    let cancel = ton.makeWalletInitialized(TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret), localPassword: serverSalt).start(next: { next in
-                                    }, error: { error in
-                                        subscriber.putError(.generic)
-                                    }, completed: {
-                                    })
-                                    disposable.set(ActionDisposable {
-                                        cancel?.dispose()
-                                    })
-                                }))
-                            } else {
-                                subscriber.putCompletion()
-                            }
-                        }, error: { _ in
-                        }, completed: {
-                        })
-                        disposable.set(ActionDisposable {
-                            cancel?.dispose()
-                        })
+                    let cancel = ton.makeWalletInitialized(key, localPassword: serverSalt).start(next: { _ in
+                        preconditionFailure()
                     }, error: { _ in
+                        subscriber.putError(.generic)
                     }, completed: {
+                        subscriber.putCompletion()
                     })
                     disposable.set(ActionDisposable {
                         cancel?.dispose()
@@ -395,43 +391,83 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String) -> Signal<Never, SendGramsFromWalletError> {
-        return keychain.decrypt(walletInfo.encryptedSecret.rawValue)
-        |> introduceError(SendGramsFromWalletError.self)
-        |> mapToSignal { decryptedSecret -> Signal<Never, SendGramsFromWalletError> in
-            guard let decryptedSecret = decryptedSecret else {
-                return .fail(.secretDecryptionFailed)
-            }
-            return Signal { subscriber in
-                let disposable = MetaDisposable()
-                
-                self.impl.with { impl in
-                    impl.withInstance { ton in
-                        let cancel = ton.sendGrams(from: TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret), localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage).start(next: { _ in
-                            preconditionFailure()
-                        }, error: { error in
-                            subscriber.putError(.generic)
-                        }, completed: {
-                            subscriber.putCompletion()
-                        })
-                        disposable.set(ActionDisposable {
-                            cancel?.dispose()
-                        })
+    private func ensureWalletInitialized(address: String, key: TONKey, serverSalt: Data) -> Signal<Never, MakeWalletInitializedError> {
+        return self.getWalletStateRaw(address: address)
+        |> castError(MakeWalletInitializedError.self)
+        |> mapToSignal { state -> Signal<Never, MakeWalletInitializedError> in
+            if state.isInitialized {
+                return .complete()
+            } else {
+                let poll: Signal<Void, MakeWalletInitializedError> = self.getWalletStateRaw(address: address)
+                |> castError(MakeWalletInitializedError.self)
+                |> mapToSignal { state -> Signal<Void, MakeWalletInitializedError> in
+                    if state.isInitialized {
+                        return .single(Void())
+                    } else {
+                        return .complete()
                     }
                 }
                 
-                return disposable
+                let pollUntilInitialized = (
+                    poll
+                    |> then(.complete()
+                    |> delay(2.0, queue: Queue.concurrentDefaultQueue()))
+                )
+                |> restart
+                |> take(1)
+                
+                return self.makeWalletInitialized(key: key, serverSalt: serverSalt)
+                |> then(
+                    pollUntilInitialized
+                    |> ignoreValues
+                )
             }
         }
     }
     
-    fileprivate func walletRestoreWords(walletInfo: WalletInfo, keychain: TonKeychain, serverSalt: Data) -> Signal<[String], WalletRestoreWordsError> {
-        return keychain.decrypt(walletInfo.encryptedSecret.rawValue)
-        |> introduceError(WalletRestoreWordsError.self)
-        |> mapToSignal { decryptedSecret -> Signal<[String], WalletRestoreWordsError> in
-            guard let decryptedSecret = decryptedSecret else {
-                return .fail(.secretDecryptionFailed)
+    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String) -> Signal<Never, SendGramsFromWalletError> {
+        return keychain.decrypt(walletInfo.encryptedSecret)
+        |> mapError { _ -> SendGramsFromWalletError in
+            return .secretDecryptionFailed
+        }
+        |> mapToSignal { decryptedSecret -> Signal<Never, SendGramsFromWalletError> in
+            let key = TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret)
+            
+            return self.ensureWalletInitialized(address: fromAddress, key: key, serverSalt: serverSalt)
+            |> mapError { _ -> SendGramsFromWalletError in
+                return .generic
             }
+            |> then(
+                Signal<Never, SendGramsFromWalletError> { subscriber in
+                    let disposable = MetaDisposable()
+                    
+                    self.impl.with { impl in
+                        impl.withInstance { ton in
+                            let cancel = ton.sendGrams(from: key, localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage).start(next: { _ in
+                                preconditionFailure()
+                            }, error: { _ in
+                                subscriber.putError(.generic)
+                            }, completed: {
+                                subscriber.putCompletion()
+                            })
+                            disposable.set(ActionDisposable {
+                                cancel?.dispose()
+                            })
+                        }
+                    }
+                    
+                    return disposable
+                }
+            )
+        }
+    }
+    
+    fileprivate func walletRestoreWords(walletInfo: WalletInfo, keychain: TonKeychain, serverSalt: Data) -> Signal<[String], WalletRestoreWordsError> {
+        return keychain.decrypt(walletInfo.encryptedSecret)
+        |> mapError { _ -> WalletRestoreWordsError in
+            return .secretDecryptionFailed
+        }
+        |> mapToSignal { decryptedSecret -> Signal<[String], WalletRestoreWordsError> in
             return Signal { subscriber in
                 let disposable = MetaDisposable()
                 
@@ -460,7 +496,7 @@ public final class TonInstance {
     }
 }
 
-public struct WalletPublicKey: Hashable {
+public struct WalletPublicKey: Codable, Hashable {
     public var rawValue: String
     
     public init(rawValue: String) {
@@ -468,43 +504,82 @@ public struct WalletPublicKey: Hashable {
     }
 }
 
-public struct EncryptedWalletSecret: Hashable {
-    public var rawValue: Data
-    
-    public init(rawValue: Data) {
-        self.rawValue = rawValue
-    }
-}
-
-public struct WalletInfo: PostboxCoding, Equatable {
+public struct WalletInfo: PostboxCoding, Codable, Equatable {
     public let publicKey: WalletPublicKey
-    public let encryptedSecret: EncryptedWalletSecret
+    public let encryptedSecret: TonKeychainEncryptedData
     
-    public init(publicKey: WalletPublicKey, encryptedSecret: EncryptedWalletSecret) {
+    public init(publicKey: WalletPublicKey, encryptedSecret: TonKeychainEncryptedData) {
         self.publicKey = publicKey
         self.encryptedSecret = encryptedSecret
     }
     
     public init(decoder: PostboxDecoder) {
         self.publicKey = WalletPublicKey(rawValue: decoder.decodeStringForKey("publicKey", orElse: ""))
-        self.encryptedSecret = EncryptedWalletSecret(rawValue: decoder.decodeDataForKey("encryptedSecret")!)
+        if let publicKey = decoder.decodeDataForKey("encryptedSecretPublicKey"), let secret = decoder.decodeDataForKey("encryptedSecretData") {
+            self.encryptedSecret = TonKeychainEncryptedData(publicKey: publicKey, data: secret)
+        } else {
+            self.encryptedSecret = TonKeychainEncryptedData(publicKey: Data(), data: Data())
+        }
     }
     
     public func encode(_ encoder: PostboxEncoder) {
         encoder.encodeString(self.publicKey.rawValue, forKey: "publicKey")
-        encoder.encodeData(self.encryptedSecret.rawValue, forKey: "encryptedSecret")
+        encoder.encodeData(self.encryptedSecret.publicKey, forKey: "encryptedSecretPublicKey")
+        encoder.encodeData(self.encryptedSecret.data, forKey: "encryptedSecretData")
+    }
+}
+
+public struct CombinedWalletState: Codable, Equatable {
+    public var walletState: WalletState
+    public var timestamp: Int64
+    public var topTransactions: [WalletTransaction]
+}
+
+public struct WalletStateRecord: PostboxCoding, Equatable {
+    public let info: WalletInfo
+    public var state: CombinedWalletState?
+    
+    public init(info: WalletInfo, state: CombinedWalletState?) {
+        self.info = info
+        self.state = state
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.info = decoder.decodeDataForKey("info").flatMap { data in
+            return try? JSONDecoder().decode(WalletInfo.self, from: data)
+        } ?? WalletInfo(publicKey: WalletPublicKey(rawValue: ""), encryptedSecret: TonKeychainEncryptedData(publicKey: Data(), data: Data()))
+        self.state = decoder.decodeDataForKey("state").flatMap { data in
+            return try? JSONDecoder().decode(CombinedWalletState.self, from: data)
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        if let data = try? JSONEncoder().encode(self.info) {
+            encoder.encodeData(data, forKey: "info")
+        }
+        if let state = self.state, let data = try? JSONEncoder().encode(state) {
+            encoder.encodeData(data, forKey: "state")
+        } else {
+            encoder.encodeNil(forKey: "state")
+        }
     }
 }
 
 public struct WalletCollection: PreferencesEntry {
-    public var wallets: [WalletInfo]
+    public var wallets: [WalletStateRecord]
     
-    public init(wallets: [WalletInfo]) {
+    public init(wallets: [WalletStateRecord]) {
         self.wallets = wallets
     }
     
     public init(decoder: PostboxDecoder) {
-        self.wallets = decoder.decodeObjectArrayWithDecoderForKey("wallets")
+        var wallets: [WalletStateRecord] = decoder.decodeObjectArrayWithDecoderForKey("wallets")
+        for i in (0 ..< wallets.count).reversed() {
+            if wallets[i].info.publicKey.rawValue.isEmpty {
+                wallets.remove(at: i)
+            }
+        }
+        self.wallets = wallets
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -539,19 +614,22 @@ public func createWallet(postbox: Postbox, network: Network, tonInstance: TonIns
     }
     |> mapToSignal { serverSalt -> Signal<(WalletInfo, [String]), CreateWalletError> in
         return tonInstance.createWallet(keychain: keychain, serverSalt: serverSalt)
-        |> introduceError(CreateWalletError.self)
         |> mapToSignal { walletInfo, wordList -> Signal<(WalletInfo, [String]), CreateWalletError> in
             return postbox.transaction { transaction -> (WalletInfo, [String]) in
                 transaction.updatePreferencesEntry(key: PreferencesKeys.walletCollection, { current in
                     var walletCollection = (current as? WalletCollection) ?? WalletCollection(wallets: [])
-                    walletCollection.wallets = [walletInfo]
+                    walletCollection.wallets = [WalletStateRecord(info: walletInfo, state: nil)]
                     return walletCollection
                 })
                 return (walletInfo, wordList)
             }
-            |> introduceError(CreateWalletError.self)
+            |> castError(CreateWalletError.self)
         }
     }
+}
+
+private enum ImportWalletInternalError {
+    case generic
 }
 
 public enum ImportWalletError {
@@ -565,16 +643,22 @@ public func importWallet(postbox: Postbox, network: Network, tonInstance: TonIns
     }
     |> mapToSignal { serverSalt in
         return tonInstance.importWallet(keychain: keychain, wordList: wordList, serverSalt: serverSalt)
+        |> `catch` { error -> Signal<WalletInfo, ImportWalletError> in
+            switch error {
+            case .generic:
+                return .fail(.generic)
+            }
+        }
         |> mapToSignal { walletInfo -> Signal<WalletInfo, ImportWalletError> in
             return postbox.transaction { transaction -> WalletInfo in
                 transaction.updatePreferencesEntry(key: PreferencesKeys.walletCollection, { current in
                     var walletCollection = (current as? WalletCollection) ?? WalletCollection(wallets: [])
-                    walletCollection.wallets = [walletInfo]
+                    walletCollection.wallets = [WalletStateRecord(info: walletInfo, state: nil)]
                     return walletCollection
                 })
                 return walletInfo
             }
-            |> introduceError(ImportWalletError.self)
+            |> castError(ImportWalletError.self)
         }
     }
 }
@@ -605,7 +689,7 @@ public func walletRestoreWords(network: Network, walletInfo: WalletInfo, tonInst
     }
 }
 
-public struct WalletState: Equatable {
+public struct WalletState: Codable, Equatable {
     public let balance: Int64
     public let lastTransactionId: WalletTransactionId?
     
@@ -623,8 +707,69 @@ public func testGiverWalletAddress(tonInstance: TonInstance) -> Signal<String, N
     return tonInstance.testGiverWalletAddress()
 }
 
-public func getWalletState(address: String, tonInstance: TonInstance) -> Signal<WalletState, NoError> {
+private func getWalletState(address: String, tonInstance: TonInstance) -> Signal<(WalletState, Int64), NoError> {
     return tonInstance.getWalletState(address: address)
+}
+
+public enum GetCombinedWalletStateError {
+    case generic
+}
+
+public enum CombinedWalletStateResult {
+    case cached(CombinedWalletState?)
+    case updated(CombinedWalletState)
+}
+
+public func getCombinedWalletState(postbox: Postbox, walletInfo: WalletInfo, tonInstance: TonInstance) -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> {
+    return postbox.transaction { transaction -> CombinedWalletState? in
+        let walletCollection = (transaction.getPreferencesEntry(key: PreferencesKeys.walletCollection) as? WalletCollection) ?? WalletCollection(wallets: [])
+        for item in walletCollection.wallets {
+            if item.info.publicKey == walletInfo.publicKey {
+                return item.state
+            }
+        }
+        return nil
+    }
+    |> castError(GetCombinedWalletStateError.self)
+    |> mapToSignal { cachedState -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+        return .single(.cached(cachedState))
+        |> then(
+            tonInstance.walletAddress(publicKey: walletInfo.publicKey)
+            |> castError(GetCombinedWalletStateError.self)
+            |> mapToSignal { address -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+                return getWalletState(address: address, tonInstance: tonInstance)
+                |> castError(GetCombinedWalletStateError.self)
+                |> mapToSignal { walletState, syncUtime -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+                    let topTransactions: Signal<[WalletTransaction], GetCombinedWalletStateError>
+                    if walletState.lastTransactionId == cachedState?.walletState.lastTransactionId {
+                        topTransactions = .single(cachedState?.topTransactions ?? [])
+                    } else {
+                        topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
+                        |> mapError { _ -> GetCombinedWalletStateError in
+                            return .generic
+                        }
+                    }
+                    return topTransactions
+                    |> mapToSignal { topTransactions -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+                        let combinedState = CombinedWalletState(walletState: walletState, timestamp: syncUtime, topTransactions: topTransactions)
+                        return postbox.transaction { transaction -> CombinedWalletStateResult in
+                            transaction.updatePreferencesEntry(key: PreferencesKeys.walletCollection, { current in
+                                var walletCollection = (current as? WalletCollection) ?? WalletCollection(wallets: [])
+                                for i in 0 ..< walletCollection.wallets.count {
+                                    if walletCollection.wallets[i].info.publicKey == walletInfo.publicKey {
+                                        walletCollection.wallets[i].state = combinedState
+                                    }
+                                }
+                                return walletCollection
+                            })
+                            return .updated(combinedState)
+                        }
+                        |> castError(GetCombinedWalletStateError.self)
+                    }
+                }
+            }
+        )
+    }
 }
 
 public enum GetGramsFromTestGiverError {
@@ -647,28 +792,14 @@ public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keyc
     }
     |> mapToSignal { serverSalt in
         return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
-        |> introduceError(SendGramsFromWalletError.self)
+        |> castError(SendGramsFromWalletError.self)
         |> mapToSignal { fromAddress in
             return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage)
         }
     }
 }
 
-public enum InitializeWalletError {
-    case generic
-}
-
-public func initializeWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo) -> Signal<Never, InitializeWalletError> {
-    return getServerWalletSalt(network: network)
-    |> mapError { _ -> InitializeWalletError in
-        return .generic
-    }
-    |> mapToSignal { serverSalt in
-        return tonInstance.initializeWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo)
-    }
-}
-
-public struct WalletTransactionId: Hashable {
+public struct WalletTransactionId: Codable, Hashable {
     public var lt: Int64
     public var transactionHash: Data
 }
@@ -680,7 +811,7 @@ private extension WalletTransactionId {
     }
 }
 
-public final class WalletTransactionMessage: Equatable {
+public final class WalletTransactionMessage: Codable, Equatable {
     public let value: Int64
     public let source: String
     public let destination: String
@@ -716,7 +847,7 @@ private extension WalletTransactionMessage {
     }
 }
 
-public final class WalletTransaction: Equatable {
+public final class WalletTransaction: Codable, Equatable {
     public let data: Data
     public let transactionId: WalletTransactionId
     public let timestamp: Int64
@@ -779,12 +910,33 @@ public enum GetWalletTransactionsError {
 }
 
 public func getWalletTransactions(address: String, previousId: WalletTransactionId?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
+    return getWalletTransactionsOnce(address: address, previousId: previousId, tonInstance: tonInstance)
+    |> mapToSignal { transactions in
+        guard let lastTransaction = transactions.last, transactions.count >= 2 else {
+            return .single(transactions)
+        }
+        return getWalletTransactionsOnce(address: address, previousId: lastTransaction.transactionId, tonInstance: tonInstance)
+        |> map { additionalTransactions in
+            var result = transactions
+            var existingIds = Set(result.map { $0.transactionId })
+            for transaction in additionalTransactions {
+                if !existingIds.contains(transaction.transactionId) {
+                    existingIds.insert(transaction.transactionId)
+                    result.append(transaction)
+                }
+            }
+            return result
+        }
+    }
+}
+
+private func getWalletTransactionsOnce(address: String, previousId: WalletTransactionId?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
     let previousIdValue: Signal<WalletTransactionId?, GetWalletTransactionsError>
     if let previousId = previousId {
         previousIdValue = .single(previousId)
     } else {
         previousIdValue = tonInstance.walletLastTransactionId(address: address)
-        |> introduceError(GetWalletTransactionsError.self)
+        |> castError(GetWalletTransactionsError.self)
     }
     return previousIdValue
     |> mapToSignal { previousId in

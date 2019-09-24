@@ -179,7 +179,7 @@ public class ShareRootControllerImpl {
             let account: Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> = internalContext.sharedContext.accountManager.transaction { transaction -> (SharedAccountContextImpl, LoggingSettings) in
                 return (internalContext.sharedContext, transaction.getSharedData(SharedDataKeys.loggingSettings) as? LoggingSettings ?? LoggingSettings.defaultSettings)
             }
-            |> introduceError(ShareAuthorizationError.self)
+            |> castError(ShareAuthorizationError.self)
             |> mapToSignal { sharedContext, loggingSettings -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
                 Logger.shared.logToFile = loggingSettings.logToFile
                 Logger.shared.logToConsole = loggingSettings.logToConsole
@@ -187,7 +187,7 @@ public class ShareRootControllerImpl {
                 Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
                 
                 return sharedContext.activeAccountsWithInfo
-                |> introduceError(ShareAuthorizationError.self)
+                |> castError(ShareAuthorizationError.self)
                 |> take(1)
                 |> mapToSignal { primary, accounts -> Signal<(SharedAccountContextImpl, Account, [AccountWithInfo]), ShareAuthorizationError> in
                     guard let primary = primary else {
@@ -209,7 +209,7 @@ public class ShareRootControllerImpl {
                 return combineLatest(sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), limitsConfiguration, sharedContext.accountManager.accessChallengeData())
                 |> take(1)
                 |> deliverOnMainQueue
-                |> introduceError(ShareAuthorizationError.self)
+                |> castError(ShareAuthorizationError.self)
                 |> map { sharedData, limitsConfiguration, data -> (AccountContext, PostboxAccessChallengeData, [AccountWithInfo]) in
                     updateLegacyLocalization(strings: sharedContext.currentPresentationData.with({ $0 }).strings)
                     let context = AccountContextImpl(sharedContext: sharedContext, account: account, tonContext: nil, limitsConfiguration: limitsConfiguration)

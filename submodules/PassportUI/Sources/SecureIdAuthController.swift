@@ -209,7 +209,7 @@ public final class SecureIdAuthController: ViewController {
         
         switch self.mode {
             case let .form(peerId, scope, publicKey, callbackUrl, _, _):
-                self.formDisposable = (combineLatest(requestSecureIdForm(postbox: context.account.postbox, network: context.account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> introduceError(RequestSecureIdFormError.self))
+                self.formDisposable = (combineLatest(requestSecureIdForm(postbox: context.account.postbox, network: context.account.network, peerId: peerId, scope: scope, publicKey: publicKey), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> castError(RequestSecureIdFormError.self))
                 |> mapToSignal { form, configuration -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
                     return context.account.postbox.transaction { transaction -> Signal<SecureIdEncryptedFormData, RequestSecureIdFormError> in
                         guard let accountPeer = transaction.getPeer(context.account.peerId), let servicePeer = transaction.getPeer(form.peerId) else {
@@ -240,7 +240,7 @@ public final class SecureIdAuthController: ViewController {
                     handleError(error, callbackUrl, peerId)
                 })
             case .list:
-                self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.context.account.network), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> introduceError(GetAllSecureIdValuesError.self), context.account.postbox.transaction { transaction -> Signal<Peer, GetAllSecureIdValuesError> in
+                self.formDisposable = (combineLatest(getAllSecureIdValues(network: self.context.account.network), secureIdConfiguration(postbox: context.account.postbox, network: context.account.network) |> castError(GetAllSecureIdValuesError.self), context.account.postbox.transaction { transaction -> Signal<Peer, GetAllSecureIdValuesError> in
                     guard let accountPeer = transaction.getPeer(context.account.peerId) else {
                         return .fail(.generic)
                     }

@@ -78,7 +78,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
         }
         return (peer, value)
     }
-    |> introduceError(RequestUpdateMessageReactionError.self)
+    |> castError(RequestUpdateMessageReactionError.self)
     |> mapToSignal { peerAndValue in
         guard let (peer, value) = peerAndValue else {
             return .fail(.generic)
@@ -115,7 +115,7 @@ private func requestUpdateMessageReaction(postbox: Postbox, network: Network, st
                 })
                 stateManager.addUpdates(result)
             }
-            |> introduceError(RequestUpdateMessageReactionError.self)
+            |> castError(RequestUpdateMessageReactionError.self)
             |> ignoreValues
         }
     }*/

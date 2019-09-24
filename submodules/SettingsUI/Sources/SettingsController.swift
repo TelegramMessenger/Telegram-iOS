@@ -1253,7 +1253,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             presentControllerImpl?(c, a)
         }, pushController: { c in
             pushControllerImpl?(c)
-        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get())
+        }, getNavigationController: getNavigationControllerImpl, exceptionsList: notifyExceptions.get(), archivedStickerPacks: archivedPacks.get(), privacySettings: privacySettings.get(), hasWallet: hasWallet)
         
         let (hasWallet, hasPassport, hasWatchApp) = hasWalletPassportAndWatch
         let listState = ItemListNodeState(entries: settingsEntries(account: context.account, presentationData: presentationData, state: state, view: view, proxySettings: proxySettings, notifyExceptions: preferencesAndExceptions.1, notificationsAuthorizationStatus: preferencesAndExceptions.2, notificationsWarningSuppressed: preferencesAndExceptions.3, unreadTrendingStickerPacks: unreadTrendingStickerPacks, archivedPacks: featuredAndArchived.1, privacySettings: preferencesAndExceptions.4, hasWallet: hasWallet, hasPassport: hasPassport, hasWatchApp: hasWatchApp, accountsAndPeers: accountsAndPeers.1, inAppNotificationSettings: inAppNotificationSettings, experimentalUISettings: experimentalUISettings, displayPhoneNumberConfirmation: preferencesAndExceptions.5), style: .blocks, searchItem: searchItem, initialScrollToItem: ListViewScrollToItem(index: 0, position: .top(-navigationBarSearchContentHeight), animated: false, curve: .Default(duration: 0.0), directionHint: .Up))
@@ -1620,16 +1620,33 @@ private func accountContextMenuItems(context: AccountContext, logout: @escaping 
 }
 
 func openWallet(context: AccountContext, push: @escaping (ViewController) -> Void) {
-    let _ = (availableWallets(postbox: context.account.postbox)
-    |> deliverOnMainQueue).start(next: { wallets in
-        if let tonContext = context.tonContext {
-            if wallets.wallets.isEmpty {
+    guard let tonContext = context.tonContext else {
+        return
+    }
+    let _ = (combineLatest(queue: .mainQueue(),
+        availableWallets(postbox: context.account.postbox),
+        tonContext.keychain.encryptionPublicKey()
+    )
+    |> deliverOnMainQueue).start(next: { wallets, currentPublicKey in
+        if wallets.wallets.isEmpty {
+            if let _ = currentPublicKey {
                 push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro))
             } else {
-                let _ = (walletAddress(publicKey: wallets.wallets[0].publicKey, tonInstance: tonContext.instance)
-                |> deliverOnMainQueue).start(next: { address in
-                    push(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: wallets.wallets[0], address: address))
-                })
+                push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable))
+            }
+        } else {
+            let walletInfo = wallets.wallets[0].info
+            if let currentPublicKey = currentPublicKey {
+                if currentPublicKey == walletInfo.encryptedSecret.publicKey {
+                    let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
+                    |> deliverOnMainQueue).start(next: { address in
+                        push(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
+                    })
+                } else {
+                    push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed)))
+                }
+            } else {
+                push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable)))
             }
         }
     })

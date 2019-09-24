@@ -262,7 +262,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 128, display: true), sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { comment in
                 arguments.updateState { state in
                     var state = state
-                    state.comment = comment
+                    state.text = comment
                     return state
                 }
             }, tag: WalletSendScreenEntryTag.comment, action: {
@@ -275,8 +275,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
 private struct WalletSendScreenState: Equatable {
     var address: String
     var amount: String
-    var comment: String
-    var qrScanAvailable: Bool
+    var text: String
 }
 
 private func walletSendScreenEntries(presentationData: PresentationData, balance: Int64?, state: WalletSendScreenState) -> [WalletSendScreenEntry] {
@@ -291,7 +290,7 @@ private func walletSendScreenEntries(presentationData: PresentationData, balance
     entries.append(.amount(presentationData.theme, presentationData.strings, "Grams to send", state.amount ?? ""))
     
     entries.append(.commentHeader(presentationData.theme, "COMMENT"))
-    entries.append(.comment(presentationData.theme, "Optional description of the payment", state.comment))
+    entries.append(.comment(presentationData.theme, "Optional description of the payment", state.text))
     return entries
 }
 
@@ -303,9 +302,9 @@ private final class WalletSendScreenImpl: ItemListController<WalletSendScreenEnt
     
 }
 
-func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, walletState: WalletState? = nil, address: String? = nil, amount: Int64? = nil) -> ViewController {
+func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String? = nil, amount: Int64? = nil, text: String? = nil) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatAmountText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: "", qrScanAvailable: address == nil)
+    let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatAmountText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", text: text ?? "")
     
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -336,9 +335,8 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
                     state.amount = formatAmountText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
                 }
                 if let comment = comment {
-                    state.comment = comment
+                    state.text = comment
                 }
-                state.qrScanAvailable = false
                 updatedState = state
                 return state
             }
@@ -346,7 +344,7 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
             if let updatedState = updatedState {
                 if updatedState.amount.isEmpty {
                     selectNextInputItemImpl?(WalletSendScreenEntryTag.address)
-                } else if updatedState.comment.isEmpty {
+                } else if updatedState.text.isEmpty {
                     selectNextInputItemImpl?(WalletSendScreenEntryTag.amount)
                 }
             }
@@ -377,7 +375,7 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
             dismissAlertImpl?(true)
         }), TextAlertAction(type: .defaultAction, title: "Confirm", action: {
             dismissAlertImpl?(false)
-            pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.comment)))
+            pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.text)))
         })], dismissAutomatically: false)
         presentInGlobalOverlayImpl?(controller, nil)
         
@@ -390,12 +388,20 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
         }
     })
     
-    let balance: Signal<WalletState?, NoError> = .single(walletState)
-    |> then(walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
-    |> mapToSignal { address in
-        return getWalletState(address: address, tonInstance: tonContext.instance)
-        |> map(Optional.init)
-    })
+    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(postbox: context.account.postbox, walletInfo: walletInfo, tonInstance: tonContext.instance)
+    |> map { combinedState in
+        var state: WalletState?
+        switch combinedState {
+        case let .cached(combinedState):
+            state = combinedState?.walletState
+        case let .updated(combinedState):
+            state = combinedState.walletState
+        }
+        return state
+    }
+    |> `catch` { _ in
+        return .single(nil)
+    }
 
     var focusItemTag: ItemListItemTag?
     if address == nil {
@@ -404,7 +410,7 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
         focusItemTag = WalletSendScreenEntryTag.amount
     }
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, balance, statePromise.get())
+    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, walletState, statePromise.get())
     |> map { presentationData, balance, state -> (ItemListControllerState, (ItemListNodeState<WalletSendScreenEntry>, WalletSendScreenEntry.ItemGenerationArguments)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()

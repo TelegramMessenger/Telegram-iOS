@@ -291,7 +291,7 @@ func fetchEmojiSpriteResource(postbox: Postbox, network: Network, resource: Emoj
     let packName = "P\(resource.packId)_by_AEStickerBot"
     
     return loadedStickerPack(postbox: postbox, network: network, reference: .name(packName), forceActualized: false)
-    |> introduceError(MediaResourceDataFetchError.self)
+    |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { result -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         switch result {
             case let .result(_, items, _):

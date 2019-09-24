@@ -378,7 +378,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                     }
                     
                     createSignal = addressPromise.get()
-                    |> introduceError(CreateGroupError.self)
+                    |> castError(CreateGroupError.self)
                     |> mapToSignal { address -> Signal<PeerId?, CreateGroupError> in
                         guard let address = address else {
                             return .complete()

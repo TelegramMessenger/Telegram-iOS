@@ -49,7 +49,7 @@ public func joinChatInteractively(with hash: String, account: Account) -> Signal
         account.stateManager.addUpdates(updates)
         if let peerId = apiUpdatesGroups(updates).first?.peerId {
             return account.postbox.multiplePeersView([peerId])
-            |> introduceError(JoinLinkError.self)
+            |> castError(JoinLinkError.self)
             |> filter { view in
                 return view.peers[peerId] != nil
             }
@@ -57,7 +57,7 @@ public func joinChatInteractively(with hash: String, account: Account) -> Signal
             |> map { _ in
                 return peerId
             }
-            |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil) |> introduceError(JoinLinkError.self))
+            |> timeout(5.0, queue: Queue.concurrentDefaultQueue(), alternate: .single(nil) |> castError(JoinLinkError.self))
         }
         return .single(nil)
     }

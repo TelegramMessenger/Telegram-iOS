@@ -272,7 +272,7 @@ public func preparedShareItems(account: Account, to peerId: PeerId, dataItems: [
         dataSignals = dataSignals
         |> then(
             wrappedSignal
-            |> introduceError(Void.self)
+            |> castError(Void.self)
             |> take(1)
         )
     }
@@ -339,11 +339,11 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
     }
     
     return enqueueMessagesToMultiplePeers(account: account, peerIds: peerIds, messages: messages)
-    |> introduceError(Void.self)
+    |> castError(Void.self)
     |> mapToSignal { messageIds -> Signal<Float, Void> in
         let key: PostboxViewKey = .messages(Set(messageIds))
         return account.postbox.combinedView(keys: [key])
-        |> introduceError(Void.self)
+        |> castError(Void.self)
         |> mapToSignal { view -> Signal<Float, Void> in
             if let messagesView = view.views[key] as? MessagesView {
                 for (_, message) in messagesView.messages {

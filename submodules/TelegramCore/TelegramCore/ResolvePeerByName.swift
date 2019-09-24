@@ -113,7 +113,7 @@ public func resolvePeerByName(account: Account, name: String, ageLimit: Int32 = 
                     transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.resolvedByNamePeers, key: CachedResolvedByNamePeer.key(name: normalizedName)), entry: CachedResolvedByNamePeer(peerId: peerId, timestamp: timestamp), collectionSpec: resolvedByNamePeersCollectionSpec)
                     return peerId
                 }
-                |> introduceError(Void.self)
+                |> castError(Void.self)
             }
             |> `catch` { _ -> Signal<PeerId?, NoError> in
                 return .single(nil)

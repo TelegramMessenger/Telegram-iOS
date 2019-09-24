@@ -30,11 +30,13 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface TONAccountState : NSObject
 
+@property (nonatomic, readonly) bool isInitialized;
 @property (nonatomic, readonly) int64_t balance;
 @property (nonatomic, readonly) int32_t seqno;
 @property (nonatomic, strong, readonly) TONTransactionId * _Nullable lastTransactionId;
+@property (nonatomic, readonly) int64_t syncUtime;
 
-- (instancetype)initWithBalance:(int64_t)balance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId;
+- (instancetype)initWithIsInitialized:(bool)isInitialized balance:(int64_t)balance seqno:(int32_t)seqno lastTransactionId:(TONTransactionId * _Nullable)lastTransactionId syncUtime:(int64_t)syncUtime;
 
 @end
 

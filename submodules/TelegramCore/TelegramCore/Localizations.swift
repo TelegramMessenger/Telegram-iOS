@@ -172,12 +172,12 @@ public func downloadAndApplyLocalization(accountManager: AccountManager, postbox
                     |> mapToSignal { _ -> Signal<Void, NoError> in
                         return .complete()
                     }
-                    |> introduceError(DownloadAndApplyLocalizationError.self)
+                    |> castError(DownloadAndApplyLocalizationError.self)
                 }
-                |> introduceError(DownloadAndApplyLocalizationError.self)
+                |> castError(DownloadAndApplyLocalizationError.self)
                 |> switchToLatest
             }
-            |> introduceError(DownloadAndApplyLocalizationError.self)
+            |> castError(DownloadAndApplyLocalizationError.self)
             |> switchToLatest
         }
     }

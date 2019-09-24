@@ -54,7 +54,7 @@ public func addContactInteractively(account: Account, peerId: PeerId, firstName:
             return nil
         }
     }
-    |> introduceError(AddContactError.self)
+    |> castError(AddContactError.self)
     |> mapToSignal { inputUserAndPhone in
         guard let (inputUser, phone) = inputUserAndPhone else {
             return .fail(.generic)
@@ -93,7 +93,7 @@ public func addContactInteractively(account: Account, peerId: PeerId, firstName:
                 
                 account.stateManager.addUpdates(result)
             }
-            |> introduceError(AddContactError.self)
+            |> castError(AddContactError.self)
             |> ignoreValues
         }
     }
@@ -107,7 +107,7 @@ public func acceptAndShareContact(account: Account, peerId: PeerId) -> Signal<Ne
     return account.postbox.transaction { transaction -> Api.InputUser? in
         return transaction.getPeer(peerId).flatMap(apiInputUser)
     }
-    |> introduceError(AcceptAndShareContactError.self)
+    |> castError(AcceptAndShareContactError.self)
     |> mapToSignal { inputUser -> Signal<Never, AcceptAndShareContactError> in
         guard let inputUser = inputUser else {
             return .fail(.generic)

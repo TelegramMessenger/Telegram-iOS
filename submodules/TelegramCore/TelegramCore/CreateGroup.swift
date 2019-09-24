@@ -49,7 +49,7 @@ public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> S
                     return view.peers[peerId] != nil
                 }
                 |> take(1)
-                |> introduceError(CreateGroupError.self)
+                |> castError(CreateGroupError.self)
                 |> map { _ in
                     return peerId
                 }
@@ -58,6 +58,6 @@ public func createGroup(account: Account, title: String, peerIds: [PeerId]) -> S
             }
         }
     }
-    |> introduceError(CreateGroupError.self)
+    |> castError(CreateGroupError.self)
     |> switchToLatest
 }

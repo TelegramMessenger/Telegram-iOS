@@ -242,6 +242,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public final var visibleContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var visibleBottomContentOffsetChanged: (ListViewVisibleContentOffset) -> Void = { _ in }
     public final var beganInteractiveDragging: () -> Void = { }
+    public final var endedInteractiveDragging: () -> Void = { }
     public final var didEndScrolling: (() -> Void)?
     
     private var currentGeneralScrollDirection: GeneralScrollDirection?
@@ -599,6 +600,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             self.lastContentOffsetTimestamp = 0.0
             self.didEndScrolling?()
         }
+        self.endedInteractiveDragging()
     }
     
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {

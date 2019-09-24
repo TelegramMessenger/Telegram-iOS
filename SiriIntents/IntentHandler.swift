@@ -236,11 +236,11 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
         |> take(1)
         |> mapToSignal { matchedContacts in
             return account
-            |> introduceError(IntentContactsError.self)
+            |> castError(IntentContactsError.self)
             |> mapToSignal { account -> Signal<[(String, TelegramUser)], IntentContactsError> in
                 if let account = account {
                     return matchingCloudContacts(postbox: account.postbox, contacts: matchedContacts)
-                    |> introduceError(IntentContactsError.self)
+                    |> castError(IntentContactsError.self)
                 } else {
                     return .fail(.generic)
                 }
@@ -278,11 +278,11 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             let account = self.accountPromise.get()
             
             let signal = account
-            |> introduceError(IntentHandlingError.self)
+            |> castError(IntentHandlingError.self)
             |> mapToSignal { account -> Signal<INPerson?, IntentHandlingError> in
                 if let account = account {
                     return matchingCloudContact(postbox: account.postbox, peerId: PeerId(peerId))
-                    |> introduceError(IntentHandlingError.self)
+                    |> castError(IntentHandlingError.self)
                     |> map { user -> INPerson? in
                         if let user = user {
                             return personWithUser(stableId: "tg\(peerId)", user: user)
@@ -394,7 +394,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     func handle(intent: INSearchForMessagesIntent, completion: @escaping (INSearchForMessagesIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
-        |> introduceError(IntentHandlingError.self)
+        |> castError(IntentHandlingError.self)
         |> mapToSignal { account -> Signal<[INMessage], IntentHandlingError> in
             guard let account = account else {
                 return .fail(.generic)
@@ -409,7 +409,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             }
             
             return (completion |> timeout(4.0, queue: Queue.mainQueue(), alternate: .single(Void())))
-            |> introduceError(IntentHandlingError.self)
+            |> castError(IntentHandlingError.self)
             |> take(1)
             |> mapToSignal { _ -> Signal<[INMessage], IntentHandlingError> in
                 let messages: Signal<[INMessage], NoError>
@@ -419,7 +419,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
                     messages = unreadMessages(account: account)
                 }
                 return messages
-                |> introduceError(IntentHandlingError.self)
+                |> castError(IntentHandlingError.self)
                 |> afterDisposed {
                     account.shouldBeServiceTaskMaster.set(.single(.never))
                 }
@@ -484,7 +484,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             
             for (_, messageId) in maxMessageIdsToApply {
                 signals.append(applyMaxReadIndexInteractively(postbox: account.postbox, stateManager: account.stateManager, index: MessageIndex(id: messageId, timestamp: 0))
-                |> introduceError(IntentHandlingError.self))
+                |> castError(IntentHandlingError.self))
             }
             
             if signals.isEmpty {
@@ -576,7 +576,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
     func handle(intent: INSearchCallHistoryIntent, completion: @escaping (INSearchCallHistoryIntentResponse) -> Void) {
         self.actionDisposable.set((self.accountPromise.get()
         |> take(1)
-        |> introduceError(IntentHandlingError.self)
+        |> castError(IntentHandlingError.self)
         |> mapToSignal { account -> Signal<[CallRecord], IntentHandlingError> in
             guard let account = account else {
                 return .fail(.generic)
@@ -584,7 +584,7 @@ class IntentHandler: INExtension, INSendMessageIntentHandling, INSearchForMessag
             
             account.shouldBeServiceTaskMaster.set(.single(.now))
             return missedCalls(account: account)
-            |> introduceError(IntentHandlingError.self)
+            |> castError(IntentHandlingError.self)
             |> afterDisposed {
                 account.shouldBeServiceTaskMaster.set(.single(.never))
             }

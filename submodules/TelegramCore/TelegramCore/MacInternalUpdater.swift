@@ -12,17 +12,17 @@ public enum InternalUpdaterError {
 
 public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, InternalUpdaterError> {
     return resolvePeerByName(account: account, name: source)
-        |> introduceError(InternalUpdaterError.self)
+        |> castError(InternalUpdaterError.self)
         |> mapToSignal { peerId -> Signal<Peer?, InternalUpdaterError> in
             return account.postbox.transaction { transaction in
                 return peerId != nil ? transaction.getPeer(peerId!) : nil
-                } |> introduceError(InternalUpdaterError.self)
+                } |> castError(InternalUpdaterError.self)
         }
         |> mapToSignal { peer in
             if let peer = peer, let inputPeer = apiInputPeer(peer) {
                 return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: Int32.max, minId: 0, hash: 0))
                     |> retryRequest
-                    |> introduceError(InternalUpdaterError.self)
+                    |> castError(InternalUpdaterError.self)
                     |> mapToSignal { result in
                         switch result {
                         case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):
@@ -79,17 +79,17 @@ public enum AppUpdateDownloadResult {
 
 public func downloadAppUpdate(account: Account, source: String, fileName: String) -> Signal<AppUpdateDownloadResult, InternalUpdaterError> {
     return resolvePeerByName(account: account, name: source)
-        |> introduceError(InternalUpdaterError.self)
+        |> castError(InternalUpdaterError.self)
         |> mapToSignal { peerId -> Signal<Peer?, InternalUpdaterError> in
             return account.postbox.transaction { transaction in
                 return peerId != nil ? transaction.getPeer(peerId!) : nil
-                } |> introduceError(InternalUpdaterError.self)
+                } |> castError(InternalUpdaterError.self)
         }
         |> mapToSignal { peer in
             if let peer = peer, let inputPeer = apiInputPeer(peer) {
                 return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: 0, addOffset: 0, limit: 10, maxId: Int32.max, minId: 0, hash: 0))
                     |> retryRequest
-                    |> introduceError(InternalUpdaterError.self)
+                    |> castError(InternalUpdaterError.self)
                     |> mapToSignal { result in
                         switch result {
                         case let .channelMessages(_, _, _, apiMessages, apiChats, apiUsers):

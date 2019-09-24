@@ -255,6 +255,12 @@ build_verbose: check_env
 	//:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
 	--verbose 8 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
+deps: check_env
+	$(BUCK) query "deps(//:AppPackage)" --dot  \
+	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
+
+
 build_openssl: check_env
 	$(BUCK) build \
 	//submodules/openssl:openssl#iphoneos-arm64 \

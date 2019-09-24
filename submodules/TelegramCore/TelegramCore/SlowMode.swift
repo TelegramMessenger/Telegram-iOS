@@ -16,7 +16,7 @@ public func updateChannelSlowModeInteractively(postbox: Postbox, network: Networ
     return postbox.transaction { transaction -> Peer? in
         return transaction.getPeer(peerId)
     }
-    |> introduceError(UpdateChannelSlowModeError.self)
+    |> castError(UpdateChannelSlowModeError.self)
     |> mapToSignal { peer in
         guard let peer = peer, let inputChannel = apiInputChannel(peer) else {
             return .fail(.generic)
@@ -34,7 +34,7 @@ public func updateChannelSlowModeInteractively(postbox: Postbox, network: Networ
                     return currentData.withUpdatedSlowModeTimeout(timeout)
                 })
             }
-            |> introduceError(UpdateChannelSlowModeError.self)
+            |> castError(UpdateChannelSlowModeError.self)
         }
     }
 }

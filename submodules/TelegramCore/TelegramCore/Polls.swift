@@ -22,7 +22,7 @@ public enum RequestMessageSelectPollOptionError {
 public func requestMessageSelectPollOption(account: Account, messageId: MessageId, opaqueIdentifier: Data?) -> Signal<Never, RequestMessageSelectPollOptionError> {
     return account.postbox.loadedPeerWithId(messageId.peerId)
     |> take(1)
-    |> introduceError(RequestMessageSelectPollOptionError.self)
+    |> castError(RequestMessageSelectPollOptionError.self)
     |> mapToSignal { peer in
         if let inputPeer = apiInputPeer(peer) {
             return account.network.request(Api.functions.messages.sendVote(peer: inputPeer, msgId: messageId.id, options: opaqueIdentifier.flatMap({ [Buffer(data: $0)] }) ?? []))

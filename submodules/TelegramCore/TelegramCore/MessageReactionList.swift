@@ -97,7 +97,7 @@ private final class MessageReactionCategoryContext {
             let inputPeer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer)
             return inputPeer
         }
-        |> introduceError(LoadReactionsError.self)
+        |> castError(LoadReactionsError.self)
         |> mapToSignal { inputPeer -> Signal<Api.MessageReactionsList, LoadReactionsError> in
             guard let inputPeer = inputPeer else {
                 return .fail(.generic)

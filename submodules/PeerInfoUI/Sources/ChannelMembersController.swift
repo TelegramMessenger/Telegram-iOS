@@ -355,7 +355,7 @@ public func channelMembersController(context: AccountContext, peerId: PeerId) ->
             
             addMembersDisposable.set((contactsController.result
             |> deliverOnMainQueue
-            |> introduceError(AddChannelMemberError.self)
+            |> castError(AddChannelMemberError.self)
             |> mapToSignal { [weak contactsController] contacts -> Signal<Never, AddChannelMemberError> in
                 contactsController?.displayProgress = true
                 
