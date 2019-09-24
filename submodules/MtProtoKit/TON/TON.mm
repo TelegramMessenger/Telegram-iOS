@@ -42,11 +42,15 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
         return nil;
     }
     NSString *source = readString(message->source_);
-    NSString *destination = readString(message->source_);
+    NSString *destination = readString(message->destination_);
+    NSString *textMessage = readString(message->message_);
     if (source == nil || destination == nil) {
         return nil;
     }
-    return [[TONTransactionMessage alloc] initWithValue:message->value_ source:source destination:destination];
+    if (textMessage == nil) {
+        textMessage = @"";
+    }
+    return [[TONTransactionMessage alloc] initWithValue:message->value_ source:source destination:destination textMessage:textMessage];
 }
 
 @implementation TONKey
@@ -91,12 +95,13 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONTransactionMessage
 
-- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination {
+- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage {
     self = [super init];
     if (self != nil) {
         _value = value;
         _source = source;
         _destination = destination;
+        _textMessage = textMessage;
     }
     return self;
 }
@@ -449,7 +454,12 @@ typedef enum {
             }
         }];
         
-        auto query = make_object<tonlib_api::testGiver_sendGrams>(make_object<tonlib_api::accountAddress>(accountAddress.UTF8String), accountState.seqno, amount);
+        auto query = make_object<tonlib_api::testGiver_sendGrams>(make_object<tonlib_api::accountAddress>(
+            accountAddress.UTF8String),
+            accountState.seqno,
+            amount,
+            std::string()
+        );
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{
@@ -493,10 +503,15 @@ typedef enum {
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount {
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString * _Nonnull)textMessage {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in sendGramsFromKey"]];
+            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+        }
+        NSData *textMessageData = [textMessage dataUsingEncoding:NSUTF8StringEncoding];
+        if (textMessageData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in sendGramsFromKey"]];
             return [[MTBlockDisposable alloc] initWithBlock:^{}];
         }
@@ -523,7 +538,8 @@ typedef enum {
             ),
             make_object<tonlib_api::accountAddress>(fromAddress.UTF8String),
             make_object<tonlib_api::accountAddress>(address.UTF8String),
-            amount
+            amount,
+            makeString(textMessageData)
         );
         _client->send({ requestId, std::move(query) });
         

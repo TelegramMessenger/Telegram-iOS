@@ -140,6 +140,52 @@ class AdnlExtClientImpl : public AdnlExtClient {
   void try_stop();
 };
 
+class AdnlExtMultiClientImpl : public AdnlExtMultiClient {
+ public:
+  AdnlExtMultiClientImpl(std::vector<std::pair<AdnlNodeIdFull, td::IPAddress>> ids,
+                         std::unique_ptr<AdnlExtClient::Callback> callback)
+      : ids_(std::move(ids)), callback_(std::move(callback)) {
+  }
+
+  void start_up() override;
+
+  void add_server(AdnlNodeIdFull dst, td::IPAddress dst_addr, td::Promise<td::Unit> promise) override;
+  void del_server(td::IPAddress dst_addr, td::Promise<td::Unit> promise) override;
+
+  void check_ready(td::Promise<td::Unit> promise) override {
+    if (total_ready_ > 0) {
+      promise.set_value(td::Unit());
+    } else {
+      promise.set_error(td::Status::Error(ErrorCode::notready, "conn not ready"));
+    }
+  }
+  void send_query(std::string name, td::BufferSlice data, td::Timestamp timeout,
+                  td::Promise<td::BufferSlice> promise) override;
+
+  void client_ready(td::uint32 idx, bool value);
+
+ private:
+  std::unique_ptr<Callback> make_callback(td::uint32 g);
+
+  struct Client {
+    Client(td::actor::ActorOwn<AdnlExtClient> client, AdnlNodeIdFull pubkey, td::IPAddress addr, td::uint32 generation)
+        : client(std::move(client)), pubkey(std::move(pubkey)), addr(addr), generation(generation), ready(false) {
+    }
+    td::actor::ActorOwn<AdnlExtClient> client;
+    AdnlNodeIdFull pubkey;
+    td::IPAddress addr;
+    td::uint32 generation;
+    bool ready = false;
+  };
+  td::uint32 total_ready_ = 0;
+
+  td::uint32 generation_ = 0;
+  std::map<td::uint32, std::unique_ptr<Client>> clients_;
+
+  std::vector<std::pair<AdnlNodeIdFull, td::IPAddress>> ids_;
+  std::unique_ptr<AdnlExtClient::Callback> callback_;
+};
+
 }  // namespace adnl
 
 }  // namespace ton

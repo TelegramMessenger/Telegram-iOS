@@ -1,5 +1,43 @@
 import AVFoundation
 
+public struct CameraCode: Equatable {
+    public enum CodeType {
+        case qr
+    }
+    
+    public let type: CodeType
+    public let message: String
+    public let corners: [CGPoint]
+    
+    public init(type: CameraCode.CodeType, message: String, corners: [CGPoint]) {
+        self.type = type
+        self.message = message
+        self.corners = corners
+    }
+    
+    public var boundingBox: CGRect {
+        let x = self.corners.map { $0.x }
+        let y = self.corners.map { $0.y }
+        if let minX = x.min(), let minY = y.min(), let maxX = x.max(), let maxY = y.max() {
+            return CGRect(x: minX, y: minY, width: abs(maxX - minX), height: abs(maxY - minY))
+        }
+        return CGRect.null
+    }
+    
+    public static func == (lhs: CameraCode, rhs: CameraCode) -> Bool {
+        if lhs.type != rhs.type {
+            return false
+        }
+        if lhs.message != rhs.message {
+            return false
+        }
+        if lhs.corners != rhs.corners {
+            return false
+        }
+        return true
+    }
+}
+
 final class CameraOutput: NSObject {
     //private let photoOutput = CameraPhotoOutput()
     private let videoOutput = AVCaptureVideoDataOutput()
@@ -7,9 +45,10 @@ final class CameraOutput: NSObject {
     private let metadataOutput = AVCaptureMetadataOutput()
     
     private let queue = DispatchQueue(label: "")
+    private let metadataQueue = DispatchQueue(label: "")
     
     var processSampleBuffer: ((CMSampleBuffer, AVCaptureConnection) -> Void)?
-    var processQRCode: ((String, AVMetadataMachineReadableCodeObject) -> Void)?
+    var processCodes: (([CameraCode]) -> Void)?
     
     override init() {
         super.init()
@@ -34,6 +73,11 @@ final class CameraOutput: NSObject {
         }
         if session.canAddOutput(self.metadataOutput) {
             session.addOutput(self.metadataOutput)
+            
+            self.metadataOutput.setMetadataObjectsDelegate(self, queue: self.metadataQueue)
+            if self.metadataOutput.availableMetadataObjectTypes.contains(.qr) {
+                self.metadataOutput.metadataObjectTypes = [.qr]
+            }
         }
     }
     
@@ -60,8 +104,13 @@ extension CameraOutput: AVCaptureVideoDataOutputSampleBufferDelegate, AVCaptureA
 
 extension CameraOutput: AVCaptureMetadataOutputObjectsDelegate {
     func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        if let object = metadataObjects.first as? AVMetadataMachineReadableCodeObject, object.type == .qr, let stringValue = object.stringValue, !stringValue.isEmpty {
-            self.processQRCode?(stringValue, object)
+        let codes: [CameraCode] = metadataObjects.filter { $0.type == .qr }.compactMap { object in
+            if let object = object as? AVMetadataMachineReadableCodeObject, let stringValue = object.stringValue, !stringValue.isEmpty {
+                return CameraCode(type: .qr, message: stringValue, corners: object.corners)
+            } else {
+                return nil
+            }
         }
+        self.processCodes?(codes)
     }
 }

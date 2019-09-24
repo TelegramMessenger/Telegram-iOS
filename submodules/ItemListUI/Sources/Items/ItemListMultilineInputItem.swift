@@ -15,6 +15,16 @@ public struct ItemListMultilineInputItemTextLimit {
     }
 }
 
+public struct ItemListMultilineInputInlineAction {
+    public let icon: UIImage
+    public let action: (() -> Void)?
+    
+    public init(icon: UIImage, action: (() -> Void)?) {
+        self.icon = icon
+        self.action = action
+    }
+}
+
 public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let text: String
@@ -27,11 +37,12 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let action: (() -> Void)?
     let textUpdated: (String) -> Void
     let shouldUpdateText: (String) -> Bool
-    public let tag: ItemListItemTag?
     let maxLength: ItemListMultilineInputItemTextLimit?
     let minimalHeight: CGFloat?
+    let inlineAction: ItemListMultilineInputInlineAction?
+    public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil) {
+    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
         self.theme = theme
         self.text = text
         self.placeholder = placeholder
@@ -46,6 +57,7 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
         self.shouldUpdateText = shouldUpdateText
         self.tag = tag
         self.action = action
+        self.inlineAction = inlineAction
     }
     
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -94,6 +106,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
     private let measureTextNode: TextNode
     
     private let limitTextNode: TextNode
+    private var inlineActionButtonNode: HighlightableButtonNode?
     
     private var item: ItemListMultilineInputItem?
     private var layoutParams: ListViewItemLayoutParams?
@@ -185,6 +198,10 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                 rightInset += 30.0
             }
             
+            if let inlineAction = item.inlineAction {
+                rightInset += inlineAction.icon.size.width + 8.0
+            }
+            
             var measureText = item.text
             if measureText.hasSuffix("\n") || measureText.isEmpty {
                measureText += "|"
@@ -224,6 +241,10 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         if strongSelf.isNodeLoaded {
                             strongSelf.textNode.typingAttributes = [NSAttributedString.Key.font.rawValue: Font.regular(17.0), NSAttributedString.Key.foregroundColor.rawValue: item.theme.list.itemPrimaryTextColor]
                             strongSelf.textNode.tintColor = item.theme.list.itemAccentColor
+                        }
+                        
+                        if let inlineAction = item.inlineAction {
+                            strongSelf.inlineActionButtonNode?.setImage(generateTintedImage(image: inlineAction.icon, color: item.theme.list.itemAccentColor), for: .normal)
                         }
                     }
                     
@@ -292,6 +313,23 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                         }
                     } else if strongSelf.limitTextNode.supernode != nil {
                         strongSelf.limitTextNode.removeFromSupernode()
+                    }
+                    
+                    if let inlineAction = item.inlineAction {
+                        let inlineActionButtonNode: HighlightableButtonNode
+                        if let currentInlineActionButtonNode = strongSelf.inlineActionButtonNode {
+                            inlineActionButtonNode = currentInlineActionButtonNode
+                        } else {
+                            inlineActionButtonNode = HighlightableButtonNode()
+                            inlineActionButtonNode.setImage(generateTintedImage(image: inlineAction.icon, color: item.theme.list.itemAccentColor), for: .normal)
+                            inlineActionButtonNode.addTarget(strongSelf, action: #selector(strongSelf.inlineActionPressed), forControlEvents: .touchUpInside)
+                            strongSelf.addSubnode(inlineActionButtonNode)
+                            strongSelf.inlineActionButtonNode = inlineActionButtonNode
+                        }
+                        inlineActionButtonNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - inlineAction.icon.size.width - 11.0, y: 7.0), size: inlineAction.icon.size)
+                    } else if let inlineActionButtonNode = strongSelf.inlineActionButtonNode {
+                        inlineActionButtonNode.removeFromSupernode()
+                        strongSelf.inlineActionButtonNode = nil
                     }
                 }
             })
@@ -376,5 +414,11 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
     
     public func animateError() {
         self.textNode.layer.addShakeAnimation()
+    }
+    
+    @objc private func inlineActionPressed() {
+        if let action = self.item?.inlineAction?.action {
+            action()
+        }
     }
 }

@@ -32,7 +32,7 @@ internal.transactionId lt:int64 hash:bytes = internal.TransactionId;
 
 raw.initialAccountState code:bytes data:bytes = raw.InitialAccountState;
 raw.accountState balance:int64 code:bytes data:bytes last_transaction_id:internal.transactionId sync_utime:int53 = raw.AccountState;
-raw.message source:string destination:string value:int64 = raw.Message;
+raw.message source:string destination:string value:int64 message:bytes = raw.Message;
 raw.transaction utime:int53 data:bytes transaction_id:internal.transactionId fee:int64 in_msg:raw.message out_msgs:vector<raw.message> = raw.Transaction;
 raw.transactions transactions:vector<raw.Transaction> previous_transaction_id:internal.transactionId = raw.Transactions;
 
@@ -81,15 +81,15 @@ raw.getTransactions account_address:accountAddress from_transaction_id:internal.
 testWallet.init private_key:inputKey = Ok;
 testWallet.getAccountAddress initital_account_state:testWallet.initialAccountState = AccountAddress;
 testWallet.getAccountState account_address:accountAddress = testWallet.AccountState;
-testWallet.sendGrams private_key:inputKey destination:accountAddress seqno:int32 amount:int64 = Ok;
+testWallet.sendGrams private_key:inputKey destination:accountAddress seqno:int32 amount:int64 message:bytes = Ok;
 
 testGiver.getAccountState = testGiver.AccountState;
 testGiver.getAccountAddress = AccountAddress;
-testGiver.sendGrams destination:accountAddress seqno:int32 amount:int64 = Ok;
+testGiver.sendGrams destination:accountAddress seqno:int32 amount:int64 message:bytes = Ok;
 
 //generic.getAccountAddress initital_account_state:generic.InitialAccountState = AccountAddress;
 generic.getAccountState account_address:accountAddress = generic.AccountState;
-generic.sendGrams private_key:inputKey source:accountAddress destination:accountAddress amount:int64 = Ok;
+generic.sendGrams private_key:inputKey source:accountAddress destination:accountAddress amount:int64 message:bytes = Ok;
 
 onLiteServerQueryResult id:int64 bytes:bytes = Ok;
 onLiteServerQueryError id:int64 error:error = Ok;

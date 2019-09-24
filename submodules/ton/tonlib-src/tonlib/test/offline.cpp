@@ -127,8 +127,8 @@ TEST(Tonlib, TestGiver) {
 
   auto wallet_query = fift_output.source_lookup.read_file("wallet-query.boc").move_as_ok().data;
 
-  auto res = GenericAccount::create_ext_message(TestGiver::address(), {},
-                                                TestGiver::make_a_gift_message(0, 1000000000ll * 6666 / 1000, address));
+  auto res = GenericAccount::create_ext_message(
+      TestGiver::address(), {}, TestGiver::make_a_gift_message(0, 1000000000ll * 6666 / 1000, "GIFT", address));
   vm::CellSlice(vm::NoVm(), res).print_rec(std::cerr);
   CHECK(vm::std_boc_deserialize(wallet_query).move_as_ok()->get_hash() == res->get_hash());
 }

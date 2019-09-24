@@ -808,8 +808,17 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         }
     }
     
-    return combineLatest(watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings)
-    |> map { watchAppInstalled, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings in
+    let hasWallet = context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+    |> take(1)
+    |> map { view -> Bool in
+        let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+        let configuration = WalletConfiguration.with(appConfiguration: appConfiguration)
+        return configuration.enabled
+    }
+
+    
+    return combineLatest(watchAppInstalled, hasWallet, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings)
+    |> map { watchAppInstalled, hasWallet, canAddAccount, localizations, notificationSettings, notificationExceptionsList, archivedStickerPacks, proxyServers, privacySettings in
         let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
         
         var allItems: [SettingsSearchableItem] = []
@@ -858,12 +867,14 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         })
         allItems.append(passport)
 
-        let wallet = SettingsSearchableItem(id: .wallet(0), title: "Wallet", alternate: synonyms("Wallet"), icon: .passport, breadcrumbs: [], present: { context, _, present in
-            openWallet(context: context, push: { c in
-                present(.push, c)
+        if hasWallet {
+            let wallet = SettingsSearchableItem(id: .wallet(0), title: "Wallet", alternate: synonyms("Wallet"), icon: .passport, breadcrumbs: [], present: { context, _, present in
+                openWallet(context: context, push: { c in
+                    present(.push, c)
+                })
             })
-        })
-        allItems.append(wallet)
+            allItems.append(wallet)
+        }
         
         let support = SettingsSearchableItem(id: .support(0), title: strings.Settings_Support, alternate: synonyms(strings.SettingsSearch_Synonyms_Support), icon: .support, breadcrumbs: [], present: { context, _, present in
             let _ = (supportPeerId(account: context.account)

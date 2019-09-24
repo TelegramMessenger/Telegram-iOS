@@ -159,7 +159,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         var toolbarHeight: CGFloat = cleanInsets.bottom
 
         if let segmentedControlNode = self.segmentedControlNode, let toolbarBackgroundNode = self.toolbarBackgroundNode, let toolbarSeparatorNode = self.toolbarSeparatorNode {
-            toolbarHeight += 44
+            toolbarHeight += 44.0
             transition.updateFrame(node: toolbarBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: toolbarHeight)))
             transition.updateFrame(node: toolbarSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - toolbarHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
             
@@ -169,7 +169,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         
         var insets = layout.insets(options: [.input])
         insets.top += navigationBarHeight
-        insets.bottom = max(insets.bottom, cleanInsets.bottom)
+        insets.bottom = max(insets.bottom, cleanInsets.bottom + 44.0)
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
         

@@ -625,7 +625,7 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"engine.adnlProxy.config", 1848000769},
     {"engine.adnlProxy.port", -117344950},
     {"engine.dht.config", -197295930},
-    {"engine.validator.config", 17126390},
+    {"engine.validator.config", -826140252},
     {"engine.validator.controlQueryError", 1999018527},
     {"engine.validator.dhtServerStatus", -1323440290},
     {"engine.validator.dhtServersStatus", 725155112},
@@ -3099,9 +3099,9 @@ Status from_json(ton_api::engine_validator_config &to, JsonObject &from) {
     }
   }
   {
-    TRY_RESULT(value, get_json_object_field(from, "fullnodeslave", JsonValue::Type::Null, true));
+    TRY_RESULT(value, get_json_object_field(from, "fullnodeslaves", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
-      TRY_STATUS(from_json(to.fullnodeslave_, value));
+      TRY_STATUS(from_json(to.fullnodeslaves_, value));
     }
   }
   {
@@ -6711,9 +6711,7 @@ void to_json(JsonValueScope &jv, const ton_api::engine_validator_config &object)
   jo << ctie("dht", ToJson(object.dht_));
   jo << ctie("validators", ToJson(object.validators_));
   jo << ctie("fullnode", ToJson(object.fullnode_));
-  if (object.fullnodeslave_) {
-    jo << ctie("fullnodeslave", ToJson(object.fullnodeslave_));
-  }
+  jo << ctie("fullnodeslaves", ToJson(object.fullnodeslaves_));
   jo << ctie("fullnodemasters", ToJson(object.fullnodemasters_));
   jo << ctie("liteservers", ToJson(object.liteservers_));
   jo << ctie("control", ToJson(object.control_));

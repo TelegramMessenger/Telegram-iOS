@@ -400,47 +400,55 @@ func contextMenuForChatPresentationIntefaceState(chatPresentationInterfaceState:
         
         if !messages[0].text.isEmpty || resourceAvailable {
             let message = messages[0]
-            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                if resourceAvailable {
-                    for media in message.media {
-                        if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
-                            let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
-                                |> take(1)
-                                |> deliverOnMainQueue).start(next: { data in
-                                    if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
-                                        if let image = UIImage(data: imageData) {
-                                            if !message.text.isEmpty {
-                                                UIPasteboard.general.string = message.text
-                                                /*UIPasteboard.general.items = [
-                                                 [kUTTypeUTF8PlainText as String: message.text],
-                                                 [kUTTypePNG as String: image]
-                                                 ]*/
+            var isExpired = false
+            for media in message.media {
+                if let _ = media as? TelegramMediaExpiredContent {
+                    isExpired = true
+                }
+            }
+            if !isExpired {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_ContextMenuCopy, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    if resourceAvailable {
+                        for media in message.media {
+                            if let image = media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
+                                let _ = (context.account.postbox.mediaBox.resourceData(largest.resource, option: .incremental(waitUntilFetchStatus: false))
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { data in
+                                        if data.complete, let imageData = try? Data(contentsOf: URL(fileURLWithPath: data.path)) {
+                                            if let image = UIImage(data: imageData) {
+                                                if !message.text.isEmpty {
+                                                    UIPasteboard.general.string = message.text
+                                                    /*UIPasteboard.general.items = [
+                                                     [kUTTypeUTF8PlainText as String: message.text],
+                                                     [kUTTypePNG as String: image]
+                                                     ]*/
+                                                } else {
+                                                    UIPasteboard.general.image = image
+                                                }
                                             } else {
-                                                UIPasteboard.general.image = image
+                                                UIPasteboard.general.string = message.text
                                             }
                                         } else {
                                             UIPasteboard.general.string = message.text
                                         }
-                                    } else {
-                                        UIPasteboard.general.string = message.text
-                                    }
-                                })
+                                    })
+                            }
                         }
-                    }
-                } else {
-                    var messageEntities: [MessageTextEntity]?
-                    for attribute in message.attributes {
-                        if let attribute = attribute as? TextEntitiesMessageAttribute {
-                            messageEntities = attribute.entities
-                            break
+                    } else {
+                        var messageEntities: [MessageTextEntity]?
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                messageEntities = attribute.entities
+                                break
+                            }
                         }
+                        storeMessageTextInPasteboard(message.text, entities: messageEntities)
                     }
-                    storeMessageTextInPasteboard(message.text, entities: messageEntities)
-                }
-                f(.default)
-            })))
+                    f(.default)
+                })))
+            }
             if resourceAvailable, !message.containsSecretMedia {
                 var mediaReference: AnyMediaReference?
                 for media in message.media {

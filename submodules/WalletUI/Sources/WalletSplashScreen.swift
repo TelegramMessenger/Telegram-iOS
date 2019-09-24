@@ -13,6 +13,7 @@ import SwiftSignalKit
 import OverlayStatusController
 import ItemListUI
 import AlertUI
+import TextFormat
 
 public enum WalletSplashMode {
     case intro
@@ -49,10 +50,10 @@ public final class WalletSplashScreen: ViewController {
         case .intro:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "Not Now", style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: "Import existing wallet", style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
-        case let .sending(walletInfo, address, amount, comment):
+        case let .sending(walletInfo, address, amount, textMessage):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
             
-            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount)
+            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage)
             |> deliverOnMainQueue).start(error: { [weak self] error in
                 guard let strongSelf = self else {
                     return
@@ -223,29 +224,32 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         self.animationNode = AnimatedStickerNode()
         
         let title: String
-        let text: String
+        let text: NSAttributedString
         let buttonText: String
         let termsText: String
         let secondaryActionText: String
-    
+        
+        let textFont = Font.regular(16.0)
+        let textColor = self.presentationData.theme.list.itemPrimaryTextColor
+        
         switch mode {
         case .intro:
             title = "Gram Wallet"
-            text = "Gram wallet allows you to make fast and secure blockchain-based payments without intermediaries."
+            text = NSAttributedString(string: "Gram wallet allows you to make fast and secure blockchain-based payments without intermediaries.", font: textFont, textColor: textColor)
             buttonText = "Create My Wallet"
             termsText = "By creating the wallet you accept\nTerms of Conditions."
             self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/IntroIcon")
             secondaryActionText = ""
         case .created:
             title = "Congratulations"
-            text = "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode."
+            text = NSAttributedString(string: "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode.", font: textFont, textColor: textColor)
             buttonText = "Proceed"
             termsText = ""
             self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/CreatedIcon")
             secondaryActionText = ""
         case .success:
             title = "Ready to go!"
-            text = "You’re all set. Now you have a wallet that only you control - directly, without middlemen or bankers. "
+            text = NSAttributedString(string: "You’re all set. Now you have a wallet that only you control - directly, without middlemen or bankers. ", font: textFont, textColor: textColor)
             buttonText = "View My Wallet"
             termsText = ""
             self.iconNode.image = nil
@@ -256,7 +260,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             secondaryActionText = ""
         case .restoreFailed:
             title = "Too Bad"
-            text = "Without the secret words, you can't'nrestore access to the wallet."
+            text = NSAttributedString(string: "Without the secret words, you can't'nrestore access to the wallet.", font: textFont, textColor: textColor)
             buttonText = "Create a New Wallet"
             termsText = ""
             self.iconNode.image = nil
@@ -267,14 +271,16 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             secondaryActionText = "Enter 24 words"
         case .sending:
             title = "Sending Grams"
-            text = "Please wait a few seconds for your transaction to be processed..."
+            text = NSAttributedString(string: "Please wait a few seconds for your transaction to be processed...", font: textFont, textColor: textColor)
             buttonText = ""
             termsText = ""
             self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/SendingIcon")
             secondaryActionText = ""
         case let .sent(_, amount):
             title = "Done!"
-            text = "\(amount) Grams have been sent."
+            let bodyAttributes = MarkdownAttributeSet(font: textFont, textColor: textColor)
+            let boldAttributes = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: textColor)
+            text = parseMarkdownIntoAttributedString("**\(formatBalanceText(amount, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)) Grams** have been sent.", attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center)
             buttonText = "View My Wallet"
             termsText = ""
             self.iconNode.image = nil
@@ -293,7 +299,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        self.textNode.attributedText = text
         self.textNode.maximumNumberOfLines = 0
         self.textNode.lineSpacing = 0.1
         self.textNode.textAlignment = .center

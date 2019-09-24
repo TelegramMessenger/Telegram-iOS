@@ -131,9 +131,9 @@ private func walletReceiveScreenEntries(presentationData: PresentationData, addr
     var entries: [WalletReceiveScreenEntry] = []
     entries.append(.addressHeader(presentationData.theme, "YOUR WALLET ADDRESS"))
     
-    let address = String(address[address.startIndex..<address.index(address.startIndex, offsetBy: 24)] + "\n" + address[address.index(address.startIndex, offsetBy: 24)..<address.endIndex])
+    let formattedAddress = String(address[address.startIndex..<address.index(address.startIndex, offsetBy: 24)] + "\n" + address[address.index(address.startIndex, offsetBy: 24)..<address.endIndex])
     entries.append(.addressCode(presentationData.theme, address))
-    entries.append(.address(presentationData.theme, address))
+    entries.append(.address(presentationData.theme, formattedAddress))
     entries.append(.copyAddress(presentationData.theme, "Copy Wallet Address"))
     entries.append(.shareAddressLink(presentationData.theme, "Share Wallet Address"))
     entries.append(.addressInfo(presentationData.theme, "Share this link with other Gram wallet owners to receive Grams from them."))
@@ -159,9 +159,6 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
 
         presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess("Address copied to clipboard.", false)), nil)
     }, shareAddressLink: {
-        guard let address = address.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
-            return
-        }
         let controller = ShareController(context: context, subject: .url("ton://\(address)"), preferredAction: .default)
         presentControllerImpl?(controller, nil)
     })

@@ -413,12 +413,14 @@ raw_message::raw_message()
   : source_()
   , destination_()
   , value_()
+  , message_()
 {}
 
-raw_message::raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_)
+raw_message::raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::string const &message_)
   : source_(std::move(source_))
   , destination_(std::move(destination_))
   , value_(value_)
+  , message_(std::move(message_))
 {}
 
 const std::int32_t raw_message::ID;
@@ -429,6 +431,7 @@ void raw_message::store(td::TlStorerToString &s, const char *field_name) const {
     s.store_field("source", source_);
     s.store_field("destination", destination_);
     s.store_field("value", value_);
+    s.store_bytes_field("message", message_);
     s.store_class_end();
   }
 }
@@ -741,13 +744,15 @@ generic_sendGrams::generic_sendGrams()
   , source_()
   , destination_()
   , amount_()
+  , message_()
 {}
 
-generic_sendGrams::generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_)
+generic_sendGrams::generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::string const &message_)
   : private_key_(std::move(private_key_))
   , source_(std::move(source_))
   , destination_(std::move(destination_))
   , amount_(amount_)
+  , message_(std::move(message_))
 {}
 
 const std::int32_t generic_sendGrams::ID;
@@ -759,6 +764,7 @@ void generic_sendGrams::store(td::TlStorerToString &s, const char *field_name) c
     if (source_ == nullptr) { s.store_field("source", "null"); } else { source_->store(s, "source"); }
     if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
     s.store_field("amount", amount_);
+    s.store_bytes_field("message", message_);
     s.store_class_end();
   }
 }
@@ -1058,12 +1064,14 @@ testGiver_sendGrams::testGiver_sendGrams()
   : destination_()
   , seqno_()
   , amount_()
+  , message_()
 {}
 
-testGiver_sendGrams::testGiver_sendGrams(object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_)
+testGiver_sendGrams::testGiver_sendGrams(object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_)
   : destination_(std::move(destination_))
   , seqno_(seqno_)
   , amount_(amount_)
+  , message_(std::move(message_))
 {}
 
 const std::int32_t testGiver_sendGrams::ID;
@@ -1074,6 +1082,7 @@ void testGiver_sendGrams::store(td::TlStorerToString &s, const char *field_name)
     if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
     s.store_field("seqno", seqno_);
     s.store_field("amount", amount_);
+    s.store_bytes_field("message", message_);
     s.store_class_end();
   }
 }
@@ -1137,13 +1146,15 @@ testWallet_sendGrams::testWallet_sendGrams()
   , destination_()
   , seqno_()
   , amount_()
+  , message_()
 {}
 
-testWallet_sendGrams::testWallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_)
+testWallet_sendGrams::testWallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_)
   : private_key_(std::move(private_key_))
   , destination_(std::move(destination_))
   , seqno_(seqno_)
   , amount_(amount_)
+  , message_(std::move(message_))
 {}
 
 const std::int32_t testWallet_sendGrams::ID;
@@ -1155,6 +1166,7 @@ void testWallet_sendGrams::store(td::TlStorerToString &s, const char *field_name
     if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
     s.store_field("seqno", seqno_);
     s.store_field("amount", amount_);
+    s.store_bytes_field("message", message_);
     s.store_class_end();
   }
 }

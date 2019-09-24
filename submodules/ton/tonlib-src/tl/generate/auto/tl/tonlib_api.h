@@ -442,12 +442,13 @@ class raw_message final : public Object {
   std::string source_;
   std::string destination_;
   std::int64_t value_;
+  std::string message_;
 
   raw_message();
 
-  raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_);
+  raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::string const &message_);
 
-  static const std::int32_t ID = -1131081640;
+  static const std::int32_t ID = -259956097;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -717,12 +718,13 @@ class generic_sendGrams final : public Function {
   object_ptr<accountAddress> source_;
   object_ptr<accountAddress> destination_;
   std::int64_t amount_;
+  std::string message_;
 
   generic_sendGrams();
 
-  generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_);
+  generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::string const &message_);
 
-  static const std::int32_t ID = 799772985;
+  static const std::int32_t ID = 1523427648;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1012,12 +1014,13 @@ class testGiver_sendGrams final : public Function {
   object_ptr<accountAddress> destination_;
   std::int32_t seqno_;
   std::int64_t amount_;
+  std::string message_;
 
   testGiver_sendGrams();
 
-  testGiver_sendGrams(object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_);
+  testGiver_sendGrams(object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_);
 
-  static const std::int32_t ID = -178493799;
+  static const std::int32_t ID = -1361914347;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1087,12 +1090,13 @@ class testWallet_sendGrams final : public Function {
   object_ptr<accountAddress> destination_;
   std::int32_t seqno_;
   std::int64_t amount_;
+  std::string message_;
 
   testWallet_sendGrams();
 
-  testWallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_);
+  testWallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_);
 
-  static const std::int32_t ID = -1716705044;
+  static const std::int32_t ID = 43200674;
   std::int32_t get_id() const final {
     return ID;
   }

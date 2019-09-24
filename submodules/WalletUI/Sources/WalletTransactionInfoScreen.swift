@@ -142,7 +142,7 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     }
     entries.append(.infoAddress(presentationData.theme, text))
     if case .list = address {
-        entries.append(.infoCopyAddress(presentationData.theme, "Copy Address"))
+        entries.append(.infoCopyAddress(presentationData.theme, "Copy Wallet Address"))
         entries.append(.infoSendGrams(presentationData.theme, "Send Grams"))
     }
     
@@ -170,6 +170,7 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     }, sendGrams: {
         let address = extractAddress(walletTransaction)
         if case let .list(addresses) = address, let address = addresses.first {
+            dismissImpl?()
             pushImpl?(walletSendScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
         }
     })

@@ -176,6 +176,113 @@ td::Status AdnlOutboundConnection::process_packet(td::BufferSlice data) {
   return td::Status::OK();
 }
 
+void AdnlExtMultiClientImpl::start_up() {
+  for (auto &id : ids_) {
+    add_server(id.first, id.second, [](td::Result<td::Unit> R) {});
+  }
+  ids_.clear();
+}
+
+void AdnlExtMultiClientImpl::add_server(AdnlNodeIdFull dst, td::IPAddress dst_addr, td::Promise<td::Unit> promise) {
+  for (auto &c : clients_) {
+    if (c.second->addr == dst_addr) {
+      promise.set_error(td::Status::Error(ErrorCode::error, "duplicate ip"));
+      return;
+    }
+  }
+
+  auto g = ++generation_;
+  auto cli = std::make_unique<Client>(AdnlExtClient::create(dst, dst_addr, make_callback(g)), dst, dst_addr, g);
+  clients_[g] = std::move(cli);
+}
+
+void AdnlExtMultiClientImpl::del_server(td::IPAddress dst_addr, td::Promise<td::Unit> promise) {
+  for (auto &c : clients_) {
+    if (c.second->addr == dst_addr) {
+      if (c.second->ready) {
+        total_ready_--;
+        if (!total_ready_) {
+          callback_->on_stop_ready();
+        }
+      }
+      clients_.erase(c.first);
+      promise.set_value(td::Unit());
+      return;
+    }
+  }
+  promise.set_error(td::Status::Error(ErrorCode::error, "ip not found"));
+}
+
+void AdnlExtMultiClientImpl::send_query(std::string name, td::BufferSlice data, td::Timestamp timeout,
+                                        td::Promise<td::BufferSlice> promise) {
+  if (total_ready_ == 0) {
+    promise.set_error(td::Status::Error(ErrorCode::notready, "conn not ready"));
+    return;
+  }
+
+  std::vector<td::uint32> vec;
+  for (auto &c : clients_) {
+    if (c.second->ready) {
+      vec.push_back(c.first);
+    }
+  }
+  CHECK(vec.size() == total_ready_);
+
+  auto &c = clients_[vec[td::Random::fast(0, td::narrow_cast<td::uint32>(vec.size() - 1))]];
+
+  td::actor::send_closure(c->client, &AdnlExtClient::send_query, std::move(name), std::move(data), timeout,
+                          std::move(promise));
+}
+
+void AdnlExtMultiClientImpl::client_ready(td::uint32 idx, bool value) {
+  auto it = clients_.find(idx);
+  if (it == clients_.end()) {
+    return;
+  }
+  auto &c = it->second;
+  if (c->ready == value) {
+    return;
+  }
+  c->ready = value;
+  if (value) {
+    total_ready_++;
+    if (total_ready_ == 1) {
+      callback_->on_ready();
+    }
+  } else {
+    total_ready_--;
+    if (total_ready_ == 0) {
+      callback_->on_stop_ready();
+    }
+  }
+}
+
+std::unique_ptr<AdnlExtClient::Callback> AdnlExtMultiClientImpl::make_callback(td::uint32 g) {
+  class Cb : public Callback {
+   public:
+    Cb(td::actor::ActorId<AdnlExtMultiClientImpl> id, td::uint32 idx) : id_(id), idx_(idx) {
+    }
+
+    void on_ready() override {
+      td::actor::send_closure(id_, &AdnlExtMultiClientImpl::client_ready, idx_, true);
+    }
+
+    void on_stop_ready() override {
+      td::actor::send_closure(id_, &AdnlExtMultiClientImpl::client_ready, idx_, false);
+    }
+
+   private:
+    td::actor::ActorId<AdnlExtMultiClientImpl> id_;
+    td::uint32 idx_;
+  };
+  return std::make_unique<Cb>(actor_id(this), g);
+}
+
+td::actor::ActorOwn<AdnlExtMultiClient> AdnlExtMultiClient::create(
+    std::vector<std::pair<AdnlNodeIdFull, td::IPAddress>> ids, std::unique_ptr<AdnlExtClient::Callback> callback) {
+  return td::actor::create_actor<AdnlExtMultiClientImpl>("extmulticlient", std::move(ids), std::move(callback));
+}
+
 }  // namespace adnl
 
 }  // namespace ton

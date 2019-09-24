@@ -479,6 +479,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 guard let context = arguments.context else {
                     return
                 }
+                let _ = debugDeleteWallets(postbox: context.account.postbox).start()
+                return
                 let _ = (availableWallets(postbox: context.account.postbox)
                 |> deliverOnMainQueue).start(next: { wallets in
                     if let tonContext = context.tonContext {

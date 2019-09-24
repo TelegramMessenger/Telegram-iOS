@@ -43,6 +43,14 @@ class AdnlExtClient : public td::actor::Actor {
                                                    std::unique_ptr<AdnlExtClient::Callback> callback);
 };
 
+class AdnlExtMultiClient : public AdnlExtClient {
+ public:
+  virtual void add_server(AdnlNodeIdFull dst, td::IPAddress dst_addr, td::Promise<td::Unit> promise) = 0;
+  virtual void del_server(td::IPAddress dst_addr, td::Promise<td::Unit> promise) = 0;
+  static td::actor::ActorOwn<AdnlExtMultiClient> create(std::vector<std::pair<AdnlNodeIdFull, td::IPAddress>> ids,
+                                                        std::unique_ptr<AdnlExtClient::Callback> callback);
+};
+
 }  // namespace adnl
 
 }  // namespace ton
