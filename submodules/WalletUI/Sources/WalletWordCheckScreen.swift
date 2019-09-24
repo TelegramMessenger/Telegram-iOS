@@ -2116,7 +2116,7 @@ public final class WalletWordCheckScreen: ViewController {
                 let enteredWords = (strongSelf.displayNode as! WalletWordCheckScreenNode).enteredWords
                 var isCorrect = true
                 for i in 0 ..< enteredWords.count {
-                    if enteredWords[i] != wordList[indices[i]] {
+                    if enteredWords[i].lowercased() != wordList[indices[i]] {
                         isCorrect = false
                         break
                     }
@@ -2280,6 +2280,7 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         self.inputNode.textField.inputAccessoryView = WordCheckInputAccesssoryView(theme: theme, wordList: possibleWordList, wordTapped: { word in
             wordTapped?(word)
         })
+        self.inputNode.textField.keyboardType = .asciiCapable
         self.inputNode.textField.autocorrectionType = .no
         self.inputNode.textField.autocapitalizationType = .none
         self.inputNode.textField.spellCheckingType = .no
@@ -2338,7 +2339,7 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        let wordList = string.split(separator: " ")
+        let wordList = string.lowercased().split(separator: " ")
         if wordList.count == 24 {
             self.pasteWords(wordList.map(String.init))
             return false

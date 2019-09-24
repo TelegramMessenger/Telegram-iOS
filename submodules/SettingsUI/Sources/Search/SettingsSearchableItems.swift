@@ -858,7 +858,7 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         })
         allItems.append(passport)
 
-        if hasWallet {
+        if true || hasWallet {
             let wallet = SettingsSearchableItem(id: .wallet(0), title: "Wallet", alternate: synonyms("Wallet"), icon: .passport, breadcrumbs: [], present: { context, _, present in
                 openWallet(context: context, push: { c in
                     present(.push, c)
