@@ -86,7 +86,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     var statusBarStyle: StatusBarStyle = .Ignore
-    var statusBarStyleUpdated: (() -> Void)?
+    var statusBarStyleUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
     init(controllerRemoved: @escaping (ViewController) -> Void) {
         self.controllerRemoved = controllerRemoved
@@ -260,7 +260,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         } else {
                             transitionType = .pop
                         }
-                        self.state.pending = PendingChild(value: self.makeChild(layout: layout, value: last), transitionType: transitionType, transition: transition, update: { [weak self] pendingChild in
+                        self.state.pending = PendingChild(value: self.makeChild(layout: layout.withUpdatedInputHeight(nil), value: last), transitionType: transitionType, transition: transition, update: { [weak self] pendingChild in
                             self?.pendingChildIsReady(pendingChild)
                         })
                     }
@@ -268,12 +268,16 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             }
         }
         
+        var statusBarTransition = transition
+        
         if let pending = self.state.pending {
             if pending.isReady {
                 self.state.pending = nil
                 let previous = self.state.top
+                previous?.value.view.endEditing(true)
                 self.state.top = pending.value
-                self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: layout, transition: pending.transition)
+                self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: layout.withUpdatedInputHeight(nil), transition: pending.transition)
+                statusBarTransition = pending.transition
                 if !self.isReady {
                     self.isReady = true
                     self.isReadyUpdated?()
@@ -287,11 +291,16 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             self.topTransition(from: previous, to: nil, transitionType: .pop, layout: layout, transition: .immediate)
         }
         
+        var updatedStatusBarStyle = self.statusBarStyle
         if let top = self.state.top {
             self.applyLayout(layout: layout, to: top, transition: transition)
-            self.statusBarStyle = top.value.statusBar.statusBarStyle
+            updatedStatusBarStyle = top.value.statusBar.statusBarStyle
         } else {
-            self.statusBarStyle = .Ignore
+            updatedStatusBarStyle = .Ignore
+        }
+        if self.statusBarStyle != updatedStatusBarStyle {
+            self.statusBarStyle = updatedStatusBarStyle
+            self.statusBarStyleUpdated?(statusBarTransition)
         }
         
         if self.state.transition == nil {

@@ -22,6 +22,8 @@ final class AuthorizationSequenceSplashController: ViewController {
     
     private let controller: RMIntroViewController
     
+    private var validLayout: ContainerViewLayout?
+    
     var nextPressed: ((PresentationStrings?) -> Void)?
     
     private let suggestedLocalization = Promise<SuggestedLocalizationInfo?>()
@@ -102,7 +104,9 @@ final class AuthorizationSequenceSplashController: ViewController {
     private func addControllerIfNeeded() {
         if !controller.isViewLoaded || controller.view.superview == nil {
             self.displayNode.view.addSubview(controller.view)
-            controller.view.frame = self.displayNode.bounds;
+            if let layout = self.validLayout {
+                controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+            }
             controller.viewDidAppear(false)
         }
     }
@@ -134,14 +138,18 @@ final class AuthorizationSequenceSplashController: ViewController {
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        self.validLayout = layout
+        let controllerFrame = CGRect(origin: CGPoint(), size: layout.size)
+        self.controller.defaultFrame = controllerFrame
+        
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: 0.0, transition: transition)
         
         self.addControllerIfNeeded()
         if case .immediate = transition {
-            self.controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+            self.controller.view.frame = controllerFrame
         } else {
             UIView.animate(withDuration: 0.3, animations: {
-                self.controller.view.frame = CGRect(origin: CGPoint(), size: layout.size)
+                self.controller.view.frame = controllerFrame
             })
         }
     }

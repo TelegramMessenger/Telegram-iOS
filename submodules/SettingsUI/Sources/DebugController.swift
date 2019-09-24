@@ -485,7 +485,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         if !wallets.wallets.isEmpty {
                             let _ = (testGiverWalletAddress(tonInstance: tonContext.instance)
                             |> deliverOnMainQueue).start(next: { address in
-                                arguments.pushController(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: wallets.wallets[0], address: address))
+                                arguments.pushController(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: wallets.wallets[0].info, address: address))
                             })
                         }
                     }
@@ -500,7 +500,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 |> deliverOnMainQueue).start(next: { wallets in
                     if let tonContext = context.tonContext {
                         if !wallets.wallets.isEmpty {
-                            let _ = (walletAddress(publicKey: wallets.wallets[0].publicKey, tonInstance: tonContext.instance)
+                            let _ = (walletAddress(publicKey: wallets.wallets[0].info.publicKey, tonInstance: tonContext.instance)
                             |> deliverOnMainQueue).start(next: { address in
                                 let _ = (getGramsFromTestGiver(address: address, amount: 1500000000, tonInstance: tonContext.instance)
                                 |> deliverOnMainQueue).start(completed: {

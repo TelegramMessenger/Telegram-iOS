@@ -337,7 +337,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                 
                                 return updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: resultPeerId)
                             }
-                            |> introduceError(ChannelDiscussionGroupError.self)
+                            |> castError(ChannelDiscussionGroupError.self)
                             |> switchToLatest
                         }
                     } else {

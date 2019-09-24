@@ -11,6 +11,7 @@ import SolidRoundedButtonNode
 import UndoUI
 import AlertUI
 import SwiftSignalKit
+import TextFormat
 
 private let possibleWordList: [String] = [
     "abandon",
@@ -2063,10 +2064,8 @@ private let possibleWordList: [String] = [
     "zoo"
 ]
 
-private let verifyWordIndices: [Int] = [4, 16, 21]
-
 public enum WalletWordCheckMode {
-    case verify(WalletInfo, [String])
+    case verify(WalletInfo, [String], [Int])
     case `import`
 }
 
@@ -2113,11 +2112,11 @@ public final class WalletWordCheckScreen: ViewController {
                 return
             }
             switch strongSelf.mode {
-            case let .verify(walletInfo, wordList):                
+            case let .verify(walletInfo, wordList, indices):
                 let enteredWords = (strongSelf.displayNode as! WalletWordCheckScreenNode).enteredWords
                 var isCorrect = true
                 for i in 0 ..< enteredWords.count {
-                    if enteredWords[i] != wordList[verifyWordIndices[i]] {
+                    if enteredWords[i] != wordList[indices[i]] {
                         isCorrect = false
                         break
                     }
@@ -2580,23 +2579,27 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         self.iconNode.displaysAsynchronously = false
         
         let title: String
-        let text: String
+        let text: NSAttributedString
         let buttonText: String
         let secondaryActionText: String
         
         let wordIndices: [Int]
         
         switch mode {
-        case .verify:
-            wordIndices = verifyWordIndices
+        case let .verify(_, _, indices):
+            wordIndices = indices
             title = "Test Time!"
-            text = "Let’s check that you wrote them down correctly. Please enter words\n\(wordIndices[0] + 1), \(wordIndices[1] + 1) and \(wordIndices[2] + 1) below:"
+            
+            let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor, additionalAttributes: [:])
+            let bold = MarkdownAttributeSet(font: Font.bold(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber])
+            text = parseMarkdownIntoAttributedString("Let’s check that you wrote them down correctly. Please enter words\n**\(wordIndices[0] + 1)**, **\(wordIndices[1] + 1)** and **\(wordIndices[2] + 1)** below:", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+            
             buttonText = "Continue"
             secondaryActionText = ""
             self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/WordsCheckIcon")
         case .import:
             title = "24 Secret Words"
-            text = "Please restore access to your wallet by\nentering the 24 secret words you wrote down when creating the wallet."
+            text = NSAttributedString(string: "Please restore access to your wallet by\nentering the 24 secret words you wrote down when creating the wallet.", font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             buttonText = "Continue"
             secondaryActionText = "I don't have those"
             wordIndices = Array(0 ..< 24)
@@ -2617,7 +2620,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        self.textNode.attributedText = text
         self.textNode.maximumNumberOfLines = 0
         self.textNode.lineSpacing = 0.1
         self.textNode.textAlignment = .center

@@ -368,6 +368,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                     let flatContainer = NavigationContainer(controllerRemoved: { [weak self] controller in
                         self?.controllerRemoved(controller)
                     })
+                    flatContainer.statusBarStyleUpdated = { [weak self] transition in
+                        guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                            return
+                        }
+                        strongSelf.updateContainers(layout: layout, transition: transition)
+                    }
                     self.displayNode.insertSubnode(flatContainer, at: 0)
                     self.rootContainer = .flat(flatContainer)
                     flatContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -378,6 +384,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let flatContainer = NavigationContainer(controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
+                flatContainer.statusBarStyleUpdated = { [weak self] transition in
+                    guard let strongSelf = self, let layout = strongSelf.validLayout else {
+                        return
+                    }
+                    strongSelf.updateContainers(layout: layout, transition: transition)
+                }
                 self.displayNode.insertSubnode(flatContainer, at: 0)
                 self.rootContainer = .flat(flatContainer)
                 flatContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
@@ -394,6 +406,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                     self.rootContainer = .split(splitContainer)
                     splitContainer.frame = CGRect(origin: CGPoint(), size: layout.size)
                     splitContainer.update(layout: layout, masterControllers: masterControllers, detailControllers: detailControllers, transition: .immediate)
+                    flatContainer.statusBarStyleUpdated = nil
                     flatContainer.removeFromSupernode()
                 case let .split(splitContainer):
                     transition.updateFrame(node: splitContainer, frame: CGRect(origin: CGPoint(), size: layout.size))

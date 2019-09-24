@@ -72,7 +72,15 @@ public final class WalletWordDisplayScreen: ViewController {
                     }
                 })]), in: .window(.root))
             } else {
-                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .verify(strongSelf.walletInfo, strongSelf.wordList)))
+                var wordIndices: [Int] = []
+                while wordIndices.count < 3 {
+                    let index = Int(arc4random_uniform(UInt32(strongSelf.wordList.count)))
+                    if !wordIndices.contains(index) {
+                        wordIndices.append(index)
+                    }
+                }
+                wordIndices.sort()
+                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .verify(strongSelf.walletInfo, strongSelf.wordList, wordIndices)))
             }
         })
         

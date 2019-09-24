@@ -34,7 +34,7 @@ private func importedAccountData(basePath: String, documentsPath: String, accoun
             }
         }
         |> ignoreValues
-        |> introduceError(AccountImportError.self)
+        |> castError(AccountImportError.self)
         
         let importData = importPreferencesData(documentsPath: documentsPath, masterDatacenterId: Int32(masterDatacenterId), account: account, database: database)
         |> mapToSignal { accountUserId -> Signal<(AccountImportProgressType, Float), AccountImportError> in
@@ -65,7 +65,7 @@ private func importPreferencesData(documentsPath: String, masterDatacenterId: In
                 transaction.setState(AuthorizedAccountState(isTestingEnvironment: false, masterDatacenterId: masterDatacenterId, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: parsedAccountUserId), state: nil))
                 return parsedAccountUserId
             }
-            |> introduceError(AccountImportError.self)
+            |> castError(AccountImportError.self)
         } else {
             return .fail(.generic)
         }
@@ -81,17 +81,17 @@ private func importDatabaseData(accountManager: AccountManager, account: Tempora
                 transaction.updatePeerPresencesInternal(presences: [user.id: presence], merge: { _, updated in return updated })
             }
             |> ignoreValues
-            |> introduceError(AccountImportError.self)
+            |> castError(AccountImportError.self)
         }
         
         let importedSecretChats = loadLegacySecretChats(account: account, basePath: basePath, accountPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: accountUserId), database: database)
-        |> introduceError(AccountImportError.self)
+        |> castError(AccountImportError.self)
         
         /*let importedFiles = loadLegacyFiles(account: account, basePath: basePath, accountPeerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: accountUserId), database: database)
-        |> introduceError(AccountImportError.self)*/
+        |> castError(AccountImportError.self)*/
         
         let importedLegacyPreferences = importLegacyPreferences(accountManager: accountManager, account: account, documentsPath: basePath + "/Documents", database: database)
-        |> introduceError(AccountImportError.self)
+        |> castError(AccountImportError.self)
         
         return importedAccountUser
         |> map { _ -> (AccountImportProgressType, Float) in return (.generic, 0.0) }
@@ -224,7 +224,7 @@ public func importedLegacyAccount(basePath: String, accountManager: AccountManag
             }
             
             return temporaryAccount(manager: accountManager, rootPath: rootPathForBasePath(basePath), encryptionParameters: encryptionParameters)
-            |> introduceError(AccountImportError.self)
+            |> castError(AccountImportError.self)
             |> mapToSignal { account -> Signal<ImportedLegacyAccountEvent, AccountImportError> in
                 let actions = importedAccountData(basePath: basePath, documentsPath: documentsPath, accountManager: accountManager, account: account, database: database)
                 var result = actions

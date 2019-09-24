@@ -71,6 +71,23 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
 }
 @end
 
+@interface RMIntroView : UIView
+
+@property (nonatomic, copy) void (^onLayout)();
+
+@end
+
+@implementation RMIntroView
+
+- (void)layoutSubviews {
+    [super layoutSubviews];
+    
+    if (_onLayout) {
+        _onLayout();
+    }
+}
+
+@end
 
 @interface RMIntroViewController () <UIGestureRecognizerDelegate>
 {
@@ -92,6 +109,8 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     
     SVariable *_alternativeLocalization;
     NSDictionary<NSString *, NSString *> *_englishStrings;
+    
+    bool _loadedView;
 }
 @end
 
@@ -215,12 +234,6 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     }
 }
 
-
-- (void)loadView
-{
-    [super loadView];
-}
-
 - (void)loadGL
 {
     if (/*[[UIApplication sharedApplication] applicationState] != UIApplicationStateBackground*/true && !_isOpenGLLoaded)
@@ -273,9 +286,27 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     _isOpenGLLoaded = false;
 }
 
+- (void)loadView {
+    self.view = [[RMIntroView alloc] initWithFrame:self.defaultFrame];
+    __weak RMIntroViewController *weakSelf = self;
+    ((RMIntroView *)self.view).onLayout = ^{
+        __strong RMIntroViewController *strongSelf = weakSelf;
+        if (strongSelf != nil) {
+            [strongSelf updateLayout];
+        }
+    };
+    
+    [self viewDidLoad];
+}
+
 - (void)viewDidLoad
 {
     [super viewDidLoad];
+    
+    if (_loadedView) {
+        return;
+    }
+    _loadedView = true;
     
     self.view.backgroundColor = _backgroundColor;
     
@@ -411,7 +442,7 @@ static void TGDispatchOnMainThread(dispatch_block_t block) {
     return deviceScreen;
 }
 
-- (void)viewWillLayoutSubviews
+- (void)updateLayout
 {
     UIInterfaceOrientation isVertical = (self.view.bounds.size.height / self.view.bounds.size.width > 1.0f);
     

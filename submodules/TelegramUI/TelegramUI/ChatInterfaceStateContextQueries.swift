@@ -79,7 +79,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 let stickerSettings: StickerSettings = (transaction.getSharedData(ApplicationSpecificSharedDataKeys.stickerSettings) as? StickerSettings) ?? .defaultSettings
                 return stickerSettings
             }
-            |> introduceError(ChatContextQueryError.self)
+            |> castError(ChatContextQueryError.self)
             |> mapToSignal { stickerSettings -> Signal<[FoundStickerItem], ChatContextQueryError> in
                 let scope: SearchStickersScope
                 switch stickerSettings.emojiStickerSuggestionMode {
@@ -91,7 +91,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                         scope = [.installed]
                 }
                 return searchStickers(account: context.account, query: query.basicEmoji.0, scope: scope)
-                |> introduceError(ChatContextQueryError.self)
+                |> castError(ChatContextQueryError.self)
             }
             |> map { stickers -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in
@@ -123,7 +123,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 return { _ in return .hashtags(result) }
             }
-            |> introduceError(ChatContextQueryError.self)
+            |> castError(ChatContextQueryError.self)
             
             return signal |> then(hashtags)
         case let .mention(query, types):
@@ -178,7 +178,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 }
                 return { _ in return .mentions(sortedPeers) }
             }
-            |> introduceError(ChatContextQueryError.self)
+            |> castError(ChatContextQueryError.self)
             
             return signal |> then(participants)
         case let .command(query):
@@ -207,7 +207,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                 let sortedCommands = filteredCommands
                 return { _ in return .commands(sortedCommands) }
             }
-            |> introduceError(ChatContextQueryError.self)
+            |> castError(ChatContextQueryError.self)
             return signal |> then(commands)
         case let .contextRequest(addressName, query):
             var delayRequest = true
@@ -239,7 +239,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
                     return .single(nil)
                 }
             }
-            |> introduceError(ChatContextQueryError.self)
+            |> castError(ChatContextQueryError.self)
             |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
                 if let user = peer as? TelegramUser, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
                     let contextResults = requestChatContextResults(account: context.account, botId: user.id, peerId: chatPeer.id, query: query, offset: "")
@@ -307,7 +307,7 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
                 return { _ in return .emojis(result, range) }
             }
-            |> introduceError(ChatContextQueryError.self)
+            |> castError(ChatContextQueryError.self)
     }
 }
 

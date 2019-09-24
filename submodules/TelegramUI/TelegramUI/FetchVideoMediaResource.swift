@@ -224,7 +224,7 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
     |> map { view in
         return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
     }
-    |> introduceError(MediaResourceDataFetchError.self)
+    |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         let config = VideoConversionConfiguration.with(appConfiguration: appConfiguration)
         let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in
@@ -343,7 +343,7 @@ func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFileVideo
     |> map { view in
         return view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
     }
-    |> introduceError(MediaResourceDataFetchError.self)
+    |> castError(MediaResourceDataFetchError.self)
     |> mapToSignal { appConfiguration -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> in
         let config = VideoConversionConfiguration.with(appConfiguration: appConfiguration)
         let signal = Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError> { subscriber in

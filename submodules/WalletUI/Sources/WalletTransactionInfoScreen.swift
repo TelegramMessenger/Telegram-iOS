@@ -27,6 +27,7 @@ private final class WalletTransactionInfoControllerArguments {
 private enum WalletTransactionInfoSection: Int32 {
     case amount
     case info
+    case comment
 }
 
 private enum WalletTransactionInfoEntry: ItemListNodeEntry {
@@ -35,6 +36,8 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
     case infoAddress(PresentationTheme, String)
     case infoCopyAddress(PresentationTheme, String)
     case infoSendGrams(PresentationTheme, String)
+    case commentHeader(PresentationTheme, String)
+    case comment(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -42,6 +45,8 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return WalletTransactionInfoSection.amount.rawValue
         case .infoHeader, .infoAddress, .infoCopyAddress, .infoSendGrams:
             return WalletTransactionInfoSection.info.rawValue
+        case .commentHeader, .comment:
+            return WalletTransactionInfoSection.comment.rawValue
         }
     }
     
@@ -57,6 +62,10 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return 3
         case .infoSendGrams:
             return 4
+        case .commentHeader:
+            return 5
+        case .comment:
+            return 6
         }
     }
     
@@ -80,6 +89,10 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.sendGrams()
             })
+        case let .commentHeader(theme, text):
+            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+        case let .comment(theme, text):
+            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
         }
     }
 }
@@ -111,6 +124,30 @@ private func extractAddress(_ walletTransaction: WalletTransaction) -> String {
     return text
 }
 
+private func extractDescription(_ walletTransaction: WalletTransaction) -> String {
+    let transferredValue = walletTransaction.transferredValue
+    var text = ""
+    if transferredValue <= 0 {
+        for message in walletTransaction.outMessages {
+            if !text.isEmpty {
+                text.append("\n\n")
+            }
+            text.append(message.textMessage)
+        }
+    } else {
+        if let inMessage = walletTransaction.inMessage {
+            text = inMessage.textMessage
+        }
+    }
+    return text
+}
+
+private func formatAddress(_ address: String) -> String {
+    var address = address
+    address.insert("\n", at: address.index(address.startIndex, offsetBy: address.count / 2))
+    return address
+}
+
 private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState) -> [WalletTransactionInfoEntry] {
     var entries: [WalletTransactionInfoEntry] = []
     
@@ -118,15 +155,21 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     
     let transferredValue = walletTransaction.transferredValue
     let text = extractAddress(walletTransaction)
+    let description = extractDescription(walletTransaction)
     
     if transferredValue <= 0 {
         entries.append(.infoHeader(presentationData.theme, "RECIPIENT"))
     } else {
         entries.append(.infoHeader(presentationData.theme, "SENDER"))
     }
-    entries.append(.infoAddress(presentationData.theme, text))
+    entries.append(.infoAddress(presentationData.theme, formatAddress(text)))
     entries.append(.infoCopyAddress(presentationData.theme, "Copy Address"))
     entries.append(.infoSendGrams(presentationData.theme, "Send Grams"))
+    
+    if !description.isEmpty {
+        entries.append(.commentHeader(presentationData.theme, "COMMENT"))
+        entries.append(.comment(presentationData.theme, description))
+    }
     
     return entries
 }
@@ -295,6 +338,8 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset + verticalInset)
             let insets = itemListNeighborsGroupedInsets(neighbors)
             
+            let titleScale: CGFloat = min(1.0, (params.width - 40.0 - iconSize.width) / titleLayout.size.width)
+            
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
             
             return (layout, { [weak self] in
@@ -311,9 +356,11 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
                     let contentWidth = titleLayout.size.width + iconSpacing + iconSize.width / 2.0
                     let titleFrame = CGRect(origin: CGPoint(x: floor((params.width - contentWidth) / 2.0), y: verticalInset), size: titleLayout.size)
                     let subtitleFrame = CGRect(origin: CGPoint(x: floor((params.width - subtitleLayout.size.width) / 2.0), y: titleFrame.maxY - 5.0), size: subtitleLayout.size)
-                    strongSelf.titleNode.frame = titleFrame
+                    strongSelf.titleNode.position = titleFrame.center
+                    strongSelf.titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
+                    strongSelf.titleNode.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
                     strongSelf.subtitleNode.frame = subtitleFrame
-                    strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: titleFrame.maxX + iconSpacing, y: titleFrame.minY + floor((titleFrame.height - iconSize.height) / 2.0)), size: iconSize)
+                    strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: floor(titleFrame.midX + titleFrame.width / 2.0 * titleScale + iconSpacing), y: titleFrame.minY + floor((titleFrame.height - iconSize.height) / 2.0) - 2.0), size: iconSize)
                 }
             })
         }
@@ -327,4 +374,3 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
 }
-

@@ -1105,7 +1105,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                         }
                         
                         let _ = (contactDataManager.createContactWithData(composedContactData)
-                        |> introduceError(AddContactError.self)
+                        |> castError(AddContactError.self)
                         |> mapToSignal { contactIdAndData -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                             guard let (id, data) = contactIdAndData else {
                                 return .single(nil)
@@ -1122,7 +1122,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                                 context.account.postbox.transaction { transaction -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
                                                     return (id, data, transaction.getPeer(peer.id))
                                                 }
-                                                |> introduceError(AddContactError.self)
+                                                |> castError(AddContactError.self)
                                             )
                                         }
                                     default:
@@ -1130,13 +1130,13 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                                 }
                                 
                                 return importContact(account: context.account, firstName: composedContactData.basicData.firstName, lastName: composedContactData.basicData.lastName, phoneNumber: filteredPhoneNumbers[0].value)
-                                |> introduceError(AddContactError.self)
+                                |> castError(AddContactError.self)
                                 |> mapToSignal { peerId -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                                     if let peerId = peerId {
                                         return context.account.postbox.transaction { transaction -> (DeviceContactStableId, DeviceContactExtendedData, Peer?)? in
                                             return (id, data, transaction.getPeer(peerId))
                                         }
-                                        |> introduceError(AddContactError.self)
+                                        |> castError(AddContactError.self)
                                     } else {
                                         return .single((id, data, nil))
                                     }
