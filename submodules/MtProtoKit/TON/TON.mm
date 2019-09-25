@@ -42,7 +42,7 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
         return nil;
     }
     NSString *source = readString(message->source_);
-    NSString *destination = readString(message->source_);
+    NSString *destination = readString(message->destination_);
     NSString *textMessage = readString(message->message_);
     if (source == nil || destination == nil) {
         return nil;

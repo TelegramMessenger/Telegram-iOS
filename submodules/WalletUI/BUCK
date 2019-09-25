@@ -26,6 +26,7 @@ static_library(
         "//submodules/QrCode:QrCode",
         "//submodules/MergeLists:MergeLists",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/GlassButtonNode:GlassButtonNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

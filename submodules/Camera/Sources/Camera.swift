@@ -10,17 +10,18 @@ private final class CameraContext {
     private let output = CameraOutput()
     
     private let initialConfiguration: Camera.Configuration
+    private var invalidated = false
+    
+    private var previousSampleBuffer: CMSampleBuffer?
+    var processSampleBuffer: ((CMSampleBuffer) -> Void)?
+    
+    private let detectedCodesPipe = ValuePipe<[CameraCode]>()
     
     var previewNode: CameraPreviewNode? {
         didSet {
             self.previewNode?.prepare()
         }
     }
-    
-    var previousSampleBuffer: CMSampleBuffer?
-    var processSampleBuffer: ((CMSampleBuffer) -> Void)?
-    
-    private var invalidated = false
     
     init(queue: Queue, configuration: Camera.Configuration) {
         self.queue = queue
@@ -44,6 +45,10 @@ private final class CameraContext {
             self?.queue.async {
                 self?.processSampleBuffer?(sampleBuffer)
             }
+        }
+        
+        self.output.processCodes = { [weak self] codes in
+            self?.detectedCodesPipe.putNext(codes)
         }
     }
     
@@ -85,24 +90,38 @@ private final class CameraContext {
         self.input.configure(for: self.session, device: self.device, audio: self.initialConfiguration.audio)
         self.session.commitConfiguration()
     }
+    
+    func setTorchActive(_ active: Bool) {
+        self.device.setTorchActive(active)
+    }
+    
+    var detectedCodes: Signal<[CameraCode], NoError> {
+        return self.detectedCodesPipe.signal()
+    }
 }
 
-final class Camera {
-    typealias Preset = AVCaptureSession.Preset
-    typealias Position = AVCaptureDevice.Position
-    typealias FocusMode = AVCaptureDevice.FocusMode
-    typealias ExposureMode = AVCaptureDevice.ExposureMode
+public final class Camera {
+    public typealias Preset = AVCaptureSession.Preset
+    public typealias Position = AVCaptureDevice.Position
+    public typealias FocusMode = AVCaptureDevice.FocusMode
+    public typealias ExposureMode = AVCaptureDevice.ExposureMode
     
-    struct Configuration {
+    public struct Configuration {
         let preset: Preset
         let position: Position
         let audio: Bool
+        
+        public init(preset: Preset, position: Position, audio: Bool) {
+            self.preset = preset
+            self.position = position
+            self.audio = audio
+        }
     }
     
     private let queue = Queue()
     private var contextRef: Unmanaged<CameraContext>?
     
-    init(configuration: Camera.Configuration = Configuration(preset: .hd1920x1080, position: .back, audio: true)) {
+    public init(configuration: Camera.Configuration = Configuration(preset: .hd1920x1080, position: .back, audio: true)) {
         self.queue.async {
             let context = CameraContext(queue: self.queue, configuration: configuration)
             self.contextRef = Unmanaged.passRetained(context)
@@ -116,7 +135,7 @@ final class Camera {
         }
     }
     
-    func startCapture() {
+    public func startCapture() {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.startCapture()
@@ -124,14 +143,15 @@ final class Camera {
         }
     }
     
-    func stopCapture() {
+    public func stopCapture() {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.stopCapture()
             }
         }
     }
-    func togglePosition() {
+    
+    public func togglePosition() {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.togglePosition()
@@ -139,11 +159,11 @@ final class Camera {
         }
     }
     
-    func takePhoto() -> Signal<Void, NoError> {
+    public func takePhoto() -> Signal<Void, NoError> {
         return .never()
     }
     
-    func focus(at point: CGPoint) {
+    public func focus(at point: CGPoint) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.focus(at: point)
@@ -151,7 +171,7 @@ final class Camera {
         }
     }
     
-    func setFPS(_ fps: Double) {
+    public func setFPS(_ fps: Double) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.setFPS(fps)
@@ -159,7 +179,15 @@ final class Camera {
         }
     }
     
-    func attachPreviewNode(_ node: CameraPreviewNode) {
+    public func setTorchActive(_ active: Bool) {
+        self.queue.async {
+            if let context = self.contextRef?.takeUnretainedValue() {
+                context.setTorchActive(active)
+            }
+        }
+    }
+    
+    public func attachPreviewNode(_ node: CameraPreviewNode) {
         let nodeRef: Unmanaged<CameraPreviewNode> = Unmanaged.passRetained(node)
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
@@ -173,11 +201,25 @@ final class Camera {
         }
     }
     
-    func setProcessSampleBuffer(_ block: ((CMSampleBuffer) -> Void)?) {
+    public func setProcessSampleBuffer(_ block: ((CMSampleBuffer) -> Void)?) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
                 context.processSampleBuffer = block
             }
+        }
+    }
+    
+    public var detectedCodes: Signal<[CameraCode], NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.async {
+                if let context = self.contextRef?.takeUnretainedValue() {
+                    disposable.set(context.detectedCodes.start(next: { codes in
+                        subscriber.putNext(codes)
+                    }))
+                }
+            }
+            return disposable
         }
     }
 }

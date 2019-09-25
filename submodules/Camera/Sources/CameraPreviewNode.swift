@@ -14,10 +14,10 @@ private final class CameraPreviewNodeLayer: AVSampleBufferDisplayLayer {
     }
 }
 
-class CameraPreviewNode: ASDisplayNode {
+public final class CameraPreviewNode: ASDisplayNode {
     private var displayLayer: AVSampleBufferDisplayLayer
 
-    override init() {
+    public override init() {
         self.displayLayer = AVSampleBufferDisplayLayer()
         self.displayLayer.videoGravity = .resizeAspectFill
         
@@ -38,11 +38,11 @@ class CameraPreviewNode: ASDisplayNode {
         self.displayLayer.enqueue(sampleBuffer)
     }
     
-    override func layout() {
+    override public func layout() {
         super.layout()
         
         var transform = CGAffineTransform(rotationAngle: CGFloat.pi / 2.0)
-        transform = transform.scaledBy(x: 1.0, y: -1.0)
+        transform = transform.scaledBy(x: 1.0, y: 1.0)
         self.displayLayer.setAffineTransform(transform)
         
         self.displayLayer.frame = self.bounds

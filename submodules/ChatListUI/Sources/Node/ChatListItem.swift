@@ -1136,6 +1136,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             var online = false
+            var animateOnline = false
 
             let peerRevealOptions: [ItemListRevealOption]
             let peerLeftRevealOptions: [ItemListRevealOption]
@@ -1146,6 +1147,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if case .online = relativeStatus {
                             online = true
                         }
+                        animateOnline = true
                     }
                     
                     let isPinned = item.index.pinningIndex != nil
@@ -1335,14 +1337,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular)
                     }
                     strongSelf.onlineNode.setImage(onlineIcon)
-                    
+                                        
                     let _ = dateApply()
                     let _ = textApply()
                     let _ = authorApply()
                     let _ = titleApply()
                     let _ = badgeApply(animateBadges, !isMuted)
                     let _ = mentionBadgeApply(animateBadges, true)
-                    let _ = onlineApply(animateContent)
+                    let _ = onlineApply(animateContent && animateOnline)
                     
                     let contentRect = rawContentRect.offsetBy(dx: editingOffset + leftInset + revealOffset, dy: 0.0)
                     

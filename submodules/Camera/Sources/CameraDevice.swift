@@ -135,4 +135,13 @@ final class CameraDevice {
             device.setExposureTargetBias(value, completionHandler: nil)
         }
     }
+    
+    func setTorchActive(_ active: Bool) {
+        guard let device = self.videoDevice else {
+            return
+        }
+        self.transaction(device) { device in
+            device.torchMode = active ? .on : .off
+        }
+    }
 }

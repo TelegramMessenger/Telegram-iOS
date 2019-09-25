@@ -328,6 +328,7 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 }))
                 return true
             case let .other(otherMedia):
+                params.dismissInput()
                 if let contact = otherMedia as? TelegramMediaContact {
                     let _ = (params.context.account.postbox.transaction { transaction -> (Peer?, Bool?) in
                         if let peerId = contact.peerId {

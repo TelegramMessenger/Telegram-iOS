@@ -12,6 +12,7 @@ import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
 import ItemListUI
+import AlertUI
 import TextFormat
 
 public enum WalletSecureStorageResetReason {
@@ -56,9 +57,21 @@ public final class WalletSplashScreen: ViewController {
         case .intro:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "Not Now", style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: "Import existing wallet", style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
-        case let .sending(walletInfo, address, amount, comment):
+        case let .sending(walletInfo, address, amount, textMessage):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
-            let _ = (Signal<Never, NoError>.complete() |> delay(3.0, queue: Queue.mainQueue())).start(completed: { [weak self] in
+            
+            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage)
+            |> deliverOnMainQueue).start(error: { [weak self] error in
+                guard let strongSelf = self else {
+                    return
+                }
+                let controller = textAlertController(context: strongSelf.context, title: nil, text: "Error", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {
+                    if let navigationController = strongSelf.navigationController as? NavigationController {
+                        navigationController.popViewController(animated: true)
+                    }
+                })])
+                strongSelf.present(controller, in: .window(.root))
+            }, completed: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -258,15 +271,18 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         self.animationNode = AnimatedStickerNode()
         
         let title: String
-        let text: String
+        let text: NSAttributedString
         let buttonText: String
         let termsText: NSAttributedString
         let secondaryActionText: String
-    
+        
+        let textFont = Font.regular(16.0)
+        let textColor = self.presentationData.theme.list.itemPrimaryTextColor
+        
         switch mode {
         case .intro:
             title = "Gram Wallet"
-            text = "Gram wallet allows you to make fast and secure blockchain-based payments without intermediaries."
+            text = NSAttributedString(string: "Gram wallet allows you to make fast and secure blockchain-based payments without intermediaries.", font: textFont, textColor: textColor)
             buttonText = "Create My Wallet"
             let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [:])
             let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber])
@@ -275,14 +291,14 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             secondaryActionText = ""
         case .created:
             title = "Congratulations"
-            text = "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode."
+            text = NSAttributedString(string: "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode.", font: textFont, textColor: textColor)
             buttonText = "Proceed"
             termsText = NSAttributedString(string: "")
             self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/CreatedIcon")
             secondaryActionText = ""
         case .success:
             title = "Ready to go!"
-            text = "You’re all set. Now you have a wallet that only you control - directly, without middlemen or bankers. "
+            text = NSAttributedString(string: "You’re all set. Now you have a wallet that only you control - directly, without middlemen or bankers. ", font: textFont, textColor: textColor)
             buttonText = "View My Wallet"
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
@@ -293,7 +309,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             secondaryActionText = ""
         case .restoreFailed:
             title = "Too Bad"
-            text = "Without the secret words, you can't'nrestore access to the wallet."
+            text = NSAttributedString(string: "Without the secret words, you can't'nrestore access to the wallet.", font: textFont, textColor: textColor)
             buttonText = "Create a New Wallet"
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
@@ -304,14 +320,16 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             secondaryActionText = "Enter 24 words"
         case .sending:
             title = "Sending Grams"
-            text = "Please wait a few seconds for your transaction to be processed..."
+            text = NSAttributedString(string: "Please wait a few seconds for your transaction to be processed...", font: textFont, textColor: textColor)
             buttonText = ""
             termsText = NSAttributedString(string: "")
             self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/SendingIcon")
             secondaryActionText = ""
         case let .sent(_, amount):
             title = "Done!"
-            text = "\(amount) Grams have been sent."
+            let bodyAttributes = MarkdownAttributeSet(font: textFont, textColor: textColor)
+            let boldAttributes = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: textColor)
+            text = parseMarkdownIntoAttributedString("**\(formatBalanceText(amount, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)) Grams** have been sent.", attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center)
             buttonText = "View My Wallet"
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
@@ -322,7 +340,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             secondaryActionText = ""
         case .secureStorageNotAvailable:
             title = "Too Bad"
-            text = "Please set up Passcode on your device to enable secure payments with your Gram wallet."
+            text = NSAttributedString(string: "Please set up Passcode on your device to enable secure payments with your Gram wallet.", font: textFont, textColor: textColor)
             buttonText = "OK"
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
@@ -335,9 +353,9 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             title = "Too Bad"
             switch reason {
             case .notAvailable:
-                text = "Unfortunately, your wallet is no longer available because your system Passcode or Touch ID has been turned off."
+                text = NSAttributedString(string: "Unfortunately, your wallet is no longer available because your system Passcode or Touch ID has been turned off.", font: textFont, textColor: textColor)
             case .changed:
-                text = "Unfortunately, your wallet is no longer available due to the change in your system security settings (Passcode/Touch ID). To restore your wallet, tap \"import existing wallet\"."
+                text = NSAttributedString(string: "Unfortunately, your wallet is no longer available due to the change in your system security settings (Passcode/Touch ID). To restore your wallet, tap \"import existing wallet\".", font: textFont, textColor: textColor)
             }
             buttonText = "Import Existing Wallet"
             termsText = NSAttributedString(string: "")
@@ -357,7 +375,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+        self.textNode.attributedText = text
         self.textNode.maximumNumberOfLines = 0
         self.textNode.lineSpacing = 0.1
         self.textNode.textAlignment = .center

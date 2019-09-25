@@ -192,7 +192,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
             case let .header(theme, text):
                 return PeersNearbyHeaderItem(theme: theme, text: text, sectionId: self.section)
             case let .usersHeader(theme, text, loading):
-                return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: loading, sectionId: self.section)
+                return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: loading ? .left : .none, sectionId: self.section)
             case let .empty(theme, text):
                 return ItemListPlaceholderItem(theme: theme, text: text, sectionId: self.section, style: .blocks)
             case let .user(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
@@ -200,7 +200,7 @@ private enum PeersNearbyEntry: ItemListNodeEntry {
                     arguments.openChat(peer.peer.0)
                 }, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in }, toggleUpdated: nil, hasTopGroupInset: false, tag: nil)
             case let .groupsHeader(theme, text, loading):
-                return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: loading, sectionId: self.section)
+                return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: loading ? .left : .none, sectionId: self.section)
             case let .createGroup(theme, title, latitude, longitude, address):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.createGroupIcon(theme), title: title, alwaysPlain: false, sectionId: self.section, editing: false, action: {
                     if let latitude = latitude, let longitude = longitude {

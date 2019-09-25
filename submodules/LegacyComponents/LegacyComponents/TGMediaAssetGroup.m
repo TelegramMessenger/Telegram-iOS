@@ -243,6 +243,8 @@
         case PHAssetCollectionSubtypeAlbumMyPhotoStream:
             return TGMediaAssetGroupSubtypeMyPhotoStream;
             
+        case PHAssetCollectionSubtypeSmartAlbumAnimated:
+            return TGMediaAssetGroupSubtypeAnimated;
         default:
             return TGMediaAssetGroupSubtypeRegular;
     }
@@ -343,6 +345,18 @@
                     
                 default:
                     return true;
+            }
+        }
+            
+        case PHAssetCollectionSubtypeSmartAlbumAnimated:
+        {
+            switch (assetType)
+            {
+                case TGMediaAssetAnyType:
+                    return true;
+                    
+                default:
+                    return false;
             }
         }
             

@@ -12,6 +12,12 @@ import SwiftSignalKit
 import OverlayStatusController
 import ShareController
 
+private func formatAddress(_ address: String) -> String {
+    var address = address
+    address.insert("\n", at: address.index(address.startIndex, offsetBy: address.count / 2))
+    return address
+}
+
 private final class WalletReceiveScreenArguments {
     let context: AccountContext
     let copyAddress: () -> Void
@@ -130,10 +136,8 @@ private enum WalletReceiveScreenEntry: ItemListNodeEntry {
 private func walletReceiveScreenEntries(presentationData: PresentationData, address: String) -> [WalletReceiveScreenEntry] {
     var entries: [WalletReceiveScreenEntry] = []
     entries.append(.addressHeader(presentationData.theme, "YOUR WALLET ADDRESS"))
-    
-    let address = String(address[address.startIndex..<address.index(address.startIndex, offsetBy: 24)] + "\n" + address[address.index(address.startIndex, offsetBy: 24)..<address.endIndex])
     entries.append(.addressCode(presentationData.theme, address))
-    entries.append(.address(presentationData.theme, address))
+    entries.append(.address(presentationData.theme, formatAddress(address)))
     entries.append(.copyAddress(presentationData.theme, "Copy Wallet Address"))
     entries.append(.shareAddressLink(presentationData.theme, "Share Wallet Address"))
     entries.append(.addressInfo(presentationData.theme, "Share this link with other Gram wallet owners to receive Grams from them."))
@@ -150,7 +154,6 @@ private final class WalletReceiveScreenImpl: ItemListController<WalletReceiveScr
 
 func walletReceiveScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String) -> ViewController {
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
-    var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
     
     let arguments = WalletReceiveScreenArguments(context: context, copyAddress: {
@@ -158,11 +161,8 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
         
         UIPasteboard.general.string = address
 
-        presentInGlobalOverlayImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess("Address copied to clipboard.", false)), nil)
+        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess("Address copied to clipboard.", false)), nil)
     }, shareAddressLink: {
-        guard let address = address.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
-            return
-        }
         let controller = ShareController(context: context, subject: .url("ton://\(address)"), preferredAction: .default)
         presentControllerImpl?(controller, nil)
     })
@@ -185,9 +185,6 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
     controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
-    }
-    presentInGlobalOverlayImpl = { [weak controller] c, a in
-        controller?.presentInGlobalOverlay(c, with: a)
     }
     dismissImpl = { [weak controller] in
         let _ = controller?.dismiss()

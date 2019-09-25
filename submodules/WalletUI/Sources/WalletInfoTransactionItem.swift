@@ -12,13 +12,15 @@ private let transactionIcon = UIImage(bundleImageName: "Wallet/TransactionGem")?
 
 class WalletInfoTransactionItem: ListViewItem {
     let theme: PresentationTheme
+    let dateTimeFormat: PresentationDateTimeFormat
     let walletTransaction: WalletTransaction
     let action: () -> Void
     
     fileprivate let header: WalletInfoTransactionDateHeader?
     
-    init(theme: PresentationTheme, strings: PresentationStrings, walletTransaction: WalletTransaction, action: @escaping () -> Void) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletTransaction, action: @escaping () -> Void) {
         self.theme = theme
+        self.dateTimeFormat = dateTimeFormat
         self.walletTransaction = walletTransaction
         self.action = action
         self.header = WalletInfoTransactionDateHeader(timestamp: Int32(clamping: walletTransaction.timestamp), theme: theme, strings: strings)
@@ -189,7 +191,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             var text: String = ""
             var description: String = ""
             if transferredValue <= 0 {
-                title = "\(formatBalanceText(transferredValue))"
+                title = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.list.itemPrimaryTextColor
                 if item.walletTransaction.outMessages.isEmpty {
                     directionText = ""
@@ -209,7 +211,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     }
                 }
             } else {
-                title = "+\(formatBalanceText(transferredValue))"
+                title = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
                 directionText = "from"
                 if let inMessage = item.walletTransaction.inMessage {
@@ -220,7 +222,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 }
             }
             
-            let dateText = stringForMessageTimestamp(timestamp: Int32(clamping: item.walletTransaction.timestamp), dateTimeFormat: PresentationDateTimeFormat(timeFormat: PresentationTimeFormat.military, dateFormat: .dayFirst, dateSeparator: ".", decimalSeparator: ".", groupingSeparator: ","))
+            let dateText = stringForMessageTimestamp(timestamp: Int32(clamping: item.walletTransaction.timestamp), dateTimeFormat: item.dateTimeFormat)
             
             let (dateLayout, dateApply) = makeDateLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: dateText, font: dateFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

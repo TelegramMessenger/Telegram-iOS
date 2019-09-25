@@ -2776,8 +2776,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                    self?.displayPasteMenu(images)
                 case let .gif(data):
                     self?.enqueueGifData(data)
-                case let .sticker(image):
-                    self?.enqueueStickerImage(image)
+                case let .sticker(image, isMemoji):
+                    self?.enqueueStickerImage(image, isMemoji: isMemoji)
             }
         }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
@@ -5666,9 +5666,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func enqueueStickerImage(_ image: UIImage) {
+    private func enqueueStickerImage(_ image: UIImage, isMemoji: Bool) {
         let size = image.size.aspectFitted(CGSize(width: 512.0, height: 512.0))
-        self.enqueueMediaMessageDisposable.set((convertToWebP(image: image, targetSize: size, quality: 0.85) |> deliverOnMainQueue).start(next: { [weak self] data in
+        self.enqueueMediaMessageDisposable.set((convertToWebP(image: image, targetSize: size, targetBoundingSize: size, quality: 0.9) |> deliverOnMainQueue).start(next: { [weak self] data in
             if let strongSelf = self, !data.isEmpty {
                 let resource = LocalFileMediaResource(fileId: arc4random64())
                 strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)

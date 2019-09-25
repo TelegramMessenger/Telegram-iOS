@@ -199,7 +199,7 @@ private func textInputBackgroundImage(backgroundColor: UIColor, strokeColor: UIC
 enum ChatTextInputPanelPasteData {
     case images([UIImage])
     case gif(Data)
-    case sticker(UIImage)
+    case sticker(UIImage, Bool)
 }
 
 class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
@@ -1589,8 +1589,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             return false
         } else {
             var isPNG = false
+            var isMemoji = false
             for item in pasteboard.items {
-                if let image = item[kUTTypePNG as String] as? UIImage {
+                if let image = item["com.apple.png-sticker"] as? UIImage {
+                    images.append(image)
+                    isPNG = true
+                    isMemoji = true
+                } else if let image = item[kUTTypePNG as String] as? UIImage {
                     images.append(image)
                     isPNG = true
                 } else if let image = item["com.apple.uikit.image"] as? UIImage {
@@ -1609,8 +1614,8 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                     return false
                 }
                 let aspectRatio = min(image.size.width, image.size.height) / maxSide
-                if imageHasTransparency(cgImage), aspectRatio > 0.85 {
-                    self.paste(.sticker(image))
+                if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.85) {
+                    self.paste(.sticker(image, isMemoji))
                     return false
                 }
             }
