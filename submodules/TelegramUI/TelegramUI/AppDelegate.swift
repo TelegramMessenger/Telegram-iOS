@@ -654,13 +654,13 @@ final class SharedApplicationContext {
             return .single(Data())
         }, encrypt: { data in
             return Signal { subscriber in
-                subscriber.putNext(data)
+                subscriber.putNext(TonKeychainEncryptedData(publicKey: Data(), data: data))
                 subscriber.putCompletion()
                 return EmptyDisposable
             }
         }, decrypt: { data in
             return Signal { subscriber in
-                subscriber.putNext(data)
+                subscriber.putNext(data.data)
                 subscriber.putCompletion()
                 return EmptyDisposable
             }
