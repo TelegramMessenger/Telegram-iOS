@@ -32,7 +32,7 @@ namespace block {
 using namespace std::literals::string_literals;
 
 td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blkid, ton::Bits256* store_shard_hash_to,
-                                    bool check_state_hash) {
+                                    bool check_state_hash, td::uint32* save_utime) {
   ton::RootHash vhash{root->get_hash().bits()};
   if (vhash != blkid.root_hash) {
     return td::Status::Error(PSTRING() << " block header for block " << blkid.to_str() << " has incorrect root hash "
@@ -46,6 +46,9 @@ td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blki
   block::gen::BlockInfo::Record info;
   if (!(tlb::unpack_cell(root, blk) && tlb::unpack_cell(blk.info, info))) {
     return td::Status::Error(std::string{"cannot unpack header for block "} + blkid.to_str());
+  }
+  if (save_utime) {
+    *save_utime = info.gen_utime;
   }
   if (store_shard_hash_to) {
     vm::CellSlice upd_cs{vm::NoVmSpec(), blk.state_update};
@@ -153,7 +156,8 @@ td::Status check_shard_proof(ton::BlockIdExt blk, ton::BlockIdExt shard_blk, td:
 }
 
 td::Status check_account_proof(td::Slice proof, ton::BlockIdExt shard_blk, const block::StdAddress& addr,
-                               td::Ref<vm::Cell> root, ton::LogicalTime* last_trans_lt, ton::Bits256* last_trans_hash) {
+                               td::Ref<vm::Cell> root, ton::LogicalTime* last_trans_lt, ton::Bits256* last_trans_hash,
+                               td::uint32* save_utime) {
   TRY_RESULT_PREFIX(Q_roots, vm::std_boc_deserialize_multi(std::move(proof)), "cannot deserialize account proof");
   if (Q_roots.size() != 2) {
     return td::Status::Error(PSLICE() << "account state proof must have exactly two roots");
@@ -169,9 +173,9 @@ td::Status check_account_proof(td::Slice proof, ton::BlockIdExt shard_blk, const
       return td::Status::Error("account state proof is invalid");
     }
     ton::Bits256 state_hash = state_root->get_hash().bits();
-    TRY_STATUS_PREFIX(
-        check_block_header_proof(vm::MerkleProof::virtualize(std::move(Q_roots[0]), 1), shard_blk, &state_hash, true),
-        "error in account shard block header proof : ");
+    TRY_STATUS_PREFIX(check_block_header_proof(vm::MerkleProof::virtualize(std::move(Q_roots[0]), 1), shard_blk,
+                                               &state_hash, true, save_utime),
+                      "error in account shard block header proof : ");
     block::gen::ShardStateUnsplit::Record sstate;
     if (!(tlb::unpack_cell(std::move(state_root), sstate))) {
       return td::Status::Error("cannot unpack state header");
@@ -233,8 +237,8 @@ td::Result<AccountState::Info> AccountState::validate(ton::BlockIdExt ref_blk, b
   TRY_STATUS(block::check_shard_proof(blk, shard_blk, shard_proof.as_slice()));
 
   Info res;
-  TRY_STATUS(
-      block::check_account_proof(proof.as_slice(), shard_blk, addr, root, &res.last_trans_lt, &res.last_trans_hash));
+  TRY_STATUS(block::check_account_proof(proof.as_slice(), shard_blk, addr, root, &res.last_trans_lt,
+                                        &res.last_trans_hash, &res.gen_utime));
   res.root = std::move(root);
 
   return res;

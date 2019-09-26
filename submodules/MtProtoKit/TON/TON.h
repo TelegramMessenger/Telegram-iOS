@@ -78,16 +78,12 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest;
 
 - (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
-- (MTSignal *)getTestWalletAccountAddressWithPublicKey:(NSString *)publicKey;
-- (MTSignal *)getTestGiverAccountState;
-- (MTSignal *)getTestGiverAddress;
-- (MTSignal *)testGiverSendGramsWithAccountState:(TONAccountState *)accountState accountAddress:(NSString *)accountAddress amount:(int64_t)amount;
+- (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
 - (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
 - (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString *)textMessage;
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
 - (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
-- (MTSignal *)deleteKeyWithPublicKey:(NSString *)publicKey;
-- (MTSignal *)makeWalletInitialized:(TONKey *)key localPassword:(NSData *)localPassword;
+- (MTSignal *)deleteKey:(TONKey *)key;
 - (MTSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash;
 
 @end

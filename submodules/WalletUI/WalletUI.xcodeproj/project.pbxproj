@@ -931,6 +931,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E293117BD4900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletRefreshNode.swift</string>
+			<key>path</key>
+			<string>Sources/WalletRefreshNode.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E2948FA33F200000000</key>
 		<dict>
 			<key>isa</key>
@@ -1015,6 +1026,7 @@
 				<string>1DD70E296D49CFFF00000000</string>
 				<string>1DD70E29DE28A96800000000</string>
 				<string>1DD70E2979DDEBBB00000000</string>
+				<string>1DD70E293117BD4900000000</string>
 				<string>1DD70E2948FA33F200000000</string>
 				<string>1DD70E2986544B8D00000000</string>
 				<string>1DD70E2964068E1100000000</string>
@@ -1109,6 +1121,13 @@
 			<key>fileRef</key>
 			<string>1DD70E2979DDEBBB00000000</string>
 		</dict>
+		<key>E7A30F043117BD4900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E293117BD4900000000</string>
+		</dict>
 		<key>E7A30F0448FA33F200000000</key>
 		<dict>
 			<key>isa</key>
@@ -1165,6 +1184,7 @@
 				<string>E7A30F046D49CFFF00000000</string>
 				<string>E7A30F04DE28A96800000000</string>
 				<string>E7A30F0479DDEBBB00000000</string>
+				<string>E7A30F043117BD4900000000</string>
 				<string>E7A30F0448FA33F200000000</string>
 				<string>E7A30F0486544B8D00000000</string>
 				<string>E7A30F0464068E1100000000</string>

@@ -5,9 +5,9 @@
   ."Creates a request to simple wallet created by new-wallet.fif, with private key loaded from file <filename-base>.pk "
   ."and address from <filename-base>.addr, and saves it into <savefile>.boc ('wallet-query.boc' by default)" cr 1 halt
 } : usage
-$# dup 4 < swap 5 > or ' usage if
 def? $6 { @' $5 "-B" $= { @' $6 =: body-boc-file [forget] $6 def? $7 { @' $7 =: $5 [forget] $7 } { [forget] $5 } cond
   @' $# 2- =: $# } if } if
+$# dup 4 < swap 5 > or ' usage if
 
 true constant bounce
 
@@ -16,13 +16,14 @@ $2 bounce parse-load-address =: bounce 2=: dest_addr
 $3 parse-int =: seqno
 $4 $>GR =: amount
 def? $5 { @' $5 } { "wallet-query" } cond constant savefile
+3 constant send-mode  // mode for SENDRAWMSG: +1 - sender pays fees, +2 - ignore errors
 
 file-base +".addr" load-address
 2dup 2constant wallet_addr
 ."Source wallet address = " 2dup .addr cr 6 .Addr cr
 file-base +".pk" load-keypair nip constant wallet_pk
 
-def? body-boc-file { @' body-boc-file file>B B>boc } { <b "TEST" $, b> } cond
+def? body-boc-file { @' body-boc-file file>B B>boc } { <b 0 32 u, "TEST" $, b> } cond
 constant body-cell
 
 ."Transferring " amount .GR ."to account "
@@ -34,7 +35,7 @@ dest_addr 2dup bounce 7 + .Addr ." = " .addr
 <b b{01} s, bounce 1 i, b{000100} s, dest_addr addr, amount Gram, 0 9 64 32 + + 1+ u, 
   body-cell <s 2dup s-fits? not rot over 1 i, -rot { drop body-cell ref, } { s, } cond
 b>
-<b seqno 32 u, 1 8 u, swap ref, b>
+<b seqno 32 u, send-mode 8 u, swap ref, b>
 dup ."signing message: " <s csr. cr
 dup hash wallet_pk ed25519_sign_uint
 <b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s,

@@ -14,10 +14,12 @@ set(TONLIB_SOURCE
   tonlib/KeyStorage.cpp
   tonlib/LastBlock.cpp
   tonlib/LastBlockStorage.cpp
+  tonlib/Logging.cpp
   tonlib/TestGiver.cpp
   tonlib/TestWallet.cpp
   tonlib/TonlibClient.cpp
   tonlib/utils.cpp
+  tonlib/Wallet.cpp
 
   tonlib/Client.h
   tonlib/Config.h
@@ -28,11 +30,13 @@ set(TONLIB_SOURCE
   tonlib/KeyStorage.h
   tonlib/LastBlock.h
   tonlib/LastBlockStorage.h
+  tonlib/Logging.h
   tonlib/TestGiver.h
   tonlib/TestWallet.h
   tonlib/TonlibCallback.h
   tonlib/TonlibClient.h
   tonlib/utils.h
+  tonlib/Wallet.h
 
   tonlib/keys/bip39.cpp
   tonlib/keys/DecryptedKey.cpp

@@ -77,6 +77,7 @@ struct IntCtx {
   vm::TonDb* ton_db{nullptr};
   Dictionary* dictionary{nullptr};
   SourceLookup* source_lookup{nullptr};
+  int* now{nullptr};
 
  private:
   std::string str;

@@ -80,7 +80,7 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
         case let .infoHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .infoAddress(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
+            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], font: .monospace, sectionId: self.section, style: .blocks)
         case let .infoCopyAddress(theme, text):
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.copyWalletAddress()
@@ -346,20 +346,30 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             let leftInset: CGFloat = 15.0 + params.leftInset
             let verticalInset: CGFloat = 24.0
             
-            let title: String
+            let balanceString: String
             let titleColor: UIColor
             let transferredValue = item.walletTransaction.transferredValue
             if transferredValue <= 0 {
-                title = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
+                balanceString = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.list.itemPrimaryTextColor
             } else {
-                title = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
+                balanceString = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
+            }
+            
+            let title = NSMutableAttributedString()
+            if let range = balanceString.range(of: ".") {
+                let integralPart = String(balanceString[..<range.lowerBound])
+                let fractionalPart = String(balanceString[range.lowerBound...])
+                title.append(NSAttributedString(string: integralPart, font: Font.bold(48.0), textColor: titleColor))
+                title.append(NSAttributedString(string: fractionalPart, font: Font.bold(24.0), textColor: titleColor))
+            } else {
+                title.append(NSAttributedString(string: balanceString, font: Font.bold(48.0), textColor: titleColor))
             }
             
             let subtitle: String = stringForFullDate(timestamp: Int32(clamping: item.walletTransaction.timestamp), strings: item.strings, dateTimeFormat: item.dateTimeFormat)
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.semibold(39.0), textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: item.theme.list.freeTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             

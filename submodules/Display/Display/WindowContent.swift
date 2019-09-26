@@ -129,6 +129,9 @@ public func doesViewTreeDisableInteractiveTransitionGestureRecognizer(_ view: UI
     if view.disablesInteractiveTransitionGestureRecognizer {
         return true
     }
+    if view.disablesInteractiveKeyboardGestureRecognizer {
+        return true
+    }
     if let f = view.disablesInteractiveTransitionGestureRecognizerNow, f() {
         return true
     }
@@ -279,6 +282,7 @@ public class Window1 {
     private let statusBarHost: StatusBarHost?
     private let statusBarManager: StatusBarManager?
     private let keyboardManager: KeyboardManager?
+    private let keyboardViewManager: KeyboardViewManager?
     private var statusBarChangeObserver: AnyObject?
     private var keyboardRotationChangeObserver: AnyObject?
     private var keyboardFrameChangeObserver: AnyObject?
@@ -344,10 +348,12 @@ public class Window1 {
             statusBarHeight = statusBarHost.statusBarFrame.size.height
             self.statusBarManager = StatusBarManager(host: statusBarHost, volumeControlStatusBar: self.volumeControlStatusBar, volumeControlStatusBarNode: self.volumeControlStatusBarNode)
             self.keyboardManager = KeyboardManager(host: statusBarHost)
+            self.keyboardViewManager = KeyboardViewManager(host: statusBarHost)
         } else {
             statusBarHeight = self.deviceMetrics.statusBarHeight
             self.statusBarManager = nil
             self.keyboardManager = nil
+            self.keyboardViewManager = nil
         }
         
         let isLandscape =  boundsSize.width > boundsSize.height
@@ -692,7 +698,7 @@ public class Window1 {
             if let rootController = self._rootController {
                 if let rootController = rootController as? NavigationController {
                     rootController.statusBarHost = self.statusBarHost
-                    rootController.keyboardManager = self.keyboardManager
+                    rootController.keyboardViewManager = self.keyboardViewManager
                 }
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
                     rootController.displayNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)

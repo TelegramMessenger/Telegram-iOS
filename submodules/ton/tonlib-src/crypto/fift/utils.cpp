@@ -163,13 +163,15 @@ td::Result<fift::SourceLookup> create_mem_source_lookup(std::string main, std::s
   return create_source_lookup(main, need_preamble, need_asm, need_ton_util, fift_dir);
 }
 
-td::Result<td::Ref<vm::Cell>> compile_asm(td::Slice asm_code, std::string fift_dir) {
+td::Result<td::Ref<vm::Cell>> compile_asm(td::Slice asm_code, std::string fift_dir, bool is_raw) {
   std::stringstream ss;
   TRY_RESULT(source_lookup,
-             create_source_lookup(PSTRING() << "\"Asm.fif\" include\n<{ " << asm_code << "\n}>c boc>B \"res\" B>file",
+             create_source_lookup(PSTRING() << "\"Asm.fif\" include\n " << (is_raw ? "<{" : "") << asm_code << "\n"
+                                            << (is_raw ? "}>c" : "") << " boc>B \"res\" B>file",
                                   true, true, true, fift_dir));
   TRY_RESULT(res, run_fift(std::move(source_lookup), &ss));
   TRY_RESULT(boc, res.read_file("res"));
   return vm::std_boc_deserialize(std::move(boc.data));
 }
+
 }  // namespace fift

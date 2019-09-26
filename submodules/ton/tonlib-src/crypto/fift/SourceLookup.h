@@ -20,6 +20,7 @@
 #include <iostream>
 
 #include "td/utils/Status.h"
+#include "td/utils/Time.h"
 
 namespace fift {
 class FileLoader {
@@ -43,10 +44,21 @@ class OsFileLoader : public FileLoader {
   bool is_file_exists(td::CSlice filename) override;
 };
 
+class OsTime {
+ public:
+  virtual ~OsTime() = default;
+  virtual td::uint32 now() = 0;
+};
+
+//TODO: rename SourceLookup
 class SourceLookup {
  public:
   SourceLookup() = default;
-  explicit SourceLookup(std::unique_ptr<FileLoader> file_loader) : file_loader_(std::move(file_loader)) {
+  explicit SourceLookup(std::unique_ptr<FileLoader> file_loader, std::unique_ptr<OsTime> os_time = {})
+      : file_loader_(std::move(file_loader)), os_time_(std::move(os_time)) {
+  }
+  void set_os_time(std::unique_ptr<OsTime> os_time) {
+    os_time_ = std::move(os_time);
   }
   void add_include_path(td::string path);
   td::Result<FileLoader::File> lookup_source(std::string filename, std::string current_dir);
@@ -63,9 +75,16 @@ class SourceLookup {
   bool is_file_exists(td::CSlice filename) {
     return file_loader_->is_file_exists(filename);
   }
+  td::uint32 now() {
+    if (os_time_) {
+      return os_time_->now();
+    }
+    return static_cast<td::uint32>(td::Time::now());
+  }
 
  protected:
   std::unique_ptr<FileLoader> file_loader_;
+  std::unique_ptr<OsTime> os_time_;
   std::vector<std::string> source_include_path_;
 };
 }  // namespace fift

@@ -310,9 +310,17 @@ class tonNode_blockIdExt;
 
 class tonNode_blockSignature;
 
+class tonNode_blocksDescription;
+
 class tonNode_Broadcast;
 
+class tonNode_capabilities;
+
 class tonNode_data;
+
+class tonNode_DataFull;
+
+class tonNode_dataList;
 
 class tonNode_externalMessage;
 
@@ -331,6 +339,8 @@ class tonNode_PreparedState;
 class tonNode_sessionId;
 
 class tonNode_shardPublicOverlayId;
+
+class tonNode_success;
 
 class tonNode_zeroStateIdExt;
 
@@ -5806,6 +5816,31 @@ class tonNode_blockSignature final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class tonNode_blocksDescription final : public Object {
+ public:
+  std::vector<object_ptr<tonNode_blockIdExt>> ids_;
+  bool incomplete_;
+
+  tonNode_blocksDescription();
+
+  tonNode_blocksDescription(std::vector<object_ptr<tonNode_blockIdExt>> &&ids_, bool incomplete_);
+
+  static const std::int32_t ID = -701865684;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<tonNode_blocksDescription> fetch(td::TlParser &p);
+
+  explicit tonNode_blocksDescription(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class tonNode_Broadcast: public Object {
  public:
 
@@ -5913,6 +5948,31 @@ class tonNode_newShardBlockBroadcast final : public tonNode_Broadcast {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class tonNode_capabilities final : public Object {
+ public:
+  std::int32_t version_;
+  std::int64_t capabilities_;
+
+  tonNode_capabilities();
+
+  tonNode_capabilities(std::int32_t version_, std::int64_t capabilities_);
+
+  static const std::int32_t ID = -172007232;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<tonNode_capabilities> fetch(td::TlParser &p);
+
+  explicit tonNode_capabilities(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class tonNode_data final : public Object {
  public:
   td::BufferSlice data_;
@@ -5929,6 +5989,84 @@ class tonNode_data final : public Object {
   static object_ptr<tonNode_data> fetch(td::TlParser &p);
 
   explicit tonNode_data(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tonNode_DataFull: public Object {
+ public:
+
+  static object_ptr<tonNode_DataFull> fetch(td::TlParser &p);
+};
+
+class tonNode_dataFull final : public tonNode_DataFull {
+ public:
+  object_ptr<tonNode_blockIdExt> id_;
+  td::BufferSlice proof_;
+  td::BufferSlice block_;
+  bool is_link_;
+
+  tonNode_dataFull();
+
+  tonNode_dataFull(object_ptr<tonNode_blockIdExt> &&id_, td::BufferSlice &&proof_, td::BufferSlice &&block_, bool is_link_);
+
+  static const std::int32_t ID = -1101488237;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<tonNode_DataFull> fetch(td::TlParser &p);
+
+  explicit tonNode_dataFull(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tonNode_dataFullEmpty final : public tonNode_DataFull {
+ public:
+
+  tonNode_dataFullEmpty();
+
+  static const std::int32_t ID = 1466861002;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<tonNode_DataFull> fetch(td::TlParser &p);
+
+  explicit tonNode_dataFullEmpty(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tonNode_dataList final : public Object {
+ public:
+  std::vector<td::BufferSlice> data_;
+
+  tonNode_dataList();
+
+  explicit tonNode_dataList(std::vector<td::BufferSlice> &&data_);
+
+  static const std::int32_t ID = 351548179;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<tonNode_dataList> fetch(td::TlParser &p);
+
+  explicit tonNode_dataList(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -6247,6 +6385,27 @@ class tonNode_shardPublicOverlayId final : public Object {
   static object_ptr<tonNode_shardPublicOverlayId> fetch(td::TlParser &p);
 
   explicit tonNode_shardPublicOverlayId(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class tonNode_success final : public Object {
+ public:
+
+  tonNode_success();
+
+  static const std::int32_t ID = -1063902129;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<tonNode_success> fetch(td::TlParser &p);
+
+  explicit tonNode_success(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -8201,6 +8360,34 @@ class tonNode_downloadBlock final : public Function {
   static ReturnType fetch_result(td::TlParser &p);
 };
 
+class tonNode_downloadBlockFull final : public Function {
+ public:
+  object_ptr<tonNode_blockIdExt> block_;
+
+  tonNode_downloadBlockFull();
+
+  explicit tonNode_downloadBlockFull(object_ptr<tonNode_blockIdExt> &&block_);
+
+  static const std::int32_t ID = 1780991133;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_DataFull>;
+
+  static object_ptr<tonNode_downloadBlockFull> fetch(td::TlParser &p);
+
+  explicit tonNode_downloadBlockFull(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
 class tonNode_downloadBlockProof final : public Function {
  public:
   object_ptr<tonNode_blockIdExt> block_;
@@ -8247,6 +8434,118 @@ class tonNode_downloadBlockProofLink final : public Function {
   static object_ptr<tonNode_downloadBlockProofLink> fetch(td::TlParser &p);
 
   explicit tonNode_downloadBlockProofLink(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_downloadBlockProofLinks final : public Function {
+ public:
+  std::vector<object_ptr<tonNode_blockIdExt>> blocks_;
+
+  tonNode_downloadBlockProofLinks();
+
+  explicit tonNode_downloadBlockProofLinks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_);
+
+  static const std::int32_t ID = 684796771;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_dataList>;
+
+  static object_ptr<tonNode_downloadBlockProofLinks> fetch(td::TlParser &p);
+
+  explicit tonNode_downloadBlockProofLinks(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_downloadBlockProofs final : public Function {
+ public:
+  std::vector<object_ptr<tonNode_blockIdExt>> blocks_;
+
+  tonNode_downloadBlockProofs();
+
+  explicit tonNode_downloadBlockProofs(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_);
+
+  static const std::int32_t ID = -1515170827;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_dataList>;
+
+  static object_ptr<tonNode_downloadBlockProofs> fetch(td::TlParser &p);
+
+  explicit tonNode_downloadBlockProofs(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_downloadBlocks final : public Function {
+ public:
+  std::vector<object_ptr<tonNode_blockIdExt>> blocks_;
+
+  tonNode_downloadBlocks();
+
+  explicit tonNode_downloadBlocks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_);
+
+  static const std::int32_t ID = 1985594749;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_dataList>;
+
+  static object_ptr<tonNode_downloadBlocks> fetch(td::TlParser &p);
+
+  explicit tonNode_downloadBlocks(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_downloadNextBlockFull final : public Function {
+ public:
+  object_ptr<tonNode_blockIdExt> prev_block_;
+
+  tonNode_downloadNextBlockFull();
+
+  explicit tonNode_downloadNextBlockFull(object_ptr<tonNode_blockIdExt> &&prev_block_);
+
+  static const std::int32_t ID = 1855993674;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_DataFull>;
+
+  static object_ptr<tonNode_downloadNextBlockFull> fetch(td::TlParser &p);
+
+  explicit tonNode_downloadNextBlockFull(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -8345,6 +8644,31 @@ class tonNode_downloadZeroState final : public Function {
   static ReturnType fetch_result(td::TlParser &p);
 };
 
+class tonNode_getCapabilities final : public Function {
+ public:
+
+  tonNode_getCapabilities();
+
+  static const std::int32_t ID = -555345672;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_capabilities>;
+
+  static object_ptr<tonNode_getCapabilities> fetch(td::TlParser &p);
+
+  explicit tonNode_getCapabilities(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
 class tonNode_getNextBlockDescription final : public Function {
  public:
   object_ptr<tonNode_blockIdExt> prev_block_;
@@ -8363,6 +8687,35 @@ class tonNode_getNextBlockDescription final : public Function {
   static object_ptr<tonNode_getNextBlockDescription> fetch(td::TlParser &p);
 
   explicit tonNode_getNextBlockDescription(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_getNextBlocksDescription final : public Function {
+ public:
+  object_ptr<tonNode_blockIdExt> prev_block_;
+  std::int32_t limit_;
+
+  tonNode_getNextBlocksDescription();
+
+  tonNode_getNextBlocksDescription(object_ptr<tonNode_blockIdExt> &&prev_block_, std::int32_t limit_);
+
+  static const std::int32_t ID = 1059590852;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_blocksDescription>;
+
+  static object_ptr<tonNode_getNextBlocksDescription> fetch(td::TlParser &p);
+
+  explicit tonNode_getNextBlocksDescription(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -8392,6 +8745,36 @@ class tonNode_getNextKeyBlockIds final : public Function {
   static object_ptr<tonNode_getNextKeyBlockIds> fetch(td::TlParser &p);
 
   explicit tonNode_getNextKeyBlockIds(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_getPrevBlocksDescription final : public Function {
+ public:
+  object_ptr<tonNode_blockIdExt> next_block_;
+  std::int32_t limit_;
+  std::int32_t cutoff_seqno_;
+
+  tonNode_getPrevBlocksDescription();
+
+  tonNode_getPrevBlocksDescription(object_ptr<tonNode_blockIdExt> &&next_block_, std::int32_t limit_, std::int32_t cutoff_seqno_);
+
+  static const std::int32_t ID = 1550675145;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_blocksDescription>;
+
+  static object_ptr<tonNode_getPrevBlocksDescription> fetch(td::TlParser &p);
+
+  explicit tonNode_getPrevBlocksDescription(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -8449,6 +8832,63 @@ class tonNode_prepareBlockProof final : public Function {
   static object_ptr<tonNode_prepareBlockProof> fetch(td::TlParser &p);
 
   explicit tonNode_prepareBlockProof(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_prepareBlockProofs final : public Function {
+ public:
+  std::vector<object_ptr<tonNode_blockIdExt>> blocks_;
+  bool allow_partial_;
+
+  tonNode_prepareBlockProofs();
+
+  tonNode_prepareBlockProofs(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_, bool allow_partial_);
+
+  static const std::int32_t ID = -310791496;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_PreparedProof>;
+
+  static object_ptr<tonNode_prepareBlockProofs> fetch(td::TlParser &p);
+
+  explicit tonNode_prepareBlockProofs(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
+class tonNode_prepareBlocks final : public Function {
+ public:
+  std::vector<object_ptr<tonNode_blockIdExt>> blocks_;
+
+  tonNode_prepareBlocks();
+
+  explicit tonNode_prepareBlocks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_);
+
+  static const std::int32_t ID = 1795140604;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<tonNode_Prepared>;
+
+  static object_ptr<tonNode_prepareBlocks> fetch(td::TlParser &p);
+
+  explicit tonNode_prepareBlocks(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -8549,12 +8989,12 @@ class tonNode_slave_sendExtMessage final : public Function {
 
   explicit tonNode_slave_sendExtMessage(object_ptr<tonNode_externalMessage> &&message_);
 
-  static const std::int32_t ID = 2067425040;
+  static const std::int32_t ID = 58127017;
   std::int32_t get_id() const final {
     return ID;
   }
 
-  using ReturnType = bool;
+  using ReturnType = object_ptr<tonNode_success>;
 
   static object_ptr<tonNode_slave_sendExtMessage> fetch(td::TlParser &p);
 

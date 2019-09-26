@@ -6,15 +6,18 @@ import TelegramPresentationData
 import TelegramCore
 import AnimationUI
 import SwiftSignalKit
+import AppBundle
 
 class WalletInfoEmptyItem: ListViewItem {
+    let account: Account
     let theme: PresentationTheme
     let strings: PresentationStrings
     let address: String
     
     let selectable: Bool = false
     
-    init(theme: PresentationTheme, strings: PresentationStrings, address: String) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String) {
+        self.account = account
         self.theme = theme
         self.strings = strings
         self.address = address
@@ -22,7 +25,7 @@ class WalletInfoEmptyItem: ListViewItem {
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = WalletInfoEmptyItemNode()
+            let node = WalletInfoEmptyItemNode(account: self.account)
             node.insets = UIEdgeInsets()
             node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             Queue.mainQueue().async {
@@ -54,21 +57,20 @@ class WalletInfoEmptyItem: ListViewItem {
 
 final class WalletInfoEmptyItemNode: ListViewItemNode {
     private let offsetContainer: ASDisplayNode
-    private let iconNode: ASImageNode
     private let animationNode: AnimatedStickerNode
     private let titleNode: TextNode
     private let textNode: TextNode
     private let addressNode: TextNode
     
-    init() {
+    init(account: Account) {
         self.offsetContainer = ASDisplayNode()
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.image = UIImage(bundleImageName: "Wallet/DuckIcon")
-        
         self.animationNode = AnimatedStickerNode()
+        if let path = getAppBundle().path(forResource: "WalletEmpty", ofType: "tgs") {
+            self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+            self.animationNode.visibility = true
+        }
+        self.animationNode.visibility = true
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false
@@ -79,7 +81,6 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         
         self.wantsTrailingItemSpaceUpdates = true
         
-        self.offsetContainer.addSubnode(self.iconNode)
         self.offsetContainer.addSubnode(self.animationNode)
         self.offsetContainer.addSubnode(self.titleNode)
         self.offsetContainer.addSubnode(self.textNode)
@@ -101,8 +102,8 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         let termsSpacing: CGFloat = 11.0
         let buttonHeight: CGFloat = 50.0
         
-        let iconSize: CGSize
-        iconSize = self.iconNode.image?.size ?? CGSize(width: 140.0, height: 140.0)
+        let iconSize = CGSize(width: 140.0, height: 140.0)
+        self.animationNode.updateLayout(size: iconSize)
         
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -145,7 +146,7 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
                     
                 let transition: ContainedViewLayoutTransition = .immediate
                 
-                transition.updateFrameAdditive(node: strongSelf.iconNode, frame: iconFrame)
+                transition.updateFrameAdditive(node: strongSelf.animationNode, frame: iconFrame)
                 strongSelf.animationNode.updateLayout(size: iconFrame.size)
                 transition.updateFrameAdditive(node: strongSelf.animationNode, frame: iconFrame)
                 transition.updateFrameAdditive(node: strongSelf.titleNode, frame: titleFrame)

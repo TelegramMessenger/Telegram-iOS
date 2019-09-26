@@ -20,49 +20,41 @@ class NavigationTransitionCoordinator {
         get {
             return self._progress
         }
-        set(value) {
-            self._progress = value
-            self.updateProgress(transition: .immediate)
-        }
     }
     
-    private let container: UIView
+    private let container: ASDisplayNode
     private let transition: NavigationTransition
-    let topView: UIView
-    private let viewSuperview: UIView?
-    let bottomView: UIView
+    let topNode: ASDisplayNode
+    let bottomNode: ASDisplayNode
     private let topNavigationBar: NavigationBar?
     private let bottomNavigationBar: NavigationBar?
-    private let dimView: UIView
-    private let shadowView: UIImageView
+    private let dimNode: ASDisplayNode
+    private let shadowNode: ASImageNode
     
     private let inlineNavigationBarTransition: Bool
     
     private(set) var animatingCompletion = false
     private var currentCompletion: (() -> Void)?
-    private var didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
+    private var didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)?
     
-    init(transition: NavigationTransition, container: UIView, topView: UIView, topNavigationBar: NavigationBar?, bottomView: UIView, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)? = nil) {
+    init(transition: NavigationTransition, container: ASDisplayNode, topNode: ASDisplayNode, topNavigationBar: NavigationBar?, bottomNode: ASDisplayNode, bottomNavigationBar: NavigationBar?, didUpdateProgress: ((CGFloat, ContainedViewLayoutTransition, CGRect, CGRect) -> Void)? = nil) {
         self.transition = transition
         self.container = container
         self.didUpdateProgress = didUpdateProgress
-        self.topView = topView
-        switch transition {
-            case .Push:
-                self.viewSuperview = bottomView.superview
-            case .Pop:
-                self.viewSuperview = topView.superview
-        }
-        self.bottomView = bottomView
+        self.topNode = topNode
+        self.bottomNode = bottomNode
         self.topNavigationBar = topNavigationBar
         self.bottomNavigationBar = bottomNavigationBar
-        self.dimView = UIView()
-        self.dimView.backgroundColor = UIColor.black
-        self.shadowView = UIImageView(image: shadowImage)
+        self.dimNode = ASDisplayNode()
+        self.dimNode.backgroundColor = UIColor.black
+        self.shadowNode = ASImageNode()
+        self.shadowNode.displaysAsynchronously = false
+        self.shadowNode.displayWithoutProcessing = true
+        self.shadowNode.image = shadowImage
         
         if let topNavigationBar = topNavigationBar, let bottomNavigationBar = bottomNavigationBar, !topNavigationBar.isHidden, !bottomNavigationBar.isHidden, topNavigationBar.canTransitionInline, bottomNavigationBar.canTransitionInline, topNavigationBar.item?.leftBarButtonItem == nil {
-            var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container)
-            var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container)
+            var topFrame = topNavigationBar.view.convert(topNavigationBar.bounds, to: container.view)
+            var bottomFrame = bottomNavigationBar.view.convert(bottomNavigationBar.bounds, to: container.view)
             topFrame.origin.x = 0.0
             bottomFrame.origin.x = 0.0
             self.inlineNavigationBarTransition = true// topFrame.equalTo(bottomFrame)
@@ -72,23 +64,25 @@ class NavigationTransitionCoordinator {
         
         switch transition {
             case .Push:
-                self.viewSuperview?.insertSubview(topView, belowSubview: topView)
+                self.container.insertSubnode(topNode, belowSubnode: topNode)
             case .Pop:
-                self.viewSuperview?.insertSubview(bottomView, belowSubview: topView)
+                self.container.insertSubnode(bottomNode, belowSubnode: topNode)
         }
         
-        self.viewSuperview?.insertSubview(self.dimView, belowSubview: topView)
-        self.viewSuperview?.insertSubview(self.shadowView, belowSubview: dimView)
+        self.container.insertSubnode(self.dimNode, belowSubnode: topNode)
+        self.container.insertSubnode(self.shadowNode, belowSubnode: dimNode)
         
         self.maybeCreateNavigationBarTransition()
-        self.updateProgress(transition: .immediate)
+        self.updateProgress(0.0, transition: .immediate, completion: {})
     }
 
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    func updateProgress(transition: ContainedViewLayoutTransition) {
+    func updateProgress(_ progress: CGFloat, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+        self._progress = progress
+        
         let position: CGFloat
         switch self.transition {
             case .Push:
@@ -104,19 +98,25 @@ class NavigationTransitionCoordinator {
         
         let containerSize = self.container.bounds.size
         
-        self.topView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels(position * containerSize.width), y: 0.0), size: containerSize)
-        self.dimView.frame = CGRect(origin: CGPoint(x: 0.0, y: dimInset), size: CGSize(width: max(0.0, self.topView.frame.minX), height: self.container.bounds.size.height - dimInset))
-        self.shadowView.frame = CGRect(origin: CGPoint(x: self.dimView.frame.maxX - shadowWidth, y: dimInset), size: CGSize(width: shadowWidth, height: containerSize.height - dimInset))
-        self.dimView.alpha = (1.0 - position) * 0.15
-        self.shadowView.alpha = (1.0 - position) * 0.9
-        self.bottomView.frame = CGRect(origin: CGPoint(x: ((position - 1.0) * containerSize.width * 0.3), y: 0.0), size: containerSize)
+        let topFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(position * containerSize.width), y: 0.0), size: containerSize)
+        let bottomFrame = CGRect(origin: CGPoint(x: ((position - 1.0) * containerSize.width * 0.3), y: 0.0), size: containerSize)
         
-        self.updateNavigationBarTransition()
+        transition.updateFrame(node: self.topNode, frame: topFrame, completion: { _ in
+            completion()
+        })
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: dimInset), size: CGSize(width: max(0.0, topFrame.minX), height: self.container.bounds.size.height - dimInset)))
+        transition.updateFrame(node: self.shadowNode, frame: CGRect(origin: CGPoint(x: self.dimNode.frame.maxX - shadowWidth, y: dimInset), size: CGSize(width: shadowWidth, height: containerSize.height - dimInset)))
+        transition.updateAlpha(node: self.dimNode, alpha: (1.0 - position) * 0.15)
+        transition.updateAlpha(node: self.shadowNode, alpha: (1.0 - position) * 0.9)
         
-        self.didUpdateProgress?(self.progress, transition)
+        transition.updateFrame(node: self.bottomNode, frame: bottomFrame)
+        
+        self.updateNavigationBarTransition(transition: transition)
+        
+        self.didUpdateProgress?(self.progress, transition, topFrame, bottomFrame)
     }
     
-    func updateNavigationBarTransition() {
+    func updateNavigationBarTransition(transition: ContainedViewLayoutTransition) {
         if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar, self.inlineNavigationBarTransition {
             let position: CGFloat
             switch self.transition {
@@ -126,8 +126,10 @@ class NavigationTransitionCoordinator {
                     position = progress
             }
             
-            topNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: bottomNavigationBar, transition: self.transition, role: .top, progress: position)
-            bottomNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: topNavigationBar, transition: self.transition, role: .bottom, progress: position)
+            transition.animateView {
+                topNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: bottomNavigationBar, transition: self.transition, role: .top, progress: position)
+                bottomNavigationBar.transitionState = NavigationBarTransitionState(navigationBar: topNavigationBar, transition: self.transition, role: .bottom, progress: position)
+            }
         }
     }
     
@@ -156,45 +158,36 @@ class NavigationTransitionCoordinator {
     func animateCancel(_ completion: @escaping () -> ()) {
         self.currentCompletion = completion
         
-        UIView.animate(withDuration: 0.1, delay: 0.0, options: UIView.AnimationOptions(), animations: { () -> Void in
-            self.progress = 0.0
-        }) { (completed) -> Void in
-            switch self.transition {
-                case .Push:
-                    if let viewSuperview = self.viewSuperview {
-                        viewSuperview.addSubview(self.bottomView)
-                    } else {
-                        self.bottomView.removeFromSuperview()
-                    }
-                    self.topView.removeFromSuperview()
-                case .Pop:
-                    if let viewSuperview = self.viewSuperview {
-                        viewSuperview.addSubview(self.topView)
-                    } else {
-                        self.topView.removeFromSuperview()
-                    }
-                    self.bottomView.removeFromSuperview()
+        self.updateProgress(0.0, transition: .animated(duration: 0.1, curve: .easeInOut), completion: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            switch strongSelf.transition {
+            case .Push:
+                strongSelf.topNode.removeFromSupernode()
+            case .Pop:
+                strongSelf.bottomNode.removeFromSupernode()
             }
             
-            self.dimView.removeFromSuperview()
-            self.shadowView.removeFromSuperview()
+            strongSelf.dimNode.removeFromSupernode()
+            strongSelf.shadowNode.removeFromSupernode()
             
-            self.endNavigationBarTransition()
+            strongSelf.endNavigationBarTransition()
             
-            if let currentCompletion = self.currentCompletion {
-                self.currentCompletion = nil
+            if let currentCompletion = strongSelf.currentCompletion {
+                strongSelf.currentCompletion = nil
                 currentCompletion()
             }
-        }
+        })
     }
     
     func complete() {
         self.animatingCompletion = true
         
-        self.progress = 1.0
+        self._progress = 1.0
         
-        self.dimView.removeFromSuperview()
-        self.shadowView.removeFromSuperview()
+        self.dimNode.removeFromSupernode()
+        self.shadowNode.removeFromSupernode()
         
         self.endNavigationBarTransition()
         
@@ -224,8 +217,8 @@ class NavigationTransitionCoordinator {
                     }
             }*/
             
-            self.dimView.removeFromSuperview()
-            self.shadowView.removeFromSuperview()
+            self.dimNode.removeFromSupernode()
+            self.shadowNode.removeFromSupernode()
             
             self.endNavigationBarTransition()
             
@@ -236,17 +229,13 @@ class NavigationTransitionCoordinator {
         }
         
         if abs(velocity) < CGFloat.ulpOfOne && abs(self.progress) < CGFloat.ulpOfOne {
-            UIView.animate(withDuration: 0.5, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
-                self.progress = 1.0
-            }, completion: { _ in
+            self.updateProgress(1.0, transition: .animated(duration: 0.5, curve: .spring), completion: {
                 f()
             })
         } else {
-            UIView.animate(withDuration: Double(max(0.05, min(0.2, abs(distance / velocity)))), delay: 0.0, options:UIView.AnimationOptions(), animations: { () -> Void in
-                self.progress = 1.0
-            }) { (completed) -> Void in
+            self.updateProgress(1.0, transition: .animated(duration: Double(max(0.05, min(0.2, abs(distance / velocity)))), curve: .easeInOut), completion: {
                 f()
-            }
+            })
         }
     }
 }

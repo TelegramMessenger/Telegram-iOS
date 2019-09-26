@@ -8,62 +8,9 @@ import Display
 import Postbox
 import TelegramCore
 import SolidRoundedButtonNode
-import AnimationUI
 import SwiftSignalKit
 import MergeLists
 import TelegramStringFormatting
-
-private func stringForRelativeUpdateTime(strings: PresentationStrings, day: RelativeTimestampFormatDay, dateTimeFormat: PresentationDateTimeFormat, hours: Int32, minutes: Int32) -> String {
-    let dayString: String
-    switch day {
-    case .today:
-        dayString = strings.Updated_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
-    case .yesterday:
-        dayString = strings.Updated_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
-    }
-    return dayString
-}
-
-private func lastUpdateTimestampString(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusTimestamp: Int32, relativeTo timestamp: Int32) -> String {
-    let difference = timestamp - statusTimestamp
-    let expanded = true
-    if difference < 60 {
-        return strings.Updated_JustNow
-    } else if difference < 60 * 60 && !expanded {
-        let minutes = difference / 60
-        return strings.Updated_MinutesAgo(minutes)
-    } else {
-        var t: time_t = time_t(statusTimestamp)
-        var timeinfo: tm = tm()
-        localtime_r(&t, &timeinfo)
-        
-        var now: time_t = time_t(timestamp)
-        var timeinfoNow: tm = tm()
-        localtime_r(&now, &timeinfoNow)
-        
-        if timeinfo.tm_year != timeinfoNow.tm_year {
-            return strings.Updated_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).0
-        }
-        
-        let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
-        if dayDifference == 0 || dayDifference == -1 {
-            let day: RelativeTimestampFormatDay
-            if dayDifference == 0 {
-                if expanded {
-                    day = .today
-                } else {
-                    let minutes = difference / (60 * 60)
-                    return strings.Updated_HoursAgo(minutes)
-                }
-            } else {
-                day = .yesterday
-            }
-            return stringForRelativeUpdateTime(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
-        } else {
-            return strings.Updated_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).0
-        }
-    }
-}
 
 public final class WalletInfoScreen: ViewController {
     private let context: AccountContext
@@ -132,6 +79,11 @@ public final class WalletInfoScreen: ViewController {
                 return
             }
             strongSelf.push(walletTransactionInfoController(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, walletTransaction: transaction))
+        }, present: { [weak self] c in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.present(c, in: .window(.root))
         })
         
         self.displayNodeDidLoad()
@@ -147,22 +99,39 @@ public final class WalletInfoScreen: ViewController {
 }
 
 private final class WalletInfoBalanceNode: ASDisplayNode {
-    let balanceTextNode: ImmediateTextNode
+    let balanceIntegralTextNode: ImmediateTextNode
+    let balanceFractionalTextNode: ImmediateTextNode
     let balanceIconNode: ASImageNode
     
     var balance: String = " " {
         didSet {
-            self.balanceTextNode.attributedText = NSAttributedString(string: self.balance, font: Font.bold(39.0), textColor: .white)
+            let integralString = NSMutableAttributedString()
+            let fractionalString = NSMutableAttributedString()
+            if let range = self.balance.range(of: ".") {
+                let integralPart = String(self.balance[..<range.lowerBound])
+                let fractionalPart = String(self.balance[range.lowerBound...])
+                integralString.append(NSAttributedString(string: integralPart, font: Font.medium(48.0), textColor: .white))
+                fractionalString.append(NSAttributedString(string: fractionalPart, font: Font.medium(48.0), textColor: .white))
+            } else {
+                integralString.append(NSAttributedString(string: self.balance, font: Font.medium(48.0), textColor: .white))
+            }
+            self.balanceIntegralTextNode.attributedText = integralString
+            self.balanceFractionalTextNode.attributedText = fractionalString
         }
     }
     
     var isLoading: Bool = true
     
     init(theme: PresentationTheme) {
-        self.balanceTextNode = ImmediateTextNode()
-        self.balanceTextNode.displaysAsynchronously = false
-        self.balanceTextNode.attributedText = NSAttributedString(string: " ", font: Font.bold(39.0), textColor: .white)
-        self.balanceTextNode.layer.minificationFilter = .linear
+        self.balanceIntegralTextNode = ImmediateTextNode()
+        self.balanceIntegralTextNode.displaysAsynchronously = false
+        self.balanceIntegralTextNode.attributedText = NSAttributedString(string: " ", font: Font.bold(39.0), textColor: .white)
+        self.balanceIntegralTextNode.layer.minificationFilter = .linear
+        
+        self.balanceFractionalTextNode = ImmediateTextNode()
+        self.balanceFractionalTextNode.displaysAsynchronously = false
+        self.balanceFractionalTextNode.attributedText = NSAttributedString(string: " ", font: Font.bold(39.0), textColor: .white)
+        self.balanceFractionalTextNode.layer.minificationFilter = .linear
         
         self.balanceIconNode = ASImageNode()
         self.balanceIconNode.displaysAsynchronously = false
@@ -171,57 +140,60 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.balanceTextNode)
+        self.addSubnode(self.balanceIntegralTextNode)
+        self.addSubnode(self.balanceFractionalTextNode)
         self.addSubnode(self.balanceIconNode)
     }
     
-    func update(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
+    func update(width: CGFloat, scaleTransition: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let sideInset: CGFloat = 16.0
         let balanceIconSpacing: CGFloat = 8.0
         
-        let balanceTextSize = self.balanceTextNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: 200.0))
+        let balanceIntegralTextSize = self.balanceIntegralTextNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: 200.0))
+        let balanceFractionalTextSize = self.balanceFractionalTextNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: 200.0))
         let balanceIconSize = self.balanceIconNode.image?.size ?? CGSize(width: 38.0, height: 34.0)
         
-        let balanceOrigin = CGPoint(x: floor((width - balanceTextSize.width - balanceIconSpacing - balanceIconSize.width / 2.0) / 2.0), y: 0.0)
         
-        let balanceTextFrame = CGRect(origin: balanceOrigin, size: balanceTextSize)
+        let fractionalScale: CGFloat = scaleTransition * 0.5 + (1.0 - scaleTransition) * 1.0
+        
+        let balanceOrigin = CGPoint(x: floor((width - balanceIntegralTextSize.width - balanceFractionalTextSize.width * fractionalScale - balanceIconSpacing - balanceIconSize.width / 2.0) / 2.0), y: 0.0)
+        
+        let balanceIntegralTextFrame = CGRect(origin: balanceOrigin, size: balanceIntegralTextSize)
+        var balanceFractionalTextFrame = CGRect(origin: CGPoint(x: balanceIntegralTextFrame.maxX, y: balanceIntegralTextFrame.maxY - balanceFractionalTextSize.height), size: balanceFractionalTextSize)
+        let apparentBalanceFractionalTextFrame = CGRect(origin: balanceFractionalTextFrame.origin, size: CGSize(width: balanceFractionalTextFrame.width * fractionalScale, height: balanceFractionalTextFrame.height * fractionalScale))
+        balanceFractionalTextFrame.origin.x -= balanceFractionalTextFrame.width / 2.0 * (1.0 - fractionalScale)
+        balanceFractionalTextFrame.origin.y += balanceFractionalTextFrame.height / 4.0 * (1.0 - fractionalScale)
+        
         let balanceIconFrame: CGRect
-        balanceIconFrame = CGRect(origin: CGPoint(x: balanceTextFrame.maxX + balanceIconSpacing, y: balanceTextFrame.minY + floor((balanceTextFrame.height - balanceIconSize.height) / 2.0)), size: balanceIconSize)
-        transition.updateFrameAdditive(node: self.balanceTextNode, frame: balanceTextFrame)
+        balanceIconFrame = CGRect(origin: CGPoint(x: apparentBalanceFractionalTextFrame.maxX + balanceIconSpacing, y: balanceIntegralTextFrame.minY + floor((balanceIntegralTextFrame.height - balanceIconSize.height) / 2.0)), size: balanceIconSize)
+        
+        transition.updateFrameAdditive(node: self.balanceIntegralTextNode, frame: balanceIntegralTextFrame)
+        transition.updateFrameAsPositionAndBounds(node: self.balanceFractionalTextNode, frame: balanceFractionalTextFrame)
+        transition.updateTransformScale(node: self.balanceFractionalTextNode, scale: fractionalScale)
         transition.updateFrame(node: self.balanceIconNode, frame: balanceIconFrame)
         
-        return balanceTextSize.height
+        return balanceIntegralTextSize.height
     }
 }
 
 private final class WalletInfoHeaderNode: ASDisplayNode {
     var balance: Int64?
     var isRefreshing: Bool = false
-    
-    var timestampString: String = "" {
-        didSet {
-            self.balanceTimestampNode.attributedText = NSAttributedString(string: self.timestampString, font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
-        }
-    }
+    var timestamp: Int32?
     
     let balanceNode: WalletInfoBalanceNode
-    private let refreshNode: AnimatedStickerNode
+    private let refreshNode: WalletRefreshNode
     private let balanceSubtitleNode: ImmediateTextNode
-    private let balanceTimestampNode: ImmediateTextNode
     private let receiveButtonNode: SolidRoundedButtonNode
     private let sendButtonNode: SolidRoundedButtonNode
     private let headerBackgroundNode: ASImageNode
     
-    init(account: Account, theme: PresentationTheme, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
-        self.balanceNode = WalletInfoBalanceNode(theme: theme)
+    init(account: Account, presentationData: PresentationData, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
+        self.balanceNode = WalletInfoBalanceNode(theme: presentationData.theme)
         
         self.balanceSubtitleNode = ImmediateTextNode()
         self.balanceSubtitleNode.displaysAsynchronously = false
         self.balanceSubtitleNode.attributedText = NSAttributedString(string: "your balance", font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
-        
-        self.balanceTimestampNode = ImmediateTextNode()
-        self.balanceTimestampNode.displaysAsynchronously = false
-        self.balanceTimestampNode.attributedText = NSAttributedString(string: "", font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
         
         self.headerBackgroundNode = ASImageNode()
         self.headerBackgroundNode.displaysAsynchronously = false
@@ -237,12 +209,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.receiveButtonNode = SolidRoundedButtonNode(title: "Receive", icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
         self.sendButtonNode = SolidRoundedButtonNode(title: "Send", icon: UIImage(bundleImageName: "Wallet/SendButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
         
-        self.refreshNode = AnimatedStickerNode()
-        self.refreshNode.playToCompletionOnStop = true
-        self.refreshNode.automaticallyLoadFirstFrame = true
-        if let path = getAppBundle().path(forResource: "celebrate", ofType: "tgs") {
-            self.refreshNode.setup(account: account, resource: .localFile(path), width: Int(32.0 * UIScreenScale), height: Int(32.0 * UIScreenScale), mode: .direct)
-        }
+        self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         
         super.init()
         
@@ -251,7 +218,6 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.sendButtonNode)
         self.addSubnode(self.balanceNode)
         self.addSubnode(self.balanceSubtitleNode)
-        self.addSubnode(self.balanceTimestampNode)
         self.addSubnode(self.refreshNode)
         
         self.receiveButtonNode.pressed = {
@@ -284,9 +250,10 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         let buttonAlpha = buttonTransition * 1.0
         
         let balanceSubtitleSize = self.balanceSubtitleNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: 200.0))
-        let balanceTimestampSize = self.balanceTimestampNode.updateLayout(CGSize(width: size.width - sideInset * 2.0, height: 200.0))
         
-        let balanceHeight = self.balanceNode.update(width: size.width, transition: transition)
+        let headerScaleTransition: CGFloat = max(0.0, min(1.0, (effectiveOffset - minHeaderOffset) / (maxHeaderOffset - minHeaderOffset)))
+        
+        let balanceHeight = self.balanceNode.update(width: size.width, scaleTransition: headerScaleTransition, transition: transition)
         let balanceSize = CGSize(width: size.width, height: balanceHeight)
         
         let maxHeaderScale: CGFloat = min(1.0, (size.width - 40.0) / balanceSize.width)
@@ -296,29 +263,21 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         
         let minHeaderY = navigationHeight - 44.0 + floor((44.0 - minHeaderHeight) / 2.0)
         let maxHeaderY = floor((size.height - balanceSize.height) / 2.0 - balanceSubtitleSize.height)
-        let headerScaleTransition: CGFloat = max(0.0, min(1.0, (effectiveOffset - minHeaderOffset) / (maxHeaderOffset - minHeaderOffset)))
         let headerPositionTransition: CGFloat = max(0.0, (effectiveOffset - minHeaderOffset) / (maxOffset - minHeaderOffset))
         let headerY = headerPositionTransition * maxHeaderY + (1.0 - headerPositionTransition) * minHeaderY
         let headerScale = headerScaleTransition * maxHeaderScale + (1.0 - headerScaleTransition) * minHeaderScale
         
-        let refreshSize = CGSize(width: 32.0, height: 32.0)
-        self.refreshNode.updateLayout(size: refreshSize)
+        let refreshSize = CGSize(width: 0.0, height: 0.0)
         transition.updateFrame(node: self.refreshNode, frame: CGRect(origin: CGPoint(x: floor((size.width - refreshSize.width) / 2.0), y: navigationHeight - 44.0 + floor((44.0 - refreshSize.height) / 2.0)), size: refreshSize))
+        transition.updateAlpha(node: self.refreshNode, alpha: headerScaleTransition)
         if self.balance == nil {
-            transition.updateAlpha(node: self.refreshNode, alpha: 0.0)
-            transition.updateSublayerTransformScale(node: self.refreshNode, scale: 0.1)
-            self.refreshNode.visibility = false
+            self.refreshNode.update(state: .pullToRefresh(self.timestamp ?? 0, 0.0))
         } else if self.isRefreshing {
-            transition.updateAlpha(node: self.refreshNode, alpha: 1.0)
-            transition.updateSublayerTransformScale(node: self.refreshNode, scale: 1.0)
-            self.refreshNode.visibility = true
+            self.refreshNode.update(state: .refreshing)
         } else {
             let refreshOffset: CGFloat = 20.0
-            let refreshScaleTransition: CGFloat = max(0.0, min(1.0, (offset - maxOffset) / refreshOffset))
-            transition.updateAlpha(node: self.refreshNode, alpha: refreshScaleTransition)
-            let refreshScale: CGFloat = refreshScaleTransition * 1.0 + (1.0 - refreshScaleTransition) * 0.1
-            transition.updateSublayerTransformScale(node: self.refreshNode, scale: refreshScale)
-            self.refreshNode.visibility = false
+            let refreshScaleTransition: CGFloat = max(0.0, (offset - maxOffset) / refreshOffset)
+            self.refreshNode.update(state: .pullToRefresh(self.timestamp ?? 0, refreshScaleTransition * 0.25))
         }
         
         let balanceFrame = CGRect(origin: CGPoint(x: 0.0, y: headerY), size: balanceSize)
@@ -327,11 +286,6 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         
         let balanceSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - balanceSubtitleSize.width) / 2.0), y: balanceFrame.midY + (balanceFrame.height / 2.0 * headerScale) + balanceSubtitleSpacing), size: balanceSubtitleSize)
         transition.updateFrameAdditive(node: self.balanceSubtitleNode, frame: balanceSubtitleFrame)
-        
-        let balanceTimestampFrame = CGRect(origin: CGPoint(x: floor((size.width - balanceTimestampSize.width) / 2.0), y: balanceSubtitleFrame.maxY + 2.0), size: balanceTimestampSize)
-        transition.updateFrameAdditive(node: self.balanceTimestampNode, frame: balanceTimestampFrame)
-        
-        transition.updateAlpha(node: self.balanceTimestampNode, alpha: headerScaleTransition)
         
         let headerHeight: CGFloat = 1000.0
         transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset + 10.0 - headerHeight), size: CGSize(width: size.width, height: headerHeight)))
@@ -360,11 +314,11 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         if self.balance == nil {
             self.balanceNode.isHidden = true
             self.balanceSubtitleNode.isHidden = true
-            self.balanceTimestampNode.isHidden = true
+            self.refreshNode.isHidden = true
         } else {
             self.balanceNode.isHidden = false
             self.balanceSubtitleNode.isHidden = false
-            self.balanceTimestampNode.isHidden = false
+            self.refreshNode.isHidden = false
         }
         transition.updateFrame(node: self.receiveButtonNode, frame: receiveButtonFrame)
         transition.updateAlpha(node: self.receiveButtonNode, alpha: buttonAlpha)
@@ -390,13 +344,9 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             self.receiveButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.balanceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.balanceSubtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-            self.balanceTimestampNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.refreshNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         }
         self.balanceNode.isLoading = false
-    }
-    
-    func animateBeganRefreshing() {
-        //self.refreshNode.layer.animate(from: 0.5 as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.easeOut.rawValue, duration: 0.2, delay: 0.0, removeOnCompletion: true, additive: true)
     }
 }
 
@@ -443,10 +393,10 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
         }
     }
     
-    func item(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
         switch self {
         case let .empty(address):
-            return WalletInfoEmptyItem(theme: theme, strings: strings, address: address)
+            return WalletInfoEmptyItem(account: account, theme: theme, strings: strings, address: address)
         case let .transaction(_, transaction):
             return WalletInfoTransactionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: transaction, action: {
                 action(transaction)
@@ -455,12 +405,12 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], presentationData: PresentationData, action: @escaping (WalletTransaction) -> Void) -> WalletInfoListTransaction {
+private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletTransaction) -> Void) -> WalletInfoListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
     
     return WalletInfoListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -473,6 +423,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private let address: String
     
     private let openTransaction: (WalletTransaction) -> Void
+    private let present: (ViewController) -> Void
     
     private let hapticFeedback = HapticFeedback()
     
@@ -502,15 +453,16 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private var updateTimestampTimer: SwiftSignalKit.Timer?
     
-    init(account: Account, tonContext: TonContext, presentationData: PresentationData, walletInfo: WalletInfo, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletTransaction) -> Void) {
+    init(account: Account, tonContext: TonContext, presentationData: PresentationData, walletInfo: WalletInfo, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletTransaction) -> Void, present: @escaping (ViewController) -> Void) {
         self.account = account
         self.tonContext = tonContext
         self.presentationData = presentationData
         self.walletInfo = walletInfo
         self.address = address
         self.openTransaction = openTransaction
+        self.present = present
         
-        self.headerNode = WalletInfoHeaderNode(account: account, theme: presentationData.theme, sendAction: sendAction, receiveAction: receiveAction)
+        self.headerNode = WalletInfoHeaderNode(account: account, presentationData: presentationData, sendAction: sendAction, receiveAction: receiveAction)
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
@@ -521,7 +473,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         
         super.init()
         
-        self.backgroundColor = .white
+        self.backgroundColor = self.presentationData.theme.list.itemBlocksBackgroundColor
         
         self.addSubnode(self.listNode)
         self.addSubnode(self.headerNode)
@@ -548,8 +500,6 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 if !strongSelf.reloadingState && canBeginRefresh && isScrolling {
                     if offset >= headerHeight + 100.0 {
                         canBeginRefresh = false
-                        strongSelf.headerNode.isRefreshing = true
-                        strongSelf.headerNode.animateBeganRefreshing()
                         strongSelf.hapticFeedback.impact()
                         strongSelf.refreshTransactions()
                     }
@@ -596,13 +546,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             guard let strongSelf = self, let combinedState = strongSelf.combinedState, !strongSelf.reloadingState else {
                 return
             }
-            let string = lastUpdateTimestampString(strings: strongSelf.presentationData.strings, dateTimeFormat: strongSelf.presentationData.dateTimeFormat, statusTimestamp: Int32(clamping: combinedState.timestamp), relativeTo: Int32(Date().timeIntervalSince1970))
-            if strongSelf.headerNode.timestampString != string {
-                strongSelf.headerNode.timestampString = string
-                if let (layout, navigationHeight) = strongSelf.validLayout {
-                    strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: strongSelf.listOffset ?? 0.0, transition: .immediate)
-                }
-            }
+            strongSelf.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
         }, queue: .mainQueue())
         self.updateTimestampTimer?.start()
     }
@@ -687,10 +631,9 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.loadingMoreTransactions = true
         self.reloadingState = true
         
-        self.headerNode.timestampString = "updating"
+        self.headerNode.isRefreshing = true
         
         self.stateDisposable.set((getCombinedWalletState(postbox: self.account.postbox, walletInfo: self.walletInfo, tonInstance: self.tonContext.instance)
-        |> delay(self.combinedState == nil ? 0.0 : 2.0, queue: .mainQueue())
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
@@ -698,6 +641,9 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             let combinedState: CombinedWalletState?
             switch value {
             case let .cached(state):
+                if strongSelf.combinedState != nil {
+                    return
+                }
                 if state == nil {
                     strongSelf.loadingIndicator.startAnimating()
                 } else {
@@ -722,7 +668,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 
                 strongSelf.reloadingState = false
                 
-                strongSelf.headerNode.timestampString = lastUpdateTimestampString(strings: strongSelf.presentationData.strings, dateTimeFormat: strongSelf.presentationData.dateTimeFormat, statusTimestamp: Int32(clamping: combinedState.timestamp), relativeTo: Int32(Date().timeIntervalSince1970))
+                strongSelf.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
                 
                 if strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: strongSelf.listOffset ?? 0.0, transition: .immediate)
@@ -756,6 +702,35 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
+            
+                strongSelf.reloadingState = false
+            
+            if let combinedState = strongSelf.combinedState {
+                strongSelf.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
+            }
+                
+            if strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: strongSelf.listOffset ?? 0.0, transition: .immediate)
+            }
+                
+            strongSelf.loadingMoreTransactions = false
+            strongSelf.canLoadMoreTransactions = false
+                
+            strongSelf.headerNode.isRefreshing = false
+                
+            if strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
+                strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: strongSelf.listOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut))
+            }
+            
+            if !strongSelf.didSetContentReady {
+                strongSelf.didSetContentReady = true
+                strongSelf.contentReady.set(.single(true))
+            }
+            
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "An Error Occurred", text: "The wallet state can not be retrieved at this time. Please try again later.", actions: [
+                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                })
+            ], actionLayout: .vertical))
         }))
     }
     
@@ -831,7 +806,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             }
         }
         
-        let transaction = preparedTransition(from: self.currentEntries ?? [], to: updatedEntries, presentationData: self.presentationData, action: { [weak self] transaction in
+        let transaction = preparedTransition(from: self.currentEntries ?? [], to: updatedEntries, account: self.account, presentationData: self.presentationData, action: { [weak self] transaction in
             guard let strongSelf = self else {
                 return
             }

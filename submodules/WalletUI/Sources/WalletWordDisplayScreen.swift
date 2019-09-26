@@ -10,6 +10,7 @@ import TelegramCore
 import SolidRoundedButtonNode
 import UndoUI
 import AlertUI
+import AnimationUI
 
 public final class WalletWordDisplayScreen: ViewController {
     private let context: AccountContext
@@ -35,6 +36,7 @@ public final class WalletWordDisplayScreen: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
         
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
@@ -51,7 +53,7 @@ public final class WalletWordDisplayScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletWordDisplayScreenNode(presentationData: self.presentationData, wordList: self.wordList, action: { [weak self] in
+        self.displayNode = WalletWordDisplayScreenNode(account: self.context.account, presentationData: self.presentationData, wordList: self.wordList, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -103,7 +105,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     private let navigationSeparatorNode: ASDisplayNode
     private let navigationTitleNode: ImmediateTextNode
     private let scrollNode: ASScrollNode
-    private let iconNode: ASImageNode
+    private let animationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let wordNodes: [(ImmediateTextNode, ImmediateTextNode, ImmediateTextNode)]
@@ -111,7 +113,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     
     private var navigationHeight: CGFloat?
     
-    init(presentationData: PresentationData, wordList: [String], action: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, wordList: [String], action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.wordList = wordList
         self.action = action
@@ -124,15 +126,15 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         self.scrollNode = ASScrollNode()
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.displaysAsynchronously = false
+        self.animationNode = AnimatedStickerNode()
+        if let path = getAppBundle().path(forResource: "WalletWordList", ofType: "tgs") {
+            self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+            self.animationNode.visibility = true
+        }
         
         let title: String = "24 Secret Words"
         let text: String = "Write down these 24 words in the correct order and store them in a secret place.\n\nUse these secret words to restore access to your wallet if you lose your passcode or Telegram account."
         let buttonText: String = "Done"
-        
-        self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/WordsDisplayIcon")
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
@@ -187,7 +189,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         self.addSubnode(self.scrollNode)
         
-        self.scrollNode.addSubnode(self.iconNode)
+        self.scrollNode.addSubnode(self.animationNode)
         self.scrollNode.addSubnode(self.titleNode)
         self.scrollNode.addSubnode(self.textNode)
         self.scrollNode.addSubnode(self.buttonNode)
@@ -257,7 +259,8 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let iconSize = self.iconNode.image?.size ?? CGSize(width: 50.0, height: 50.0)
+        let iconSize = CGSize(width: 140.0, height: 140.0)
+        self.animationNode.updateLayout(size: iconSize)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let navigationTitleSize = self.navigationTitleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
@@ -268,7 +271,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         let contentVerticalOrigin = navigationHeight + 10.0
         
         let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize)
-        transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
+        transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)

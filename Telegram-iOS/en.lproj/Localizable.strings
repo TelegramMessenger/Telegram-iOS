@@ -4755,20 +4755,20 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatSearch.ResultsTooltip" = "Tap to view as a list.";
 
-"Updated.JustNow" = "updated just now";
-"Updated.MinutesAgo_0" = "updated %@ minutes ago"; //three to ten
-"Updated.MinutesAgo_1" = "updated 1 minute ago"; //one
-"Updated.MinutesAgo_2" = "updated 2 minutes ago"; //two
-"Updated.MinutesAgo_3_10" = "updated %@ minutes ago"; //three to ten
-"Updated.MinutesAgo_many" = "updated %@ minutes ago"; // more than ten
-"Updated.MinutesAgo_any" = "updated %@ minutes ago"; // more than ten
-"Updated.HoursAgo_0" = "updated %@ hours ago";
-"Updated.HoursAgo_1" = "updated 1 hour ago";
-"Updated.HoursAgo_2" = "updated 2 hours ago";
-"Updated.HoursAgo_3_10" = "updated %@ hours ago";
-"Updated.HoursAgo_any" = "updated %@ hours ago";
-"Updated.HoursAgo_many" = "updated %@ hours ago";
-"Updated.HoursAgo_0" = "updated %@ hours ago";
-"Updated.YesterdayAt" = "updated yesterday at %@";
-"Updated.AtDate" = "updated %@";
-"Updated.TodayAt" = "updated today at %@";
+"Updated.JustNow" = "just now";
+"Updated.MinutesAgo_0" = "%@ minutes ago"; //three to ten
+"Updated.MinutesAgo_1" = "1 minute ago"; //one
+"Updated.MinutesAgo_2" = "2 minutes ago"; //two
+"Updated.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
+"Updated.MinutesAgo_many" = "%@ minutes ago"; // more than ten
+"Updated.MinutesAgo_any" = "%@ minutes ago"; // more than ten
+"Updated.HoursAgo_0" = "%@ hours ago";
+"Updated.HoursAgo_1" = "1 hour ago";
+"Updated.HoursAgo_2" = "2 hours ago";
+"Updated.HoursAgo_3_10" = "%@ hours ago";
+"Updated.HoursAgo_any" = "%@ hours ago";
+"Updated.HoursAgo_many" = "%@ hours ago";
+"Updated.HoursAgo_0" = "%@ hours ago";
+"Updated.YesterdayAt" = "yesterday at %@";
+"Updated.AtDate" = "%@";
+"Updated.TodayAt" = "today at %@";

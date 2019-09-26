@@ -25,11 +25,12 @@ namespace block {
 using td::Ref;
 
 td::Status check_block_header_proof(td::Ref<vm::Cell> root, ton::BlockIdExt blkid,
-                                    ton::Bits256* store_shard_hash_to = nullptr, bool check_state_hash = false);
+                                    ton::Bits256* store_shard_hash_to = nullptr, bool check_state_hash = false,
+                                    td::uint32* save_utime = nullptr);
 td::Status check_shard_proof(ton::BlockIdExt blk, ton::BlockIdExt shard_blk, td::Slice shard_proof);
 td::Status check_account_proof(td::Slice proof, ton::BlockIdExt shard_blk, const block::StdAddress& addr,
                                td::Ref<vm::Cell> root, ton::LogicalTime* last_trans_lt = nullptr,
-                               ton::Bits256* last_trans_hash = nullptr);
+                               ton::Bits256* last_trans_hash = nullptr, td::uint32* save_utime = nullptr);
 td::Result<td::Bits256> check_state_proof(ton::BlockIdExt blkid, td::Slice proof);
 td::Result<Ref<vm::Cell>> check_extract_state_proof(ton::BlockIdExt blkid, td::Slice proof, td::Slice data);
 
@@ -47,6 +48,7 @@ struct AccountState {
     td::Ref<vm::Cell> root;
     ton::LogicalTime last_trans_lt = 0;
     ton::Bits256 last_trans_hash;
+    td::uint32 gen_utime{0};
   };
 
   td::Result<Info> validate(ton::BlockIdExt ref_blk, block::StdAddress addr) const;

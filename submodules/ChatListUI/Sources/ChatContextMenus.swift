@@ -58,7 +58,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
                 })))
                 items.append(.separator)
             case .recentSearch:
-                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
+                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_RemoveFromRecents, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Clear"), color: theme.contextMenu.destructiveColor) }, action: { _, f in
                     let _ = (removeRecentlySearchedPeer(postbox: context.account.postbox, peerId: peerId)
                     |> deliverOnMainQueue).start(completed: {
                         f(.default)

@@ -12,6 +12,7 @@ import UndoUI
 import AlertUI
 import SwiftSignalKit
 import TextFormat
+import AnimationUI
 
 private let possibleWordList: [String] = [
     "abandon",
@@ -2091,6 +2092,7 @@ public final class WalletWordCheckScreen: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
         
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
@@ -2107,7 +2109,7 @@ public final class WalletWordCheckScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletWordCheckScreenNode(presentationData: self.presentationData, mode: self.mode, possibleWordList: possibleWordList, action: { [weak self] in
+        self.displayNode = WalletWordCheckScreenNode(account: self.context.account, presentationData: self.presentationData, mode: self.mode, possibleWordList: possibleWordList, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -2547,7 +2549,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
     private let navigationSeparatorNode: ASDisplayNode
     private let navigationTitleNode: ImmediateTextNode
     private let scrollNode: ASScrollNode
-    private let iconNode: ASImageNode
+    private let animationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let secondaryActionTitleNode: ImmediateTextNode
@@ -2561,7 +2563,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         return self.inputNodes.map { $0.text }
     }
     
-    init(presentationData: PresentationData, mode: WalletWordCheckMode, possibleWordList: [String], action: @escaping () -> Void, secondaryAction: @escaping () -> Void) {
+    init(account: Account, presentationData: PresentationData, mode: WalletWordCheckMode, possibleWordList: [String], action: @escaping () -> Void, secondaryAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         self.action = action
@@ -2576,9 +2578,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.displaysAsynchronously = false
+        self.animationNode = AnimatedStickerNode()
         
         let title: String
         let text: NSAttributedString
@@ -2598,14 +2598,16 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             
             buttonText = "Continue"
             secondaryActionText = ""
-            self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/WordsCheckIcon")
+            if let path = getAppBundle().path(forResource: "WalletWordCheck", ofType: "tgs") {
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.visibility = true
+            }
         case .import:
             title = "24 Secret Words"
             text = NSAttributedString(string: "Please restore access to your wallet by\nentering the 24 secret words you wrote down when creating the wallet.", font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             buttonText = "Continue"
             secondaryActionText = "I don't have those"
             wordIndices = Array(0 ..< 24)
-            self.iconNode.image = nil
         }
         
         self.navigationTitleNode = ImmediateTextNode()
@@ -2660,7 +2662,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         self.addSubnode(self.scrollNode)
         
-        self.scrollNode.addSubnode(self.iconNode)
+        self.scrollNode.addSubnode(self.animationNode)
         self.scrollNode.addSubnode(self.titleNode)
         self.scrollNode.addSubnode(self.textNode)
         self.scrollNode.addSubnode(self.secondaryActionTitleNode)
@@ -2773,7 +2775,14 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: contentAreaSize))
         
-        let iconSize = self.iconNode.image?.size ?? CGSize()
+        let iconSize: CGSize
+        switch self.mode {
+        case .import:
+            iconSize = CGSize()
+        case .verify:
+            iconSize = CGSize(width: 140.0, height: 140.0)
+            self.animationNode.updateLayout(size: iconSize)
+        }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: contentAreaSize.width - sideInset * 2.0, height: contentAreaSize.height))
         let navigationTitleSize = self.navigationTitleNode.updateLayout(CGSize(width: contentAreaSize.width - sideInset * 2.0, height: contentAreaSize.height))
@@ -2787,7 +2796,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         let contentVerticalOrigin = navigationHeight + 10.0
         
         let iconFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize)
-        transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
+        transition.updateFrame(node: self.animationNode, frame: iconFrame)
         let titleFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
         let textFrame = CGRect(origin: CGPoint(x: floor((contentAreaSize.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)

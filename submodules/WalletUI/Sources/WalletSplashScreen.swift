@@ -49,6 +49,7 @@ public final class WalletSplashScreen: ViewController {
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
         
+        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
@@ -287,14 +288,22 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [:])
             let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber])
             termsText = parseMarkdownIntoAttributedString("By creating the wallet you accept\n[Terms of Conditions]().", attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
-            self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/IntroIcon")
+            self.iconNode.image = nil
+            if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.visibility = true
+            }
             secondaryActionText = ""
         case .created:
             title = "Congratulations"
             text = NSAttributedString(string: "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode.", font: textFont, textColor: textColor)
             buttonText = "Proceed"
             termsText = NSAttributedString(string: "")
-            self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/CreatedIcon")
+            self.iconNode.image = nil
+            if let path = getAppBundle().path(forResource: "WalletCreated", ofType: "tgs") {
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.visibility = true
+            }
             secondaryActionText = ""
         case .success:
             title = "Ready to go!"
@@ -323,7 +332,11 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             text = NSAttributedString(string: "Please wait a few seconds for your transaction to be processed...", font: textFont, textColor: textColor)
             buttonText = ""
             termsText = NSAttributedString(string: "")
-            self.iconNode.image = UIImage(bundleImageName: "Settings/Wallet/SendingIcon")
+            self.iconNode.image = nil
+            if let path = getAppBundle().path(forResource: "SendingGrams", ofType: "tgs") {
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.visibility = true
+            }
             secondaryActionText = ""
         case let .sent(_, amount):
             title = "Done!"
@@ -392,7 +405,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         
         self.secondaryActionButtonNode = HighlightTrackingButtonNode()
         
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: true)
+        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
         self.buttonNode.isHidden = buttonText.isEmpty
         
         super.init()
