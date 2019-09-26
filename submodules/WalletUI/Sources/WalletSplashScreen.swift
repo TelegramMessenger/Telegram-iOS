@@ -95,9 +95,9 @@ public final class WalletSplashScreen: ViewController {
                     navigationController.setViewControllers(controllers, animated: true)
                 }
             })
-        case .sent:
+        case .sent, .created:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
-        case .created, .success, .restoreFailed, .secureStorageNotAvailable, .secureStorageReset:
+        case .success, .restoreFailed, .secureStorageNotAvailable, .secureStorageReset:
             break
         }
         
@@ -143,7 +143,7 @@ public final class WalletSplashScreen: ViewController {
                         ], actionLayout: .vertical), in: .window(.root))
                 })
             case let .created(walletInfo, wordList):
-                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList))
+                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check))
             case let .success(walletInfo), let .sent(walletInfo, _):
                 let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
                 |> deliverOnMainQueue).start(next: { address in
@@ -245,7 +245,9 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
     private let secondaryAction: () -> Void
     
     private let iconNode: ASImageNode
+    private var animationSize: CGSize = CGSize()
     private let animationNode: AnimatedStickerNode
+    private let alternativeAnimationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let buttonNode: SolidRoundedButtonNode
@@ -270,6 +272,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         self.iconNode.displaysAsynchronously = false
         
         self.animationNode = AnimatedStickerNode()
+        self.alternativeAnimationNode = AnimatedStickerNode()
         
         let title: String
         let text: NSAttributedString
@@ -289,8 +292,9 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber])
             termsText = parseMarkdownIntoAttributedString("By creating the wallet you accept\n[Terms of Conditions]().", attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
             self.iconNode.image = nil
-            if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+            if let path = getAppBundle().path(forResource: "WalletIntroLoading", ofType: "tgs") {
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 248, height: 248, mode: .direct)
+                self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -301,7 +305,8 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletCreated", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 250, height: 250, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 125.0, height: 125.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -312,7 +317,8 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "celebrate", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -323,7 +329,8 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "sad", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = "Enter 24 words"
@@ -334,7 +341,8 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "SendingGrams", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, mode: .direct)
+                self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -347,7 +355,8 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "celebrate", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -455,6 +464,17 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        switch self.mode {
+        case .created, .sending, .sent:
+            self.view.disablesInteractiveTransitionGestureRecognizer = true
+        default:
+            break
+        }
+    }
+    
     @objc private func secondaryActionPressed() {
         self.secondaryAction()
     }
@@ -462,19 +482,18 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
-        let iconSpacing: CGFloat = 5.0
+        let iconSpacing: CGFloat = 8.0
         let titleSpacing: CGFloat = 19.0
         let termsSpacing: CGFloat = 11.0
         let buttonHeight: CGFloat = 50.0
         
-        let iconSize: CGSize
+        let iconSize: CGSize = self.animationSize
         var iconOffset = CGPoint()
         switch self.mode {
         case .success:
-            iconSize = CGSize(width: 140.0, height: 140.0)
             iconOffset.x = 10.0
         default:
-            iconSize = self.iconNode.image?.size ?? CGSize(width: 140.0, height: 140.0)
+            break
         }
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))

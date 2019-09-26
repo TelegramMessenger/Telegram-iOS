@@ -1901,6 +1901,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return self.navigationBar?.view
         }
         
+        switch self.chatPresentationInterfaceState.mode {
+        case .standard(previewing: true):
+            if self.bounds.contains(point) {
+                return self.historyNode.view
+            }
+        default:
+            break
+        }
+        
         return nil
     }
     

@@ -11,6 +11,7 @@ import SolidRoundedButtonNode
 import SwiftSignalKit
 import MergeLists
 import TelegramStringFormatting
+import AnimationUI
 
 public final class WalletInfoScreen: ViewController {
     private let context: AccountContext
@@ -101,7 +102,7 @@ public final class WalletInfoScreen: ViewController {
 private final class WalletInfoBalanceNode: ASDisplayNode {
     let balanceIntegralTextNode: ImmediateTextNode
     let balanceFractionalTextNode: ImmediateTextNode
-    let balanceIconNode: ASImageNode
+    let balanceIconNode: AnimatedStickerNode
     
     var balance: String = " " {
         didSet {
@@ -122,7 +123,7 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
     
     var isLoading: Bool = true
     
-    init(theme: PresentationTheme) {
+    init(account: Account, theme: PresentationTheme) {
         self.balanceIntegralTextNode = ImmediateTextNode()
         self.balanceIntegralTextNode.displaysAsynchronously = false
         self.balanceIntegralTextNode.attributedText = NSAttributedString(string: " ", font: Font.bold(39.0), textColor: .white)
@@ -133,10 +134,11 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
         self.balanceFractionalTextNode.attributedText = NSAttributedString(string: " ", font: Font.bold(39.0), textColor: .white)
         self.balanceFractionalTextNode.layer.minificationFilter = .linear
         
-        self.balanceIconNode = ASImageNode()
-        self.balanceIconNode.displaysAsynchronously = false
-        self.balanceIconNode.displayWithoutProcessing = true
-        self.balanceIconNode.image = UIImage(bundleImageName: "Wallet/BalanceGem")?.precomposed()
+        self.balanceIconNode = AnimatedStickerNode()
+        if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
+            self.balanceIconNode.setup(account: account, resource: .localFile(path), width: 120, height: 120, mode: .direct)
+            self.balanceIconNode.visibility = true
+        }
         
         super.init()
         
@@ -147,30 +149,37 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
     
     func update(width: CGFloat, scaleTransition: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         let sideInset: CGFloat = 16.0
-        let balanceIconSpacing: CGFloat = 8.0
+        let balanceIconSpacing: CGFloat = scaleTransition * 0.0 + (1.0 - scaleTransition) * (-12.0)
+        let balanceVerticalIconOffset: CGFloat = scaleTransition * (-6.0) + (1.0 - scaleTransition) * (-2.0)
         
         let balanceIntegralTextSize = self.balanceIntegralTextNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: 200.0))
         let balanceFractionalTextSize = self.balanceFractionalTextNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: 200.0))
-        let balanceIconSize = self.balanceIconNode.image?.size ?? CGSize(width: 38.0, height: 34.0)
+        let balanceIconSize = CGSize(width: 60.0, height: 60.0)
         
+        let integralScale: CGFloat = scaleTransition * 1.0 + (1.0 - scaleTransition) * 0.8
+        let fractionalScale: CGFloat = scaleTransition * 0.5 + (1.0 - scaleTransition) * 0.8
         
-        let fractionalScale: CGFloat = scaleTransition * 0.5 + (1.0 - scaleTransition) * 1.0
-        
-        let balanceOrigin = CGPoint(x: floor((width - balanceIntegralTextSize.width - balanceFractionalTextSize.width * fractionalScale - balanceIconSpacing - balanceIconSize.width / 2.0) / 2.0), y: 0.0)
+        let balanceOrigin = CGPoint(x: floor((width - balanceIntegralTextSize.width * integralScale - balanceFractionalTextSize.width * fractionalScale - balanceIconSpacing - balanceIconSize.width / 2.0) / 2.0), y: 0.0)
         
         let balanceIntegralTextFrame = CGRect(origin: balanceOrigin, size: balanceIntegralTextSize)
+        let apparentBalanceIntegralTextFrame = CGRect(origin: balanceIntegralTextFrame.origin, size: CGSize(width: balanceIntegralTextFrame.width * integralScale, height: balanceIntegralTextFrame.height * integralScale))
         var balanceFractionalTextFrame = CGRect(origin: CGPoint(x: balanceIntegralTextFrame.maxX, y: balanceIntegralTextFrame.maxY - balanceFractionalTextSize.height), size: balanceFractionalTextSize)
         let apparentBalanceFractionalTextFrame = CGRect(origin: balanceFractionalTextFrame.origin, size: CGSize(width: balanceFractionalTextFrame.width * fractionalScale, height: balanceFractionalTextFrame.height * fractionalScale))
-        balanceFractionalTextFrame.origin.x -= balanceFractionalTextFrame.width / 2.0 * (1.0 - fractionalScale)
-        balanceFractionalTextFrame.origin.y += balanceFractionalTextFrame.height / 4.0 * (1.0 - fractionalScale)
+        
+        balanceFractionalTextFrame.origin.x -= (balanceFractionalTextFrame.width / 4.0) * scaleTransition + 0.25 * (balanceFractionalTextFrame.width / 2.0) * (1.0 - scaleTransition)
+        balanceFractionalTextFrame.origin.y += balanceFractionalTextFrame.height * 0.5 * (0.8 - fractionalScale)
         
         let balanceIconFrame: CGRect
-        balanceIconFrame = CGRect(origin: CGPoint(x: apparentBalanceFractionalTextFrame.maxX + balanceIconSpacing, y: balanceIntegralTextFrame.minY + floor((balanceIntegralTextFrame.height - balanceIconSize.height) / 2.0)), size: balanceIconSize)
+        balanceIconFrame = CGRect(origin: CGPoint(x: apparentBalanceFractionalTextFrame.maxX + balanceIconSpacing * integralScale, y: balanceIntegralTextFrame.midY - balanceIconSize.height / 2.0 + balanceVerticalIconOffset), size: balanceIconSize)
         
-        transition.updateFrameAdditive(node: self.balanceIntegralTextNode, frame: balanceIntegralTextFrame)
+        transition.updateFrameAsPositionAndBounds(node: self.balanceIntegralTextNode, frame: balanceIntegralTextFrame)
+        transition.updateTransformScale(node: self.balanceIntegralTextNode, scale: integralScale)
         transition.updateFrameAsPositionAndBounds(node: self.balanceFractionalTextNode, frame: balanceFractionalTextFrame)
         transition.updateTransformScale(node: self.balanceFractionalTextNode, scale: fractionalScale)
-        transition.updateFrame(node: self.balanceIconNode, frame: balanceIconFrame)
+        
+        self.balanceIconNode.updateLayout(size: balanceIconFrame.size)
+        transition.updateFrameAsPositionAndBounds(node: self.balanceIconNode, frame: balanceIconFrame)
+        transition.updateTransformScale(node: self.balanceIconNode, scale: scaleTransition * 1.0 + (1.0 - scaleTransition) * 0.8)
         
         return balanceIntegralTextSize.height
     }
@@ -189,7 +198,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let headerBackgroundNode: ASImageNode
     
     init(account: Account, presentationData: PresentationData, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
-        self.balanceNode = WalletInfoBalanceNode(theme: presentationData.theme)
+        self.balanceNode = WalletInfoBalanceNode(account: account, theme: presentationData.theme)
         
         self.balanceSubtitleNode = ImmediateTextNode()
         self.balanceSubtitleNode.displaysAsynchronously = false
@@ -277,14 +286,15 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         } else {
             let refreshOffset: CGFloat = 20.0
             let refreshScaleTransition: CGFloat = max(0.0, (offset - maxOffset) / refreshOffset)
-            self.refreshNode.update(state: .pullToRefresh(self.timestamp ?? 0, refreshScaleTransition * 0.25))
+            self.refreshNode.update(state: .pullToRefresh(self.timestamp ?? 0, refreshScaleTransition * 0.1))
         }
         
         let balanceFrame = CGRect(origin: CGPoint(x: 0.0, y: headerY), size: balanceSize)
         transition.updateFrame(node: self.balanceNode, frame: balanceFrame)
         transition.updateSublayerTransformScale(node: self.balanceNode, scale: headerScale)
         
-        let balanceSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - balanceSubtitleSize.width) / 2.0), y: balanceFrame.midY + (balanceFrame.height / 2.0 * headerScale) + balanceSubtitleSpacing), size: balanceSubtitleSize)
+        let balanceSubtitleOffset = headerScaleTransition * 27.0 + (1.0 - headerScaleTransition) * 9.0
+        let balanceSubtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - balanceSubtitleSize.width) / 2.0), y: balanceFrame.midY + balanceSubtitleOffset), size: balanceSubtitleSize)
         transition.updateFrameAdditive(node: self.balanceSubtitleNode, frame: balanceSubtitleFrame)
         
         let headerHeight: CGFloat = 1000.0

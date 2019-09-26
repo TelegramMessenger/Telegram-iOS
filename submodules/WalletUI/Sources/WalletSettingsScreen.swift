@@ -96,7 +96,7 @@ public func walletSettingsController(context: AccountContext, tonContext: TonCon
     let arguments = WalletSettingsControllerArguments(exportWallet: {
         let _ = (walletRestoreWords(network: context.account.network, walletInfo: walletInfo, tonInstance: tonContext.instance, keychain: tonContext.keychain)
         |> deliverOnMainQueue).start(next: { wordList in
-            pushControllerImpl?(WalletWordDisplayScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, wordList: wordList))
+            pushControllerImpl?(WalletWordDisplayScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, wordList: wordList, mode: .export))
         })
     }, deleteWallet: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }

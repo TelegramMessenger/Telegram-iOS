@@ -12,20 +12,27 @@ import UndoUI
 import AlertUI
 import AnimationUI
 
+public enum WalletWordDisplayScreenMode {
+    case check
+    case export
+}
+
 public final class WalletWordDisplayScreen: ViewController {
     private let context: AccountContext
     private let tonContext: TonContext
     private var presentationData: PresentationData
     private let walletInfo: WalletInfo
     private let wordList: [String]
+    private let mode: WalletWordDisplayScreenMode
     
     private let startTime: Double
     
-    public init(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, wordList: [String]) {
+    public init(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode) {
         self.context = context
         self.tonContext = tonContext
         self.walletInfo = walletInfo
         self.wordList = wordList
+        self.mode = mode
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -57,6 +64,12 @@ public final class WalletWordDisplayScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
+            
+            if case .export = strongSelf.mode {
+                strongSelf.dismiss()
+                return
+            }
+            
             let deltaTime = Date().timeIntervalSince1970 - strongSelf.startTime
             let minimalTimeout: Double
             #if DEBUG
@@ -128,7 +141,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletWordList", ofType: "tgs") {
-            self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+            self.animationNode.setup(account: account, resource: .localFile(path), width: 264, height: 264, playbackMode: .once, mode: .direct)
             self.animationNode.visibility = true
         }
         
@@ -246,7 +259,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         let sideInset: CGFloat = 32.0
         let buttonSideInset: CGFloat = 48.0
-        let iconSpacing: CGFloat = 5.0
+        let iconSpacing: CGFloat = 18.0
         let titleSpacing: CGFloat = 19.0
         let textSpacing: CGFloat = 37.0
         let buttonHeight: CGFloat = 50.0
@@ -259,7 +272,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let iconSize = CGSize(width: 140.0, height: 140.0)
+        let iconSize = CGSize(width: 132.0, height: 132.0)
         self.animationNode.updateLayout(size: iconSize)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
@@ -270,7 +283,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         let contentVerticalOrigin = navigationHeight + 10.0
         
-        let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize)
+        let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + 12.0, y: contentVerticalOrigin), size: iconSize)
         transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
