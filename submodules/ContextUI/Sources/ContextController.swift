@@ -566,7 +566,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     
                     let contentContainerOffset = CGPoint(x: localSourceFrame.center.x - self.contentContainerNode.frame.center.x, y: localSourceFrame.center.y - self.contentContainerNode.frame.center.y)
                     if let contentNode = self.contentContainerNode.contentNode, case let .controller(controller) = contentNode {
-                        let snapshotView = controller.sourceNode.view.snapshotContentTree()
+                        let snapshotView: UIView? = nil// controller.sourceNode.view.snapshotContentTree()
                         if let snapshotView = snapshotView {
                             controller.sourceNode.isHidden = true
                             
@@ -859,7 +859,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                 
-                if let snapshotView = targetNode.view.snapshotContentTree(unhide: true, keepTransform: true) {
+                if let snapshotView = targetNode.view.snapshotContentTree(unhide: true, keepTransform: true), false {
                     self.view.addSubview(snapshotView)
                     snapshotView.layer.animatePosition(from: CGPoint(x: self.contentContainerNode.frame.midX, y: self.contentContainerNode.frame.minY + localSourceFrame.height / 2.0), to: localSourceFrame.center, duration: transitionDuration * animationDurationFactor, timingFunction: transitionCurve.timingFunction, removeOnCompletion: false)
                     snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2 * animationDurationFactor, removeOnCompletion: false, completion: { _ in

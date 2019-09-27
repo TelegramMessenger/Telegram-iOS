@@ -229,7 +229,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, placeholder, value):
-            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 128, display: true), sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { text in
+            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 124, display: true), sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { text in
                 arguments.updateText(WalletSendScreenEntryTag.comment, text)
             }, tag: WalletSendScreenEntryTag.comment, action: {
                 arguments.proceed()
@@ -412,7 +412,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         let amount = amountValue(state.amount)
         var sendEnabled = false
         if let balance = balance {
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= balance.balance && state.comment.count <= 128
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= balance.balance && state.comment.count <= 124
         }
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
             arguments.proceed()

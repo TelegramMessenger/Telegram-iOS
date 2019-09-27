@@ -145,6 +145,13 @@ class KeyboardManager {
     }
 }
 
+private func endAnimations(view: UIView) {
+    view.layer.removeAllAnimations()
+    for subview in view.subviews {
+        endAnimations(view: subview)
+    }
+}
+
 final class KeyboardViewManager {
     private let host: StatusBarHost
     
@@ -152,12 +159,23 @@ final class KeyboardViewManager {
         self.host = host
     }
     
+    func dismissEditingWithoutAnimation(view: UIView) {
+        view.endEditing(true)
+        if let keyboardWindow = self.host.keyboardWindow {
+            for view in keyboardWindow.subviews {
+                endAnimations(view: view)
+            }
+        }
+    }
+    
     func update(leftEdge: CGFloat, transition: ContainedViewLayoutTransition) {
+        print("leftEdge: \(leftEdge) canSet: \(self.host.keyboardWindow != nil)")
         guard let keyboardWindow = self.host.keyboardWindow else {
             return
         }
         let t = keyboardWindow.layer.sublayerTransform
         let currentOffset = CGPoint(x: t.m41, y: t.m42)
-        transition.updateSublayerTransformOffset(layer: keyboardWindow.layer, offset: CGPoint(x: leftEdge, y: currentOffset.y))
+        transition.updateSublayerTransformOffset(layer: keyboardWindow.layer, offset: CGPoint(x: leftEdge, y: currentOffset.y), completion: { _ in
+        })
     }
 }

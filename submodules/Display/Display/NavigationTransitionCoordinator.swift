@@ -9,7 +9,13 @@ enum NavigationTransition {
 private let shadowWidth: CGFloat = 16.0
 
 private func generateShadow() -> UIImage? {
-    return UIImage(named: "NavigationShadow", in: getAppBundle(), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsets(), resizingMode: .tile)
+    return generateImage(CGSize(width: 16.0, height: 1.0), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setFillColor(UIColor.black.cgColor)
+        context.setShadow(offset: CGSize(), blur: 16.0, color: UIColor(white: 0.0, alpha: 0.5).cgColor)
+        context.fill(CGRect(origin: CGPoint(x: size.width, y: 0.0), size: CGSize(width: 16.0, height: 1.0)))
+    })
+    //return UIImage(named: "NavigationShadow", in: getAppBundle(), compatibleWith: nil)?.precomposed().resizableImage(withCapInsets: UIEdgeInsets(), resizingMode: .tile)
 }
 
 private let shadowImage = generateShadow()
