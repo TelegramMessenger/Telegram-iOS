@@ -4879,3 +4879,4 @@ Any member of this group will be able to see messages in the channel.";
 
 "Wallet.Send.ErrorInvalidAddress" = "Invalid wallet address. Please correct and try again.";
 "Wallet.Send.ErrorDecryptionFailed" = "Encryption error. Please check device passcode settings and try again.";
+"Wallet.Send.SendAnyway" = "Send Anyway";

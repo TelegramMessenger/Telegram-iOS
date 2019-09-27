@@ -292,7 +292,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
+    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
         return keychain.decrypt(walletInfo.encryptedSecret)
         |> mapError { _ -> SendGramsFromWalletError in
             return .secretDecryptionFailed
@@ -304,7 +304,7 @@ public final class TonInstance {
                 
                 self.impl.with { impl in
                     impl.withInstance { ton in
-                        let cancel = ton.sendGrams(from: key, localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: true, timeout: 0, randomId: randomId).start(next: { result in
+                        let cancel = ton.sendGrams(from: key, localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId).start(next: { result in
                             guard let result = result as? TONSendGramsResult else {
                                 subscriber.putError(.generic)
                                 return
@@ -314,6 +314,8 @@ public final class TonInstance {
                             if let error = error as? TONError {
                                 if error.text == "Failed to parse account address" {
                                     subscriber.putError(.invalidAddress)
+                                } else if error.text.hasPrefix("DANGEROUS_TRANSACTION") {
+                                    subscriber.putError(.destinationIsNotInitialized)
                                 } else {
                                     subscriber.putError(.generic)
                                 }
@@ -699,9 +701,10 @@ public enum SendGramsFromWalletError {
     case generic
     case secretDecryptionFailed
     case invalidAddress
+    case destinationIsNotInitialized
 }
 
-public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo, toAddress: String, amount: Int64, textMessage: String, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
+public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo, toAddress: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
     return getServerWalletSalt(network: network)
     |> mapError { _ -> SendGramsFromWalletError in
         return .generic
@@ -710,7 +713,7 @@ public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keyc
         return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
         |> castError(SendGramsFromWalletError.self)
         |> mapToSignal { fromAddress in
-            return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, randomId: randomId)
+            return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId)
         }
     }
 }

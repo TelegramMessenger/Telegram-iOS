@@ -2175,6 +2175,7 @@ public final class WalletWordCheckScreen: ViewController {
                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
+                    return
                 }
                 let _ = (importWallet(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain, wordList: enteredWords)
                 |> deliverOnMainQueue).start(next: { walletInfo in
@@ -2719,15 +2720,15 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             }
         }
         focused = { [weak self] node in
-            guard let strongSelf = self else {
-                return
-            }
-            if node.isLast {
-                UIView.animate(withDuration: 0.3, animations: {
-                    strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -10.0), animated: false)
-                })
-            } else {
-                strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+            DispatchQueue.main.async {
+                guard let strongSelf = self else {
+                    return
+                }
+                if node.isLast {
+                    strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+                } else {
+                    strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+                }
             }
         }
         pasteWords = { [weak self] wordList in

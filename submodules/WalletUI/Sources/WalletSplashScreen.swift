@@ -88,50 +88,7 @@ public final class WalletSplashScreen: ViewController {
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_ImportExisting, style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
         case let .sending(walletInfo, address, amount, textMessage, randomId):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
-            
-            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage, randomId: randomId)
-            |> deliverOnMainQueue).start(error: { [weak self] error in
-                guard let strongSelf = self else {
-                    return
-                }
-                let text: String
-                switch error {
-                case .generic:
-                    text = strongSelf.presentationData.strings.Login_UnknownError
-                case .invalidAddress:
-                    text = strongSelf.presentationData.strings.Wallet_Send_ErrorInvalidAddress
-                case .secretDecryptionFailed:
-                    text = strongSelf.presentationData.strings.Wallet_Send_ErrorDecryptionFailed
-                }
-                let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                    if let navigationController = strongSelf.navigationController as? NavigationController {
-                        navigationController.popViewController(animated: true)
-                    }
-                })])
-                strongSelf.present(controller, in: .window(.root))
-            }, completed: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                if let navigationController = strongSelf.navigationController as? NavigationController {
-                    var controllers = navigationController.viewControllers
-                    controllers = controllers.filter { controller in
-                        if controller is WalletSplashScreen {
-                            return false
-                        }
-                        if controller is WalletSendScreen {
-                            return false
-                        }
-                        if controller is WalletInfoScreen {
-                            return false
-                        }
-                        return true
-                    }
-                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
-                    strongSelf.view.endEditing(true)
-                    navigationController.setViewControllers(controllers, animated: true)
-                }
-            })
+            self.sendGrams(walletInfo: walletInfo, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: false, randomId: randomId)
         case .sent, .created:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
         case .restoreFailed, .secureStorageNotAvailable, .secureStorageReset:
@@ -153,6 +110,70 @@ public final class WalletSplashScreen: ViewController {
     
     @objc private func importPressed() {
         self.push(WalletWordCheckScreen(context: self.context, tonContext: self.tonContext, mode: .import, walletCreatedPreloadState: nil))
+    }
+    
+    private func sendGrams(walletInfo: WalletInfo, address: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, randomId: Int64) {
+        let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
+        |> deliverOnMainQueue).start(error: { [weak self] error in
+            guard let strongSelf = self else {
+                return
+            }
+            let text: String
+            switch error {
+            case .generic:
+                text = strongSelf.presentationData.strings.Login_UnknownError
+            case .invalidAddress:
+                text = strongSelf.presentationData.strings.Wallet_Send_ErrorInvalidAddress
+            case .secretDecryptionFailed:
+                text = strongSelf.presentationData.strings.Wallet_Send_ErrorDecryptionFailed
+            case .destinationIsNotInitialized:
+                if !forceIfDestinationNotInitialized {
+                    text = "This address belongs to an empty wallet. Are you sure you want to transfer grams to it?"
+                    let controller = textAlertController(context: strongSelf.context, title: "Warning", text: text, actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                            if let navigationController = strongSelf.navigationController as? NavigationController {
+                                navigationController.popViewController(animated: true)
+                            }
+                        }),
+                        TextAlertAction(type: .defaultAction, title: "Send Anyway", action: {
+                            self?.sendGrams(walletInfo: walletInfo, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: true, randomId: randomId)
+                        })
+                    ])
+                    strongSelf.present(controller, in: .window(.root))
+                    return
+                } else {
+                    text = strongSelf.presentationData.strings.Login_UnknownError
+                }
+            }
+            let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigationController.popViewController(animated: true)
+                }
+            })])
+            strongSelf.present(controller, in: .window(.root))
+        }, completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let navigationController = strongSelf.navigationController as? NavigationController {
+                var controllers = navigationController.viewControllers
+                controllers = controllers.filter { controller in
+                    if controller is WalletSplashScreen {
+                        return false
+                    }
+                    if controller is WalletSendScreen {
+                        return false
+                    }
+                    if controller is WalletInfoScreen {
+                        return false
+                    }
+                    return true
+                }
+                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                strongSelf.view.endEditing(true)
+                navigationController.setViewControllers(controllers, animated: true)
+            }
+        })
     }
     
     override public func loadDisplayNode() {
