@@ -301,21 +301,20 @@ private final class WalletReceiveScreenImpl: ItemListController<WalletReceiveScr
 }
 
 private func invoiceUrl(address: String, state: WalletReceiveScreenState, escapeComment: Bool = true) -> String {
-    let escapedAddress = address.replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
     var arguments = ""
     if !state.amount.isEmpty {
-        arguments += arguments.isEmpty ? "/?" : "&"
+        arguments += arguments.isEmpty ? "?" : "&"
         arguments += "amount=\(amountValue(state.amount))"
     }
     if !state.comment.isEmpty, let escapedComment = state.comment.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-        arguments += arguments.isEmpty ? "/?" : "&"
+        arguments += arguments.isEmpty ? "?" : "&"
         if escapeComment {
             arguments += "text=\(escapedComment)"
         } else {
             arguments += "text=\(state.comment)"
         }
     }
-    return "ton://\(escapedAddress)\(arguments)"
+    return "ton://transfer/\(address)\(arguments)"
 }
 
 func walletReceiveScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String) -> ViewController {
@@ -348,7 +347,7 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
             }
             return state
         }
-        ensureItemVisibleImpl?(tag, false)
+        ensureItemVisibleImpl?(WalletReceiveScreenEntryTag.comment, false)
     }, selectNextInputItem: { tag in
         selectNextInputItemImpl?(tag)
     }, dismissInput: {

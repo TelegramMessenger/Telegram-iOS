@@ -443,7 +443,6 @@ public struct ParsedWalletUrl {
 }
 
 private let invalidWalletAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted
-
 private func isValidWalletAddress(_ address: String) -> Bool {
     if address.count != 48 || address.rangeOfCharacter(from: invalidWalletAddressCharacters) != nil {
         return false
@@ -452,12 +451,13 @@ private func isValidWalletAddress(_ address: String) -> Bool {
 }
 
 public func parseWalletUrl(_ url: URL) -> ParsedWalletUrl? {
-    guard url.scheme == "ton" else {
+    guard url.scheme == "ton" && url.host == "transfer" else {
         return nil
     }
     var address: String?
-    if let host = url.host, isValidWalletAddress(host) {
-        address = host.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+    let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    if isValidWalletAddress(path) {
+        address = path
     }
     var amount: Int64?
     var comment: String?

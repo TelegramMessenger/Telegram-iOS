@@ -1031,7 +1031,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         )
         |> deliverOnMainQueue).start(next: { wallets, currentPublicKey, preferences in
             let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-            guard let config = WalletConfiguration.config(appConfiguration: appConfiguration) else {
+            guard let config = WalletConfiguration.with(appConfiguration: appConfiguration).config else {
                 return
             }
             let tonContext = storedContext.context(config: config)

@@ -1104,7 +1104,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> map { view -> Bool in
             let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
             let configuration = WalletConfiguration.with(appConfiguration: appConfiguration)
-            return configuration.enabled
+            return configuration.config != nil
         }
     }
     

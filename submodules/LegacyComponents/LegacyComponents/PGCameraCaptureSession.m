@@ -952,8 +952,10 @@ static UIImageOrientation TGSnapshotOrientationForVideoOrientation(bool mirrored
 
 - (void)captureOutput:(AVCaptureOutput *)output didOutputMetadataObjects:(NSArray<__kindof AVMetadataObject *> *)metadataObjects fromConnection:(AVCaptureConnection *)connection
 {
-    if (!self.isRunning)
+    if (!self.isRunning || self.currentMode != PGCameraModePhoto)
         return;
+    
+    
     
     if ([metadataObjects.firstObject isKindOfClass:[AVMetadataMachineReadableCodeObject class]])
     {

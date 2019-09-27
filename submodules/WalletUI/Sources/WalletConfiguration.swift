@@ -3,28 +3,20 @@ import TelegramCore
 
 public struct WalletConfiguration {
     static var defaultValue: WalletConfiguration {
-        return WalletConfiguration(enabled: false)
+        return WalletConfiguration(config: nil)
     }
     
-    public let enabled: Bool
+    public let config: String?
     
-    fileprivate init(enabled: Bool) {
-        self.enabled = enabled
+    fileprivate init(config: String?) {
+        self.config = config
     }
     
     public static func with(appConfiguration: AppConfiguration) -> WalletConfiguration {
-        if let data = appConfiguration.data, let enabled = data["wallet_enabled"] as? Bool, let _ = data["wallet_config"] as? String {
-            return WalletConfiguration(enabled: enabled)
+        if let data = appConfiguration.data, let config = data["wallet_config"] as? String {
+            return WalletConfiguration(config: config)
         } else {
             return .defaultValue
-        }
-    }
-    
-    public static func config(appConfiguration: AppConfiguration) -> String? {
-        if let data = appConfiguration.data, let config = data["wallet_config"] as? String {
-            return config
-        } else {
-            return nil
         }
     }
 }
