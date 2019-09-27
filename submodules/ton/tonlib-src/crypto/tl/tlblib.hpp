@@ -176,6 +176,10 @@ class TLB {
   virtual bool store_integer_ref(vm::CellBuilder& cb, td::RefInt256 value) const {
     return value.not_null() && store_integer_value(cb, *value);
   }
+  bool pack_integer(Ref<vm::CellSlice>& csr, td::RefInt256 value) const {
+    vm::CellBuilder cb;
+    return store_integer_ref(cb, value) && (csr = vm::load_cell_slice_ref(cb.finalize())).not_null();
+  }
   virtual bool add_values(vm::CellBuilder& cb, vm::CellSlice& cs1, vm::CellSlice& cs2) const {
     td::RefInt256 x = as_integer_skip(cs1), y = as_integer_skip(cs2);
     return x.not_null() && y.not_null() && store_integer_ref(cb, x += std::move(y));

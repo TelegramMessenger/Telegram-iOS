@@ -384,6 +384,26 @@ TEST(Tonlib, Keys) {
   CHECK(decrypted_key.private_key.as_octet_string() == other_decrypted_key.private_key.as_octet_string());
 }
 
+TEST(Tonlib, ParseAddres) {
+  using tonlib_api::make_object;
+  Client client;
+
+  // init
+  sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "."))).ensure();
+
+  sync_send(client, make_object<tonlib_api::unpackAccountAddress>("hello")).ensure_error();
+  auto addr =
+      sync_send(client,
+                make_object<tonlib_api::unpackAccountAddress>("Ef9Tj6fMJP-OqhAdhKXxq36DL-HYSzCc3-9O6UNzqsgPfYFX"))
+          .move_as_ok();
+  ASSERT_EQ(-1, addr->workchain_id_);
+  ASSERT_EQ(true, addr->bounceable_);
+  ASSERT_EQ(false, addr->testnet_);
+
+  auto addr_str = sync_send(client, make_object<tonlib_api::packAccountAddress>(std::move(addr))).move_as_ok();
+  ASSERT_EQ("Ef9Tj6fMJP-OqhAdhKXxq36DL-HYSzCc3-9O6UNzqsgPfYFX", addr_str->account_address_);
+}
+
 TEST(Tonlib, KeysApi) {
   using tonlib_api::make_object;
   Client client;

@@ -29,6 +29,8 @@ bip39Hints words:vector<string> = Bip39Hints;
 
 accountAddress account_address:string = AccountAddress;
 
+unpackedAccountAddress workchain_id:int32 bounceable:Bool testnet:Bool addr:bytes = UnpackedAccountAddress;
+
 internal.transactionId lt:int64 hash:bytes = internal.TransactionId;
 
 raw.initialAccountState code:bytes data:bytes = raw.InitialAccountState;
@@ -95,6 +97,9 @@ importKey local_password:secureBytes mnemonic_password:secureBytes exported_key:
 importPemKey local_password:secureBytes key_password:secureBytes exported_key:exportedPemKey = Key;
 importEncryptedKey local_password:secureBytes key_password:secureBytes exported_encrypted_key:exportedEncryptedKey = Key;
 changeLocalPassword input_key:inputKey new_local_password:secureBytes = Key;
+
+unpackAccountAddress account_address:string = UnpackedAccountAddress;
+packAccountAddress account_address:unpackedAccountAddress = AccountAddress;
 
 getBip39Hints prefix:string = Bip39Hints;
 

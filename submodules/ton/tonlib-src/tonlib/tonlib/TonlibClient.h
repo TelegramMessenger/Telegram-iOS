@@ -101,6 +101,8 @@ class TonlibClient : public td::actor::Actor {
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::testWallet_getAccountAddress& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::wallet_getAccountAddress& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::testGiver_getAccountAddress& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::packAccountAddress& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::unpackAccountAddress& request);
   static object_ptr<tonlib_api::Object> do_static_request(tonlib_api::getBip39Hints& request);
 
   static object_ptr<tonlib_api::Object> do_static_request(tonlib_api::setLogStream& request);

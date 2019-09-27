@@ -1027,6 +1027,12 @@ bool Transaction::prepare_action_phase(const ActionPhaseConfig& cfg) {
         break;
       case block::gen::OutAction::action_send_msg:
         err_code = try_action_send_msg(cs, ap, cfg);
+        if (err_code == -2) {
+          err_code = try_action_send_msg(cs, ap, cfg, 1);
+          if (err_code == -2) {
+            err_code = try_action_send_msg(cs, ap, cfg, 2);
+          }
+        }
         break;
       case block::gen::OutAction::action_reserve_currency:
         err_code = try_action_reserve_currency(cs, ap, cfg);
@@ -1240,22 +1246,60 @@ bool Transaction::check_rewrite_dest_addr(Ref<vm::CellSlice>& dest_addr, const A
   return true;
 }
 
-int Transaction::try_action_send_msg(vm::CellSlice& cs, ActionPhase& ap, const ActionPhaseConfig& cfg) {
+int Transaction::try_action_send_msg(const vm::CellSlice& cs0, ActionPhase& ap, const ActionPhaseConfig& cfg,
+                                     int redoing) {
   block::gen::OutAction::Record_action_send_msg act_rec;
   // mode: +128 = attach all remaining balance, +64 = attach all remaining balance of the inbound message, +1 = pay message fees, +2 = skip if message cannot be sent
+  vm::CellSlice cs{cs0};
   if (!tlb::unpack_exact(cs, act_rec) || (act_rec.mode & ~0xc3) || (act_rec.mode & 0xc0) == 0xc0) {
     return -1;
   }
   bool skip_invalid = (act_rec.mode & 2);
-  auto cs2 = vm::load_cell_slice(act_rec.out_msg);
-  // try to parse suggested message in cs2
+  // try to parse suggested message in act_rec.out_msg
   td::RefInt256 fwd_fee, ihr_fee;
-  bool ext_msg = cs2.prefetch_ulong(1);
+  block::gen::MessageRelaxed::Record msg;
+  if (!tlb::type_unpack_cell(act_rec.out_msg, block::gen::t_MessageRelaxed_Any, msg)) {
+    return -1;
+  }
+  if (redoing >= 1) {
+    if (msg.init->size_refs() >= 2) {
+      LOG(DEBUG) << "moving the StateInit of a suggested outbound message into a separate cell";
+      // init:(Maybe (Either StateInit ^StateInit))
+      // transform (just (left z:StateInit)) into (just (right z:^StateInit))
+      CHECK(msg.init.write().fetch_ulong(2) == 2);
+      vm::CellBuilder cb;
+      Ref<vm::Cell> cell;
+      CHECK(cb.append_cellslice_bool(std::move(msg.init))  // StateInit
+            && cb.finalize_to(cell)                        // -> ^StateInit
+            && cb.store_long_bool(3, 2)                    // (just (right ... ))
+            && cb.store_ref_bool(std::move(cell))          // z:^StateInit
+            && cb.finalize_to(cell));
+      msg.init = vm::load_cell_slice_ref(std::move(cell));
+    } else {
+      redoing = 2;
+    }
+  }
+  if (redoing >= 2 && msg.body->size_ext() > 1 && msg.body->prefetch_ulong(1) == 0) {
+    LOG(DEBUG) << "moving the body of a suggested outbound message into a separate cell";
+    // body:(Either X ^X)
+    // transform (left x:X) into (right x:^X)
+    CHECK(msg.body.write().fetch_ulong(1) == 0);
+    vm::CellBuilder cb;
+    Ref<vm::Cell> cell;
+    CHECK(cb.append_cellslice_bool(std::move(msg.body))  // X
+          && cb.finalize_to(cell)                        // -> ^X
+          && cb.store_long_bool(1, 1)                    // (right ... )
+          && cb.store_ref_bool(std::move(cell))          // x:^X
+          && cb.finalize_to(cell));
+    msg.body = vm::load_cell_slice_ref(std::move(cell));
+  }
+
   block::gen::CommonMsgInfoRelaxed::Record_int_msg_info info;
+  bool ext_msg = msg.info->prefetch_ulong(1);
   if (ext_msg) {
     // ext_out_msg_info$11 constructor of CommonMsgInfoRelaxed
     block::gen::CommonMsgInfoRelaxed::Record_ext_out_msg_info erec;
-    if (!tlb::unpack(cs2, erec)) {
+    if (!tlb::csr_unpack(msg.info, erec)) {
       return -1;
     }
     info.src = std::move(erec.src);
@@ -1267,7 +1311,7 @@ int Transaction::try_action_send_msg(vm::CellSlice& cs, ActionPhase& ap, const A
     fwd_fee = ihr_fee = td::RefInt256{true, 0};
   } else {
     // int_msg_info$0 constructor
-    if (!tlb::unpack(cs2, info) || !block::tlb::t_CurrencyCollection.validate_csr(info.value)) {
+    if (!tlb::csr_unpack(msg.info, info) || !block::tlb::t_CurrencyCollection.validate_csr(info.value)) {
       return -1;
     }
     fwd_fee = block::tlb::t_Grams.as_integer(info.fwd_fee);
@@ -1295,12 +1339,11 @@ int Transaction::try_action_send_msg(vm::CellSlice& cs, ActionPhase& ap, const A
   // compute size of message
   vm::CellStorageStat sstat;  // for message size
   // preliminary storage estimation of the resulting message
-  sstat.compute_used_storage(cs2);  // message body
+  sstat.add_used_storage(msg.init, true, 3);  // message init
+  sstat.add_used_storage(msg.body, true, 3);  // message body (the root cell itself is not counted)
   if (!ext_msg) {
     sstat.add_used_storage(info.value->prefetch_ref());
   }
-  sstat.bits -= cs2.size();  // bits in the root cells are free
-  sstat.cells--;             // the root cell itself is not counted as a cell
   LOG(DEBUG) << "storage paid for a message: " << sstat.cells << " cells, " << sstat.bits << " bits";
   if (sstat.bits > max_msg_bits || sstat.cells > max_msg_cells) {
     LOG(DEBUG) << "message too large, invalid";
@@ -1397,17 +1440,15 @@ int Transaction::try_action_send_msg(vm::CellSlice& cs, ActionPhase& ap, const A
 
     // re-pack message value
     CHECK(req.pack_to(info.value));
-    vm::CellBuilder cb;
-    CHECK(block::tlb::t_Grams.store_integer_ref(cb, fwd_fee_remain) &&
-          (info.fwd_fee = load_cell_slice_ref(cb.finalize())).not_null());
-    CHECK(block::tlb::t_Grams.store_integer_ref(cb, ihr_fee) &&
-          (info.ihr_fee = load_cell_slice_ref(cb.finalize())).not_null());
+    CHECK(block::tlb::t_Grams.pack_integer(info.fwd_fee, fwd_fee_remain));
+    CHECK(block::tlb::t_Grams.pack_integer(info.ihr_fee, ihr_fee));
 
     // serialize message
-    CHECK(tlb::pack(cb, info));
-    if (!cb.append_cellslice_bool(cs2)) {
+    CHECK(tlb::csr_pack(msg.info, info));
+    vm::CellBuilder cb;
+    if (!tlb::type_pack(cb, block::gen::t_MessageRelaxed_Any, msg)) {
       LOG(DEBUG) << "outbound message does not fit into a cell after rewriting";
-      return 39;
+      return redoing < 2 ? -2 : (skip_invalid ? 0 : 39);
     }
 
     new_msg_bits = cb.size();
@@ -1438,11 +1479,11 @@ int Transaction::try_action_send_msg(vm::CellSlice& cs, ActionPhase& ap, const A
     erec.dest = info.dest;
     erec.created_at = info.created_at;
     erec.created_lt = info.created_lt;
+    CHECK(tlb::csr_pack(msg.info, erec));
     vm::CellBuilder cb;
-    CHECK(tlb::pack(cb, erec));
-    if (!cb.append_cellslice_bool(cs2)) {
+    if (!tlb::type_pack(cb, block::gen::t_MessageRelaxed_Any, msg)) {
       LOG(DEBUG) << "outbound message does not fit into a cell after rewriting";
-      return 39;
+      return redoing < 2 ? -2 : (skip_invalid ? 0 : 39);
     }
 
     new_msg_bits = cb.size();
@@ -1461,6 +1502,8 @@ int Transaction::try_action_send_msg(vm::CellSlice& cs, ActionPhase& ap, const A
   }
   if (!block::gen::t_Message_Any.validate_ref(new_msg)) {
     LOG(ERROR) << "generated outbound message is not a valid (Message Any) according to automated check";
+    block::gen::t_Message_Any.print_ref(std::cerr, new_msg);
+    vm::load_cell_slice(new_msg).print_rec(std::cerr);
     return -1;
   }
   if (verbosity > 2) {
