@@ -325,6 +325,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }))
             dismissInput()
         case let .wallet(address, amount, comment):
+            dismissInput()
             context.sharedContext.openWallet(context: context, walletContext: .send(address: address, amount: amount, comment: comment)) { c in
                 navigationController?.pushViewController(c)
         }

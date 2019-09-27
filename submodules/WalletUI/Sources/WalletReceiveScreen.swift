@@ -303,18 +303,18 @@ private final class WalletReceiveScreenImpl: ItemListController<WalletReceiveScr
 private func invoiceUrl(address: String, state: WalletReceiveScreenState, escapeComment: Bool = true) -> String {
     var arguments = ""
     if !state.amount.isEmpty {
-        arguments += arguments.isEmpty ? "/?" : "&"
+        arguments += arguments.isEmpty ? "?" : "&"
         arguments += "amount=\(amountValue(state.amount))"
     }
     if !state.comment.isEmpty, let escapedComment = state.comment.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
-        arguments += arguments.isEmpty ? "/?" : "&"
+        arguments += arguments.isEmpty ? "?" : "&"
         if escapeComment {
             arguments += "text=\(escapedComment)"
         } else {
             arguments += "text=\(state.comment)"
         }
     }
-    return "ton://\(address)\(arguments)"
+    return "ton://transfer/\(address)\(arguments)"
 }
 
 func walletReceiveScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String) -> ViewController {

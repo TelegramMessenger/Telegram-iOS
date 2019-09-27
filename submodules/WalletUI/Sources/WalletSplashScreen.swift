@@ -163,8 +163,10 @@ public final class WalletSplashScreen: ViewController {
                     }
                     var controllers: [UIViewController] = []
                     for controller in navigationController.viewControllers {
-                        if controller is WalletInfoScreen {
-                            controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
+                        if let controller = controller as? WalletInfoScreen {
+                            let infoScreen = WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address)
+                            infoScreen.navigationPresentation = controller.navigationPresentation
+                            controllers.append(infoScreen)
                         } else {
                             controllers.append(controller)
                         }
@@ -300,7 +302,9 @@ public final class WalletSplashScreen: ViewController {
                         }
                         
                         if !controllers.contains(where: { $0 is WalletInfoScreen }) {
-                            controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
+                            let infoScreen = WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address)
+                            infoScreen.navigationPresentation = .modal
+                            controllers.append(infoScreen)
                         }
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)

@@ -451,12 +451,13 @@ private func isValidWalletAddress(_ address: String) -> Bool {
 }
 
 public func parseWalletUrl(_ url: URL) -> ParsedWalletUrl? {
-    guard url.scheme == "ton" else {
+    guard url.scheme == "ton" && url.host == "transfer" else {
         return nil
     }
     var address: String?
-    if let host = url.host, isValidWalletAddress(host) {
-        address = host
+    let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    if isValidWalletAddress(path) {
+        address = path
     }
     var amount: Int64?
     var comment: String?
