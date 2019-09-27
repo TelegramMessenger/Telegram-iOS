@@ -331,6 +331,33 @@ void sendGramsResult::store(td::TlStorerToString &s, const char *field_name) con
   }
 }
 
+unpackedAccountAddress::unpackedAccountAddress()
+  : workchain_id_()
+  , bounceable_()
+  , testnet_()
+  , addr_()
+{}
+
+unpackedAccountAddress::unpackedAccountAddress(std::int32_t workchain_id_, bool bounceable_, bool testnet_, std::string const &addr_)
+  : workchain_id_(workchain_id_)
+  , bounceable_(bounceable_)
+  , testnet_(testnet_)
+  , addr_(std::move(addr_))
+{}
+
+const std::int32_t unpackedAccountAddress::ID;
+
+void unpackedAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "unpackedAccountAddress");
+    s.store_field("workchain_id", workchain_id_);
+    s.store_field("bounceable", bounceable_);
+    s.store_field("testnet", testnet_);
+    s.store_bytes_field("addr", addr_);
+    s.store_class_end();
+  }
+}
+
 updateSendLiteServerQuery::updateSendLiteServerQuery()
   : id_()
   , data_()
@@ -1168,6 +1195,24 @@ void options_setConfig::store(td::TlStorerToString &s, const char *field_name) c
   }
 }
 
+packAccountAddress::packAccountAddress()
+  : account_address_()
+{}
+
+packAccountAddress::packAccountAddress(object_ptr<unpackedAccountAddress> &&account_address_)
+  : account_address_(std::move(account_address_))
+{}
+
+const std::int32_t packAccountAddress::ID;
+
+void packAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "packAccountAddress");
+    if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
+    s.store_class_end();
+  }
+}
+
 raw_getAccountAddress::raw_getAccountAddress()
   : initital_account_state_()
 {}
@@ -1455,6 +1500,24 @@ void testWallet_sendGrams::store(td::TlStorerToString &s, const char *field_name
     s.store_field("seqno", seqno_);
     s.store_field("amount", amount_);
     s.store_bytes_field("message", message_);
+    s.store_class_end();
+  }
+}
+
+unpackAccountAddress::unpackAccountAddress()
+  : account_address_()
+{}
+
+unpackAccountAddress::unpackAccountAddress(std::string const &account_address_)
+  : account_address_(std::move(account_address_))
+{}
+
+const std::int32_t unpackAccountAddress::ID;
+
+void unpackAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "unpackAccountAddress");
+    s.store_field("account_address", account_address_);
     s.store_class_end();
   }
 }

@@ -65,6 +65,9 @@ bool downcast_call(Object &obj, const T &func) {
     case sendGramsResult::ID:
       func(static_cast<sendGramsResult &>(obj));
       return true;
+    case unpackedAccountAddress::ID:
+      func(static_cast<unpackedAccountAddress &>(obj));
+      return true;
     case updateSendLiteServerQuery::ID:
       func(static_cast<updateSendLiteServerQuery &>(obj));
       return true;
@@ -199,6 +202,9 @@ bool downcast_call(Function &obj, const T &func) {
     case options_setConfig::ID:
       func(static_cast<options_setConfig &>(obj));
       return true;
+    case packAccountAddress::ID:
+      func(static_cast<packAccountAddress &>(obj));
+      return true;
     case raw_getAccountAddress::ID:
       func(static_cast<raw_getAccountAddress &>(obj));
       return true;
@@ -243,6 +249,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case testWallet_sendGrams::ID:
       func(static_cast<testWallet_sendGrams &>(obj));
+      return true;
+    case unpackAccountAddress::ID:
+      func(static_cast<unpackAccountAddress &>(obj));
       return true;
     case wallet_getAccountAddress::ID:
       func(static_cast<wallet_getAccountAddress &>(obj));

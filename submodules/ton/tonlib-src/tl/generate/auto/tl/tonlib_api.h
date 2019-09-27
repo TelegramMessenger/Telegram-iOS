@@ -74,6 +74,8 @@ class options;
 
 class sendGramsResult;
 
+class unpackedAccountAddress;
+
 class updateSendLiteServerQuery;
 
 class generic_AccountState;
@@ -380,6 +382,25 @@ class sendGramsResult final : public Object {
   explicit sendGramsResult(std::int64_t sent_until_);
 
   static const std::int32_t ID = -858318471;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class unpackedAccountAddress final : public Object {
+ public:
+  std::int32_t workchain_id_;
+  bool bounceable_;
+  bool testnet_;
+  std::string addr_;
+
+  unpackedAccountAddress();
+
+  unpackedAccountAddress(std::int32_t workchain_id_, bool bounceable_, bool testnet_, std::string const &addr_);
+
+  static const std::int32_t ID = 1892946998;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1110,6 +1131,24 @@ class options_setConfig final : public Function {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class packAccountAddress final : public Function {
+ public:
+  object_ptr<unpackedAccountAddress> account_address_;
+
+  packAccountAddress();
+
+  explicit packAccountAddress(object_ptr<unpackedAccountAddress> &&account_address_);
+
+  static const std::int32_t ID = -1388561940;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<accountAddress>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class raw_getAccountAddress final : public Function {
  public:
   object_ptr<raw_initialAccountState> initital_account_state_;
@@ -1381,6 +1420,24 @@ class testWallet_sendGrams final : public Function {
   }
 
   using ReturnType = object_ptr<sendGramsResult>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class unpackAccountAddress final : public Function {
+ public:
+  std::string account_address_;
+
+  unpackAccountAddress();
+
+  explicit unpackAccountAddress(std::string const &account_address_);
+
+  static const std::int32_t ID = -682459063;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<unpackedAccountAddress>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };

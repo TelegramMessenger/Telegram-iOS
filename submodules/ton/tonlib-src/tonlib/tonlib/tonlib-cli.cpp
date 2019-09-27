@@ -182,6 +182,7 @@ class TonlibCli : public td::actor::Actor {
       td::TerminalIO::out() << "help - show this help\n";
       td::TerminalIO::out() << "genkey - generate new secret key\n";
       td::TerminalIO::out() << "keys - show all stored keys\n";
+      td::TerminalIO::out() << "unpackaddress <address> - validate and parse address\n";
       td::TerminalIO::out() << "importkey - import key\n";
       td::TerminalIO::out() << "exportkey [<key_id>] - export key\n";
       td::TerminalIO::out() << "setconfig <path> [<name>] [<use_callback>] [<force>] - set lite server config\n";
@@ -237,6 +238,8 @@ class TonlibCli : public td::actor::Actor {
       transfer(from, to, grams, message, cmd == "transferf");
     } else if (cmd == "hint") {
       get_hints(parser.read_word());
+    } else if (cmd == "unpackaddress") {
+      unpack_address(parser.read_word());
     }
   }
 
@@ -300,6 +303,17 @@ class TonlibCli : public td::actor::Actor {
         };
   }
 
+  void unpack_address(td::Slice addr) {
+    send_query(tonlib_api::make_object<tonlib_api::unpackAccountAddress>(addr.str()),
+               [addr = addr.str()](auto r_parsed_addr) mutable {
+                 if (r_parsed_addr.is_error()) {
+                   LOG(ERROR) << "Failed to parse address: " << r_parsed_addr.error();
+                   return;
+                 }
+                 LOG(ERROR) << to_string(r_parsed_addr.ok());
+               });
+  }
+
   void generate_key(td::SecureString entropy = {}) {
     if (entropy.size() < 20) {
       td::TerminalIO::out() << "Enter some entropy";
@@ -324,6 +338,7 @@ class TonlibCli : public td::actor::Actor {
                [this, password = std::move(password)](auto r_key) mutable {
                  if (r_key.is_error()) {
                    LOG(ERROR) << "Failed to create new key: " << r_key.error();
+                   return;
                  }
                  auto key = r_key.move_as_ok();
                  LOG(ERROR) << to_string(key);
@@ -368,6 +383,7 @@ class TonlibCli : public td::actor::Actor {
       auto r_secret = td::base64_decode_secure(secret_b64);
       if (r_secret.is_error()) {
         LOG(ERROR) << "Invalid secret database at " << key_db_path();
+        return;
       }
 
       KeyInfo info;

@@ -134,7 +134,7 @@ td::Result<std::unique_ptr<block::BlockProofChain>> LastBlock::process_block_pro
   if (is_changed) {
     callback_->on_state_changed(state_);
   }
-  return chain;
+  return std::move(chain);
 }
 
 void LastBlock::on_block_proof(

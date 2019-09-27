@@ -59,6 +59,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"ok", -722616727},
     {"options", 789823302},
     {"sendGramsResult", -858318471},
+    {"unpackedAccountAddress", 1892946998},
     {"updateSendLiteServerQuery", -1555130916},
     {"generic.accountStateRaw", -1387096685},
     {"generic.accountStateTestWallet", -1041955397},
@@ -108,6 +109,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"onLiteServerQueryError", -677427533},
     {"onLiteServerQueryResult", 2056444510},
     {"options.setConfig", 646497241},
+    {"packAccountAddress", -1388561940},
     {"raw.getAccountAddress", -521283849},
     {"raw.getAccountState", 663706721},
     {"raw.getTransactions", 935377269},
@@ -123,6 +125,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"testWallet.getAccountState", 654082364},
     {"testWallet.init", 419055225},
     {"testWallet.sendGrams", 1290131585},
+    {"unpackAccountAddress", -682459063},
     {"wallet.getAccountAddress", -1004103180},
     {"wallet.getAccountState", 462294850},
     {"wallet.init", 1528056782},
@@ -313,6 +316,33 @@ Status from_json(tonlib_api::sendGramsResult &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "sent_until", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.sent_until_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::unpackedAccountAddress &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "workchain_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.workchain_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "bounceable", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.bounceable_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "testnet", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.testnet_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "addr", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.addr_, value));
     }
   }
   return Status::OK();
@@ -935,6 +965,15 @@ Status from_json(tonlib_api::options_setConfig &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::packAccountAddress &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "account_address", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.account_address_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::raw_getAccountAddress &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "initital_account_state", JsonValue::Type::Null, true));
@@ -1124,6 +1163,15 @@ Status from_json(tonlib_api::testWallet_sendGrams &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::unpackAccountAddress &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "account_address", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.account_address_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::wallet_getAccountAddress &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "initital_account_state", JsonValue::Type::Null, true));
@@ -1286,6 +1334,14 @@ void to_json(JsonValueScope &jv, const tonlib_api::sendGramsResult &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "sendGramsResult");
   jo << ctie("sent_until", ToJson(object.sent_until_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::unpackedAccountAddress &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "unpackedAccountAddress");
+  jo << ctie("workchain_id", ToJson(object.workchain_id_));
+  jo << ctie("bounceable", ToJson(object.bounceable_));
+  jo << ctie("testnet", ToJson(object.testnet_));
+  jo << ctie("addr", ToJson(JsonBytes{object.addr_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::updateSendLiteServerQuery &object) {
   auto jo = jv.enter_object();
@@ -1589,6 +1645,13 @@ void to_json(JsonValueScope &jv, const tonlib_api::options_setConfig &object) {
     jo << ctie("config", ToJson(object.config_));
   }
 }
+void to_json(JsonValueScope &jv, const tonlib_api::packAccountAddress &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "packAccountAddress");
+  if (object.account_address_) {
+    jo << ctie("account_address", ToJson(object.account_address_));
+  }
+}
 void to_json(JsonValueScope &jv, const tonlib_api::raw_getAccountAddress &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "raw.getAccountAddress");
@@ -1696,6 +1759,11 @@ void to_json(JsonValueScope &jv, const tonlib_api::testWallet_sendGrams &object)
   jo << ctie("seqno", ToJson(object.seqno_));
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
   jo << ctie("message", ToJson(JsonBytes{object.message_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::unpackAccountAddress &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "unpackAccountAddress");
+  jo << ctie("account_address", ToJson(object.account_address_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::wallet_getAccountAddress &object) {
   auto jo = jv.enter_object();

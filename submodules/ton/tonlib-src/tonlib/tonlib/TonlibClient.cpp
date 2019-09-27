@@ -425,6 +425,8 @@ bool TonlibClient::is_static_request(td::int32 id) {
     case tonlib_api::testWallet_getAccountAddress::ID:
     case tonlib_api::wallet_getAccountAddress::ID:
     case tonlib_api::testGiver_getAccountAddress::ID:
+    case tonlib_api::packAccountAddress::ID:
+    case tonlib_api::unpackAccountAddress::ID:
     case tonlib_api::getBip39Hints::ID:
     case tonlib_api::setLogStream::ID:
     case tonlib_api::getLogStream::ID:
@@ -502,6 +504,34 @@ tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(
 tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(
     const tonlib_api::testGiver_getAccountAddress& request) {
   return tonlib_api::make_object<tonlib_api::accountAddress>(TestGiver::address().rserialize(true));
+}
+
+tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(
+    const tonlib_api::unpackAccountAddress& request) {
+  auto r_account_address = block::StdAddress::parse(request.account_address_);
+  if (r_account_address.is_error()) {
+    return status_to_tonlib_api(r_account_address.move_as_error());
+  }
+  auto account_address = r_account_address.move_as_ok();
+  return tonlib_api::make_object<tonlib_api::unpackedAccountAddress>(
+      account_address.workchain, account_address.bounceable, account_address.testnet,
+      account_address.addr.as_slice().str());
+}
+
+tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(
+    const tonlib_api::packAccountAddress& request) {
+  if (!request.account_address_) {
+    return status_to_tonlib_api(td::Status::Error(400, "Field account_address must not be empty"));
+  }
+  if (request.account_address_->addr_.size() != 32) {
+    return status_to_tonlib_api(td::Status::Error(400, "Field account_address.addr must not be exactly 32 bytes"));
+  }
+  block::StdAddress addr;
+  addr.workchain = request.account_address_->workchain_id_;
+  addr.bounceable = request.account_address_->bounceable_;
+  addr.testnet = request.account_address_->testnet_;
+  addr.addr.as_slice().copy_from(request.account_address_->addr_);
+  return tonlib_api::make_object<tonlib_api::accountAddress>(addr.rserialize(true));
 }
 
 tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(tonlib_api::getBip39Hints& request) {
@@ -925,7 +955,7 @@ td::Status TonlibClient::do_request(const tonlib_api::testWallet_sendGrams& requ
   if (!request.private_key_) {
     return td::Status::Error(400, "Field private_key must not be empty");
   }
-  if (request.message_.size() > 124) {
+  if (request.message_.size() > 70) {
     return td::Status::Error(400, "Message is too long");
   }
   TRY_RESULT(account_address, block::StdAddress::parse(request.destination_->account_address_));
@@ -1003,7 +1033,7 @@ td::Status TonlibClient::do_request(const tonlib_api::wallet_sendGrams& request,
   if (!request.private_key_) {
     return td::Status::Error(400, "Field private_key must not be empty");
   }
-  if (request.message_.size() > 124) {
+  if (request.message_.size() > 70) {
     return td::Status::Error(400, "Message is too long");
   }
   TRY_RESULT(valid_until, td::narrow_cast_safe<td::uint32>(request.valid_until_));
@@ -1062,7 +1092,7 @@ td::Status TonlibClient::do_request(const tonlib_api::testGiver_sendGrams& reque
   if (!request.destination_) {
     return td::Status::Error(400, "Field destination must not be empty");
   }
-  if (request.message_.size() > 124) {
+  if (request.message_.size() > 70) {
     return td::Status::Error(400, "Message is too long");
   }
   TRY_RESULT(account_address, block::StdAddress::parse(request.destination_->account_address_));
@@ -1219,12 +1249,16 @@ class GenericSendGrams : public TonlibQueryActor {
       auto key = td::Ed25519::PublicKey(td::SecureString(key_bytes.key));
 
       if (GenericAccount::get_address(0 /*zerochain*/, TestWallet::get_init_state(key)).addr == source_address_.addr) {
+        auto state = ton::move_tl_object_as<tonlib_api::generic_accountStateUninited>(source_state_);
         source_state_ = tonlib_api::make_object<tonlib_api::generic_accountStateTestWallet>(
-            tonlib_api::make_object<tonlib_api::testWallet_accountState>(-1, 0, nullptr, 0));
+            tonlib_api::make_object<tonlib_api::testWallet_accountState>(-1, 0, nullptr,
+                                                                         state->account_state_->sync_utime_));
       } else if (GenericAccount::get_address(0 /*zerochain*/, Wallet::get_init_state(key)).addr ==
                  source_address_.addr) {
+        auto state = ton::move_tl_object_as<tonlib_api::generic_accountStateUninited>(source_state_);
         source_state_ = tonlib_api::make_object<tonlib_api::generic_accountStateWallet>(
-            tonlib_api::make_object<tonlib_api::wallet_accountState>(-1, 0, nullptr, 0));
+            tonlib_api::make_object<tonlib_api::wallet_accountState>(-1, 0, nullptr,
+                                                                     state->account_state_->sync_utime_));
       }
     }
     return do_loop();

@@ -122,15 +122,15 @@ struct CellStorageStat {
     cells = bits = public_cells = 0;
     clear_seen();
   }
-  bool compute_used_storage(Ref<vm::CellSlice> cs_ref, bool kill_dup = true, bool skip_count_root = false);
-  bool compute_used_storage(const CellSlice& cs, bool kill_dup = true, bool skip_count_root = false);
-  bool compute_used_storage(CellSlice&& cs, bool kill_dup = true, bool skip_count_root = false);
-  bool compute_used_storage(Ref<vm::Cell> cell, bool kill_dup = true, bool skip_count_root = false);
+  bool compute_used_storage(Ref<vm::CellSlice> cs_ref, bool kill_dup = true, unsigned skip_count_root = 0);
+  bool compute_used_storage(const CellSlice& cs, bool kill_dup = true, unsigned skip_count_root = 0);
+  bool compute_used_storage(CellSlice&& cs, bool kill_dup = true, unsigned skip_count_root = 0);
+  bool compute_used_storage(Ref<vm::Cell> cell, bool kill_dup = true, unsigned skip_count_root = 0);
 
-  bool add_used_storage(Ref<vm::CellSlice> cs_ref, bool kill_dup = true, bool skip_count_root = false);
-  bool add_used_storage(const CellSlice& cs, bool kill_dup = true, bool skip_count_root = false);
-  bool add_used_storage(CellSlice&& cs, bool kill_dup = true, bool skip_count_root = false);
-  bool add_used_storage(Ref<vm::Cell> cell, bool kill_dup = true, bool skip_count_root = false);
+  bool add_used_storage(Ref<vm::CellSlice> cs_ref, bool kill_dup = true, unsigned skip_count_root = 0);
+  bool add_used_storage(const CellSlice& cs, bool kill_dup = true, unsigned skip_count_root = 0);
+  bool add_used_storage(CellSlice&& cs, bool kill_dup = true, unsigned skip_count_root = 0);
+  bool add_used_storage(Ref<vm::Cell> cell, bool kill_dup = true, unsigned skip_count_root = 0);
 };
 
 struct CellSerializationInfo {
