@@ -5345,7 +5345,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     strongSelf.chatDisplayNode.dismissInput()
-                    legacyController.navigationPresentation = .modal
                     (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyController)
                 }
             })

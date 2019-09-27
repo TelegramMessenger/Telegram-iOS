@@ -10,6 +10,8 @@ import TelegramCore
 import Camera
 import GlassButtonNode
 import UrlHandling
+import CoreImage
+import AlertUI
 
 private func generateFrameImage() -> UIImage? {
     return generateImage(CGSize(width: 64.0, height: 64.0), contextGenerator: { size, context in
@@ -115,6 +117,38 @@ public final class WalletQrScanScreen: ViewController {
                 strongSelf.completion(parsedWalletUrl)
             }
         })
+        
+        (self.displayNode as! WalletQrScanScreenNode).presentGallery = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.context.sharedContext.openImagePicker(context: strongSelf.context, completion: { image in
+                let detector = CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: [CIDetectorAccuracy:CIDetectorAccuracyHigh])!
+                if let ciImage = CIImage(image: image) {
+                    var options: [String: Any]
+                    if ciImage.properties.keys.contains((kCGImagePropertyOrientation as String)) {
+                        options = [CIDetectorImageOrientation: ciImage.properties[(kCGImagePropertyOrientation as String)] ?? 1]
+                    } else {
+                        options = [CIDetectorImageOrientation: 1]
+                    }
+                    
+                    let features = detector.features(in: ciImage, options: options)
+                    for case let row as CIQRCodeFeature in features {
+                        guard let message = row.messageString else {
+                            continue
+                        }
+                        if let url = URL(string: message), let parsedWalletUrl = parseWalletUrl(url) {
+                            strongSelf.completion(parsedWalletUrl)
+                            return
+                        }
+                    }
+                }
+                let controller = textAlertController(context: strongSelf.context, title: nil, text: "No valid QR code detected.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
+                strongSelf.present(controller, in: .window(.root))
+            }, present: { [weak self] c in
+                self?.push(c)
+            })
+        }
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -143,6 +177,8 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
     
     fileprivate let focusedCode = ValuePromise<CameraCode?>(ignoreRepeated: true)
     private var focusedRect: CGRect?
+    
+    var presentGallery: (() -> Void)?
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
@@ -308,7 +344,7 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
     }
     
     @objc private func galleryPressed() {
-
+        self.presentGallery?()
     }
     
     @objc private func torchPressed() {

@@ -822,6 +822,8 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 
 - (CGFloat)_currentStatusBarHeight
 {
+    if (_context.isStatusBarHidden)
+        return 0.0;
     if (_context.safeAreaInset.top > 20.0f)
         return _context.safeAreaInset.top;
     
@@ -1127,7 +1129,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
     UIEdgeInsets safeAreaInset = [TGViewController safeAreaInsetForOrientation:orientation hasOnScreenNavigation:hasOnScreenNavigation];
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];
     
-    statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : statusBarHeight;
+    //statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : statusBarHeight;
     
     UIEdgeInsets edgeInset = UIEdgeInsetsMake(([self shouldIgnoreStatusBarInOrientation:orientation] ? 0.0f : statusBarHeight) + navigationBarHeight, 0, 0, 0);
     

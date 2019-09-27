@@ -122,7 +122,7 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     
     public func isStatusBarHidden() -> Bool {
         if let controller = self.controller {
-            return controller.statusBar.isHidden
+            return controller.statusBar.isHidden || controller.navigationPresentation == .modal
         } else {
             return true
         }
@@ -281,6 +281,9 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
             }
             if validLayout.intrinsicInsets.bottom.isEqual(to: 21.0) {
                 safeInsets.bottom = 21.0
+            }
+            if controller.navigationPresentation == .modal {
+                safeInsets.top = 0.0
             }
             return safeInsets
         }
