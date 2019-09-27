@@ -216,7 +216,7 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: "Scan QR Code", font: Font.bold(32.0), textColor: .white)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.Wallet_Qr_ScanCode, font: Font.bold(32.0), textColor: .white)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         

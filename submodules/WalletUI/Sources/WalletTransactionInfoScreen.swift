@@ -127,7 +127,7 @@ private func stringForAddress(strings: PresentationStrings, address: WalletTrans
         case let .list(addresses):
             return addresses.map { formatAddress($0) }.joined(separator: "\n\n")
         case .none:
-            return "No Address"
+            return strings.Wallet_TransactionInfo_NoAddress
         case .unknown:
             return "<unknown>"
     }
@@ -184,19 +184,19 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     let description = extractDescription(walletTransaction)
     
     if transferredValue <= 0 {
-        entries.append(.infoHeader(presentationData.theme, "RECIPIENT"))
+        entries.append(.infoHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_RecipientHeader))
     } else {
-        entries.append(.infoHeader(presentationData.theme, "SENDER"))
+        entries.append(.infoHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SenderHeader))
     }
 
     entries.append(.infoAddress(presentationData.theme, text))
     if case .list = address {
-        entries.append(.infoCopyAddress(presentationData.theme, "Copy Wallet Address"))
-        entries.append(.infoSendGrams(presentationData.theme, "Send Grams"))
+        entries.append(.infoCopyAddress(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CopyAddress))
+        entries.append(.infoSendGrams(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SendGrams))
     }
     
     if !description.isEmpty {
-        entries.append(.commentHeader(presentationData.theme, "COMMENT"))
+        entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CommentHeader))
         entries.append(.comment(presentationData.theme, description))
     }
     
@@ -220,13 +220,13 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
         if case let .list(addresses) = address, let address = addresses.first {
             UIPasteboard.general.string = address
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess("Address copied to clipboard.", false)), nil)
+            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Wallet_TransactionInfo_AddressCopied, false)), nil)
         }
     }, sendGrams: {
         let address = extractAddress(walletTransaction)
         if case let .list(addresses) = address, let address = addresses.first {
             dismissImpl?()
-            pushImpl?(walletSendScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
+            pushImpl?(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address))
         }
     }, displayContextMenu: { tag, text in
         displayContextMenuImpl?(tag, text)
@@ -234,7 +234,7 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<WalletTransactionInfoEntry>, WalletTransactionInfoEntry.ItemGenerationArguments)) in
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Transaction"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_TransactionInfo_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletTransactionInfoControllerEntries(presentationData: presentationData, walletTransaction: walletTransaction, state: state), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
@@ -400,7 +400,7 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             }
             
             let title = NSMutableAttributedString()
-            if let range = balanceString.range(of: ".") {
+            if let range = balanceString.range(of: item.dateTimeFormat.decimalSeparator) {
                 let integralPart = String(balanceString[..<range.lowerBound])
                 let fractionalPart = String(balanceString[range.lowerBound...])
                 title.append(NSAttributedString(string: integralPart, font: Font.bold(48.0), textColor: titleColor))

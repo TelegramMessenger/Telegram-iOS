@@ -1021,19 +1021,26 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void) {
-        guard let tonContext = context.tonContext else {
+        guard let storedContext = context.tonContext else {
             return
         }
         let _ = (combineLatest(queue: .mainQueue(),
             availableWallets(postbox: context.account.postbox),
-            tonContext.keychain.encryptionPublicKey()
+            storedContext.keychain.encryptionPublicKey(),
+            context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         )
-        |> deliverOnMainQueue).start(next: { wallets, currentPublicKey in
+        |> deliverOnMainQueue).start(next: { wallets, currentPublicKey, preferences in
+            let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            guard let config = WalletConfiguration.config(appConfiguration: appConfiguration) else {
+                return
+            }
+            let tonContext = storedContext.context(config: config)
+            
             if wallets.wallets.isEmpty {
                 if let _ = currentPublicKey {
-                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro))
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro, walletCreatedPreloadState: nil))
                 } else {
-                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable))
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
                 }
             } else {
                 let walletInfo = wallets.wallets[0].info
@@ -1045,15 +1052,15 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                                 case .generic:
                                     present(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
                                 case let .send(address, amount, comment):
-                                    present(walletSendScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address, amount: amount, comment: comment))
+                                    present(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
                             }
                             
                         })
                     } else {
-                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed)))
+                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
                     }
                 } else {
-                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable)))
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
                 }
             }
         })

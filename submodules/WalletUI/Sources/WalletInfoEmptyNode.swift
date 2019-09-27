@@ -143,10 +143,10 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
             let sideInset: CGFloat = 16.0
             var iconOffset = CGPoint()
             
-            let title = "Wallet Created"
-            let text = "Your wallet address"
+            let title = item.strings.Wallet_Info_WalletCreated
+            let text = item.strings.Wallet_Info_Address
             
-            let textColor = UIColor.black
+            let textColor = item.theme.list.itemPrimaryTextColor
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.bold(32.0), textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
             
@@ -169,6 +169,8 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.item = item
+                
                 strongSelf.item = item
                 
                 strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)

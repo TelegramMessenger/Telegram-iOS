@@ -52,7 +52,7 @@ public final class WalletQrViewScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.title = "QR Code"
+        self.title = self.presentationData.strings.Wallet_Qr_Title
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
 

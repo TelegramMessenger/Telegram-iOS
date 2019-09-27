@@ -22,11 +22,14 @@ public final class WalletPasscodeScreen: ViewController {
     private let tonContext: TonContext
     private var presentationData: PresentationData
     private let mode: WalletPasscodeMode
+    private let randomId: Int64
     
     public init(context: AccountContext, tonContext: TonContext, mode: WalletPasscodeMode) {
         self.context = context
         self.tonContext = tonContext
         self.mode = mode
+        
+        self.randomId = arc4random64()
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -77,7 +80,7 @@ public final class WalletPasscodeScreen: ViewController {
                             }
                             return true
                         }
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sending(walletInfo, address, amount, comment)))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sending(walletInfo, address, amount, comment, strongSelf.randomId), walletCreatedPreloadState: nil))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }

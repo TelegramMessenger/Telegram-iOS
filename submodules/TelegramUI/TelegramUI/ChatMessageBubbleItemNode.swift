@@ -427,7 +427,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 }
             }
             
-            let reactions: [(String, String, String)] = [
+            /*let reactions: [(String, String, String)] = [
                 ("😔", "Sad", "sad"),
                 ("😳", "Surprised", "surprised"),
                 ("😂", "Fun", "lol"),
@@ -444,7 +444,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
             if item.controllerInteraction.canSetupReply(item.message) {
                 //reactionItems.append(.reply)
             }
-            return reactionItems
+            return reactionItems*/
+            
+            return []
         }
         reactionRecognizer.getReactionContainer = { [weak self] in
             return self?.item?.controllerInteraction.reactionContainerNode()

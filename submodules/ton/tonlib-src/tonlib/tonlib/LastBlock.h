@@ -19,8 +19,12 @@
 #pragma once
 #include "td/actor/actor.h"
 
+#include "tonlib/Config.h"
 #include "tonlib/ExtClient.h"
 
+namespace block {
+struct BlockProofChain;
+}
 namespace tonlib {
 td::StringBuilder &operator<<(td::StringBuilder &sb, const LastBlockState &state);
 template <unsigned int N, class StorerT>
@@ -116,13 +120,21 @@ class LastBlock : public td::actor::Actor {
     virtual void on_state_changed(LastBlockState state) = 0;
   };
 
-  explicit LastBlock(ExtClientRef client, LastBlockState state, td::unique_ptr<Callback> callback);
+  explicit LastBlock(ExtClientRef client, LastBlockState state, Config config, td::unique_ptr<Callback> callback);
   void get_last_block(td::Promise<LastBlockState> promise);
 
  private:
   ExtClient client_;
   LastBlockState state_;
+  Config config_;
   td::unique_ptr<Callback> callback_;
+
+  td::Status fatal_error_;
+
+  enum class QueryState { Empty, Active, Done };
+  QueryState get_mc_info_state_{QueryState::Empty};
+  QueryState get_last_block_state_{QueryState::Empty};
+  QueryState check_init_block_state_{QueryState::Empty};
 
   // stats
   td::Timer total_sync_;
@@ -131,11 +143,15 @@ class LastBlock : public td::actor::Actor {
 
   std::vector<td::Promise<LastBlockState>> promises_;
 
-  void do_get_last_block();
+  void do_check_init_block(ton::BlockIdExt from);
+  void on_init_block_proof(
+      ton::BlockIdExt from,
+      td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_partialBlockProof>> r_block_proof);
   void on_masterchain_info(td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_masterchainInfo>> r_info);
+  void do_get_last_block();
   void on_block_proof(ton::BlockIdExt from,
                       td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_partialBlockProof>> r_block_proof);
-  td::Result<bool> process_block_proof(
+  td::Result<std::unique_ptr<block::BlockProofChain>> process_block_proof(
       ton::BlockIdExt from,
       td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_partialBlockProof>> r_block_proof);
 
@@ -144,5 +160,12 @@ class LastBlock : public td::actor::Actor {
   bool update_mc_last_block(ton::BlockIdExt mc_block_id);
   bool update_mc_last_key_block(ton::BlockIdExt mc_key_block_id);
   void update_utime(td::int64 utime);
+
+  void on_sync_ok();
+  void on_sync_error(td::Status status);
+  void on_fatal_error(td::Status status);
+  bool has_fatal_error() const;
+
+  void sync_loop();
 };
 }  // namespace tonlib

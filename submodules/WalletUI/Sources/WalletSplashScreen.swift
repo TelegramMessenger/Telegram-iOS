@@ -14,6 +14,7 @@ import OverlayStatusController
 import ItemListUI
 import AlertUI
 import TextFormat
+import LocalAuth
 
 public enum WalletSecureStorageResetReason {
     case notAvailable
@@ -25,7 +26,7 @@ public enum WalletSplashMode {
     case created(WalletInfo, [String])
     case success(WalletInfo)
     case restoreFailed
-    case sending(WalletInfo, String, Int64, String)
+    case sending(WalletInfo, String, Int64, String, Int64)
     case sent(WalletInfo, Int64)
     case secureStorageNotAvailable
     case secureStorageReset(WalletSecureStorageResetReason)
@@ -37,7 +38,9 @@ public final class WalletSplashScreen: ViewController {
     private var presentationData: PresentationData
     private let mode: WalletSplashMode
     
-    public init(context: AccountContext, tonContext: TonContext, mode: WalletSplashMode) {
+    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult>?
+    
+    public init(context: AccountContext, tonContext: TonContext, mode: WalletSplashMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult>?) {
         self.context = context
         self.tonContext = tonContext
         self.mode = mode
@@ -46,6 +49,31 @@ public final class WalletSplashScreen: ViewController {
         
         let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
+        
+        switch mode {
+        case let .created(walletInfo, _):
+            if let walletCreatedPreloadState = walletCreatedPreloadState {
+                self.walletCreatedPreloadState = walletCreatedPreloadState
+            } else {
+                self.walletCreatedPreloadState = Promise()
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.account.postbox, walletInfo: walletInfo, tonInstance: tonContext.instance)
+                |> `catch` { _ -> Signal<CombinedWalletStateResult, NoError> in
+                    return .complete()
+                })
+            }
+        case let .success(walletInfo):
+            if let walletCreatedPreloadState = walletCreatedPreloadState {
+                self.walletCreatedPreloadState = walletCreatedPreloadState
+            } else {
+                self.walletCreatedPreloadState = Promise()
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.account.postbox, walletInfo: walletInfo, tonInstance: tonContext.instance)
+                |> `catch` { _ -> Signal<CombinedWalletStateResult, NoError> in
+                    return .complete()
+                })
+            }
+        default:
+            self.walletCreatedPreloadState = nil
+        }
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
         
@@ -56,45 +84,16 @@ public final class WalletSplashScreen: ViewController {
         
         switch self.mode {
         case .intro:
-            self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "Not Now", style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
-            self.navigationItem.setRightBarButton(UIBarButtonItem(title: "Import existing wallet", style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
-        case let .sending(walletInfo, address, amount, textMessage):
+            self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_NotNow, style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
+            self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_ImportExisting, style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
+        case let .sending(walletInfo, address, amount, textMessage, randomId):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
-            
-            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage)
-            |> deliverOnMainQueue).start(error: { [weak self] error in
-                guard let strongSelf = self else {
-                    return
-                }
-                let controller = textAlertController(context: strongSelf.context, title: nil, text: "Error", actions: [TextAlertAction(type: .defaultAction, title: "OK", action: {
-                    if let navigationController = strongSelf.navigationController as? NavigationController {
-                        navigationController.popViewController(animated: true)
-                    }
-                })])
-                strongSelf.present(controller, in: .window(.root))
-            }, completed: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                if let navigationController = strongSelf.navigationController as? NavigationController {
-                    var controllers: [UIViewController] = []
-                    for controller in navigationController.viewControllers {
-                        if controller is WalletInfoScreen {
-                            controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
-                        } else {
-                            controllers.append(controller)
-                        }
-                    }
-                    
-                    let controller = WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount))
-                    controllers.append(controller)
-                    strongSelf.view.endEditing(true)
-                    navigationController.setViewControllers(controllers, animated: true)
-                }
-            })
+            self.sendGrams(walletInfo: walletInfo, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: false, randomId: randomId)
         case .sent, .created:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
-        case .success, .restoreFailed, .secureStorageNotAvailable, .secureStorageReset:
+        case .restoreFailed, .secureStorageNotAvailable, .secureStorageReset:
+            break
+        case .success:
             break
         }
         
@@ -110,7 +109,66 @@ public final class WalletSplashScreen: ViewController {
     }
     
     @objc private func importPressed() {
-        self.push(WalletWordCheckScreen(context: self.context, tonContext: self.tonContext, mode: .import))
+        self.push(WalletWordCheckScreen(context: self.context, tonContext: self.tonContext, mode: .import, walletCreatedPreloadState: nil))
+    }
+    
+    private func sendGrams(walletInfo: WalletInfo, address: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, randomId: Int64) {
+        let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
+        |> deliverOnMainQueue).start(error: { [weak self] error in
+            guard let strongSelf = self else {
+                return
+            }
+            let text: String
+            switch error {
+            case .generic:
+                text = strongSelf.presentationData.strings.Login_UnknownError
+            case .invalidAddress:
+                text = strongSelf.presentationData.strings.Wallet_Send_ErrorInvalidAddress
+            case .secretDecryptionFailed:
+                text = strongSelf.presentationData.strings.Wallet_Send_ErrorDecryptionFailed
+            case .destinationIsNotInitialized:
+                if !forceIfDestinationNotInitialized {
+                    text = "This address belongs to an empty wallet. Are you sure you want to transfer grams to it?"
+                    let controller = textAlertController(context: strongSelf.context, title: "Warning", text: text, actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                            if let navigationController = strongSelf.navigationController as? NavigationController {
+                                navigationController.popViewController(animated: true)
+                            }
+                        }),
+                        TextAlertAction(type: .defaultAction, title: "Send Anyway", action: {
+                            self?.sendGrams(walletInfo: walletInfo, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: true, randomId: randomId)
+                        })
+                    ])
+                    strongSelf.present(controller, in: .window(.root))
+                    return
+                } else {
+                    text = strongSelf.presentationData.strings.Login_UnknownError
+                }
+            }
+            let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    navigationController.popViewController(animated: true)
+                }
+            })])
+            strongSelf.present(controller, in: .window(.root))
+        }, completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let navigationController = strongSelf.navigationController as? NavigationController {
+                var controllers: [UIViewController] = []
+                for controller in navigationController.viewControllers {
+                    if controller is WalletInfoScreen {
+                        controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
+                    } else {
+                        controllers.append(controller)
+                    }
+                }
+                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
+                strongSelf.view.endEditing(true)
+                navigationController.setViewControllers(controllers, animated: true)
+            }
+        })
     }
     
     override public func loadDisplayNode() {
@@ -128,46 +186,87 @@ public final class WalletSplashScreen: ViewController {
                         return
                     }
                     controller.dismiss()
-                    (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .created(walletInfo, wordList)), animated: true)
+                    (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .created(walletInfo, wordList), walletCreatedPreloadState: nil), animated: true)
                 }, error: { _ in
                     guard let strongSelf = self else {
                         return
                     }
                     controller.dismiss()
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "An Error Occurred", text: "Sorry. Please try again.", actions: [
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Intro_CreateErrorTitle, text: strongSelf.presentationData.strings.Wallet_Intro_CreateErrorText, actions: [
                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                         })
-                        ], actionLayout: .vertical), in: .window(.root))
+                    ], actionLayout: .vertical), in: .window(.root))
                 })
             case let .created(walletInfo, wordList):
-                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check))
+                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
             case let .success(walletInfo):
                 let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
                 |> deliverOnMainQueue).start(next: { address in
                     guard let strongSelf = self else {
                         return
                     }
-                    if let navigationController = strongSelf.navigationController as? NavigationController {
-                        var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { controller in
-                            if controller is WalletSplashScreen {
+                    
+                    var stateSignal: Signal<Bool, NoError>
+                    if let walletCreatedPreloadState = strongSelf.walletCreatedPreloadState {
+                        stateSignal = walletCreatedPreloadState.get()
+                        |> map { state -> Bool in
+                            if case .updated = state {
+                                return true
+                            } else {
                                 return false
                             }
-                            if controller is WalletWordDisplayScreen {
-                                return false
-                            }
-                            if controller is WalletInfoScreen {
-                                return false
-                            }
-                            if controller is WalletWordCheckScreen {
-                                return false
-                            }
-                            return true
                         }
-                        controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
-                        strongSelf.view.endEditing(true)
-                        navigationController.setViewControllers(controllers, animated: true)
+                        |> filter { $0 }
+                    } else {
+                        stateSignal = .single(true)
                     }
+                    
+                    let presentationData = strongSelf.presentationData
+                    let progressSignal = Signal<Never, NoError> { subscriber in
+                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: nil))
+                        self?.present(controller, in: .window(.root))
+                        return ActionDisposable { [weak controller] in
+                            Queue.mainQueue().async() {
+                                controller?.dismiss()
+                            }
+                        }
+                    }
+                    |> runOn(Queue.mainQueue())
+                    |> delay(0.15, queue: Queue.mainQueue())
+                    let progressDisposable = progressSignal.start()
+                    
+                    stateSignal = stateSignal
+                    |> afterDisposed {
+                        Queue.mainQueue().async {
+                            progressDisposable.dispose()
+                        }
+                    }
+                    let _ = (stateSignal
+                    |> deliverOnMainQueue).start(next: { _ in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        progressDisposable.dispose()
+                        
+                        if let navigationController = strongSelf.navigationController as? NavigationController {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { controller in
+                                if controller is WalletSplashScreen {
+                                    return false
+                                }
+                                if controller is WalletWordDisplayScreen {
+                                    return false
+                                }
+                                if controller is WalletWordCheckScreen {
+                                    return false
+                                }
+                                return true
+                            }
+                            controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
+                            strongSelf.view.endEditing(true)
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
+                    })
                 })
             case let .sent(walletInfo, _):
                 if let navigationController = strongSelf.navigationController as? NavigationController {
@@ -205,7 +304,7 @@ public final class WalletSplashScreen: ViewController {
                         }
                         return true
                     }
-                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .intro))
+                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .intro, walletCreatedPreloadState: nil))
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 }
@@ -213,8 +312,13 @@ public final class WalletSplashScreen: ViewController {
                 break
             case .secureStorageNotAvailable:
                 strongSelf.dismiss()
-            case .secureStorageReset:
-                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .import))
+            case let .secureStorageReset(reason):
+                switch reason {
+                case .notAvailable:
+                    strongSelf.dismiss()
+                case .changed:
+                    strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .import, walletCreatedPreloadState: nil))
+                }
             }
         }, secondaryAction: { [weak self] in
             guard let strongSelf = self else {
@@ -236,18 +340,22 @@ public final class WalletSplashScreen: ViewController {
                         }
                         return true
                     }
-                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .intro))
+                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .intro, walletCreatedPreloadState: nil))
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 }
             default:
-                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .import))
+                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .import, walletCreatedPreloadState: nil))
             }
         }, openTerms: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://telegram.org", forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
+            var url = strongSelf.presentationData.strings.Wallet_Intro_TermsUrl
+            if url.isEmpty {
+                url = "https://telegram.org/tos/wallet"
+            }
+            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
         })
         
         self.displayNodeDidLoad()
@@ -306,12 +414,12 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         
         switch mode {
         case .intro:
-            title = "Gram Wallet"
-            text = NSAttributedString(string: "Gram wallet allows you to make fast and secure blockchain-based payments without intermediaries.", font: textFont, textColor: textColor)
-            buttonText = "Create My Wallet"
+            title = self.presentationData.strings.Wallet_Intro_Title
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_Intro_Text, font: textFont, textColor: textColor)
+            buttonText = self.presentationData.strings.Wallet_Intro_CreateWallet
             let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [:])
             let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: self.presentationData.theme.list.itemSecondaryTextColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber])
-            termsText = parseMarkdownIntoAttributedString("By creating the wallet you accept\n[Terms of Conditions]().", attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+            termsText = parseMarkdownIntoAttributedString(self.presentationData.strings.Wallet_Intro_Terms, attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletIntroLoading", ofType: "tgs") {
                 self.animationNode.setup(account: account, resource: .localFile(path), width: 248, height: 248, mode: .direct)
@@ -320,9 +428,9 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             }
             secondaryActionText = ""
         case .created:
-            title = "Congratulations"
-            text = NSAttributedString(string: "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode.", font: textFont, textColor: textColor)
-            buttonText = "Proceed"
+            title = self.presentationData.strings.Wallet_Created_Title
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_Created_Text, font: textFont, textColor: textColor)
+            buttonText = self.presentationData.strings.Wallet_Created_Proceed
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletCreated", ofType: "tgs") {
@@ -332,9 +440,9 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             }
             secondaryActionText = ""
         case .success:
-            title = "Ready to go!"
-            text = NSAttributedString(string: "You’re all set. Now you have a wallet that only you control - directly, without middlemen or bankers. ", font: textFont, textColor: textColor)
-            buttonText = "View My Wallet"
+            title = self.presentationData.strings.Wallet_Completed_Title
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_Completed_Text, font: textFont, textColor: textColor)
+            buttonText = self.presentationData.strings.Wallet_Completed_ViewWallet
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "celebrate", ofType: "tgs") {
@@ -344,9 +452,9 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             }
             secondaryActionText = ""
         case .restoreFailed:
-            title = "Too Bad"
-            text = NSAttributedString(string: "Without the secret words, you can't'nrestore access to the wallet.", font: textFont, textColor: textColor)
-            buttonText = "Create a New Wallet"
+            title = self.presentationData.strings.Wallet_RestoreFailed_Title
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_RestoreFailed_Text, font: textFont, textColor: textColor)
+            buttonText = self.presentationData.strings.Wallet_RestoreFailed_CreateWallet
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "sad", ofType: "tgs") {
@@ -354,10 +462,10 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
-            secondaryActionText = "Enter 24 words"
+            secondaryActionText = self.presentationData.strings.Wallet_RestoreFailed_EnterWords
         case .sending:
-            title = "Sending Grams"
-            text = NSAttributedString(string: "Please wait a few seconds for your transaction to be processed...", font: textFont, textColor: textColor)
+            title = self.presentationData.strings.Wallet_Sending_Title
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_Sending_Text, font: textFont, textColor: textColor)
             buttonText = ""
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
@@ -368,11 +476,11 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             }
             secondaryActionText = ""
         case let .sent(_, amount):
-            title = "Done!"
+            title = self.presentationData.strings.Wallet_Sent_Title
             let bodyAttributes = MarkdownAttributeSet(font: textFont, textColor: textColor)
             let boldAttributes = MarkdownAttributeSet(font: Font.semibold(16.0), textColor: textColor)
-            text = parseMarkdownIntoAttributedString("**\(formatBalanceText(amount, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)) Grams** have been sent.", attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center)
-            buttonText = "View My Wallet"
+            text = parseMarkdownIntoAttributedString(self.presentationData.strings.Wallet_Sent_Text(formatBalanceText(amount, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)).0, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center)
+            buttonText = self.presentationData.strings.Wallet_Sent_ViewWallet
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "celebrate", ofType: "tgs") {
@@ -382,32 +490,61 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             }
             secondaryActionText = ""
         case .secureStorageNotAvailable:
-            title = "Too Bad"
-            text = NSAttributedString(string: "Please set up Passcode on your device to enable secure payments with your Gram wallet.", font: textFont, textColor: textColor)
-            buttonText = "OK"
+            title = self.presentationData.strings.Wallet_SecureStorageNotAvailable_Title
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_SecureStorageNotAvailable_Text, font: textFont, textColor: textColor)
+            buttonText = self.presentationData.strings.Common_OK
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
-            if let path = getAppBundle().path(forResource: "sad", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+            if let path = getAppBundle().path(forResource: "WalletKeyLock", ofType: "tgs") {
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 140.0, height: 140.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
         case let .secureStorageReset(reason):
-            title = "Too Bad"
+            title = self.presentationData.strings.Wallet_SecureStorageReset_Title
+            
+            let biometricTypeString: String?
+            if let type = LocalAuth.biometricAuthentication {
+                switch type {
+                case .faceId:
+                    biometricTypeString = self.presentationData.strings.Wallet_SecureStorageReset_BiometryFaceId
+                case .touchId:
+                    biometricTypeString = self.presentationData.strings.Wallet_SecureStorageReset_BiometryTouchId
+                }
+            } else {
+                biometricTypeString = nil
+            }
+            
             switch reason {
             case .notAvailable:
-                text = NSAttributedString(string: "Unfortunately, your wallet is no longer available because your system Passcode or Touch ID has been turned off.", font: textFont, textColor: textColor)
+                let string: String
+                if let biometricTypeString = biometricTypeString {
+                    string = self.presentationData.strings.Wallet_SecureStorageReset_BiometryText(biometricTypeString).0
+                } else {
+                    string = self.presentationData.strings.Wallet_SecureStorageReset_PasscodeText
+                }
+                text = NSAttributedString(string: string, font: textFont, textColor: textColor)
+                buttonText = self.presentationData.strings.Common_OK
+                secondaryActionText = ""
             case .changed:
-                text = NSAttributedString(string: "Unfortunately, your wallet is no longer available due to the change in your system security settings (Passcode/Touch ID). To restore your wallet, tap \"import existing wallet\".", font: textFont, textColor: textColor)
+                let string: String
+                if let biometricTypeString = biometricTypeString {
+                    string = self.presentationData.strings.Wallet_SecureStorageChanged_BiometryText(biometricTypeString).0
+                } else {
+                    string = self.presentationData.strings.Wallet_SecureStorageChanged_PasscodeText
+                }
+                text = NSAttributedString(string: string, font: textFont, textColor: textColor)
+                buttonText = self.presentationData.strings.Wallet_SecureStorageChanged_ImportWallet
+                secondaryActionText = self.presentationData.strings.Wallet_SecureStorageChanged_CreateWallet
             }
-            buttonText = "Import Existing Wallet"
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "sad", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
-            secondaryActionText = "Create New Wallet"
         }
         
         self.titleNode = ImmediateTextNode()

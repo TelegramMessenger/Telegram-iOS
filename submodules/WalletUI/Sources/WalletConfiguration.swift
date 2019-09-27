@@ -13,10 +13,18 @@ public struct WalletConfiguration {
     }
     
     public static func with(appConfiguration: AppConfiguration) -> WalletConfiguration {
-        if let data = appConfiguration.data, let enabled = data["wallet_enabled"] as? Bool {
+        if let data = appConfiguration.data, let enabled = data["wallet_enabled"] as? Bool, let _ = data["wallet_config"] as? String {
             return WalletConfiguration(enabled: enabled)
         } else {
             return .defaultValue
+        }
+    }
+    
+    public static func config(appConfiguration: AppConfiguration) -> String? {
+        if let data = appConfiguration.data, let config = data["wallet_config"] as? String {
+            return config
+        } else {
+            return nil
         }
     }
 }

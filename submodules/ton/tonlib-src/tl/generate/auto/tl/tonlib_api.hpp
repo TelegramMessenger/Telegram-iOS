@@ -20,6 +20,9 @@ bool downcast_call(Object &obj, const T &func) {
     case bip39Hints::ID:
       func(static_cast<bip39Hints &>(obj));
       return true;
+    case config::ID:
+      func(static_cast<config &>(obj));
+      return true;
     case error::ID:
       func(static_cast<error &>(obj));
       return true;
@@ -58,6 +61,9 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case options::ID:
       func(static_cast<options &>(obj));
+      return true;
+    case sendGramsResult::ID:
+      func(static_cast<sendGramsResult &>(obj));
       return true;
     case updateSendLiteServerQuery::ID:
       func(static_cast<updateSendLiteServerQuery &>(obj));

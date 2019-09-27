@@ -205,9 +205,9 @@ private enum SettingsEntry: ItemListNodeEntry {
             return 1010
         case .language:
             return 1011
-        case .passport:
-            return 1012
         case .wallet:
+            return 1012
+        case .passport:
             return 1013
         case .watch:
             return 1014
@@ -574,7 +574,7 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         let languageName = presentationData.strings.primaryComponent.localizedName
         entries.append(.language(presentationData.theme, PresentationResourcesSettings.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
         
-        if hasWallet || experimentalUISettings.wallets {
+        if hasWallet {
             entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.wallet, "Gram Wallet", ""))
         }
         if hasPassport {

@@ -12,6 +12,7 @@ private let transactionIcon = UIImage(bundleImageName: "Wallet/TransactionGem")?
 
 class WalletInfoTransactionItem: ListViewItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
     let walletTransaction: WalletTransaction
     let action: () -> Void
@@ -20,6 +21,7 @@ class WalletInfoTransactionItem: ListViewItem {
     
     init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletTransaction, action: @escaping () -> Void) {
         self.theme = theme
+        self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.walletTransaction = walletTransaction
         self.action = action
@@ -188,9 +190,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 titleColor = item.theme.list.itemPrimaryTextColor
                 if item.walletTransaction.outMessages.isEmpty {
                     directionText = ""
-                    text = "Empty Transaction"
+                    text = item.strings.Wallet_Info_UnknownTransaction
                 } else {
-                    directionText = "to"
+                    directionText = item.strings.Wallet_Info_TransactionTo
                     for message in item.walletTransaction.outMessages {
                         if !text.isEmpty {
                             text.append("\n")
@@ -206,7 +208,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             } else {
                 title = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
-                directionText = "from"
+                directionText = item.strings.Wallet_Info_TransactionFrom
                 if let inMessage = item.walletTransaction.inMessage {
                     text = formatAddress(inMessage.source)
                     description = inMessage.textMessage
@@ -222,7 +224,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             let (directionLayout, directionApply) = makeDirectionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: directionText, font: directionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleString = NSMutableAttributedString()
-            if let range = title.range(of: ".") {
+            if let range = title.range(of: item.dateTimeFormat.decimalSeparator) {
                 let integralPart = String(title[..<range.lowerBound])
                 let fractionalPart = String(title[range.lowerBound...])
                 titleString.append(NSAttributedString(string: integralPart, font: Font.bold(17.0), textColor: titleColor))

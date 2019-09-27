@@ -253,16 +253,16 @@ private struct WalletSendScreenState: Equatable {
 private func walletSendScreenEntries(presentationData: PresentationData, balance: Int64?, state: WalletSendScreenState) -> [WalletSendScreenEntry] {
     var entries: [WalletSendScreenEntry] = []
 
-    entries.append(.addressHeader(presentationData.theme, "RECIPIENT WALLET ADDRESS"))
-    entries.append(.address(presentationData.theme, "Enter wallet address...", state.address))
-    entries.append(.addressInfo(presentationData.theme, "Copy the 48-letter address of the recipient here or ask them to send you a ton:// link."))
+    entries.append(.addressHeader(presentationData.theme, presentationData.strings.Wallet_Send_AddressHeader))
+    entries.append(.address(presentationData.theme, presentationData.strings.Wallet_Send_AddressText, state.address))
+    entries.append(.addressInfo(presentationData.theme, presentationData.strings.Wallet_Send_AddressInfo))
     
     let amount = amountValue(state.amount)
-    entries.append(.amountHeader(presentationData.theme, "AMOUNT", balance.flatMap { "BALANCE: \(formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))" }, amount > 0 && (balance ?? 0) < amount))
-    entries.append(.amount(presentationData.theme, presentationData.strings, "Grams to send", state.amount ?? ""))
+    entries.append(.amountHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AmountHeader, balance.flatMap { presentationData.strings.Wallet_Send_Balance(formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)).0 }, amount > 0 && (balance ?? 0) < amount))
+    entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.strings.Wallet_Send_AmountText, state.amount ?? ""))
     
-    entries.append(.commentHeader(presentationData.theme, "COMMENT (OPTIONAL)"))
-    entries.append(.comment(presentationData.theme, "Description of the payment", state.comment))
+    entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
+    entries.append(.comment(presentationData.theme, presentationData.strings.Wallet_Receive_CommentInfo, state.comment))
     return entries
 }
 
@@ -274,7 +274,7 @@ private final class WalletSendScreenImpl: ItemListController<WalletSendScreenEnt
     
 }
 
-public func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String? = nil, amount: Int64? = nil, comment: String? = nil) -> ViewController {
+public func walletSendScreen(context: AccountContext, tonContext: TonContext, randomId: Int64, walletInfo: WalletInfo, address: String? = nil, amount: Int64? = nil, comment: String? = nil) -> ViewController {    
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
    
     let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", comment: comment ?? "")
@@ -361,11 +361,11 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, wa
             return state
         }
         
-        let title = NSAttributedString(string: "Confirmation", font: Font.semibold(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
+        let title = NSAttributedString(string: presentationData.strings.Wallet_Send_Confirmation, font: Font.semibold(17.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
         
         let address = state.address[state.address.startIndex..<state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)] + " \n " + state.address[state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)..<state.address.endIndex]
         
-        let text = "Do you want to send **\(formatBalanceText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))** Grams to\n\(address)?"
+        let text = presentationData.strings.Wallet_Send_ConfirmationText(formatBalanceText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), String(address)).0
         let bodyAttributes = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
         let boldAttributes = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.actionSheet.primaryTextColor)
         let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center))
@@ -374,10 +374,10 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, wa
         var dismissAlertImpl: ((Bool) -> Void)?
         let controller = richTextAlertController(context: context, title: title, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {
             dismissAlertImpl?(true)
-        }), TextAlertAction(type: .defaultAction, title: "Confirm", action: {
+        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Send_ConfirmationConfirm, action: {
             dismissAlertImpl?(false)
             dismissInputImpl?()
-            pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.comment)))
+            pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.comment, randomId), walletCreatedPreloadState: nil))
         })], allowInputInset: false, dismissAutomatically: false)
         presentInGlobalOverlayImpl?(controller, nil)
         
@@ -423,11 +423,11 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, wa
         if let balance = balance {
             sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= balance.balance && state.comment.count <= 128
         }
-        let rightNavigationButton = ItemListNavigationButton(content: .text("Send"), style: .bold, enabled: sendEnabled, action: {
+        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
             arguments.proceed()
         })
         
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Send Grams"), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Send_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: balance?.balance, state: state), style: .blocks, focusItemTag: focusItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))

@@ -267,7 +267,7 @@ private struct WalletReceiveScreenState: Equatable {
 private func walletReceiveScreenEntries(presentationData: PresentationData, address: String, state: WalletReceiveScreenState) -> [WalletReceiveScreenEntry] {
     var entries: [WalletReceiveScreenEntry] = []
     entries.append(.addressCode(presentationData.theme, invoiceUrl(address: address, state: state, escapeComment: true)))
-    entries.append(.addressHeader(presentationData.theme, state.isEmpty ? "YOUR WALLET ADDRESS" : "INVOICE URL"))
+    entries.append(.addressHeader(presentationData.theme, state.isEmpty ? presentationData.strings.Wallet_Receive_AddressHeader : presentationData.strings.Wallet_Receive_InvoiceUrlHeader))
     
     let addressText: String
     var addressMonospace = false
@@ -278,16 +278,16 @@ private func walletReceiveScreenEntries(presentationData: PresentationData, addr
         addressText = invoiceUrl(address: address, state: state, escapeComment: false)
     }
     entries.append(.address(presentationData.theme, addressText, addressMonospace))
-    entries.append(.copyAddress(presentationData.theme, state.isEmpty ? "Copy Wallet Address" : "Copy Invoice URL"))
-    entries.append(.shareAddressLink(presentationData.theme, state.isEmpty ? "Share Wallet Address" : "Share Invoice URL"))
-    entries.append(.addressInfo(presentationData.theme, "Share this link with other Gram wallet owners to receive Grams from them."))
+    entries.append(.copyAddress(presentationData.theme, state.isEmpty ? presentationData.strings.Wallet_Receive_CopyAddress : presentationData.strings.Wallet_Receive_CopyInvoiceUrl))
+    entries.append(.shareAddressLink(presentationData.theme, state.isEmpty ? presentationData.strings.Wallet_Receive_ShareAddress : presentationData.strings.Wallet_Receive_ShareInvoiceUrl))
+    entries.append(.addressInfo(presentationData.theme, presentationData.strings.Wallet_Receive_ShareUrlInfo))
     
     let amount = amountValue(state.amount)
-    entries.append(.amountHeader(presentationData.theme, "AMOUNT"))
-    entries.append(.amount(presentationData.theme, presentationData.strings, "Grams to receive", state.amount ?? ""))
+    entries.append(.amountHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AmountHeader))
+    entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.strings.Wallet_Receive_AmountText, state.amount ?? ""))
     
-    entries.append(.commentHeader(presentationData.theme, "COMMENT (OPTIONAL)"))
-    entries.append(.comment(presentationData.theme, "Description of the payment", state.comment))
+    entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
+    entries.append(.comment(presentationData.theme, presentationData.strings.Wallet_Receive_CommentInfo, state.comment))
     
     return entries
 }
@@ -360,10 +360,10 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
         let successText: String
         if state.isEmpty {
             UIPasteboard.general.string = address
-            successText = "Address copied to clipboard."
+            successText = presentationData.strings.Wallet_Receive_AddressCopied
         } else {
             UIPasteboard.general.string = invoiceUrl(address: address, state: state)
-            successText = "Invoice URL copied to clipboard."
+            successText = presentationData.strings.Wallet_Receive_InvoiceUrlCopied
         }
         
         if currentStatusController == nil {
@@ -401,7 +401,7 @@ func walletReceiveScreen(context: AccountContext, tonContext: TonContext, wallet
             ensureVisibleItemTag = focusItemTag
         }
     
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Receive Grams"), leftNavigationButton: ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {}), rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Receive_Title), leftNavigationButton: ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {}), rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletReceiveScreenEntries(presentationData: presentationData, address: address, state: state), style: .blocks, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))

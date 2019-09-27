@@ -73,14 +73,22 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@interface TONSendGramsResult : NSObject
+
+@property (nonatomic, readonly) int64_t sentUntil;
+
+- (instancetype)initWithSentUntil:(int64_t)sentUntil;
+
+@end
+
 @interface TON : NSObject
 
-- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest;
+- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest;
 
 - (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
 - (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString *)textMessage;
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
 - (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
 - (MTSignal *)deleteKey:(TONKey *)key;

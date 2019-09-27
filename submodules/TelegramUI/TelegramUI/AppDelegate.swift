@@ -653,6 +653,7 @@ final class SharedApplicationContext {
         
         #if targetEnvironment(simulator)
         tonKeychain = TonKeychain(encryptionPublicKey: {
+            //return .single(nil)
             return .single(Data())
         }, encrypt: { data in
             return Signal { subscriber in
@@ -941,10 +942,7 @@ final class SharedApplicationContext {
             |> deliverOnMainQueue
             |> map { accountAndSettings -> AuthorizedApplicationContext? in
                 return accountAndSettings.flatMap { account, limitsConfiguration, callListSettings in
-                    var tonContext: TonContext?
-                    if let path = getAppBundle().path(forResource: "cfg", ofType: "txt"), let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let config = String(data: data, encoding: .utf8) {
-                        tonContext = TonContext(instance: TonInstance(basePath: account.basePath, config: config, network: account.network), keychain: tonKeychain)
-                    }
+                    let tonContext = StoredTonContext(basePath: account.basePath, postbox: account.postbox, network: account.network, keychain: tonKeychain)
                     let context = AccountContextImpl(sharedContext: sharedApplicationContext.sharedContext, account: account, tonContext: tonContext, limitsConfiguration: limitsConfiguration)
                     return AuthorizedApplicationContext(sharedApplicationContext: sharedApplicationContext, mainWindow: self.mainWindow, watchManagerArguments: watchManagerArgumentsPromise.get(), context: context, accountManager: sharedApplicationContext.sharedContext.accountManager, showCallsTab: callListSettings.showTab, reinitializedNotificationSettings: {
                         let _ = (self.context.get()

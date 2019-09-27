@@ -46,13 +46,15 @@ private final class TonInstanceImpl {
     private let queue: Queue
     private let basePath: String
     private let config: String
+    private let blockchainName: String
     private let network: Network
     private var instance: TON?
     
-    init(queue: Queue, basePath: String, config: String, network: Network) {
+    init(queue: Queue, basePath: String, config: String, blockchainName: String, network: Network) {
         self.queue = queue
         self.basePath = basePath
         self.config = config
+        self.blockchainName = blockchainName
         self.network = network
     }
     
@@ -62,7 +64,7 @@ private final class TonInstanceImpl {
             instance = current
         } else {
             let network = self.network
-            instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, performExternalRequest: { request in
+            instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, blockchainName: self.blockchainName, performExternalRequest: { request in
                 let _ = (network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))).start(next: { result in
                     switch result {
                     case let .liteResponse(response):
@@ -82,11 +84,11 @@ public final class TonInstance {
     private let queue: Queue
     private let impl: QueueLocalObject<TonInstanceImpl>
     
-    public init(basePath: String, config: String, network: Network) {
+    public init(basePath: String, config: String, blockchainName: String, network: Network) {
         self.queue = .mainQueue()
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return TonInstanceImpl(queue: queue, basePath: basePath, config: config, network: network)
+            return TonInstanceImpl(queue: queue, basePath: basePath, config: config, blockchainName: blockchainName, network: network)
         })
     }
     
@@ -290,7 +292,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String) -> Signal<Never, SendGramsFromWalletError> {
+    fileprivate func sendGramsFromWallet(keychain: TonKeychain, serverSalt: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
         return keychain.decrypt(walletInfo.encryptedSecret)
         |> mapError { _ -> SendGramsFromWalletError in
             return .secretDecryptionFailed
@@ -302,10 +304,24 @@ public final class TonInstance {
                 
                 self.impl.with { impl in
                     impl.withInstance { ton in
-                        let cancel = ton.sendGrams(from: key, localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage).start(next: { _ in
-                            preconditionFailure()
-                        }, error: { _ in
-                            subscriber.putError(.generic)
+                        let cancel = ton.sendGrams(from: key, localPassword: serverSalt, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId).start(next: { result in
+                            guard let result = result as? TONSendGramsResult else {
+                                subscriber.putError(.generic)
+                                return
+                            }
+                            subscriber.putCompletion()
+                        }, error: { error in
+                            if let error = error as? TONError {
+                                if error.text == "Failed to parse account address" {
+                                    subscriber.putError(.invalidAddress)
+                                } else if error.text.hasPrefix("DANGEROUS_TRANSACTION") {
+                                    subscriber.putError(.destinationIsNotInitialized)
+                                } else {
+                                    subscriber.putError(.generic)
+                                }
+                            } else {
+                                subscriber.putError(.generic)
+                            }
                         }, completed: {
                             subscriber.putCompletion()
                         })
@@ -684,9 +700,11 @@ public func getCombinedWalletState(postbox: Postbox, walletInfo: WalletInfo, ton
 public enum SendGramsFromWalletError {
     case generic
     case secretDecryptionFailed
+    case invalidAddress
+    case destinationIsNotInitialized
 }
 
-public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo, toAddress: String, amount: Int64, textMessage: String) -> Signal<Never, SendGramsFromWalletError> {
+public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo, toAddress: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
     return getServerWalletSalt(network: network)
     |> mapError { _ -> SendGramsFromWalletError in
         return .generic
@@ -695,7 +713,7 @@ public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, keyc
         return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
         |> castError(SendGramsFromWalletError.self)
         |> mapToSignal { fromAddress in
-            return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage)
+            return tonInstance.sendGramsFromWallet(keychain: keychain, serverSalt: serverSalt, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId)
         }
     }
 }

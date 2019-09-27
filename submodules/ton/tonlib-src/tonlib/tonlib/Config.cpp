@@ -21,6 +21,45 @@
 #include "td/utils/JsonBuilder.h"
 
 namespace tonlib {
+td::Result<ton::BlockIdExt> parse_block_id_ext(td::JsonObject &obj) {
+  ton::WorkchainId zero_workchain_id;
+  {
+    TRY_RESULT(wc, td::get_json_object_int_field(obj, "workchain"));
+    zero_workchain_id = wc;
+  }
+  ton::ShardId zero_shard_id;  // uint64
+  {
+    TRY_RESULT(shard_id, td::get_json_object_long_field(obj, "shard"));
+    zero_shard_id = static_cast<ton::ShardId>(shard_id);
+  }
+  ton::BlockSeqno zero_seqno;
+  {
+    TRY_RESULT(seqno, td::get_json_object_int_field(obj, "seqno"));
+    zero_seqno = seqno;
+  }
+
+  ton::RootHash zero_root_hash;
+  {
+    TRY_RESULT(hash_b64, td::get_json_object_string_field(obj, "root_hash"));
+    TRY_RESULT(hash, td::base64_decode(hash_b64));
+    if (hash.size() * 8 != ton::RootHash::size()) {
+      return td::Status::Error("Invalid config (8)");
+    }
+    zero_root_hash = ton::RootHash(td::ConstBitPtr(td::Slice(hash).ubegin()));
+  }
+  ton::FileHash zero_file_hash;
+  {
+    TRY_RESULT(hash_b64, td::get_json_object_string_field(obj, "file_hash"));
+    TRY_RESULT(hash, td::base64_decode(hash_b64));
+    if (hash.size() * 8 != ton::FileHash::size()) {
+      return td::Status::Error("Invalid config (9)");
+    }
+    zero_file_hash = ton::RootHash(td::ConstBitPtr(td::Slice(hash).ubegin()));
+  }
+
+  return ton::BlockIdExt(zero_workchain_id, zero_shard_id, zero_seqno, std::move(zero_root_hash),
+                         std::move(zero_file_hash));
+}
 td::Result<Config> Config::parse(std::string str) {
   TRY_RESULT(json, td::json_decode(str));
   if (json.type() != td::JsonValue::Type::Object) {
@@ -74,45 +113,13 @@ td::Result<Config> Config::parse(std::string str) {
     return td::Status::Error("Invalid config (7)");
   }
   TRY_RESULT(zero_state_obj, td::get_json_object_field(validator, "zero_state", td::JsonValue::Type::Object, false));
-  auto &zero_state = zero_state_obj.get_object();
-
-  ton::WorkchainId zero_workchain_id;
-  {
-    TRY_RESULT(wc, td::get_json_object_int_field(zero_state, "workchain"));
-    zero_workchain_id = wc;
+  TRY_RESULT(zero_state_id, parse_block_id_ext(zero_state_obj.get_object()));
+  res.zero_state_id = zero_state_id;
+  auto r_init_block_obj = td::get_json_object_field(validator, "init_block", td::JsonValue::Type::Object, false);
+  if (r_init_block_obj.is_ok()) {
+    TRY_RESULT(init_block_id, parse_block_id_ext(r_init_block_obj.move_as_ok().get_object()));
+    res.init_block_id = init_block_id;
   }
-  ton::ShardId zero_shard_id;  // uint64
-  {
-    TRY_RESULT(shard_id, td::get_json_object_long_field(zero_state, "shard"));
-    zero_shard_id = static_cast<ton::ShardId>(shard_id);
-  }
-  ton::BlockSeqno zero_seqno;
-  {
-    TRY_RESULT(seqno, td::get_json_object_int_field(zero_state, "seqno"));
-    zero_seqno = seqno;
-  }
-
-  ton::RootHash zero_root_hash;
-  {
-    TRY_RESULT(hash_b64, td::get_json_object_string_field(zero_state, "root_hash"));
-    TRY_RESULT(hash, td::base64_decode(hash_b64));
-    if (hash.size() * 8 != ton::RootHash::size()) {
-      return td::Status::Error("Invalid config (8)");
-    }
-    zero_root_hash = ton::RootHash(td::ConstBitPtr(td::Slice(hash).ubegin()));
-  }
-  ton::FileHash zero_file_hash;
-  {
-    TRY_RESULT(hash_b64, td::get_json_object_string_field(zero_state, "file_hash"));
-    TRY_RESULT(hash, td::base64_decode(hash_b64));
-    if (hash.size() * 8 != ton::FileHash::size()) {
-      return td::Status::Error("Invalid config (9)");
-    }
-    zero_file_hash = ton::RootHash(td::ConstBitPtr(td::Slice(hash).ubegin()));
-  }
-
-  res.zero_state_id = ton::BlockIdExt(zero_workchain_id, zero_shard_id, zero_seqno, std::move(zero_root_hash),
-                                      std::move(zero_file_hash));
 
   return res;
 }

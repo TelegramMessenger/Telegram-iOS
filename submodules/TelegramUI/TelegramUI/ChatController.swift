@@ -539,7 +539,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
-                    let reactions: [(String, String, String)] = [
+                    /*let reactions: [(String, String, String)] = [
                         ("😔", "Sad", "sad"),
                         ("😳", "Surprised", "surprised"),
                         ("😂", "Fun", "lol"),
@@ -562,8 +562,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                         reactionItems = []
-                    }
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer)
+                    }*/
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: [], recognizer: recognizer)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {

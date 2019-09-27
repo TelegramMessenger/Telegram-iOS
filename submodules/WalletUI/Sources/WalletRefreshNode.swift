@@ -176,7 +176,7 @@ final class WalletRefreshNode: ASDisplayNode {
             title = lastUpdateTimestampString(strings: self.strings, dateTimeFormat: dateTimeFormat, statusTimestamp: ts, relativeTo: Int32(Date().timeIntervalSince1970))
             pullProgress = progress
         case .refreshing:
-            title = "updating"
+            title = self.strings.Wallet_Info_Updating
         }
         
         if let previousState = previousState {

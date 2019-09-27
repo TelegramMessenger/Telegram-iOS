@@ -69,7 +69,7 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(walletSendScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo))
+            strongSelf.push(walletSendScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, randomId: arc4random64(), walletInfo: strongSelf.walletInfo))
         }, receiveAction: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -100,6 +100,8 @@ public final class WalletInfoScreen: ViewController {
 }
 
 private final class WalletInfoBalanceNode: ASDisplayNode {
+    let dateTimeFormat: PresentationDateTimeFormat
+    
     let balanceIntegralTextNode: ImmediateTextNode
     let balanceFractionalTextNode: ImmediateTextNode
     let balanceIconNode: AnimatedStickerNode
@@ -108,7 +110,7 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
         didSet {
             let integralString = NSMutableAttributedString()
             let fractionalString = NSMutableAttributedString()
-            if let range = self.balance.range(of: ".") {
+            if let range = self.balance.range(of: self.dateTimeFormat.decimalSeparator) {
                 let integralPart = String(self.balance[..<range.lowerBound])
                 let fractionalPart = String(self.balance[range.lowerBound...])
                 integralString.append(NSAttributedString(string: integralPart, font: Font.medium(48.0), textColor: .white))
@@ -123,7 +125,9 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
     
     var isLoading: Bool = true
     
-    init(account: Account, theme: PresentationTheme) {
+    init(account: Account, theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat) {
+        self.dateTimeFormat = dateTimeFormat
+        
         self.balanceIntegralTextNode = ImmediateTextNode()
         self.balanceIntegralTextNode.displaysAsynchronously = false
         self.balanceIntegralTextNode.attributedText = NSAttributedString(string: " ", font: Font.bold(39.0), textColor: .white)
@@ -195,34 +199,40 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let balanceSubtitleNode: ImmediateTextNode
     private let receiveButtonNode: SolidRoundedButtonNode
     private let sendButtonNode: SolidRoundedButtonNode
-    private let headerBackgroundNode: ASImageNode
+    private let headerBackgroundNode: ASDisplayNode
+    private let headerCornerNode: ASImageNode
     
     init(account: Account, presentationData: PresentationData, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
-        self.balanceNode = WalletInfoBalanceNode(account: account, theme: presentationData.theme)
+        self.balanceNode = WalletInfoBalanceNode(account: account, theme: presentationData.theme, dateTimeFormat: presentationData.dateTimeFormat)
         
         self.balanceSubtitleNode = ImmediateTextNode()
         self.balanceSubtitleNode.displaysAsynchronously = false
-        self.balanceSubtitleNode.attributedText = NSAttributedString(string: "your balance", font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
+        self.balanceSubtitleNode.attributedText = NSAttributedString(string: presentationData.strings.Wallet_Info_YourBalance, font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
         
-        self.headerBackgroundNode = ASImageNode()
-        self.headerBackgroundNode.displaysAsynchronously = false
-        self.headerBackgroundNode.displayWithoutProcessing = true
-        self.headerBackgroundNode.image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
+        self.headerBackgroundNode = ASDisplayNode()
+        self.headerBackgroundNode.backgroundColor = .black
+        
+        self.headerCornerNode = ASImageNode()
+        self.headerCornerNode.displaysAsynchronously = false
+        self.headerCornerNode.displayWithoutProcessing = true
+        self.headerCornerNode.image = generateImage(CGSize(width: 20.0, height: 10.0), rotatedContext: { size, context in
+            
             context.setFillColor(UIColor.black.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
             context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height / 2.0), size: size))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 20.0, height: 20.0)))
         })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 1)
         
-        self.receiveButtonNode = SolidRoundedButtonNode(title: "Receive", icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
-        self.sendButtonNode = SolidRoundedButtonNode(title: "Send", icon: UIImage(bundleImageName: "Wallet/SendButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: UIImage(bundleImageName: "Wallet/SendButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         
         super.init()
         
         self.addSubnode(self.headerBackgroundNode)
+        self.addSubnode(self.headerCornerNode)
         self.addSubnode(self.receiveButtonNode)
         self.addSubnode(self.sendButtonNode)
         self.addSubnode(self.balanceNode)
@@ -298,7 +308,8 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         transition.updateFrameAdditive(node: self.balanceSubtitleNode, frame: balanceSubtitleFrame)
         
         let headerHeight: CGFloat = 1000.0
-        transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset + 10.0 - headerHeight), size: CGSize(width: size.width, height: headerHeight)))
+        transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: -1.0, y: effectiveOffset - headerHeight), size: CGSize(width: size.width + 2.0, height: headerHeight)))
+        transition.updateFrame(node: self.headerCornerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset), size: CGSize(width: size.width, height: 10.0)))
         
         let buttonOffset = effectiveOffset
         
@@ -739,7 +750,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 strongSelf.contentReady.set(.single(true))
             }
             
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "An Error Occurred", text: "The wallet state can not be retrieved at this time. Please try again later.", actions: [
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorTitle, text: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorText, actions: [
                 TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                 })
             ], actionLayout: .vertical), nil)

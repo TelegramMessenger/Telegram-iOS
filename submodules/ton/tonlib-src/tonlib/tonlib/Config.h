@@ -28,6 +28,7 @@ struct Config {
     td::IPAddress address;
   };
   ton::BlockIdExt zero_state_id;
+  ton::BlockIdExt init_block_id;
   std::vector<LiteClient> lite_clients;
   static td::Result<Config> parse(std::string str);
 };
