@@ -140,6 +140,18 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @end
 
+@implementation TONSendGramsResult
+
+- (instancetype)initWithSentUntil:(int64_t)sentUntil {
+    self = [super init];
+    if (self != nil) {
+        _sentUntil = sentUntil;
+    }
+    return self;
+}
+
+@end
+
 using tonlib_api::make_object;
 
 @interface TONReceiveThreadParams : NSObject
@@ -205,6 +217,7 @@ typedef enum {
     NSMutableDictionary<NSNumber *, TONRequestHandler *> *_requestHandlers;
     MTPipe *_initializedStatus;
     NSMutableSet *_sendGramRandomIds;
+    MTQueue *_queue;
 }
 
 @end
@@ -220,9 +233,10 @@ typedef enum {
     }
 }
 
-- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest {
+- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest {
     self = [super init];
     if (self != nil) {
+        _queue = [MTQueue mainQueue];
         _requestHandlersLock = [[NSLock alloc] init];
         _requestHandlers = [[NSMutableDictionary alloc] init];
         _initializedStatus = [[MTPipe alloc] initWithReplay:true];
@@ -280,7 +294,7 @@ typedef enum {
         [[NSFileManager defaultManager] createDirectoryAtPath:keystoreDirectory withIntermediateDirectories:true attributes:nil error:nil];
         
         MTPipe *initializedStatus = _initializedStatus;
-        [[self requestInitWithConfigString:config keystoreDirectory:keystoreDirectory] startWithNext:nil error:^(id error) {
+        [[self requestInitWithConfigString:config blockchainName:blockchainName keystoreDirectory:keystoreDirectory] startWithNext:nil error:^(id error) {
             NSString *errorText = @"Unknown error";
             if ([error isKindOfClass:[TONError class]]) {
                 errorText = ((TONError *)error).text;
@@ -293,7 +307,7 @@ typedef enum {
     return self;
 }
 
-- (MTSignal *)requestInitWithConfigString:(NSString *)configString keystoreDirectory:(NSString *)keystoreDirectory {
+- (MTSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
@@ -308,9 +322,13 @@ typedef enum {
         }];
         
         auto query = make_object<tonlib_api::init>(make_object<tonlib_api::options>(
-            configString.UTF8String,
-            keystoreDirectory.UTF8String,
-            false
+            make_object<tonlib_api::config>(
+                configString.UTF8String,
+                blockchainName.UTF8String,
+                false,
+                false
+            ),
+            keystoreDirectory.UTF8String
         ));
         _client->send({ requestId, std::move(query) });
         
@@ -429,7 +447,7 @@ typedef enum {
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString * _Nonnull)textMessage  randomId:(int64_t)randomId {
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString * _Nonnull)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         if ([_sendGramRandomIds containsObject:@(randomId)]) {
             [_sendGramRandomIds addObject:@(randomId)];
@@ -452,10 +470,23 @@ typedef enum {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
+        __weak TON *weakSelf = self;
+        MTQueue *queue = _queue;
         _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
             if (object->get_id() == tonlib_api::error::ID) {
+                [queue dispatchOnQueue:^{
+                    __strong TON *strongSelf = weakSelf;
+                    if (strongSelf != nil) {
+                        [_sendGramRandomIds removeObject:@(randomId)];
+                    }
+                }];
                 auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::sendGramsResult::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::sendGramsResult>(object);
+                TONSendGramsResult *sendResult = [[TONSendGramsResult alloc] initWithSentUntil:result->sent_until_];
+                [subscriber putNext:sendResult];
+                [subscriber putCompletion];
             } else {
                 [subscriber putCompletion];
             }
@@ -472,6 +503,8 @@ typedef enum {
             make_object<tonlib_api::accountAddress>(fromAddress.UTF8String),
             make_object<tonlib_api::accountAddress>(address.UTF8String),
             amount,
+            timeout,
+            forceIfDestinationNotInitialized,
             makeString(textMessageData)
         );
         _client->send({ requestId, std::move(query) });

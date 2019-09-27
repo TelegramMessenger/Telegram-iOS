@@ -783,7 +783,7 @@ public extension ContainedViewLayoutTransition {
     }
     
     func updateSublayerTransformOffset(layer: CALayer, offset: CGPoint, completion: ((Bool) -> Void)? = nil) {
-        let t = layer.transform
+        let t = layer.sublayerTransform
         let currentOffset = CGPoint(x: t.m41, y: t.m42)
         if currentOffset == offset {
             if let completion = completion {

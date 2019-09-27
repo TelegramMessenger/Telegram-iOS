@@ -167,6 +167,7 @@ public enum ResolvedUrl {
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
+    case wallet(address: String, amount: Int64?, comment: String?)
 }
 
 public enum NavigateToChatKeepStack {
@@ -368,6 +369,11 @@ public final class ContactSelectionControllerParams {
     }
 }
 
+public enum OpenWalletContext {
+    case generic
+    case send(address: String, amount: Int64?, comment: String?)
+}
+
 public let defaultContactLabel: String = "_$!<Mobile>!$_"
 
 public enum CreateGroupMode {
@@ -434,6 +440,7 @@ public protocol SharedAccountContext: class {
     func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
+    func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void)
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
@@ -443,11 +450,44 @@ public protocol SharedAccountContext: class {
     func beginNewAuth(testingEnvironment: Bool)
 }
 
-public struct TonContext {
+private final class TonInstanceData {
+    var config: String?
+    var instance: TonInstance?
+}
+
+public final class StoredTonContext {
+    private let basePath: String
+    private let postbox: Postbox
+    private let network: Network
+    public let keychain: TonKeychain
+    private let currentInstance = Atomic<TonInstanceData>(value: TonInstanceData())
+    
+    public init(basePath: String, postbox: Postbox, network: Network, keychain: TonKeychain) {
+        self.basePath = basePath
+        self.postbox = postbox
+        self.network = network
+        self.keychain = keychain
+    }
+    
+    public func context(config: String) -> TonContext {
+        return self.currentInstance.with { data -> TonContext in
+            if let instance = data.instance, data.config == config {
+                return TonContext(instance: instance, keychain: self.keychain)
+            } else {
+                data.config = config
+                let instance = TonInstance(basePath: self.basePath, config: config, blockchainName: "testnet", network: self.network)
+                data.instance = instance
+                return TonContext(instance: instance, keychain: self.keychain)
+            }
+        }
+    }
+}
+
+public final class TonContext {
     public let instance: TonInstance
     public let keychain: TonKeychain
     
-    public init(instance: TonInstance, keychain: TonKeychain) {
+    fileprivate init(instance: TonInstance, keychain: TonKeychain) {
         self.instance = instance
         self.keychain = keychain
     }
@@ -456,7 +496,7 @@ public struct TonContext {
 public protocol AccountContext: class {
     var sharedContext: SharedAccountContext { get }
     var account: Account { get }
-    var tonContext: TonContext? { get }
+    var tonContext: StoredTonContext? { get }
     
     var liveLocationManager: LiveLocationManager? { get }
     var fetchManager: FetchManager { get }

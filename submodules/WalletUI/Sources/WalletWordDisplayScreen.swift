@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AppBundle
 import AccountContext
+import SwiftSignalKit
 import TelegramPresentationData
 import AsyncDisplayKit
 import Display
@@ -26,13 +27,17 @@ public final class WalletWordDisplayScreen: ViewController {
     private let mode: WalletWordDisplayScreenMode
     
     private let startTime: Double
+    private let idleTimerExtensionDisposable: Disposable
     
-    public init(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode) {
+    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult>?
+    
+    public init(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult>?) {
         self.context = context
         self.tonContext = tonContext
         self.walletInfo = walletInfo
         self.wordList = wordList
         self.mode = mode
+        self.walletCreatedPreloadState = walletCreatedPreloadState
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -40,6 +45,7 @@ public final class WalletWordDisplayScreen: ViewController {
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
         
         self.startTime = Date().timeIntervalSince1970
+        self.idleTimerExtensionDisposable = context.sharedContext.applicationBindings.pushIdleTimerExtension()
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
         
@@ -53,6 +59,10 @@ public final class WalletWordDisplayScreen: ViewController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.idleTimerExtensionDisposable.dispose()
     }
     
     @objc private func backPressed() {
@@ -78,12 +88,12 @@ public final class WalletWordDisplayScreen: ViewController {
             minimalTimeout = 60.0
             #endif
             if deltaTime < minimalTimeout {
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "Sure Done?", text: "You didn't have enough time to write those words down.", actions: [TextAlertAction(type: .defaultAction, title: "OK, Sorry", action: {
+                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Words_NotDoneTitle, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Words_NotDoneOk, action: {
                     guard let strongSelf = self else {
                         return
                     }
                     if let path = getAppBundle().path(forResource: "thumbsup", ofType: "tgs") {
-                        strongSelf.present(UndoOverlayController(context: strongSelf.context, content: UndoOverlayContent.emoji(account: strongSelf.context.account, path: path, text: "Apologies Accepted"), elevatedLayout: false, animateInAsReplacement: false, action: { _ in }), in: .current)
+                        strongSelf.present(UndoOverlayController(context: strongSelf.context, content: UndoOverlayContent.emoji(account: strongSelf.context.account, path: path, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneResponse), elevatedLayout: false, animateInAsReplacement: false, action: { _ in }), in: .current)
                     }
                 })]), in: .window(.root))
             } else {
@@ -95,7 +105,7 @@ public final class WalletWordDisplayScreen: ViewController {
                     }
                 }
                 wordIndices.sort()
-                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .verify(strongSelf.walletInfo, strongSelf.wordList, wordIndices)))
+                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .verify(strongSelf.walletInfo, strongSelf.wordList, wordIndices), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
             }
         })
         
@@ -145,9 +155,9 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
             self.animationNode.visibility = true
         }
         
-        let title: String = "24 Secret Words"
-        let text: String = "Write down these 24 words in the correct order and store them in a secret place.\n\nUse these secret words to restore access to your wallet if you lose your passcode or Telegram account."
-        let buttonText: String = "Done"
+        let title: String = self.presentationData.strings.Wallet_Words_Title
+        let text: String = self.presentationData.strings.Wallet_Words_Text
+        let buttonText: String = self.presentationData.strings.Wallet_Words_Done
         
         self.titleNodeContainer = ASDisplayNode()
         
@@ -265,7 +275,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         let maxScale: CGFloat = 1.0
         let scale = t * maxScale + (1.0 - t) * minScale
         
-        self.titleNodeContainer.frame = CGRect(origin: CGPoint(x: self.bounds.width / 2.0, y: y), size: CGSize())
+        self.titleNodeContainer.frame = CGRect(origin: CGPoint(x: scrollView.bounds.width / 2.0, y: y), size: CGSize())
         self.titleNodeContainer.subnodeTransform = CATransform3DMakeScale(scale, scale, 1.0)
         
         let alpha: CGFloat = (t <= 0.0 + CGFloat.ulpOfOne) ? 1.0 : 0.0

@@ -524,8 +524,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         }
     }
     
-    public func ensureItemNodeVisible(_ itemNode: ListViewItemNode) {
-        (self.displayNode as! ItemListControllerNode<Entry>).listNode.ensureItemNodeVisible(itemNode)
+    public func ensureItemNodeVisible(_ itemNode: ListViewItemNode, animated: Bool = true) {
+        (self.displayNode as! ItemListControllerNode<Entry>).listNode.ensureItemNodeVisible(itemNode, animated: animated)
     }
     
     public func afterLayout(_ f: @escaping () -> Void) {

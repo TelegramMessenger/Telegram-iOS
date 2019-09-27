@@ -44,6 +44,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
   static const std::unordered_map<Slice, int32, SliceHash> m = {
     {"accountAddress", 755613099},
     {"bip39Hints", 1012243456},
+    {"config", -1538391496},
     {"error", -1679978726},
     {"exportedEncryptedKey", 2024406612},
     {"exportedKey", -1449248297},
@@ -56,7 +57,8 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"logTags", -1604930601},
     {"logVerbosityLevel", 1734624234},
     {"ok", -722616727},
-    {"options", -952483001},
+    {"options", 789823302},
+    {"sendGramsResult", -858318471},
     {"updateSendLiteServerQuery", -1555130916},
     {"generic.accountStateRaw", -1387096685},
     {"generic.accountStateTestWallet", -1041955397},
@@ -93,7 +95,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"exportKey", 399723440},
     {"exportPemKey", -2047752448},
     {"generic.getAccountState", -657000446},
-    {"generic.sendGrams", 1523427648},
+    {"generic.sendGrams", -758801136},
     {"getBip39Hints", -1889640982},
     {"getLogStream", 1167608667},
     {"getLogTagVerbosityLevel", 951004547},
@@ -105,7 +107,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"init", -2014661877},
     {"onLiteServerQueryError", -677427533},
     {"onLiteServerQueryResult", 2056444510},
-    {"options.setConfig", 21225546},
+    {"options.setConfig", 646497241},
     {"raw.getAccountAddress", -521283849},
     {"raw.getAccountState", 663706721},
     {"raw.getTransactions", 935377269},
@@ -116,15 +118,15 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"setLogVerbosityLevel", -303429678},
     {"testGiver.getAccountAddress", -540100768},
     {"testGiver.getAccountState", 267738275},
-    {"testGiver.sendGrams", -1361914347},
+    {"testGiver.sendGrams", -1785750375},
     {"testWallet.getAccountAddress", -1557748223},
     {"testWallet.getAccountState", 654082364},
     {"testWallet.init", 419055225},
-    {"testWallet.sendGrams", 43200674},
+    {"testWallet.sendGrams", 1290131585},
     {"wallet.getAccountAddress", -1004103180},
     {"wallet.getAccountState", 462294850},
     {"wallet.init", 1528056782},
-    {"wallet.sendGrams", 789731197}
+    {"wallet.sendGrams", -1837893526}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -146,6 +148,33 @@ Status from_json(tonlib_api::bip39Hints &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "words", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.words_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::config &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "config", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.config_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "blockchain_name", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.blockchain_name_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "use_callbacks_for_network", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.use_callbacks_for_network_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "ignore_cache", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.ignore_cache_, value));
     }
   }
   return Status::OK();
@@ -277,10 +306,13 @@ Status from_json(tonlib_api::options &to, JsonObject &from) {
       TRY_STATUS(from_json(to.keystore_directory_, value));
     }
   }
+  return Status::OK();
+}
+Status from_json(tonlib_api::sendGramsResult &to, JsonObject &from) {
   {
-    TRY_RESULT(value, get_json_object_field(from, "use_callbacks_for_network", JsonValue::Type::Null, true));
+    TRY_RESULT(value, get_json_object_field(from, "sent_until", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
-      TRY_STATUS(from_json(to.use_callbacks_for_network_, value));
+      TRY_STATUS(from_json(to.sent_until_, value));
     }
   }
   return Status::OK();
@@ -746,6 +778,18 @@ Status from_json(tonlib_api::generic_sendGrams &to, JsonObject &from) {
     }
   }
   {
+    TRY_RESULT(value, get_json_object_field(from, "timeout", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.timeout_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "allow_send_to_uninited", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.allow_send_to_uninited_, value));
+    }
+  }
+  {
     TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json_bytes(to.message_, value));
@@ -1156,6 +1200,14 @@ void to_json(JsonValueScope &jv, const tonlib_api::bip39Hints &object) {
   jo << ctie("@type", "bip39Hints");
   jo << ctie("words", ToJson(object.words_));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::config &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "config");
+  jo << ctie("config", ToJson(object.config_));
+  jo << ctie("blockchain_name", ToJson(object.blockchain_name_));
+  jo << ctie("use_callbacks_for_network", ToJson(object.use_callbacks_for_network_));
+  jo << ctie("ignore_cache", ToJson(object.ignore_cache_));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::error &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "error");
@@ -1225,9 +1277,15 @@ void to_json(JsonValueScope &jv, const tonlib_api::ok &object) {
 void to_json(JsonValueScope &jv, const tonlib_api::options &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "options");
-  jo << ctie("config", ToJson(object.config_));
+  if (object.config_) {
+    jo << ctie("config", ToJson(object.config_));
+  }
   jo << ctie("keystore_directory", ToJson(object.keystore_directory_));
-  jo << ctie("use_callbacks_for_network", ToJson(object.use_callbacks_for_network_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::sendGramsResult &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "sendGramsResult");
+  jo << ctie("sent_until", ToJson(object.sent_until_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::updateSendLiteServerQuery &object) {
   auto jo = jv.enter_object();
@@ -1450,6 +1508,8 @@ void to_json(JsonValueScope &jv, const tonlib_api::generic_sendGrams &object) {
     jo << ctie("destination", ToJson(object.destination_));
   }
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
+  jo << ctie("timeout", ToJson(object.timeout_));
+  jo << ctie("allow_send_to_uninited", ToJson(object.allow_send_to_uninited_));
   jo << ctie("message", ToJson(JsonBytes{object.message_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::getBip39Hints &object) {
@@ -1525,7 +1585,9 @@ void to_json(JsonValueScope &jv, const tonlib_api::onLiteServerQueryResult &obje
 void to_json(JsonValueScope &jv, const tonlib_api::options_setConfig &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "options.setConfig");
-  jo << ctie("config", ToJson(object.config_));
+  if (object.config_) {
+    jo << ctie("config", ToJson(object.config_));
+  }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::raw_getAccountAddress &object) {
   auto jo = jv.enter_object();

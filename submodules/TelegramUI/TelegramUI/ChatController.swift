@@ -46,6 +46,7 @@ import UrlHandling
 import ReactionSelectionNode
 import MessageReactionListUI
 import AppBundle
+import WalletUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -538,7 +539,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let strongSelf = self, !actions.isEmpty else {
                         return
                     }
-                    let reactions: [(String, String, String)] = [
+                    /*let reactions: [(String, String, String)] = [
                         ("😔", "Sad", "sad"),
                         ("😳", "Surprised", "surprised"),
                         ("😂", "Fun", "lol"),
@@ -561,8 +562,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     if Namespaces.Message.allScheduled.contains(message.id.namespace) {
                         reactionItems = []
-                    }
-                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: reactionItems, recognizer: recognizer)
+                    }*/
+                    let controller = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .extracted(ChatMessageContextExtractedContentSource(chatNode: strongSelf.chatDisplayNode, message: message)), items: .single(actions), reactionItems: [], recognizer: recognizer)
                     strongSelf.currentContextController = controller
                     controller.reactionSelected = { [weak controller] value in
                         guard let strongSelf = self, let message = updatedMessages.first else {
@@ -5078,8 +5079,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     }, recognizedQRCode: { [weak self] code in
-                        if let strongSelf = self, let (host, port, username, password, secret) = parseProxyUrl(code) {
-                            strongSelf.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
+                        if let strongSelf = self {
+                            if let (host, port, username, password, secret) = parseProxyUrl(code) {
+                                strongSelf.openResolved(ResolvedUrl.proxy(host: host, port: port, username: username, password: password, secret: secret))
+                            } else if let url = URL(string: code), let parsedWalletUrl = parseWalletUrl(url) {
+                                strongSelf.openResolved(ResolvedUrl.wallet(address: parsedWalletUrl.address, amount: parsedWalletUrl.amount, comment: parsedWalletUrl.comment))
+                            }
                         }
                     }, presentSchedulePicker: { [weak self] done in
                         guard let strongSelf = self else {

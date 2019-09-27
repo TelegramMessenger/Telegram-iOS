@@ -13,14 +13,16 @@ class WalletInfoEmptyItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let address: String
+    let presentAddressContextMenu: (ASDisplayNode) -> Void
     
     let selectable: Bool = false
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String, presentAddressContextMenu: @escaping (ASDisplayNode) -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.address = address
+        self.presentAddressContextMenu = presentAddressContextMenu
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -62,6 +64,8 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
     private let textNode: TextNode
     private let addressNode: TextNode
     
+    private var item: WalletInfoEmptyItem?
+    
     init(account: Account) {
         self.offsetContainer = ASDisplayNode()
         
@@ -86,6 +90,21 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         self.offsetContainer.addSubnode(self.textNode)
         self.offsetContainer.addSubnode(self.addressNode)
         self.addSubnode(self.offsetContainer)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        self.addressNode.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
+    }
+    
+    @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
+        if case .began = recognizer.state {
+            guard let item = self.item else {
+                return
+            }
+            item.presentAddressContextMenu(self.addressNode)
+        }
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -113,16 +132,18 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
             let sideInset: CGFloat = 16.0
             var iconOffset = CGPoint()
             
-            let title = "Wallet Created"
-            let text = "Your wallet address"
+            let title = item.strings.Wallet_Info_WalletCreated
+            let text = item.strings.Wallet_Info_Address
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.bold(32.0), textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
+            let textColor = item.theme.list.itemPrimaryTextColor
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(16.0), textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: Font.bold(32.0), textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(16.0), textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
             
             var addressString = item.address
             addressString.insert("\n", at: addressString.index(addressString.startIndex, offsetBy: addressString.count / 2))
-            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: addressString, font: Font.monospace(16.0), textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
+            let (addressLayout, addressApply) = makeAddressLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: addressString, font: Font.monospace(16.0), textColor: textColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - sideInset * 2.0, height: .greatestFiniteMagnitude), alignment: .center, lineSpacing: 0.1, cutout: nil, insets: UIEdgeInsets()))
             
             let contentVerticalOrigin: CGFloat = 32.0
             
@@ -137,6 +158,8 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
                 guard let strongSelf = self else {
                     return
                 }
+                
+                strongSelf.item = item
                 
                 strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                 

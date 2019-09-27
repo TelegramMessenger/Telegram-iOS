@@ -69,7 +69,7 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(walletSendScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo))
+            strongSelf.push(walletSendScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, randomId: arc4random64(), walletInfo: strongSelf.walletInfo))
         }, receiveAction: { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -80,11 +80,11 @@ public final class WalletInfoScreen: ViewController {
                 return
             }
             strongSelf.push(walletTransactionInfoController(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, walletTransaction: transaction))
-        }, present: { [weak self] c in
+        }, present: { [weak self] c, a in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.present(c, in: .window(.root))
+            strongSelf.present(c, in: .window(.root), with: a)
         })
         
         self.displayNodeDidLoad()
@@ -195,34 +195,40 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let balanceSubtitleNode: ImmediateTextNode
     private let receiveButtonNode: SolidRoundedButtonNode
     private let sendButtonNode: SolidRoundedButtonNode
-    private let headerBackgroundNode: ASImageNode
+    private let headerBackgroundNode: ASDisplayNode
+    private let headerCornerNode: ASImageNode
     
     init(account: Account, presentationData: PresentationData, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
         self.balanceNode = WalletInfoBalanceNode(account: account, theme: presentationData.theme)
         
         self.balanceSubtitleNode = ImmediateTextNode()
         self.balanceSubtitleNode.displaysAsynchronously = false
-        self.balanceSubtitleNode.attributedText = NSAttributedString(string: "your balance", font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
+        self.balanceSubtitleNode.attributedText = NSAttributedString(string: presentationData.strings.Wallet_Info_YourBalance, font: Font.regular(13), textColor: UIColor(white: 1.0, alpha: 0.6))
         
-        self.headerBackgroundNode = ASImageNode()
-        self.headerBackgroundNode.displaysAsynchronously = false
-        self.headerBackgroundNode.displayWithoutProcessing = true
-        self.headerBackgroundNode.image = generateImage(CGSize(width: 20.0, height: 20.0), rotatedContext: { size, context in
+        self.headerBackgroundNode = ASDisplayNode()
+        self.headerBackgroundNode.backgroundColor = .black
+        
+        self.headerCornerNode = ASImageNode()
+        self.headerCornerNode.displaysAsynchronously = false
+        self.headerCornerNode.displayWithoutProcessing = true
+        self.headerCornerNode.image = generateImage(CGSize(width: 20.0, height: 10.0), rotatedContext: { size, context in
+            
             context.setFillColor(UIColor.black.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
             context.setBlendMode(.copy)
             context.setFillColor(UIColor.clear.cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: size.height / 2.0), size: size))
+            context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 20.0, height: 20.0)))
         })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 1)
         
-        self.receiveButtonNode = SolidRoundedButtonNode(title: "Receive", icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
-        self.sendButtonNode = SolidRoundedButtonNode(title: "Send", icon: UIImage(bundleImageName: "Wallet/SendButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: UIImage(bundleImageName: "Wallet/SendButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         
         super.init()
         
         self.addSubnode(self.headerBackgroundNode)
+        self.addSubnode(self.headerCornerNode)
         self.addSubnode(self.receiveButtonNode)
         self.addSubnode(self.sendButtonNode)
         self.addSubnode(self.balanceNode)
@@ -298,7 +304,8 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         transition.updateFrameAdditive(node: self.balanceSubtitleNode, frame: balanceSubtitleFrame)
         
         let headerHeight: CGFloat = 1000.0
-        transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset + 10.0 - headerHeight), size: CGSize(width: size.width, height: headerHeight)))
+        transition.updateFrame(node: self.headerBackgroundNode, frame: CGRect(origin: CGPoint(x: -1.0, y: effectiveOffset - headerHeight), size: CGSize(width: size.width + 2.0, height: headerHeight)))
+        transition.updateFrame(node: self.headerCornerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: effectiveOffset), size: CGSize(width: size.width, height: 10.0)))
         
         let buttonOffset = effectiveOffset
         
@@ -403,10 +410,10 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void) -> ListViewItem {
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void, presentAddressContextMenu: @escaping (ASDisplayNode) -> Void) -> ListViewItem {
         switch self {
         case let .empty(address):
-            return WalletInfoEmptyItem(account: account, theme: theme, strings: strings, address: address)
+            return WalletInfoEmptyItem(account: account, theme: theme, strings: strings, address: address, presentAddressContextMenu: presentAddressContextMenu)
         case let .transaction(_, transaction):
             return WalletInfoTransactionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: transaction, action: {
                 action(transaction)
@@ -415,12 +422,12 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletTransaction) -> Void) -> WalletInfoListTransaction {
+private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletTransaction) -> Void, presentAddressContextMenu: @escaping (ASDisplayNode) -> Void) -> WalletInfoListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, presentAddressContextMenu: presentAddressContextMenu), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, presentAddressContextMenu: presentAddressContextMenu), directionHint: nil) }
     
     return WalletInfoListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -433,7 +440,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private let address: String
     
     private let openTransaction: (WalletTransaction) -> Void
-    private let present: (ViewController) -> Void
+    private let present: (ViewController, Any?) -> Void
     
     private let hapticFeedback = HapticFeedback()
     
@@ -463,7 +470,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private var updateTimestampTimer: SwiftSignalKit.Timer?
     
-    init(account: Account, tonContext: TonContext, presentationData: PresentationData, walletInfo: WalletInfo, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletTransaction) -> Void, present: @escaping (ViewController) -> Void) {
+    init(account: Account, tonContext: TonContext, presentationData: PresentationData, walletInfo: WalletInfo, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
         self.tonContext = tonContext
         self.presentationData = presentationData
@@ -475,7 +482,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.headerNode = WalletInfoHeaderNode(account: account, presentationData: presentationData, sendAction: sendAction, receiveAction: receiveAction)
         
         self.listNode = ListView()
-        self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         self.listNode.isHidden = true
         
@@ -737,10 +744,10 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 strongSelf.contentReady.set(.single(true))
             }
             
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "An Error Occurred", text: "The wallet state can not be retrieved at this time. Please try again later.", actions: [
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorTitle, text: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorText, actions: [
                 TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                 })
-            ], actionLayout: .vertical))
+            ], actionLayout: .vertical), nil)
         }))
     }
     
@@ -821,6 +828,21 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 return
             }
             strongSelf.openTransaction(transaction)
+        }, presentAddressContextMenu: { [weak self] node in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.present(ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                guard let strongSelf = self else {
+                    return
+                }
+                UIPasteboard.general.string = strongSelf.address
+            })]), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak node] in
+                guard let strongSelf = self, let node = node else {
+                    return nil
+                }
+                return (node, node.bounds, strongSelf, strongSelf.bounds)
+            }))
         })
         self.currentEntries = updatedEntries
         
@@ -853,27 +875,4 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
         }
     }
-}
-
-func formatBalanceText(_ value: Int64, decimalSeparator: String) -> String {
-    var balanceText = "\(abs(value))"
-    while balanceText.count < 10 {
-        balanceText.insert("0", at: balanceText.startIndex)
-    }
-    balanceText.insert(contentsOf: decimalSeparator, at: balanceText.index(balanceText.endIndex, offsetBy: -9))
-    while true {
-        if balanceText.hasSuffix("0") {
-            if balanceText.hasSuffix("\(decimalSeparator)0") {
-                break
-            } else {
-                balanceText.removeLast()
-            }
-        } else {
-            break
-        }
-    }
-    if value < 0 {
-        balanceText.insert("-", at: balanceText.startIndex)
-    }
-    return balanceText
 }

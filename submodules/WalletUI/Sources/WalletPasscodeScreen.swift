@@ -80,7 +80,7 @@ public final class WalletPasscodeScreen: ViewController {
                             }
                             return true
                         }
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sending(walletInfo, address, amount, comment, strongSelf.randomId)))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sending(walletInfo, address, amount, comment, strongSelf.randomId), walletCreatedPreloadState: nil))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }

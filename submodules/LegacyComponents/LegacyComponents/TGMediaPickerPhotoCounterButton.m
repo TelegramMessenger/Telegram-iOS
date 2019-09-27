@@ -66,7 +66,7 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
         _backgroundView.image = backgroundImage;
         [_wrapperView addSubview:_backgroundView];
     
-        _countLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, -0.5f, frame.size.width, frame.size.height)];
+        _countLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, -0.5f, frame.size.width + 1.0, frame.size.height)];
         _countLabel.backgroundColor = [UIColor clearColor];
         _countLabel.font = [TGFont roundedFontOfSize:17];
         _countLabel.text = [TGStringUtils stringWithLocalizedNumber:0];
@@ -292,7 +292,7 @@ const CGFloat TGPhotoCounterButtonMaskFade = 18;
     if (sizeToFit)
         [_countLabel sizeToFit];
     
-    CGFloat labelWidth = CGRound(_countLabel.frame.size.width);
+    CGFloat labelWidth = ceilf(_countLabel.frame.size.width);
     CGFloat labelOrigin = 0.0f;
 
     if (![self _useRtlLayout])

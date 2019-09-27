@@ -118,7 +118,7 @@ void transfer_grams(Client& client, std::string from, std::string to, td::int64 
   auto balance = get_balance(client, to);
   sync_send(client, tonlib_api::make_object<tonlib_api::generic_sendGrams>(
                         std::move(input_key), tonlib_api::make_object<tonlib_api::accountAddress>(from),
-                        tonlib_api::make_object<tonlib_api::accountAddress>(to), amount, "GIFT"))
+                        tonlib_api::make_object<tonlib_api::accountAddress>(to), amount, 0, true, "GIFT"))
       .ensure();
   while (balance == get_balance(client, to)) {
     client.receive(1);
@@ -196,7 +196,8 @@ int main(int argc, char* argv[]) {
 
   Client client;
   {
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(global_config_str, ".", false)))
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(
+                          make_object<tonlib_api::config>(global_config_str, "", false, false), ".")))
         .ensure();
   }
   //dump_transaction_history(client, get_test_giver_address(client));
@@ -209,7 +210,8 @@ int main(int argc, char* argv[]) {
   return 0;
   {
     // init
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(global_config_str, ".", false)))
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(
+                          make_object<tonlib_api::config>(global_config_str, "", false, false), ".")))
         .ensure();
 
     auto key = sync_send(client, make_object<tonlib_api::createNewKey>(
@@ -224,7 +226,9 @@ int main(int argc, char* argv[]) {
     auto public_key_raw = key->public_key_;
     td::Ed25519::PublicKey public_key_std(td::SecureString{public_key_raw});
 
-    sync_send(client, make_object<tonlib_api::options_setConfig>(global_config_str)).ensure();
+    sync_send(client, make_object<tonlib_api::options_setConfig>(
+                          make_object<tonlib_api::config>(global_config_str, "", false, false)))
+        .ensure();
 
     auto wallet_addr = GenericAccount::get_address(0, TestWallet::get_init_state(public_key_std));
     {
@@ -307,10 +311,10 @@ int main(int argc, char* argv[]) {
     }
 
     {
-      sync_send(client,
-                make_object<tonlib_api::generic_sendGrams>(
-                    create_input_key(), make_object<tonlib_api::accountAddress>(wallet_addr.rserialize()),
-                    make_object<tonlib_api::accountAddress>(test_giver_address), 1000000000ll * 3333 / 1000, "GIFT"))
+      sync_send(client, make_object<tonlib_api::generic_sendGrams>(
+                            create_input_key(), make_object<tonlib_api::accountAddress>(wallet_addr.rserialize()),
+                            make_object<tonlib_api::accountAddress>(test_giver_address), 1000000000ll * 3333 / 1000, 0,
+                            true, "GIFT"))
           .ensure();
     }
     while (true) {

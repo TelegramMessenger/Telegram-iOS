@@ -75,7 +75,7 @@ private func walletSettingsControllerEntries(presentationData: PresentationData,
     var entries: [WalletSettingsEntry] = []
     
     entries.append(.exportWallet(presentationData.theme, "Export Wallet"))
-    entries.append(.deleteWallet(presentationData.theme, "Delete Wallet"))
+    entries.append(.deleteWallet(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWallet))
     
     return entries
 }
@@ -94,20 +94,30 @@ public func walletSettingsController(context: AccountContext, tonContext: TonCon
     var replaceAllWalletControllersImpl: ((ViewController) -> Void)?
     
     let arguments = WalletSettingsControllerArguments(exportWallet: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+        presentControllerImpl?(controller, nil)
         let _ = (walletRestoreWords(network: context.account.network, walletInfo: walletInfo, tonInstance: tonContext.instance, keychain: tonContext.keychain)
-        |> deliverOnMainQueue).start(next: { wordList in
-            pushControllerImpl?(WalletWordDisplayScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, wordList: wordList, mode: .export))
+        |> deliverOnMainQueue).start(next: { [weak controller] wordList in
+            controller?.dismiss()
+            pushControllerImpl?(WalletWordDisplayScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, wordList: wordList, mode: .export, walletCreatedPreloadState: nil))
+        }, error: { [weak controller] _ in
+            controller?.dismiss()
         })
     }, deleteWallet: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-            ActionSheetButtonItem(title: "Delete Wallet", color: .destructive, action: { [weak actionSheet] in
+            ActionSheetButtonItem(title: presentationData.strings.Wallet_Settings_DeleteWallet, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
+                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                presentControllerImpl?(controller, nil)
                 let _ = (deleteLocalWalletData(postbox: context.account.postbox, network: context.account.network, tonInstance: tonContext.instance, keychain: tonContext.keychain, walletInfo: walletInfo)
-                |> deliverOnMainQueue).start(error: { _ in
-                }, completed: {
-                    replaceAllWalletControllersImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro))
+                |> deliverOnMainQueue).start(error: { [weak controller] _ in
+                    controller?.dismiss()
+                }, completed: { [weak controller] in
+                    controller?.dismiss()
+                    replaceAllWalletControllersImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro, walletCreatedPreloadState: nil))
                 })
             })
         ]), ActionSheetItemGroup(items: [
@@ -120,7 +130,7 @@ public func walletSettingsController(context: AccountContext, tonContext: TonCon
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<WalletSettingsEntry>, WalletSettingsEntry.ItemGenerationArguments)) in
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text("Wallet Settings"), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Settings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletSettingsControllerEntries(presentationData: presentationData, state: state), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))

@@ -384,7 +384,7 @@ public class WallpaperGalleryController: ViewController {
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                                     
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
-                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers                                        
                                         themeSpecificChatWallpapers[current.theme.index] = wallpaper
                                         return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     }) |> deliverOnMainQueue).start(completed: {

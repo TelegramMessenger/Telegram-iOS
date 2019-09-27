@@ -813,9 +813,9 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
                     self.displayLinkAnimator = DisplayLinkAnimator(duration: 0.2 * animationDurationFactor * UIView.animationDurationFactor(), from: 0.0, to: 0.999, update: { [weak self] value in
                         (self?.propertyAnimator as? UIViewPropertyAnimator)?.fractionComplete = value
-                        }, completion: {
-                            completedEffect = true
-                            intermediateCompletion()
+                    }, completion: {
+                        completedEffect = true
+                        intermediateCompletion()
                     })
                 }
                 self.effectView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.05 * animationDurationFactor, delay: 0.15, timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, removeOnCompletion: false)

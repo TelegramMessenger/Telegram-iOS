@@ -55,6 +55,33 @@ void bip39Hints::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
+config::config()
+  : config_()
+  , blockchain_name_()
+  , use_callbacks_for_network_()
+  , ignore_cache_()
+{}
+
+config::config(std::string const &config_, std::string const &blockchain_name_, bool use_callbacks_for_network_, bool ignore_cache_)
+  : config_(std::move(config_))
+  , blockchain_name_(std::move(blockchain_name_))
+  , use_callbacks_for_network_(use_callbacks_for_network_)
+  , ignore_cache_(ignore_cache_)
+{}
+
+const std::int32_t config::ID;
+
+void config::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "config");
+    s.store_field("config", config_);
+    s.store_field("blockchain_name", blockchain_name_);
+    s.store_field("use_callbacks_for_network", use_callbacks_for_network_);
+    s.store_field("ignore_cache", ignore_cache_);
+    s.store_class_end();
+  }
+}
+
 error::error()
   : code_()
   , message_()
@@ -268,13 +295,11 @@ void ok::store(td::TlStorerToString &s, const char *field_name) const {
 options::options()
   : config_()
   , keystore_directory_()
-  , use_callbacks_for_network_()
 {}
 
-options::options(std::string const &config_, std::string const &keystore_directory_, bool use_callbacks_for_network_)
+options::options(object_ptr<config> &&config_, std::string const &keystore_directory_)
   : config_(std::move(config_))
   , keystore_directory_(std::move(keystore_directory_))
-  , use_callbacks_for_network_(use_callbacks_for_network_)
 {}
 
 const std::int32_t options::ID;
@@ -282,9 +307,26 @@ const std::int32_t options::ID;
 void options::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "options");
-    s.store_field("config", config_);
+    if (config_ == nullptr) { s.store_field("config", "null"); } else { config_->store(s, "config"); }
     s.store_field("keystore_directory", keystore_directory_);
-    s.store_field("use_callbacks_for_network", use_callbacks_for_network_);
+    s.store_class_end();
+  }
+}
+
+sendGramsResult::sendGramsResult()
+  : sent_until_()
+{}
+
+sendGramsResult::sendGramsResult(std::int64_t sent_until_)
+  : sent_until_(sent_until_)
+{}
+
+const std::int32_t sendGramsResult::ID;
+
+void sendGramsResult::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "sendGramsResult");
+    s.store_field("sent_until", sent_until_);
     s.store_class_end();
   }
 }
@@ -873,14 +915,18 @@ generic_sendGrams::generic_sendGrams()
   , source_()
   , destination_()
   , amount_()
+  , timeout_()
+  , allow_send_to_uninited_()
   , message_()
 {}
 
-generic_sendGrams::generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::string const &message_)
+generic_sendGrams::generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_)
   : private_key_(std::move(private_key_))
   , source_(std::move(source_))
   , destination_(std::move(destination_))
   , amount_(amount_)
+  , timeout_(timeout_)
+  , allow_send_to_uninited_(allow_send_to_uninited_)
   , message_(std::move(message_))
 {}
 
@@ -893,6 +939,8 @@ void generic_sendGrams::store(td::TlStorerToString &s, const char *field_name) c
     if (source_ == nullptr) { s.store_field("source", "null"); } else { source_->store(s, "source"); }
     if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
     s.store_field("amount", amount_);
+    s.store_field("timeout", timeout_);
+    s.store_field("allow_send_to_uninited", allow_send_to_uninited_);
     s.store_bytes_field("message", message_);
     s.store_class_end();
   }
@@ -1106,7 +1154,7 @@ options_setConfig::options_setConfig()
   : config_()
 {}
 
-options_setConfig::options_setConfig(std::string const &config_)
+options_setConfig::options_setConfig(object_ptr<config> &&config_)
   : config_(std::move(config_))
 {}
 
@@ -1115,7 +1163,7 @@ const std::int32_t options_setConfig::ID;
 void options_setConfig::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "options_setConfig");
-    s.store_field("config", config_);
+    if (config_ == nullptr) { s.store_field("config", "null"); } else { config_->store(s, "config"); }
     s.store_class_end();
   }
 }

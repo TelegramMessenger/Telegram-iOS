@@ -400,8 +400,7 @@ public class ItemListSingleLineInputItemNode: ListViewItemNode, UITextFieldDeleg
     
     @objc public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if let item = self.item {
-            var newText = textField.text ?? ""
-            newText.replaceSubrange(newText.index(newText.startIndex, offsetBy: range.lowerBound) ..< newText.index(newText.startIndex, offsetBy: range.upperBound), with: string)
+            let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
             if !item.shouldUpdateText(newText) {
                 return false
             }

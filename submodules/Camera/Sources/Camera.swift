@@ -60,11 +60,13 @@ private final class CameraContext {
         self.session.startRunning()
     }
     
-    func stopCapture() {
-        self.session.beginConfiguration()
-        self.input.invalidate(for: self.session)
-        self.output.invalidate(for: self.session)
-        self.session.commitConfiguration()
+    func stopCapture(invalidate: Bool = false) {
+        if invalidate {
+            self.session.beginConfiguration()
+            self.input.invalidate(for: self.session)
+            self.output.invalidate(for: self.session)
+            self.session.commitConfiguration()
+        }
         
         self.session.stopRunning()
     }
@@ -143,10 +145,10 @@ public final class Camera {
         }
     }
     
-    public func stopCapture() {
+    public func stopCapture(invalidate: Bool = false) {
         self.queue.async {
             if let context = self.contextRef?.takeUnretainedValue() {
-                context.stopCapture()
+                context.stopCapture(invalidate: invalidate)
             }
         }
     }

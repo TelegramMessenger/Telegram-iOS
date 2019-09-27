@@ -10,7 +10,7 @@ public enum QrCodeIcon {
     case custom(UIImage?)
 }
 
-public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, icon: QrCodeIcon, ecl: String = "M", scale: CGFloat = 0.0) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = nil, icon: QrCodeIcon, ecl: String = "M") -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return Signal<CIImage, NoError> { subscriber in
         if let data = string.data(using: .isoLatin1, allowLossyConversion: false), let filter = CIFilter(name: "CIQRCodeGenerator") {
             filter.setValue(data, forKey: "inputMessage")
@@ -25,7 +25,7 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
     }
     |> map { inputImage in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: scale, clear: true)
+            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)

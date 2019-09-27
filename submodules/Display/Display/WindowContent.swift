@@ -1059,6 +1059,18 @@ public class Window1 {
             let currentLocation = location
             let deltaY = keyboardGestureBeginLocation.y - location.y
             if deltaY * deltaY >= 3.0 * 3.0 || self.windowLayout.upperKeyboardInputPositionBound != nil {
+                if self.windowLayout.upperKeyboardInputPositionBound == nil {
+                    var enableGesture = true
+                    if let view = self.hostView.containerView.hitTest(location, with: nil) {
+                        if doesViewTreeDisableInteractiveTransitionGestureRecognizer(view) {
+                            enableGesture = false
+                        }
+                    }
+                    if !enableGesture {
+                        self.keyboardGestureBeginLocation = nil
+                        return
+                    }
+                }
                 self.updateLayout {
                     $0.update(upperKeyboardInputPositionBound: currentLocation.y + (self.keyboardGestureAccessoryHeight ?? 0.0), transition: .immediate, overrideTransition: false)
                 }

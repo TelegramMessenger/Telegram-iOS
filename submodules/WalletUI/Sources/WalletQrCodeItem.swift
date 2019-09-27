@@ -12,12 +12,17 @@ class WalletQrCodeItem: ListViewItem, ItemListItem {
     let address: String
     let sectionId: ItemListSectionId
     let style: ItemListStyle
+    let action: (() -> Void)?
+    let longTapAction: (() -> Void)?
+    public let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, address: String, sectionId: ItemListSectionId, style: ItemListStyle) {
+    init(theme: PresentationTheme, address: String, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
         self.theme = theme
         self.address = address
         self.sectionId = sectionId
         self.style = style
+        self.action = action
+        self.longTapAction = longTapAction
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -55,10 +60,6 @@ class WalletQrCodeItem: ListViewItem, ItemListItem {
 }
 
 class WalletQrCodeItemNode: ListViewItemNode {
-    private let backgroundNode: ASDisplayNode
-    private let topStripeNode: ASDisplayNode
-    private let bottomStripeNode: ASDisplayNode
-    
     private let imageNode: TransformImageNode
     
     private var item: WalletQrCodeItem?
@@ -68,21 +69,42 @@ class WalletQrCodeItemNode: ListViewItemNode {
     }
     
     init() {
-        self.backgroundNode = ASDisplayNode()
-        self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
-        
-        self.topStripeNode = ASDisplayNode()
-        self.topStripeNode.isLayerBacked = true
-        
-        self.bottomStripeNode = ASDisplayNode()
-        self.bottomStripeNode.isLayerBacked = true
-        
         self.imageNode = TransformImageNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
         
         self.addSubnode(self.imageNode)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { [weak self] point in
+            return .waitForSingleTap
+        }
+        recognizer.highlight = { [weak self] point in
+            self?.imageNode.alpha = point != nil ? 0.4 : 1.0
+        }
+        self.view.addGestureRecognizer(recognizer)
+    }
+    
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .tap:
+                    self.item?.action?()
+                case .longTap:
+                    self.item?.longTapAction?()
+                default:
+                    break
+                }
+            }
+        default:
+            break
+        }
     }
     
     func asyncLayout() -> (_ item: WalletQrCodeItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -98,7 +120,7 @@ class WalletQrCodeItemNode: ListViewItemNode {
                 updatedTheme = item.theme
             }
             
-            if currentItem?.address != item.address {
+            if currentItem?.address != item.address || updatedTheme != nil {
                 updatedAddress = item.address
             }
             
@@ -106,22 +128,16 @@ class WalletQrCodeItemNode: ListViewItemNode {
             let insets: UIEdgeInsets
             let separatorHeight = UIScreenPixel
             
-            let inset: CGFloat = 12.0
-            var imageSize = CGSize(width: 256.0, height: 256.0)
+            let inset: CGFloat = 0.0
+            var imageSize = CGSize(width: 128.0, height: 128.0)
             let imageApply = makeImageLayout(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil))
             
-            let itemBackgroundColor: UIColor
-            let itemSeparatorColor: UIColor
             switch item.style {
             case .plain:
-                itemBackgroundColor = item.theme.list.plainBackgroundColor
-                itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
-                contentSize = CGSize(width: params.width, height: imageSize.height + inset * 2.0)
+                contentSize = CGSize(width: params.width, height: imageSize.height + 30.0)
                 insets = itemListNeighborsPlainInsets(neighbors)
             case .blocks:
-                itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
-                itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
-                contentSize = CGSize(width: params.width, height: imageSize.height + inset * 2.0)
+                contentSize = CGSize(width: params.width, height: imageSize.height + 30.0)
                 insets = itemListNeighborsGroupedInsets(neighbors)
             }
             
@@ -131,69 +147,13 @@ class WalletQrCodeItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     strongSelf.item = item
                     
-                    if let _ = updatedTheme {
-                        strongSelf.topStripeNode.backgroundColor = itemSeparatorColor
-                        strongSelf.bottomStripeNode.backgroundColor = itemSeparatorColor
-                        strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
-                    }
-                    
                     if let updatedAddress = updatedAddress {
-                        strongSelf.imageNode.setSignal(qrCode(string: updatedAddress, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Settings/Wallet/IntroIcon")), ecl: "Q"), attemptSynchronously: true)
+                        strongSelf.imageNode.setSignal(qrCode(string: updatedAddress, color: item.theme.list.itemPrimaryTextColor.withAlphaComponent(0.77), backgroundColor: item.theme.list.blocksBackgroundColor, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")), ecl: "Q"), attemptSynchronously: true)
                     }
                     
                     let _ = imageApply()
-                    
-                    let leftInset: CGFloat
-                    
-                    switch item.style {
-                    case .plain:
-                        leftInset = 35.0 + params.leftInset
                         
-                        if strongSelf.backgroundNode.supernode != nil {
-                            strongSelf.backgroundNode.removeFromSupernode()
-                        }
-                        if strongSelf.topStripeNode.supernode != nil {
-                            strongSelf.topStripeNode.removeFromSupernode()
-                        }
-                        if strongSelf.bottomStripeNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 0)
-                        }
-                        
-                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
-                    case .blocks:
-                        leftInset = 16.0 + params.leftInset
-                        
-                        if strongSelf.backgroundNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
-                        }
-                        if strongSelf.topStripeNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.topStripeNode, at: 1)
-                        }
-                        if strongSelf.bottomStripeNode.supernode == nil {
-                            strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
-                        }
-                        switch neighbors.top {
-                        case .sameSection(false):
-                            strongSelf.topStripeNode.isHidden = true
-                        default:
-                            strongSelf.topStripeNode.isHidden = false
-                        }
-                        let bottomStripeInset: CGFloat
-                        let bottomStripeOffset: CGFloat
-                        switch neighbors.bottom {
-                        case .sameSection(false):
-                            bottomStripeInset = 16.0 + params.leftInset
-                            bottomStripeOffset = -separatorHeight
-                        default:
-                            bottomStripeInset = 0.0
-                            bottomStripeOffset = 0.0
-                        }
-                        strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                        strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: separatorHeight))
-                        strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: params.width - bottomStripeInset, height: separatorHeight))
-                    }
-                    
-                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: (params.width - imageSize.width) / 2.0, y: 12.0), size: imageSize)
+                    strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: (params.width - imageSize.width) / 2.0, y: 0.0), size: imageSize)
                 }
             })
         }

@@ -15,7 +15,8 @@ public struct PresentationResourcesSettings {
     public static let dataAndStorage = UIImage(bundleImageName: "Settings/MenuIcons/DataAndStorage")?.precomposed()
     public static let appearance = UIImage(bundleImageName: "Settings/MenuIcons/Appearance")?.precomposed()
     public static let language = UIImage(bundleImageName: "Settings/MenuIcons/Language")?.precomposed()
-    
+
+    public static let wallet = UIImage(bundleImageName: "Settings/MenuIcons/Wallet")?.precomposed()
     public static let passport = UIImage(bundleImageName: "Settings/MenuIcons/Passport")?.precomposed()
     public static let watch = UIImage(bundleImageName: "Settings/MenuIcons/Watch")?.precomposed()
     

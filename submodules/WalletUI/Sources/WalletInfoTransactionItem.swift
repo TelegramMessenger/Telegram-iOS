@@ -12,6 +12,7 @@ private let transactionIcon = UIImage(bundleImageName: "Wallet/TransactionGem")?
 
 class WalletInfoTransactionItem: ListViewItem {
     let theme: PresentationTheme
+    let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
     let walletTransaction: WalletTransaction
     let action: () -> Void
@@ -20,6 +21,7 @@ class WalletInfoTransactionItem: ListViewItem {
     
     init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletTransaction, action: @escaping () -> Void) {
         self.theme = theme
+        self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.walletTransaction = walletTransaction
         self.action = action
@@ -85,12 +87,6 @@ private let textFont = Font.monospace(15.0)
 private let descriptionFont = Font.regular(15.0)
 private let dateFont = Font.regular(14.0)
 private let directionFont = Font.regular(15.0)
-
-private func formatAddress(_ address: String) -> String {
-    var address = address
-    address.insert("\n", at: address.index(address.startIndex, offsetBy: address.count / 2))
-    return address
-}
 
 class WalletInfoTransactionItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
@@ -194,9 +190,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 titleColor = item.theme.list.itemPrimaryTextColor
                 if item.walletTransaction.outMessages.isEmpty {
                     directionText = ""
-                    text = "Empty Transaction"
+                    text = item.strings.Wallet_Info_UnknownTransaction
                 } else {
-                    directionText = "to"
+                    directionText = item.strings.Wallet_Info_TransactionTo
                     for message in item.walletTransaction.outMessages {
                         if !text.isEmpty {
                             text.append("\n")
@@ -212,7 +208,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             } else {
                 title = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
-                directionText = "from"
+                directionText = item.strings.Wallet_Info_TransactionFrom
                 if let inMessage = item.walletTransaction.inMessage {
                     text = formatAddress(inMessage.source)
                     description = inMessage.textMessage

@@ -2078,10 +2078,13 @@ public final class WalletWordCheckScreen: ViewController {
     
     private let startTime: Double
     
-    public init(context: AccountContext, tonContext: TonContext, mode: WalletWordCheckMode) {
+    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult>?
+    
+    public init(context: AccountContext, tonContext: TonContext, mode: WalletWordCheckMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult>?) {
         self.context = context
         self.tonContext = tonContext
         self.mode = mode
+        self.walletCreatedPreloadState = walletCreatedPreloadState
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -2139,16 +2142,16 @@ public final class WalletWordCheckScreen: ViewController {
                             }
                             return true
                         }
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo)))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }
                 } else {
                     strongSelf.view.endEditing(true)
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "Incorrect words!", text: "The secret words you have entered do not match the ones in the list.", actions: [
-                        TextAlertAction(type: .defaultAction, title: "Try Again", action: {
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_WordCheck_IncorrectHeader, text: strongSelf.presentationData.strings.Wallet_WordCheck_IncorrectText, actions: [
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_WordCheck_TryAgain, action: {
                         }),
-                        TextAlertAction(type: .genericAction, title: "View Words", action: {
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Wallet_WordCheck_ViewWords, action: {
                             guard let strongSelf = self else {
                                 return
                             }
@@ -2168,7 +2171,7 @@ public final class WalletWordCheckScreen: ViewController {
                 }
                 if !allWordsAreValid {
                     strongSelf.view.endEditing(true)
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "Incorrect words", text: "Sorry, you have entered incorrect secret words. Please double check and try again.", actions: [
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectTitle, text: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectText, actions: [
                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
@@ -2192,7 +2195,7 @@ public final class WalletWordCheckScreen: ViewController {
                             }
                             return true
                         }
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo)))
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }
@@ -2201,7 +2204,7 @@ public final class WalletWordCheckScreen: ViewController {
                         return
                     }
                     strongSelf.view.endEditing(true)
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: "Incorrect words", text: "Sorry, you have entered incorrect secret words. Please double check and try again.", actions: [
+                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectTitle, text: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectText, actions: [
                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
@@ -2223,7 +2226,7 @@ public final class WalletWordCheckScreen: ViewController {
                     }
                     return true
                 }
-                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .restoreFailed))
+                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .restoreFailed, walletCreatedPreloadState: nil))
                 navigationController.setViewControllers(controllers, animated: true)
             }
         })
@@ -2252,6 +2255,8 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
     private let inputNode: TextFieldNode
     private let clearButtonNode: HighlightableButtonNode
     
+    public private(set) var isLast: Bool
+    
     var text: String {
         get {
             return self.inputNode.textField.text ?? ""
@@ -2265,6 +2270,7 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         self.next = next
         self.focused = focused
         self.pasteWords = pasteWords
+        self.isLast = isLast
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -2593,23 +2599,23 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         switch mode {
         case let .verify(_, _, indices):
             wordIndices = indices
-            title = "Test Time!"
+            title = self.presentationData.strings.Wallet_WordCheck_Title
             
             let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor, additionalAttributes: [:])
             let bold = MarkdownAttributeSet(font: Font.bold(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor, additionalAttributes: [NSAttributedString.Key.underlineStyle.rawValue: NSUnderlineStyle.single.rawValue as NSNumber])
-            text = parseMarkdownIntoAttributedString("Let’s check that you wrote them down correctly. Please enter words\n**\(wordIndices[0] + 1)**, **\(wordIndices[1] + 1)** and **\(wordIndices[2] + 1)** below:", attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
+            text = parseMarkdownIntoAttributedString(self.presentationData.strings.Wallet_WordCheck_Text("\(wordIndices[0] + 1)", "\(wordIndices[1] + 1)", "\(wordIndices[2] + 1)").0, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in nil }), textAlignment: .center)
             
-            buttonText = "Continue"
+            buttonText = self.presentationData.strings.Wallet_WordCheck_Continue
             secondaryActionText = ""
             if let path = getAppBundle().path(forResource: "WalletWordCheck", ofType: "tgs") {
                 self.animationNode.setup(account: account, resource: .localFile(path), width: 238, height: 238, playbackMode: .once, mode: .direct)
                 self.animationNode.visibility = true
             }
         case .import:
-            title = "24 Secret Words"
-            text = NSAttributedString(string: "Please restore access to your wallet by\nentering the 24 secret words you wrote down when creating the wallet.", font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-            buttonText = "Continue"
-            secondaryActionText = "I don't have those"
+            title = self.presentationData.strings.Wallet_WordImport_Title
+            text = NSAttributedString(string: self.presentationData.strings.Wallet_WordImport_Text, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
+            buttonText = self.presentationData.strings.Wallet_WordImport_Continue
+            secondaryActionText = self.presentationData.strings.Wallet_WordImport_CanNotRemember
             wordIndices = Array(0 ..< 24)
         }
         
@@ -2716,7 +2722,13 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+            if node.isLast {
+                UIView.animate(withDuration: 0.3, animations: {
+                    strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -10.0), animated: false)
+                })
+            } else {
+                strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+            }
         }
         pasteWords = { [weak self] wordList in
             guard let strongSelf = self else {
@@ -2773,7 +2785,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         let maxScale: CGFloat = 1.0
         let scale = t * maxScale + (1.0 - t) * minScale
         
-        self.titleNodeContainer.frame = CGRect(origin: CGPoint(x: self.bounds.width / 2.0, y: y), size: CGSize())
+        self.titleNodeContainer.frame = CGRect(origin: CGPoint(x: scrollView.bounds.width / 2.0, y: y), size: CGSize())
         self.titleNodeContainer.subnodeTransform = CATransform3DMakeScale(scale, scale, 1.0)
         
         let alpha: CGFloat = (t <= 0.0 + CGFloat.ulpOfOne) ? 1.0 : 0.0

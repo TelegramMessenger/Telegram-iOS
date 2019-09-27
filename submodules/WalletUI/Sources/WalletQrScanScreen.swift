@@ -9,6 +9,7 @@ import SwiftSignalKit
 import TelegramCore
 import Camera
 import GlassButtonNode
+import UrlHandling
 
 private func generateFrameImage() -> UIImage? {
     return generateImage(CGSize(width: 64.0, height: 64.0), contextGenerator: { size, context in
@@ -47,12 +48,13 @@ private func generateFrameImage() -> UIImage? {
 
 public final class WalletQrScanScreen: ViewController {
     private let context: AccountContext
-    private let completion: (String, Int64?, String?) -> Void
+    private let completion: (ParsedWalletUrl) -> Void
     private var presentationData: PresentationData
     
-    private var disposable: Disposable?
+    private var codeDisposable: Disposable?
+    private var inForegroundDisposable: Disposable?
     
-    public init(context: AccountContext, completion: @escaping (String, Int64?, String?) -> Void) {
+    public init(context: AccountContext, completion: @escaping (ParsedWalletUrl) -> Void) {
         self.context = context
         self.completion = completion
         
@@ -70,6 +72,14 @@ public final class WalletQrScanScreen: ViewController {
         self.navigationBar?.intrinsicCanTransitionInline = false
         
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        
+        self.inForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
+        |> deliverOnMainQueue).start(next: { [weak self] inForeground in
+            guard let strongSelf = self else {
+                return
+            }
+            (strongSelf.displayNode as! WalletQrScanScreenNode).updateInForeground(inForeground)
+        })
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -77,7 +87,8 @@ public final class WalletQrScanScreen: ViewController {
     }
     
     deinit {
-        self.disposable?.dispose()
+        self.codeDisposable?.dispose()
+        self.inForegroundDisposable?.dispose()
     }
     
     @objc private func backPressed() {
@@ -89,12 +100,7 @@ public final class WalletQrScanScreen: ViewController {
         
         self.displayNodeDidLoad()
         
-//        (self.displayNode as! WalletQrScanScreenNode).focusedCode.get()
-//        |> map { code -> String? in
-//            return code?.message
-//        } |> distinctUntilChanged
-        
-        self.disposable = (((self.displayNode as! WalletQrScanScreenNode).focusedCode.get()
+        self.codeDisposable = (((self.displayNode as! WalletQrScanScreenNode).focusedCode.get()
         |> map { code -> String? in
             return code?.message
         }
@@ -106,8 +112,9 @@ public final class WalletQrScanScreen: ViewController {
             guard let strongSelf = self, let code = code else {
                 return
             }
-            let cleanString = code.replacingOccurrences(of: "ton://", with: "")
-            strongSelf.completion(cleanString, nil, nil)
+            if let url = URL(string: code), let parsedWalletUrl = parseWalletUrl(url) {
+                strongSelf.completion(parsedWalletUrl)
+            }
         })
     }
     
@@ -128,6 +135,7 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
     private let leftDimNode: ASDisplayNode
     private let rightDimNode: ASDisplayNode
     private let frameNode: ASImageNode
+    private let galleryButtonNode: GlassButtonNode
     private let torchButtonNode: GlassButtonNode
     private let titleNode: ImmediateTextNode
     
@@ -168,11 +176,12 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         self.frameNode = ASImageNode()
         self.frameNode.image = generateFrameImage()
         
+        self.galleryButtonNode = GlassButtonNode(icon: UIImage(bundleImageName: "Wallet/CameraGalleryIcon")!, label: nil)
         self.torchButtonNode = GlassButtonNode(icon: UIImage(bundleImageName: "Wallet/CameraFlashIcon")!, label: nil)
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: "Scan QR Code", font: Font.bold(32.0), textColor: .white)
+        self.titleNode.attributedText = NSAttributedString(string: presentationData.strings.Wallet_Qr_ScanCode, font: Font.bold(32.0), textColor: .white)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
         
@@ -189,14 +198,25 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         self.addSubnode(self.leftDimNode)
         self.addSubnode(self.rightDimNode)
         self.addSubnode(self.frameNode)
+        self.addSubnode(self.galleryButtonNode)
         self.addSubnode(self.torchButtonNode)
         self.addSubnode(self.titleNode)
-        
+      
+        self.galleryButtonNode.addTarget(self, action: #selector(self.galleryPressed), forControlEvents: .touchUpInside)
         self.torchButtonNode.addTarget(self, action: #selector(self.torchPressed), forControlEvents: .touchUpInside)
     }
     
     deinit {
         self.codeDisposable.dispose()
+        self.camera.stopCapture(invalidate: true)
+    }
+    
+    fileprivate func updateInForeground(_ inForeground: Bool) {
+        if !inForeground {
+            self.camera.stopCapture(invalidate: false)
+        } else {
+            self.camera.startCapture()
+        }
     }
     
     override func didLoad() {
@@ -272,12 +292,17 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         
         transition.updateFrame(node: self.frameNode, frame: dimRect.insetBy(dx: -2.0, dy: -2.0))
         
-        let torchButtonSize = CGSize(width: 72.0, height: 72.0)
-        transition.updateFrame(node: self.torchButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - torchButtonSize.width) / 2.0), y: dimHeight + frameSide + 50.0), size: torchButtonSize))
+        let buttonSize = CGSize(width: 72.0, height: 72.0)
+        transition.updateFrame(node: self.galleryButtonNode, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0) - buttonSize.width - 28.0, y: dimHeight + frameSide + 50.0), size: buttonSize))
+        transition.updateFrame(node: self.torchButtonNode, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0) + 28.0, y: dimHeight + frameSide + 50.0), size: buttonSize))
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: dimHeight - titleSize.height - titleSpacing), size: titleSize)
         transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
+    }
+    
+    @objc private func galleryPressed() {
+
     }
     
     @objc private func torchPressed() {

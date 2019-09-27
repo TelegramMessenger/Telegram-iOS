@@ -104,6 +104,16 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(panRecognizer)
+        
+        self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            if strongSelf.state.transition != nil {
+                return true
+            }
+            return false
+        }
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -406,7 +416,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             childFrame.origin.x = child.value.displayNode.frame.origin.x
             switch transition.type {
             case .pop:
-                shouldSyncKeyboard = true
+                if transition.previous.value === child.value {
+                    shouldSyncKeyboard = true
+                }
             case .push:
                 break
             }

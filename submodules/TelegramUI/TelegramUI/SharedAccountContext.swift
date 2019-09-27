@@ -14,6 +14,7 @@ import PeersNearbyUI
 import PeerInfoUI
 import SettingsUI
 import UrlHandling
+import WalletUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -1015,6 +1016,52 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeChatMessagePreviewItem(context: AccountContext, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?) -> ListViewItem {
         return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: .peer(message.id.peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, isScheduledMessages: false, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus), controllerInteraction: defaultChatControllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: true, additionalContent: nil)
+    }
+    
+    public func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void) {
+        guard let storedContext = context.tonContext else {
+            return
+        }
+        let _ = (combineLatest(queue: .mainQueue(),
+            availableWallets(postbox: context.account.postbox),
+            storedContext.keychain.encryptionPublicKey(),
+            context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        )
+        |> deliverOnMainQueue).start(next: { wallets, currentPublicKey, preferences in
+            let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+            guard let config = WalletConfiguration.config(appConfiguration: appConfiguration) else {
+                return
+            }
+            let tonContext = storedContext.context(config: config)
+            
+            if wallets.wallets.isEmpty {
+                if let _ = currentPublicKey {
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro, walletCreatedPreloadState: nil))
+                } else {
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
+                }
+            } else {
+                let walletInfo = wallets.wallets[0].info
+                if let currentPublicKey = currentPublicKey {
+                    if currentPublicKey == walletInfo.encryptedSecret.publicKey {
+                        let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
+                        |> deliverOnMainQueue).start(next: { address in
+                            switch walletContext {
+                                case .generic:
+                                    present(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
+                                case let .send(address, amount, comment):
+                                    present(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
+                            }
+                            
+                        })
+                    } else {
+                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
+                    }
+                } else {
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
+                }
+            }
+        })
     }
 }
 
