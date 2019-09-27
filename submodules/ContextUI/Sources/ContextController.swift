@@ -1232,7 +1232,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     }
                 }
             case let .controller(controller):
-                break
+                let controllerPoint = self.view.convert(point, to: controller.controller.view)
+                if let result = controller.controller.view.hitTest(controllerPoint, with: event) {
+                    if result is UIScrollView {
+                        return result
+                    } else if result is ListViewBackingView {
+                        return result
+                    }
+                }
             }
         }
         

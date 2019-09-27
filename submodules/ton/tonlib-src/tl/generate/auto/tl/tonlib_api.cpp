@@ -172,6 +172,87 @@ void key::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
+logStreamDefault::logStreamDefault() {
+}
+
+const std::int32_t logStreamDefault::ID;
+
+void logStreamDefault::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "logStreamDefault");
+    s.store_class_end();
+  }
+}
+
+logStreamFile::logStreamFile()
+  : path_()
+  , max_file_size_()
+{}
+
+logStreamFile::logStreamFile(std::string const &path_, std::int64_t max_file_size_)
+  : path_(std::move(path_))
+  , max_file_size_(max_file_size_)
+{}
+
+const std::int32_t logStreamFile::ID;
+
+void logStreamFile::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "logStreamFile");
+    s.store_field("path", path_);
+    s.store_field("max_file_size", max_file_size_);
+    s.store_class_end();
+  }
+}
+
+logStreamEmpty::logStreamEmpty() {
+}
+
+const std::int32_t logStreamEmpty::ID;
+
+void logStreamEmpty::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "logStreamEmpty");
+    s.store_class_end();
+  }
+}
+
+logTags::logTags()
+  : tags_()
+{}
+
+logTags::logTags(std::vector<std::string> &&tags_)
+  : tags_(std::move(tags_))
+{}
+
+const std::int32_t logTags::ID;
+
+void logTags::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "logTags");
+    { const std::vector<std::string> &v = tags_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("tags", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { s.store_field("", v[i]); } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+logVerbosityLevel::logVerbosityLevel()
+  : verbosity_level_()
+{}
+
+logVerbosityLevel::logVerbosityLevel(std::int32_t verbosity_level_)
+  : verbosity_level_(verbosity_level_)
+{}
+
+const std::int32_t logVerbosityLevel::ID;
+
+void logVerbosityLevel::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "logVerbosityLevel");
+    s.store_field("verbosity_level", verbosity_level_);
+    s.store_class_end();
+  }
+}
+
 ok::ok() {
 }
 
@@ -265,6 +346,24 @@ void generic_accountStateTestWallet::store(td::TlStorerToString &s, const char *
   }
 }
 
+generic_accountStateWallet::generic_accountStateWallet()
+  : account_state_()
+{}
+
+generic_accountStateWallet::generic_accountStateWallet(object_ptr<wallet_accountState> &&account_state_)
+  : account_state_(std::move(account_state_))
+{}
+
+const std::int32_t generic_accountStateWallet::ID;
+
+void generic_accountStateWallet::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "generic_accountStateWallet");
+    if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
+    s.store_class_end();
+  }
+}
+
 generic_accountStateTestGiver::generic_accountStateTestGiver()
   : account_state_()
 {}
@@ -297,42 +396,6 @@ void generic_accountStateUninited::store(td::TlStorerToString &s, const char *fi
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "generic_accountStateUninited");
     if (account_state_ == nullptr) { s.store_field("account_state", "null"); } else { account_state_->store(s, "account_state"); }
-    s.store_class_end();
-  }
-}
-
-generic_initialAccountStateRaw::generic_initialAccountStateRaw()
-  : initital_account_state_()
-{}
-
-generic_initialAccountStateRaw::generic_initialAccountStateRaw(object_ptr<raw_initialAccountState> &&initital_account_state_)
-  : initital_account_state_(std::move(initital_account_state_))
-{}
-
-const std::int32_t generic_initialAccountStateRaw::ID;
-
-void generic_initialAccountStateRaw::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_initialAccountStateRaw");
-    if (initital_account_state_ == nullptr) { s.store_field("initital_account_state", "null"); } else { initital_account_state_->store(s, "initital_account_state"); }
-    s.store_class_end();
-  }
-}
-
-generic_initialAccountStateTestWallet::generic_initialAccountStateTestWallet()
-  : initital_account_state_()
-{}
-
-generic_initialAccountStateTestWallet::generic_initialAccountStateTestWallet(object_ptr<testWallet_initialAccountState> &&initital_account_state_)
-  : initital_account_state_(std::move(initital_account_state_))
-{}
-
-const std::int32_t generic_initialAccountStateTestWallet::ID;
-
-void generic_initialAccountStateTestWallet::store(td::TlStorerToString &s, const char *field_name) const {
-  if (!LOG_IS_STRIPPED(ERROR)) {
-    s.store_class_begin(field_name, "generic_initialAccountStateTestWallet");
-    if (initital_account_state_ == nullptr) { s.store_field("initital_account_state", "null"); } else { initital_account_state_->store(s, "initital_account_state"); }
     s.store_class_end();
   }
 }
@@ -586,6 +649,72 @@ void uninited_accountState::store(td::TlStorerToString &s, const char *field_nam
   }
 }
 
+wallet_accountState::wallet_accountState()
+  : balance_()
+  , seqno_()
+  , last_transaction_id_()
+  , sync_utime_()
+{}
+
+wallet_accountState::wallet_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
+  : balance_(balance_)
+  , seqno_(seqno_)
+  , last_transaction_id_(std::move(last_transaction_id_))
+  , sync_utime_(sync_utime_)
+{}
+
+const std::int32_t wallet_accountState::ID;
+
+void wallet_accountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_accountState");
+    s.store_field("balance", balance_);
+    s.store_field("seqno", seqno_);
+    if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    s.store_field("sync_utime", sync_utime_);
+    s.store_class_end();
+  }
+}
+
+wallet_initialAccountState::wallet_initialAccountState()
+  : public_key_()
+{}
+
+wallet_initialAccountState::wallet_initialAccountState(std::string const &public_key_)
+  : public_key_(std::move(public_key_))
+{}
+
+const std::int32_t wallet_initialAccountState::ID;
+
+void wallet_initialAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_initialAccountState");
+    s.store_field("public_key", public_key_);
+    s.store_class_end();
+  }
+}
+
+addLogMessage::addLogMessage()
+  : verbosity_level_()
+  , text_()
+{}
+
+addLogMessage::addLogMessage(std::int32_t verbosity_level_, std::string const &text_)
+  : verbosity_level_(verbosity_level_)
+  , text_(std::move(text_))
+{}
+
+const std::int32_t addLogMessage::ID;
+
+void addLogMessage::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "addLogMessage");
+    s.store_field("verbosity_level", verbosity_level_);
+    s.store_field("text", text_);
+    s.store_class_end();
+  }
+}
+
 changeLocalPassword::changeLocalPassword()
   : input_key_()
   , new_local_password_()
@@ -644,11 +773,11 @@ void createNewKey::store(td::TlStorerToString &s, const char *field_name) const 
 }
 
 deleteKey::deleteKey()
-  : public_key_()
+  : key_()
 {}
 
-deleteKey::deleteKey(std::string const &public_key_)
-  : public_key_(std::move(public_key_))
+deleteKey::deleteKey(object_ptr<key> &&key_)
+  : key_(std::move(key_))
 {}
 
 const std::int32_t deleteKey::ID;
@@ -656,7 +785,7 @@ const std::int32_t deleteKey::ID;
 void deleteKey::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "deleteKey");
-    s.store_field("public_key", public_key_);
+    if (key_ == nullptr) { s.store_field("key", "null"); } else { key_->store(s, "key"); }
     s.store_class_end();
   }
 }
@@ -783,6 +912,60 @@ void getBip39Hints::store(td::TlStorerToString &s, const char *field_name) const
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "getBip39Hints");
     s.store_field("prefix", prefix_);
+    s.store_class_end();
+  }
+}
+
+getLogStream::getLogStream() {
+}
+
+const std::int32_t getLogStream::ID;
+
+void getLogStream::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "getLogStream");
+    s.store_class_end();
+  }
+}
+
+getLogTagVerbosityLevel::getLogTagVerbosityLevel()
+  : tag_()
+{}
+
+getLogTagVerbosityLevel::getLogTagVerbosityLevel(std::string const &tag_)
+  : tag_(std::move(tag_))
+{}
+
+const std::int32_t getLogTagVerbosityLevel::ID;
+
+void getLogTagVerbosityLevel::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "getLogTagVerbosityLevel");
+    s.store_field("tag", tag_);
+    s.store_class_end();
+  }
+}
+
+getLogTags::getLogTags() {
+}
+
+const std::int32_t getLogTags::ID;
+
+void getLogTags::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "getLogTags");
+    s.store_class_end();
+  }
+}
+
+getLogVerbosityLevel::getLogVerbosityLevel() {
+}
+
+const std::int32_t getLogVerbosityLevel::ID;
+
+void getLogVerbosityLevel::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "getLogVerbosityLevel");
     s.store_class_end();
   }
 }
@@ -1036,6 +1219,63 @@ void runTests::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
+setLogStream::setLogStream()
+  : log_stream_()
+{}
+
+setLogStream::setLogStream(object_ptr<LogStream> &&log_stream_)
+  : log_stream_(std::move(log_stream_))
+{}
+
+const std::int32_t setLogStream::ID;
+
+void setLogStream::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "setLogStream");
+    if (log_stream_ == nullptr) { s.store_field("log_stream", "null"); } else { log_stream_->store(s, "log_stream"); }
+    s.store_class_end();
+  }
+}
+
+setLogTagVerbosityLevel::setLogTagVerbosityLevel()
+  : tag_()
+  , new_verbosity_level_()
+{}
+
+setLogTagVerbosityLevel::setLogTagVerbosityLevel(std::string const &tag_, std::int32_t new_verbosity_level_)
+  : tag_(std::move(tag_))
+  , new_verbosity_level_(new_verbosity_level_)
+{}
+
+const std::int32_t setLogTagVerbosityLevel::ID;
+
+void setLogTagVerbosityLevel::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "setLogTagVerbosityLevel");
+    s.store_field("tag", tag_);
+    s.store_field("new_verbosity_level", new_verbosity_level_);
+    s.store_class_end();
+  }
+}
+
+setLogVerbosityLevel::setLogVerbosityLevel()
+  : new_verbosity_level_()
+{}
+
+setLogVerbosityLevel::setLogVerbosityLevel(std::int32_t new_verbosity_level_)
+  : new_verbosity_level_(new_verbosity_level_)
+{}
+
+const std::int32_t setLogVerbosityLevel::ID;
+
+void setLogVerbosityLevel::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "setLogVerbosityLevel");
+    s.store_field("new_verbosity_level", new_verbosity_level_);
+    s.store_class_end();
+  }
+}
+
 testGiver_getAccountAddress::testGiver_getAccountAddress() {
 }
 
@@ -1165,6 +1405,93 @@ void testWallet_sendGrams::store(td::TlStorerToString &s, const char *field_name
     if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
     if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
     s.store_field("seqno", seqno_);
+    s.store_field("amount", amount_);
+    s.store_bytes_field("message", message_);
+    s.store_class_end();
+  }
+}
+
+wallet_getAccountAddress::wallet_getAccountAddress()
+  : initital_account_state_()
+{}
+
+wallet_getAccountAddress::wallet_getAccountAddress(object_ptr<wallet_initialAccountState> &&initital_account_state_)
+  : initital_account_state_(std::move(initital_account_state_))
+{}
+
+const std::int32_t wallet_getAccountAddress::ID;
+
+void wallet_getAccountAddress::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_getAccountAddress");
+    if (initital_account_state_ == nullptr) { s.store_field("initital_account_state", "null"); } else { initital_account_state_->store(s, "initital_account_state"); }
+    s.store_class_end();
+  }
+}
+
+wallet_getAccountState::wallet_getAccountState()
+  : account_address_()
+{}
+
+wallet_getAccountState::wallet_getAccountState(object_ptr<accountAddress> &&account_address_)
+  : account_address_(std::move(account_address_))
+{}
+
+const std::int32_t wallet_getAccountState::ID;
+
+void wallet_getAccountState::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_getAccountState");
+    if (account_address_ == nullptr) { s.store_field("account_address", "null"); } else { account_address_->store(s, "account_address"); }
+    s.store_class_end();
+  }
+}
+
+wallet_init::wallet_init()
+  : private_key_()
+{}
+
+wallet_init::wallet_init(object_ptr<inputKey> &&private_key_)
+  : private_key_(std::move(private_key_))
+{}
+
+const std::int32_t wallet_init::ID;
+
+void wallet_init::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_init");
+    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
+    s.store_class_end();
+  }
+}
+
+wallet_sendGrams::wallet_sendGrams()
+  : private_key_()
+  , destination_()
+  , seqno_()
+  , valid_until_()
+  , amount_()
+  , message_()
+{}
+
+wallet_sendGrams::wallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t valid_until_, std::int64_t amount_, std::string const &message_)
+  : private_key_(std::move(private_key_))
+  , destination_(std::move(destination_))
+  , seqno_(seqno_)
+  , valid_until_(valid_until_)
+  , amount_(amount_)
+  , message_(std::move(message_))
+{}
+
+const std::int32_t wallet_sendGrams::ID;
+
+void wallet_sendGrams::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "wallet_sendGrams");
+    if (private_key_ == nullptr) { s.store_field("private_key", "null"); } else { private_key_->store(s, "private_key"); }
+    if (destination_ == nullptr) { s.store_field("destination", "null"); } else { destination_->store(s, "destination"); }
+    s.store_field("seqno", seqno_);
+    s.store_field("valid_until", valid_until_);
     s.store_field("amount", amount_);
     s.store_bytes_field("message", message_);
     s.store_class_end();

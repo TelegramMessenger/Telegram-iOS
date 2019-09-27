@@ -144,3 +144,23 @@ class KeyboardManager {
         self.previousFirstResponderView = firstResponderView
     }
 }
+
+final class KeyboardViewManager {
+    private let host: StatusBarHost
+    
+    init(host: StatusBarHost) {
+        self.host = host
+    }
+    
+    func update(leftEdge: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard let keyboardWindow = self.host.keyboardWindow else {
+            return
+        }
+        let previousPosition = keyboardWindow.layer.position
+        let updatedPosition = CGPoint(x: leftEdge + keyboardWindow.layer.bounds.width / 2.0, y: previousPosition.y)
+        keyboardWindow.layer.position = updatedPosition
+        if transition.isAnimated && !previousPosition.x.isEqual(to: updatedPosition.x) {
+            transition.animatePositionAdditive(layer: keyboardWindow.layer, offset: CGPoint(x: previousPosition.x - updatedPosition.x, y: 0.0))
+        }
+    }
+}

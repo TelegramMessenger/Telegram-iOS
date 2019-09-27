@@ -67,8 +67,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case resetDatabase(PresentationTheme)
     case resetHoles(PresentationTheme)
     case resetBiometricsData(PresentationTheme)
-    case openDebugWallet(PresentationTheme)
-    case getGrams(PresentationTheme)
     case optimizeDatabase(PresentationTheme)
     case photoPreview(PresentationTheme, Bool)
     case knockoutWallpaper(PresentationTheme, Bool)
@@ -86,7 +84,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .openDebugWallet, .getGrams, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
+        case .clearTips, .reimport, .resetData, .resetDatabase, .resetHoles, .resetBiometricsData, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .gradientBubbles:
             return DebugControllerSection.experiments.rawValue
         case .hostInfo, .versionInfo:
             return DebugControllerSection.info.rawValue
@@ -131,10 +129,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 16
         case .resetBiometricsData:
             return 17
-        case .openDebugWallet:
-            return 18
-        case .getGrams:
-            return 19
         case .optimizeDatabase:
             return 20
         case .photoPreview:
@@ -474,47 +468,6 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return settings.withUpdatedBiometricsDomainState(nil).withUpdatedShareBiometricsDomainState(nil)
                 }).start()
             })
-        case let .openDebugWallet(theme):
-            return ItemListActionItem(theme: theme, title: "Delete Wallets", kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                guard let context = arguments.context else {
-                    return
-                }
-                let _ = debugDeleteWallets(postbox: context.account.postbox).start()
-                return
-                let _ = (availableWallets(postbox: context.account.postbox)
-                |> deliverOnMainQueue).start(next: { wallets in
-                    if let tonContext = context.tonContext {
-                        if !wallets.wallets.isEmpty {
-                            let _ = (testGiverWalletAddress(tonInstance: tonContext.instance)
-                            |> deliverOnMainQueue).start(next: { address in
-                                arguments.pushController(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: wallets.wallets[0].info, address: address))
-                            })
-                        }
-                    }
-                })
-            })
-        case let .getGrams(theme):
-            return ItemListActionItem(theme: theme, title: "Update Wallet", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                guard let context = arguments.context else {
-                    return
-                }
-                let _ = (availableWallets(postbox: context.account.postbox)
-                |> deliverOnMainQueue).start(next: { wallets in
-                    if let tonContext = context.tonContext {
-                        if !wallets.wallets.isEmpty {
-                            let _ = (walletAddress(publicKey: wallets.wallets[0].info.publicKey, tonInstance: tonContext.instance)
-                            |> deliverOnMainQueue).start(next: { address in
-                                let _ = (getGramsFromTestGiver(address: address, amount: 1500000000, tonInstance: tonContext.instance)
-                                |> deliverOnMainQueue).start(completed: {
-                                    let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
-                                    arguments.presentController(controller, nil)
-                                })
-                            })
-                        }
-                    }
-                })
-            })
         case let .optimizeDatabase(theme):
             return ItemListActionItem(theme: theme, title: "Optimize Database", kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 guard let context = arguments.context else {
@@ -599,8 +552,6 @@ private func debugControllerEntries(presentationData: PresentationData, loggingS
     entries.append(.resetData(presentationData.theme))
     entries.append(.resetDatabase(presentationData.theme))
     entries.append(.resetHoles(presentationData.theme))
-    entries.append(.openDebugWallet(presentationData.theme))
-    entries.append(.getGrams(presentationData.theme))
     entries.append(.optimizeDatabase(presentationData.theme))
     entries.append(.photoPreview(presentationData.theme, experimentalSettings.chatListPhotos))
     entries.append(.knockoutWallpaper(presentationData.theme, experimentalSettings.knockoutWallpaper))

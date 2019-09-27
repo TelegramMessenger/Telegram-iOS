@@ -647,6 +647,9 @@ bool downcast_call(Object &obj, const T &func) {
     case tonNode_blockSignature::ID:
       func(static_cast<tonNode_blockSignature &>(obj));
       return true;
+    case tonNode_blocksDescription::ID:
+      func(static_cast<tonNode_blocksDescription &>(obj));
+      return true;
     case tonNode_blockBroadcast::ID:
       func(static_cast<tonNode_blockBroadcast &>(obj));
       return true;
@@ -659,8 +662,20 @@ bool downcast_call(Object &obj, const T &func) {
     case tonNode_newShardBlockBroadcast::ID:
       func(static_cast<tonNode_newShardBlockBroadcast &>(obj));
       return true;
+    case tonNode_capabilities::ID:
+      func(static_cast<tonNode_capabilities &>(obj));
+      return true;
     case tonNode_data::ID:
       func(static_cast<tonNode_data &>(obj));
+      return true;
+    case tonNode_dataFull::ID:
+      func(static_cast<tonNode_dataFull &>(obj));
+      return true;
+    case tonNode_dataFullEmpty::ID:
+      func(static_cast<tonNode_dataFullEmpty &>(obj));
+      return true;
+    case tonNode_dataList::ID:
+      func(static_cast<tonNode_dataList &>(obj));
       return true;
     case tonNode_externalMessage::ID:
       func(static_cast<tonNode_externalMessage &>(obj));
@@ -700,6 +715,9 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case tonNode_shardPublicOverlayId::ID:
       func(static_cast<tonNode_shardPublicOverlayId &>(obj));
+      return true;
+    case tonNode_success::ID:
+      func(static_cast<tonNode_success &>(obj));
       return true;
     case tonNode_zeroStateIdExt::ID:
       func(static_cast<tonNode_zeroStateIdExt &>(obj));
@@ -925,11 +943,26 @@ bool downcast_call(Function &obj, const T &func) {
     case tonNode_downloadBlock::ID:
       func(static_cast<tonNode_downloadBlock &>(obj));
       return true;
+    case tonNode_downloadBlockFull::ID:
+      func(static_cast<tonNode_downloadBlockFull &>(obj));
+      return true;
     case tonNode_downloadBlockProof::ID:
       func(static_cast<tonNode_downloadBlockProof &>(obj));
       return true;
     case tonNode_downloadBlockProofLink::ID:
       func(static_cast<tonNode_downloadBlockProofLink &>(obj));
+      return true;
+    case tonNode_downloadBlockProofLinks::ID:
+      func(static_cast<tonNode_downloadBlockProofLinks &>(obj));
+      return true;
+    case tonNode_downloadBlockProofs::ID:
+      func(static_cast<tonNode_downloadBlockProofs &>(obj));
+      return true;
+    case tonNode_downloadBlocks::ID:
+      func(static_cast<tonNode_downloadBlocks &>(obj));
+      return true;
+    case tonNode_downloadNextBlockFull::ID:
+      func(static_cast<tonNode_downloadNextBlockFull &>(obj));
       return true;
     case tonNode_downloadPersistentState::ID:
       func(static_cast<tonNode_downloadPersistentState &>(obj));
@@ -940,17 +973,32 @@ bool downcast_call(Function &obj, const T &func) {
     case tonNode_downloadZeroState::ID:
       func(static_cast<tonNode_downloadZeroState &>(obj));
       return true;
+    case tonNode_getCapabilities::ID:
+      func(static_cast<tonNode_getCapabilities &>(obj));
+      return true;
     case tonNode_getNextBlockDescription::ID:
       func(static_cast<tonNode_getNextBlockDescription &>(obj));
       return true;
+    case tonNode_getNextBlocksDescription::ID:
+      func(static_cast<tonNode_getNextBlocksDescription &>(obj));
+      return true;
     case tonNode_getNextKeyBlockIds::ID:
       func(static_cast<tonNode_getNextKeyBlockIds &>(obj));
+      return true;
+    case tonNode_getPrevBlocksDescription::ID:
+      func(static_cast<tonNode_getPrevBlocksDescription &>(obj));
       return true;
     case tonNode_prepareBlock::ID:
       func(static_cast<tonNode_prepareBlock &>(obj));
       return true;
     case tonNode_prepareBlockProof::ID:
       func(static_cast<tonNode_prepareBlockProof &>(obj));
+      return true;
+    case tonNode_prepareBlockProofs::ID:
+      func(static_cast<tonNode_prepareBlockProofs &>(obj));
+      return true;
+    case tonNode_prepareBlocks::ID:
+      func(static_cast<tonNode_prepareBlocks &>(obj));
       return true;
     case tonNode_preparePersistentState::ID:
       func(static_cast<tonNode_preparePersistentState &>(obj));
@@ -1737,6 +1785,26 @@ bool downcast_call(tonNode_Broadcast &obj, const T &func) {
       return true;
     case tonNode_newShardBlockBroadcast::ID:
       func(static_cast<tonNode_newShardBlockBroadcast &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(tonNode_DataFull &obj, const T &func) {
+  switch (obj.get_id()) {
+    case tonNode_dataFull::ID:
+      func(static_cast<tonNode_dataFull &>(obj));
+      return true;
+    case tonNode_dataFullEmpty::ID:
+      func(static_cast<tonNode_dataFullEmpty &>(obj));
       return true;
     default:
       return false;

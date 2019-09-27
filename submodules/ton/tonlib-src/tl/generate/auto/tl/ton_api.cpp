@@ -446,6 +446,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return tonNode_blockIdExt::fetch(p);
     case tonNode_blockSignature::ID:
       return tonNode_blockSignature::fetch(p);
+    case tonNode_blocksDescription::ID:
+      return tonNode_blocksDescription::fetch(p);
     case tonNode_blockBroadcast::ID:
       return tonNode_blockBroadcast::fetch(p);
     case tonNode_ihrMessageBroadcast::ID:
@@ -454,8 +456,16 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return tonNode_externalMessageBroadcast::fetch(p);
     case tonNode_newShardBlockBroadcast::ID:
       return tonNode_newShardBlockBroadcast::fetch(p);
+    case tonNode_capabilities::ID:
+      return tonNode_capabilities::fetch(p);
     case tonNode_data::ID:
       return tonNode_data::fetch(p);
+    case tonNode_dataFull::ID:
+      return tonNode_dataFull::fetch(p);
+    case tonNode_dataFullEmpty::ID:
+      return tonNode_dataFullEmpty::fetch(p);
+    case tonNode_dataList::ID:
+      return tonNode_dataList::fetch(p);
     case tonNode_externalMessage::ID:
       return tonNode_externalMessage::fetch(p);
     case tonNode_ihrMessage::ID:
@@ -482,6 +492,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return tonNode_sessionId::fetch(p);
     case tonNode_shardPublicOverlayId::ID:
       return tonNode_shardPublicOverlayId::fetch(p);
+    case tonNode_success::ID:
+      return tonNode_success::fetch(p);
     case tonNode_zeroStateIdExt::ID:
       return tonNode_zeroStateIdExt::fetch(p);
     case validator_group::ID:
@@ -632,24 +644,44 @@ object_ptr<Function> Function::fetch(td::TlParser &p) {
       return tcp_ping::fetch(p);
     case tonNode_downloadBlock::ID:
       return tonNode_downloadBlock::fetch(p);
+    case tonNode_downloadBlockFull::ID:
+      return tonNode_downloadBlockFull::fetch(p);
     case tonNode_downloadBlockProof::ID:
       return tonNode_downloadBlockProof::fetch(p);
     case tonNode_downloadBlockProofLink::ID:
       return tonNode_downloadBlockProofLink::fetch(p);
+    case tonNode_downloadBlockProofLinks::ID:
+      return tonNode_downloadBlockProofLinks::fetch(p);
+    case tonNode_downloadBlockProofs::ID:
+      return tonNode_downloadBlockProofs::fetch(p);
+    case tonNode_downloadBlocks::ID:
+      return tonNode_downloadBlocks::fetch(p);
+    case tonNode_downloadNextBlockFull::ID:
+      return tonNode_downloadNextBlockFull::fetch(p);
     case tonNode_downloadPersistentState::ID:
       return tonNode_downloadPersistentState::fetch(p);
     case tonNode_downloadPersistentStateSlice::ID:
       return tonNode_downloadPersistentStateSlice::fetch(p);
     case tonNode_downloadZeroState::ID:
       return tonNode_downloadZeroState::fetch(p);
+    case tonNode_getCapabilities::ID:
+      return tonNode_getCapabilities::fetch(p);
     case tonNode_getNextBlockDescription::ID:
       return tonNode_getNextBlockDescription::fetch(p);
+    case tonNode_getNextBlocksDescription::ID:
+      return tonNode_getNextBlocksDescription::fetch(p);
     case tonNode_getNextKeyBlockIds::ID:
       return tonNode_getNextKeyBlockIds::fetch(p);
+    case tonNode_getPrevBlocksDescription::ID:
+      return tonNode_getPrevBlocksDescription::fetch(p);
     case tonNode_prepareBlock::ID:
       return tonNode_prepareBlock::fetch(p);
     case tonNode_prepareBlockProof::ID:
       return tonNode_prepareBlockProof::fetch(p);
+    case tonNode_prepareBlockProofs::ID:
+      return tonNode_prepareBlockProofs::fetch(p);
+    case tonNode_prepareBlocks::ID:
+      return tonNode_prepareBlocks::fetch(p);
     case tonNode_preparePersistentState::ID:
       return tonNode_preparePersistentState::fetch(p);
     case tonNode_prepareZeroState::ID:
@@ -10634,6 +10666,50 @@ void tonNode_blockSignature::store(td::TlStorerToString &s, const char *field_na
   }
 }
 
+tonNode_blocksDescription::tonNode_blocksDescription()
+  : ids_()
+  , incomplete_()
+{}
+
+tonNode_blocksDescription::tonNode_blocksDescription(std::vector<object_ptr<tonNode_blockIdExt>> &&ids_, bool incomplete_)
+  : ids_(std::move(ids_))
+  , incomplete_(incomplete_)
+{}
+
+const std::int32_t tonNode_blocksDescription::ID;
+
+object_ptr<tonNode_blocksDescription> tonNode_blocksDescription::fetch(td::TlParser &p) {
+  return make_object<tonNode_blocksDescription>(p);
+}
+
+tonNode_blocksDescription::tonNode_blocksDescription(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : ids_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+  , incomplete_(TlFetchBool::parse(p))
+#undef FAIL
+{}
+
+void tonNode_blocksDescription::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreVector<TlStoreObject>::store(ids_, s);
+  TlStoreBool::store(incomplete_, s);
+}
+
+void tonNode_blocksDescription::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreVector<TlStoreObject>::store(ids_, s);
+  TlStoreBool::store(incomplete_, s);
+}
+
+void tonNode_blocksDescription::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_blocksDescription");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = ids_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("ids", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_field("incomplete", incomplete_);
+    s.store_class_end();
+  }
+}
+
 object_ptr<tonNode_Broadcast> tonNode_Broadcast::fetch(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return nullptr;
   int constructor = p.fetch_int();
@@ -10834,6 +10910,50 @@ void tonNode_newShardBlockBroadcast::store(td::TlStorerToString &s, const char *
   }
 }
 
+tonNode_capabilities::tonNode_capabilities()
+  : version_()
+  , capabilities_()
+{}
+
+tonNode_capabilities::tonNode_capabilities(std::int32_t version_, std::int64_t capabilities_)
+  : version_(version_)
+  , capabilities_(capabilities_)
+{}
+
+const std::int32_t tonNode_capabilities::ID;
+
+object_ptr<tonNode_capabilities> tonNode_capabilities::fetch(td::TlParser &p) {
+  return make_object<tonNode_capabilities>(p);
+}
+
+tonNode_capabilities::tonNode_capabilities(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : version_(TlFetchInt::parse(p))
+  , capabilities_(TlFetchLong::parse(p))
+#undef FAIL
+{}
+
+void tonNode_capabilities::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(version_, s);
+  TlStoreBinary::store(capabilities_, s);
+}
+
+void tonNode_capabilities::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(version_, s);
+  TlStoreBinary::store(capabilities_, s);
+}
+
+void tonNode_capabilities::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_capabilities");
+    s.store_field("version", version_);
+    s.store_field("capabilities", capabilities_);
+    s.store_class_end();
+  }
+}
+
 tonNode_data::tonNode_data()
   : data_()
 {}
@@ -10868,6 +10988,145 @@ void tonNode_data::store(td::TlStorerToString &s, const char *field_name) const 
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "tonNode_data");
     s.store_bytes_field("data", data_);
+    s.store_class_end();
+  }
+}
+
+object_ptr<tonNode_DataFull> tonNode_DataFull::fetch(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return nullptr;
+  int constructor = p.fetch_int();
+  switch (constructor) {
+    case tonNode_dataFull::ID:
+      return tonNode_dataFull::fetch(p);
+    case tonNode_dataFullEmpty::ID:
+      return tonNode_dataFullEmpty::fetch(p);
+    default:
+      FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
+  }
+#undef FAIL
+}
+
+tonNode_dataFull::tonNode_dataFull()
+  : id_()
+  , proof_()
+  , block_()
+  , is_link_()
+{}
+
+tonNode_dataFull::tonNode_dataFull(object_ptr<tonNode_blockIdExt> &&id_, td::BufferSlice &&proof_, td::BufferSlice &&block_, bool is_link_)
+  : id_(std::move(id_))
+  , proof_(std::move(proof_))
+  , block_(std::move(block_))
+  , is_link_(is_link_)
+{}
+
+const std::int32_t tonNode_dataFull::ID;
+
+object_ptr<tonNode_DataFull> tonNode_dataFull::fetch(td::TlParser &p) {
+  return make_object<tonNode_dataFull>(p);
+}
+
+tonNode_dataFull::tonNode_dataFull(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : id_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+  , proof_(TlFetchBytes<td::BufferSlice>::parse(p))
+  , block_(TlFetchBytes<td::BufferSlice>::parse(p))
+  , is_link_(TlFetchBool::parse(p))
+#undef FAIL
+{}
+
+void tonNode_dataFull::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreObject::store(id_, s);
+  TlStoreString::store(proof_, s);
+  TlStoreString::store(block_, s);
+  TlStoreBool::store(is_link_, s);
+}
+
+void tonNode_dataFull::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreObject::store(id_, s);
+  TlStoreString::store(proof_, s);
+  TlStoreString::store(block_, s);
+  TlStoreBool::store(is_link_, s);
+}
+
+void tonNode_dataFull::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_dataFull");
+    if (id_ == nullptr) { s.store_field("id", "null"); } else { id_->store(s, "id"); }
+    s.store_bytes_field("proof", proof_);
+    s.store_bytes_field("block", block_);
+    s.store_field("is_link", is_link_);
+    s.store_class_end();
+  }
+}
+
+tonNode_dataFullEmpty::tonNode_dataFullEmpty() {
+}
+
+const std::int32_t tonNode_dataFullEmpty::ID;
+
+object_ptr<tonNode_DataFull> tonNode_dataFullEmpty::fetch(td::TlParser &p) {
+  return make_object<tonNode_dataFullEmpty>(p);
+}
+
+tonNode_dataFullEmpty::tonNode_dataFullEmpty(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+#undef FAIL
+{
+  (void)p;
+}
+
+void tonNode_dataFullEmpty::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+}
+
+void tonNode_dataFullEmpty::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+}
+
+void tonNode_dataFullEmpty::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_dataFullEmpty");
+    s.store_class_end();
+  }
+}
+
+tonNode_dataList::tonNode_dataList()
+  : data_()
+{}
+
+tonNode_dataList::tonNode_dataList(std::vector<td::BufferSlice> &&data_)
+  : data_(std::move(data_))
+{}
+
+const std::int32_t tonNode_dataList::ID;
+
+object_ptr<tonNode_dataList> tonNode_dataList::fetch(td::TlParser &p) {
+  return make_object<tonNode_dataList>(p);
+}
+
+tonNode_dataList::tonNode_dataList(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : data_(TlFetchVector<TlFetchBytes<td::BufferSlice>>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_dataList::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreVector<TlStoreString>::store(data_, s);
+}
+
+void tonNode_dataList::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreVector<TlStoreString>::store(data_, s);
+}
+
+void tonNode_dataList::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_dataList");
+    { const std::vector<td::BufferSlice> &v = data_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("data", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { s.store_bytes_field("", v[i]); } s.store_class_end(); }
     s.store_class_end();
   }
 }
@@ -11411,6 +11670,37 @@ void tonNode_shardPublicOverlayId::store(td::TlStorerToString &s, const char *fi
     s.store_field("workchain", workchain_);
     s.store_field("shard", shard_);
     s.store_field("zero_state_file_hash", zero_state_file_hash_);
+    s.store_class_end();
+  }
+}
+
+tonNode_success::tonNode_success() {
+}
+
+const std::int32_t tonNode_success::ID;
+
+object_ptr<tonNode_success> tonNode_success::fetch(td::TlParser &p) {
+  return make_object<tonNode_success>(p);
+}
+
+tonNode_success::tonNode_success(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+#undef FAIL
+{
+  (void)p;
+}
+
+void tonNode_success::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+}
+
+void tonNode_success::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+}
+
+void tonNode_success::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_success");
     s.store_class_end();
   }
 }
@@ -14937,6 +15227,52 @@ tonNode_downloadBlock::ReturnType tonNode_downloadBlock::fetch_result(td::TlPars
 #undef FAIL
 }
 
+tonNode_downloadBlockFull::tonNode_downloadBlockFull()
+  : block_()
+{}
+
+tonNode_downloadBlockFull::tonNode_downloadBlockFull(object_ptr<tonNode_blockIdExt> &&block_)
+  : block_(std::move(block_))
+{}
+
+const std::int32_t tonNode_downloadBlockFull::ID;
+
+object_ptr<tonNode_downloadBlockFull> tonNode_downloadBlockFull::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadBlockFull>(p);
+}
+
+tonNode_downloadBlockFull::tonNode_downloadBlockFull(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadBlockFull::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1780991133);
+  TlStoreObject::store(block_, s);
+}
+
+void tonNode_downloadBlockFull::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1780991133);
+  TlStoreObject::store(block_, s);
+}
+
+void tonNode_downloadBlockFull::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadBlockFull");
+    if (block_ == nullptr) { s.store_field("block", "null"); } else { block_->store(s, "block"); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadBlockFull::ReturnType tonNode_downloadBlockFull::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchObject<tonNode_DataFull>::parse(p);
+#undef FAIL
+}
+
 tonNode_downloadBlockProof::tonNode_downloadBlockProof()
   : block_()
 {}
@@ -15026,6 +15362,190 @@ void tonNode_downloadBlockProofLink::store(td::TlStorerToString &s, const char *
 tonNode_downloadBlockProofLink::ReturnType tonNode_downloadBlockProofLink::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchBoxed<TlFetchObject<tonNode_data>, 1443505284>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadBlockProofLinks::tonNode_downloadBlockProofLinks()
+  : blocks_()
+{}
+
+tonNode_downloadBlockProofLinks::tonNode_downloadBlockProofLinks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_)
+  : blocks_(std::move(blocks_))
+{}
+
+const std::int32_t tonNode_downloadBlockProofLinks::ID;
+
+object_ptr<tonNode_downloadBlockProofLinks> tonNode_downloadBlockProofLinks::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadBlockProofLinks>(p);
+}
+
+tonNode_downloadBlockProofLinks::tonNode_downloadBlockProofLinks(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadBlockProofLinks::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(684796771);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadBlockProofLinks::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(684796771);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadBlockProofLinks::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadBlockProofLinks");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadBlockProofLinks::ReturnType tonNode_downloadBlockProofLinks::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_dataList>, 351548179>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadBlockProofs::tonNode_downloadBlockProofs()
+  : blocks_()
+{}
+
+tonNode_downloadBlockProofs::tonNode_downloadBlockProofs(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_)
+  : blocks_(std::move(blocks_))
+{}
+
+const std::int32_t tonNode_downloadBlockProofs::ID;
+
+object_ptr<tonNode_downloadBlockProofs> tonNode_downloadBlockProofs::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadBlockProofs>(p);
+}
+
+tonNode_downloadBlockProofs::tonNode_downloadBlockProofs(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadBlockProofs::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1515170827);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadBlockProofs::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1515170827);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadBlockProofs::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadBlockProofs");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadBlockProofs::ReturnType tonNode_downloadBlockProofs::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_dataList>, 351548179>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadBlocks::tonNode_downloadBlocks()
+  : blocks_()
+{}
+
+tonNode_downloadBlocks::tonNode_downloadBlocks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_)
+  : blocks_(std::move(blocks_))
+{}
+
+const std::int32_t tonNode_downloadBlocks::ID;
+
+object_ptr<tonNode_downloadBlocks> tonNode_downloadBlocks::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadBlocks>(p);
+}
+
+tonNode_downloadBlocks::tonNode_downloadBlocks(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadBlocks::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1985594749);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadBlocks::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1985594749);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_downloadBlocks::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadBlocks");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadBlocks::ReturnType tonNode_downloadBlocks::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_dataList>, 351548179>::parse(p);
+#undef FAIL
+}
+
+tonNode_downloadNextBlockFull::tonNode_downloadNextBlockFull()
+  : prev_block_()
+{}
+
+tonNode_downloadNextBlockFull::tonNode_downloadNextBlockFull(object_ptr<tonNode_blockIdExt> &&prev_block_)
+  : prev_block_(std::move(prev_block_))
+{}
+
+const std::int32_t tonNode_downloadNextBlockFull::ID;
+
+object_ptr<tonNode_downloadNextBlockFull> tonNode_downloadNextBlockFull::fetch(td::TlParser &p) {
+  return make_object<tonNode_downloadNextBlockFull>(p);
+}
+
+tonNode_downloadNextBlockFull::tonNode_downloadNextBlockFull(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : prev_block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_downloadNextBlockFull::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1855993674);
+  TlStoreObject::store(prev_block_, s);
+}
+
+void tonNode_downloadNextBlockFull::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1855993674);
+  TlStoreObject::store(prev_block_, s);
+}
+
+void tonNode_downloadNextBlockFull::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_downloadNextBlockFull");
+    if (prev_block_ == nullptr) { s.store_field("prev_block", "null"); } else { prev_block_->store(s, "prev_block"); }
+    s.store_class_end();
+  }
+}
+
+tonNode_downloadNextBlockFull::ReturnType tonNode_downloadNextBlockFull::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchObject<tonNode_DataFull>::parse(p);
 #undef FAIL
 }
 
@@ -15191,6 +15711,45 @@ tonNode_downloadZeroState::ReturnType tonNode_downloadZeroState::fetch_result(td
 #undef FAIL
 }
 
+tonNode_getCapabilities::tonNode_getCapabilities() {
+}
+
+const std::int32_t tonNode_getCapabilities::ID;
+
+object_ptr<tonNode_getCapabilities> tonNode_getCapabilities::fetch(td::TlParser &p) {
+  return make_object<tonNode_getCapabilities>(p);
+}
+
+tonNode_getCapabilities::tonNode_getCapabilities(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+#undef FAIL
+{
+  (void)p;
+}
+
+void tonNode_getCapabilities::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-555345672);
+}
+
+void tonNode_getCapabilities::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-555345672);
+}
+
+void tonNode_getCapabilities::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_getCapabilities");
+    s.store_class_end();
+  }
+}
+
+tonNode_getCapabilities::ReturnType tonNode_getCapabilities::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_capabilities>, -172007232>::parse(p);
+#undef FAIL
+}
+
 tonNode_getNextBlockDescription::tonNode_getNextBlockDescription()
   : prev_block_()
 {}
@@ -15234,6 +15793,58 @@ void tonNode_getNextBlockDescription::store(td::TlStorerToString &s, const char 
 tonNode_getNextBlockDescription::ReturnType tonNode_getNextBlockDescription::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchObject<tonNode_BlockDescription>::parse(p);
+#undef FAIL
+}
+
+tonNode_getNextBlocksDescription::tonNode_getNextBlocksDescription()
+  : prev_block_()
+  , limit_()
+{}
+
+tonNode_getNextBlocksDescription::tonNode_getNextBlocksDescription(object_ptr<tonNode_blockIdExt> &&prev_block_, std::int32_t limit_)
+  : prev_block_(std::move(prev_block_))
+  , limit_(limit_)
+{}
+
+const std::int32_t tonNode_getNextBlocksDescription::ID;
+
+object_ptr<tonNode_getNextBlocksDescription> tonNode_getNextBlocksDescription::fetch(td::TlParser &p) {
+  return make_object<tonNode_getNextBlocksDescription>(p);
+}
+
+tonNode_getNextBlocksDescription::tonNode_getNextBlocksDescription(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : prev_block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+  , limit_(TlFetchInt::parse(p))
+#undef FAIL
+{}
+
+void tonNode_getNextBlocksDescription::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1059590852);
+  TlStoreObject::store(prev_block_, s);
+  TlStoreBinary::store(limit_, s);
+}
+
+void tonNode_getNextBlocksDescription::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1059590852);
+  TlStoreObject::store(prev_block_, s);
+  TlStoreBinary::store(limit_, s);
+}
+
+void tonNode_getNextBlocksDescription::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_getNextBlocksDescription");
+    if (prev_block_ == nullptr) { s.store_field("prev_block", "null"); } else { prev_block_->store(s, "prev_block"); }
+    s.store_field("limit", limit_);
+    s.store_class_end();
+  }
+}
+
+tonNode_getNextBlocksDescription::ReturnType tonNode_getNextBlocksDescription::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_blocksDescription>, -701865684>::parse(p);
 #undef FAIL
 }
 
@@ -15286,6 +15897,64 @@ void tonNode_getNextKeyBlockIds::store(td::TlStorerToString &s, const char *fiel
 tonNode_getNextKeyBlockIds::ReturnType tonNode_getNextKeyBlockIds::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchBoxed<TlFetchObject<tonNode_keyBlocks>, 124144985>::parse(p);
+#undef FAIL
+}
+
+tonNode_getPrevBlocksDescription::tonNode_getPrevBlocksDescription()
+  : next_block_()
+  , limit_()
+  , cutoff_seqno_()
+{}
+
+tonNode_getPrevBlocksDescription::tonNode_getPrevBlocksDescription(object_ptr<tonNode_blockIdExt> &&next_block_, std::int32_t limit_, std::int32_t cutoff_seqno_)
+  : next_block_(std::move(next_block_))
+  , limit_(limit_)
+  , cutoff_seqno_(cutoff_seqno_)
+{}
+
+const std::int32_t tonNode_getPrevBlocksDescription::ID;
+
+object_ptr<tonNode_getPrevBlocksDescription> tonNode_getPrevBlocksDescription::fetch(td::TlParser &p) {
+  return make_object<tonNode_getPrevBlocksDescription>(p);
+}
+
+tonNode_getPrevBlocksDescription::tonNode_getPrevBlocksDescription(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : next_block_(TlFetchObject<tonNode_blockIdExt>::parse(p))
+  , limit_(TlFetchInt::parse(p))
+  , cutoff_seqno_(TlFetchInt::parse(p))
+#undef FAIL
+{}
+
+void tonNode_getPrevBlocksDescription::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1550675145);
+  TlStoreObject::store(next_block_, s);
+  TlStoreBinary::store(limit_, s);
+  TlStoreBinary::store(cutoff_seqno_, s);
+}
+
+void tonNode_getPrevBlocksDescription::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1550675145);
+  TlStoreObject::store(next_block_, s);
+  TlStoreBinary::store(limit_, s);
+  TlStoreBinary::store(cutoff_seqno_, s);
+}
+
+void tonNode_getPrevBlocksDescription::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_getPrevBlocksDescription");
+    if (next_block_ == nullptr) { s.store_field("next_block", "null"); } else { next_block_->store(s, "next_block"); }
+    s.store_field("limit", limit_);
+    s.store_field("cutoff_seqno", cutoff_seqno_);
+    s.store_class_end();
+  }
+}
+
+tonNode_getPrevBlocksDescription::ReturnType tonNode_getPrevBlocksDescription::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<tonNode_blocksDescription>, -701865684>::parse(p);
 #undef FAIL
 }
 
@@ -15384,6 +16053,104 @@ void tonNode_prepareBlockProof::store(td::TlStorerToString &s, const char *field
 tonNode_prepareBlockProof::ReturnType tonNode_prepareBlockProof::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchObject<tonNode_PreparedProof>::parse(p);
+#undef FAIL
+}
+
+tonNode_prepareBlockProofs::tonNode_prepareBlockProofs()
+  : blocks_()
+  , allow_partial_()
+{}
+
+tonNode_prepareBlockProofs::tonNode_prepareBlockProofs(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_, bool allow_partial_)
+  : blocks_(std::move(blocks_))
+  , allow_partial_(allow_partial_)
+{}
+
+const std::int32_t tonNode_prepareBlockProofs::ID;
+
+object_ptr<tonNode_prepareBlockProofs> tonNode_prepareBlockProofs::fetch(td::TlParser &p) {
+  return make_object<tonNode_prepareBlockProofs>(p);
+}
+
+tonNode_prepareBlockProofs::tonNode_prepareBlockProofs(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+  , allow_partial_(TlFetchBool::parse(p))
+#undef FAIL
+{}
+
+void tonNode_prepareBlockProofs::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-310791496);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+  TlStoreBool::store(allow_partial_, s);
+}
+
+void tonNode_prepareBlockProofs::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-310791496);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+  TlStoreBool::store(allow_partial_, s);
+}
+
+void tonNode_prepareBlockProofs::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_prepareBlockProofs");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_field("allow_partial", allow_partial_);
+    s.store_class_end();
+  }
+}
+
+tonNode_prepareBlockProofs::ReturnType tonNode_prepareBlockProofs::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchObject<tonNode_PreparedProof>::parse(p);
+#undef FAIL
+}
+
+tonNode_prepareBlocks::tonNode_prepareBlocks()
+  : blocks_()
+{}
+
+tonNode_prepareBlocks::tonNode_prepareBlocks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_)
+  : blocks_(std::move(blocks_))
+{}
+
+const std::int32_t tonNode_prepareBlocks::ID;
+
+object_ptr<tonNode_prepareBlocks> tonNode_prepareBlocks::fetch(td::TlParser &p) {
+  return make_object<tonNode_prepareBlocks>(p);
+}
+
+tonNode_prepareBlocks::tonNode_prepareBlocks(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+#undef FAIL
+{}
+
+void tonNode_prepareBlocks::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(1795140604);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_prepareBlocks::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(1795140604);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void tonNode_prepareBlocks::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "tonNode_prepareBlocks");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+tonNode_prepareBlocks::ReturnType tonNode_prepareBlocks::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchObject<tonNode_Prepared>::parse(p);
 #undef FAIL
 }
 
@@ -15546,13 +16313,13 @@ tonNode_slave_sendExtMessage::tonNode_slave_sendExtMessage(td::TlParser &p)
 
 void tonNode_slave_sendExtMessage::store(td::TlStorerCalcLength &s) const {
   (void)sizeof(s);
-  s.store_binary(2067425040);
+  s.store_binary(58127017);
   TlStoreObject::store(message_, s);
 }
 
 void tonNode_slave_sendExtMessage::store(td::TlStorerUnsafe &s) const {
   (void)sizeof(s);
-  s.store_binary(2067425040);
+  s.store_binary(58127017);
   TlStoreObject::store(message_, s);
 }
 
@@ -15566,7 +16333,7 @@ void tonNode_slave_sendExtMessage::store(td::TlStorerToString &s, const char *fi
 
 tonNode_slave_sendExtMessage::ReturnType tonNode_slave_sendExtMessage::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
-  return TlFetchBoxed<TlFetchTrue, 1072550713>::parse(p);
+  return TlFetchBoxed<TlFetchObject<tonNode_success>, -1063902129>::parse(p);
 #undef FAIL
 }
 

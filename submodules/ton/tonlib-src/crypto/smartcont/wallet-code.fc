@@ -8,7 +8,7 @@
   var signature = in_msg~load_bits(512);
   var cs = in_msg;
   var (msg_seqno, valid_until) = (cs~load_uint(32), cs~load_uint(32));
-  throw_if(35, valid_until < now());
+  throw_if(35, valid_until <= now());
   var ds = get_data().begin_parse();
   var (stored_seqno, public_key) = (ds~load_uint(32), ds~load_uint(256));
   ds.end_parse();

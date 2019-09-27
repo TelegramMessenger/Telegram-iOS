@@ -16,7 +16,7 @@ PROGRAM{
     32 LDU	//  signature in_msg msg_seqno valid_until cs
     NOW	//  signature in_msg msg_seqno valid_until cs _15
     s1 s2 XCHG	//  signature in_msg msg_seqno cs valid_until _15
-    LESS	//  signature in_msg msg_seqno cs _16
+    LEQ	//  signature in_msg msg_seqno cs _16
     35 THROWIF
     c4 PUSH	//  signature in_msg msg_seqno cs _19
     CTOS	//  signature in_msg msg_seqno cs ds

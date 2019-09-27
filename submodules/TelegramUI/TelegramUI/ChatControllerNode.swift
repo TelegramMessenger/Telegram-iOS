@@ -600,7 +600,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var effectiveInputNodeHeight: CGFloat?
         if let inputNodeHeightAndOverflow = inputNodeHeightAndOverflow {
             if let upperInputPositionBound = self.upperInputPositionBound {
-                effectiveInputNodeHeight = min(layout.size.height - max(0.0, upperInputPositionBound), inputNodeHeightAndOverflow.0)
+                effectiveInputNodeHeight = max(0.0, min(layout.size.height - max(0.0, upperInputPositionBound), inputNodeHeightAndOverflow.0))
             } else {
                 effectiveInputNodeHeight = inputNodeHeightAndOverflow.0
             }
@@ -1899,6 +1899,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let _ = self.messageActionSheetController {
             self.displayMessageActionSheet(stableId: nil, sheetActions: nil, displayContextMenuController: nil)
             return self.navigationBar?.view
+        }
+        
+        switch self.chatPresentationInterfaceState.mode {
+        case .standard(previewing: true):
+            if self.bounds.contains(point) {
+                return self.historyNode.view
+            }
+        default:
+            break
         }
         
         return nil

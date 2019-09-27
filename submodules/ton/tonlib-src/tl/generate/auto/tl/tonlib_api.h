@@ -60,6 +60,12 @@ class inputKey;
 
 class key;
 
+class LogStream;
+
+class logTags;
+
+class logVerbosityLevel;
+
 class ok;
 
 class options;
@@ -67,8 +73,6 @@ class options;
 class updateSendLiteServerQuery;
 
 class generic_AccountState;
-
-class generic_InitialAccountState;
 
 class internal_transactionId;
 
@@ -89,6 +93,10 @@ class testWallet_accountState;
 class testWallet_initialAccountState;
 
 class uninited_accountState;
+
+class wallet_accountState;
+
+class wallet_initialAccountState;
 
 class Object;
 
@@ -231,6 +239,85 @@ class key final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class LogStream: public Object {
+ public:
+};
+
+class logStreamDefault final : public LogStream {
+ public:
+
+  logStreamDefault();
+
+  static const std::int32_t ID = 1390581436;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class logStreamFile final : public LogStream {
+ public:
+  std::string path_;
+  std::int64_t max_file_size_;
+
+  logStreamFile();
+
+  logStreamFile(std::string const &path_, std::int64_t max_file_size_);
+
+  static const std::int32_t ID = -1880085930;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class logStreamEmpty final : public LogStream {
+ public:
+
+  logStreamEmpty();
+
+  static const std::int32_t ID = -499912244;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class logTags final : public Object {
+ public:
+  std::vector<std::string> tags_;
+
+  logTags();
+
+  explicit logTags(std::vector<std::string> &&tags_);
+
+  static const std::int32_t ID = -1604930601;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class logVerbosityLevel final : public Object {
+ public:
+  std::int32_t verbosity_level_;
+
+  logVerbosityLevel();
+
+  explicit logVerbosityLevel(std::int32_t verbosity_level_);
+
+  static const std::int32_t ID = 1734624234;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class ok final : public Object {
  public:
 
@@ -315,6 +402,22 @@ class generic_accountStateTestWallet final : public generic_AccountState {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class generic_accountStateWallet final : public generic_AccountState {
+ public:
+  object_ptr<wallet_accountState> account_state_;
+
+  generic_accountStateWallet();
+
+  explicit generic_accountStateWallet(object_ptr<wallet_accountState> &&account_state_);
+
+  static const std::int32_t ID = 942582925;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class generic_accountStateTestGiver final : public generic_AccountState {
  public:
   object_ptr<testGiver_accountState> account_state_;
@@ -340,42 +443,6 @@ class generic_accountStateUninited final : public generic_AccountState {
   explicit generic_accountStateUninited(object_ptr<uninited_accountState> &&account_state_);
 
   static const std::int32_t ID = -908702008;
-  std::int32_t get_id() const final {
-    return ID;
-  }
-
-  void store(td::TlStorerToString &s, const char *field_name) const final;
-};
-
-class generic_InitialAccountState: public Object {
- public:
-};
-
-class generic_initialAccountStateRaw final : public generic_InitialAccountState {
- public:
-  object_ptr<raw_initialAccountState> initital_account_state_;
-
-  generic_initialAccountStateRaw();
-
-  explicit generic_initialAccountStateRaw(object_ptr<raw_initialAccountState> &&initital_account_state_);
-
-  static const std::int32_t ID = -1178429153;
-  std::int32_t get_id() const final {
-    return ID;
-  }
-
-  void store(td::TlStorerToString &s, const char *field_name) const final;
-};
-
-class generic_initialAccountStateTestWallet final : public generic_InitialAccountState {
- public:
-  object_ptr<testWallet_initialAccountState> initital_account_state_;
-
-  generic_initialAccountStateTestWallet();
-
-  explicit generic_initialAccountStateTestWallet(object_ptr<testWallet_initialAccountState> &&initital_account_state_);
-
-  static const std::int32_t ID = 710924204;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -566,6 +633,60 @@ class uninited_accountState final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class wallet_accountState final : public Object {
+ public:
+  std::int64_t balance_;
+  std::int32_t seqno_;
+  object_ptr<internal_transactionId> last_transaction_id_;
+  std::int64_t sync_utime_;
+
+  wallet_accountState();
+
+  wallet_accountState(std::int64_t balance_, std::int32_t seqno_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_);
+
+  static const std::int32_t ID = -1919815977;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_initialAccountState final : public Object {
+ public:
+  std::string public_key_;
+
+  wallet_initialAccountState();
+
+  explicit wallet_initialAccountState(std::string const &public_key_);
+
+  static const std::int32_t ID = -1079249978;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class addLogMessage final : public Function {
+ public:
+  std::int32_t verbosity_level_;
+  std::string text_;
+
+  addLogMessage();
+
+  addLogMessage(std::int32_t verbosity_level_, std::string const &text_);
+
+  static const std::int32_t ID = 1597427692;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class changeLocalPassword final : public Function {
  public:
   object_ptr<inputKey> input_key_;
@@ -622,13 +743,13 @@ class createNewKey final : public Function {
 
 class deleteKey final : public Function {
  public:
-  std::string public_key_;
+  object_ptr<key> key_;
 
   deleteKey();
 
-  explicit deleteKey(std::string const &public_key_);
+  explicit deleteKey(object_ptr<key> &&key_);
 
-  static const std::int32_t ID = 917647652;
+  static const std::int32_t ID = -1579595571;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -748,6 +869,69 @@ class getBip39Hints final : public Function {
   }
 
   using ReturnType = object_ptr<bip39Hints>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class getLogStream final : public Function {
+ public:
+
+  getLogStream();
+
+  static const std::int32_t ID = 1167608667;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<LogStream>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class getLogTagVerbosityLevel final : public Function {
+ public:
+  std::string tag_;
+
+  getLogTagVerbosityLevel();
+
+  explicit getLogTagVerbosityLevel(std::string const &tag_);
+
+  static const std::int32_t ID = 951004547;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<logVerbosityLevel>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class getLogTags final : public Function {
+ public:
+
+  getLogTags();
+
+  static const std::int32_t ID = -254449190;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<logTags>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class getLogVerbosityLevel final : public Function {
+ public:
+
+  getLogVerbosityLevel();
+
+  static const std::int32_t ID = 594057956;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<logVerbosityLevel>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
@@ -979,6 +1163,61 @@ class runTests final : public Function {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class setLogStream final : public Function {
+ public:
+  object_ptr<LogStream> log_stream_;
+
+  setLogStream();
+
+  explicit setLogStream(object_ptr<LogStream> &&log_stream_);
+
+  static const std::int32_t ID = -1364199535;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class setLogTagVerbosityLevel final : public Function {
+ public:
+  std::string tag_;
+  std::int32_t new_verbosity_level_;
+
+  setLogTagVerbosityLevel();
+
+  setLogTagVerbosityLevel(std::string const &tag_, std::int32_t new_verbosity_level_);
+
+  static const std::int32_t ID = -2095589738;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class setLogVerbosityLevel final : public Function {
+ public:
+  std::int32_t new_verbosity_level_;
+
+  setLogVerbosityLevel();
+
+  explicit setLogVerbosityLevel(std::int32_t new_verbosity_level_);
+
+  static const std::int32_t ID = -303429678;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class testGiver_getAccountAddress final : public Function {
  public:
 
@@ -1097,6 +1336,83 @@ class testWallet_sendGrams final : public Function {
   testWallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_);
 
   static const std::int32_t ID = 43200674;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_getAccountAddress final : public Function {
+ public:
+  object_ptr<wallet_initialAccountState> initital_account_state_;
+
+  wallet_getAccountAddress();
+
+  explicit wallet_getAccountAddress(object_ptr<wallet_initialAccountState> &&initital_account_state_);
+
+  static const std::int32_t ID = -1004103180;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<accountAddress>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_getAccountState final : public Function {
+ public:
+  object_ptr<accountAddress> account_address_;
+
+  wallet_getAccountState();
+
+  explicit wallet_getAccountState(object_ptr<accountAddress> &&account_address_);
+
+  static const std::int32_t ID = 462294850;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<wallet_accountState>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_init final : public Function {
+ public:
+  object_ptr<inputKey> private_key_;
+
+  wallet_init();
+
+  explicit wallet_init(object_ptr<inputKey> &&private_key_);
+
+  static const std::int32_t ID = 1528056782;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class wallet_sendGrams final : public Function {
+ public:
+  object_ptr<inputKey> private_key_;
+  object_ptr<accountAddress> destination_;
+  std::int32_t seqno_;
+  std::int64_t valid_until_;
+  std::int64_t amount_;
+  std::string message_;
+
+  wallet_sendGrams();
+
+  wallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t valid_until_, std::int64_t amount_, std::string const &message_);
+
+  static const std::int32_t ID = 789731197;
   std::int32_t get_id() const final {
     return ID;
   }

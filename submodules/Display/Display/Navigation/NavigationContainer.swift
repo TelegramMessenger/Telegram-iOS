@@ -54,10 +54,12 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private final class TopTransition {
+        let type: PendingChild.TransitionType
         let previous: Child
         let coordinator: NavigationTransitionCoordinator
         
-        init(previous: Child, coordinator: NavigationTransitionCoordinator) {
+        init(type: PendingChild.TransitionType, previous: Child, coordinator: NavigationTransitionCoordinator) {
+            self.type = type
             self.previous = previous
             self.coordinator = coordinator
         }
@@ -77,10 +79,10 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     private(set) var isReady: Bool = false
     var isReadyUpdated: (() -> Void)?
     var controllerRemoved: (ViewController) -> Void
-    var keyboardManager: KeyboardManager? {
+    var keyboardViewManager: KeyboardViewManager? {
         didSet {
-            if self.keyboardManager !== oldValue {
-                self.keyboardManager?.surfaces = self.state.top?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
+            if self.keyboardViewManager !== oldValue {
+                
             }
         }
     }
@@ -139,14 +141,17 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
                 
                 topController.viewWillDisappear(true)
-                let topView = topController.view!
+                let topNode = topController.displayNode
                 bottomController.containerLayoutUpdated(layout, transition: .immediate)
                 bottomController.viewWillAppear(true)
-                let bottomView = bottomController.view!
+                let bottomNode = bottomController.displayNode
                 
-                let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self.view, topView: topView, topNavigationBar: topController.navigationBar, bottomView: bottomView, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self] progress, transition in
+                let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, container: self, topNode: topNode, topNavigationBar: topController.navigationBar, bottomNode: bottomNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self] progress, transition, topFrame, bottomFrame in
                     if let strongSelf = self {
-                        strongSelf.keyboardManager?.surfaces = strongSelf.state.top?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
+                        if let top = strongSelf.state.top {
+                            strongSelf.syncKeyboard(leftEdge: top.value.displayNode.frame.minX, transition: transition)
+                        }
+                        //strongSelf.keyboardManager?.surfaces = strongSelf.state.top?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
                         /*for i in 0 ..< strongSelf._viewControllers.count {
                             if let controller = strongSelf._viewControllers[i].controller as? ViewController {
                                 if i < strongSelf._viewControllers.count - 1 {
@@ -159,13 +164,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     }
                 })
                 bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
-                self.state.transition = TopTransition(previous: Child(value: bottomController, layout: layout), coordinator: navigationTransitionCoordinator)
+                self.state.transition = TopTransition(type: .pop, previous: Child(value: bottomController, layout: layout), coordinator: navigationTransitionCoordinator)
             }
         case .changed:
             if let navigationTransitionCoordinator = self.state.transition?.coordinator, !navigationTransitionCoordinator.animatingCompletion {
                 let translation = recognizer.translation(in: self.view).x
                 let progress = max(0.0, min(1.0, translation / self.view.frame.width))
-                navigationTransitionCoordinator.progress = progress
+                navigationTransitionCoordinator.updateProgress(progress, transition: .immediate, completion: {})
             }
         case .ended, .cancelled:
             if let navigationTransitionCoordinator = self.state.transition?.coordinator, !navigationTransitionCoordinator.animatingCompletion {
@@ -274,7 +279,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             if pending.isReady {
                 self.state.pending = nil
                 let previous = self.state.top
-                previous?.value.view.endEditing(true)
+                //previous?.value.view.endEditing(true)
                 self.state.top = pending.value
                 self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: layout.withUpdatedInputHeight(nil), transition: pending.transition)
                 statusBarTransition = pending.transition
@@ -293,7 +298,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         
         var updatedStatusBarStyle = self.statusBarStyle
         if let top = self.state.top {
-            self.applyLayout(layout: layout, to: top, transition: transition)
+            self.applyLayout(layout: layout, to: top, isMaster: true, transition: transition)
             updatedStatusBarStyle = top.value.statusBar.statusBarStyle
         } else {
             updatedStatusBarStyle = .Ignore
@@ -304,13 +309,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         
         if self.state.transition == nil {
-            self.keyboardManager?.surfaces = self.state.top?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
+            //self.keyboardManager?.surfaces = self.state.top?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
         }
     }
     
     private func topTransition(from fromValue: Child?, to toValue: Child?, transitionType: PendingChild.TransitionType, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if case .animated = transition, let fromValue = fromValue, let toValue = toValue {
-            self.keyboardManager?.surfaces = fromValue.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
+            //self.keyboardManager?.surfaces = fromValue.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
             if let currentTransition = self.state.transition {
                 assertionFailure()
             }
@@ -338,7 +343,17 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             }
             toValue.value.setIgnoreAppearanceMethodInvocations(false)
             
-            let topTransition = TopTransition(previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, container: self.view, topView: topController.view, topNavigationBar: topController.navigationBar, bottomView: bottomController.view, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: nil))
+            let topTransition = TopTransition(type: transitionType, previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, container: self, topNode: topController.displayNode, topNavigationBar: topController.navigationBar, bottomNode: bottomController.displayNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self] _, transition, topFrame, bottomFrame in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch transitionType {
+                case .push:
+                    strongSelf.syncKeyboard(leftEdge: topFrame.minX - bottomFrame.width, transition: transition)
+                case .pop:
+                    strongSelf.syncKeyboard(leftEdge: topFrame.minX, transition: transition)
+                }
+            }))
             self.state.transition = topTransition
             
             topTransition.coordinator.animateCompletion(0.0, completion: { [weak self, weak topTransition] in
@@ -353,13 +368,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 topTransition.previous.value.viewDidDisappear(true)
                 if let toValue = strongSelf.state.top, let layout = strongSelf.state.layout {
                     toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
-                    strongSelf.applyLayout(layout: layout, to: toValue, transition: .immediate)
+                    strongSelf.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
                     toValue.value.viewDidAppear(true)
-                    strongSelf.keyboardManager?.surfaces = toValue.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
+                    //strongSelf.keyboardManager?.surfaces = toValue.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
                 }
             })
         } else {
-            self.keyboardManager?.surfaces = toValue?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
+            //self.keyboardManager?.surfaces = toValue?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
             if let fromValue = fromValue {
                 fromValue.value.viewWillDisappear(false)
                 fromValue.value.setIgnoreAppearanceMethodInvocations(true)
@@ -368,7 +383,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 fromValue.value.viewDidDisappear(false)
             }
             if let toValue = toValue {
-                self.applyLayout(layout: layout, to: toValue, transition: .immediate)
+                self.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
                 toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                 toValue.value.viewWillAppear(false)
                 toValue.value.setIgnoreAppearanceMethodInvocations(true)
@@ -384,15 +399,32 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         return Child(value: value, layout: layout)
     }
     
-    private func applyLayout(layout: ContainerViewLayout, to child: Child, transition: ContainedViewLayoutTransition) {
-        let childFrame = CGRect(origin: CGPoint(), size: layout.size)
+    private func applyLayout(layout: ContainerViewLayout, to child: Child, isMaster: Bool, transition: ContainedViewLayoutTransition) {
+        var childFrame = CGRect(origin: CGPoint(), size: layout.size)
+        var shouldSyncKeyboard = false
+        if let transition = self.state.transition {
+            childFrame.origin.x = child.value.displayNode.frame.origin.x
+            switch transition.type {
+            case .pop:
+                shouldSyncKeyboard = true
+            case .push:
+                break
+            }
+        }
         if child.value.displayNode.frame != childFrame {
             transition.updateFrame(node: child.value.displayNode, frame: childFrame)
+        }
+        if shouldSyncKeyboard && isMaster {
+            self.syncKeyboard(leftEdge: childFrame.minX, transition: transition)
         }
         if child.layout != layout {
             child.layout = layout
             child.value.containerLayoutUpdated(layout, transition: transition)
         }
+    }
+    
+    private func syncKeyboard(leftEdge: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.keyboardViewManager?.update(leftEdge: leftEdge, transition: transition)
     }
     
     private func pendingChildIsReady(_ child: PendingChild) {

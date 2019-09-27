@@ -65,3 +65,45 @@ public final class DisplayLinkAnimator {
         }
     }
 }
+
+public final class ConstantDisplayLinkAnimator {
+    private var displayLink: CADisplayLink!
+    private let update: () -> Void
+    private var completed = false
+    
+    public var isPaused: Bool = true {
+        didSet {
+            if self.isPaused != oldValue {
+                self.displayLink.isPaused = self.isPaused
+            }
+        }
+    }
+    
+    public init(update: @escaping () -> Void) {
+        self.update = update
+        
+        self.displayLink = CADisplayLink(target: DisplayLinkTarget({ [weak self] in
+            self?.tick()
+        }), selector: #selector(DisplayLinkTarget.event))
+        self.displayLink.isPaused = true
+        self.displayLink.add(to: RunLoop.main, forMode: .common)
+    }
+    
+    deinit {
+        self.displayLink.isPaused = true
+        self.displayLink.invalidate()
+    }
+    
+    public func invalidate() {
+        self.displayLink.isPaused = true
+        self.displayLink.invalidate()
+    }
+    
+    @objc private func tick() {
+        if self.completed {
+            return
+        }
+        self.update()
+    }
+}
+

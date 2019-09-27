@@ -96,7 +96,7 @@ public func walletSettingsController(context: AccountContext, tonContext: TonCon
     let arguments = WalletSettingsControllerArguments(exportWallet: {
         let _ = (walletRestoreWords(network: context.account.network, walletInfo: walletInfo, tonInstance: tonContext.instance, keychain: tonContext.keychain)
         |> deliverOnMainQueue).start(next: { wordList in
-            pushControllerImpl?(WalletWordDisplayScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, wordList: wordList))
+            pushControllerImpl?(WalletWordDisplayScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, wordList: wordList, mode: .export))
         })
     }, deleteWallet: {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -104,11 +104,10 @@ public func walletSettingsController(context: AccountContext, tonContext: TonCon
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: "Delete Wallet", color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
-                let _ = (debugDeleteWallets(postbox: context.account.postbox)
-                |> deliverOnMainQueue).start(completed: {
-                    if let tonContext = context.tonContext {
-                        replaceAllWalletControllersImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro))
-                    }
+                let _ = (deleteLocalWalletData(postbox: context.account.postbox, network: context.account.network, tonInstance: tonContext.instance, keychain: tonContext.keychain, walletInfo: walletInfo)
+                |> deliverOnMainQueue).start(error: { _ in
+                }, completed: {
+                    replaceAllWalletControllersImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro))
                 })
             })
         ]), ActionSheetItemGroup(items: [

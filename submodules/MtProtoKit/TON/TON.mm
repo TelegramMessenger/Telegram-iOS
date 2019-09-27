@@ -353,11 +353,11 @@ typedef enum {
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)getTestWalletAccountAddressWithPublicKey:(NSString *)publicKey {
+- (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         NSData *publicKeyData = [publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
-            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in getTestWalletAccountAddressWithPublicKey"]];
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in getWalletAccountAddressWithPublicKey"]];
             return [[MTBlockDisposable alloc] initWithBlock:^{}];
         }
         
@@ -377,93 +377,10 @@ typedef enum {
             }
         }];
         
-        auto query = make_object<tonlib_api::testWallet_getAccountAddress>(
-            make_object<tonlib_api::testWallet_initialAccountState>(
+        auto query = make_object<tonlib_api::wallet_getAccountAddress>(
+            make_object<tonlib_api::wallet_initialAccountState>(
                 makeString(publicKeyData)
             )
-        );
-        _client->send({ requestId, std::move(query) });
-        
-        return [[MTBlockDisposable alloc] initWithBlock:^{
-        }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
-}
-
-- (MTSignal *)getTestGiverAccountState {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        uint64_t requestId = _nextRequestId;
-        _nextRequestId += 1;
-        
-        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
-            if (object->get_id() == tonlib_api::error::ID) {
-                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
-                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
-            } else if (object->get_id() == tonlib_api::testGiver_accountState::ID) {
-                auto result = tonlib_api::move_object_as<tonlib_api::testGiver_accountState>(object);
-                TONTransactionId *lastTransactionId = nil;
-                if (result->last_transaction_id_ != nullptr) {
-                    lastTransactionId = [[TONTransactionId alloc] initWithLt:result->last_transaction_id_->lt_ transactionHash:makeData(result->last_transaction_id_->hash_)];
-                }
-                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:true balance:result->balance_ seqno:result->seqno_ lastTransactionId:lastTransactionId syncUtime:result->sync_utime_]];
-                [subscriber putCompletion];
-            } else {
-                assert(false);
-            }
-        }];
-        
-        auto query = make_object<tonlib_api::testGiver_getAccountState>();
-        _client->send({ requestId, std::move(query) });
-        
-        return [[MTBlockDisposable alloc] initWithBlock:^{
-        }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
-}
-
-- (MTSignal *)getTestGiverAddress {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        uint64_t requestId = _nextRequestId;
-        _nextRequestId += 1;
-        
-        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
-            if (object->get_id() == tonlib_api::error::ID) {
-                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
-                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
-            } else if (object->get_id() == tonlib_api::accountAddress::ID) {
-                auto result = tonlib_api::move_object_as<tonlib_api::accountAddress>(object);
-                [subscriber putNext:[[NSString alloc] initWithUTF8String:result->account_address_.c_str()]];
-                [subscriber putCompletion];
-            } else {
-                assert(false);
-            }
-        }];
-        
-        auto query = make_object<tonlib_api::testGiver_getAccountAddress>();
-        _client->send({ requestId, std::move(query) });
-        
-        return [[MTBlockDisposable alloc] initWithBlock:^{
-        }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
-}
-
-- (MTSignal *)testGiverSendGramsWithAccountState:(TONAccountState *)accountState accountAddress:(NSString *)accountAddress amount:(int64_t)amount {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        uint64_t requestId = _nextRequestId;
-        _nextRequestId += 1;
-        
-        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
-            if (object->get_id() == tonlib_api::error::ID) {
-                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
-                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
-            } else {
-                [subscriber putCompletion];
-            }
-        }];
-        
-        auto query = make_object<tonlib_api::testGiver_sendGrams>(make_object<tonlib_api::accountAddress>(
-            accountAddress.UTF8String),
-            accountState.seqno,
-            amount,
-            std::string()
         );
         _client->send({ requestId, std::move(query) });
         
@@ -489,16 +406,8 @@ typedef enum {
                 }
                 [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:false balance:result->account_state_->balance_ seqno:-1 lastTransactionId:lastTransactionId syncUtime:result->account_state_->sync_utime_]];
                 [subscriber putCompletion];
-            } else if (object->get_id() == tonlib_api::generic_accountStateTestWallet::ID) {
-                auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateTestWallet>(object);
-                TONTransactionId *lastTransactionId = nil;
-                if (result->account_state_->last_transaction_id_ != nullptr) {
-                    lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
-                }
-                [subscriber putNext:[[TONAccountState alloc] initWithIsInitialized:true balance:result->account_state_->balance_ seqno:result->account_state_->seqno_ lastTransactionId:lastTransactionId syncUtime:result->account_state_->sync_utime_]];
-                [subscriber putCompletion];
-            } else if (object->get_id() == tonlib_api::generic_accountStateTestGiver::ID) {
-                auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateTestGiver>(object);
+            } else if (object->get_id() == tonlib_api::generic_accountStateWallet::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::generic_accountStateWallet>(object);
                 TONTransactionId *lastTransactionId = nil;
                 if (result->account_state_->last_transaction_id_ != nullptr) {
                     lastTransactionId = [[TONTransactionId alloc] initWithLt:result->account_state_->last_transaction_id_->lt_ transactionHash:makeData(result->account_state_->last_transaction_id_->hash_)];
@@ -611,42 +520,6 @@ typedef enum {
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)makeWalletInitialized:(TONKey *)key localPassword:(NSData *)localPassword {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
-        if (publicKeyData == nil) {
-            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in exportKey"]];
-            return [[MTBlockDisposable alloc] initWithBlock:^{}];
-        }
-        
-        uint64_t requestId = _nextRequestId;
-        _nextRequestId += 1;
-        
-        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
-            if (object->get_id() == tonlib_api::error::ID) {
-                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
-                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
-            } else {
-                [subscriber putCompletion];
-            }
-        }];
-        
-        auto query = make_object<tonlib_api::testWallet_init>(
-            make_object<tonlib_api::inputKey>(
-                make_object<tonlib_api::key>(
-                    makeString(publicKeyData),
-                    makeSecureString(key.secret)
-                ),
-                makeSecureString(localPassword)
-            )
-        );
-        _client->send({ requestId, std::move(query) });
-        
-        return [[MTBlockDisposable alloc] initWithBlock:^{
-        }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
-}
-
 - (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
@@ -688,11 +561,11 @@ typedef enum {
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)deleteKeyWithPublicKey:(NSString *)publicKey {
+- (MTSignal *)deleteKey:(TONKey *)key {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
-        NSData *publicKeyData = [publicKey dataUsingEncoding:NSUTF8StringEncoding];
+        NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
-            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in deleteKeyWithPublicKey"]];
+            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in deleteKey"]];
             return [[MTBlockDisposable alloc] initWithBlock:^{}];
         }
         
@@ -709,7 +582,10 @@ typedef enum {
         }];
         
         auto query = make_object<tonlib_api::deleteKey>(
-            makeString(publicKeyData)
+            make_object<tonlib_api::key>(
+                makeString(publicKeyData),
+                makeSecureString(key.secret)
+            )
         );
         _client->send({ requestId, std::move(query) });
         

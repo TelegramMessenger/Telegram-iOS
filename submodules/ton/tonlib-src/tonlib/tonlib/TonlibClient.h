@@ -28,6 +28,8 @@
 
 #include "td/actor/actor.h"
 
+#include <map>
+
 namespace tonlib {
 class TonlibClient : public td::actor::Actor {
  public:
@@ -58,6 +60,9 @@ class TonlibClient : public td::actor::Actor {
   td::actor::ActorOwn<LastBlock> raw_last_block_;
   ExtClient client_;
 
+  std::map<td::int64, td::actor::ActorOwn<>> actors_;
+  td::int64 actor_id_{1};
+
   ExtClientRef get_client_ref();
   void init_ext_client();
   void init_last_block();
@@ -65,12 +70,17 @@ class TonlibClient : public td::actor::Actor {
   bool is_closing_{false};
   td::uint32 ref_cnt_{1};
   void hangup_shared() override {
-    ref_cnt_--;
+    auto it = actors_.find(get_link_token());
+    if (it != actors_.end()) {
+      actors_.erase(it);
+    } else {
+      ref_cnt_--;
+    }
     try_stop();
   }
   void hangup() override;
   void try_stop() {
-    if (is_closing_ && ref_cnt_ == 0) {
+    if (is_closing_ && ref_cnt_ == 0 && actors_.empty()) {
       stop();
     }
   }
@@ -86,8 +96,19 @@ class TonlibClient : public td::actor::Actor {
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::runTests& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::raw_getAccountAddress& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::testWallet_getAccountAddress& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::wallet_getAccountAddress& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::testGiver_getAccountAddress& request);
   static object_ptr<tonlib_api::Object> do_static_request(tonlib_api::getBip39Hints& request);
+
+  static object_ptr<tonlib_api::Object> do_static_request(tonlib_api::setLogStream& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::getLogStream& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::setLogVerbosityLevel& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::setLogTagVerbosityLevel& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::getLogVerbosityLevel& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::getLogTagVerbosityLevel& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::getLogTags& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::addLogMessage& request);
+
   template <class T, class P>
   td::Status do_request(const T& request, P&& promise) {
     return td::Status::Error(400, "Function is unsupported");
@@ -111,6 +132,11 @@ class TonlibClient : public td::actor::Actor {
                         td::Promise<object_ptr<tonlib_api::ok>>&& promise);
   td::Status do_request(tonlib_api::testWallet_getAccountState& request,
                         td::Promise<object_ptr<tonlib_api::testWallet_accountState>>&& promise);
+
+  td::Status do_request(const tonlib_api::wallet_init& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+  td::Status do_request(const tonlib_api::wallet_sendGrams& request, td::Promise<object_ptr<tonlib_api::ok>>&& promise);
+  td::Status do_request(tonlib_api::wallet_getAccountState& request,
+                        td::Promise<object_ptr<tonlib_api::wallet_accountState>>&& promise);
 
   td::Status do_request(const tonlib_api::testGiver_getAccountState& request,
                         td::Promise<object_ptr<tonlib_api::testGiver_accountState>>&& promise);
@@ -145,5 +171,7 @@ class TonlibClient : public td::actor::Actor {
                         td::Promise<object_ptr<tonlib_api::ok>>&& promise);
 
   void proxy_request(td::int64 query_id, std::string data);
+
+  friend class TonlibQueryActor;
 };
 }  // namespace tonlib

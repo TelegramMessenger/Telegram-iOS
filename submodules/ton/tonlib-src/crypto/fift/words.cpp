@@ -1289,8 +1289,8 @@ void interpret_file_exists(IntCtx& ctx) {
 
 // custom and crypto
 
-void interpret_now(vm::Stack& stack) {
-  stack.push_smallint(std::time(nullptr));
+void interpret_now(IntCtx& ctx) {
+  ctx.stack.push_smallint(ctx.source_lookup->now());
 }
 
 void interpret_new_keypair(vm::Stack& stack) {
@@ -2534,7 +2534,7 @@ void init_words_common(Dictionary& d) {
   d.def_ctx_word("B>file ", interpret_write_file);
   d.def_ctx_word("file-exists? ", interpret_file_exists);
   // custom & crypto
-  d.def_stack_word("now ", interpret_now);
+  d.def_ctx_word("now ", interpret_now);
   d.def_stack_word("newkeypair ", interpret_new_keypair);
   d.def_stack_word("priv>pub ", interpret_priv_key_to_pub);
   d.def_stack_word("ed25519_sign ", interpret_ed25519_sign);

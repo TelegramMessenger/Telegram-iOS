@@ -24,14 +24,23 @@
 
 #include "td/utils/filesystem.h"
 #include "td/utils/port/path.h"
+#include "td/utils/crypto.h"
 
 namespace tonlib {
-std::string to_file_name(td::Slice public_key) {
-  return td::buffer_to_hex(public_key);
+std::string to_file_name_old(const KeyStorage::Key &key) {
+  return td::buffer_to_hex(key.public_key);
 }
 
-std::string KeyStorage::to_file_path(td::Slice public_key) {
-  return directory_ + TD_DIR_SLASH + to_file_name(public_key);
+std::string KeyStorage::to_file_path_old(const Key &key) {
+  return directory_ + TD_DIR_SLASH + to_file_name_old(key);
+}
+
+std::string to_file_name(const KeyStorage::Key &key) {
+  return td::buffer_to_hex(td::sha512(key.secret.as_slice()).substr(0, 32));
+}
+
+std::string KeyStorage::to_file_path(const Key &key) {
+  return directory_ + TD_DIR_SLASH + to_file_name(key);
 }
 td::Status KeyStorage::set_directory(std::string directory) {
   TRY_RESULT(path, td::realpath(directory));
@@ -52,8 +61,8 @@ td::Result<KeyStorage::Key> KeyStorage::save_key(const DecryptedKey &decrypted_k
 
   auto size = encrypted_key.encrypted_data.size();
 
-  LOG(ERROR) << "SAVE " << to_file_name(res.public_key);
-  TRY_RESULT(to_file, td::FileFd::open(to_file_path(res.public_key), td::FileFd::CreateNew | td::FileFd::Write));
+  LOG(ERROR) << "SAVE " << to_file_name(res);
+  TRY_RESULT(to_file, td::FileFd::open(to_file_path(res), td::FileFd::CreateNew | td::FileFd::Write));
   TRY_RESULT(written, to_file.write(encrypted_key.encrypted_data));
   if (written != static_cast<size_t>(size)) {
     return td::Status::Error(PSLICE() << "Failed to write file: written " << written << " bytes instead of " << size);
@@ -74,7 +83,16 @@ td::Result<KeyStorage::Key> KeyStorage::create_new_key(td::Slice local_password,
 }
 
 td::Result<DecryptedKey> KeyStorage::export_decrypted_key(InputKey input_key) {
-  TRY_RESULT(encrypted_data, td::read_file_secure(to_file_path(input_key.key.public_key)));
+  auto r_encrypted_data = td::read_file_secure(to_file_path(input_key.key));
+  if (r_encrypted_data.is_error()) {
+    r_encrypted_data = td::read_file_secure(to_file_path_old(input_key.key));
+    if (r_encrypted_data.is_ok()) {
+      LOG(WARNING) << "Restore private from deprecated location " << to_file_path_old(input_key.key) << " --> "
+                   << to_file_path(input_key.key);
+      td::rename(to_file_path_old(input_key.key), to_file_path(input_key.key)).ignore();
+    }
+  }
+  TRY_RESULT(encrypted_data, std::move(r_encrypted_data));
   EncryptedKey encrypted_key{std::move(encrypted_data), td::Ed25519::PublicKey(std::move(input_key.key.public_key)),
                              std::move(input_key.key.secret)};
   return encrypted_key.decrypt(std::move(input_key.local_password));
@@ -94,8 +112,8 @@ td::Result<KeyStorage::PrivateKey> KeyStorage::load_private_key(InputKey input_k
   return std::move(private_key);
 }
 
-td::Status KeyStorage::delete_key(td::Slice public_key) {
-  return td::unlink(to_file_path(public_key));
+td::Status KeyStorage::delete_key(const Key &key) {
+  return td::unlink(to_file_path(key));
 }
 
 td::Result<KeyStorage::Key> KeyStorage::import_key(td::Slice local_password, td::Slice mnemonic_password,
@@ -122,6 +140,7 @@ td::Result<KeyStorage::Key> KeyStorage::change_local_password(InputKey input_key
   Key res;
   res.public_key = std::move(input_key.key.public_key);
   res.secret = std::move(new_secret);
+  TRY_STATUS(td::copy_file(to_file_path(input_key.key), to_file_path(res)));
   return std::move(res);
 }
 

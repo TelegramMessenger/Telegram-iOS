@@ -27,6 +27,7 @@ class TonlibCli : public td::actor::Actor {
     std::string config;
     std::string key_dir{"."};
     bool use_callbacks_for_network{false};
+    bool use_simple_wallet{false};
   };
   TonlibCli(Options options) : options_(std::move(options)) {
   }
@@ -281,7 +282,7 @@ class TonlibCli : public td::actor::Actor {
                  info.public_key = key->public_key_;
                  info.secret = std::move(key->secret_);
                  keys_.push_back(std::move(info));
-                 export_key(info.public_key, keys_.size() - 1, std::move(password));
+                 //export_key(key->public_key_, keys_.size() - 1, std::move(password));
                  store_keys();
                });
   }
@@ -388,8 +389,11 @@ class TonlibCli : public td::actor::Actor {
     auto r_key_i = to_key_i(key);
     using tonlib_api::make_object;
     if (r_key_i.is_ok()) {
-      auto obj = tonlib::TonlibClient::static_request(make_object<tonlib_api::testWallet_getAccountAddress>(
-          make_object<tonlib_api::testWallet_initialAccountState>(keys_[r_key_i.ok()].public_key)));
+      auto obj = options_.use_simple_wallet
+                     ? tonlib::TonlibClient::static_request(make_object<tonlib_api::testWallet_getAccountAddress>(
+                           make_object<tonlib_api::testWallet_initialAccountState>(keys_[r_key_i.ok()].public_key)))
+                     : tonlib::TonlibClient::static_request(make_object<tonlib_api::wallet_getAccountAddress>(
+                           make_object<tonlib_api::wallet_initialAccountState>(keys_[r_key_i.ok()].public_key)));
       if (obj->get_id() != tonlib_api::error::ID) {
         Address res;
         res.address = ton::move_tl_object_as<tonlib_api::accountAddress>(obj);
@@ -476,12 +480,19 @@ class TonlibCli : public td::actor::Actor {
     using tonlib_api::make_object;
     send_query(make_object<tonlib_api::importKey>(td::SecureString(password), td::SecureString(),
                                                   make_object<tonlib_api::exportedKey>(std::move(words))),
-               [](auto r_res) {
+               [this, password = td::SecureString(password)](auto r_res) {
                  if (r_res.is_error()) {
                    td::TerminalIO::out() << "Can't import key " << r_res.error() << "\n";
                    return;
                  }
-                 td::TerminalIO::out() << to_string(r_res.ok());
+                 auto key = r_res.move_as_ok();
+                 LOG(ERROR) << to_string(key);
+                 KeyInfo info;
+                 info.public_key = key->public_key_;
+                 info.secret = std::move(key->secret_);
+                 keys_.push_back(std::move(info));
+                 export_key(key->public_key_, keys_.size() - 1, std::move(password));
+                 store_keys();
                });
   }
 
@@ -618,7 +629,7 @@ class TonlibCli : public td::actor::Actor {
                                                           std::move(to.address), grams, message.str()),
                [](auto r_res) {
                  if (r_res.is_error()) {
-                   td::TerminalIO::out() << "Can't get state: " << r_res.error() << "\n";
+                   td::TerminalIO::out() << "Can't transfer: " << r_res.error() << "\n";
                    return;
                  }
                  td::TerminalIO::out() << to_string(r_res.ok());
@@ -648,16 +659,29 @@ class TonlibCli : public td::actor::Actor {
 
   void init_simple_wallet(std::string key, size_t key_i, td::Slice password) {
     using tonlib_api::make_object;
-    send_query(make_object<tonlib_api::testWallet_init>(make_object<tonlib_api::inputKey>(
-                   make_object<tonlib_api::key>(keys_[key_i].public_key, keys_[key_i].secret.copy()),
-                   td::SecureString(password))),
-               [key = std::move(key)](auto r_res) {
-                 if (r_res.is_error()) {
-                   td::TerminalIO::out() << "Can't init wallet with key: [" << key << "] " << r_res.error() << "\n";
-                   return;
-                 }
-                 td::TerminalIO::out() << to_string(r_res.ok());
-               });
+    if (options_.use_simple_wallet) {
+      send_query(make_object<tonlib_api::testWallet_init>(make_object<tonlib_api::inputKey>(
+                     make_object<tonlib_api::key>(keys_[key_i].public_key, keys_[key_i].secret.copy()),
+                     td::SecureString(password))),
+                 [key = std::move(key)](auto r_res) {
+                   if (r_res.is_error()) {
+                     td::TerminalIO::out() << "Can't init wallet with key: [" << key << "] " << r_res.error() << "\n";
+                     return;
+                   }
+                   td::TerminalIO::out() << to_string(r_res.ok());
+                 });
+    } else {
+      send_query(make_object<tonlib_api::wallet_init>(make_object<tonlib_api::inputKey>(
+                     make_object<tonlib_api::key>(keys_[key_i].public_key, keys_[key_i].secret.copy()),
+                     td::SecureString(password))),
+                 [key = std::move(key)](auto r_res) {
+                   if (r_res.is_error()) {
+                     td::TerminalIO::out() << "Can't init wallet with key: [" << key << "] " << r_res.error() << "\n";
+                     return;
+                   }
+                   td::TerminalIO::out() << to_string(r_res.ok());
+                 });
+    }
   }
 
   void get_hints(td::Slice prefix) {
@@ -705,8 +729,12 @@ int main(int argc, char* argv[]) {
     options.config = std::move(data);
     return td::Status::OK();
   });
-  p.add_option('c', "use_callbacks_for_network (for debug)", "do not use this", [&]() {
+  p.add_option('c', "use-callbacks-for-network", "do not use this", [&]() {
     options.use_callbacks_for_network = true;
+    return td::Status::OK();
+  });
+  p.add_option('S', "use-simple-wallet", "do not use this", [&]() {
+    options.use_simple_wallet = true;
     return td::Status::OK();
   });
 

@@ -14,12 +14,11 @@
 namespace ton {
 namespace tonlib_api{
   using namespace td;
-Result<int32> tl_constructor_from_string(tonlib_api::generic_AccountState *object, const std::string &str) {
+Result<int32> tl_constructor_from_string(tonlib_api::LogStream *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
-    {"generic.accountStateRaw", -1387096685},
-    {"generic.accountStateTestWallet", -1041955397},
-    {"generic.accountStateTestGiver", 1134654598},
-    {"generic.accountStateUninited", -908702008}
+    {"logStreamDefault", 1390581436},
+    {"logStreamFile", -1880085930},
+    {"logStreamEmpty", -499912244}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -27,10 +26,13 @@ Result<int32> tl_constructor_from_string(tonlib_api::generic_AccountState *objec
   }
   return it->second;
 }
-Result<int32> tl_constructor_from_string(tonlib_api::generic_InitialAccountState *object, const std::string &str) {
+Result<int32> tl_constructor_from_string(tonlib_api::generic_AccountState *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
-    {"generic.initialAccountStateRaw", -1178429153},
-    {"generic.initialAccountStateTestWallet", 710924204}
+    {"generic.accountStateRaw", -1387096685},
+    {"generic.accountStateTestWallet", -1041955397},
+    {"generic.accountStateWallet", 942582925},
+    {"generic.accountStateTestGiver", 1134654598},
+    {"generic.accountStateUninited", -908702008}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -48,15 +50,19 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"exportedPemKey", 1425473725},
     {"inputKey", 869287093},
     {"key", -1978362923},
+    {"logStreamDefault", 1390581436},
+    {"logStreamFile", -1880085930},
+    {"logStreamEmpty", -499912244},
+    {"logTags", -1604930601},
+    {"logVerbosityLevel", 1734624234},
     {"ok", -722616727},
     {"options", -952483001},
     {"updateSendLiteServerQuery", -1555130916},
     {"generic.accountStateRaw", -1387096685},
     {"generic.accountStateTestWallet", -1041955397},
+    {"generic.accountStateWallet", 942582925},
     {"generic.accountStateTestGiver", 1134654598},
     {"generic.accountStateUninited", -908702008},
-    {"generic.initialAccountStateRaw", -1178429153},
-    {"generic.initialAccountStateTestWallet", 710924204},
     {"internal.transactionId", -989527262},
     {"raw.accountState", 461615898},
     {"raw.initialAccountState", 777456197},
@@ -66,7 +72,9 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"testGiver.accountState", 860930426},
     {"testWallet.accountState", 305698744},
     {"testWallet.initialAccountState", -1231516227},
-    {"uninited.accountState", 1768941188}
+    {"uninited.accountState", 1768941188},
+    {"wallet.accountState", -1919815977},
+    {"wallet.initialAccountState", -1079249978}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -76,16 +84,21 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
 }
 Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"addLogMessage", 1597427692},
     {"changeLocalPassword", -1685491421},
     {"close", -1187782273},
     {"createNewKey", -1861385712},
-    {"deleteKey", 917647652},
+    {"deleteKey", -1579595571},
     {"exportEncryptedKey", 155352861},
     {"exportKey", 399723440},
     {"exportPemKey", -2047752448},
     {"generic.getAccountState", -657000446},
     {"generic.sendGrams", 1523427648},
     {"getBip39Hints", -1889640982},
+    {"getLogStream", 1167608667},
+    {"getLogTagVerbosityLevel", 951004547},
+    {"getLogTags", -254449190},
+    {"getLogVerbosityLevel", 594057956},
     {"importEncryptedKey", 656724958},
     {"importKey", -1607900903},
     {"importPemKey", 76385617},
@@ -98,13 +111,20 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"raw.getTransactions", 935377269},
     {"raw.sendMessage", 473889461},
     {"runTests", -2039925427},
+    {"setLogStream", -1364199535},
+    {"setLogTagVerbosityLevel", -2095589738},
+    {"setLogVerbosityLevel", -303429678},
     {"testGiver.getAccountAddress", -540100768},
     {"testGiver.getAccountState", 267738275},
     {"testGiver.sendGrams", -1361914347},
     {"testWallet.getAccountAddress", -1557748223},
     {"testWallet.getAccountState", 654082364},
     {"testWallet.init", 419055225},
-    {"testWallet.sendGrams", 43200674}
+    {"testWallet.sendGrams", 43200674},
+    {"wallet.getAccountAddress", -1004103180},
+    {"wallet.getAccountState", 462294850},
+    {"wallet.init", 1528056782},
+    {"wallet.sendGrams", 789731197}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -202,6 +222,45 @@ Status from_json(tonlib_api::key &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::logStreamDefault &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(tonlib_api::logStreamFile &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "path", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.path_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "max_file_size", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.max_file_size_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::logStreamEmpty &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(tonlib_api::logTags &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "tags", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.tags_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::logVerbosityLevel &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "verbosity_level", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.verbosity_level_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::ok &to, JsonObject &from) {
   return Status::OK();
 }
@@ -259,6 +318,15 @@ Status from_json(tonlib_api::generic_accountStateTestWallet &to, JsonObject &fro
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::generic_accountStateWallet &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "account_state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.account_state_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::generic_accountStateTestGiver &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "account_state", JsonValue::Type::Null, true));
@@ -273,24 +341,6 @@ Status from_json(tonlib_api::generic_accountStateUninited &to, JsonObject &from)
     TRY_RESULT(value, get_json_object_field(from, "account_state", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.account_state_, value));
-    }
-  }
-  return Status::OK();
-}
-Status from_json(tonlib_api::generic_initialAccountStateRaw &to, JsonObject &from) {
-  {
-    TRY_RESULT(value, get_json_object_field(from, "initital_account_state", JsonValue::Type::Null, true));
-    if (value.type() != JsonValue::Type::Null) {
-      TRY_STATUS(from_json(to.initital_account_state_, value));
-    }
-  }
-  return Status::OK();
-}
-Status from_json(tonlib_api::generic_initialAccountStateTestWallet &to, JsonObject &from) {
-  {
-    TRY_RESULT(value, get_json_object_field(from, "initital_account_state", JsonValue::Type::Null, true));
-    if (value.type() != JsonValue::Type::Null) {
-      TRY_STATUS(from_json(to.initital_account_state_, value));
     }
   }
   return Status::OK();
@@ -523,6 +573,57 @@ Status from_json(tonlib_api::uninited_accountState &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::wallet_accountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "balance", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.balance_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "last_transaction_id", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.last_transaction_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "sync_utime", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.sync_utime_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::wallet_initialAccountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.public_key_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::addLogMessage &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "verbosity_level", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.verbosity_level_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "text", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.text_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::changeLocalPassword &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "input_key", JsonValue::Type::Null, true));
@@ -564,9 +665,9 @@ Status from_json(tonlib_api::createNewKey &to, JsonObject &from) {
 }
 Status from_json(tonlib_api::deleteKey &to, JsonObject &from) {
   {
-    TRY_RESULT(value, get_json_object_field(from, "public_key", JsonValue::Type::Null, true));
+    TRY_RESULT(value, get_json_object_field(from, "key", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
-      TRY_STATUS(from_json(to.public_key_, value));
+      TRY_STATUS(from_json(to.key_, value));
     }
   }
   return Status::OK();
@@ -659,6 +760,24 @@ Status from_json(tonlib_api::getBip39Hints &to, JsonObject &from) {
       TRY_STATUS(from_json(to.prefix_, value));
     }
   }
+  return Status::OK();
+}
+Status from_json(tonlib_api::getLogStream &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(tonlib_api::getLogTagVerbosityLevel &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "tag", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.tag_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::getLogTags &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(tonlib_api::getLogVerbosityLevel &to, JsonObject &from) {
   return Status::OK();
 }
 Status from_json(tonlib_api::importEncryptedKey &to, JsonObject &from) {
@@ -835,6 +954,39 @@ Status from_json(tonlib_api::runTests &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::setLogStream &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "log_stream", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.log_stream_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::setLogTagVerbosityLevel &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "tag", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.tag_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "new_verbosity_level", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.new_verbosity_level_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::setLogVerbosityLevel &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "new_verbosity_level", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.new_verbosity_level_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::testGiver_getAccountAddress &to, JsonObject &from) {
   return Status::OK();
 }
@@ -928,6 +1080,72 @@ Status from_json(tonlib_api::testWallet_sendGrams &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::wallet_getAccountAddress &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "initital_account_state", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.initital_account_state_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::wallet_getAccountState &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "account_address", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.account_address_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::wallet_init &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "private_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.private_key_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::wallet_sendGrams &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "private_key", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.private_key_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "destination", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.destination_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "valid_until", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.valid_until_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "amount", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.amount_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.message_, value));
+    }
+  }
+  return Status::OK();
+}
 void to_json(JsonValueScope &jv, const tonlib_api::accountAddress &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "accountAddress");
@@ -973,6 +1191,33 @@ void to_json(JsonValueScope &jv, const tonlib_api::key &object) {
   jo << ctie("public_key", ToJson(object.public_key_));
   jo << ctie("secret", ToJson(JsonBytes{object.secret_}));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::LogStream &object) {
+  tonlib_api::downcast_call(const_cast<tonlib_api::LogStream &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const tonlib_api::logStreamDefault &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "logStreamDefault");
+}
+void to_json(JsonValueScope &jv, const tonlib_api::logStreamFile &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "logStreamFile");
+  jo << ctie("path", ToJson(object.path_));
+  jo << ctie("max_file_size", ToJson(object.max_file_size_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::logStreamEmpty &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "logStreamEmpty");
+}
+void to_json(JsonValueScope &jv, const tonlib_api::logTags &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "logTags");
+  jo << ctie("tags", ToJson(object.tags_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::logVerbosityLevel &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "logVerbosityLevel");
+  jo << ctie("verbosity_level", ToJson(object.verbosity_level_));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::ok &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "ok");
@@ -1007,6 +1252,13 @@ void to_json(JsonValueScope &jv, const tonlib_api::generic_accountStateTestWalle
     jo << ctie("account_state", ToJson(object.account_state_));
   }
 }
+void to_json(JsonValueScope &jv, const tonlib_api::generic_accountStateWallet &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "generic.accountStateWallet");
+  if (object.account_state_) {
+    jo << ctie("account_state", ToJson(object.account_state_));
+  }
+}
 void to_json(JsonValueScope &jv, const tonlib_api::generic_accountStateTestGiver &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "generic.accountStateTestGiver");
@@ -1019,23 +1271,6 @@ void to_json(JsonValueScope &jv, const tonlib_api::generic_accountStateUninited 
   jo << ctie("@type", "generic.accountStateUninited");
   if (object.account_state_) {
     jo << ctie("account_state", ToJson(object.account_state_));
-  }
-}
-void to_json(JsonValueScope &jv, const tonlib_api::generic_InitialAccountState &object) {
-  tonlib_api::downcast_call(const_cast<tonlib_api::generic_InitialAccountState &>(object), [&jv](const auto &object) { to_json(jv, object); });
-}
-void to_json(JsonValueScope &jv, const tonlib_api::generic_initialAccountStateRaw &object) {
-  auto jo = jv.enter_object();
-  jo << ctie("@type", "generic.initialAccountStateRaw");
-  if (object.initital_account_state_) {
-    jo << ctie("initital_account_state", ToJson(object.initital_account_state_));
-  }
-}
-void to_json(JsonValueScope &jv, const tonlib_api::generic_initialAccountStateTestWallet &object) {
-  auto jo = jv.enter_object();
-  jo << ctie("@type", "generic.initialAccountStateTestWallet");
-  if (object.initital_account_state_) {
-    jo << ctie("initital_account_state", ToJson(object.initital_account_state_));
   }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::internal_transactionId &object) {
@@ -1125,6 +1360,27 @@ void to_json(JsonValueScope &jv, const tonlib_api::uninited_accountState &object
   }
   jo << ctie("sync_utime", ToJson(object.sync_utime_));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_accountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.accountState");
+  jo << ctie("balance", ToJson(JsonInt64{object.balance_}));
+  jo << ctie("seqno", ToJson(object.seqno_));
+  if (object.last_transaction_id_) {
+    jo << ctie("last_transaction_id", ToJson(object.last_transaction_id_));
+  }
+  jo << ctie("sync_utime", ToJson(object.sync_utime_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_initialAccountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.initialAccountState");
+  jo << ctie("public_key", ToJson(object.public_key_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::addLogMessage &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "addLogMessage");
+  jo << ctie("verbosity_level", ToJson(object.verbosity_level_));
+  jo << ctie("text", ToJson(object.text_));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::changeLocalPassword &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "changeLocalPassword");
@@ -1147,7 +1403,9 @@ void to_json(JsonValueScope &jv, const tonlib_api::createNewKey &object) {
 void to_json(JsonValueScope &jv, const tonlib_api::deleteKey &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "deleteKey");
-  jo << ctie("public_key", ToJson(object.public_key_));
+  if (object.key_) {
+    jo << ctie("key", ToJson(object.key_));
+  }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::exportEncryptedKey &object) {
   auto jo = jv.enter_object();
@@ -1198,6 +1456,23 @@ void to_json(JsonValueScope &jv, const tonlib_api::getBip39Hints &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "getBip39Hints");
   jo << ctie("prefix", ToJson(object.prefix_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::getLogStream &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "getLogStream");
+}
+void to_json(JsonValueScope &jv, const tonlib_api::getLogTagVerbosityLevel &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "getLogTagVerbosityLevel");
+  jo << ctie("tag", ToJson(object.tag_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::getLogTags &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "getLogTags");
+}
+void to_json(JsonValueScope &jv, const tonlib_api::getLogVerbosityLevel &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "getLogVerbosityLevel");
 }
 void to_json(JsonValueScope &jv, const tonlib_api::importEncryptedKey &object) {
   auto jo = jv.enter_object();
@@ -1290,6 +1565,24 @@ void to_json(JsonValueScope &jv, const tonlib_api::runTests &object) {
   jo << ctie("@type", "runTests");
   jo << ctie("dir", ToJson(object.dir_));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::setLogStream &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "setLogStream");
+  if (object.log_stream_) {
+    jo << ctie("log_stream", ToJson(object.log_stream_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::setLogTagVerbosityLevel &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "setLogTagVerbosityLevel");
+  jo << ctie("tag", ToJson(object.tag_));
+  jo << ctie("new_verbosity_level", ToJson(object.new_verbosity_level_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::setLogVerbosityLevel &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "setLogVerbosityLevel");
+  jo << ctie("new_verbosity_level", ToJson(object.new_verbosity_level_));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::testGiver_getAccountAddress &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "testGiver.getAccountAddress");
@@ -1339,6 +1632,41 @@ void to_json(JsonValueScope &jv, const tonlib_api::testWallet_sendGrams &object)
     jo << ctie("destination", ToJson(object.destination_));
   }
   jo << ctie("seqno", ToJson(object.seqno_));
+  jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
+  jo << ctie("message", ToJson(JsonBytes{object.message_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_getAccountAddress &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.getAccountAddress");
+  if (object.initital_account_state_) {
+    jo << ctie("initital_account_state", ToJson(object.initital_account_state_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_getAccountState &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.getAccountState");
+  if (object.account_address_) {
+    jo << ctie("account_address", ToJson(object.account_address_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_init &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.init");
+  if (object.private_key_) {
+    jo << ctie("private_key", ToJson(object.private_key_));
+  }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::wallet_sendGrams &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "wallet.sendGrams");
+  if (object.private_key_) {
+    jo << ctie("private_key", ToJson(object.private_key_));
+  }
+  if (object.destination_) {
+    jo << ctie("destination", ToJson(object.destination_));
+  }
+  jo << ctie("seqno", ToJson(object.seqno_));
+  jo << ctie("valid_until", ToJson(object.valid_until_));
   jo << ctie("amount", ToJson(JsonInt64{object.amount_}));
   jo << ctie("message", ToJson(JsonBytes{object.message_}));
 }

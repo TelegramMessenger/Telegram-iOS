@@ -151,7 +151,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     }
     
     var statusBarHost: StatusBarHost?
-    var keyboardManager: KeyboardManager?
+    var keyboardViewManager: KeyboardViewManager?
     
     public func updateMasterDetailsBlackout(_ blackout: MasterDetailLayoutBlackout?, transition: ContainedViewLayoutTransition) {
         self.masterDetailsBlackout = blackout
@@ -341,12 +341,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 if previousModalContainer == nil {
                     topModalDismissProgress = modalContainer.dismissProgress
                     if case .compact = layout.metrics.widthClass {
-                        modalContainer.container.keyboardManager = self.keyboardManager
+                        modalContainer.container.keyboardViewManager = self.keyboardViewManager
                     } else {
-                        modalContainer.container.keyboardManager = nil
+                        modalContainer.container.keyboardViewManager = nil
                     }
                 } else {
-                    modalContainer.container.keyboardManager = nil
+                    modalContainer.container.keyboardViewManager = nil
                 }
                 previousModalContainer = modalContainer
             }
@@ -358,9 +358,9 @@ open class NavigationController: UINavigationController, ContainableController, 
                 switch rootContainer {
                 case let .flat(flatContainer):
                     if previousModalContainer == nil {
-                        flatContainer.keyboardManager = self.keyboardManager
+                        flatContainer.keyboardViewManager = self.keyboardViewManager
                     } else {
-                        flatContainer.keyboardManager = nil
+                        flatContainer.keyboardViewManager = nil
                     }
                     transition.updateFrame(node: flatContainer, frame: CGRect(origin: CGPoint(), size: layout.size))
                     flatContainer.update(layout: layout, canBeClosed: false, controllers: controllers, transition: transition)

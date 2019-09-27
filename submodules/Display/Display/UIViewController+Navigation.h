@@ -21,6 +21,7 @@ typedef NS_OPTIONS(NSUInteger, UIResponderDisableAutomaticKeyboardHandling) {
 @interface UIView (Navigation)
 
 @property (nonatomic) bool disablesInteractiveTransitionGestureRecognizer;
+@property (nonatomic) bool disablesInteractiveKeyboardGestureRecognizer;
 @property (nonatomic, copy) bool (^ disablesInteractiveTransitionGestureRecognizerNow)();
 
 @property (nonatomic) UIResponderDisableAutomaticKeyboardHandling disableAutomaticKeyboardHandling;

@@ -375,6 +375,10 @@ target_link_libraries(test-tonlib tdutils tdactor adnllite tl_api ton_crypto ton
 
 add_executable(test-tonlib-offline test/test-td-main.cpp ${TONLIB_OFFLINE_TEST_SOURCE})
 target_link_libraries(test-tonlib-offline tdutils tdactor adnllite tl_api ton_crypto ton_block fift-lib tl_tonlib_api tonlib)
+
+if (NOT CMAKE_CROSSCOMPILING)
+  add_dependencies(test-tonlib-offline gen_fif)
+endif()
 #END tonlib
 
 

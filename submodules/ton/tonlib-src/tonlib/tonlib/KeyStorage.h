@@ -57,7 +57,7 @@ class KeyStorage {
   td::Result<ExportedEncryptedKey> export_encrypted_key(InputKey input_key, td::Slice key_password);
   td::Result<Key> change_local_password(InputKey input_key, td::Slice new_local_password);
 
-  td::Status delete_key(td::Slice public_key);
+  td::Status delete_key(const Key& key);
 
   td::Result<Key> import_key(td::Slice local_password, td::Slice mnemonic_password, ExportedKey exported_key);
   td::Result<Key> import_pem_key(td::Slice local_password, td::Slice key_password, ExportedPemKey exported_key);
@@ -72,6 +72,7 @@ class KeyStorage {
   td::Result<Key> save_key(const DecryptedKey& mnemonic, td::Slice local_password);
   td::Result<DecryptedKey> export_decrypted_key(InputKey input_key);
 
-  std::string to_file_path(td::Slice public_key);
+  std::string to_file_path(const Key& key);
+  std::string to_file_path_old(const Key& key);
 };
 }  // namespace tonlib

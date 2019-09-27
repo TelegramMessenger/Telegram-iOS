@@ -106,7 +106,6 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = .white
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
         self.bottomStripeNode = ASDisplayNode()
@@ -222,7 +221,17 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             
             let (directionLayout, directionApply) = makeDirectionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: directionText, font: directionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: title, font: titleFont, textColor: titleColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0 - dateLayout.size.width - directionLayout.size.width - iconSize.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let titleString = NSMutableAttributedString()
+            if let range = title.range(of: ".") {
+                let integralPart = String(title[..<range.lowerBound])
+                let fractionalPart = String(title[range.lowerBound...])
+                titleString.append(NSAttributedString(string: integralPart, font: Font.bold(17.0), textColor: titleColor))
+                titleString.append(NSAttributedString(string: fractionalPart, font: Font.regular(14.0), textColor: titleColor))
+            } else {
+                titleString.append(NSAttributedString(string: title, font: Font.bold(17.0), textColor: titleColor))
+            }
+            
+            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0 - dateLayout.size.width - directionLayout.size.width - iconSize.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -235,8 +244,8 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             let itemBackgroundColor: UIColor
             let itemSeparatorColor: UIColor
             
-            itemBackgroundColor = item.theme.list.plainBackgroundColor
-            itemSeparatorColor = item.theme.list.itemPlainSeparatorColor
+            itemBackgroundColor = item.theme.list.itemBlocksBackgroundColor
+            itemSeparatorColor = item.theme.list.itemBlocksSeparatorColor
             
             let topInset: CGFloat = 11.0
             let bottomInset: CGFloat = 11.0
@@ -458,7 +467,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor.withAlphaComponent(0.9)
+        self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.9)
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false

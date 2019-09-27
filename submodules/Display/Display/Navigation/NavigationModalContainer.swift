@@ -53,6 +53,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate {
     override func didLoad() {
         super.didLoad()
         
+        self.view.disablesInteractiveKeyboardGestureRecognizer = true
+        
         self.scrollNode.view.alwaysBounceVertical = false
         self.scrollNode.view.alwaysBounceHorizontal = false
         self.scrollNode.view.bounces = false
