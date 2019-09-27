@@ -183,12 +183,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
                     }
                 } else if isValidAddress(text) {
                     arguments.updateText(WalletSendScreenEntryTag.address, text)
-                    if isValidAddress(text, exactLength: true, url: false) {
-                        arguments.selectNextInputItem(WalletSendScreenEntryTag.address)
-                    }
-                } else if isValidAddress(text, url: true) {
-                    arguments.updateText(WalletSendScreenEntryTag.address, convertedAddress(text, url: false))
-                    if isValidAddress(text, exactLength: true, url: true) {
+                    if isValidAddress(text, exactLength: true) {
                         arguments.selectNextInputItem(WalletSendScreenEntryTag.address)
                     }
                 }

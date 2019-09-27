@@ -120,23 +120,14 @@ func formatAmountText(_ text: String, decimalSeparator: String) -> String {
     return text
 }
 
-private let invalidAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=").inverted
-private let invalidUrlAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted
+private let invalidAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted
 
-func isValidAddress(_ address: String, exactLength: Bool = false, url: Bool = false) -> Bool {
-    if address.count > walletAddressLength || address.rangeOfCharacter(from: url ? invalidUrlAddressCharacters : invalidAddressCharacters) != nil {
+func isValidAddress(_ address: String, exactLength: Bool = false) -> Bool {
+    if address.count > walletAddressLength || address.rangeOfCharacter(from: invalidAddressCharacters) != nil {
         return false
     }
     if exactLength && address.count != walletAddressLength {
         return false
     }
     return true
-}
-
-func convertedAddress(_ address: String, url: Bool) -> String {
-    if url {
-        return address.replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
-    } else {
-        return address.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
-    }
 }

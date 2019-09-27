@@ -156,17 +156,23 @@ public final class WalletSplashScreen: ViewController {
                 return
             }
             if let navigationController = strongSelf.navigationController as? NavigationController {
-                var controllers: [UIViewController] = []
-                for controller in navigationController.viewControllers {
-                    if controller is WalletInfoScreen {
-                        controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
-                    } else {
-                        controllers.append(controller)
+                let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
+                |> deliverOnMainQueue).start(next: { [weak self] address in
+                    guard let strongSelf = self else {
+                        return
                     }
-                }
-                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
-                strongSelf.view.endEditing(true)
-                navigationController.setViewControllers(controllers, animated: true)
+                    var controllers: [UIViewController] = []
+                    for controller in navigationController.viewControllers {
+                        if controller is WalletInfoScreen {
+                            controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
+                        } else {
+                            controllers.append(controller)
+                        }
+                    }
+                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
+                    strongSelf.view.endEditing(true)
+                    navigationController.setViewControllers(controllers, animated: true)
+                })
             }
         })
     }
@@ -286,8 +292,19 @@ public final class WalletSplashScreen: ViewController {
                         }
                         return true
                     }
-                    strongSelf.view.endEditing(true)
-                    navigationController.setViewControllers(controllers, animated: true)
+                    
+                    let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
+                    |> deliverOnMainQueue).start(next: { [weak self] address in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if !controllers.contains(where: { $0 is WalletInfoScreen }) {
+                            controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
+                        }
+                        strongSelf.view.endEditing(true)
+                        navigationController.setViewControllers(controllers, animated: true)
+                    })
                 }
             case .restoreFailed:
                 if let navigationController = strongSelf.navigationController as? NavigationController {
