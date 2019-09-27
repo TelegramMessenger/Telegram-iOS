@@ -15,6 +15,8 @@ import PeerInfoUI
 import SettingsUI
 import UrlHandling
 import WalletUI
+import LegacyMediaPickerUI
+import LocalMediaResources
 
 private enum CallStatusText: Equatable {
     case none
@@ -1061,6 +1063,38 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
                 }
             }
+        })
+    }
+    
+    public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in
+            let legacyController = LegacyController(presentation: .navigation, theme: presentationData.theme)
+            legacyController.navigationPresentation = .modal
+            legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
+            
+            let controller = generator(legacyController.context)
+            legacyController.bind(controller: controller)
+            legacyController.deferScreenEdgeGestures = [.top]
+            controller.selectionBlock = { [weak legacyController, weak controller] asset, _ in
+                if let asset = asset {
+                    let _ = (fetchPhotoLibraryImage(localIdentifier: asset.backingAsset.localIdentifier, thumbnail: false)
+                    |> deliverOnMainQueue).start(next: { imageAndFlag in
+                        if let (image, _) = imageAndFlag {
+                            completion(image)
+                        }
+                    })
+                    if let legacyController = legacyController {
+                        legacyController.dismiss()
+                    }
+                }
+            }
+            controller.dismissalBlock = { [weak legacyController] in
+                if let legacyController = legacyController {
+                    legacyController.dismiss()
+                }
+            }
+            present(legacyController)
         })
     }
 }

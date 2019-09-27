@@ -410,10 +410,12 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void, presentAddressContextMenu: @escaping (ASDisplayNode) -> Void) -> ListViewItem {
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> ListViewItem {
         switch self {
         case let .empty(address):
-            return WalletInfoEmptyItem(account: account, theme: theme, strings: strings, address: address, presentAddressContextMenu: presentAddressContextMenu)
+            return WalletInfoEmptyItem(account: account, theme: theme, strings: strings, address: address, displayAddressContextMenu: { node, frame in
+                displayAddressContextMenu(node, frame)
+            })
         case let .transaction(_, transaction):
             return WalletInfoTransactionItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: transaction, action: {
                 action(transaction)
@@ -422,12 +424,12 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletTransaction) -> Void, presentAddressContextMenu: @escaping (ASDisplayNode) -> Void) -> WalletInfoListTransaction {
+private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> WalletInfoListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, presentAddressContextMenu: presentAddressContextMenu), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, presentAddressContextMenu: presentAddressContextMenu), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, displayAddressContextMenu: displayAddressContextMenu), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, displayAddressContextMenu: displayAddressContextMenu), directionHint: nil) }
     
     return WalletInfoListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
@@ -828,20 +830,20 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 return
             }
             strongSelf.openTransaction(transaction)
-        }, presentAddressContextMenu: { [weak self] node in
+        }, displayAddressContextMenu: { [weak self] node, frame in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.present(ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Conversation_ContextMenuCopy), action: {
-                guard let strongSelf = self else {
-                    return
-                }
-                UIPasteboard.general.string = strongSelf.address
-            })]), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak node] in
-                guard let strongSelf = self, let node = node else {
+            let address = strongSelf.address
+            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Conversation_ContextMenuCopy), action: {
+                UIPasteboard.general.string = address
+            })])
+            strongSelf.present(contextMenuController, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                if let strongSelf = self {
+                    return (node, frame.insetBy(dx: 0.0, dy: -2.0), strongSelf, strongSelf.view.bounds)
+                } else {
                     return nil
                 }
-                return (node, node.bounds, strongSelf, strongSelf.bounds)
             }))
         })
         self.currentEntries = updatedEntries

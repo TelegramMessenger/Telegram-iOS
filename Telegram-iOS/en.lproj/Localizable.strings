@@ -4820,6 +4820,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Intro.Text" = "Gram wallet allows you to make fast and secure blockchain-based payments without intermediaries.";
 "Wallet.Intro.CreateWallet" = "Create My Wallet";
 "Wallet.Intro.Terms" = "By creating the wallet you accept\n[Terms of Conditions]().";
+"Wallet.Intro.TermsUrl" = "https://telegram.org/tos/wallet";
 "Wallet.Created.Title" = "Congratulations";
 "Wallet.Created.Text" = "Your Gram wallet has just been created. Only you control it.\n\nTo be able to always have access to it, please write down secret words and\nset up a secure passcode.";
 "Wallet.Created.Proceed" = "Proceed";

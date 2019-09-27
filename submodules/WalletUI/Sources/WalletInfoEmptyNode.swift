@@ -13,16 +13,16 @@ class WalletInfoEmptyItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let address: String
-    let presentAddressContextMenu: (ASDisplayNode) -> Void
+    let displayAddressContextMenu: (ASDisplayNode, CGRect) -> Void
     
     let selectable: Bool = false
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String, presentAddressContextMenu: @escaping (ASDisplayNode) -> Void) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.address = address
-        self.presentAddressContextMenu = presentAddressContextMenu
+        self.displayAddressContextMenu = displayAddressContextMenu
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -95,15 +95,26 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
     override func didLoad() {
         super.didLoad()
         
-        self.addressNode.view.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { [weak self] point in
+            return .waitForSingleTap
+        }
+        self.addressNode.view.addGestureRecognizer(recognizer)
     }
     
-    @objc private func longPressGesture(_ recognizer: UILongPressGestureRecognizer) {
-        if case .began = recognizer.state {
-            guard let item = self.item else {
-                return
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .longTap:
+                    self.item?.displayAddressContextMenu(self, self.addressNode.frame)
+                default:
+                    break
+                }
             }
-            item.presentAddressContextMenu(self.addressNode)
+        default:
+            break
         }
     }
     
@@ -158,6 +169,7 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.item = item
                 
                 strongSelf.item = item
                 

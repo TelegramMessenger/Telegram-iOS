@@ -63,11 +63,41 @@ func isValidAmount(_ amount: String) -> Bool {
         return false
     }
     
+    let string = amount.replacingOccurrences(of: ",", with: ".")
+    if let range = string.range(of: ".") {
+        let integralPart = String(string[..<range.lowerBound])
+        let fractionalPart = String(string[range.upperBound...])
+        let string = integralPart + fractionalPart + String(repeating: "0", count: max(0, 9 - fractionalPart.count))
+        if let _ = Int64(string) {
+        } else {
+            return false
+        }
+    } else if !string.isEmpty {
+        if let integral = Int64(string), integral <= maxIntegral {
+        } else {
+            return false
+        }
+    }
+    
     return true
 }
 
+private let maxIntegral: Int64 = Int64.max / 1000000000
+
 func amountValue(_ string: String) -> Int64 {
-    return Int64((Double(string.replacingOccurrences(of: ",", with: ".")) ?? 0.0) * 1000000000.0)
+    let string = string.replacingOccurrences(of: ",", with: ".")
+    if let range = string.range(of: ".") {
+        let integralPart = String(string[..<range.lowerBound])
+        let fractionalPart = String(string[range.upperBound...])
+        let string = integralPart + fractionalPart + String(repeating: "0", count: max(0, 9 - fractionalPart.count))
+        return Int64(string) ?? 0
+    } else if let integral = Int64(string) {
+        if integral > maxIntegral {
+            return 0
+        }
+        return integral * 1000000000
+    }
+    return 0
 }
 
 func normalizedStringForGramsString(_ string: String, decimalSeparator: String = ".") -> String {

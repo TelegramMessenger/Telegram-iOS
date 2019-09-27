@@ -106,7 +106,7 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
                         let _ = try? drawSvgPath(c, path: "M24.1237113,50.5927835 L40.8762887,50.5927835 L40.8762887,60.9793814 L32.5,64.0928525 L24.1237113,60.9793814 Z")
                     case let .custom(image):
                         if let image = image {
-                            let fittedSize = image.size.fitted(clipRect.size)
+                            let fittedSize = image.size.aspectFitted(clipRect.size)
                             let fittedRect = CGRect(origin: CGPoint(x: fittedRect.midX - fittedSize.width / 2.0, y: fittedRect.midY - fittedSize.height / 2.0), size: fittedSize)
                             c.translateBy(x: fittedRect.midX, y: fittedRect.midY)
                             c.scaleBy(x: 1.0, y: -1.0)

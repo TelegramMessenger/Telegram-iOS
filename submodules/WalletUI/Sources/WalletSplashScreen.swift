@@ -314,7 +314,11 @@ public final class WalletSplashScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://telegram.org", forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
+            var url = strongSelf.presentationData.strings.Wallet_Intro_TermsUrl
+            if url.isEmpty {
+                url = "https://telegram.org/tos/wallet"
+            }
+            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
         })
         
         self.displayNodeDidLoad()
