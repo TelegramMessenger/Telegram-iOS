@@ -100,14 +100,13 @@ public final class WalletQrScanScreen: ViewController {
         
         self.displayNodeDidLoad()
         
-        self.codeDisposable = (((self.displayNode as! WalletQrScanScreenNode).focusedCode.get()
+        self.codeDisposable = ((self.displayNode as! WalletQrScanScreenNode).focusedCode.get()
         |> map { code -> String? in
             return code?.message
         }
         |> distinctUntilChanged
-        |> delay(2.5, queue: Queue.mainQueue()))
         |> mapToSignal { code -> Signal<String?, NoError> in
-            return .single(code)
+            return .single(code) |> delay(0.5, queue: Queue.mainQueue())
         }).start(next: { [weak self] code in
             guard let strongSelf = self, let code = code else {
                 return
@@ -270,13 +269,16 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         
         let dimAlpha: CGFloat
         let dimRect: CGRect
+        let controlsAlpha: CGFloat
         if let focusedRect = self.focusedRect {
             dimAlpha = 1.0
+            controlsAlpha = 0.0
             let side = max(bounds.width * focusedRect.width, bounds.height * focusedRect.height) * 0.6
             let center = CGPoint(x: (1.0 - focusedRect.center.y) * bounds.width, y: focusedRect.center.x * bounds.height)
             dimRect = CGRect(x: center.x - side / 2.0, y: center.y - side / 2.0, width: side, height: side)
         } else {
             dimAlpha = 0.625
+            controlsAlpha = 1.0
             dimRect = CGRect(x: dimInset, y: dimHeight, width: layout.size.width - dimInset * 2.0, height: layout.size.height - dimHeight * 2.0)
         }
     
@@ -295,6 +297,10 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         let buttonSize = CGSize(width: 72.0, height: 72.0)
         transition.updateFrame(node: self.galleryButtonNode, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0) - buttonSize.width - 28.0, y: dimHeight + frameSide + 50.0), size: buttonSize))
         transition.updateFrame(node: self.torchButtonNode, frame: CGRect(origin: CGPoint(x: floor(layout.size.width / 2.0) + 28.0, y: dimHeight + frameSide + 50.0), size: buttonSize))
+        
+        transition.updateAlpha(node: self.titleNode, alpha: controlsAlpha)
+        transition.updateAlpha(node: self.galleryButtonNode, alpha: controlsAlpha)
+        transition.updateAlpha(node: self.torchButtonNode, alpha: controlsAlpha)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: dimHeight - titleSize.height - titleSpacing), size: titleSize)

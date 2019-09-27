@@ -13,14 +13,16 @@ class WalletInfoEmptyItem: ListViewItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let address: String
+    let displayAddressContextMenu: (ASDisplayNode, CGRect) -> Void
     
     let selectable: Bool = false
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String) {
+    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.theme = theme
         self.strings = strings
         self.address = address
+        self.displayAddressContextMenu = displayAddressContextMenu
     }
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
@@ -62,6 +64,8 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
     private let textNode: TextNode
     private let addressNode: TextNode
     
+    private var item: WalletInfoEmptyItem?
+    
     init(account: Account) {
         self.offsetContainer = ASDisplayNode()
         
@@ -86,6 +90,32 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         self.offsetContainer.addSubnode(self.textNode)
         self.offsetContainer.addSubnode(self.addressNode)
         self.addSubnode(self.offsetContainer)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
+        recognizer.tapActionAtPoint = { [weak self] point in
+            return .waitForSingleTap
+        }
+        self.addressNode.view.addGestureRecognizer(recognizer)
+    }
+    
+    @objc func tapLongTapOrDoubleTapGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .longTap:
+                    self.item?.displayAddressContextMenu(self, self.addressNode.frame)
+                default:
+                    break
+                }
+            }
+        default:
+            break
+        }
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {
@@ -139,6 +169,7 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.item = item
                 
                 strongSelf.offsetContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
                 

@@ -2706,7 +2706,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            if node === strongSelf.inputNodes.last {
+            if node.isLast {
                 if done {
                     action()
                 } else {
