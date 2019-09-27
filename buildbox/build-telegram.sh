@@ -60,6 +60,7 @@ if [ "$BUILD_CONFIGURATION" == "hockeyapp" ]; then
 	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "appstore" ]; then
 	CODESIGNING_SUBPATH="transient-data/codesigning"
+	CODESIGNING_TEAMS_SUBPATH="transient-data/teams"
 elif [ "$BUILD_CONFIGURATION" == "verify" ]; then
 	CODESIGNING_SUBPATH="fake-codesigning"
 else
