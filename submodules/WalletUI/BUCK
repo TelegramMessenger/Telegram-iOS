@@ -28,6 +28,7 @@ static_library(
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/GlassButtonNode:GlassButtonNode",
         "//submodules/UrlHandling:UrlHandling",
+        "//submodules/UrlEscaping:UrlEscaping",
 	"//submodules/LocalAuth:LocalAuth",
     ],
     frameworks = [

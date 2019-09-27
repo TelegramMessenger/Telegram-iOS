@@ -11,6 +11,7 @@ import ItemListUI
 import SwiftSignalKit
 import OverlayStatusController
 import ShareController
+import UrlEscaping
 
 private final class WalletReceiveScreenArguments {
     let context: AccountContext
@@ -275,7 +276,7 @@ private func walletReceiveScreenEntries(presentationData: PresentationData, addr
         addressText = formatAddress(address)
         addressMonospace = true
     } else {
-        addressText = invoiceUrl(address: address, state: state, escapeComment: false)
+        addressText = invoiceUrl(address: address, state: state, escapeComment: true)
     }
     entries.append(.address(presentationData.theme, addressText, addressMonospace))
     entries.append(.copyAddress(presentationData.theme, state.isEmpty ? presentationData.strings.Wallet_Receive_CopyAddress : presentationData.strings.Wallet_Receive_CopyInvoiceUrl))
@@ -306,13 +307,9 @@ private func invoiceUrl(address: String, state: WalletReceiveScreenState, escape
         arguments += arguments.isEmpty ? "?" : "&"
         arguments += "amount=\(amountValue(state.amount))"
     }
-    if !state.comment.isEmpty, let escapedComment = state.comment.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+    if !state.comment.isEmpty {
         arguments += arguments.isEmpty ? "?" : "&"
-        if escapeComment {
-            arguments += "text=\(escapedComment)"
-        } else {
-            arguments += "text=\(state.comment)"
-        }
+        arguments += "text=\(urlEncodedStringFromString(state.comment))"
     }
     return "ton://transfer/\(address)\(arguments)"
 }
