@@ -462,6 +462,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
     var strings: PresentationStrings
     let titleNode: ASTextNode
     let backgroundNode: ASDisplayNode
+    let separatorNode: ASDisplayNode
     
     init(theme: PresentationTheme, strings: PresentationStrings, roundedTimestamp: Int32, month: Int32, year: Int32) {
         self.theme = theme
@@ -469,7 +470,11 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
-        self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor.withAlphaComponent(0.9)
+        self.backgroundNode.backgroundColor = theme.list.itemBlocksBackgroundColor
+        
+        self.separatorNode = ASDisplayNode()
+        self.separatorNode.isLayerBacked = true
+        self.separatorNode.backgroundColor = theme.list.itemBlocksSeparatorColor
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -498,6 +503,7 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         }
         
         self.addSubnode(self.backgroundNode)
+        self.addSubnode(self.separatorNode)
         self.addSubnode(self.titleNode)
         self.titleNode.attributedText = NSAttributedString(string: text, font: sectionTitleFont, textColor: theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 1
@@ -521,5 +527,10 @@ final class WalletInfoTransactionDateHeaderNode: ListViewItemHeaderNode {
         let titleSize = self.titleNode.measure(CGSize(width: size.width - leftInset - rightInset - 24.0, height: CGFloat.greatestFiniteMagnitude))
         self.titleNode.frame = CGRect(origin: CGPoint(x: leftInset + 16.0, y: floor((size.height - titleSize.height) / 2.0)), size: titleSize)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.separatorNode.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - UIScreenPixel), size: CGSize(width: size.width, height: UIScreenPixel))
+    }
+    
+    override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
+        transition.updateAlpha(node: self.separatorNode, alpha: (1.0 - factor) * 0.0 + factor * 1.0)
     }
 }

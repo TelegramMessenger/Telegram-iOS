@@ -522,6 +522,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         var peer: Peer?
         var displayAsMessage = false
+        var enablePreview = true
         switch item.content {
             case let .peer(message, peerValue, _, _, _, _, _, _, _, _, displayAsMessageValue):
                 displayAsMessage = displayAsMessageValue
@@ -529,6 +530,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     peer = author
                 } else {
                     peer = peerValue.chatMainPeer
+                }
+                if peerValue.peerId.namespace == Namespaces.Peer.SecretChat {
+                    enablePreview = false
                 }
             case let .groupReference(groupReference):
                 if let previousItem = previousItem, case let .groupReference(previousGroupReference) = previousItem.content, groupReference.hiddenByDefault != previousGroupReference.hiddenByDefault {
@@ -547,6 +551,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             self.avatarNode.setPeer(account: item.context.account, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
         }
+        
+        self.contextContainer.isGestureEnabled = enablePreview
     }
     
     override func layoutForParams(_ params: ListViewItemLayoutParams, item: ListViewItem, previousItem: ListViewItem?, nextItem: ListViewItem?) {

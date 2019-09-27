@@ -105,7 +105,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         panRecognizer.cancelsTouchesInView = true
         self.view.addGestureRecognizer(panRecognizer)
         
-        self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
+        /*self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             guard let strongSelf = self else {
                 return false
             }
@@ -113,7 +113,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 return true
             }
             return false
-        }
+        }*/
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
@@ -196,9 +196,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         let topController = top.value
                         let bottomController = transition.previous.value
-                        UIView.setAnimationsEnabled(false)
-                        topController.view.endEditing(true)
-                        UIView.setAnimationsEnabled(true)
+                        strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topController.view)
                         
                         strongSelf.state.transition = nil
                         
@@ -370,6 +368,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 guard let strongSelf = self, let topTransition = topTransition, strongSelf.state.transition === topTransition else {
                     return
                 }
+                strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topTransition.previous.value.view)
                 strongSelf.state.transition = nil
                 
                 topTransition.previous.value.setIgnoreAppearanceMethodInvocations(true)
@@ -421,6 +420,10 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
             case .push:
                 break
+            }
+        } else {
+            if isMaster {
+                shouldSyncKeyboard = true
             }
         }
         if child.value.displayNode.frame != childFrame {

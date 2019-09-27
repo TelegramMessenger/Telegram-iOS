@@ -2908,8 +2908,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
             switch item.stickDirection {
                 case .top:
                     headerFrame = CGRect(origin: CGPoint(x: 0.0, y: min(max(upperDisplayBound, upperBound), lowerBound - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
-                    stickLocationDistance = 0.0
-                    stickLocationDistanceFactor = 0.0
+                    stickLocationDistance = headerFrame.minY - upperBound
+                    stickLocationDistanceFactor = max(0.0, min(1.0, stickLocationDistance / itemHeaderHeight))
                 case .bottom:
                     headerFrame = CGRect(origin: CGPoint(x: 0.0, y: max(upperBound, min(lowerBound, lowerDisplayBound) - itemHeaderHeight)), size: CGSize(width: self.visibleSize.width, height: itemHeaderHeight))
                     stickLocationDistance = lowerBound - headerFrame.maxY
