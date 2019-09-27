@@ -3,10 +3,10 @@ import UIKit
 import Display
 import AccountContext
 
-public func textAlertController(context: AccountContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal) -> AlertController {
+public func textAlertController(context: AccountContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     
-    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: title, text: text, actions: actions, actionLayout: actionLayout)
+    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset)
     let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         controller?.theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     })
@@ -17,7 +17,7 @@ public func textAlertController(context: AccountContext, title: String?, text: S
     return controller
 }
 
-public func richTextAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, dismissAutomatically: Bool = true) -> AlertController {
+public func richTextAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissAutomatically: Bool = true) -> AlertController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
     
@@ -29,7 +29,7 @@ public func richTextAlertController(context: AccountContext, title: NSAttributed
             }
             action.action()
         })
-    }, actionLayout: actionLayout))
+    }, actionLayout: actionLayout), allowInputInset: allowInputInset)
     dismissImpl = { [weak controller] in
         controller?.dismissAnimated()
     }

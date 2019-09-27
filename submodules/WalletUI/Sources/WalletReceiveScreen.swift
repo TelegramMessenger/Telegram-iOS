@@ -236,6 +236,8 @@ private enum WalletReceiveScreenEntry: ItemListNodeEntry {
         case let .comment(theme, placeholder, value):
             return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 128, display: true), sectionId: self.section, style: .blocks, returnKeyType: .done, textUpdated: { text in
                 arguments.updateText(WalletReceiveScreenEntryTag.comment, text)
+            }, shouldUpdateText: { text in
+                return text.count <= 128
             }, updatedFocus: { focus in
                 arguments.updateState { state in
                     var state = state
