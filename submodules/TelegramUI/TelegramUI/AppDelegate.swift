@@ -24,6 +24,8 @@ import WatchBridge
 import LegacyDataImport
 import SettingsUI
 import AppBundle
+import WalletUI
+import UrlHandling
 
 private let handleVoipNotifications = false
 
@@ -1479,6 +1481,9 @@ final class SharedApplicationContext {
                     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 } else if let confirmationCode = parseConfirmationCodeUrl(url) {
                     authContext.rootController.applyConfirmationCode(confirmationCode)
+                } else if let _ = parseWalletUrl(url) {
+                    let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
+                    authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: nil, text: "Please log in to your account to use Gram Wallet.", actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 }
             }
         })

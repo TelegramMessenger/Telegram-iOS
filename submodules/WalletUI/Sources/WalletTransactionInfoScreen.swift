@@ -17,10 +17,12 @@ import TelegramStringFormatting
 private final class WalletTransactionInfoControllerArguments {
     let copyWalletAddress: () -> Void
     let sendGrams: () -> Void
+    let displayContextMenu: (WalletTransactionInfoEntryTag, String) -> Void
     
-    init(copyWalletAddress: @escaping () -> Void, sendGrams: @escaping () -> Void) {
+    init(copyWalletAddress: @escaping () -> Void, sendGrams: @escaping () -> Void, displayContextMenu: @escaping (WalletTransactionInfoEntryTag, String) -> Void) {
         self.copyWalletAddress = copyWalletAddress
         self.sendGrams = sendGrams
+        self.displayContextMenu = displayContextMenu
     }
 }
 
@@ -28,6 +30,18 @@ private enum WalletTransactionInfoSection: Int32 {
     case amount
     case info
     case comment
+}
+
+private enum WalletTransactionInfoEntryTag: ItemListItemTag {
+    case comment
+    
+    func isEqual(to other: ItemListItemTag) -> Bool {
+        if let other = other as? WalletTransactionInfoEntryTag {
+            return self == other
+        } else {
+            return false
+        }
+    }
 }
 
 private enum WalletTransactionInfoEntry: ItemListNodeEntry {
@@ -92,7 +106,9 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks)
+            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: {
+                arguments.displayContextMenu(WalletTransactionInfoEntryTag.comment, text)
+            }, tag: WalletTransactionInfoEntryTag.comment)
         }
     }
 }
@@ -157,12 +173,6 @@ private func extractDescription(_ walletTransaction: WalletTransaction) -> Strin
     return text
 }
 
-private func formatAddress(_ address: String) -> String {
-    var address = address
-    address.insert("\n", at: address.index(address.startIndex, offsetBy: address.count / 2))
-    return address
-}
-
 private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState) -> [WalletTransactionInfoEntry] {
     var entries: [WalletTransactionInfoEntry] = []
     
@@ -203,6 +213,7 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
+    var displayContextMenuImpl: ((WalletTransactionInfoEntryTag, String) -> Void)?
     
     let arguments = WalletTransactionInfoControllerArguments(copyWalletAddress: {
         let address = extractAddress(walletTransaction)
@@ -217,6 +228,8 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
             dismissImpl?()
             pushImpl?(walletSendScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
         }
+    }, displayContextMenu: { tag, text in
+        displayContextMenuImpl?(tag, text)
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
@@ -241,6 +254,35 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     }
     pushImpl = { [weak controller] c in
         controller?.push(c)
+    }
+    displayContextMenuImpl = { [weak controller] tag, value in
+        if let strongController = controller {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            var resultItemNode: ListViewItemNode?
+            let _ = strongController.frameForItemNode({ itemNode in
+                if let itemNode = itemNode as? ItemListMultilineTextItemNode {
+                    if let itemTag = itemNode.tag as? WalletTransactionInfoEntryTag {
+                        if itemTag == tag {
+                            resultItemNode = itemNode
+                            return true
+                        }
+                    }
+                }
+                return false
+            })
+            if let resultItemNode = resultItemNode {
+                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: {
+                    UIPasteboard.general.string = value
+                })])
+                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
+                    if let strongController = controller, let resultItemNode = resultItemNode {
+                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
+                    } else {
+                        return nil
+                    }
+                }))
+            }
+        }
     }
     
     return controller

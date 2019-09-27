@@ -14,6 +14,7 @@ import AccountContext
 import UrlEscaping
 import PassportUI
 import UrlHandling
+import WalletUI
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -140,6 +141,12 @@ func formattedConfirmationCode(_ code: Int) -> String {
 
 func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if url.hasPrefix("ton://") {
+        if let url = URL(string: url), let parsedUrl = parseWalletUrl(url) {
+            context.sharedContext.openWallet(context: context, walletContext: .send(address: parsedUrl.address, amount: parsedUrl.amount, comment: parsedUrl.comment)) { c in
+                navigationController?.pushViewController(c)
+            }
+        }
+        
         return
     }
     

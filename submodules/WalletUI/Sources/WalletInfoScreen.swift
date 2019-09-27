@@ -513,7 +513,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         self.headerNode = WalletInfoHeaderNode(account: account, theme: presentationData.theme, sendAction: sendAction, receiveAction: receiveAction)
         
         self.listNode = ListView()
-        self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
         self.listNode.verticalScrollIndicatorFollowsOverscroll = true
         self.listNode.isHidden = true
         
@@ -868,27 +868,4 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: animated ? .animated(duration: 0.5, curve: .spring) : .immediate)
         }
     }
-}
-
-func formatBalanceText(_ value: Int64, decimalSeparator: String) -> String {
-    var balanceText = "\(abs(value))"
-    while balanceText.count < 10 {
-        balanceText.insert("0", at: balanceText.startIndex)
-    }
-    balanceText.insert(contentsOf: decimalSeparator, at: balanceText.index(balanceText.endIndex, offsetBy: -9))
-    while true {
-        if balanceText.hasSuffix("0") {
-            if balanceText.hasSuffix("\(decimalSeparator)0") {
-                break
-            } else {
-                balanceText.removeLast()
-            }
-        } else {
-            break
-        }
-    }
-    if value < 0 {
-        balanceText.insert("-", at: balanceText.startIndex)
-    }
-    return balanceText
 }

@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AppBundle
 import AccountContext
+import SwiftSignalKit
 import TelegramPresentationData
 import AsyncDisplayKit
 import Display
@@ -19,6 +20,7 @@ public final class WalletWordDisplayScreen: ViewController {
     private let wordList: [String]
     
     private let startTime: Double
+    private let idleTimerExtensionDisposable: Disposable
     
     public init(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, wordList: [String]) {
         self.context = context
@@ -32,6 +34,7 @@ public final class WalletWordDisplayScreen: ViewController {
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
         
         self.startTime = Date().timeIntervalSince1970
+        self.idleTimerExtensionDisposable = context.sharedContext.applicationBindings.pushIdleTimerExtension()
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
         
@@ -44,6 +47,10 @@ public final class WalletWordDisplayScreen: ViewController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        self.idleTimerExtensionDisposable.dispose()
     }
     
     @objc private func backPressed() {

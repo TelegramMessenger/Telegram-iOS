@@ -37,12 +37,14 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
     let action: (() -> Void)?
     let textUpdated: (String) -> Void
     let shouldUpdateText: (String) -> Bool
+    let processPaste: ((String) -> Void)?
+    let updatedFocus: ((Bool) -> Void)?
     let maxLength: ItemListMultilineInputItemTextLimit?
     let minimalHeight: CGFloat?
     let inlineAction: ItemListMultilineInputInlineAction?
     public let tag: ItemListItemTag?
     
-    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
+    public init(theme: PresentationTheme, text: String, placeholder: String, maxLength: ItemListMultilineInputItemTextLimit?, sectionId: ItemListSectionId, style: ItemListStyle, capitalization: Bool = true, autocorrection: Bool = true, returnKeyType: UIReturnKeyType = .default, minimalHeight: CGFloat? = nil, textUpdated: @escaping (String) -> Void, shouldUpdateText: @escaping (String) -> Bool = { _ in return true }, processPaste: ((String) -> Void)? = nil, updatedFocus: ((Bool) -> Void)? = nil, tag: ItemListItemTag? = nil, action: (() -> Void)? = nil, inlineAction: ItemListMultilineInputInlineAction? = nil) {
         self.theme = theme
         self.text = text
         self.placeholder = placeholder
@@ -55,6 +57,8 @@ public class ItemListMultilineInputItem: ListViewItem, ItemListItem {
         self.minimalHeight = minimalHeight
         self.textUpdated = textUpdated
         self.shouldUpdateText = shouldUpdateText
+        self.processPaste = processPaste
+        self.updatedFocus = updatedFocus
         self.tag = tag
         self.action = action
         self.inlineAction = inlineAction
@@ -365,15 +369,27 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
         self.textClippingNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textTopInset), size: CGSize(width: max(0.0, params.width - leftInset - params.rightInset), height: max(0.0, contentSize.height - textTopInset - textBottomInset)))
     }
     
+    public func editableTextNodeDidBeginEditing(_ editableTextNode: ASEditableTextNode) {
+        self.item?.updatedFocus?(true)
+    }
+    
+    public func editableTextNodeDidFinishEditing(_ editableTextNode: ASEditableTextNode) {
+        self.item?.updatedFocus?(false)
+    }
+    
     public func editableTextNode(_ editableTextNode: ASEditableTextNode, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
         if let item = self.item {
+            if text.count > 1, let processPaste = item.processPaste {
+                processPaste(text)
+                return false
+            }
+            
             if let action = item.action, text == "\n" {
                 action()
                 return false
             }
             
-            var newText: String = editableTextNode.textView.text
-            newText.replaceSubrange(newText.index(newText.startIndex, offsetBy: range.lowerBound) ..< newText.index(newText.startIndex, offsetBy: range.upperBound), with: text)
+            let newText = (editableTextNode.textView.text as NSString).replacingCharacters(in: range, with: text)
             if !item.shouldUpdateText(newText) {
                 return false
             }

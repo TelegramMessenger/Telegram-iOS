@@ -741,6 +741,19 @@
 			<key>explicitFileType</key>
 			<string>archive.ar</string>
 		</dict>
+		<key>1DD70E29D81471E200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>libUrlHandling.a</string>
+			<key>path</key>
+			<string>libUrlHandling.a</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+			<key>explicitFileType</key>
+			<string>archive.ar</string>
+		</dict>
 		<key>B401C97968022A5500000000</key>
 		<dict>
 			<key>isa</key>
@@ -802,6 +815,7 @@
 				<string>1DD70E29AE67341000000000</string>
 				<string>1DD70E2951398CF200000000</string>
 				<string>1DD70E29597BAFBB00000000</string>
+				<string>1DD70E29D81471E200000000</string>
 			</array>
 		</dict>
 		<key>1DD70E29D097476500000000</key>
@@ -920,6 +934,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E298815219000000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletQrViewScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletQrViewScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E2979DDEBBB00000000</key>
 		<dict>
 			<key>isa</key>
@@ -975,6 +1000,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E298710C0BD00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletUtils.swift</string>
+			<key>path</key>
+			<string>Sources/WalletUtils.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E2936794EB600000000</key>
 		<dict>
 			<key>isa</key>
@@ -1014,11 +1050,13 @@
 				<string>1DD70E29E336006800000000</string>
 				<string>1DD70E296D49CFFF00000000</string>
 				<string>1DD70E29DE28A96800000000</string>
+				<string>1DD70E298815219000000000</string>
 				<string>1DD70E2979DDEBBB00000000</string>
 				<string>1DD70E2948FA33F200000000</string>
 				<string>1DD70E2986544B8D00000000</string>
 				<string>1DD70E2964068E1100000000</string>
 				<string>1DD70E290467090400000000</string>
+				<string>1DD70E298710C0BD00000000</string>
 				<string>1DD70E2936794EB600000000</string>
 				<string>1DD70E290678D03000000000</string>
 			</array>
@@ -1102,6 +1140,13 @@
 			<key>fileRef</key>
 			<string>1DD70E29DE28A96800000000</string>
 		</dict>
+		<key>E7A30F048815219000000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E298815219000000000</string>
+		</dict>
 		<key>E7A30F0479DDEBBB00000000</key>
 		<dict>
 			<key>isa</key>
@@ -1137,6 +1182,13 @@
 			<key>fileRef</key>
 			<string>1DD70E290467090400000000</string>
 		</dict>
+		<key>E7A30F048710C0BD00000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E298710C0BD00000000</string>
+		</dict>
 		<key>E7A30F0436794EB600000000</key>
 		<dict>
 			<key>isa</key>
@@ -1164,11 +1216,13 @@
 				<string>E7A30F04E336006800000000</string>
 				<string>E7A30F046D49CFFF00000000</string>
 				<string>E7A30F04DE28A96800000000</string>
+				<string>E7A30F048815219000000000</string>
 				<string>E7A30F0479DDEBBB00000000</string>
 				<string>E7A30F0448FA33F200000000</string>
 				<string>E7A30F0486544B8D00000000</string>
 				<string>E7A30F0464068E1100000000</string>
 				<string>E7A30F040467090400000000</string>
+				<string>E7A30F048710C0BD00000000</string>
 				<string>E7A30F0436794EB600000000</string>
 				<string>E7A30F040678D03000000000</string>
 			</array>
@@ -1530,6 +1584,13 @@
 			<key>fileRef</key>
 			<string>1DD70E29AE67341000000000</string>
 		</dict>
+		<key>E7A30F04D81471E200000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29D81471E200000000</string>
+		</dict>
 		<key>FAF5FAC90000000000000000</key>
 		<dict>
 			<key>isa</key>
@@ -1587,6 +1648,7 @@
 				<string>E7A30F0481AE180900000000</string>
 				<string>E7A30F04524F478E00000000</string>
 				<string>E7A30F04AE67341000000000</string>
+				<string>E7A30F04D81471E200000000</string>
 			</array>
 			<key>name</key>
 			<string>Fake Swift Dependencies (Copy Files Phase)</string>

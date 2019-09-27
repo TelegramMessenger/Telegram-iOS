@@ -27,6 +27,7 @@ static_library(
         "//submodules/MergeLists:MergeLists",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/GlassButtonNode:GlassButtonNode",
+        "//submodules/UrlHandling:UrlHandling",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

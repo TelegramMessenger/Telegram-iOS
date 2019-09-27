@@ -167,6 +167,7 @@ public enum ResolvedUrl {
     case share(url: String?, text: String?, to: String?)
     case wallpaper(WallpaperUrlParameter)
     case theme(String)
+    case wallet(address: String, amount: Int64?, comment: String?)
 }
 
 public enum NavigateToChatKeepStack {
@@ -368,6 +369,11 @@ public final class ContactSelectionControllerParams {
     }
 }
 
+public enum OpenWalletContext {
+    case generic
+    case send(address: String, amount: Int64?, comment: String?)
+}
+
 public let defaultContactLabel: String = "_$!<Mobile>!$_"
 
 public enum CreateGroupMode {
@@ -434,6 +440,7 @@ public protocol SharedAccountContext: class {
     func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
+    func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void)
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

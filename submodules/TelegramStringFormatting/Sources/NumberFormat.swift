@@ -20,6 +20,7 @@ public func normalizeArabicNumeralString(_ string: String, type: ArabicNumeralSt
         ("7", "٧", "۷"),
         ("8", "٨", "۸"),
         ("9", "٩", "۹"),
+        (",", "٫", "٫")
     ]
     for (western, arabic, persian) in numerals {
         switch type {

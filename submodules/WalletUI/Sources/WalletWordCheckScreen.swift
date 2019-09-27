@@ -2250,6 +2250,8 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
     private let inputNode: TextFieldNode
     private let clearButtonNode: HighlightableButtonNode
     
+    public private(set) var isLast: Bool
+    
     var text: String {
         get {
             return self.inputNode.textField.text ?? ""
@@ -2263,6 +2265,7 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         self.next = next
         self.focused = focused
         self.pasteWords = pasteWords
+        self.isLast = isLast
         
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -2710,7 +2713,13 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+            if node.isLast {
+                UIView.animate(withDuration: 0.3, animations: {
+                    strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -10.0), animated: false)
+                })
+            } else {
+                strongSelf.scrollNode.view.scrollRectToVisible(node.frame.insetBy(dx: 0.0, dy: -10.0), animated: true)
+            }
         }
         pasteWords = { [weak self] wordList in
             guard let strongSelf = self else {

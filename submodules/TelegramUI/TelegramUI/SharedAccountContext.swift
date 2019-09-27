@@ -14,6 +14,7 @@ import PeersNearbyUI
 import PeerInfoUI
 import SettingsUI
 import UrlHandling
+import WalletUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -1015,6 +1016,45 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     public func makeChatMessagePreviewItem(context: AccountContext, message: Message, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder, forcedResourceStatus: FileMediaResourceStatus?) -> ListViewItem {
         return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: .peer(message.id.peerId), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, isScheduledMessages: false, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus), controllerInteraction: defaultChatControllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes()), disableDate: true, additionalContent: nil)
+    }
+    
+    public func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void) {
+        guard let tonContext = context.tonContext else {
+            return
+        }
+        let _ = (combineLatest(queue: .mainQueue(),
+            availableWallets(postbox: context.account.postbox),
+            tonContext.keychain.encryptionPublicKey()
+        )
+        |> deliverOnMainQueue).start(next: { wallets, currentPublicKey in
+            if wallets.wallets.isEmpty {
+                if let _ = currentPublicKey {
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro))
+                } else {
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable))
+                }
+            } else {
+                let walletInfo = wallets.wallets[0].info
+                if let currentPublicKey = currentPublicKey {
+                    if currentPublicKey == walletInfo.encryptedSecret.publicKey {
+                        let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
+                        |> deliverOnMainQueue).start(next: { address in
+                            switch walletContext {
+                                case .generic:
+                                    present(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
+                                case let .send(address, amount, comment):
+                                    present(walletSendScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address, amount: amount, comment: comment))
+                            }
+                            
+                        })
+                    } else {
+                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed)))
+                    }
+                } else {
+                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable)))
+                }
+            }
+        })
     }
 }
 

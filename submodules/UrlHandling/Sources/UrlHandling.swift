@@ -372,6 +372,11 @@ public func parseWallpaperUrl(_ url: String) -> WallpaperUrlParameter? {
 }
 
 public func resolveUrlImpl(account: Account, url: String) -> Signal<ResolvedUrl, NoError> {
+    if url.hasPrefix("ton://") {
+        if let url = URL(string: url), let parsedUrl = parseWalletUrl(url) {
+            return .single(.wallet(address: parsedUrl.address, amount: parsedUrl.amount, comment: parsedUrl.comment))
+        }
+    }
     let schemes = ["http://", "https://", ""]
     let baseTelegramMePaths = ["telegram.me", "t.me"]
     for basePath in baseTelegramMePaths {
@@ -429,4 +434,43 @@ public func resolveInstantViewUrl(account: Account, url: String) -> Signal<Resol
             return .single(.externalUrl(url))
         }
     }
+}
+
+public struct ParsedWalletUrl {
+    public let address: String
+    public let amount: Int64?
+    public let comment: String?
+}
+
+private let invalidWalletAddressCharacters = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_=").inverted
+
+private func isValidWalletAddress(_ address: String) -> Bool {
+    if address.count != 48 || address.rangeOfCharacter(from: invalidWalletAddressCharacters) != nil {
+        return false
+    }
+    return true
+}
+
+public func parseWalletUrl(_ url: URL) -> ParsedWalletUrl? {
+    guard url.scheme == "ton" else {
+        return nil
+    }
+    var address: String?
+    if let host = url.host, isValidWalletAddress(host) {
+        address = host.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+    }
+    var amount: Int64?
+    var comment: String?
+    if let query = url.query, let components = URLComponents(string: "/?" + query), let queryItems = components.queryItems {
+        for queryItem in queryItems {
+            if let value = queryItem.value {
+                if queryItem.name == "amount", !value.isEmpty, let amountValue = Int64(value) {
+                    amount = amountValue
+                } else if queryItem.name == "text", !value.isEmpty {
+                    comment = value
+                }
+            }
+        }
+    }
+    return address.flatMap { ParsedWalletUrl(address: $0, amount: amount, comment: comment) }
 }

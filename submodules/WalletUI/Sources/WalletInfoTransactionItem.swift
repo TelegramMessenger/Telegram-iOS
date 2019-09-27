@@ -86,12 +86,6 @@ private let descriptionFont = Font.regular(15.0)
 private let dateFont = Font.regular(14.0)
 private let directionFont = Font.regular(15.0)
 
-private func formatAddress(_ address: String) -> String {
-    var address = address
-    address.insert("\n", at: address.index(address.startIndex, offsetBy: address.count / 2))
-    return address
-}
-
 class WalletInfoTransactionItemNode: ListViewItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode

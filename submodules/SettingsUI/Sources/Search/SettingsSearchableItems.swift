@@ -27,6 +27,7 @@ enum SettingsSearchableItemIcon {
     case appearance
     case language
     case watch
+    case wallet
     case passport
     case support
     case faq
@@ -858,9 +859,9 @@ func settingsSearchableItems(context: AccountContext, notificationExceptionsList
         })
         allItems.append(passport)
 
-        if true || hasWallet {
-            let wallet = SettingsSearchableItem(id: .wallet(0), title: "Wallet", alternate: synonyms("Wallet"), icon: .passport, breadcrumbs: [], present: { context, _, present in
-                openWallet(context: context, push: { c in
+        if hasWallet {
+            let wallet = SettingsSearchableItem(id: .wallet(0), title: "Gram Wallet", alternate: synonyms(""), icon: .wallet, breadcrumbs: [], present: { context, _, present in
+                context.sharedContext.openWallet(context: context, walletContext: .generic, present: { c in
                     present(.push, c)
                 })
             })

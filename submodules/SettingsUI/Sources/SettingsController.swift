@@ -574,11 +574,11 @@ private func settingsEntries(account: Account, presentationData: PresentationDat
         let languageName = presentationData.strings.primaryComponent.localizedName
         entries.append(.language(presentationData.theme, PresentationResourcesSettings.language, presentationData.strings.Settings_AppLanguage, languageName.isEmpty ? presentationData.strings.Localization_LanguageName : languageName))
         
+        if hasWallet || experimentalUISettings.wallets {
+            entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.wallet, "Gram Wallet", ""))
+        }
         if hasPassport {
             entries.append(.passport(presentationData.theme, PresentationResourcesSettings.passport, presentationData.strings.Settings_Passport, ""))
-        }
-        if hasWallet || experimentalUISettings.wallets {
-            entries.append(.wallet(presentationData.theme, PresentationResourcesSettings.passport, "Wallet", ""))
         }
         
         if hasWatchApp {
@@ -850,7 +850,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            openWallet(context: context, push: { c in
+            context.sharedContext.openWallet(context: context, walletContext: .generic, present: { c in
                 pushControllerImpl?(c)
             })
         })
@@ -1098,8 +1098,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         )
     )
     
-    let hasWallet = .single(false)
-    |> then(contextValue.get()
+    let hasWallet = contextValue.get()
     |> mapToSignal { context in
         return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> Bool in
@@ -1107,7 +1106,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             let configuration = WalletConfiguration.with(appConfiguration: appConfiguration)
             return configuration.enabled
         }
-    })
+    }
     
     let hasPassport = ValuePromise<Bool>(false)
     let updatePassport: () -> Void = {
@@ -1617,37 +1616,4 @@ private func accountContextMenuItems(context: AccountContext, logout: @escaping 
         
         return items
     }
-}
-
-func openWallet(context: AccountContext, push: @escaping (ViewController) -> Void) {
-    guard let tonContext = context.tonContext else {
-        return
-    }
-    let _ = (combineLatest(queue: .mainQueue(),
-        availableWallets(postbox: context.account.postbox),
-        tonContext.keychain.encryptionPublicKey()
-    )
-    |> deliverOnMainQueue).start(next: { wallets, currentPublicKey in
-        if wallets.wallets.isEmpty {
-            if let _ = currentPublicKey {
-                push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro))
-            } else {
-                push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable))
-            }
-        } else {
-            let walletInfo = wallets.wallets[0].info
-            if let currentPublicKey = currentPublicKey {
-                if currentPublicKey == walletInfo.encryptedSecret.publicKey {
-                    let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
-                    |> deliverOnMainQueue).start(next: { address in
-                        push(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
-                    })
-                } else {
-                    push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed)))
-                }
-            } else {
-                push(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable)))
-            }
-        }
-    })
 }
