@@ -152,6 +152,19 @@ private func endAnimations(view: UIView) {
     }
 }
 
+private func viewTreeContainsFirstResponder(view: UIView) -> Bool {
+    if view.isFirstResponder {
+        return true
+    } else {
+        for subview in view.subviews {
+            if viewTreeContainsFirstResponder(view: subview) {
+                return true
+            }
+        }
+        return false
+    }
+}
+
 final class KeyboardViewManager {
     private let host: StatusBarHost
     
@@ -160,16 +173,17 @@ final class KeyboardViewManager {
     }
     
     func dismissEditingWithoutAnimation(view: UIView) {
-        view.endEditing(true)
-        if let keyboardWindow = self.host.keyboardWindow {
-            for view in keyboardWindow.subviews {
-                endAnimations(view: view)
+        if viewTreeContainsFirstResponder(view: view) {
+            view.endEditing(true)
+            if let keyboardWindow = self.host.keyboardWindow {
+                for view in keyboardWindow.subviews {
+                    endAnimations(view: view)
+                }
             }
         }
     }
     
     func update(leftEdge: CGFloat, transition: ContainedViewLayoutTransition) {
-        print("leftEdge: \(leftEdge) canSet: \(self.host.keyboardWindow != nil)")
         guard let keyboardWindow = self.host.keyboardWindow else {
             return
         }

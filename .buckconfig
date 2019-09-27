@@ -32,4 +32,3 @@
   allow_symlinks = forbid
   ignore = tools, \
            .git, \
-  

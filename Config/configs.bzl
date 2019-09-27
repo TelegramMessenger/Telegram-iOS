@@ -46,9 +46,9 @@ ALL_LOAD_LINKER_FLAG = "-all_load"
 def read_config_nonempty(name):
     value = native.read_config("custom", name)
     if value == None:
-        fail("Configuration paramter custom.%s should be defined" % name)
+        fail("Configuration parameter custom.%s should be defined" % name)
     elif len(value) == 0:
-        fail("Configuration paramter custom.%s should not be empty" % name)
+        fail("Configuration parameter custom.%s should not be empty" % name)
     else:
         return value
 
@@ -139,6 +139,9 @@ def get_codesign_entitlements(type):
 def get_build_number():
     return read_config_nonempty("buildNumber")
 
+def get_short_version():
+    return read_config_nonempty("appVersion")
+
 def bundle_identifier(suffix):
     return read_config_nonempty("baseApplicationBundleId") + suffix
 
@@ -191,6 +194,7 @@ def app_binary_configs():
         "DEVELOPMENT_TEAM": get_development_team(),
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "Telegram",
         "TARGETED_DEVICE_FAMILY": "1,2",
@@ -211,6 +215,7 @@ def share_extension_configs():
         "CODE_SIGN_ENTITLEMENTS": get_codesign_entitlements("share"),
         "DEVELOPMENT_TEAM": get_development_team(),
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "ShareExtension",
     }
@@ -230,6 +235,7 @@ def widget_extension_configs():
         "CODE_SIGN_ENTITLEMENTS": get_codesign_entitlements("widget"),
         "DEVELOPMENT_TEAM": get_development_team(),
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "WidgetExtension",
     }
@@ -249,6 +255,7 @@ def notification_content_extension_configs():
         "CODE_SIGN_ENTITLEMENTS": get_codesign_entitlements("notification_content"),
         "DEVELOPMENT_TEAM": get_development_team(),
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "NotificationContentExtension",
     }
@@ -268,6 +275,7 @@ def notification_service_extension_configs():
         "CODE_SIGN_ENTITLEMENTS": get_codesign_entitlements("notification_service"),
         "DEVELOPMENT_TEAM": get_development_team(),
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "NotificationServiceExtension",
     }
@@ -287,6 +295,7 @@ def intents_extension_configs():
         "CODE_SIGN_ENTITLEMENTS": get_codesign_entitlements("intents"),
         "DEVELOPMENT_TEAM": get_development_team(),
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "APP_NAME": "Telegram",
         "PRODUCT_NAME": "IntentsExtension",
     }
@@ -311,6 +320,7 @@ def watch_extension_binary_configs():
         "APP_NAME": "Telegram",
         "APP_BUNDLE_ID": bundle_identifier(suffix=""),
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "ENABLE_BITCODE": "YES",
     }
     config = config_with_updated_linker_flags(config, ALL_LOAD_LINKER_FLAG)
@@ -333,6 +343,7 @@ def watch_binary_configs():
         "APP_BUNDLE_ID": bundle_identifier(suffix=""),
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "ENABLE_BITCODE": "YES",
     }
     config = config_with_updated_linker_flags(config, ALL_LOAD_LINKER_FLAG)
@@ -361,6 +372,7 @@ def app_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
         "TARGETED_DEVICE_FAMILY": "1,2",
     }
@@ -376,6 +388,7 @@ def share_extension_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
     }
     return substitutions
 
@@ -389,6 +402,7 @@ def widget_extension_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
     }
     return substitutions
 
@@ -401,6 +415,7 @@ def notification_content_extension_info_plist_substitutions():
         "APP_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
     }
     return substitutions
 
@@ -413,6 +428,7 @@ def notification_service_extension_info_plist_substitutions():
         "APP_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
     }
     return substitutions
 
@@ -426,6 +442,7 @@ def intents_extension_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "PRODUCT_MODULE_NAME": "SiriIntents",
     }
     return substitutions
@@ -440,6 +457,7 @@ def watch_extension_info_plist_substitutions():
         "PRODUCT_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
     }
     return substitutions
 
@@ -453,5 +471,6 @@ def watch_info_plist_substitutions():
         "PRODUCT_NAME": "Telegram",
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
+        "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
     }
     return substitutions
