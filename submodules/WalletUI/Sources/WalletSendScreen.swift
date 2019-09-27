@@ -22,15 +22,17 @@ private final class WalletSendScreenArguments {
     let updateState: ((WalletSendScreenState) -> WalletSendScreenState) -> Void
     let updateText: (WalletSendScreenEntryTag, String) -> Void
     let selectNextInputItem: (WalletSendScreenEntryTag) -> Void
+    let scrollToBottom: () -> Void
     let dismissInput: () -> Void
     let openQrScanner: () -> Void
     let proceed: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((WalletSendScreenState) -> WalletSendScreenState) -> Void, updateText: @escaping (WalletSendScreenEntryTag, String) -> Void, selectNextInputItem: @escaping (WalletSendScreenEntryTag) -> Void, dismissInput: @escaping () -> Void, openQrScanner: @escaping () -> Void, proceed: @escaping () -> Void) {
+    init(context: AccountContext, updateState: @escaping ((WalletSendScreenState) -> WalletSendScreenState) -> Void, updateText: @escaping (WalletSendScreenEntryTag, String) -> Void, selectNextInputItem: @escaping (WalletSendScreenEntryTag) -> Void, scrollToBottom: @escaping () -> Void, dismissInput: @escaping () -> Void, openQrScanner: @escaping () -> Void, proceed: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.updateText = updateText
         self.selectNextInputItem = selectNextInputItem
+        self.scrollToBottom = scrollToBottom
         self.dismissInput = dismissInput
         self.openQrScanner = openQrScanner
         self.proceed = proceed
@@ -231,6 +233,10 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
         case let .comment(theme, placeholder, value):
             return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 124, display: true), sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { text in
                 arguments.updateText(WalletSendScreenEntryTag.comment, text)
+            }, updatedFocus: { focus in
+                if focus {
+                    arguments.scrollToBottom()
+                }
             }, tag: WalletSendScreenEntryTag.comment, action: {
                 arguments.proceed()
             })
@@ -285,7 +291,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
     var dismissImpl: (() -> Void)?
     var dismissInputImpl: (() -> Void)?
     var selectNextInputItemImpl: ((WalletSendScreenEntryTag) -> Void)?
-    var ensureItemVisibleImpl: ((WalletSendScreenEntryTag) -> Void)?
+    var ensureItemVisibleImpl: ((WalletSendScreenEntryTag, Bool) -> Void)?
     
     let arguments = WalletSendScreenArguments(context: context, updateState: { f in
         updateState(f)
@@ -302,9 +308,11 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
             }
             return state
         }
-        ensureItemVisibleImpl?(tag)
+        ensureItemVisibleImpl?(tag, false)
     }, selectNextInputItem: { tag in
         selectNextInputItemImpl?(tag)
+    }, scrollToBottom: {
+        ensureItemVisibleImpl?(WalletSendScreenEntryTag.comment, true)
     }, dismissInput: {
         dismissInputImpl?()
     }, openQrScanner: {
@@ -368,8 +376,9 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
             dismissAlertImpl?(true)
         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Send_ConfirmationConfirm, action: {
             dismissAlertImpl?(false)
+            dismissInputImpl?()
             pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.comment, randomId), walletCreatedPreloadState: nil))
-        })], dismissAutomatically: false)
+        })], allowInputInset: false, dismissAutomatically: false)
         presentInGlobalOverlayImpl?(controller, nil)
         
         dismissAlertImpl = { [weak controller] animated in
@@ -467,7 +476,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
             resultItemNode.focus()
         }
     }
-    ensureItemVisibleImpl = { [weak controller] targetTag in
+    ensureItemVisibleImpl = { [weak controller] targetTag, animated in
         controller?.afterLayout({
             guard let controller = controller else {
                 return
@@ -486,7 +495,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
             })
     
             if let resultItemNode = resultItemNode {
-                controller.ensureItemNodeVisible(resultItemNode)
+                controller.ensureItemNodeVisible(resultItemNode, animated: animated)
             }
         })
     }

@@ -325,7 +325,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         if case .animated = transition, let fromValue = fromValue, let toValue = toValue {
             //self.keyboardManager?.surfaces = fromValue.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
             if let currentTransition = self.state.transition {
-                assertionFailure()
+                //assertionFailure()
             }
             
             fromValue.value.viewWillDisappear(true)

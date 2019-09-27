@@ -100,6 +100,8 @@ public final class WalletInfoScreen: ViewController {
 }
 
 private final class WalletInfoBalanceNode: ASDisplayNode {
+    let dateTimeFormat: PresentationDateTimeFormat
+    
     let balanceIntegralTextNode: ImmediateTextNode
     let balanceFractionalTextNode: ImmediateTextNode
     let balanceIconNode: AnimatedStickerNode
@@ -108,7 +110,7 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
         didSet {
             let integralString = NSMutableAttributedString()
             let fractionalString = NSMutableAttributedString()
-            if let range = self.balance.range(of: ".") {
+            if let range = self.balance.range(of: self.dateTimeFormat.decimalSeparator) {
                 let integralPart = String(self.balance[..<range.lowerBound])
                 let fractionalPart = String(self.balance[range.lowerBound...])
                 integralString.append(NSAttributedString(string: integralPart, font: Font.medium(48.0), textColor: .white))
@@ -123,7 +125,9 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
     
     var isLoading: Bool = true
     
-    init(account: Account, theme: PresentationTheme) {
+    init(account: Account, theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat) {
+        self.dateTimeFormat = dateTimeFormat
+        
         self.balanceIntegralTextNode = ImmediateTextNode()
         self.balanceIntegralTextNode.displaysAsynchronously = false
         self.balanceIntegralTextNode.attributedText = NSAttributedString(string: " ", font: Font.bold(39.0), textColor: .white)
@@ -199,7 +203,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let headerCornerNode: ASImageNode
     
     init(account: Account, presentationData: PresentationData, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
-        self.balanceNode = WalletInfoBalanceNode(account: account, theme: presentationData.theme)
+        self.balanceNode = WalletInfoBalanceNode(account: account, theme: presentationData.theme, dateTimeFormat: presentationData.dateTimeFormat)
         
         self.balanceSubtitleNode = ImmediateTextNode()
         self.balanceSubtitleNode.displaysAsynchronously = false

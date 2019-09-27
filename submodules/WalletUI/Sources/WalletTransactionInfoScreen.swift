@@ -400,7 +400,7 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             }
             
             let title = NSMutableAttributedString()
-            if let range = balanceString.range(of: ".") {
+            if let range = balanceString.range(of: item.dateTimeFormat.decimalSeparator) {
                 let integralPart = String(balanceString[..<range.lowerBound])
                 let fractionalPart = String(balanceString[range.lowerBound...])
                 title.append(NSAttributedString(string: integralPart, font: Font.bold(48.0), textColor: titleColor))

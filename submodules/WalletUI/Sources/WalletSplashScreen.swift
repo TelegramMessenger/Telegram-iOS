@@ -156,20 +156,15 @@ public final class WalletSplashScreen: ViewController {
                 return
             }
             if let navigationController = strongSelf.navigationController as? NavigationController {
-                var controllers = navigationController.viewControllers
-                controllers = controllers.filter { controller in
-                    if controller is WalletSplashScreen {
-                        return false
-                    }
-                    if controller is WalletSendScreen {
-                        return false
-                    }
+                var controllers: [UIViewController] = []
+                for controller in navigationController.viewControllers {
                     if controller is WalletInfoScreen {
-                        return false
+                        controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address))
+                    } else {
+                        controllers.append(controller)
                     }
-                    return true
                 }
-                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
                 strongSelf.view.endEditing(true)
                 navigationController.setViewControllers(controllers, animated: true)
             }
@@ -204,7 +199,7 @@ public final class WalletSplashScreen: ViewController {
                 })
             case let .created(walletInfo, wordList):
                 strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
-            case let .success(walletInfo), let .sent(walletInfo, _):
+            case let .success(walletInfo):
                 let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
                 |> deliverOnMainQueue).start(next: { address in
                     guard let strongSelf = self else {
@@ -273,6 +268,27 @@ public final class WalletSplashScreen: ViewController {
                         }
                     })
                 })
+            case let .sent(walletInfo, _):
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    var controllers = navigationController.viewControllers
+                    controllers = controllers.filter { controller in
+                        if controller is WalletSendScreen {
+                            return false
+                        }
+                        if controller is WalletSplashScreen {
+                            return false
+                        }
+                        if controller is WalletWordDisplayScreen {
+                            return false
+                        }
+                        if controller is WalletWordCheckScreen {
+                            return false
+                        }
+                        return true
+                    }
+                    strongSelf.view.endEditing(true)
+                    navigationController.setViewControllers(controllers, animated: true)
+                }
             case .restoreFailed:
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     var controllers = navigationController.viewControllers

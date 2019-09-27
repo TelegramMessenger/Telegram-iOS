@@ -224,7 +224,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             let (directionLayout, directionApply) = makeDirectionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: directionText, font: directionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let titleString = NSMutableAttributedString()
-            if let range = title.range(of: ".") {
+            if let range = title.range(of: item.dateTimeFormat.decimalSeparator) {
                 let integralPart = String(title[..<range.lowerBound])
                 let fractionalPart = String(title[range.lowerBound...])
                 titleString.append(NSAttributedString(string: integralPart, font: Font.bold(17.0), textColor: titleColor))
