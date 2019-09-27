@@ -25,7 +25,7 @@ public enum WalletSplashMode {
     case created(WalletInfo, [String])
     case success(WalletInfo)
     case restoreFailed
-    case sending(WalletInfo, String, Int64, String)
+    case sending(WalletInfo, String, Int64, String, Int64)
     case sent(WalletInfo, Int64)
     case secureStorageNotAvailable
     case secureStorageReset(WalletSecureStorageResetReason)
@@ -58,10 +58,10 @@ public final class WalletSplashScreen: ViewController {
         case .intro:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(title: "Not Now", style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: "Import existing wallet", style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
-        case let .sending(walletInfo, address, amount, textMessage):
+        case let .sending(walletInfo, address, amount, textMessage, randomId):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
             
-            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage)
+            let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, keychain: self.tonContext.keychain, walletInfo: walletInfo, toAddress: address, amount: amount, textMessage: textMessage, randomId: randomId)
             |> deliverOnMainQueue).start(error: { [weak self] error in
                 guard let strongSelf = self else {
                     return

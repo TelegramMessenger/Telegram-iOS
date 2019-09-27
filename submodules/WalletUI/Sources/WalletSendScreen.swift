@@ -303,6 +303,8 @@ private final class WalletSendScreenImpl: ItemListController<WalletSendScreenEnt
 }
 
 func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, address: String? = nil, amount: Int64? = nil, text: String? = nil) -> ViewController {
+    let randomId: Int64 = arc4random64()
+    
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let initialState = WalletSendScreenState(address: address ?? "", amount: amount.flatMap { formatAmountText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) } ?? "", text: text ?? "")
     
@@ -375,7 +377,7 @@ func walletSendScreen(context: AccountContext, tonContext: TonContext, walletInf
             dismissAlertImpl?(true)
         }), TextAlertAction(type: .defaultAction, title: "Confirm", action: {
             dismissAlertImpl?(false)
-            pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.text)))
+            pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.text, randomId)))
         })], dismissAutomatically: false)
         presentInGlobalOverlayImpl?(controller, nil)
         

@@ -116,9 +116,9 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     
     private let navigationBackgroundNode: ASDisplayNode
     private let navigationSeparatorNode: ASDisplayNode
-    private let navigationTitleNode: ImmediateTextNode
     private let scrollNode: ASScrollNode
     private let animationNode: AnimatedStickerNode
+    private let titleNodeContainer: ASDisplayNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
     private let wordNodes: [(ImmediateTextNode, ImmediateTextNode, ImmediateTextNode)]
@@ -149,17 +149,13 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         let text: String = "Write down these 24 words in the correct order and store them in a secret place.\n\nUse these secret words to restore access to your wallet if you lose your passcode or Telegram account."
         let buttonText: String = "Done"
         
+        self.titleNodeContainer = ASDisplayNode()
+        
         self.titleNode = ImmediateTextNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(32.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         self.titleNode.maximumNumberOfLines = 0
         self.titleNode.textAlignment = .center
-        
-        self.navigationTitleNode = ImmediateTextNode()
-        self.navigationTitleNode.displaysAsynchronously = false
-        self.navigationTitleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
-        self.navigationTitleNode.maximumNumberOfLines = 0
-        self.navigationTitleNode.textAlignment = .center
         
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
@@ -203,7 +199,6 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         self.addSubnode(self.scrollNode)
         
         self.scrollNode.addSubnode(self.animationNode)
-        self.scrollNode.addSubnode(self.titleNode)
         self.scrollNode.addSubnode(self.textNode)
         self.scrollNode.addSubnode(self.buttonNode)
         
@@ -214,8 +209,10 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         }
         
         self.navigationBackgroundNode.addSubnode(self.navigationSeparatorNode)
-        self.navigationBackgroundNode.addSubnode(self.navigationTitleNode)
         self.addSubnode(self.navigationBackgroundNode)
+        
+        self.titleNodeContainer.addSubnode(self.titleNode)
+        self.addSubnode(self.titleNodeContainer)
         
         self.buttonNode.pressed = {
             action()
@@ -245,11 +242,35 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         }
     }
     
+    private var listTitleFrame: CGRect?
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.updateTitle()
+    }
+    
+    private func updateTitle() {
+        guard let listTitleFrame = self.listTitleFrame else {
+            return
+        }
+        let scrollView = self.scrollNode.view
+        
         let navigationHeight = self.navigationHeight ?? 0.0
-        let alpha: CGFloat = scrollView.contentOffset.y >= (self.titleNode.frame.maxY - navigationHeight) ? 1.0 : 0.0
+        let minY = navigationHeight - 44.0 + floor(44.0 / 2.0)
+        let maxY = minY + 44.0
+        let y = max(minY, -scrollView.contentOffset.y + listTitleFrame.midY)
+        var t = (y - minY) / (maxY - minY)
+        t = max(0.0, min(1.0, t))
+        
+        let minScale: CGFloat = 0.5
+        let maxScale: CGFloat = 1.0
+        let scale = t * maxScale + (1.0 - t) * minScale
+        
+        self.titleNodeContainer.frame = CGRect(origin: CGPoint(x: self.bounds.width / 2.0, y: y), size: CGSize())
+        self.titleNodeContainer.subnodeTransform = CATransform3DMakeScale(scale, scale, 1.0)
+        
+        let alpha: CGFloat = (t <= 0.0 + CGFloat.ulpOfOne) ? 1.0 : 0.0
         if self.navigationBackgroundNode.alpha != alpha {
-            let transition: ContainedViewLayoutTransition = .animated(duration: 0.12, curve: .easeInOut)
+            let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .easeInOut)
             transition.updateAlpha(node: self.navigationBackgroundNode, alpha: alpha, beginWithCurrentState: true)
         }
     }
@@ -276,7 +297,6 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         self.animationNode.updateLayout(size: iconSize)
         
         let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
-        let navigationTitleSize = self.navigationTitleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         let textSize = self.textNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         
         var contentHeight: CGFloat = 0.0
@@ -286,11 +306,10 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + 12.0, y: contentVerticalOrigin), size: iconSize)
         transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
         let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
-        transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
+        self.listTitleFrame = titleFrame
+        transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((-titleFrame.width) / 2.0), y: floor((-titleFrame.height) / 2.0)), size: titleFrame.size))
         let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
         transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
-        
-        transition.updateFrameAdditive(node: self.navigationTitleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - navigationTitleSize.width) / 2.0), y: navigationHeight - 44.0 + floor((44.0 - navigationTitleSize.height) / 2.0)), size: navigationTitleSize))
         
         contentHeight = textFrame.maxY + textSpacing
         
@@ -356,5 +375,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: max(layout.size.height, buttonFrame.maxY + scrollBottomInset))
+        
+        self.updateTitle()
     }
 }

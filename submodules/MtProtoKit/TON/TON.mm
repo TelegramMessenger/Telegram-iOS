@@ -204,6 +204,7 @@ typedef enum {
     NSLock *_requestHandlersLock;
     NSMutableDictionary<NSNumber *, TONRequestHandler *> *_requestHandlers;
     MTPipe *_initializedStatus;
+    NSMutableSet *_sendGramRandomIds;
 }
 
 @end
@@ -227,6 +228,7 @@ typedef enum {
         _initializedStatus = [[MTPipe alloc] initWithReplay:true];
         _initializedStatus.sink(@(TONInitializationStatusInitializing));
         _nextRequestId = 1;
+        _sendGramRandomIds = [[NSMutableSet alloc] init];
         
         _client = std::make_shared<tonlib::Client>();
         
@@ -427,8 +429,15 @@ typedef enum {
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString * _Nonnull)textMessage {
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString * _Nonnull)textMessage  randomId:(int64_t)randomId {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        if ([_sendGramRandomIds containsObject:@(randomId)]) {
+            [_sendGramRandomIds addObject:@(randomId)];
+            
+            return [[MTBlockDisposable alloc] initWithBlock:^{
+            }];
+        }
+        
         NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in sendGramsFromKey"]];

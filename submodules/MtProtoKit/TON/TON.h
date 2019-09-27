@@ -80,7 +80,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
 - (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString *)textMessage;
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString *)textMessage randomId:(int64_t)randomId;
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
 - (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
 - (MTSignal *)deleteKey:(TONKey *)key;
