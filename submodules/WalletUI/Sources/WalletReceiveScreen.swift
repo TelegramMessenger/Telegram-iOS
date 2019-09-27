@@ -234,10 +234,10 @@ private enum WalletReceiveScreenEntry: ItemListNodeEntry {
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, placeholder, value):
-            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 128, display: true), sectionId: self.section, style: .blocks, returnKeyType: .done, textUpdated: { text in
+            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 124, display: true), sectionId: self.section, style: .blocks, returnKeyType: .done, textUpdated: { text in
                 arguments.updateText(WalletReceiveScreenEntryTag.comment, text)
             }, shouldUpdateText: { text in
-                return text.count <= 128
+                return text.count <= 124
             }, updatedFocus: { focus in
                 arguments.updateState { state in
                     var state = state

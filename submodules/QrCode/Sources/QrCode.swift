@@ -6,6 +6,7 @@ import Display
 
 public enum QrCodeIcon {
     case none
+    case cutout
     case proxy
     case custom(UIImage?)
 }
@@ -75,7 +76,7 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
                 let clipSide = 81.0 * fittedRect.width / 267.0 * codeScale
                 let clipRect = CGRect(x: fittedRect.midX - clipSide / 2.0, y: fittedRect.midY - clipSide / 2.0, width: clipSide, height: clipSide)
                 switch icon {
-                    case .proxy, .custom:
+                    case .cutout, .proxy, .custom:
                         c.fill(clipRect)
                     default:
                         break
