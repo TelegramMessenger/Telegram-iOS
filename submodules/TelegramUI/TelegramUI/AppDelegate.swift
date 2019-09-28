@@ -364,8 +364,15 @@ final class SharedApplicationContext {
         let apiId: Int32 = buildConfig.apiId
         let languagesCategory = "ios"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get() |> map { token in
-            return buildConfig.bundleData(withAppToken: token)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get()
+        |> map { token in
+            let data = buildConfig.bundleData(withAppToken: token)
+            if let data = data, let jsonString = String(data: data, encoding: .utf8) {
+                Logger.shared.log("data", "\(jsonString)")
+            } else {
+                Logger.shared.log("data", "can't deserialize")
+            }
+            return data
         })
         
         guard let appGroupUrl = maybeAppGroupUrl else {
