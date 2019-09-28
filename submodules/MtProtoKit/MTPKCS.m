@@ -2,6 +2,7 @@
 
 #include <openssl/x509.h>
 #include <openssl/pkcs7.h>
+#include <openssl/pem.h>
 
 static NSString * _Nullable readName(X509_NAME *subject) {
     BIO *subjectBio = BIO_new(BIO_s_mem());
@@ -11,6 +12,16 @@ static NSString * _Nullable readName(X509_NAME *subject) {
     NSString *result = [[NSString alloc] initWithBytes:dataStart length:nameLength encoding:NSUTF8StringEncoding];
     BIO_free(subjectBio);
     return result;
+}
+
+static NSData * _Nullable readPublicKey(EVP_PKEY *subject) {
+    BIO *subjectBio = BIO_new(BIO_s_mem());
+    PEM_write_bio_PUBKEY(subjectBio, subject);
+    char *dataStart = NULL;
+    long nameLength = BIO_get_mem_data(subjectBio, &dataStart);
+    NSString *result = [[NSString alloc] initWithBytes:dataStart length:nameLength encoding:NSUTF8StringEncoding];
+    BIO_free(subjectBio);
+    return [result dataUsingEncoding:NSUTF8StringEncoding];
 }
 
 @implementation MTPKCS
@@ -68,7 +79,10 @@ static NSString * _Nullable readName(X509_NAME *subject) {
     NSString *issuerNameString = readName(issuerName);
     NSString *subjectNameString = readName(subjectName);
     
-    result = [[MTPKCS alloc] initWithIssuerName:issuerNameString subjectName:subjectNameString data:[NSData data]];
+    EVP_PKEY *publicKey = X509_get_pubkey(cert);
+    NSData *data = readPublicKey(publicKey);
+    
+    result = [[MTPKCS alloc] initWithIssuerName:issuerNameString subjectName:subjectNameString data:data];
     
     return result;
 }
