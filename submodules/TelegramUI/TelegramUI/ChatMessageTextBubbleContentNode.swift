@@ -214,7 +214,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                         if mediaDuration != nil || isSeekableWebMedia {
                             enabledTypes.insert(.timecode)
                             if mediaDuration == nil {
-                                mediaDuration = 60.0 * 60.0 * 3.0
+                                mediaDuration = 60.0 * 60.0 * 24.0
                             }
                         }
                         if let result = addLocallyGeneratedEntities(rawText, enabledTypes: enabledTypes, entities: entitiesValue, mediaDuration: mediaDuration) {

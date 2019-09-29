@@ -267,7 +267,7 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
                     
                     let _ = textApply()
                     if let currentText = strongSelf.textNode.attributedText {
-                        if currentText.string !=  attributedText.string {
+                        if currentText.string != attributedText.string || updatedTheme != nil {
                             strongSelf.textNode.attributedText = attributedText
                         }
                     } else {
