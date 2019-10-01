@@ -1,5 +1,6 @@
 import Foundation
 import TelegramStringFormatting
+import UrlEscaping
 
 let walletAddressLength: Int = 48
 
@@ -130,4 +131,17 @@ func isValidAddress(_ address: String, exactLength: Bool = false) -> Bool {
         return false
     }
     return true
+}
+
+func walletInvoiceUrl(address: String, amount: String? = nil, comment: String? = nil) -> String {
+    var arguments = ""
+    if let amount = amount, !amount.isEmpty {
+        arguments += arguments.isEmpty ? "?" : "&"
+        arguments += "amount=\(amountValue(amount))"
+    }
+    if let comment = comment, !comment.isEmpty {
+        arguments += arguments.isEmpty ? "?" : "&"
+        arguments += "text=\(urlEncodedStringFromString(comment))"
+    }
+    return "ton://transfer/\(address)\(arguments)"
 }

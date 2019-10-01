@@ -882,6 +882,17 @@
 			<key>sourceTree</key>
 			<string>SOURCE_ROOT</string>
 		</dict>
+		<key>1DD70E29CA70912900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>name</key>
+			<string>WalletCreateInvoiceScreen.swift</string>
+			<key>path</key>
+			<string>Sources/WalletCreateInvoiceScreen.swift</string>
+			<key>sourceTree</key>
+			<string>SOURCE_ROOT</string>
+		</dict>
 		<key>1DD70E298B98CCED00000000</key>
 		<dict>
 			<key>isa</key>
@@ -1069,6 +1080,7 @@
 			<key>children</key>
 			<array>
 				<string>1DD70E292CCF064200000000</string>
+				<string>1DD70E29CA70912900000000</string>
 				<string>1DD70E298B98CCED00000000</string>
 				<string>1DD70E29D2B1401800000000</string>
 				<string>1DD70E2900657ECF00000000</string>
@@ -1123,6 +1135,13 @@
 			<string>PBXBuildFile</string>
 			<key>fileRef</key>
 			<string>1DD70E292CCF064200000000</string>
+		</dict>
+		<key>E7A30F04CA70912900000000</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>fileRef</key>
+			<string>1DD70E29CA70912900000000</string>
 		</dict>
 		<key>E7A30F048B98CCED00000000</key>
 		<dict>
@@ -1243,6 +1262,7 @@
 			<key>files</key>
 			<array>
 				<string>E7A30F042CCF064200000000</string>
+				<string>E7A30F04CA70912900000000</string>
 				<string>E7A30F048B98CCED00000000</string>
 				<string>E7A30F04D2B1401800000000</string>
 				<string>E7A30F0400657ECF00000000</string>

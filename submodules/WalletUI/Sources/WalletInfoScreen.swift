@@ -74,7 +74,7 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(walletReceiveScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, address: strongSelf.address))
+            strongSelf.push(walletReceiveScreen(context: strongSelf.context, address: strongSelf.address))
         }, openTransaction: { [weak self] transaction in
             guard let strongSelf = self else {
                 return

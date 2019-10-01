@@ -197,7 +197,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
         case let .amountHeader(theme, text, balance, insufficient):
             return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: balance == nil ? .right : .none, accessoryText: balance.flatMap { ItemListSectionHeaderAccessoryText(value: $0, color: insufficient ? .destructive : .generic, icon: balanceIcon) }, sectionId: self.section)
         case let .amount(theme, strings, placeholder, text):
-            return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: text, placeholder: placeholder, type: .decimal, returnKeyType: .next, tag: WalletSendScreenEntryTag.amount, sectionId: self.section, textUpdated: { text in
+            return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: text, placeholder: placeholder, type: .decimal, returnKeyType: .next, clearType: .onFocus, tag: WalletSendScreenEntryTag.amount, sectionId: self.section, textUpdated: { text in
                 let text = formatAmountText(text, decimalSeparator: arguments.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat.decimalSeparator)
                 arguments.updateText(WalletSendScreenEntryTag.amount, text)
             }, shouldUpdateText: { text in
@@ -253,7 +253,8 @@ private func walletSendScreenEntries(presentationData: PresentationData, balance
     entries.append(.addressInfo(presentationData.theme, presentationData.strings.Wallet_Send_AddressInfo))
     
     let amount = amountValue(state.amount)
-    entries.append(.amountHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AmountHeader, balance.flatMap { presentationData.strings.Wallet_Send_Balance(formatBalanceText($0, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)).0 }, amount > 0 && (balance ?? 0) < amount))
+    let balance = max(0, balance ?? 0)
+    entries.append(.amountHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AmountHeader, presentationData.strings.Wallet_Send_Balance(formatBalanceText(balance, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)).0, balance == 0 || (amount > 0 && balance < amount)))
     entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.strings.Wallet_Send_AmountText, state.amount ?? ""))
     
     entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
@@ -408,22 +409,22 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
     }
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, walletState, statePromise.get())
-    |> map { presentationData, balance, state -> (ItemListControllerState, (ItemListNodeState<WalletSendScreenEntry>, WalletSendScreenEntry.ItemGenerationArguments)) in
+    |> map { presentationData, walletState, state -> (ItemListControllerState, (ItemListNodeState<WalletSendScreenEntry>, WalletSendScreenEntry.ItemGenerationArguments)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })
         
         let amount = amountValue(state.amount)
         var sendEnabled = false
-        if let balance = balance {
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= balance.balance && state.comment.count <= 124
+        if let walletState = walletState {
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && state.comment.count <= 124
         }
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
             arguments.proceed()
         })
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Send_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: balance?.balance, state: state), style: .blocks, focusItemTag: focusItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.balance, state: state), style: .blocks, focusItemTag: focusItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

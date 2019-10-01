@@ -4796,6 +4796,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Receive.ShareUrlInfo" = "Share this link with other Gram wallet owners to receive Grams from them.";
 "Wallet.Receive.AmountHeader" = "AMOUNT";
 "Wallet.Receive.AmountText" = "Grams to receive";
+"Wallet.Receive.AmountInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
 "Wallet.Receive.CommentHeader" = "COMMENT (OPTIONAL)";
 "Wallet.Receive.CommentInfo" = "Description of the payment";
 "Wallet.Receive.AddressCopied" = "Address copied to clipboard.";
@@ -4880,3 +4881,8 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.ErrorInvalidAddress" = "Invalid wallet address. Please correct and try again.";
 "Wallet.Send.ErrorDecryptionFailed" = "Encryption error. Please check device passcode settings and try again.";
 "Wallet.Send.SendAnyway" = "Send Anyway";
+
+"Wallet.Receive.CreateInvoice" = "Create Invoice";
+"Wallet.Receive.CreateInvoiceInfo" = "Create Invoice";
+
+"Wallet.CreateInvoice.Title" = "Create Invoice";
