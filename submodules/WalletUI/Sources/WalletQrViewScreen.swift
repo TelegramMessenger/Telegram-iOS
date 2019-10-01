@@ -9,6 +9,7 @@ import Display
 import Postbox
 import QrCode
 import ShareController
+import AnimationUI
 
 func shareInvoiceQrCode(context: AccountContext, invoice: String) {
     let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")))
@@ -116,6 +117,7 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
     private let invoice: String
     
     private let imageNode: TransformImageNode
+    private let iconNode: AnimatedStickerNode
   
     init(context: AccountContext, presentationData: PresentationData, message: String) {
         self.presentationData = presentationData
@@ -125,13 +127,20 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         self.imageNode.clipsToBounds = true
         self.imageNode.cornerRadius = 12.0
         
+        self.iconNode = AnimatedStickerNode()
+        if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
+            self.iconNode.setup(account: context.account, resource: .localFile(path), width: 120, height: 120, mode: .direct)
+            self.iconNode.visibility = true
+        }
+        
         super.init()
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
         self.addSubnode(self.imageNode)
+        self.addSubnode(self.iconNode)
         
-        self.imageNode.setSignal(qrCode(string: self.invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem"))), attemptSynchronously: true)
+        self.imageNode.setSignal(qrCode(string: self.invoice, color: .black, backgroundColor: .white, icon: .cutout), attemptSynchronously: true)
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -143,6 +152,11 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         
         let _ = imageApply()
         
-        transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: floor((layout.size.height - imageSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: imageSize))
+        let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: floor((layout.size.height - imageSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: imageSize)
+        transition.updateFrame(node: self.imageNode, frame: imageFrame)
+        
+        let iconFrame = imageFrame.insetBy(dx: 106.0, dy: 106.0).offsetBy(dx: 0.0, dy: -2.0)
+        self.iconNode.updateLayout(size: iconFrame.size)
+        transition.updateFrameAsPositionAndBounds(node: self.iconNode, frame: iconFrame)
     }
 }

@@ -60,7 +60,6 @@ private enum WalletCreateInvoiceScreenEntryTag: ItemListItemTag {
 private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
     case amountHeader(PresentationTheme, String)
     case amount(PresentationTheme, PresentationStrings, String, String)
-    case amountInfo(PresentationTheme, String)
     case commentHeader(PresentationTheme, String)
     case comment(PresentationTheme, String, String)
     case addressCode(PresentationTheme, String)
@@ -72,7 +71,7 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-        case .amountHeader, .amount, .amountInfo:
+        case .amountHeader, .amount:
             return WalletCreateInvoiceScreenSection.amount.rawValue
         case .commentHeader, .comment:
             return WalletCreateInvoiceScreenSection.comment.rawValue
@@ -87,24 +86,22 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
             return 0
         case .amount:
             return 1
-        case .amountInfo:
-            return 2
         case .commentHeader:
-            return 3
+            return 2
         case .comment:
-            return 4
+            return 3
         case .addressCode:
-            return 5
+            return 4
         case .addressHeader:
-            return 6
+            return 5
         case .address:
-            return 7
+            return 6
         case .copyAddress:
-            return 8
+            return 7
         case .shareAddressLink:
-            return 9
+            return 8
         case .addressInfo:
-            return 10
+            return 9
         }
     }
     
@@ -118,12 +115,6 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
             }
         case let .amount(lhsTheme, lhsStrings, lhsPlaceholder, lhsBalance):
             if case let .amount(rhsTheme, rhsStrings, rhsPlaceholder, rhsBalance) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPlaceholder == rhsPlaceholder, lhsBalance == rhsBalance {
-                return true
-            } else {
-                return false
-            }
-        case let .amountInfo(lhsTheme, lhsText):
-            if case let .amountInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
             } else {
                 return false
@@ -220,8 +211,6 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
             }, action: {
                 arguments.selectNextInputItem(WalletCreateInvoiceScreenEntryTag.amount)
             })
-        case let .amountInfo(theme, text):
-            return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, placeholder, value):
@@ -281,7 +270,6 @@ private func walletCreateInvoiceScreenEntries(presentationData: PresentationData
     let amount = amountValue(state.amount)
     entries.append(.amountHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AmountHeader))
     entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.strings.Wallet_Receive_AmountText, state.amount ?? ""))
-    entries.append(.amountInfo(presentationData.theme, presentationData.strings.Wallet_Receive_AmountInfo))
     
     entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
     entries.append(.comment(presentationData.theme, presentationData.strings.Wallet_Receive_CommentInfo, state.comment))

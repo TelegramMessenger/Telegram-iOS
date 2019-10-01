@@ -216,7 +216,6 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.headerCornerNode.displaysAsynchronously = false
         self.headerCornerNode.displayWithoutProcessing = true
         self.headerCornerNode.image = generateImage(CGSize(width: 20.0, height: 10.0), rotatedContext: { size, context in
-            
             context.setFillColor(UIColor.black.cgColor)
             context.fill(CGRect(origin: CGPoint(), size: size))
             context.setBlendMode(.copy)
