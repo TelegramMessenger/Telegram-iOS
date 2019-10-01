@@ -11,7 +11,7 @@ import QrCode
 import ShareController
 
 func shareInvoiceQrCode(context: AccountContext, invoice: String) {
-    let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")), ecl: "Q")
+    let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")))
     |> map { generator -> UIImage? in
         let imageSize = CGSize(width: 768.0, height: 768.0)
         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), scale: 1.0))
@@ -122,6 +122,8 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         self.invoice = message
         
         self.imageNode = TransformImageNode()
+        self.imageNode.clipsToBounds = true
+        self.imageNode.cornerRadius = 12.0
         
         super.init()
         
@@ -129,7 +131,7 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         
         self.addSubnode(self.imageNode)
         
-        self.imageNode.setSignal(qrCode(string: self.invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")), ecl: "Q"), attemptSynchronously: true)
+        self.imageNode.setSignal(qrCode(string: self.invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem"))), attemptSynchronously: true)
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {

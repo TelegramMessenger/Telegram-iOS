@@ -148,7 +148,7 @@ class WalletQrCodeItemNode: ListViewItemNode {
                     strongSelf.item = item
                     
                     if let updatedAddress = updatedAddress {
-                        strongSelf.imageNode.setSignal(qrCode(string: updatedAddress, color: item.theme.list.itemPrimaryTextColor.withAlphaComponent(0.77), backgroundColor: item.theme.list.blocksBackgroundColor, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")), ecl: "Q"), attemptSynchronously: true)
+                        strongSelf.imageNode.setSignal(qrCode(string: updatedAddress, color: item.theme.list.itemPrimaryTextColor.withAlphaComponent(0.77), backgroundColor: item.theme.list.blocksBackgroundColor, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem"))), attemptSynchronously: true)
                     }
                     
                     let _ = imageApply()
