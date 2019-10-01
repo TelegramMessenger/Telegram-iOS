@@ -71,10 +71,9 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletEmpty", ofType: "tgs") {
-            self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, mode: .direct)
+            self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
             self.animationNode.visibility = true
         }
-        self.animationNode.visibility = true
         
         self.titleNode = TextNode()
         self.titleNode.displaysAsynchronously = false

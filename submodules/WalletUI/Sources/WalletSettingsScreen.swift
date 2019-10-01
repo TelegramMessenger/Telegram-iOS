@@ -31,12 +31,13 @@ private enum WalletSettingsSection: Int32 {
 private enum WalletSettingsEntry: ItemListNodeEntry {
     case exportWallet(PresentationTheme, String)
     case deleteWallet(PresentationTheme, String)
+    case deleteWalletInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
         case .exportWallet:
             return WalletSettingsSection.exportWallet.rawValue
-        case .deleteWallet:
+        case .deleteWallet, .deleteWalletInfo:
             return WalletSettingsSection.deleteWallet.rawValue
         }
     }
@@ -47,6 +48,8 @@ private enum WalletSettingsEntry: ItemListNodeEntry {
             return 0
         case .deleteWallet:
             return 1
+        case .deleteWalletInfo:
+            return 2
         }
     }
     
@@ -64,6 +67,8 @@ private enum WalletSettingsEntry: ItemListNodeEntry {
             return ItemListActionItem(theme: theme, title: text, kind: .destructive, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.deleteWallet()
             })
+        case let .deleteWalletInfo(theme, text):
+            return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
 }
@@ -76,6 +81,8 @@ private func walletSettingsControllerEntries(presentationData: PresentationData,
     
     entries.append(.exportWallet(presentationData.theme, "Export Wallet"))
     entries.append(.deleteWallet(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWallet))
+    entries.append(.deleteWalletInfo(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWalletInfo))
+
     
     return entries
 }
@@ -108,6 +115,7 @@ public func walletSettingsController(context: AccountContext, tonContext: TonCon
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
+            ActionSheetTextItem(title: presentationData.strings.Wallet_Settings_DeleteWalletInfo),
             ActionSheetButtonItem(title: presentationData.strings.Wallet_Settings_DeleteWallet, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))

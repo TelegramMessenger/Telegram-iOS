@@ -18,16 +18,20 @@ private func removeMessageMedia(message: Message, mediaBox: MediaBox) {
     }
 }
 
-public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId]) {
-    for id in ids {
-        if id.peerId.namespace == Namespaces.Peer.SecretChat {
-            if let message = transaction.getMessage(id) {
-                removeMessageMedia(message: message, mediaBox: mediaBox)
+public func deleteMessages(transaction: Transaction, mediaBox: MediaBox, ids: [MessageId], deleteMedia: Bool = true) {
+    if deleteMedia {
+        for id in ids {
+            if id.peerId.namespace == Namespaces.Peer.SecretChat {
+                if let message = transaction.getMessage(id) {
+                    removeMessageMedia(message: message, mediaBox: mediaBox)
+                }
             }
         }
     }
     transaction.deleteMessages(ids, forEachMedia: { media in
-        processRemovedMedia(mediaBox, media)
+        if deleteMedia {
+            processRemovedMedia(mediaBox, media)
+        }
     })
 }
 

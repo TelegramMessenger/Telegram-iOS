@@ -13,6 +13,7 @@ import Foundation
     #else
         import MtProtoKitDynamic
     #endif
+    import CloudData
 #endif
 
 public enum ConnectionStatus: Equatable {
@@ -480,10 +481,26 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             }
             
             context.keychain = keychain
-            context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: nil, phoneNumber: phoneNumber))
+            var wrappedAdditionalSource: MTSignal?
+            
+            if #available(iOS 10.0, *) {
+                let additionalSource = cloudDataAdditionalAddressSource(phoneNumber: .single(phoneNumber ?? ""))
+                wrappedAdditionalSource = MTSignal(generator: { subscriber in
+                    let disposable = additionalSource.start(next: { value in
+                        subscriber?.putNext(value)
+                    }, completed: {
+                        subscriber?.putCompletion()
+                    })
+                    return MTBlockDisposable(block: {
+                        disposable.dispose()
+                    })
+                })
+            }
+                
+            context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber))
             
             #if DEBUG
-            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: nil, phoneNumber: phoneNumber).start(next: nil)
+            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber).start(next: nil)
             #endif
             
             let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
@@ -1025,5 +1042,13 @@ class Keychain: NSObject, MTKeychain {
     
     func dropGroup(_ group: String!) {
         
+    }
+}
+
+public func makeCloudDataContext() -> Any? {
+    if #available(iOS 10.0, *) {
+        return CloudDataContextImpl()
+    } else {
+        return nil
     }
 }

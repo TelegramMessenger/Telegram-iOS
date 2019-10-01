@@ -5,13 +5,20 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 
+public enum ItemListMultilineInputItemTextLimitMode {
+    case characters
+    case bytes
+}
+
 public struct ItemListMultilineInputItemTextLimit {
     public let value: Int
     public let display: Bool
+    public let mode: ItemListMultilineInputItemTextLimitMode
     
-    public init(value: Int, display: Bool) {
+    public init(value: Int, display: Bool, mode: ItemListMultilineInputItemTextLimitMode = .characters) {
         self.value = value
         self.display = display
+        self.mode = mode
     }
 }
 
@@ -189,7 +196,13 @@ public class ItemListMultilineInputItemNode: ListViewItemNode, ASEditableTextNod
             var rightInset: CGFloat = params.rightInset
             
             if let maxLength = item.maxLength, maxLength.display {
-                let textLength = item.text.count
+                let textLength: Int
+                switch maxLength.mode {
+                case .characters:
+                    textLength = item.text.count
+                case .bytes:
+                    textLength = item.text.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
+                }
                 let displayTextLimit = textLength > maxLength.value * 70 / 100
                 let remainingCount = maxLength.value - textLength
                 if displayTextLimit {

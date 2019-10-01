@@ -14,6 +14,7 @@ import TextFormat
 import DeviceAccess
 import TelegramStringFormatting
 import UrlHandling
+import OverlayStatusController
 
 private let balanceIcon = UIImage(bundleImageName: "Wallet/TransactionGem")?.precomposed()
 
@@ -226,7 +227,7 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, placeholder, value):
-            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 124, display: true), sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { text in
+            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: walletTextLimit, display: true, mode: .bytes), sectionId: self.section, style: .blocks, returnKeyType: .send, textUpdated: { text in
                 arguments.updateText(WalletSendScreenEntryTag.comment, text)
             }, updatedFocus: { focus in
                 if focus {
@@ -279,6 +280,13 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
     let updateState: ((WalletSendScreenState) -> WalletSendScreenState) -> Void = { f in
         statePromise.set(stateValue.modify { f($0) })
     }
+    
+    let serverSaltValue = Promise<Data?>()
+    serverSaltValue.set(getServerWalletSalt(network: context.account.network)
+    |> map(Optional.init)
+    |> `catch` { _ -> Signal<Data?, NoError> in
+        return .single(nil)
+    })
     
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
@@ -373,7 +381,37 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Send_ConfirmationConfirm, action: {
             dismissAlertImpl?(false)
             dismissInputImpl?()
-            pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.comment, randomId), walletCreatedPreloadState: nil))
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let progressSignal = Signal<Never, NoError> { subscriber in
+                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: nil))
+                presentControllerImpl?(controller, nil)
+                return ActionDisposable { [weak controller] in
+                    Queue.mainQueue().async() {
+                        controller?.dismiss()
+                    }
+                }
+            }
+            |> runOn(Queue.mainQueue())
+            |> delay(0.15, queue: Queue.mainQueue())
+            let progressDisposable = progressSignal.start()
+            
+            var serverSaltSignal = serverSaltValue.get()
+            |> take(1)
+            
+            serverSaltSignal = serverSaltSignal
+            |> afterDisposed {
+                Queue.mainQueue().async {
+                    progressDisposable.dispose()
+                }
+            }
+            
+            let _ = (serverSaltSignal
+            |> deliverOnMainQueue).start(next: { serverSalt in
+                if let serverSalt = serverSalt {
+                    pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.comment, randomId, serverSalt), walletCreatedPreloadState: nil))
+                }
+            })
         })], allowInputInset: false, dismissAutomatically: false)
         presentInGlobalOverlayImpl?(controller, nil)
         
@@ -386,7 +424,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         }
     })
     
-    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(postbox: context.account.postbox, walletInfo: walletInfo, tonInstance: tonContext.instance)
+    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance)
     |> map { combinedState in
         var state: WalletState?
         switch combinedState {
@@ -417,7 +455,9 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         let amount = amountValue(state.amount)
         var sendEnabled = false
         if let walletState = walletState {
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && state.comment.count <= 124
+            let textLength: Int = state.comment.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
+        
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && state.comment.count <= walletTextLimit
         }
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
             arguments.proceed()

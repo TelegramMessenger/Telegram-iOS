@@ -231,6 +231,8 @@ final class SharedApplicationContext {
     
     private let deviceToken = Promise<Data?>(nil)
     
+    private var cloudDataContext: Any?
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
@@ -240,13 +242,14 @@ final class SharedApplicationContext {
         
         let launchStartTime = CFAbsoluteTimeGetCurrent()
         
-        
         let statusBarHost = ApplicationStatusBarHost()
         let (window, hostView) = nativeWindowHostView()
         self.mainWindow = Window1(hostView: hostView, statusBarHost: statusBarHost)
         hostView.containerView.backgroundColor = UIColor.white
         self.window = window
         self.nativeWindow = window
+        
+        self.cloudDataContext = makeCloudDataContext()
         
         let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {
@@ -364,8 +367,15 @@ final class SharedApplicationContext {
         let apiId: Int32 = buildConfig.apiId
         let languagesCategory = "ios"
         
-        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get() |> map { token in
-            return buildConfig.bundleData(withAppToken: token)
+        let networkArguments = NetworkInitializationArguments(apiId: apiId, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: PresentationCallManagerImpl.voipMaxLayer, appData: self.deviceToken.get()
+        |> map { token in
+            let data = buildConfig.bundleData(withAppToken: token)
+            if let data = data, let jsonString = String(data: data, encoding: .utf8) {
+                //Logger.shared.log("data", "\(jsonString)")
+            } else {
+                Logger.shared.log("data", "can't deserialize")
+            }
+            return data
         })
         
         guard let appGroupUrl = maybeAppGroupUrl else {

@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -x
-
 if [ -z "BUILD_NUMBER" ]; then
 	echo "BUILD_NUMBER is not set"
 	exit 1
@@ -131,7 +129,7 @@ else
 
 	export DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS="-t DAV"
 	if [ "$1" == "appstore" ]; then
-		xcrun altool --upload-app --type ios --file "$RESULT_IPA_NAME" --username "$FASTLANE_ITC_USERNAME" --password "$FASTLANE_PASSWORD"
+		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" xcrun altool --upload-app --type ios --file "$RESULT_IPA_NAME" --username "$FASTLANE_ITC_USERNAME" --password "@env:FASTLANE_PASSWORD"
 	else
 		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR" skip_build:1
 	fi

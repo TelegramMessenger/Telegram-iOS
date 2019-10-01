@@ -214,10 +214,11 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, placeholder, value):
-            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: 124, display: true), sectionId: self.section, style: .blocks, returnKeyType: .done, textUpdated: { text in
+            return ItemListMultilineInputItem(theme: theme, text: value, placeholder: placeholder, maxLength: ItemListMultilineInputItemTextLimit(value: walletTextLimit, display: true), sectionId: self.section, style: .blocks, returnKeyType: .done, textUpdated: { text in
                 arguments.updateText(WalletCreateInvoiceScreenEntryTag.comment, text)
             }, shouldUpdateText: { text in
-                return text.count <= 124
+                let textLength: Int = text.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
+                return text.count <= walletTextLimit
             }, updatedFocus: { focus in
                 arguments.updateState { state in
                     var state = state

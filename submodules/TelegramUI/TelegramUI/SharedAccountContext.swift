@@ -17,6 +17,7 @@ import UrlHandling
 import WalletUI
 import LegacyMediaPickerUI
 import LocalMediaResources
+import OverlayStatusController
 
 private enum CallStatusText: Equatable {
     case none
@@ -1031,10 +1032,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         )
         |> deliverOnMainQueue).start(next: { wallets, currentPublicKey, preferences in
             let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-            guard let config = WalletConfiguration.with(appConfiguration: appConfiguration).config else {
+            let walletConfiguration = WalletConfiguration.with(appConfiguration: appConfiguration)
+            guard let config = walletConfiguration.config, let blockchainName = walletConfiguration.blockchainName else {
                 return
             }
-            let tonContext = storedContext.context(config: config)
+            let tonContext = storedContext.context(config: config, blockchainName: blockchainName)
             
             if wallets.wallets.isEmpty {
                 if let _ = currentPublicKey {
@@ -1044,15 +1046,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             } else {
                 let walletInfo = wallets.wallets[0].info
+                let exportCompleted = wallets.wallets[0].exportCompleted
                 if let currentPublicKey = currentPublicKey {
                     if currentPublicKey == walletInfo.encryptedSecret.publicKey {
                         let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
                         |> deliverOnMainQueue).start(next: { address in
                             switch walletContext {
-                                case .generic:
-                                    present(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address))
-                                case let .send(address, amount, comment):
-                                    present(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
+                            case .generic:
+                                if exportCompleted {
+                                    present(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild))
+                                } else {
+                                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
+                                }
+                            case let .send(address, amount, comment):
+                                present(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
                             }
                             
                         })

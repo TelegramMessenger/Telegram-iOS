@@ -118,6 +118,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         return self.view as! NavigationControllerView
     }
     
+    private var inCallStatusBar: StatusBar?
     private var rootContainer: RootContainer?
     private var rootModalFrame: NavigationModalFrame?
     private var modalContainers: [NavigationModalContainer] = []
@@ -187,18 +188,16 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
         var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
-        if let controller = self.viewControllers.last {
-            if let controller = controller as? ViewController {
-                if controller.lockOrientation {
-                    if let lockedOrientation = controller.lockedOrientation {
-                        supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: lockedOrientation, compactSize: lockedOrientation))
-                    } else {
-                        supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: currentOrientationToLock, compactSize: currentOrientationToLock))
-                    }
-                } else {
-                    supportedOrientations = supportedOrientations.intersection(controller.supportedOrientations)
-                }
+        if let rootContainer = self.rootContainer {
+            switch rootContainer {
+            case let .flat(container):
+                supportedOrientations = supportedOrientations.intersection(container.combinedSupportedOrientations(currentOrientationToLock: currentOrientationToLock))
+            case .split:
+                break
             }
+        }
+        for modalContainer in self.modalContainers {
+            supportedOrientations = supportedOrientations.intersection(modalContainer.container.combinedSupportedOrientations(currentOrientationToLock: currentOrientationToLock))
         }
         return supportedOrientations
     }
@@ -206,6 +205,14 @@ open class NavigationController: UINavigationController, ContainableController, 
     public func updateTheme(_ theme: NavigationControllerTheme) {
         let statusBarStyleUpdated = self.theme.statusBar != theme.statusBar
         self.theme = theme
+        if let rootContainer = self.rootContainer {
+            switch rootContainer {
+            case let .split(container):
+                container.updateTheme(theme: theme)
+            case .flat:
+                break
+            }
+        }
         if self.isViewLoaded {
             if statusBarStyleUpdated {
                 self.validStatusBarStyle = self.theme.statusBar
@@ -216,7 +223,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 case .white:
                     normalStatusBarStyle = .lightContent
                 }
-                self.statusBarHost?.setStatusBarStyle(normalStatusBarStyle, animated: false)
+                //self.statusBarHost?.setStatusBarStyle(normalStatusBarStyle, animated: false)
             }
             self.controllerView.backgroundColor = theme.emptyAreaColor
         }
@@ -232,10 +239,13 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         self.validLayout = layout
         self.updateContainers(layout: layout, transition: transition)
+        
+        self.inCallStatusBar?.frame = CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: max(40.0, layout.safeInsets.top)))
+        self.inCallStatusBar?.updateState(statusBar: nil, withSafeInsets: false, inCallText: "In Call Text", animated: false)
     }
     
     private func updateContainers(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
-        let navigationLayout = makeNavigationLayout(layout: layout, controllers: self._viewControllers)
+        let navigationLayout = makeNavigationLayout(mode: self.mode, layout: layout, controllers: self._viewControllers)
         
         var transition = transition
         var statusBarStyle: StatusBarStyle = .Ignore
@@ -330,6 +340,8 @@ open class NavigationController: UINavigationController, ContainableController, 
             if modalContainer.supernode == nil && modalContainer.isReady {
                 if let previousModalContainer = previousModalContainer {
                     self.displayNode.insertSubnode(modalContainer, belowSubnode: previousModalContainer)
+                } else if let inCallStatusBar = self.inCallStatusBar {
+                    self.displayNode.insertSubnode(modalContainer, belowSubnode: inCallStatusBar)
                 } else {
                     self.displayNode.addSubnode(modalContainer)
                 }
@@ -341,12 +353,12 @@ open class NavigationController: UINavigationController, ContainableController, 
                 if previousModalContainer == nil {
                     topModalDismissProgress = modalContainer.dismissProgress
                     if case .compact = layout.metrics.widthClass {
-                        modalContainer.container.keyboardViewManager = self.keyboardViewManager
+                        modalContainer.keyboardViewManager = self.keyboardViewManager
                     } else {
-                        modalContainer.container.keyboardViewManager = nil
+                        modalContainer.keyboardViewManager = nil
                     }
                 } else {
-                    modalContainer.container.keyboardViewManager = nil
+                    modalContainer.keyboardViewManager = nil
                 }
                 previousModalContainer = modalContainer
             }
@@ -601,11 +613,9 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         self.navigationBar.removeFromSuperview()
         
-        /*let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
-        panRecognizer.delegate = self
-        panRecognizer.delaysTouchesBegan = false
-        panRecognizer.cancelsTouchesInView = true
-        self.view.addGestureRecognizer(panRecognizer)*/
+        /*let inCallStatusBar = StatusBar()
+        self.displayNode.addSubnode(inCallStatusBar)
+        self.inCallStatusBar = inCallStatusBar*/
     }
     
     public func pushViewController(_ controller: ViewController) {
@@ -742,53 +752,6 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     override open func present(_ viewControllerToPresent: UIViewController, animated flag: Bool, completion: (() -> Void)? = nil) {
         preconditionFailure()
-        /*if let controller = viewControllerToPresent as? NavigationController {
-            controller.navigation_setDismiss({ [weak self] in
-                if let strongSelf = self {
-                    strongSelf.dismiss(animated: false, completion: nil)
-                }
-            }, rootController: self.view!.window!.rootViewController)
-            self._presentedViewController = controller
-            
-            self.view.endEditing(true)
-            if let validLayout = self.validLayout {
-                controller.containerLayoutUpdated(validLayout, transition: .immediate)
-            }
-            
-            var ready: Signal<Bool, NoError> = .single(true)
-            
-            if let controller = controller.topViewController as? ViewController {
-                ready = controller.ready.get()
-                |> filter { $0 }
-                |> take(1)
-                |> deliverOnMainQueue
-            }
-            
-            self.currentPresentDisposable.set(ready.start(next: { [weak self] _ in
-                if let strongSelf = self {
-                    if flag {
-                        controller.view.frame = strongSelf.view.bounds.offsetBy(dx: 0.0, dy: strongSelf.view.bounds.height)
-                        strongSelf.view.addSubview(controller.view)
-                        UIView.animate(withDuration: 0.3, delay: 0.0, options: UIView.AnimationOptions(rawValue: 7 << 16), animations: {
-                            controller.view.frame = strongSelf.view.bounds
-                        }, completion: { _ in
-                            if let completion = completion {
-                                completion()
-                            }
-                        })
-                    } else {
-                        controller.view.frame = strongSelf.view.bounds
-                        strongSelf.view.addSubview(controller.view)
-                        
-                        if let completion = completion {
-                            completion()
-                        }
-                    }
-                }
-            }))
-        } else {
-            preconditionFailure("NavigationController can't present \(viewControllerToPresent). Only subclasses of NavigationController are allowed.")
-        }*/
     }
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {

@@ -33,6 +33,7 @@ private enum WalletTransactionInfoSection: Int32 {
 }
 
 private enum WalletTransactionInfoEntryTag: ItemListItemTag {
+    case address
     case comment
     
     func isEqual(to other: ItemListItemTag) -> Bool {
@@ -47,7 +48,7 @@ private enum WalletTransactionInfoEntryTag: ItemListItemTag {
 private enum WalletTransactionInfoEntry: ItemListNodeEntry {
     case amount(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, WalletTransaction)
     case infoHeader(PresentationTheme, String)
-    case infoAddress(PresentationTheme, String)
+    case infoAddress(PresentationTheme, String, String?)
     case infoCopyAddress(PresentationTheme, String)
     case infoSendGrams(PresentationTheme, String)
     case commentHeader(PresentationTheme, String)
@@ -93,8 +94,12 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return WalletTransactionHeaderItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: walletTransaction, sectionId: self.section)
         case let .infoHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-        case let .infoAddress(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], font: .monospace, sectionId: self.section, style: .blocks)
+        case let .infoAddress(theme, text, address):
+            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], font: .monospace, sectionId: self.section, style: .blocks, longTapAction: address == nil ? nil : {
+                if let address = address {
+                arguments.displayContextMenu(WalletTransactionInfoEntryTag.address, address)
+                }
+            }, tag: WalletTransactionInfoEntryTag.address)
         case let .infoCopyAddress(theme, text):
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.copyWalletAddress()
@@ -173,13 +178,14 @@ private func extractDescription(_ walletTransaction: WalletTransaction) -> Strin
     return text
 }
 
-private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState) -> [WalletTransactionInfoEntry] {
+private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState, walletInfo: WalletInfo?) -> [WalletTransactionInfoEntry] {
     var entries: [WalletTransactionInfoEntry] = []
     
     entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, walletTransaction))
     
     let transferredValue = walletTransaction.transferredValue
     let address = extractAddress(walletTransaction)
+    var singleAddress: String?
     let text = stringForAddress(strings: presentationData.strings, address: address)
     let description = extractDescription(walletTransaction)
     
@@ -188,9 +194,12 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     } else {
         entries.append(.infoHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SenderHeader))
     }
-
-    entries.append(.infoAddress(presentationData.theme, text))
-    if case .list = address {
+    var singleAddres: String?
+    if case let .list(list) = address, list.count == 1 {
+        singleAddres = list.first
+    }
+    entries.append(.infoAddress(presentationData.theme, text, singleAddres))
+    if case .list = address, walletInfo != nil {
         entries.append(.infoCopyAddress(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CopyAddress))
         entries.append(.infoSendGrams(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SendGrams))
     }
@@ -203,7 +212,7 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     return entries
 }
 
-func walletTransactionInfoController(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, walletTransaction: WalletTransaction) -> ViewController {
+func walletTransactionInfoController(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo?, walletTransaction: WalletTransaction, enableDebugActions: Bool) -> ViewController {
     let statePromise = ValuePromise(WalletTransactionInfoControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: WalletTransactionInfoControllerState())
     let updateState: ((WalletTransactionInfoControllerState) -> WalletTransactionInfoControllerState) -> Void = { f in
@@ -223,6 +232,9 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
             presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Wallet_TransactionInfo_AddressCopied, false)), nil)
         }
     }, sendGrams: {
+        guard let walletInfo = walletInfo else {
+            return
+        }
         let address = extractAddress(walletTransaction)
         if case let .list(addresses) = address, let address = addresses.first {
             dismissImpl?()
@@ -235,7 +247,7 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<WalletTransactionInfoEntry>, WalletTransactionInfoEntry.ItemGenerationArguments)) in
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_TransactionInfo_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletTransactionInfoControllerEntries(presentationData: presentationData, walletTransaction: walletTransaction, state: state), style: .blocks, animateChanges: false)
+        let listState = ItemListNodeState(entries: walletTransactionInfoControllerEntries(presentationData: presentationData, walletTransaction: walletTransaction, state: state, walletInfo: walletInfo), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -271,9 +283,19 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
                 return false
             })
             if let resultItemNode = resultItemNode {
-                let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: {
+                var actions: [ContextMenuAction] = []
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: {
                     UIPasteboard.general.string = value
-                })])
+                }))
+                if enableDebugActions {
+                    if case .address = tag {
+                        actions.append(ContextMenuAction(content: .text(title: "View Transactions", accessibilityLabel: "View Transactions"), action: {
+                            pushImpl?(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: nil, address: value, enableDebugActions: enableDebugActions))
+                            //dismissImpl?()
+                        }))
+                    }
+                }
+                let contextMenuController =  ContextMenuController(actions: actions)
                 strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
                     if let strongController = controller, let resultItemNode = resultItemNode {
                         return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
@@ -345,6 +367,7 @@ private let titleFont = Font.regular(14.0)
 private let titleBoldFont = Font.semibold(14.0)
 
 private class WalletTransactionHeaderItemNode: ListViewItemNode {
+    private let titleSignNode: TextNode
     private let titleNode: TextNode
     private let subtitleNode: TextNode
     private let iconNode: ASImageNode
@@ -353,6 +376,11 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
     private var item: WalletTransactionHeaderItem?
     
     init() {
+        self.titleSignNode = TextNode()
+        self.titleSignNode.isUserInteractionEnabled = false
+        self.titleSignNode.contentMode = .left
+        self.titleSignNode.contentsScale = UIScreen.main.scale
+        
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
@@ -373,6 +401,7 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.addSubnode(self.titleSignNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
         self.addSubnode(self.iconNode)
@@ -380,6 +409,7 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: WalletTransactionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+        let makeTitleSignLayout = TextNode.asyncLayout(self.titleSignNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let iconSize = self.iconNode.image?.size ?? CGSize(width: 10.0, height: 10.0)
@@ -388,14 +418,17 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             let leftInset: CGFloat = 15.0 + params.leftInset
             let verticalInset: CGFloat = 24.0
             
+            let signString: String
             let balanceString: String
             let titleColor: UIColor
             let transferredValue = item.walletTransaction.transferredValue
             if transferredValue <= 0 {
-                balanceString = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
+                signString = "-"
+                balanceString = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.list.itemPrimaryTextColor
             } else {
-                balanceString = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
+                signString = "+"
+                balanceString = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
             }
             
@@ -408,9 +441,11 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             } else {
                 title.append(NSAttributedString(string: balanceString, font: Font.bold(48.0), textColor: titleColor))
             }
+            let titleSign = NSAttributedString(string: signString, font: Font.bold(48.0), textColor: titleColor)
             
             let subtitle: String = stringForFullDate(timestamp: Int32(clamping: item.walletTransaction.timestamp), strings: item.strings, dateTimeFormat: item.dateTimeFormat)
             
+            let (titleSignLayout, titleSignApply) = makeTitleSignLayout(TextNodeLayoutArguments(attributedString: titleSign, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: item.theme.list.freeTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -431,18 +466,25 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
                     strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
                     //strongSelf.activateArea.accessibilityLabel = attributedText.string
                     
+                    let _ = titleSignApply()
                     let _ = titleApply()
                     let _ = subtitleApply()
                     
-                    let iconSpacing: CGFloat = 8.0
-                    let contentWidth = titleLayout.size.width + iconSpacing + iconSize.width / 2.0
-                    let titleFrame = CGRect(origin: CGPoint(x: floor((params.width - contentWidth) / 2.0), y: verticalInset), size: titleLayout.size)
+                    let iconSpacing: CGFloat = 4.0
+                    let contentWidth = titleSignLayout.size.width + iconSpacing + titleLayout.size.width + iconSpacing + iconSize.width * 3.0 / 2.0
+                    let contentOrigin = floor((params.width - contentWidth) / 2.0)
+                    let titleSignFrame = CGRect(origin: CGPoint(x: contentOrigin, y: verticalInset), size: titleSignLayout.size)
+                    let iconFrame = CGRect(origin: CGPoint(x: contentOrigin + titleSignFrame.width * titleScale + iconSpacing, y: titleSignFrame.minY + floor((titleSignFrame.height - iconSize.height) / 2.0) - 2.0), size: iconSize)
+                    let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + iconSpacing, y: verticalInset), size: titleLayout.size)
                     let subtitleFrame = CGRect(origin: CGPoint(x: floor((params.width - subtitleLayout.size.width) / 2.0), y: titleFrame.maxY - 5.0), size: subtitleLayout.size)
+                    strongSelf.titleSignNode.position = titleSignFrame.center
+                    strongSelf.titleSignNode.bounds = CGRect(origin: CGPoint(), size: titleSignFrame.size)
+                    strongSelf.titleSignNode.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
                     strongSelf.titleNode.position = titleFrame.center
                     strongSelf.titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
                     strongSelf.titleNode.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
                     strongSelf.subtitleNode.frame = subtitleFrame
-                    strongSelf.iconNode.frame = CGRect(origin: CGPoint(x: floor(titleFrame.midX + titleFrame.width / 2.0 * titleScale + iconSpacing), y: titleFrame.minY + floor((titleFrame.height - iconSize.height) / 2.0) - 2.0), size: iconSize)
+                    strongSelf.iconNode.frame = iconFrame
                 }
             })
         }

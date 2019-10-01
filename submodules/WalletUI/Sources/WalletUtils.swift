@@ -3,6 +3,7 @@ import TelegramStringFormatting
 import UrlEscaping
 
 let walletAddressLength: Int = 48
+let walletTextLimit: Int = 124
 
 func formatAddress(_ address: String) -> String {
     var address = address

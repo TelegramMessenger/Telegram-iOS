@@ -152,7 +152,7 @@ private func endAnimations(view: UIView) {
     }
 }
 
-private func viewTreeContainsFirstResponder(view: UIView) -> Bool {
+func viewTreeContainsFirstResponder(view: UIView) -> Bool {
     if view.isFirstResponder {
         return true
     } else {

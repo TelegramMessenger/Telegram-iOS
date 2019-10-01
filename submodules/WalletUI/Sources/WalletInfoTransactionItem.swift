@@ -94,6 +94,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
     private let bottomStripeNode: ASDisplayNode
     private let highlightedBackgroundNode: ASDisplayNode
     
+    private let titleSignNode: TextNode
     private let titleNode: TextNode
     private let directionNode: TextNode
     private let iconNode: ASImageNode
@@ -112,6 +113,11 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         self.topStripeNode.isLayerBacked = true
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
+        self.titleSignNode = TextNode()
+        self.titleSignNode.isUserInteractionEnabled = false
+        self.titleSignNode.contentMode = .left
+        self.titleSignNode.contentsScale = UIScreen.main.scale
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -149,6 +155,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         
         super.init(layerBacked: false, dynamicBounce: false)
         
+        self.addSubnode(self.titleSignNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.directionNode)
@@ -160,6 +167,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
     }
     
     func asyncLayout() -> (_ item: WalletInfoTransactionItem, _ params: ListViewItemLayoutParams, _ hasPrevious: Bool, _ hasNext: Bool, _ dateAtBottom: Bool) -> (ListViewItemNodeLayout, () -> Void) {
+        let makeTitleSignLayout = TextNode.asyncLayout(self.titleSignNode)
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeDirectionLayout = TextNode.asyncLayout(self.directionNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
@@ -175,10 +183,11 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 updatedTheme = item.theme
             }
             let iconImage: UIImage? = transactionIcon
-            let iconSize = iconImage?.size ?? CGSize(width: 10.0, height: 10.0)
+            let iconSize = /*iconImage?.size ??*/ CGSize(width: 14.0, height: 12.0)
             
             let leftInset = 16.0 + params.leftInset
             
+            let sign: String
             let title: String
             let directionText: String
             let titleColor: UIColor
@@ -186,7 +195,8 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             var text: String = ""
             var description: String = ""
             if transferredValue <= 0 {
-                title = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
+                sign = "-"
+                title = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.list.itemPrimaryTextColor
                 if item.walletTransaction.outMessages.isEmpty {
                     directionText = ""
@@ -206,7 +216,8 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     }
                 }
             } else {
-                title = "+\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
+                sign = "+"
+                title = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
                 directionText = item.strings.Wallet_Info_TransactionFrom
                 if let inMessage = item.walletTransaction.inMessage {
@@ -232,6 +243,10 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             } else {
                 titleString.append(NSAttributedString(string: title, font: Font.bold(17.0), textColor: titleColor))
             }
+            
+            let signString = NSAttributedString(string: sign, font: Font.bold(17.0), textColor: titleColor)
+            
+            let (titleSignLayout, titleSignApply) = makeTitleSignLayout(TextNodeLayoutArguments(attributedString: signString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0 - dateLayout.size.width - directionLayout.size.width - iconSize.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset - 20.0 - dateLayout.size.width - directionLayout.size.width - iconSize.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -282,6 +297,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                         strongSelf.iconNode.image = iconImage
                     }
                     
+                    let _ = titleSignApply()
                     let _ = titleApply()
                     let _ = textApply()
                     let _ = descriptionApply()
@@ -299,13 +315,16 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     }
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentSize.height - separatorHeight), size: CGSize(width: params.width - leftInset, height: separatorHeight))
                     
-                    let titleFrame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleLayout.size)
-                    strongSelf.titleNode.frame = titleFrame
+                    let titleSignFrame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleSignLayout.size)
+                    strongSelf.titleSignNode.frame = titleSignFrame
                     
-                    let iconFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.minY + floor((titleFrame.height - iconSize.height) / 2.0) - 1.0), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: titleSignFrame.maxX + 1.0, y: titleSignFrame.minY + floor((titleSignFrame.height - iconSize.height) / 2.0) - 1.0), size: iconSize)
                     strongSelf.iconNode.frame = iconFrame
                     
-                    let directionFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + 3.0, y: titleFrame.maxY - directionLayout.size.height - 1.0), size: directionLayout.size)
+                    let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + 1.0, y: topInset), size: titleLayout.size)
+                    strongSelf.titleNode.frame = titleFrame
+                    
+                    let directionFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.maxY - directionLayout.size.height - 1.0), size: directionLayout.size)
                     strongSelf.directionNode.frame = directionFrame
                     
                     let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleSpacing), size: textLayout.size)
@@ -402,17 +421,17 @@ private final class WalletInfoTransactionDateHeader: ListViewItemHeader {
         var timeinfo: tm = tm()
         localtime_r(&time, &timeinfo)
         
-        self.roundedTimestamp = timeinfo.tm_year * 100 + timeinfo.tm_mon
         self.month = timeinfo.tm_mon
         self.year = timeinfo.tm_year
-        
-        self.id = Int64(self.roundedTimestamp)
         
         if timestamp == Int32.max {
             self.localTimestamp = timestamp / (granularity) * (granularity)
         } else {
             self.localTimestamp = ((timestamp + timezoneOffset) / (granularity)) * (granularity)
         }
+        
+        self.roundedTimestamp = self.localTimestamp
+        self.id = Int64(self.roundedTimestamp)
     }
     
     let stickDirection: ListViewItemHeaderStickDirection = .top

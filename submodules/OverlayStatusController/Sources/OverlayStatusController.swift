@@ -129,7 +129,7 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
     }
 }
 
-public final class OverlayStatusController: ViewController {
+public final class OverlayStatusController: ViewController, StandalonePresentableController {
     private let theme: PresentationTheme
     private let strings: PresentationStrings
     private let type: OverlayStatusControllerType

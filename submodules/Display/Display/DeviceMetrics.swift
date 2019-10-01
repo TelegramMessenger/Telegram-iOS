@@ -20,8 +20,19 @@ public enum DeviceMetrics: CaseIterable, Equatable {
     case unknown(screenSize: CGSize, statusBarHeight: CGFloat, onScreenNavigationHeight: CGFloat?)
 
     public static var allCases: [DeviceMetrics] {
-        return [.iPhone4, .iPhone5, .iPhone6, .iPhone6Plus, .iPhoneX, .iPhoneXSMax,
-                .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen]
+        return [
+            .iPhone4,
+            .iPhone5,
+            .iPhone6,
+            .iPhone6Plus,
+            .iPhoneX,
+            .iPhoneXSMax,
+            .iPad,
+            .iPadPro10Inch,
+            .iPadPro11Inch,
+            .iPadPro,
+            .iPadPro3rdGen
+        ]
     }
     
     public init(screenSize: CGSize, statusBarHeight: CGFloat, onScreenNavigationHeight: CGFloat?) {
@@ -103,6 +114,20 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return onScreenNavigationHeight
             default:
                 return nil
+        }
+    }
+    
+    func statusBarHeight(for size: CGSize) -> CGFloat? {
+        let value = self.statusBarHeight
+        switch self {
+        case .iPad, .iPadPro10Inch, .iPadPro11Inch, .iPadPro, .iPadPro3rdGen:
+            return value
+        default:
+            if size.width < size.height {
+                return value
+            } else {
+                return nil
+            }
         }
     }
     
