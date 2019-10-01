@@ -13,6 +13,7 @@ import MtProtoKitDynamic
 import ItemListUI
 import AccountContext
 import UrlEscaping
+import ShareController
 
 private final class ProxySettingsControllerArguments {
     let toggleEnabled: (Bool) -> Void
@@ -311,10 +312,11 @@ public enum ProxySettingsControllerMode {
 
 public func proxySettingsController(context: AccountContext, mode: ProxySettingsControllerMode = .default) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    return proxySettingsController(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) })
+    return proxySettingsController(accountManager: context.sharedContext.accountManager, context: context, postbox: context.account.postbox, network: context.account.network, mode: mode, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) })
 }
 
-public func proxySettingsController(accountManager: AccountManager, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {
+public func proxySettingsController(accountManager: AccountManager, context: AccountContext? = nil, postbox: Postbox, network: Network, mode: ProxySettingsControllerMode, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>) -> ViewController {
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     let stateValue = Atomic(value: ProxySettingsControllerState())
@@ -439,6 +441,9 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
     
     let controller = ItemListController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
+    }
     pushControllerImpl = { [weak controller] c in
         (controller?.navigationController as? NavigationController)?.pushViewController(c)
     }
@@ -499,7 +504,7 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
     }
     
     shareProxyListImpl = { [weak controller] in
-        guard let strongController = controller else {
+        guard let context = context, let strongController = controller else {
             return
         }
         let _ = (proxySettings.get()
@@ -527,13 +532,8 @@ public func proxySettingsController(accountManager: AccountManager, postbox: Pos
                     result += string
                 }
                 
-                let activityController = UIActivityViewController(activityItems: [result], applicationActivities: nil)
-                
-                if let window = strongController.view.window, let rootViewController = window.rootViewController {
-                    activityController.popoverPresentationController?.sourceView = window
-                    activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-                    rootViewController.present(activityController, animated: true, completion: nil)
-                }
+                let controller = ShareController(context: context, subject: .text(result), preferredAction: .default, showInChat: nil, externalShare: true, immediateExternalShare: true, switchableAccounts: [])
+                presentControllerImpl?(controller, nil)
             })
     }
     

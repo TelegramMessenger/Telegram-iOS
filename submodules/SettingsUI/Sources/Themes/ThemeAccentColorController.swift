@@ -21,8 +21,6 @@ final class ThemeAccentColorController: ViewController {
         return self.displayNode as! ThemeAccentColorControllerNode
     }
     
-    private var didPlayPresentationAnimation = false
-    
     private var presentationData: PresentationData
     
     init(context: AccountContext, currentTheme: PresentationThemeReference, currentColor: UIColor?) {
@@ -53,17 +51,6 @@ final class ThemeAccentColorController: ViewController {
     
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    public override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        
-        if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
-            self.didPlayPresentationAnimation = true
-            if case .modalSheet = presentationArguments.presentationAnimation {
-                self.controllerNode.animateIn()
-            }
-        }
     }
     
     override func loadDisplayNode() {
@@ -109,13 +96,6 @@ final class ThemeAccentColorController: ViewController {
     
     private func updateStrings() {
         
-    }
-    
-    override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {

@@ -25,7 +25,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     
     var navigationBar: NavigationBar?
     
-    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings) {
+    init(context: AccountContext, peer: Peer?, query: String, theme: PresentationTheme, strings: PresentationStrings, navigationController: NavigationController?) {
         self.context = context
         self.query = query
         self.listNode = ListView()
@@ -48,7 +48,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
         self.segmentedControlNode = SegmentedControlNode(theme: SegmentedControlTheme(theme: theme), items: items.map { SegmentedControlItem(title: $0) }, selectedIndex: 0)
         
         if let peer = peer {
-            self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .inline)
+            self.chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .inline(navigationController))
         } else {
             self.chatController = nil
         }
@@ -78,7 +78,7 @@ final class HashtagSearchControllerNode: ASDisplayNode {
     }
     
     func enqueueTransition(_ transition: ChatListSearchContainerTransition, firstTime: Bool) {
-        enqueuedTransitions.append((transition, firstTime))
+        self.enqueuedTransitions.append((transition, firstTime))
         
         if self.hasValidLayout {
             while !self.enqueuedTransitions.isEmpty {

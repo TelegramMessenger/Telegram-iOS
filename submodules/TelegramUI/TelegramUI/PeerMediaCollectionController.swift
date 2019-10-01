@@ -775,56 +775,57 @@ public class PeerMediaCollectionController: TelegramBaseController {
             let controller = strongSelf.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: strongSelf.context, filter: [.onlyWriteable, .excludeDisabled]))
             controller.peerSelected = { [weak controller] peerId in
                 if let strongSelf = self, let _ = controller {
-                    let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
-                        transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
-                            if let currentState = currentState as? ChatInterfaceState {
-                                return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
-                            } else {
-                                return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
+                    if peerId == strongSelf.context.account.peerId {
+                        strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
+                        
+                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
+                            return .forward(source: id, grouping: .auto, attributes: [])
+                        })
+                        |> deliverOnMainQueue).start(next: { [weak self] messageIds in
+                            if let strongSelf = self {
+                                let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
+                                    guard let id = id else {
+                                        return nil
+                                    }
+                                    return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
+                                        |> mapToSignal { status, _ -> Signal<Bool, NoError> in
+                                            if status != nil {
+                                                return .never()
+                                            } else {
+                                                return .single(true)
+                                            }
+                                        }
+                                        |> take(1)
+                                })
+                                if strongSelf.shareStatusDisposable == nil {
+                                    strongSelf.shareStatusDisposable = MetaDisposable()
+                                }
+                                strongSelf.shareStatusDisposable?.set((combineLatest(signals)
+                                    |> deliverOnMainQueue).start(completed: {
+                                        guard let strongSelf = self else {
+                                            return
+                                        }
+                                        strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .success), in: .window(.root))
+                                    }))
                             }
                         })
-                    }) |> deliverOnMainQueue).start(completed: {
-                        if let strongSelf = self {
-                            strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
-                            
-                            if peerId == strongSelf.context.account.peerId {
-                                let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messageIds.map { id -> EnqueueMessage in
-                                    return .forward(source: id, grouping: .auto, attributes: [])
-                                })
-                                |> deliverOnMainQueue).start(next: { [weak self] messageIds in
-                                    if let strongSelf = self {
-                                        let signals: [Signal<Bool, NoError>] = messageIds.compactMap({ id -> Signal<Bool, NoError>? in
-                                            guard let id = id else {
-                                                return nil
-                                            }
-                                            return strongSelf.context.account.pendingMessageManager.pendingMessageStatus(id)
-                                            |> mapToSignal { status, _ -> Signal<Bool, NoError> in
-                                                if status != nil {
-                                                    return .never()
-                                                } else {
-                                                    return .single(true)
-                                                }
-                                            }
-                                            |> take(1)
-                                        })
-                                        if strongSelf.shareStatusDisposable == nil {
-                                            strongSelf.shareStatusDisposable = MetaDisposable()
-                                        }
-                                        strongSelf.shareStatusDisposable?.set((combineLatest(signals)
-                                        |> deliverOnMainQueue).start(completed: {
-                                            guard let strongSelf = self else {
-                                                return
-                                            }
-                                            strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .success), in: .window(.root))
-                                        }))
-                                    }
-                                })
-                                if let strongController = controller {
-                                    strongController.dismiss()
+                        if let strongController = controller {
+                            strongController.dismiss()
+                        }
+                    } else {
+                        let _ = (strongSelf.context.account.postbox.transaction({ transaction -> Void in
+                            transaction.updatePeerChatInterfaceState(peerId, update: { currentState in
+                                if let currentState = currentState as? ChatInterfaceState {
+                                    return currentState.withUpdatedForwardMessageIds(forwardMessageIds)
+                                } else {
+                                    return ChatInterfaceState().withUpdatedForwardMessageIds(forwardMessageIds)
                                 }
-                            } else {
-                                let ready = ValuePromise<Bool>()
+                            })
+                        }) |> deliverOnMainQueue).start(completed: {
+                            if let strongSelf = self {
+                                strongSelf.updateInterfaceState(animated: false, { $0.withoutSelectionState() })
                                 
+                                let ready = ValuePromise<Bool>()
                                 strongSelf.messageContextDisposable.set((ready.get() |> take(1) |> deliverOnMainQueue).start(next: { _ in
                                     if let strongController = controller {
                                         strongController.dismiss()
@@ -833,8 +834,8 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                 
                                 (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                             }
-                        }
-                    })
+                        })
+                    }
                 }
             }
             (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)

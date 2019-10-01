@@ -961,7 +961,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         })
         if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
             let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
-            let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, enableDebugActions: enableDebugActions)
+            let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: enableDebugActions)
             
             let presentationData = accountContext.sharedContext.currentPresentationData.with { $0 }
             
@@ -1296,7 +1296,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             return nil
         }
     }
-    |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && arePeersEqual($0?.1, $1?.1) })
+    |> distinctUntilChanged(isEqual: { $0?.0 === $1?.0 && arePeersEqual($0?.1, $1?.1) && $0?.2 === $1?.2 })
     |> mapToSignal { primary -> Signal<(UIImage, UIImage)?, NoError> in
         if let primary = primary {
             let size = CGSize(width: 31.0, height: 31.0)
@@ -1524,7 +1524,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
             })
             if let selectedAccount = selectedAccount, let sharedContext = sharedContext {
                 let accountContext = sharedContext.makeTempAccountContext(account: selectedAccount)
-                let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, enableDebugActions: enableDebugActions)
+                let chatListController = accountContext.sharedContext.makeChatListController(context: accountContext, groupId: .root, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: enableDebugActions)
                 return chatListController
             }
         }

@@ -226,7 +226,7 @@ final class TermsOfServiceControllerNode: ViewControllerTracingNode {
         
         let containerInset: CGFloat = 32.0
         let contentInsets = UIEdgeInsets(top: 15.0, left: 15.0 + layout.safeInsets.left, bottom: 15.0, right: 15.0 + layout.safeInsets.right)
-        let contentSize = self.contentTextNode.updateLayout(CGSize(width: layout.size.width - contentInsets.left, height: CGFloat.greatestFiniteMagnitude))
+        let contentSize = self.contentTextNode.updateLayout(CGSize(width: layout.size.width - contentInsets.left - contentInsets.right, height: CGFloat.greatestFiniteMagnitude))
         let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: containerInset), size: CGSize(width: layout.size.width, height: contentSize.height + contentInsets.top + contentInsets.bottom))
         self.contentTextNode.frame = CGRect(origin: CGPoint(x: contentFrame.minX + contentInsets.left, y: contentFrame.minY + contentInsets.top), size: contentSize)
         self.contentBackgroundNode.frame = contentFrame

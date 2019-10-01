@@ -14,6 +14,7 @@ import ItemListUI
 import AccountContext
 import UrlEscaping
 import UrlHandling
+import ShareController
 
 private func shareLink(for server: ProxyServerSettings) -> String {
     var link: String
@@ -267,10 +268,10 @@ private func proxyServerSettings(with state: ProxyServerSettingsControllerState)
 
 public func proxyServerSettingsController(context: AccountContext, currentSettings: ProxyServerSettings? = nil) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    return proxyServerSettingsController(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) }, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, currentSettings: currentSettings)
+    return proxyServerSettingsController(context: context, theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: context.sharedContext.presentationData |> map { ($0.theme, $0.strings) }, accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, currentSettings: currentSettings)
 }
 
-func proxyServerSettingsController(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, accountManager: AccountManager, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
+func proxyServerSettingsController(context: AccountContext? = nil, theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, accountManager: AccountManager, postbox: Postbox, network: Network, currentSettings: ProxyServerSettings?) -> ViewController {
     var currentMode: ProxyServerSettingsControllerMode = .socks5
     var currentUsername: String?
     var currentPassword: String?
@@ -303,7 +304,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         statePromise.set(stateValue.modify { f($0) })
     }
     
-    var presentImpl: ((ViewController, Any?) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var dismissImpl: (() -> Void)?
     
     var shareImpl: (() -> Void)?
@@ -370,7 +371,7 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
     
     let controller = ItemListController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
-    presentImpl = { [weak controller] c, d in
+    presentControllerImpl = { [weak controller] c, d in
         controller?.present(c, in: .window(.root), with: d)
     }
     dismissImpl = { [weak controller] in
@@ -386,15 +387,10 @@ func proxyServerSettingsController(theme: PresentationTheme, strings: Presentati
         controller?.view.endEditing(true)
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             let controller = ShareProxyServerActionSheetController(theme: theme, strings: strings, updatedPresentationData: updatedPresentationData, link: link)
-            presentImpl?(controller, nil)
-        } else {
-            let activityController = UIActivityViewController(activityItems: [link], applicationActivities: nil)
-            
-            if let window = strongController.view.window, let rootViewController = window.rootViewController {
-                activityController.popoverPresentationController?.sourceView = window
-                activityController.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-                rootViewController.present(activityController, animated: true, completion: nil)
-            }
+            presentControllerImpl?(controller, nil)
+        } else if let context = context {
+            let controller = ShareController(context: context, subject: .url(link), preferredAction: .default, showInChat: nil, externalShare: true, immediateExternalShare: true, switchableAccounts: [])
+            presentControllerImpl?(controller, nil)
         }
     }
     

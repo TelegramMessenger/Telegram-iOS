@@ -134,7 +134,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         }
     }
     
-    public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false, enableDebugActions: Bool) {
+    public init(context: AccountContext, groupId: PeerGroupId, controlsHistoryPreload: Bool, hideNetworkActivityStatus: Bool = false, previewing: Bool = false, enableDebugActions: Bool) {
         self.context = context
         self.controlsHistoryPreload = controlsHistoryPreload
         self.hideNetworkActivityStatus = hideNetworkActivityStatus
@@ -161,36 +161,38 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
         self.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false)
         self.navigationItem.titleView = self.titleView
         
-        if case .root = groupId {
-            self.tabBarItem.title = self.presentationData.strings.DialogList_Title
-            
-            let icon: UIImage?
-            if (useSpecialTabBarIcons()) {
-                icon = UIImage(bundleImageName: "Chat List/Tabs/NY/IconChats")
+        if !previewing {
+            if case .root = groupId {
+                self.tabBarItem.title = self.presentationData.strings.DialogList_Title
+                
+                let icon: UIImage?
+                if (useSpecialTabBarIcons()) {
+                    icon = UIImage(bundleImageName: "Chat List/Tabs/NY/IconChats")
+                } else {
+                    icon = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
+                }
+                
+                self.tabBarItem.image = icon
+                self.tabBarItem.selectedImage = icon
+                
+                let leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                leftBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+                self.navigationItem.leftBarButtonItem = leftBarButtonItem
+                
+                let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
+                rightBarButtonItem.accessibilityLabel = self.presentationData.strings.VoiceOver_Navigation_Compose
+                self.navigationItem.rightBarButtonItem = rightBarButtonItem
+                let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
+                backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+                self.navigationItem.backBarButtonItem = backBarButtonItem
             } else {
-                icon = UIImage(bundleImageName: "Chat List/Tabs/IconChats")
+                let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+                self.navigationItem.rightBarButtonItem = rightBarButtonItem
+                let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+                backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
+                self.navigationItem.backBarButtonItem = backBarButtonItem
             }
-            
-            self.tabBarItem.image = icon
-            self.tabBarItem.selectedImage = icon
-            
-            let leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-            leftBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
-            self.navigationItem.leftBarButtonItem = leftBarButtonItem
-            
-            let rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationComposeIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.composePressed))
-            rightBarButtonItem.accessibilityLabel = self.presentationData.strings.VoiceOver_Navigation_Compose
-            self.navigationItem.rightBarButtonItem = rightBarButtonItem
-            let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.DialogList_Title, style: .plain, target: nil, action: nil)
-            backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
-            self.navigationItem.backBarButtonItem = backBarButtonItem
-        } else {
-            let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-            rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
-            self.navigationItem.rightBarButtonItem = rightBarButtonItem
-            let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-            backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
-            self.navigationItem.backBarButtonItem = backBarButtonItem
         }
         
         self.scrollToTop = { [weak self] in
@@ -664,7 +666,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             }
             switch item.content {
             case let .groupReference(groupReference):
-                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupReference.groupId, controlsHistoryPreload: false, enableDebugActions: false)
+                let chatListController = ChatListControllerImpl(context: strongSelf.context, groupId: groupReference.groupId, controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
                 chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupReference.groupId, chatListController: strongSelf), reactionItems: [], gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)

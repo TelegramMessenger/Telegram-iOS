@@ -108,7 +108,7 @@ public class ItemListActionItemNode: ListViewItemNode, ItemListItemNode {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
         self.backgroundNode.backgroundColor = .white
-                self.maskNode = ASImageNode()
+        self.maskNode = ASImageNode()
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
         

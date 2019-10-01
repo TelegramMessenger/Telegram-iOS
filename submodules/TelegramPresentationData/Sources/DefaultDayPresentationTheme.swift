@@ -25,7 +25,7 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         outgoingCheckColor = .black
         outgoingControlColor = outgoingPrimaryTextColor
         outgoingBubbleFillColor = accentColor
-        if outgoingBubbleFillColor.rgb == 0xffffff {
+        if outgoingBubbleFillColor.distance(to: UIColor.white) < 200 {
             outgoingBubbleStrokeColor = UIColor(rgb: 0xc8c7cc)
         } else {
             outgoingBubbleStrokeColor = outgoingBubbleFillColor

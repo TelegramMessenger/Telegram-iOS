@@ -2233,7 +2233,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         })
         
         self.networkStateDisposable = (context.account.networkState |> deliverOnMainQueue).start(next: { [weak self] state in
-            if let strongSelf = self {
+            if let strongSelf = self, case .standard(previewing: false) = strongSelf.presentationInterfaceState.mode {
                 strongSelf.chatTitleView?.networkState = state
             }
         })
@@ -2589,19 +2589,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
             if let strongSelf = self {
                 let offsetAlpha: CGFloat
-                switch offset {
-                    case let .known(offset):
-                        if offset < 40.0 {
-                            offsetAlpha = 0.0
-                        } else {
+                if case let .standard(previewing) = strongSelf.presentationInterfaceState.mode, previewing {
+                    offsetAlpha = 0.0
+                } else {
+                    switch offset {
+                        case let .known(offset):
+                            if offset < 40.0 {
+                                offsetAlpha = 0.0
+                            } else {
+                                offsetAlpha = 1.0
+                            }
+                        case .unknown:
                             offsetAlpha = 1.0
-                        }
-                    case .unknown:
-                        offsetAlpha = 1.0
-                    case .none:
-                        offsetAlpha = 0.0
+                        case .none:
+                            offsetAlpha = 0.0
+                    }
                 }
-                
                 strongSelf.chatDisplayNode.navigateButtons.displayDownButton = !offsetAlpha.isZero
             }
         }
@@ -3162,6 +3165,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                     return current.updatedSearch(nil)
                 })
+                strongSelf.updateItemNodesSearchTextHighlightStates()
             }
         }, updateMessageSearch: { [weak self] query in
             if let strongSelf = self {
@@ -3184,7 +3188,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
                         })
                         strongSelf.chatDisplayNode.dismissInput()
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                        if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
+                            navigationController?.pushViewController(controller)
+                        } else {
+                            strongSelf.push(controller)
+                        }
                     }
                 })
             }
@@ -4046,7 +4054,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                     self.chatUnreadMentionCountDisposable = (self.context.account.viewTracker.unseenPersonalMessagesCount(peerId: peerId) |> deliverOnMainQueue).start(next: { [weak self] count in
                         if let strongSelf = self {
-                            strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
+                            if case let .standard(previewing) = strongSelf.presentationInterfaceState.mode, previewing {
+                                strongSelf.chatDisplayNode.navigateButtons.mentionCount = 0
+                            } else {
+                                strongSelf.chatDisplayNode.navigateButtons.mentionCount = count
+                            }
                         }
                     })
                     

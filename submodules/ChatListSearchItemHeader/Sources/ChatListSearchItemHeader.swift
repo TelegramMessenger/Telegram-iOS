@@ -68,7 +68,7 @@ public final class ChatListSearchItemHeaderNode: ListViewItemHeaderNode {
             case .localPeers:
                 self.sectionHeaderNode.title = strings.DialogList_SearchSectionDialogs.uppercased()
             case .members:
-                self.sectionHeaderNode.title = strings.Compose_NewChannel_Members.uppercased()
+                self.sectionHeaderNode.title = strings.Channel_Info_Members.uppercased()
             case .contacts:
                 self.sectionHeaderNode.title = strings.Contacts_TopSection.uppercased()
             case .bots:

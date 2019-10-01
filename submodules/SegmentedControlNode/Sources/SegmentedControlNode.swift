@@ -105,6 +105,9 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             self.itemNodes.forEach { $0.removeFromSupernode() }
             self.itemNodes = self._items.map { item in
                 let itemNode = SegmentedControlItemNode()
+                itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
+                itemNode.titleNode.maximumNumberOfLines = 1
+                itemNode.titleNode.truncationMode = .byTruncatingTail
                 itemNode.setTitle(item.title, with: textFont, with: self.theme.textColor, for: .normal)
                 itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: .selected)
                 itemNode.setTitle(item.title, with: selectedTextFont, with: self.theme.textColor, for: [.selected, .highlighted])
@@ -153,6 +156,9 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         
         self.itemNodes = items.map { item in
             let itemNode = SegmentedControlItemNode()
+            itemNode.contentEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
+            itemNode.titleNode.maximumNumberOfLines = 1
+            itemNode.titleNode.truncationMode = .byTruncatingTail
             itemNode.setTitle(item.title, with: textFont, with: theme.textColor, for: .normal)
             itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: .selected)
             itemNode.setTitle(item.title, with: selectedTextFont, with: theme.textColor, for: [.selected, .highlighted])

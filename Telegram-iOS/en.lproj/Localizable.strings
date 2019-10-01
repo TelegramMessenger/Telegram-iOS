@@ -4883,6 +4883,6 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.SendAnyway" = "Send Anyway";
 
 "Wallet.Receive.CreateInvoice" = "Create Invoice";
-"Wallet.Receive.CreateInvoiceInfo" = "Create Invoice";
+"Wallet.Receive.CreateInvoiceInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
 
 "Wallet.CreateInvoice.Title" = "Create Invoice";

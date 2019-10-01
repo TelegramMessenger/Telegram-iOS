@@ -20,11 +20,13 @@ private let validIdentifierSet: CharacterSet = {
 private let identifierDelimiterSet: CharacterSet = {
     var set = CharacterSet.punctuationCharacters
     set.formUnion(CharacterSet.whitespacesAndNewlines)
+    set.insert("|")
     return set
 }()
 private let externalIdentifierDelimiterSet: CharacterSet = {
     var set = CharacterSet.punctuationCharacters
     set.formUnion(CharacterSet.whitespacesAndNewlines)
+    set.insert("|")
     set.remove(".")
     return set
 }()

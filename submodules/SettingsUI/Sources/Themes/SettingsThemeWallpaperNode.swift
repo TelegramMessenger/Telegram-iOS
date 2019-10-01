@@ -10,12 +10,12 @@ import AccountContext
 import RadialStatusNode
 import WallpaperResources
 
-private func whiteColorImage(theme: PresentationTheme) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
+private func whiteColorImage(theme: PresentationTheme, color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in
         let context = DrawingContext(size: arguments.drawingSize, clear: true)
         
         context.withFlippedContext { c in
-            c.setFillColor(UIColor.white.cgColor)
+            c.setFillColor(color.cgColor)
             c.fill(CGRect(origin: CGPoint(), size: arguments.drawingSize))
             
             let lineWidth: CGFloat = 1.0
@@ -85,10 +85,12 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                     apply()
                 case let .color(color):
-                    if color == 0x00ffffff {
+                    let theme = context.sharedContext.currentPresentationData.with { $0 }.theme
+                    let uiColor = UIColor(rgb: UInt32(bitPattern: color))
+                    if uiColor.distance(to: theme.list.itemBlocksBackgroundColor) < 200 {
                         self.imageNode.isHidden = false
                         self.backgroundNode.isHidden = true
-                        self.imageNode.setSignal(whiteColorImage(theme: context.sharedContext.currentPresentationData.with { $0 }.theme))
+                        self.imageNode.setSignal(whiteColorImage(theme: theme, color: uiColor))
                         let apply = self.imageNode.asyncLayout()(TransformImageArguments(corners: corners, imageSize: CGSize(), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
                         apply()
                     } else {
@@ -96,6 +98,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                         self.backgroundNode.isHidden = false
                         self.backgroundNode.backgroundColor = UIColor(rgb: UInt32(bitPattern: color))
                     }
+                
                 case let .image(representations, _):
                     self.imageNode.isHidden = false
                     self.backgroundNode.isHidden = true

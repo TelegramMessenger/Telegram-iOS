@@ -8,7 +8,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
 
-private func generateSwatchImage(color: PresentationThemeAccentColor, selected: Bool) -> UIImage? {
+private func generateSwatchImage(theme: PresentationTheme, color: PresentationThemeAccentColor, selected: Bool) -> UIImage? {
     return generateImage(CGSize(width: 40.0, height: 40.0), rotatedContext: { size, context in
         let bounds = CGRect(origin: CGPoint(), size: size)
         context.clear(bounds)
@@ -17,6 +17,13 @@ private func generateSwatchImage(color: PresentationThemeAccentColor, selected: 
         var strokeColor = color.baseColor.color
         if strokeColor == .clear {
             strokeColor = fillColor
+        }
+        if strokeColor.distance(to: theme.list.itemBlocksBackgroundColor) < 200 {
+            if strokeColor.distance(to: UIColor.white) < 200 {
+                strokeColor = UIColor(rgb: 0x999999)
+            } else {
+                strokeColor = theme.list.controlSecondaryColor
+            }
         }
         
         context.setFillColor(fillColor.cgColor)
@@ -130,8 +137,8 @@ private final class ThemeSettingsAccentColorNode : ASDisplayNode {
         self.addSubnode(self.iconNode)
     }
     
-    func setup(color: PresentationThemeAccentColor, selected: Bool, action: @escaping () -> Void) {
-        self.iconNode.image = generateSwatchImage(color: color, selected: selected)
+    func setup(theme: PresentationTheme, color: PresentationThemeAccentColor, selected: Bool, action: @escaping () -> Void) {
+        self.iconNode.image = generateSwatchImage(theme: theme, color: color, selected: selected)
         self.action = {
             action()
         }
@@ -164,6 +171,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
+    private let maskNode: ASImageNode
     
     private let scrollNode: ASScrollNode
     private var colorNodes: [ThemeSettingsAccentColorNode] = []
@@ -185,6 +193,8 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
         
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
+        
+        self.maskNode = ASImageNode()
         
         self.scrollNode = ASScrollNode()
         
@@ -256,11 +266,19 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                     if strongSelf.bottomStripeNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.bottomStripeNode, at: 2)
                     }
+                    if strongSelf.maskNode.supernode == nil {
+                        strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
+                    }
+                    
+                    let hasCorners = params.width > 480
+                    var hasTopCorners = false
+                    var hasBottomCorners = false
                     switch neighbors.top {
                         case .sameSection(false):
                             strongSelf.topStripeNode.isHidden = true
                         default:
-                            strongSelf.topStripeNode.isHidden = false
+                            hasTopCorners = true
+                            strongSelf.topStripeNode.isHidden = hasCorners
                     }
                     let bottomStripeInset: CGFloat
                     let bottomStripeOffset: CGFloat
@@ -271,8 +289,14 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                         default:
                             bottomStripeInset = 0.0
                             bottomStripeOffset = 0.0
+                            hasBottomCorners = true
+                            strongSelf.bottomStripeNode.isHidden = hasCorners
                     }
+                    
+                    strongSelf.maskNode.image = hasCorners ? PresentationResourcesItemList.cornersImage(item.theme, top: hasTopCorners, bottom: hasBottomCorners) : nil
+                    
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
+                    strongSelf.maskNode.frame = strongSelf.backgroundNode.frame.insetBy(dx: params.leftInset, dy: 0.0)
                     strongSelf.topStripeNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: layoutSize.width, height: separatorHeight))
                     strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height + bottomStripeOffset), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
                     
@@ -306,7 +330,7 @@ class ThemeSettingsAccentColorItemNode: ListViewItemNode, ItemListItemNode {
                             accentColor = PresentationThemeAccentColor(baseColor: color)
                         }
                         
-                        imageNode.setup(color: accentColor, selected: selected, action: { [weak self, weak imageNode] in
+                        imageNode.setup(theme: item.theme, color: accentColor, selected: selected, action: { [weak self, weak imageNode] in
                             item.updated(accentColor)
                             if let imageNode = imageNode {
                                 self?.scrollToNode(imageNode, animated: true)
