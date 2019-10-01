@@ -17,7 +17,7 @@ struct NavigationLayout {
     var modal: [ModalContainerLayout]
 }
 
-func makeNavigationLayout(layout: ContainerViewLayout, controllers: [ViewController]) -> NavigationLayout {
+func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewLayout, controllers: [ViewController]) -> NavigationLayout {
     var rootControllers: [ViewController] = []
     var modalStack: [ModalContainerLayout] = []
     for controller in controllers {
@@ -52,25 +52,30 @@ func makeNavigationLayout(layout: ContainerViewLayout, controllers: [ViewControl
         }
     }
     let rootLayout: RootNavigationLayout
-    switch layout.metrics.widthClass {
-    case .compact:
+    switch mode {
+    case .single:
         rootLayout = .flat(rootControllers)
-    case .regular:
-        let masterControllers = rootControllers.filter {
-            if case .master = $0.navigationPresentation {
-                return true
-            } else {
-                return false
+    case .automaticMasterDetail:
+        switch layout.metrics.widthClass {
+        case .compact:
+            rootLayout = .flat(rootControllers)
+        case .regular:
+            let masterControllers = rootControllers.filter {
+                if case .master = $0.navigationPresentation {
+                    return true
+                } else {
+                    return false
+                }
             }
-        }
-        let detailControllers = rootControllers.filter {
-            if case .master = $0.navigationPresentation {
-                return false
-            } else {
-                return true
+            let detailControllers = rootControllers.filter {
+                if case .master = $0.navigationPresentation {
+                    return false
+                } else {
+                    return true
+                }
             }
+            rootLayout = .split(masterControllers, detailControllers)
         }
-        rootLayout = .split(masterControllers, detailControllers)
     }
     return NavigationLayout(root: rootLayout, modal: modalStack)
 }

@@ -21,7 +21,7 @@ final class InstantVideoControllerRecordingStatus {
     }
 }
 
-final class InstantVideoController: LegacyController {
+final class InstantVideoController: LegacyController, StandalonePresentableController {
     private var captureController: TGVideoMessageCaptureController?
     
     var onDismiss: (() -> Void)?

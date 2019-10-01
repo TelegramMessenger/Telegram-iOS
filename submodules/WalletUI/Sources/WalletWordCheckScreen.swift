@@ -2142,6 +2142,7 @@ public final class WalletWordCheckScreen: ViewController {
                             }
                             return true
                         }
+                        let _ = confirmWalletExported(postbox: strongSelf.context.account.postbox, walletInfo: walletInfo).start()
                         controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
@@ -2247,6 +2248,7 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
 }
 
 private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
+    private let previous: (WordCheckInputNode) -> Void
     private let next: (WordCheckInputNode, Bool) -> Void
     private let focused: (WordCheckInputNode) -> Void
     private let pasteWords: ([String]) -> Void
@@ -2267,7 +2269,8 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    init(theme: PresentationTheme, index: Int, possibleWordList: [String], next: @escaping (WordCheckInputNode, Bool) -> Void, isLast: Bool, focused: @escaping (WordCheckInputNode) -> Void, pasteWords: @escaping ([String]) -> Void) {
+    init(theme: PresentationTheme, index: Int, possibleWordList: [String], previous: @escaping (WordCheckInputNode) -> Void, next: @escaping (WordCheckInputNode, Bool) -> Void, isLast: Bool, focused: @escaping (WordCheckInputNode) -> Void, pasteWords: @escaping ([String]) -> Void) {
+        self.previous = previous
         self.next = next
         self.focused = focused
         self.pasteWords = pasteWords
@@ -2316,6 +2319,12 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         self.addSubnode(self.inputNode)
         self.addSubnode(self.clearButtonNode)
         
+        self.inputNode.textField.didDeleteBackwardWhileEmpty = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.previous(strongSelf)
+        }
         self.inputNode.textField.delegate = self
         self.inputNode.textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
         
@@ -2644,12 +2653,15 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         var inputNodes: [WordCheckInputNode] = []
         
+        var previousWord: ((WordCheckInputNode) -> Void)?
         var nextWord: ((WordCheckInputNode, Bool) -> Void)?
         var focused: ((WordCheckInputNode) -> Void)?
         var pasteWords: (([String]) -> Void)?
         
         for i in 0 ..< wordIndices.count {
-            inputNodes.append(WordCheckInputNode(theme: presentationData.theme, index: wordIndices[i], possibleWordList: possibleWordList, next: { node, done in
+            inputNodes.append(WordCheckInputNode(theme: presentationData.theme, index: wordIndices[i], possibleWordList: possibleWordList, previous: { node in
+                previousWord?(node)
+            }, next: { node, done in
                 nextWord?(node, done)
             }, isLast: i == wordIndices.count - 1, focused: { node in
                 focused?(node)
@@ -2703,6 +2715,14 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         self.secondaryActionButtonNode.addTarget(self, action: #selector(self.secondaryActionPressed), forControlEvents: .touchUpInside)
         
+        previousWord = { [weak self] node in
+            guard let strongSelf = self else {
+                return
+            }
+            if let index = strongSelf.inputNodes.firstIndex(where: { $0 === node }), index != 0 {
+                strongSelf.inputNodes[index - 1].focus()
+            }
+        }
         nextWord = { [weak self] node, done in
             guard let strongSelf = self else {
                 return
@@ -2714,7 +2734,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
                     strongSelf.scrollNode.view.scrollRectToVisible(strongSelf.buttonNode.frame.insetBy(dx: 0.0, dy: -20.0), animated: true)
                 }
             } else {
-                if let index = strongSelf.inputNodes.firstIndex(where: { $0 === node }) {
+                if let index = strongSelf.inputNodes.firstIndex(where: { $0 === node }), index != strongSelf.inputNodes.count - 1 {
                     strongSelf.inputNodes[index + 1].focus()
                 }
             }

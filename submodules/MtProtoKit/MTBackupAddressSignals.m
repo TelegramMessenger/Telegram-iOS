@@ -211,6 +211,9 @@ static NSData *base64_decode(NSString *str) {
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     [signals addObject:[self fetchBackupIpsResolveGoogle:isTestingEnvironment phoneNumber:phoneNumber currentContext:currentContext addressOverride:currentContext.apiEnvironment.accessHostOverride]];
     if (additionalSource != nil) {
+/*#if DEBUG
+        [signals removeAllObjects];
+#endif*/
         [signals addObject:additionalSource];
     }
     

@@ -454,6 +454,9 @@ public class Window1 {
                 if strongSelf.deviceMetrics.type == .tablet, abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
                     keyboardHeight = max(0.0, keyboardHeight - 24.0)
                 }
+                
+                print("keyboardHeight: \(keyboardHeight)")
+                
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
                     duration = 0.5
@@ -473,7 +476,12 @@ public class Window1 {
         
         self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
-                let keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
+                var keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
+                if let keyboardView = strongSelf.statusBarHost?.keyboardView {
+                    if keyboardFrame.width.isEqual(to: keyboardView.bounds.width) && keyboardFrame.height.isEqual(to: keyboardView.bounds.height) && keyboardFrame.minX.isEqual(to: keyboardView.frame.minX) {
+                        keyboardFrame.origin.y = keyboardView.frame.minY
+                    }
+                }
                 
                 let screenHeight: CGFloat
                 var inPopover = false
@@ -488,10 +496,21 @@ public class Window1 {
                     screenHeight = UIScreen.main.bounds.width
                 }
                 
-                var keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
-                if inPopover {
-                    keyboardHeight = max(0.0, keyboardHeight - 48.0)
+                var keyboardHeight: CGFloat
+                if keyboardFrame.isEmpty || keyboardFrame.maxY < screenHeight {
+                    keyboardHeight = 0.0
+                } else {
+                    keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
+                    if inPopover {
+                        if strongSelf.windowLayout.onScreenNavigationHeight != nil {
+                            keyboardHeight = max(0.0, keyboardHeight - 24.0)
+                        } else {
+                            keyboardHeight = max(0.0, keyboardHeight - 48.0)
+                        }
+                    }
                 }
+                
+                print("keyboardHeight: \(keyboardHeight)")
             
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
@@ -780,7 +799,7 @@ public class Window1 {
         if self.tracingStatusBarsInvalidated || updatedHasPreview, let statusBarManager = statusBarManager, let keyboardManager = keyboardManager {
             self.tracingStatusBarsInvalidated = false
             
-            if self.statusBarHidden {
+            /*if self.statusBarHidden {
                 statusBarManager.updateState(surfaces: [], withSafeInsets: false, forceInCallStatusBarText: nil, forceHiddenBySystemWindows: false, animated: false)
             } else {
                 var statusBarSurfaces: [StatusBarSurface] = []
@@ -813,7 +832,7 @@ public class Window1 {
                     }
                 }
             }
-            //keyboardManager.surfaces = keyboardSurfaces
+            //keyboardManager.surfaces = keyboardSurfaces*/
             
             var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .all)
             let orientationToLock: UIInterfaceOrientationMask
@@ -947,12 +966,7 @@ public class Window1 {
                 
                 let boundsSize = updatingLayout.layout.size
                 let isLandscape = boundsSize.width > boundsSize.height
-                var statusBarHeight: CGFloat?
-                if let statusBarHost = self.statusBarHost {
-                    statusBarHeight = statusBarHost.statusBarFrame.size.height
-                } else {
-                    statusBarHeight = self.deviceMetrics.statusBarHeight
-                }
+                var statusBarHeight: CGFloat? = self.deviceMetrics.statusBarHeight(for: boundsSize)
                 
                 if self.deviceMetrics.type == .tablet, let onScreenNavigationHeight = self.hostView.onScreenNavigationHeight, onScreenNavigationHeight != self.deviceMetrics.onScreenNavigationHeight(inLandscape: false) {
                     self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, statusBarHeight: statusBarHeight ?? defaultStatusBarHeight, onScreenNavigationHeight: onScreenNavigationHeight)

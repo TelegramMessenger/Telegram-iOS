@@ -155,9 +155,15 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
             }
         }
         
+        var isProcessingContentOffsetChanged = false
         self.peerSelectionNode.contentOffsetChanged = { [weak self] offset in
+            if isProcessingContentOffsetChanged {
+                return
+            }
+            isProcessingContentOffsetChanged = true
             if let strongSelf = self, let searchContentNode = strongSelf.searchContentNode {
                 searchContentNode.updateListVisibleContentOffset(offset)
+                isProcessingContentOffsetChanged = false
             }
         }
         

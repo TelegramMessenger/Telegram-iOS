@@ -24,6 +24,7 @@ framework(
     	"//submodules/MtProtoKit:MtProtoKit#shared",
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
     	"//submodules/Postbox:Postbox#shared",
+	"//submodules/CloudData:CloudData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

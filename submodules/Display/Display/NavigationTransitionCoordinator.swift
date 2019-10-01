@@ -203,26 +203,28 @@ class NavigationTransitionCoordinator {
         }
     }
     
+    func performCompletion(completion: @escaping () -> ()) {
+        self.updateProgress(1.0, transition: .immediate, completion: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.dimNode.removeFromSupernode()
+                strongSelf.shadowNode.removeFromSupernode()
+                
+                strongSelf.endNavigationBarTransition()
+                
+                if let currentCompletion = strongSelf.currentCompletion {
+                    strongSelf.currentCompletion = nil
+                    currentCompletion()
+                }
+            }
+            completion()
+        })
+    }
+    
     func animateCompletion(_ velocity: CGFloat, completion: @escaping () -> ()) {
         self.animatingCompletion = true
         let distance = (1.0 - self.progress) * self.container.bounds.size.width
         self.currentCompletion = completion
         let f = {
-            /*switch self.transition {
-                case .Push:
-                    if let viewSuperview = self.viewSuperview {
-                        viewSuperview.addSubview(self.bottomView)
-                    } else {
-                        self.bottomView.removeFromSuperview()
-                    }
-                case .Pop:
-                    if let viewSuperview = self.viewSuperview {
-                        viewSuperview.addSubview(self.topView)
-                    } else {
-                        self.topView.removeFromSuperview()
-                    }
-            }*/
-            
             self.dimNode.removeFromSupernode()
             self.shadowNode.removeFromSupernode()
             

@@ -154,6 +154,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "E66DC04E5E043F5F00000000"
+               BuildableName = "libCloudData.a"
+               BlueprintName = "CloudData"
+               ReferencedContainer = "container:submodules/CloudData/CloudData.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "E66DC04ED56D953900000000"
                BuildableName = "libTelegramApi.a"
                BlueprintName = "TelegramApi"

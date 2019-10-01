@@ -42,6 +42,7 @@ static const void *setNeedsStatusBarAppearanceUpdateKey = &setNeedsStatusBarAppe
 static const void *inputAccessoryHeightProviderKey = &inputAccessoryHeightProviderKey;
 static const void *interactiveTransitionGestureRecognizerTestKey = &interactiveTransitionGestureRecognizerTestKey;
 static const void *UIViewControllerHintWillBePresentedInPreviewingContextKey = &UIViewControllerHintWillBePresentedInPreviewingContextKey;
+static const void *disablesInteractiveModalDismissKey = &disablesInteractiveModalDismissKey;
 
 static bool notyfyingShiftState = false;
 
@@ -248,6 +249,14 @@ static bool notyfyingShiftState = false;
 
 - (void)setDisablesInteractiveTransitionGestureRecognizerNow:(bool (^)())disablesInteractiveTransitionGestureRecognizerNow {
     [self setAssociatedObject:[disablesInteractiveTransitionGestureRecognizerNow copy] forKey:disablesInteractiveTransitionGestureRecognizerNowKey];
+}
+
+- (bool)disablesInteractiveModalDismiss {
+    return [self associatedObjectForKey:disablesInteractiveModalDismissKey];
+}
+
+- (void)setDisablesInteractiveModalDismiss:(bool)disablesInteractiveModalDismiss {
+    [self setAssociatedObject:@(disablesInteractiveModalDismiss) forKey:disablesInteractiveModalDismissKey];
 }
 
 - (BOOL (^)(CGPoint))interactiveTransitionGestureRecognizerTest {

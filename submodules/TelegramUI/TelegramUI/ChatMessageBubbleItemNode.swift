@@ -381,6 +381,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
         }
         self.tapRecognizer = recognizer
         self.view.addGestureRecognizer(recognizer)
+        self.view.isExclusiveTouch = true
         
         let replyRecognizer = ChatSwipeToReplyRecognizer(target: self, action: #selector(self.swipeToReplyGesture(_:)))
         replyRecognizer.shouldBegin = { [weak self] in

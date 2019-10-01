@@ -641,17 +641,21 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             }
         }
         if intro {
-            var dismissInto: (() -> Void)?
-            let controller = PrivacyIntroController(context: context, mode: .twoStepVerification, arguments: PrivacyIntroControllerPresentationArguments(fadeIn: false, animateIn: true), proceedAction: {
-                pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })), openSetupPasswordImmediately: true), false)
-                dismissInto?()
+            var nextImpl: (() -> Void)?
+            let introController = PrivacyIntroController(context: context, mode: .twoStepVerification, proceedAction: {
+                nextImpl?()
             })
-            dismissInto = { [weak controller] in
-                controller?.dismiss()
+            nextImpl = { [weak introController] in
+                guard let introController = introController, let navigationController = introController.navigationController as? NavigationController else {
+                    return
+                }
+                let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
+                navigationController.replaceController(introController, with: controller, animated: true)
             }
-            presentControllerImpl?(controller)
+            pushControllerImpl?(introController, true)
         } else {
-            pushControllerImpl?(twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) }))), true)
+            let controller = twoStepVerificationUnlockSettingsController(context: context, mode: .access(intro: intro, data: data.flatMap({ Signal<TwoStepVerificationUnlockSettingsControllerData, NoError>.single(.access(configuration: $0)) })))
+            pushControllerImpl?(controller, true)
         }
     }, openActiveSessions: {
         pushControllerImpl?(recentSessionsController(context: context, activeSessionsContext: activeSessionsContext), true)

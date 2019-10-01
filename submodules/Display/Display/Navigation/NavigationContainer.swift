@@ -87,6 +87,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
+    private var currentKeyboardLeftEdge: CGFloat = 0.0
+    private var additionalKeyboardLeftEdgeOffset: CGFloat = 0.0
+    
     var statusBarStyle: StatusBarStyle = .Ignore
     var statusBarStyleUpdated: ((ContainedViewLayoutTransition) -> Void)?
     
@@ -99,7 +102,12 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     override func didLoad() {
         super.didLoad()
         
-        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        let panRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.panGesture(_:)), canBegin: { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            return strongSelf.controllers.count > 1
+        })
         panRecognizer.delegate = self
         panRecognizer.delaysTouchesBegan = false
         panRecognizer.cancelsTouchesInView = true
@@ -121,6 +129,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+            return false
+        }
         if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
             return true
         }
@@ -161,16 +172,6 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         if let top = strongSelf.state.top {
                             strongSelf.syncKeyboard(leftEdge: top.value.displayNode.frame.minX, transition: transition)
                         }
-                        //strongSelf.keyboardManager?.surfaces = strongSelf.state.top?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
-                        /*for i in 0 ..< strongSelf._viewControllers.count {
-                            if let controller = strongSelf._viewControllers[i].controller as? ViewController {
-                                if i < strongSelf._viewControllers.count - 1 {
-                                    controller.updateNavigationCustomData((strongSelf.viewControllers[i + 1] as? ViewController)?.customData, progress: 1.0 - progress, transition: transition)
-                                } else {
-                                    controller.updateNavigationCustomData(nil, progress: 1.0 - progress, transition: transition)
-                                }
-                            }
-                        }*/
                     }
                 })
                 bottomController.displayNode.recursivelyEnsureDisplaySynchronously(true)
@@ -187,12 +188,10 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 let velocity = recognizer.velocity(in: self.view).x
                 
                 if velocity > 1000 || navigationTransitionCoordinator.progress > 0.2 {
-                    //(self.view as! NavigationControllerView).inTransition = true
                     navigationTransitionCoordinator.animateCompletion(velocity, completion: { [weak self] in
                         guard let strongSelf = self, let layout = strongSelf.state.layout, let transition = strongSelf.state.transition, let top = strongSelf.state.top else {
                             return
                         }
-                        //(self.view as! NavigationControllerView).inTransition = false
                         
                         let topController = top.value
                         let bottomController = transition.previous.value
@@ -201,25 +200,12 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         strongSelf.state.transition = nil
                         
                         strongSelf.controllerRemoved(top.value)
-                        
-                        //topController.viewDidDisappear(true)
-                        //bottomController.viewDidAppear(true)
                     })
                 } else {
-                    /*if self.viewControllers.count >= 2 {
-                        let topController = self.viewControllers[self.viewControllers.count - 1] as UIViewController
-                        let bottomController = self.viewControllers[self.viewControllers.count - 2] as UIViewController
-                        
-                        topController.viewWillAppear(true)
-                        bottomController.viewWillDisappear(true)
-                    }*/
-                    
-                    //(self.view as! NavigationControllerView).inTransition = true
                     navigationTransitionCoordinator.animateCancel({ [weak self] in
                         guard let strongSelf = self, let top = strongSelf.state.top, let transition = strongSelf.state.transition else {
                             return
                         }
-                        //(self.view as! NavigationControllerView).inTransition = false
                         strongSelf.state.transition = nil
                             
                         top.value.viewDidAppear(true)
@@ -287,7 +273,6 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             if pending.isReady {
                 self.state.pending = nil
                 let previous = self.state.top
-                //previous?.value.view.endEditing(true)
                 self.state.top = pending.value
                 self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: layout.withUpdatedInputHeight(nil), transition: pending.transition)
                 statusBarTransition = pending.transition
@@ -315,17 +300,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             self.statusBarStyle = updatedStatusBarStyle
             self.statusBarStyleUpdated?(statusBarTransition)
         }
-        
-        if self.state.transition == nil {
-            //self.keyboardManager?.surfaces = self.state.top?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
-        }
     }
     
     private func topTransition(from fromValue: Child?, to toValue: Child?, transitionType: PendingChild.TransitionType, layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         if case .animated = transition, let fromValue = fromValue, let toValue = toValue {
-            //self.keyboardManager?.surfaces = fromValue.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
             if let currentTransition = self.state.transition {
-                //assertionFailure()
+                currentTransition.coordinator.performCompletion(completion: {
+                })
             }
             
             fromValue.value.viewWillDisappear(true)
@@ -379,11 +360,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     toValue.value.displayNode.frame = CGRect(origin: CGPoint(), size: layout.size)
                     strongSelf.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
                     toValue.value.viewDidAppear(true)
-                    //strongSelf.keyboardManager?.surfaces = toValue.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
                 }
             })
         } else {
-            //self.keyboardManager?.surfaces = toValue?.value.view.flatMap({ [KeyboardSurface(host: $0)] }) ?? []
             if let fromValue = fromValue {
                 fromValue.value.viewWillDisappear(false)
                 fromValue.value.setIgnoreAppearanceMethodInvocations(true)
@@ -438,8 +417,14 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
+    func updateAdditionalKeyboardLeftEdgeOffset(_ offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.additionalKeyboardLeftEdgeOffset = offset
+        self.syncKeyboard(leftEdge: self.currentKeyboardLeftEdge, transition: transition)
+    }
+    
     private func syncKeyboard(leftEdge: CGFloat, transition: ContainedViewLayoutTransition) {
-        self.keyboardViewManager?.update(leftEdge: leftEdge, transition: transition)
+        self.currentKeyboardLeftEdge = leftEdge
+        self.keyboardViewManager?.update(leftEdge: self.additionalKeyboardLeftEdgeOffset + leftEdge, transition: transition)
     }
     
     private func pendingChildIsReady(_ child: PendingChild) {
@@ -453,5 +438,43 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         if let layout = self.state.layout, let canBeClosed = self.state.canBeClosed {
             self.update(layout: layout, canBeClosed: canBeClosed, controllers: self.controllers, transition: .immediate)
         }
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if !self.bounds.contains(point) {
+            return nil
+        }
+        if self.state.transition != nil {
+            return self.view
+        }
+        return super.hitTest(point, with: event)
+    }
+    
+    func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations {
+        var supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .allButUpsideDown)
+        if let controller = self.controllers.last {
+            if controller.lockOrientation {
+                if let lockedOrientation = controller.lockedOrientation {
+                    supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: lockedOrientation, compactSize: lockedOrientation))
+                } else {
+                    supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: currentOrientationToLock, compactSize: currentOrientationToLock))
+                }
+            } else {
+                supportedOrientations = supportedOrientations.intersection(controller.supportedOrientations)
+            }
+        }
+        if let transition = self.state.transition {
+            let controller = transition.previous.value
+            if controller.lockOrientation {
+                if let lockedOrientation = controller.lockedOrientation {
+                    supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: lockedOrientation, compactSize: lockedOrientation))
+                } else {
+                    supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: currentOrientationToLock, compactSize: currentOrientationToLock))
+                }
+            } else {
+                supportedOrientations = supportedOrientations.intersection(controller.supportedOrientations)
+            }
+        }
+        return supportedOrientations
     }
 }

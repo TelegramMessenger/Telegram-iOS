@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -x
-
 if [ -z "BUILD_NUMBER" ]; then
 	echo "BUILD_NUMBER is not set"
 	exit 1

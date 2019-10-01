@@ -558,7 +558,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 })
                 
                 if let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                    let actionsSideInset: CGFloat = 11.0
+                    let actionsSideInset: CGFloat = (validLayout?.safeInsets.left ?? 0.0) + 11.0
                     
                     let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                     
@@ -855,7 +855,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             }
             
             if animateOutToItem, let targetNode = targetNode, let originalProjectedContentViewFrame = self.originalProjectedContentViewFrame {
-                let actionsSideInset: CGFloat = 11.0
+                let actionsSideInset: CGFloat = (validLayout?.safeInsets.left ?? 0.0) + 11.0
                 
                 let localSourceFrame = self.view.convert(CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: CGSize(width: originalProjectedContentViewFrame.1.width, height: originalProjectedContentViewFrame.1.height)), to: self.scrollNode.view)
                 
@@ -1015,7 +1015,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
-        let actionsSideInset: CGFloat = 11.0
+        let actionsSideInset: CGFloat = layout.safeInsets.left + 11.0
         var contentTopInset: CGFloat = max(11.0, layout.statusBarHeight ?? 0.0)
         if let _ = self.reactionContextNode {
             contentTopInset += 34.0
