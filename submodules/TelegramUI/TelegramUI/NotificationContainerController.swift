@@ -15,6 +15,8 @@ public final class NotificationContainerController: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private var validLayout: ContainerViewLayout?
+    
     public init(context: AccountContext) {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -61,7 +63,15 @@ public final class NotificationContainerController: ViewController {
         
         self.controllerNode.displayingItemsUpdated = { [weak self] value in
             if let strongSelf = self {
-                strongSelf.statusBar.statusBarStyle = value ? .Hide : .Ignore
+                var statusBarHidden = false
+                if value, let layout = strongSelf.validLayout {
+                    if let statusBarHeight = layout.statusBarHeight, statusBarHeight > 20.0 {
+                        statusBarHidden = false
+                    } else {
+                        statusBarHidden = true
+                    }
+                }
+                strongSelf.statusBar.statusBarStyle = statusBarHidden ? .Hide : .Ignore
                 if value {
                     strongSelf.deferScreenEdgeGestures = [.top]
                 } else {
@@ -72,6 +82,8 @@ public final class NotificationContainerController: ViewController {
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.validLayout = layout
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, transition: transition)

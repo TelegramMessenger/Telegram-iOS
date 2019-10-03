@@ -129,7 +129,7 @@ public extension Peer {
     var isDeleted: Bool {
         switch self {
         case let user as TelegramUser:
-            return user.firstName == nil && user.lastName == nil
+            return user.firstName == nil && user.lastName == nil && user.phone == nil
         default:
             return false
         }

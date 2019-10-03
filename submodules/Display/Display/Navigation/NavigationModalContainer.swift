@@ -33,6 +33,12 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         }
     }
     
+    var canHaveKeyboardFocus: Bool = false {
+        didSet {
+            self.container.canHaveKeyboardFocus = self.canHaveKeyboardFocus
+        }
+    }
+    
     init(theme: NavigationControllerTheme, controllerRemoved: @escaping (ViewController) -> Void) {
         self.theme = theme
         
@@ -195,6 +201,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         self.dismissProgress = dismissProgress
         
         self.applyDismissProgress(transition: transition, completion: {})
+        
+        self.view.endEditing(true)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {

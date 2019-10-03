@@ -56,6 +56,15 @@ private let keyboardWindowClass: AnyClass? = {
 private class ApplicationStatusBarHost: StatusBarHost {
     private let application = UIApplication.shared
     
+    var isApplicationInForeground: Bool {
+        switch self.application.applicationState {
+        case .background:
+            return false
+        default:
+            return true
+        }
+    }
+    
     var statusBarFrame: CGRect {
         return self.application.statusBarFrame
     }
@@ -69,6 +78,10 @@ private class ApplicationStatusBarHost: StatusBarHost {
     
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool) {
         self.application.setStatusBarStyle(style, animated: animated)
+    }
+    
+    func setStatusBarHidden(_ value: Bool, animated: Bool) {
+        self.application.setStatusBarHidden(value, with: animated ? .fade : .none)
     }
     
     var statusBarWindow: UIView? {
@@ -664,6 +677,7 @@ final class SharedApplicationContext {
         #if targetEnvironment(simulator)
         tonKeychain = TonKeychain(encryptionPublicKey: {
             //return .single(nil)
+            //return .single("1".data(using: .utf8)!)
             return .single(Data())
         }, encrypt: { data in
             return Signal { subscriber in
@@ -701,11 +715,17 @@ final class SharedApplicationContext {
             }
         }, decrypt: { encryptedData in
             return Signal { subscriber in
-                BuildConfig.decryptApplicationSecret(encryptedData.data, publicKey: encryptedData.publicKey, baseAppBundleId: baseAppBundleId, completion: { result in
+                BuildConfig.decryptApplicationSecret(encryptedData.data, publicKey: encryptedData.publicKey, baseAppBundleId: baseAppBundleId, completion: { result, cancelled in
                     if let result = result {
                         subscriber.putNext(result)
                     } else {
-                        subscriber.putError(.generic)
+                        let error: TonKeychainDecryptDataError
+                        if cancelled {
+                            error = .cancelled
+                        } else {
+                            error = .generic
+                        }
+                        subscriber.putError(error)
                     }
                     subscriber.putCompletion()
                 })
@@ -1259,9 +1279,12 @@ final class SharedApplicationContext {
             #endif
         }
         
+        if UIApplication.shared.isStatusBarHidden {
+            UIApplication.shared.setStatusBarHidden(false, with: .none)
+        }
         NotificationCenter.default.addObserver(forName: UIWindow.didBecomeHiddenNotification, object: nil, queue: nil, using: { notification in
             if UIApplication.shared.isStatusBarHidden {
-                UIApplication.shared.setStatusBarHidden(false, with: .none)
+                //UIApplication.shared.setStatusBarHidden(false, with: .none)
             }
         })
         return true

@@ -68,6 +68,7 @@ public final class StatusBar: ASDisplayNode {
         didSet {
             if self.statusBarStyle != oldValue {
                 self.layer.invalidateUpTheTree()
+                self.alphaUpdated?(.immediate)
             }
         }
     }
@@ -92,6 +93,13 @@ public final class StatusBar: ASDisplayNode {
                 self.layer.invalidateUpTheTree()
             }
         }
+    }
+    
+    var alphaUpdated: ((ContainedViewLayoutTransition) -> Void)?
+    
+    public func updateAlpha(_ alpha: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.alpha = alpha
+        self.alphaUpdated?(transition)
     }
     
     public override init() {

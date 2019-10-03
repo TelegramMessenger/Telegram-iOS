@@ -35,3 +35,15 @@ class ScrollToTopView: UIScrollView, UIScrollViewDelegate {
         return false
     }
 }
+
+class ScrollToTopNode: ASDisplayNode {
+    init(action: @escaping () -> Void) {
+        super.init()
+        
+        self.setViewBlock({
+            let view = ScrollToTopView(frame: CGRect())
+            view.action = action
+            return view
+        })
+    }
+}

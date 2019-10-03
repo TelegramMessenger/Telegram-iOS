@@ -3313,6 +3313,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     indicatorFrame.origin.y = self.visibleSize.height - (self.scrollIndicatorInsets.bottom + indicatorBottomInset) - indicatorFrame.height
                 }
                 
+                if indicatorFrame.origin.y.isNaN {
+                   indicatorFrame.origin.y = indicatorTopInset
+                }
+                
                 if indicatorHeight >= visibleHeightWithoutIndicatorInsets {
                     verticalScrollIndicator.isHidden = true
                     verticalScrollIndicator.frame = indicatorFrame

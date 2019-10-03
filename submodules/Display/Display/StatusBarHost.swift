@@ -12,5 +12,8 @@ public protocol StatusBarHost {
     
     var handleVolumeControl: Signal<Bool, NoError> { get }
     
+    var isApplicationInForeground: Bool { get }
+    
     func setStatusBarStyle(_ style: UIStatusBarStyle, animated: Bool)
+    func setStatusBarHidden(_ value: Bool, animated: Bool)
 }

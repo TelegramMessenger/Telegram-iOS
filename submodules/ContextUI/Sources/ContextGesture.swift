@@ -57,6 +57,8 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     override public func reset() {
         super.reset()
         
+        self.endPressedAppearance()
+        
         self.currentProgress = 0.0
         self.delayTimer?.invalidate()
         self.delayTimer = nil
@@ -152,9 +154,8 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         
         if let touch = touches.first {
             if !self.currentProgress.isZero, self.isValidated {
-                if #available(iOS 9.0, *) {
-                    self.activationProgress?(0.0, .ended(self.currentProgress))
-                }
+                self.currentProgress = 0.0
+                self.activationProgress?(0.0, .ended(self.currentProgress))
             }
             
             self.externalEnded?((self.view, touch.location(in: self.view)))
@@ -170,9 +171,8 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
         super.touchesCancelled(touches, with: event)
         
         if let touch = touches.first, !self.currentProgress.isZero, self.isValidated {
-            if #available(iOS 9.0, *) {
-                self.activationProgress?(0.0, .ended(self.currentProgress))
-            }
+            self.currentProgress = 0.0
+            self.activationProgress?(0.0, .ended(self.currentProgress))
         }
         
         self.delayTimer?.invalidate()
@@ -183,6 +183,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     
     public func cancel() {
         if !self.currentProgress.isZero, self.isValidated {
+            self.currentProgress = 0.0
             self.activationProgress?(0.0, .ended(self.currentProgress))
             
             self.delayTimer?.invalidate()

@@ -28,6 +28,7 @@ public enum TonKeychainEncryptDataError {
 public enum TonKeychainDecryptDataError {
     case generic
     case publicKeyMismatch
+    case cancelled
 }
 
 public struct TonKeychain {
@@ -332,8 +333,8 @@ public final class TonInstance {
     
     fileprivate func walletRestoreWords(walletInfo: WalletInfo, keychain: TonKeychain, serverSalt: Data) -> Signal<[String], WalletRestoreWordsError> {
         return keychain.decrypt(walletInfo.encryptedSecret)
-        |> mapError { _ -> WalletRestoreWordsError in
-            return .secretDecryptionFailed
+        |> mapError { error -> WalletRestoreWordsError in
+            return .secretDecryptionFailed(error)
         }
         |> mapToSignal { decryptedSecret -> Signal<[String], WalletRestoreWordsError> in
             return Signal { subscriber in
@@ -365,8 +366,8 @@ public final class TonInstance {
     
     fileprivate func deleteLocalWalletData(walletInfo: WalletInfo, keychain: TonKeychain, serverSalt: Data) -> Signal<Never, DeleteLocalWalletDataError> {
         return keychain.decrypt(walletInfo.encryptedSecret)
-        |> mapError { _ -> DeleteLocalWalletDataError in
-            return .secretDecryptionFailed
+        |> mapError { error -> DeleteLocalWalletDataError in
+            return .secretDecryptionFailed(error)
         }
         |> mapToSignal { decryptedSecret -> Signal<Never, DeleteLocalWalletDataError> in
             return Signal { subscriber in
@@ -581,7 +582,7 @@ public func importWallet(postbox: Postbox, network: Network, tonInstance: TonIns
 
 public enum DeleteLocalWalletDataError {
     case generic
-    case secretDecryptionFailed
+    case secretDecryptionFailed(TonKeychainDecryptDataError)
 }
 
 public func deleteLocalWalletData(postbox: Postbox, network: Network, tonInstance: TonInstance, keychain: TonKeychain, walletInfo: WalletInfo) -> Signal<Never, DeleteLocalWalletDataError> {
@@ -612,7 +613,7 @@ public func deleteLocalWalletData(postbox: Postbox, network: Network, tonInstanc
 
 public enum WalletRestoreWordsError {
     case generic
-    case secretDecryptionFailed
+    case secretDecryptionFailed(TonKeychainDecryptDataError)
 }
 
 public func walletRestoreWords(network: Network, walletInfo: WalletInfo, tonInstance: TonInstance, keychain: TonKeychain) -> Signal<[String], WalletRestoreWordsError> {

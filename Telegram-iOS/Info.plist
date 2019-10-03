@@ -301,6 +301,11 @@
 		<string>remote-notification</string>
 		<string>voip</string>
 	</array>
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer>
+		<integer>2</integer>
+	</array>
 	<key>UIFileSharingEnabled</key>
 	<false/>
 	<key>UILaunchStoryboardName</key>
@@ -355,11 +360,6 @@
 				</array>
 			</dict>
 		</dict>
-	</array>
-	<key>UIDeviceFamily</key>
-	<array>
-		<integer>1</integer>
-		<integer>2</integer>
 	</array>
 </dict>
 </plist>

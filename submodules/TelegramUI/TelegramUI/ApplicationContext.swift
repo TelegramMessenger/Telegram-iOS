@@ -456,6 +456,7 @@ final class AuthorizedApplicationContext {
                         }, expandAction: { expandData in
                             if let strongSelf = self {
                                 let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(firstMessage.id.peerId), mode: .overlay)
+                                //chatController.navigation_setNavigationController(strongSelf.rootController)
                                 (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                             }
                         }))

@@ -280,7 +280,7 @@ public class Window1 {
     private var deviceMetrics: DeviceMetrics
     
     private let statusBarHost: StatusBarHost?
-    private let statusBarManager: StatusBarManager?
+    //private let statusBarManager: StatusBarManager?
     private let keyboardManager: KeyboardManager?
     private let keyboardViewManager: KeyboardViewManager?
     private var statusBarChangeObserver: AnyObject?
@@ -312,7 +312,7 @@ public class Window1 {
     public private(set) var forceInCallStatusBarText: String? = nil
     public var inCallNavigate: (() -> Void)? {
         didSet {
-            self.statusBarManager?.inCallNavigate = self.inCallNavigate
+            //self.statusBarManager?.inCallNavigate = self.inCallNavigate
         }
     }
     
@@ -323,21 +323,17 @@ public class Window1 {
     
     private var keyboardTypeChangeTimer: SwiftSignalKit.Timer?
     
-    private let volumeControlStatusBar: VolumeControlStatusBar
-    private let volumeControlStatusBarNode: VolumeControlStatusBarNode
+    //private let volumeControlStatusBar: VolumeControlStatusBar
+    //private let volumeControlStatusBarNode: VolumeControlStatusBarNode
     
     private var isInteractionBlocked = false
-    
-    /*private var accessibilityElements: [Any]? {
-        return self.viewController?.view.accessibilityElements
-    }*/
     
     public init(hostView: WindowHostView, statusBarHost: StatusBarHost?) {
         self.hostView = hostView
         
-        self.volumeControlStatusBar = VolumeControlStatusBar(frame: CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: CGSize(width: 100.0, height: 20.0)), shouldBeVisible: statusBarHost?.handleVolumeControl ?? .single(false))
-        self.volumeControlStatusBarNode = VolumeControlStatusBarNode()
-        self.volumeControlStatusBarNode.isHidden = true
+        //self.volumeControlStatusBar = VolumeControlStatusBar(frame: CGRect(origin: CGPoint(x: 0.0, y: -20.0), size: CGSize(width: 100.0, height: 20.0)), shouldBeVisible: statusBarHost?.handleVolumeControl ?? .single(false))
+        //self.volumeControlStatusBarNode = VolumeControlStatusBarNode()
+        //self.volumeControlStatusBarNode.isHidden = true
         
         let boundsSize = self.hostView.eventView.bounds.size
         self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, statusBarHeight: statusBarHost?.statusBarFrame.height ?? defaultStatusBarHeight, onScreenNavigationHeight: self.hostView.onScreenNavigationHeight)
@@ -346,12 +342,12 @@ public class Window1 {
         let statusBarHeight: CGFloat
         if let statusBarHost = statusBarHost {
             statusBarHeight = statusBarHost.statusBarFrame.size.height
-            self.statusBarManager = StatusBarManager(host: statusBarHost, volumeControlStatusBar: self.volumeControlStatusBar, volumeControlStatusBarNode: self.volumeControlStatusBarNode)
+            //self.statusBarManager = StatusBarManager(host: statusBarHost, volumeControlStatusBar: self.volumeControlStatusBar, volumeControlStatusBarNode: self.volumeControlStatusBarNode)
             self.keyboardManager = KeyboardManager(host: statusBarHost)
             self.keyboardViewManager = KeyboardViewManager(host: statusBarHost)
         } else {
             statusBarHeight = self.deviceMetrics.statusBarHeight
-            self.statusBarManager = nil
+            //self.statusBarManager = nil
             self.keyboardManager = nil
             self.keyboardViewManager = nil
         }
@@ -394,7 +390,7 @@ public class Window1 {
         }
         
         self.hostView.layoutSubviews = { [weak self] in
-            self?.layoutSubviews()
+            self?.layoutSubviews(force: false)
         }
         
         self.hostView.updateToInterfaceOrientation = { [weak self] orientation in
@@ -433,7 +429,7 @@ public class Window1 {
         }*/
         
         self.presentationContext.view = self.hostView.containerView
-        self.presentationContext.volumeControlStatusBarNodeView = self.volumeControlStatusBarNode.view
+        //self.presentationContext.volumeControlStatusBarNodeView = self.volumeControlStatusBarNode.view
         self.presentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         self.overlayPresentationContext.containerLayoutUpdated(containedLayoutForWindowLayout(self.windowLayout, deviceMetrics: self.deviceMetrics), transition: .immediate)
         
@@ -455,7 +451,7 @@ public class Window1 {
                     keyboardHeight = max(0.0, keyboardHeight - 24.0)
                 }
                 
-                print("keyboardHeight: \(keyboardHeight)")
+                //print("rotation keyboardHeight: \(keyboardHeight)")
                 
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
@@ -483,12 +479,31 @@ public class Window1 {
                     }
                 }
                 
+                var popoverDelta: CGFloat = 0.0
+                
                 let screenHeight: CGFloat
                 var inPopover = false
                 if keyboardFrame.width.isEqual(to: UIScreen.main.bounds.width) {
+                    var portraitScreenSize = UIScreen.main.bounds.size
+                    if portraitScreenSize.width > portraitScreenSize.height {
+                        portraitScreenSize = CGSize(width: portraitScreenSize.height, height: portraitScreenSize.width)
+                    }
+                    var portraitLayoutSize = strongSelf.windowLayout.size
+                    if portraitLayoutSize.width > portraitLayoutSize.height {
+                        portraitLayoutSize = CGSize(width: portraitLayoutSize.height, height: portraitLayoutSize.width)
+                    }
                     if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
                         screenHeight = UIScreen.main.bounds.height
-                        inPopover = true
+                        if abs(portraitLayoutSize.height - portraitScreenSize.height) > 41.0 || abs(portraitLayoutSize.width - portraitScreenSize.width) > 41.0 {
+                            popoverDelta = 48.0
+                            inPopover = true
+                        }
+                    } else if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 39.0 {
+                        screenHeight = UIScreen.main.bounds.height
+                        if abs(portraitLayoutSize.height - portraitScreenSize.height) > 39.0 || abs(portraitLayoutSize.width - portraitScreenSize.width) > 39.0 {
+                            popoverDelta = 40.0
+                            inPopover = true
+                        }
                     } else {
                         screenHeight = strongSelf.windowLayout.size.height
                     }
@@ -503,14 +518,14 @@ public class Window1 {
                     keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
                     if inPopover {
                         if strongSelf.windowLayout.onScreenNavigationHeight != nil {
-                            keyboardHeight = max(0.0, keyboardHeight - 24.0)
+                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta / 2.0)
                         } else {
-                            keyboardHeight = max(0.0, keyboardHeight - 48.0)
+                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
                         }
                     }
                 }
                 
-                print("keyboardHeight: \(keyboardHeight)")
+                print("keyboardHeight: \(keyboardHeight) (raw: \(keyboardFrame))")
             
                 var duration: Double = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?.doubleValue ?? 0.0
                 if duration > Double.ulpOfOne {
@@ -586,8 +601,8 @@ public class Window1 {
         self.windowPanRecognizer = recognizer
         self.hostView.containerView.addGestureRecognizer(recognizer)
         
-        self.hostView.containerView.addSubview(self.volumeControlStatusBar)
-        self.hostView.containerView.addSubview(self.volumeControlStatusBarNode.view)
+        //self.hostView.containerView.addSubview(self.volumeControlStatusBar)
+        //self.hostView.containerView.addSubview(self.volumeControlStatusBarNode.view)
     }
     
     public required init(coder aDecoder: NSCoder) {
@@ -613,7 +628,7 @@ public class Window1 {
     }
     
     public func setupVolumeControlStatusBarGraphics(_ graphics: (UIImage, UIImage, UIImage)) {
-        self.volumeControlStatusBarNode.graphics = graphics
+        //self.volumeControlStatusBarNode.graphics = graphics
     }
     
     public func setForceInCallStatusBar(_ forceInCallStatusBarText: String?, transition: ContainedViewLayoutTransition = .animated(duration: 0.3, curve: .easeInOut)) {
@@ -701,6 +716,9 @@ public class Window1 {
             transition = .immediate
         }
         self.updateLayout { $0.update(size: value, metrics: layoutMetricsForScreenSize(value), safeInsets: self.deviceMetrics.safeInsets(inLandscape: value.width > value.height), forceInCallStatusBarText: self.forceInCallStatusBarText, transition: transition, overrideTransition: true) }
+        if let statusBarHost = self.statusBarHost, !statusBarHost.isApplicationInForeground {
+            self.layoutSubviews(force: true)
+        }
     }
     
     private var _rootController: ContainableController?
@@ -718,6 +736,9 @@ public class Window1 {
                 if let rootController = rootController as? NavigationController {
                     rootController.statusBarHost = self.statusBarHost
                     rootController.keyboardViewManager = self.keyboardViewManager
+                    rootController.inCallNavigate = { [weak self] in
+                        self?.inCallNavigate?()
+                    }
                 }
                 if !self.windowLayout.size.width.isZero && !self.windowLayout.size.height.isZero {
                     rootController.displayNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
@@ -738,6 +759,9 @@ public class Window1 {
         }
         set(value) {
             for controller in self._topLevelOverlayControllers {
+                if let controller = controller as? ViewController {
+                    controller.statusBar.alphaUpdated = nil
+                }
                 controller.view.removeFromSuperview()
             }
             self._topLevelOverlayControllers = value
@@ -750,7 +774,25 @@ public class Window1 {
                 if let coveringView = self.coveringView {
                     self.hostView.containerView.insertSubview(controller.view, belowSubview: coveringView)
                 } else {
-                    self.hostView.containerView.insertSubview(controller.view, belowSubview: self.volumeControlStatusBarNode.view)
+                    self.hostView.containerView.addSubview(controller.view)
+                }
+                
+                if let controller = controller as? ViewController {
+                    controller.statusBar.alphaUpdated = { [weak self] transition in
+                        guard let strongSelf = self, let navigationController = strongSelf._rootController as? NavigationController else {
+                            return
+                        }
+                        var isStatusBarHidden: Bool = false
+                        for controller in strongSelf._topLevelOverlayControllers {
+                            if let controller = controller as? ViewController {
+                                if case .Hide = controller.statusBar.statusBarStyle {
+                                    isStatusBarHidden = true
+                                }
+                            }
+                        }
+                        
+                        navigationController.updateExternalStatusBarHidden(isStatusBarHidden, transition: .animated(duration: 0.3, curve: .easeInOut))
+                    }
                 }
             }
             
@@ -771,7 +813,7 @@ public class Window1 {
                     coveringView.layer.removeAnimation(forKey: "opacity")
                     coveringView.layer.allowsGroupOpacity = false
                     coveringView.alpha = 1.0
-                    self.hostView.containerView.insertSubview(coveringView, belowSubview: self.volumeControlStatusBarNode.view)
+                    self.hostView.containerView.addSubview(coveringView)
                     if !self.windowLayout.size.width.isZero {
                         coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
                         coveringView.updateLayout(self.windowLayout.size)
@@ -781,7 +823,7 @@ public class Window1 {
         }
     }
     
-    private func layoutSubviews() {
+    private func layoutSubviews(force: Bool) {
         var hasPreview = false
         var updatedHasPreview = false
         for subview in self.hostView.eventView.subviews {
@@ -796,7 +838,7 @@ public class Window1 {
             updatedHasPreview = true
         }
         
-        if self.tracingStatusBarsInvalidated || updatedHasPreview, let statusBarManager = statusBarManager, let keyboardManager = keyboardManager {
+        if self.tracingStatusBarsInvalidated || updatedHasPreview, let keyboardManager = keyboardManager {
             self.tracingStatusBarsInvalidated = false
             
             /*if self.statusBarHidden {
@@ -902,7 +944,9 @@ public class Window1 {
             }
         }
         
-        if !UIWindow.isDeviceRotating() {
+        if force {
+            self.commitUpdatingLayout()
+        } else if !UIWindow.isDeviceRotating() {
             if !self.hostView.isUpdatingOrientationLayout {
                 self.commitUpdatingLayout()
             } else {
@@ -967,6 +1011,9 @@ public class Window1 {
                 let boundsSize = updatingLayout.layout.size
                 let isLandscape = boundsSize.width > boundsSize.height
                 var statusBarHeight: CGFloat? = self.deviceMetrics.statusBarHeight(for: boundsSize)
+                if let statusBarHeightValue = statusBarHeight, let statusBarHost = self.statusBarHost {
+                    statusBarHeight = max(statusBarHeightValue, statusBarHost.statusBarFrame.size.height)
+                }
                 
                 if self.deviceMetrics.type == .tablet, let onScreenNavigationHeight = self.hostView.onScreenNavigationHeight, onScreenNavigationHeight != self.deviceMetrics.onScreenNavigationHeight(inLandscape: false) {
                     self.deviceMetrics = DeviceMetrics(screenSize: UIScreen.main.bounds.size, statusBarHeight: statusBarHeight ?? defaultStatusBarHeight, onScreenNavigationHeight: onScreenNavigationHeight)
@@ -1023,8 +1070,8 @@ public class Window1 {
                     })
                 }
                 
-                self.volumeControlStatusBarNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
-                self.volumeControlStatusBarNode.updateLayout(layout: childLayout, transition: updatingLayout.transition)
+                //self.volumeControlStatusBarNode.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
+                //self.volumeControlStatusBarNode.updateLayout(layout: childLayout, transition: updatingLayout.transition)
                 
                 if let coveringView = self.coveringView {
                     coveringView.frame = CGRect(origin: CGPoint(), size: self.windowLayout.size)
@@ -1035,7 +1082,12 @@ public class Window1 {
     }
     
     public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
-        self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
+        if let navigationController = self._rootController as? NavigationController, let controller = controller as? ViewController {
+            navigationController.presentOverlay(controller: controller, inGlobal: false)
+        } else {
+            assertionFailure()
+        }
+        //self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
     }
     
     public func presentInGlobalOverlay(_ controller: ContainableController) {

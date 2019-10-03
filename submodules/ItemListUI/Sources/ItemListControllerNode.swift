@@ -364,10 +364,10 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
             addedInsets = UIEdgeInsets(top: 0.0, left: inset, bottom: 0.0, right: inset)
             
             if self.leftOverlayNode.supernode == nil {
-                self.addSubnode(self.leftOverlayNode)
+                self.insertSubnode(self.leftOverlayNode, aboveSubnode: self.listNode)
             }
             if self.rightOverlayNode.supernode == nil {
-                self.addSubnode(self.rightOverlayNode)
+                self.insertSubnode(self.rightOverlayNode, aboveSubnode: self.listNode)
             }
         } else {
             insets.left += layout.safeInsets.left

@@ -95,10 +95,8 @@ final class GlobalOverlayPresentationContext {
                 }
                 return keyboardWindow
             } else {
-                if underStatusBar, let view = self.parentView {
+                if let view = self.parentView {
                     return view
-                } else {
-                    return statusBarHost.statusBarWindow
                 }
             }
         }

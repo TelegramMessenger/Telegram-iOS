@@ -76,13 +76,22 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     private(set) var controllers: [ViewController] = []
     private var state: State = State(layout: nil, canBeClosed: nil, top: nil, transition: nil, pending: nil)
     
+    private var ignoreInputHeight: Bool = false
+    
     private(set) var isReady: Bool = false
     var isReadyUpdated: (() -> Void)?
     var controllerRemoved: (ViewController) -> Void
     var keyboardViewManager: KeyboardViewManager? {
         didSet {
-            if self.keyboardViewManager !== oldValue {
-                
+        }
+    }
+    var canHaveKeyboardFocus: Bool = false {
+        didSet {
+            if self.canHaveKeyboardFocus != oldValue {
+                if !self.canHaveKeyboardFocus {
+                    self.view.endEditing(true)
+                    self.performUpdate(transition: .animated(duration: 0.5, curve: .spring))
+                }
             }
         }
     }
@@ -147,6 +156,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             guard self.state.transition == nil else {
                 return
             }
+            
             let beginGesture = self.controllers.count > 1
             
             if beginGesture {
@@ -163,7 +173,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 
                 topController.viewWillDisappear(true)
                 let topNode = topController.displayNode
-                bottomController.containerLayoutUpdated(layout, transition: .immediate)
+                bottomController.containerLayoutUpdated(layout.withUpdatedInputHeight(nil), transition: .immediate)
                 bottomController.viewWillAppear(true)
                 let bottomNode = bottomController.displayNode
                 
@@ -195,11 +205,16 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         let topController = top.value
                         let bottomController = transition.previous.value
+                        
+                        if viewTreeContainsFirstResponder(view: top.value.view) {
+                            strongSelf.ignoreInputHeight = true
+                        }
                         strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topController.view)
                         
                         strongSelf.state.transition = nil
                         
                         strongSelf.controllerRemoved(top.value)
+                        strongSelf.ignoreInputHeight = false
                     })
                 } else {
                     navigationTransitionCoordinator.animateCancel({ [weak self] in
@@ -383,12 +398,16 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func makeChild(layout: ContainerViewLayout, value: ViewController) -> Child {
-        value.containerLayoutUpdated(layout, transition: .immediate)
-        return Child(value: value, layout: layout)
+        let updatedLayout = layout.withUpdatedInputHeight(nil)
+        value.containerLayoutUpdated(updatedLayout, transition: .immediate)
+        return Child(value: value, layout: updatedLayout)
     }
     
     private func applyLayout(layout: ContainerViewLayout, to child: Child, isMaster: Bool, transition: ContainedViewLayoutTransition) {
         var childFrame = CGRect(origin: CGPoint(), size: layout.size)
+        
+        var updatedLayout = layout
+        
         var shouldSyncKeyboard = false
         if let transition = self.state.transition {
             childFrame.origin.x = child.value.displayNode.frame.origin.x
@@ -400,9 +419,20 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
             case .push:
                 break
             }
+            if updatedLayout.inputHeight != nil {
+                if !self.canHaveKeyboardFocus {
+                    updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+                }
+            }
         } else {
             if isMaster {
                 shouldSyncKeyboard = true
+            }
+            
+            if updatedLayout.inputHeight != nil {
+                if !self.canHaveKeyboardFocus || self.ignoreInputHeight {
+                    updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+                }
             }
         }
         if child.value.displayNode.frame != childFrame {
@@ -411,9 +441,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         if shouldSyncKeyboard && isMaster {
             self.syncKeyboard(leftEdge: childFrame.minX, transition: transition)
         }
-        if child.layout != layout {
-            child.layout = layout
-            child.value.containerLayoutUpdated(layout, transition: transition)
+        if child.layout != updatedLayout {
+            child.layout = updatedLayout
+            child.value.containerLayoutUpdated(updatedLayout, transition: transition)
         }
     }
     
@@ -430,13 +460,13 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     private func pendingChildIsReady(_ child: PendingChild) {
         if let pending = self.state.pending, pending === child {
             pending.isReady = true
-            self.performUpdate()
+            self.performUpdate(transition: .immediate)
         }
     }
     
-    private func performUpdate() {
+    private func performUpdate(transition: ContainedViewLayoutTransition) {
         if let layout = self.state.layout, let canBeClosed = self.state.canBeClosed {
-            self.update(layout: layout, canBeClosed: canBeClosed, controllers: self.controllers, transition: .immediate)
+            self.update(layout: layout, canBeClosed: canBeClosed, controllers: self.controllers, transition: transition)
         }
     }
     

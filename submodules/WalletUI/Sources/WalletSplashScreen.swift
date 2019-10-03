@@ -94,16 +94,20 @@ public final class WalletSplashScreen: ViewController {
                     return
                 }
                 strongSelf.sendGrams(walletInfo: walletInfo, decryptedSecret: decryptedSecret, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: false, randomId: randomId, serverSalt: serverSalt)
-            }, error: { [weak self] _ in
+            }, error: { [weak self] error in
                 guard let strongSelf = self else {
                     return
                 }
-                let text = strongSelf.presentationData.strings.Wallet_Send_ErrorDecryptionFailed
-                let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                    self?.dismiss()
-                })])
-                strongSelf.present(controller, in: .window(.root))
-                strongSelf.dismiss()
+                if case .cancelled = error {
+                    strongSelf.dismiss()
+                } else {
+                    let text = strongSelf.presentationData.strings.Wallet_Send_ErrorDecryptionFailed
+                    let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        self?.dismiss()
+                    })])
+                    strongSelf.present(controller, in: .window(.root))
+                    strongSelf.dismiss()
+                }
             })
         case .sent:
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
@@ -235,15 +239,18 @@ public final class WalletSplashScreen: ViewController {
                         strongSelf.mode = .created(walletInfo, wordList)
                         controller.dismiss()
                         strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
-                    }, error: { _ in
+                    }, error: { error in
                         guard let strongSelf = self else {
                             return
                         }
                         controller.dismiss()
-                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
-                            TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
-                            })
-                        ], actionLayout: .vertical), in: .window(.root))
+                        if case let .secretDecryptionFailed(.cancelled) = error {
+                        } else {
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
+                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                })
+                            ], actionLayout: .vertical), in: .window(.root))
+                        }
                     })
                 }
             case let .success(walletInfo):
@@ -720,16 +727,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         let secondaryActionSize = self.secondaryActionTitleNode.updateLayout(CGSize(width: layout.size.width - sideInset * 2.0, height: layout.size.height))
         
         let contentHeight = iconSize.height + iconSpacing + titleSize.height + titleSpacing + textSize.height
-        let contentVerticalOrigin = floor((layout.size.height - contentHeight - iconSize.height / 2.0) / 2.0)
-        
-        let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
-        transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
-        self.animationNode.updateLayout(size: iconFrame.size)
-        transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
-        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
-        transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
-        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
-        transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+        var contentVerticalOrigin = floor((layout.size.height - contentHeight - iconSize.height / 2.0) / 2.0)
         
         let minimalBottomInset: CGFloat = 60.0
         let bottomInset = layout.intrinsicInsets.bottom + max(minimalBottomInset, termsSize.height + termsSpacing * 2.0)
@@ -740,11 +738,26 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
+        var maxContentVerticalOrigin = buttonFrame.minY - 12.0 - contentHeight
+        
         if !secondaryActionSize.width.isZero {
             let secondaryActionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - secondaryActionSize.width) / 2.0), y: buttonFrame.minY - 20.0 - secondaryActionSize.height), size: secondaryActionSize)
             transition.updateFrameAdditive(node: self.secondaryActionTitleNode, frame: secondaryActionFrame)
             transition.updateFrame(node: self.secondaryActionButtonNode, frame: secondaryActionFrame.insetBy(dx: -10.0, dy: -10.0))
+            
+            maxContentVerticalOrigin = secondaryActionFrame.minY - 12.0 - contentHeight
         }
+        
+        contentVerticalOrigin = min(contentVerticalOrigin, maxContentVerticalOrigin)
+        
+        let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
+        transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
+        self.animationNode.updateLayout(size: iconFrame.size)
+        transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: iconFrame.maxY + iconSpacing), size: titleSize)
+        transition.updateFrameAdditive(node: self.titleNode, frame: titleFrame)
+        let textFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - textSize.width) / 2.0), y: titleFrame.maxY + titleSpacing), size: textSize)
+        transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
         
         let termsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - termsSize.width) / 2.0), y: buttonFrame.maxY + floor((layout.size.height - layout.intrinsicInsets.bottom - buttonFrame.maxY - termsSize.height) / 2.0)), size: termsSize)
         transition.updateFrameAdditive(node: self.termsNode, frame: termsFrame)

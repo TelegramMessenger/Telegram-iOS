@@ -21,6 +21,8 @@ public extension Peer {
                     }
                 } else if let lastName = user.lastName {
                     return lastName
+                } else if let phone = user.phone {
+                    return "+\(phone)"
                 } else {
                     return strings.User_DeletedAccount
                 }
