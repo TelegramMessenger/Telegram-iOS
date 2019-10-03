@@ -306,7 +306,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         
         var updatedStatusBarStyle = self.statusBarStyle
         if let top = self.state.top {
-            self.applyLayout(layout: layout, to: top, isMaster: true, transition: transition)
+            var updatedLayout = layout
+            if let topTransition = self.state.transition {
+                updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+            }
+            self.applyLayout(layout: updatedLayout, to: top, isMaster: true, transition: transition)
             updatedStatusBarStyle = top.value.statusBar.statusBarStyle
         } else {
             updatedStatusBarStyle = .Ignore
@@ -364,6 +368,10 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 guard let strongSelf = self, let topTransition = topTransition, strongSelf.state.transition === topTransition else {
                     return
                 }
+                
+                if viewTreeContainsFirstResponder(view: topTransition.previous.value.view) {
+                    strongSelf.ignoreInputHeight = true
+                }
                 strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: topTransition.previous.value.view)
                 strongSelf.state.transition = nil
                 
@@ -376,6 +384,8 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                     strongSelf.applyLayout(layout: layout, to: toValue, isMaster: true, transition: .immediate)
                     toValue.value.viewDidAppear(true)
                 }
+                
+                strongSelf.ignoreInputHeight = false
             })
         } else {
             if let fromValue = fromValue {

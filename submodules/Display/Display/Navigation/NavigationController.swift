@@ -129,6 +129,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var validStatusBarStyle: NavigationStatusBarStyle?
     private var validStatusBarHidden: Bool = false
     
+    private var ignoreInputHeight: Bool = false
     private var currentStatusBarExternalHidden: Bool = false
     
     private var scheduledLayoutTransitionRequestId: Int = 0
@@ -257,6 +258,14 @@ open class NavigationController: UINavigationController, ContainableController, 
     private func updateContainers(layout rawLayout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         var layout = rawLayout
         
+        if self.ignoreInputHeight {
+            if layout.inputHeight == nil {
+                self.ignoreInputHeight = false
+            } else {
+                layout = layout.withUpdatedInputHeight(nil)
+            }
+        }
+        
         if let globalScrollToTopNode = self.globalScrollToTopNode {
             globalScrollToTopNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -1.0), size: CGSize(width: layout.size.width, height: 1.0))
         }
@@ -317,14 +326,16 @@ open class NavigationController: UINavigationController, ContainableController, 
                         strongSelf.updateContainers(layout: layout, transition: transition)
                     }
                 }
-                modalContainer.interactivelyDismissed = { [weak self, weak modalContainer] in
+                modalContainer.interactivelyDismissed = { [weak self, weak modalContainer] hadInputFocus in
                     guard let strongSelf = self, let modalContainer = modalContainer else {
                         return
                     }
                     let controllers = strongSelf._viewControllers.filter { controller in
                         return !modalContainer.container.controllers.contains(where: { $0 === controller })
                     }
+                    strongSelf.ignoreInputHeight = hadInputFocus
                     strongSelf.setViewControllers(controllers, animated: false)
+                    strongSelf.ignoreInputHeight = false
                 }
             }
             modalContainers.append(modalContainer)
@@ -332,7 +343,12 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         for container in self.modalContainers {
             if !modalContainers.contains(where: { $0 === container }) {
-                transition = container.dismiss(transition: transition, completion: { [weak container] in
+                if viewTreeContainsFirstResponder(view: container.view) {
+                    self.ignoreInputHeight = true
+                    container.view.endEditing(true)
+                }
+                
+                transition = container.dismiss(transition: transition, completion: { [weak self, weak container] in
                     container?.removeFromSupernode()
                 })
             }
@@ -825,7 +841,11 @@ open class NavigationController: UINavigationController, ContainableController, 
     public func filterController(_ controller: ViewController, animated: Bool) {
         let controllers = self.viewControllers.filter({ $0 !== controller })
         if controllers.count != self.viewControllers.count {
+            if controller.isViewLoaded && viewTreeContainsFirstResponder(view: controller.view) {
+                self.ignoreInputHeight = true
+            }
             self.setViewControllers(controllers, animated: animated)
+            self.ignoreInputHeight = false
         }
     }
     
