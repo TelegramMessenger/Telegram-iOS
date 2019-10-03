@@ -133,7 +133,7 @@ public final class WalletSplashScreen: ViewController {
     }
     
     private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
-        let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, serverSalt: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
+        let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
         |> deliverOnMainQueue).start(error: { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -213,15 +213,7 @@ public final class WalletSplashScreen: ViewController {
             switch strongSelf.mode {
             case .intro:
                 let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
-                strongSelf.present(controller, in: .window(.root))
-                let _ = (createWallet(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain)
-                |> deliverOnMainQueue).start(next: { walletInfo, wordList in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    controller.dismiss()
-                    (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .created(walletInfo, wordList), walletCreatedPreloadState: nil), animated: true)
-                }, error: { _ in
+                let displayError: () -> Void = {
                     guard let strongSelf = self else {
                         return
                     }
@@ -230,6 +222,22 @@ public final class WalletSplashScreen: ViewController {
                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
+                }
+                strongSelf.present(controller, in: .window(.root))
+                let _ = (getServerWalletSalt(network: strongSelf.context.account.network)
+                |> deliverOnMainQueue).start(next: { serverSalt in
+                    let _ = (createWallet(postbox: strongSelf.context.account.postbox, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain, localPassword: serverSalt)
+                    |> deliverOnMainQueue).start(next: { walletInfo, wordList in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        controller.dismiss()
+                        (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .created(walletInfo, wordList), walletCreatedPreloadState: nil), animated: true)
+                    }, error: { _ in
+                        displayError()
+                    })
+                }, error: { _ in
+                    displayError()
                 })
             case let .created(walletInfo, wordList):
                 if let wordList = wordList {
@@ -237,20 +245,50 @@ public final class WalletSplashScreen: ViewController {
                 } else {
                     let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
                     strongSelf.present(controller, in: .window(.root))
-                    let _ = (walletRestoreWords(network: strongSelf.context.account.network, walletInfo: walletInfo, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain)
-                    |> deliverOnMainQueue).start(next: { wordList in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.mode = .created(walletInfo, wordList)
-                        controller.dismiss()
-                        strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
-                    }, error: { error in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        controller.dismiss()
-                        if case let .secretDecryptionFailed(.cancelled) = error {
+                    
+                    let context = strongSelf.context
+                    let tonContext = strongSelf.tonContext
+                    let _ = (strongSelf.tonContext.keychain.decrypt(walletInfo.encryptedSecret)
+                    |> deliverOnMainQueue).start(next: { [weak controller] decryptedSecret in
+                        let _ = (getServerWalletSalt(network: context.account.network)
+                        |> deliverOnMainQueue).start(next: { [weak controller] serverSalt in
+                            let _ = (walletRestoreWords(tonInstance: tonContext.instance, publicKey: walletInfo.publicKey, decryptedSecret:  decryptedSecret, localPassword: serverSalt)
+                            |> deliverOnMainQueue).start(next: { wordList in
+                                controller?.dismiss()
+                                
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                strongSelf.mode = .created(walletInfo, wordList)
+                                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                            }, error: { _ in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                
+                                controller?.dismiss()
+                                
+                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
+                                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                    })
+                                ], actionLayout: .vertical), in: .window(.root))
+                            })
+                        }, error: { [weak controller] _ in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            controller?.dismiss()
+                            
+                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
+                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                })
+                            ], actionLayout: .vertical), in: .window(.root))
+                        })
+                    }, error: { [weak controller] error in
+                        controller?.dismiss()
+                        if case .cancelled = error {
                         } else {
                             strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
                                 TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {

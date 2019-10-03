@@ -535,7 +535,7 @@
                     {
                         [UIView animateWithDuration:0.2 animations:^
                         {
-                            [strongSelf->_context setApplicationStatusBarAlpha:1.0f];
+                            //[strongSelf->_context setApplicationStatusBarAlpha:1.0f];
                         }];
                     }
                     
