@@ -93,7 +93,7 @@ public final class WalletSplashScreen: ViewController {
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.sendGrams(walletInfo: walletInfo, decryptedSecret: decryptedSecret, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: false, randomId: randomId, serverSalt: serverSalt)
+                strongSelf.sendGrams(walletInfo: walletInfo, decryptedSecret: decryptedSecret, address: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: true, randomId: randomId, serverSalt: serverSalt)
             }, error: { [weak self] error in
                 guard let strongSelf = self else {
                     return

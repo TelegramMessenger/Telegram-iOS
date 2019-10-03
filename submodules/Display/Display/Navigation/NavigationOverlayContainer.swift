@@ -12,6 +12,8 @@ final class NavigationOverlayContainer: ASDisplayNode {
     
     private var validLayout: ContainerViewLayout?
     
+    private var isUpdatingState: Bool = false
+    
     var keyboardViewManager: KeyboardViewManager? {
         didSet {
             if self.keyboardViewManager !== oldValue {
@@ -44,7 +46,9 @@ final class NavigationOverlayContainer: ASDisplayNode {
             }
             if !strongSelf.isReady {
                 strongSelf.isReady = true
-                strongSelf.isReadyUpdated?()
+                if !strongSelf.isUpdatingState {
+                    strongSelf.isReadyUpdated?()
+                }
             }
         })
     }
@@ -58,6 +62,8 @@ final class NavigationOverlayContainer: ASDisplayNode {
     }
     
     func update(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.isUpdatingState = true
+        
         let updateLayout = self.validLayout != layout
         
         self.validLayout = layout
@@ -66,6 +72,8 @@ final class NavigationOverlayContainer: ASDisplayNode {
             transition.updateFrame(node: self.controller.displayNode, frame: CGRect(origin: CGPoint(), size: layout.size))
             self.controller.containerLayoutUpdated(layout, transition: transition)
         }
+        
+        self.isUpdatingState = false
     }
     
     func transitionIn() {

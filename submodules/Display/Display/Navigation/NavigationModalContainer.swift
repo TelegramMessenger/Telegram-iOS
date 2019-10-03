@@ -18,6 +18,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     var updateDismissProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
     var interactivelyDismissed: ((Bool) -> Void)?
     
+    private var isUpdatingState = false
     private var ignoreScrolling = false
     private var isDismissed = false
     private var isInteractiveDimissEnabled = true
@@ -63,7 +64,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
             if !strongSelf.isReady {
                 strongSelf.isReady = true
-                strongSelf.isReadyUpdated?()
+                if !strongSelf.isUpdatingState {
+                    strongSelf.isReadyUpdated?()
+                }
             }
         }
         
@@ -282,6 +285,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             return
         }
         
+        self.isUpdatingState = true
+        
         self.validLayout = layout
         
         transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
@@ -347,6 +352,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         transition.updateFrameAsPositionAndBounds(node: self.container, frame: containerFrame.offsetBy(dx: 0.0, dy: layout.size.height))
         transition.updateTransformScale(node: self.container, scale: containerScale)
         self.container.update(layout: containerLayout, canBeClosed: true, controllers: controllers, transition: transition)
+        
+        self.isUpdatingState = false
     }
     
     func animateIn(transition: ContainedViewLayoutTransition) {

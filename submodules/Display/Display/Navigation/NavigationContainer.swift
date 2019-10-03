@@ -320,7 +320,9 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         if let top = self.state.top {
             var updatedLayout = layout
             if let topTransition = self.state.transition, top.value.view.disableAutomaticKeyboardHandling.isEmpty {
-                updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+                if !viewTreeContainsFirstResponder(view: top.value.view) {
+                    updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+                }
             }
             self.applyLayout(layout: updatedLayout, to: top, isMaster: true, transition: transition)
             updatedStatusBarStyle = top.value.statusBar.statusBarStyle
