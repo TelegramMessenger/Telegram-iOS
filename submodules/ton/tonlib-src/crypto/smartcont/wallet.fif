@@ -37,7 +37,7 @@ dest_addr 2dup bounce 7 + .Addr ." = " .addr
 b>
 <b seqno 32 u, send-mode 8 u, swap ref, b>
 dup ."signing message: " <s csr. cr
-dup hash wallet_pk ed25519_sign_uint
+dup hashu wallet_pk ed25519_sign_uint
 <b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s,
    swap B, swap <s s, b>
 dup ."resulting external message: " <s csr. cr

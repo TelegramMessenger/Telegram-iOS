@@ -401,8 +401,8 @@ open class NavigationController: UINavigationController, ContainableController, 
         }
         
         if self.currentTopVisibleOverlayContainerStatusBar !== topVisibleOverlayContainerWithStatusBar {
-            self.currentTopVisibleOverlayContainerStatusBar = topVisibleOverlayContainerWithStatusBar
             animateStatusBarStyleTransition = true
+            self.currentTopVisibleOverlayContainerStatusBar = topVisibleOverlayContainerWithStatusBar
         }
         
         var previousModalContainer: NavigationModalContainer?

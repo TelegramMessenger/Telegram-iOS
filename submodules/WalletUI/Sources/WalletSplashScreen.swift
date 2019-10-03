@@ -142,14 +142,20 @@ public final class WalletSplashScreen: ViewController {
             switch error {
             case .generic:
                 text = strongSelf.presentationData.strings.Login_UnknownError
+            case .network:
+                text = strongSelf.presentationData.strings.Wallet_Send_NetworkError
+            case .notEnoughFunds:
+                text = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFunds
+            case .messageTooLong:
+                text = strongSelf.presentationData.strings.Login_UnknownError
             case .invalidAddress:
                 text = strongSelf.presentationData.strings.Wallet_Send_ErrorInvalidAddress
             case .secretDecryptionFailed:
                 text = strongSelf.presentationData.strings.Wallet_Send_ErrorDecryptionFailed
             case .destinationIsNotInitialized:
                 if !forceIfDestinationNotInitialized {
-                    text = "This address belongs to an empty wallet. Are you sure you want to transfer grams to it?"
-                    let controller = textAlertController(context: strongSelf.context, title: "Warning", text: text, actions: [
+                    text = strongSelf.presentationData.strings.Wallet_Send_UninitializedText
+                    let controller = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Wallet_Send_UninitializedTitle, text: text, actions: [
                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
                             if let navigationController = strongSelf.navigationController as? NavigationController {
                                 navigationController.popViewController(animated: true)

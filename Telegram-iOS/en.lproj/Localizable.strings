@@ -4780,6 +4780,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Info.Send" = "Send";
 "Wallet.Info.RefreshErrorTitle" = "An Error Occurred";
 "Wallet.Info.RefreshErrorText" = "The wallet state can not be retrieved at this time. Please try again later.";
+"Wallet.Info.RefreshErrorNetworkText" = "The wallet state can not be retrieved at this time. Please try again later.";
 "Wallet.Info.UnknownTransaction" = "Empty Transaction";
 "Wallet.Info.TransactionTo" = "to";
 "Wallet.Info.TransactionFrom" = "from";
@@ -4881,8 +4882,12 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Words.NotDoneOk" = "OK, Sorry";
 "Wallet.Words.NotDoneResponse" = "Apologies Accepted";
 
+"Wallet.Send.NetworkError" = "Network Error";
+"Wallet.Send.ErrorNotEnoughFunds" = "Not Enough Funds";
 "Wallet.Send.ErrorInvalidAddress" = "Invalid wallet address. Please correct and try again.";
 "Wallet.Send.ErrorDecryptionFailed" = "Please make sure that your device has a passcode set in iOS Settings and try again.";
+"Wallet.Send.UninitializedTitle" = "Warning";
+"Wallet.Send.UninitializedText" = "This address belongs to an empty wallet. Are you sure you want to transfer grams to it?";
 "Wallet.Send.SendAnyway" = "Send Anyway";
 
 "Wallet.Receive.CreateInvoice" = "Create Invoice";

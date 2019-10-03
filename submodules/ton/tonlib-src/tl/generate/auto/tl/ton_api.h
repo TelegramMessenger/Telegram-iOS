@@ -162,6 +162,8 @@ class db_state_destroyedSessions;
 
 class db_state_gcBlockId;
 
+class db_state_hardforks;
+
 class db_state_initBlockId;
 
 class db_state_Key;
@@ -344,7 +346,7 @@ class tonNode_success;
 
 class tonNode_zeroStateIdExt;
 
-class validator_group;
+class validator_Group;
 
 class validator_config_global;
 
@@ -3215,6 +3217,30 @@ class db_state_gcBlockId final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class db_state_hardforks final : public Object {
+ public:
+  std::vector<object_ptr<tonNode_blockIdExt>> blocks_;
+
+  db_state_hardforks();
+
+  explicit db_state_hardforks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_);
+
+  static const std::int32_t ID = -2047668988;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<db_state_hardforks> fetch(td::TlParser &p);
+
+  explicit db_state_hardforks(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class db_state_initBlockId final : public Object {
  public:
   object_ptr<tonNode_blockIdExt> block_;
@@ -3342,6 +3368,27 @@ class db_state_key_asyncSerializer final : public db_state_Key {
   static object_ptr<db_state_Key> fetch(td::TlParser &p);
 
   explicit db_state_key_asyncSerializer(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class db_state_key_hardforks final : public db_state_Key {
+ public:
+
+  db_state_key_hardforks();
+
+  static const std::int32_t ID = -420206662;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<db_state_Key> fetch(td::TlParser &p);
+
+  explicit db_state_key_hardforks(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 
@@ -6440,7 +6487,13 @@ class tonNode_zeroStateIdExt final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
-class validator_group final : public Object {
+class validator_Group: public Object {
+ public:
+
+  static object_ptr<validator_Group> fetch(td::TlParser &p);
+};
+
+class validator_group final : public validator_Group {
  public:
   std::int32_t workchain_;
   std::int64_t shard_;
@@ -6457,9 +6510,38 @@ class validator_group final : public Object {
     return ID;
   }
 
-  static object_ptr<validator_group> fetch(td::TlParser &p);
+  static object_ptr<validator_Group> fetch(td::TlParser &p);
 
   explicit validator_group(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class validator_groupEx final : public validator_Group {
+ public:
+  std::int32_t workchain_;
+  std::int64_t shard_;
+  std::int32_t vertical_seqno_;
+  std::int32_t catchain_seqno_;
+  td::Bits256 config_hash_;
+  std::vector<object_ptr<validator_groupMember>> members_;
+
+  validator_groupEx();
+
+  validator_groupEx(std::int32_t workchain_, std::int64_t shard_, std::int32_t vertical_seqno_, std::int32_t catchain_seqno_, td::Bits256 const &config_hash_, std::vector<object_ptr<validator_groupMember>> &&members_);
+
+  static const std::int32_t ID = 479350270;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  static object_ptr<validator_Group> fetch(td::TlParser &p);
+
+  explicit validator_groupEx(td::TlParser &p);
 
   void store(td::TlStorerCalcLength &s) const final;
 

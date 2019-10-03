@@ -614,6 +614,8 @@ extern const AccStatusChange t_AccStatusChange;
 struct TrStoragePhase final : TLB_Complex {
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(vm::CellSlice& cs, bool weak = false) const override;
+  bool get_storage_fees(vm::CellSlice& cs, td::RefInt256& storage_fees) const;
+  bool maybe_get_storage_fees(vm::CellSlice& cs, td::RefInt256& storage_fees) const;
 };
 
 extern const TrStoragePhase t_TrStoragePhase;
@@ -693,6 +695,8 @@ struct TransactionDescr final : TLB_Complex {
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(vm::CellSlice& cs, bool weak = false) const override;
   int get_tag(const vm::CellSlice& cs) const override;
+  bool skip_to_storage_phase(vm::CellSlice& cs, bool& found) const;
+  bool get_storage_fees(Ref<vm::Cell> cell, td::RefInt256& storage_fees) const;
 };
 
 extern const TransactionDescr t_TransactionDescr;
@@ -708,6 +712,9 @@ struct Transaction final : TLB_Complex {
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(vm::CellSlice& cs, bool weak = false) const override;
   bool get_total_fees(vm::CellSlice&& cs, block::CurrencyCollection& total_fees) const;
+  bool get_descr(Ref<vm::Cell> cell, Ref<vm::Cell>& tdescr) const;
+  bool get_descr(vm::CellSlice& cs, Ref<vm::Cell>& tdescr) const;
+  bool get_storage_fees(Ref<vm::Cell> cell, td::RefInt256& storage_fees) const;
 };
 
 extern const Transaction t_Transaction;

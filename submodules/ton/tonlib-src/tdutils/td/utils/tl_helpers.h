@@ -32,10 +32,10 @@
 #include <type_traits>
 #include <unordered_set>
 
-#define BEGIN_STORE_FLAGS() \
-  do {                      \
-    uint32 flags_store = 0; \
-  uint32 bit_offset_store = 0
+#define BEGIN_STORE_FLAGS()     \
+  do {                          \
+    td::uint32 flags_store = 0; \
+  td::uint32 bit_offset_store = 0
 
 #define STORE_FLAG(flag)                     \
   flags_store |= (flag) << bit_offset_store; \
@@ -47,10 +47,10 @@
   }                               \
   while (false)
 
-#define BEGIN_PARSE_FLAGS()      \
-  do {                           \
-    uint32 flags_parse;          \
-    uint32 bit_offset_parse = 0; \
+#define BEGIN_PARSE_FLAGS()          \
+  do {                               \
+    td::uint32 flags_parse;          \
+    td::uint32 bit_offset_parse = 0; \
   td::parse(flags_parse, parser)
 
 #define PARSE_FLAG(flag)                               \

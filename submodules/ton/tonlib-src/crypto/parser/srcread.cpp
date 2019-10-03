@@ -169,6 +169,11 @@ bool SourceReader::load_line() {
     error("line too long");
     return false;
   }
+  if (len && cur_line.back() == '\r') {
+    // CP/M line breaks support
+    cur_line.pop_back();
+    --len;
+  }
   loc.text = cur_line;
   cur_line_len = (int)len;
   loc.line_pos = 0;

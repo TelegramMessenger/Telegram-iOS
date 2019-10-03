@@ -25,7 +25,7 @@
 { bl word 1 { -rot 2 'nop does swap 0 (create) }
 } :: 2=:
 { <b swap s, b> } : s>c
-{ s>c hash } : shash
+{ s>c hashB } : shash
 // to be more efficiently re-implemented in C++ in the future
 { dup 0< ' negate if } : abs
 { 2dup > ' swap if } : minmax

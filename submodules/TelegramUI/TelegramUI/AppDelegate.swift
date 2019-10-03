@@ -244,8 +244,6 @@ final class SharedApplicationContext {
     
     private let deviceToken = Promise<Data?>(nil)
     
-    private var cloudDataContext: Any?
-    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         precondition(!testIsLaunched)
         testIsLaunched = true
@@ -261,8 +259,6 @@ final class SharedApplicationContext {
         hostView.containerView.backgroundColor = UIColor.white
         self.window = window
         self.nativeWindow = window
-        
-        self.cloudDataContext = makeCloudDataContext()
         
         let clearNotificationsManager = ClearNotificationsManager(getNotificationIds: { completion in
             if #available(iOS 10.0, *) {

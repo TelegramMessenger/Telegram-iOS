@@ -77,7 +77,7 @@ td::Result<td::SecureString> SimpleEncryption::decrypt_data(td::Slice encrypted_
     return td::Status::Error("Failed to decrypt: data is too small");
   }
   if (encrypted_data.size() % 16 != 0) {
-    return td::Status::Error("Failed to decrypt: data size is not divisible by 32");
+    return td::Status::Error("Failed to decrypt: data size is not divisible by 16");
   }
   auto data_hash = encrypted_data.substr(0, 32);
   encrypted_data = encrypted_data.substr(32);

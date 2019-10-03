@@ -22,19 +22,18 @@
 #include "td/utils/base64.h"
 
 namespace tonlib {
-const block::StdAddress& TestGiver::address() {
+const block::StdAddress& TestGiver::address() noexcept {
   static block::StdAddress res =
       block::StdAddress::parse("kf_8uRo6OBbQ97jCx2EIuKm8Wmt6Vb15-KsQHFLbKSMiYIny").move_as_ok();
   return res;
 }
 
-vm::CellHash TestGiver::get_init_code_hash() {
+vm::CellHash TestGiver::get_init_code_hash() noexcept {
   return vm::CellHash::from_slice(td::base64_decode("wDkZp0yR4xo+9+BnuAPfGVjBzK6FPzqdv2DwRq3z3KE=").move_as_ok());
 }
 
 td::Ref<vm::Cell> TestGiver::make_a_gift_message(td::uint32 seqno, td::uint64 gramms, td::Slice message,
-                                                 const block::StdAddress& dest_address) {
-  CHECK(message.size() <= 124);
+                                                 const block::StdAddress& dest_address) noexcept {
   td::BigInt256 dest_addr;
   dest_addr.import_bits(dest_address.addr.as_bitslice());
   vm::CellBuilder cb;
@@ -45,7 +44,9 @@ td::Ref<vm::Cell> TestGiver::make_a_gift_message(td::uint32 seqno, td::uint64 gr
       .store_int256(dest_addr, 256);
   block::tlb::t_Grams.store_integer_value(cb, td::BigInt256(gramms));
 
-  auto message_inner = cb.store_zeroes(9 + 64 + 32 + 1 + 1).store_bytes("\0\0\0\0", 4).store_bytes(message).finalize();
+  cb.store_zeroes(9 + 64 + 32 + 1 + 1).store_bytes("\0\0\0\0", 4);
+  vm::CellString::store(cb, message, 35 * 8).ensure();
+  auto message_inner = cb.finalize();
   return vm::CellBuilder().store_long(seqno, 32).store_long(1, 8).store_ref(message_inner).finalize();
 }
 }  // namespace tonlib

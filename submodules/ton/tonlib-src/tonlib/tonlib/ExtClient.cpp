@@ -30,7 +30,7 @@ void ExtClient::with_last_block(td::Promise<LastBlockState> promise) {
     });
   };
   if (client_.last_block_actor_.empty()) {
-    return P.set_error(td::Status::Error(500, "No lite clients"));
+    return P.set_error(TonlibError::NoLiteServers());
   }
   td::actor::send_closure(client_.last_block_actor_, &LastBlock::get_last_block, std::move(P));
 }
@@ -44,7 +44,7 @@ void ExtClient::send_raw_query(td::BufferSlice query, td::Promise<td::BufferSlic
     });
   };
   if (client_.andl_ext_client_.empty()) {
-    return P.set_error(td::Status::Error(500, "No lite clients"));
+    return P.set_error(TonlibError::NoLiteServers());
   }
   td::actor::send_closure(client_.andl_ext_client_, &ton::adnl::AdnlExtClient::send_query, "query", std::move(query),
                           td::Timestamp::in(10.0), std::move(P));

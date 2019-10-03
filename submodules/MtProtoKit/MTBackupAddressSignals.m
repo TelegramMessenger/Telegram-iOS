@@ -307,7 +307,6 @@ static NSString *makeRandomPadding() {
             if (![datacenterData isKindOfClass:[MTBackupDatacenterData class]]) {
                 return [MTSignal complete];
             }
-            MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
             if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime] source:@"resolveExternal"]) {
                 return [MTSignal single:datacenterData];
             } else {

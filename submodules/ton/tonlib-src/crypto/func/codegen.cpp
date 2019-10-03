@@ -628,7 +628,7 @@ bool Op::generate_code_step(Stack& stack) {
       stack.opt_show();
       StackLayout layout1 = stack.vars();
       bool next_empty = next->is_empty();
-      stack.o << (next_empty ? "WHILEEND:<{" : "WHILE:<{");
+      stack.o << "WHILE:<{";
       stack.o.indent();
       stack.forget_const();
       block0->generate_code_all(stack);
@@ -638,7 +638,7 @@ bool Op::generate_code_step(Stack& stack) {
       stack.modified();
       stack.o.undent();
       Stack stack_copy{stack};
-      stack.o << (next_empty ? "}>" : "}>DO<{");
+      stack.o << (next_empty ? "}>DO:" : "}>DO<{");
       if (!next_empty) {
         stack.o.indent();
       }

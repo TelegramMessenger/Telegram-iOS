@@ -20,6 +20,10 @@
 #include "td/utils/misc.h"
 #include "vm/cellslice.h"
 namespace tonlib {
+int VERBOSITY_NAME(tonlib_query) = VERBOSITY_NAME(INFO);
+int VERBOSITY_NAME(last_block) = VERBOSITY_NAME(INFO);
+int VERBOSITY_NAME(lite_server) = VERBOSITY_NAME(INFO);
+
 td::Result<td::Ref<vm::CellSlice>> binary_bitstring_to_cellslice(td::Slice literal) {
   unsigned char buff[128];
   if (!begins_with(literal, "b{") || !ends_with(literal, "}")) {

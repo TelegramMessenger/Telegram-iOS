@@ -41,7 +41,7 @@ def? $3 { @' $3 } { "new-pinger" } cond constant file-base
 // no libraries
 <b b{00110} s, rot ref, swap ref, b>  // create StateInit
 dup ."StateInit: " <s csr. cr
-dup hash wc swap 2dup 2constant pinger_addr
+dup hashu wc swap 2dup 2constant pinger_addr
 ."new pinger address = " 2dup .addr cr
 2dup file-base +".addr" save-address-verbose
 ."Non-bounceable address (for init): " 2dup 7 .Addr cr

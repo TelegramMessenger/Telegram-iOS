@@ -964,6 +964,9 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
 @end
 
 MTBackupDatacenterData *MTIPDataDecode(NSData *data, NSString *phoneNumber) {
+    if (data.length < 256) {
+        return nil;
+    }
     unsigned char buffer[256];
     memcpy(buffer, data.bytes, 256);
     NSData *result = decrypt_TL_data(buffer);

@@ -86,6 +86,8 @@ cell dict_set_builder(cell dict, int key_len, slice index, builder value) asm(va
 (cell, (slice, slice, int)) ~dict::delete_get_min(cell dict, int key_len) asm(-> 0 2 1 3) "DICTREMMIN" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (int, slice, int) udict_get_next?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETNEXT" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 (int, slice, int) udict_get_prev?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTUGETPREV" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) idict_get_next?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTIGETNEXT" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
+(int, slice, int) idict_get_prev?(cell dict, int key_len, int pivot) asm(pivot dict key_len -> 1 0 2) "DICTIGETPREV" "NULLSWAPIFNOT" "NULLSWAPIFNOT";
 cell new_dict() asm "NEWDICT";
 int dict_empty?(cell c) asm "DICTEMPTY";
 

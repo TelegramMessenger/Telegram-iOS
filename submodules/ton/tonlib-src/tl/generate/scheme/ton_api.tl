@@ -444,12 +444,14 @@ db.state.initBlockId block:tonNode.blockIdExt = db.state.InitBlockId;
 db.state.gcBlockId block:tonNode.blockIdExt = db.state.GcBlockId;
 db.state.shardClient block:tonNode.blockIdExt = db.state.ShardClient;
 db.state.asyncSerializer block:tonNode.blockIdExt last:tonNode.blockIdExt last_ts:int = db.state.AsyncSerializer;
+db.state.hardforks blocks:(vector tonNode.blockIdExt) = db.state.Hardforks;
 
 db.state.key.destroyedSessions = db.state.Key;
 db.state.key.initBlockId = db.state.Key;
 db.state.key.gcBlockId = db.state.Key;
 db.state.key.shardClient = db.state.Key;
 db.state.key.asyncSerializer = db.state.Key;
+db.state.key.hardforks = db.state.Key;
 
 db.lt.el.key workchain:int shard:long idx:int = db.lt.Key;
 db.lt.desc.key workchain:int shard:long = db.lt.Key;
@@ -466,6 +468,7 @@ db.lt.status.value total_shards:int = db.lt.status.Value;
 
 validator.groupMember public_key_hash:int256 adnl:int256 weight:long = engine.validator.GroupMember; 
 validator.group workchain:int shard:long catchain_seqno:int config_hash:int256 members:(vector validator.groupMember) = validator.Group; 
+validator.groupEx workchain:int shard:long vertical_seqno:int catchain_seqno:int config_hash:int256 members:(vector validator.groupMember) = validator.Group; 
 
 ---functions---
 

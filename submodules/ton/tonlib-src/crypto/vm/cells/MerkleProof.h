@@ -51,9 +51,10 @@ class MerkleProofBuilder {
   Ref<vm::Cell> orig_root, usage_root;
 
  public:
+  MerkleProofBuilder() = default;
   MerkleProofBuilder(Ref<Cell> root);
-  void reset(Ref<Cell> root);
-  void clear();
+  Ref<Cell> init(Ref<Cell> root);
+  bool clear();
   Ref<Cell> root() const {
     return usage_root;
   }

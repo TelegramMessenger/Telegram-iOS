@@ -244,6 +244,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return db_state_destroyedSessions::fetch(p);
     case db_state_gcBlockId::ID:
       return db_state_gcBlockId::fetch(p);
+    case db_state_hardforks::ID:
+      return db_state_hardforks::fetch(p);
     case db_state_initBlockId::ID:
       return db_state_initBlockId::fetch(p);
     case db_state_key_destroyedSessions::ID:
@@ -256,6 +258,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return db_state_key_shardClient::fetch(p);
     case db_state_key_asyncSerializer::ID:
       return db_state_key_asyncSerializer::fetch(p);
+    case db_state_key_hardforks::ID:
+      return db_state_key_hardforks::fetch(p);
     case db_state_shardClient::ID:
       return db_state_shardClient::fetch(p);
     case dht_key::ID:
@@ -498,6 +502,8 @@ object_ptr<Object> Object::fetch(td::TlParser &p) {
       return tonNode_zeroStateIdExt::fetch(p);
     case validator_group::ID:
       return validator_group::fetch(p);
+    case validator_groupEx::ID:
+      return validator_groupEx::fetch(p);
     case validator_config_global::ID:
       return validator_config_global::fetch(p);
     case validator_config_local::ID:
@@ -5905,6 +5911,44 @@ void db_state_gcBlockId::store(td::TlStorerToString &s, const char *field_name) 
   }
 }
 
+db_state_hardforks::db_state_hardforks()
+  : blocks_()
+{}
+
+db_state_hardforks::db_state_hardforks(std::vector<object_ptr<tonNode_blockIdExt>> &&blocks_)
+  : blocks_(std::move(blocks_))
+{}
+
+const std::int32_t db_state_hardforks::ID;
+
+object_ptr<db_state_hardforks> db_state_hardforks::fetch(td::TlParser &p) {
+  return make_object<db_state_hardforks>(p);
+}
+
+db_state_hardforks::db_state_hardforks(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : blocks_(TlFetchVector<TlFetchObject<tonNode_blockIdExt>>::parse(p))
+#undef FAIL
+{}
+
+void db_state_hardforks::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void db_state_hardforks::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreVector<TlStoreObject>::store(blocks_, s);
+}
+
+void db_state_hardforks::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "db_state_hardforks");
+    { const std::vector<object_ptr<tonNode_blockIdExt>> &v = blocks_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("blocks", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
 db_state_initBlockId::db_state_initBlockId()
   : block_()
 {}
@@ -5957,6 +6001,8 @@ object_ptr<db_state_Key> db_state_Key::fetch(td::TlParser &p) {
       return db_state_key_shardClient::fetch(p);
     case db_state_key_asyncSerializer::ID:
       return db_state_key_asyncSerializer::fetch(p);
+    case db_state_key_hardforks::ID:
+      return db_state_key_hardforks::fetch(p);
     default:
       FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
   }
@@ -6114,6 +6160,37 @@ void db_state_key_asyncSerializer::store(td::TlStorerUnsafe &s) const {
 void db_state_key_asyncSerializer::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "db_state_key_asyncSerializer");
+    s.store_class_end();
+  }
+}
+
+db_state_key_hardforks::db_state_key_hardforks() {
+}
+
+const std::int32_t db_state_key_hardforks::ID;
+
+object_ptr<db_state_Key> db_state_key_hardforks::fetch(td::TlParser &p) {
+  return make_object<db_state_key_hardforks>(p);
+}
+
+db_state_key_hardforks::db_state_key_hardforks(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+#undef FAIL
+{
+  (void)p;
+}
+
+void db_state_key_hardforks::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+}
+
+void db_state_key_hardforks::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+}
+
+void db_state_key_hardforks::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "db_state_key_hardforks");
     s.store_class_end();
   }
 }
@@ -11755,6 +11832,20 @@ void tonNode_zeroStateIdExt::store(td::TlStorerToString &s, const char *field_na
   }
 }
 
+object_ptr<validator_Group> validator_Group::fetch(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return nullptr;
+  int constructor = p.fetch_int();
+  switch (constructor) {
+    case validator_group::ID:
+      return validator_group::fetch(p);
+    case validator_groupEx::ID:
+      return validator_groupEx::fetch(p);
+    default:
+      FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
+  }
+#undef FAIL
+}
+
 validator_group::validator_group()
   : workchain_()
   , shard_()
@@ -11773,7 +11864,7 @@ validator_group::validator_group(std::int32_t workchain_, std::int64_t shard_, s
 
 const std::int32_t validator_group::ID;
 
-object_ptr<validator_group> validator_group::fetch(td::TlParser &p) {
+object_ptr<validator_Group> validator_group::fetch(td::TlParser &p) {
   return make_object<validator_group>(p);
 }
 
@@ -11810,6 +11901,74 @@ void validator_group::store(td::TlStorerToString &s, const char *field_name) con
     s.store_class_begin(field_name, "validator_group");
     s.store_field("workchain", workchain_);
     s.store_field("shard", shard_);
+    s.store_field("catchain_seqno", catchain_seqno_);
+    s.store_field("config_hash", config_hash_);
+    { const std::vector<object_ptr<validator_groupMember>> &v = members_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("members", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
+    s.store_class_end();
+  }
+}
+
+validator_groupEx::validator_groupEx()
+  : workchain_()
+  , shard_()
+  , vertical_seqno_()
+  , catchain_seqno_()
+  , config_hash_()
+  , members_()
+{}
+
+validator_groupEx::validator_groupEx(std::int32_t workchain_, std::int64_t shard_, std::int32_t vertical_seqno_, std::int32_t catchain_seqno_, td::Bits256 const &config_hash_, std::vector<object_ptr<validator_groupMember>> &&members_)
+  : workchain_(workchain_)
+  , shard_(shard_)
+  , vertical_seqno_(vertical_seqno_)
+  , catchain_seqno_(catchain_seqno_)
+  , config_hash_(config_hash_)
+  , members_(std::move(members_))
+{}
+
+const std::int32_t validator_groupEx::ID;
+
+object_ptr<validator_Group> validator_groupEx::fetch(td::TlParser &p) {
+  return make_object<validator_groupEx>(p);
+}
+
+validator_groupEx::validator_groupEx(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : workchain_(TlFetchInt::parse(p))
+  , shard_(TlFetchLong::parse(p))
+  , vertical_seqno_(TlFetchInt::parse(p))
+  , catchain_seqno_(TlFetchInt::parse(p))
+  , config_hash_(TlFetchInt256::parse(p))
+  , members_(TlFetchVector<TlFetchObject<validator_groupMember>>::parse(p))
+#undef FAIL
+{}
+
+void validator_groupEx::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(workchain_, s);
+  TlStoreBinary::store(shard_, s);
+  TlStoreBinary::store(vertical_seqno_, s);
+  TlStoreBinary::store(catchain_seqno_, s);
+  TlStoreBinary::store(config_hash_, s);
+  TlStoreVector<TlStoreObject>::store(members_, s);
+}
+
+void validator_groupEx::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  TlStoreBinary::store(workchain_, s);
+  TlStoreBinary::store(shard_, s);
+  TlStoreBinary::store(vertical_seqno_, s);
+  TlStoreBinary::store(catchain_seqno_, s);
+  TlStoreBinary::store(config_hash_, s);
+  TlStoreVector<TlStoreObject>::store(members_, s);
+}
+
+void validator_groupEx::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "validator_groupEx");
+    s.store_field("workchain", workchain_);
+    s.store_field("shard", shard_);
+    s.store_field("vertical_seqno", vertical_seqno_);
     s.store_field("catchain_seqno", catchain_seqno_);
     s.store_field("config_hash", config_hash_);
     { const std::vector<object_ptr<validator_groupMember>> &v = members_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("members", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }

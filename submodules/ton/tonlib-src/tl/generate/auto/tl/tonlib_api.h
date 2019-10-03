@@ -62,6 +62,8 @@ class inputKey;
 
 class key;
 
+class KeyStoreType;
+
 class LogStream;
 
 class logTags;
@@ -264,6 +266,39 @@ class key final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class KeyStoreType: public Object {
+ public:
+};
+
+class keyStoreTypeDirectory final : public KeyStoreType {
+ public:
+  std::string directory_;
+
+  keyStoreTypeDirectory();
+
+  explicit keyStoreTypeDirectory(std::string const &directory_);
+
+  static const std::int32_t ID = -378990038;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class keyStoreTypeInMemory final : public KeyStoreType {
+ public:
+
+  keyStoreTypeInMemory();
+
+  static const std::int32_t ID = -2106848825;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class LogStream: public Object {
  public:
 };
@@ -359,13 +394,13 @@ class ok final : public Object {
 class options final : public Object {
  public:
   object_ptr<config> config_;
-  std::string keystore_directory_;
+  object_ptr<KeyStoreType> keystore_type_;
 
   options();
 
-  options(object_ptr<config> &&config_, std::string const &keystore_directory_);
+  options(object_ptr<config> &&config_, object_ptr<KeyStoreType> &&keystore_type_);
 
-  static const std::int32_t ID = 789823302;
+  static const std::int32_t ID = -1924388359;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -376,12 +411,13 @@ class options final : public Object {
 class sendGramsResult final : public Object {
  public:
   std::int64_t sent_until_;
+  std::string body_hash_;
 
   sendGramsResult();
 
-  explicit sendGramsResult(std::int64_t sent_until_);
+  sendGramsResult(std::int64_t sent_until_, std::string const &body_hash_);
 
-  static const std::int32_t ID = -858318471;
+  static const std::int32_t ID = 426872238;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -568,13 +604,17 @@ class raw_message final : public Object {
   std::string source_;
   std::string destination_;
   std::int64_t value_;
+  std::int64_t fwd_fee_;
+  std::int64_t ihr_fee_;
+  std::int64_t created_lt_;
+  std::string body_hash_;
   std::string message_;
 
   raw_message();
 
-  raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::string const &message_);
+  raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, std::string const &message_);
 
-  static const std::int32_t ID = -259956097;
+  static const std::int32_t ID = -906281442;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -588,14 +628,16 @@ class raw_transaction final : public Object {
   std::string data_;
   object_ptr<internal_transactionId> transaction_id_;
   std::int64_t fee_;
+  std::int64_t storage_fee_;
+  std::int64_t other_fee_;
   object_ptr<raw_message> in_msg_;
   std::vector<object_ptr<raw_message>> out_msgs_;
 
   raw_transaction();
 
-  raw_transaction(std::int64_t utime_, std::string const &data_, object_ptr<internal_transactionId> &&transaction_id_, std::int64_t fee_, object_ptr<raw_message> &&in_msg_, std::vector<object_ptr<raw_message>> &&out_msgs_);
+  raw_transaction(std::int64_t utime_, std::string const &data_, object_ptr<internal_transactionId> &&transaction_id_, std::int64_t fee_, std::int64_t storage_fee_, std::int64_t other_fee_, object_ptr<raw_message> &&in_msg_, std::vector<object_ptr<raw_message>> &&out_msgs_);
 
-  static const std::int32_t ID = -1159530820;
+  static const std::int32_t ID = 1887601793;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -612,7 +654,7 @@ class raw_transactions final : public Object {
 
   raw_transactions(std::vector<object_ptr<raw_transaction>> &&transactions_, object_ptr<internal_transactionId> &&previous_transaction_id_);
 
-  static const std::int32_t ID = 240548986;
+  static const std::int32_t ID = -2063931155;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -796,6 +838,21 @@ class createNewKey final : public Function {
   }
 
   using ReturnType = object_ptr<key>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class deleteAllKeys final : public Function {
+ public:
+
+  deleteAllKeys();
+
+  static const std::int32_t ID = 1608776483;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };

@@ -199,6 +199,36 @@ void key::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
+keyStoreTypeDirectory::keyStoreTypeDirectory()
+  : directory_()
+{}
+
+keyStoreTypeDirectory::keyStoreTypeDirectory(std::string const &directory_)
+  : directory_(std::move(directory_))
+{}
+
+const std::int32_t keyStoreTypeDirectory::ID;
+
+void keyStoreTypeDirectory::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "keyStoreTypeDirectory");
+    s.store_field("directory", directory_);
+    s.store_class_end();
+  }
+}
+
+keyStoreTypeInMemory::keyStoreTypeInMemory() {
+}
+
+const std::int32_t keyStoreTypeInMemory::ID;
+
+void keyStoreTypeInMemory::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "keyStoreTypeInMemory");
+    s.store_class_end();
+  }
+}
+
 logStreamDefault::logStreamDefault() {
 }
 
@@ -294,12 +324,12 @@ void ok::store(td::TlStorerToString &s, const char *field_name) const {
 
 options::options()
   : config_()
-  , keystore_directory_()
+  , keystore_type_()
 {}
 
-options::options(object_ptr<config> &&config_, std::string const &keystore_directory_)
+options::options(object_ptr<config> &&config_, object_ptr<KeyStoreType> &&keystore_type_)
   : config_(std::move(config_))
-  , keystore_directory_(std::move(keystore_directory_))
+  , keystore_type_(std::move(keystore_type_))
 {}
 
 const std::int32_t options::ID;
@@ -308,17 +338,19 @@ void options::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "options");
     if (config_ == nullptr) { s.store_field("config", "null"); } else { config_->store(s, "config"); }
-    s.store_field("keystore_directory", keystore_directory_);
+    if (keystore_type_ == nullptr) { s.store_field("keystore_type", "null"); } else { keystore_type_->store(s, "keystore_type"); }
     s.store_class_end();
   }
 }
 
 sendGramsResult::sendGramsResult()
   : sent_until_()
+  , body_hash_()
 {}
 
-sendGramsResult::sendGramsResult(std::int64_t sent_until_)
+sendGramsResult::sendGramsResult(std::int64_t sent_until_, std::string const &body_hash_)
   : sent_until_(sent_until_)
+  , body_hash_(std::move(body_hash_))
 {}
 
 const std::int32_t sendGramsResult::ID;
@@ -327,6 +359,7 @@ void sendGramsResult::store(td::TlStorerToString &s, const char *field_name) con
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "sendGramsResult");
     s.store_field("sent_until", sent_until_);
+    s.store_bytes_field("body_hash", body_hash_);
     s.store_class_end();
   }
 }
@@ -545,13 +578,21 @@ raw_message::raw_message()
   : source_()
   , destination_()
   , value_()
+  , fwd_fee_()
+  , ihr_fee_()
+  , created_lt_()
+  , body_hash_()
   , message_()
 {}
 
-raw_message::raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::string const &message_)
+raw_message::raw_message(std::string const &source_, std::string const &destination_, std::int64_t value_, std::int64_t fwd_fee_, std::int64_t ihr_fee_, std::int64_t created_lt_, std::string const &body_hash_, std::string const &message_)
   : source_(std::move(source_))
   , destination_(std::move(destination_))
   , value_(value_)
+  , fwd_fee_(fwd_fee_)
+  , ihr_fee_(ihr_fee_)
+  , created_lt_(created_lt_)
+  , body_hash_(std::move(body_hash_))
   , message_(std::move(message_))
 {}
 
@@ -563,6 +604,10 @@ void raw_message::store(td::TlStorerToString &s, const char *field_name) const {
     s.store_field("source", source_);
     s.store_field("destination", destination_);
     s.store_field("value", value_);
+    s.store_field("fwd_fee", fwd_fee_);
+    s.store_field("ihr_fee", ihr_fee_);
+    s.store_field("created_lt", created_lt_);
+    s.store_bytes_field("body_hash", body_hash_);
     s.store_bytes_field("message", message_);
     s.store_class_end();
   }
@@ -573,15 +618,19 @@ raw_transaction::raw_transaction()
   , data_()
   , transaction_id_()
   , fee_()
+  , storage_fee_()
+  , other_fee_()
   , in_msg_()
   , out_msgs_()
 {}
 
-raw_transaction::raw_transaction(std::int64_t utime_, std::string const &data_, object_ptr<internal_transactionId> &&transaction_id_, std::int64_t fee_, object_ptr<raw_message> &&in_msg_, std::vector<object_ptr<raw_message>> &&out_msgs_)
+raw_transaction::raw_transaction(std::int64_t utime_, std::string const &data_, object_ptr<internal_transactionId> &&transaction_id_, std::int64_t fee_, std::int64_t storage_fee_, std::int64_t other_fee_, object_ptr<raw_message> &&in_msg_, std::vector<object_ptr<raw_message>> &&out_msgs_)
   : utime_(utime_)
   , data_(std::move(data_))
   , transaction_id_(std::move(transaction_id_))
   , fee_(fee_)
+  , storage_fee_(storage_fee_)
+  , other_fee_(other_fee_)
   , in_msg_(std::move(in_msg_))
   , out_msgs_(std::move(out_msgs_))
 {}
@@ -595,6 +644,8 @@ void raw_transaction::store(td::TlStorerToString &s, const char *field_name) con
     s.store_bytes_field("data", data_);
     if (transaction_id_ == nullptr) { s.store_field("transaction_id", "null"); } else { transaction_id_->store(s, "transaction_id"); }
     s.store_field("fee", fee_);
+    s.store_field("storage_fee", storage_fee_);
+    s.store_field("other_fee", other_fee_);
     if (in_msg_ == nullptr) { s.store_field("in_msg", "null"); } else { in_msg_->store(s, "in_msg"); }
     { const std::vector<object_ptr<raw_message>> &v = out_msgs_; const std::uint32_t multiplicity = static_cast<std::uint32_t>(v.size()); const auto vector_name = "vector[" + td::to_string(multiplicity)+ "]"; s.store_class_begin("out_msgs", vector_name.c_str()); for (std::uint32_t i = 0; i < multiplicity; i++) { if (v[i] == nullptr) { s.store_field("", "null"); } else { v[i]->store(s, ""); } } s.store_class_end(); }
     s.store_class_end();
@@ -837,6 +888,18 @@ void createNewKey::store(td::TlStorerToString &s, const char *field_name) const 
     s.store_bytes_field("local_password", local_password_);
     s.store_bytes_field("mnemonic_password", mnemonic_password_);
     s.store_bytes_field("random_extra_seed", random_extra_seed_);
+    s.store_class_end();
+  }
+}
+
+deleteAllKeys::deleteAllKeys() {
+}
+
+const std::int32_t deleteAllKeys::ID;
+
+void deleteAllKeys::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "deleteAllKeys");
     s.store_class_end();
   }
 }

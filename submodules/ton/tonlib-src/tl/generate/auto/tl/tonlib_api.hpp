@@ -41,6 +41,12 @@ bool downcast_call(Object &obj, const T &func) {
     case key::ID:
       func(static_cast<key &>(obj));
       return true;
+    case keyStoreTypeDirectory::ID:
+      func(static_cast<keyStoreTypeDirectory &>(obj));
+      return true;
+    case keyStoreTypeInMemory::ID:
+      func(static_cast<keyStoreTypeInMemory &>(obj));
+      return true;
     case logStreamDefault::ID:
       func(static_cast<logStreamDefault &>(obj));
       return true;
@@ -147,6 +153,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case createNewKey::ID:
       func(static_cast<createNewKey &>(obj));
+      return true;
+    case deleteAllKeys::ID:
+      func(static_cast<deleteAllKeys &>(obj));
       return true;
     case deleteKey::ID:
       func(static_cast<deleteKey &>(obj));
@@ -264,6 +273,26 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case wallet_sendGrams::ID:
       func(static_cast<wallet_sendGrams &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(KeyStoreType &obj, const T &func) {
+  switch (obj.get_id()) {
+    case keyStoreTypeDirectory::ID:
+      func(static_cast<keyStoreTypeDirectory &>(obj));
+      return true;
+    case keyStoreTypeInMemory::ID:
+      func(static_cast<keyStoreTypeInMemory &>(obj));
       return true;
     default:
       return false;

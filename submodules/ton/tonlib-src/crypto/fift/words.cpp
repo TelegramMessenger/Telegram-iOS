@@ -764,13 +764,17 @@ void interpret_string_to_bytes(vm::Stack& stack) {
   stack.push_bytes(stack.pop_string());
 }
 
-void interpret_bytes_hash(vm::Stack& stack) {
+void interpret_bytes_hash(vm::Stack& stack, bool as_uint) {
   std::string str = stack.pop_bytes();
   unsigned char buffer[32];
   digest::hash_str<digest::SHA256>(buffer, str.c_str(), str.size());
-  td::RefInt256 x{true};
-  x.write().import_bytes(buffer, 32, false);
-  stack.push_int(std::move(x));
+  if (as_uint) {
+    td::RefInt256 x{true};
+    x.write().import_bytes(buffer, 32, false);
+    stack.push_int(std::move(x));
+  } else {
+    stack.push_bytes(std::string{(char*)buffer, 32});
+  }
 }
 
 void interpret_empty(vm::Stack& stack) {
@@ -892,11 +896,15 @@ void interpret_builder_remaining_bitrefs(vm::Stack& stack, int mode) {
   }
 }
 
-void interpret_cell_hash(vm::Stack& stack) {
+void interpret_cell_hash(vm::Stack& stack, bool as_uint) {
   auto cell = stack.pop_cell();
-  td::RefInt256 hash{true};
-  hash.write().import_bytes(cell->get_hash().as_slice().ubegin(), 32, false);
-  stack.push_int(std::move(hash));
+  if (as_uint) {
+    td::RefInt256 hash{true};
+    hash.write().import_bytes(cell->get_hash().as_slice().ubegin(), 32, false);
+    stack.push_int(std::move(hash));
+  } else {
+    stack.push_bytes(cell->get_hash().as_slice().str());
+  }
 }
 
 void interpret_store_ref(vm::Stack& stack) {
@@ -934,7 +942,9 @@ void interpret_fetch(vm::Stack& stack, int mode) {
   auto n = stack.pop_smallint_range(256 + (mode & 1));
   auto cs = stack.pop_cellslice();
   if (!cs->have(n)) {
-    stack.push(std::move(cs));
+    if (mode & 2) {
+      stack.push(std::move(cs));
+    }
     stack.push_bool(false);
     if (!(mode & 4)) {
       throw IntError{"end of data while reading integer from cell"};
@@ -959,7 +969,9 @@ void interpret_fetch_bytes(vm::Stack& stack, int mode) {
   unsigned n = stack.pop_smallint_range(127);
   auto cs = stack.pop_cellslice();
   if (!cs->have(n * 8)) {
-    stack.push(std::move(cs));
+    if (mode & 2) {
+      stack.push(std::move(cs));
+    }
     stack.push_bool(false);
     if (!(mode & 4)) {
       throw IntError{"end of data while reading byte string from cell"};
@@ -970,7 +982,7 @@ void interpret_fetch_bytes(vm::Stack& stack, int mode) {
     if (mode & 2) {
       cs.write().fetch_bytes(tmp, n);
     } else {
-      cs.write().prefetch_bytes(tmp, n);
+      cs->prefetch_bytes(tmp, n);
     }
     std::string s{tmp, tmp + n};
     if (mode & 1) {
@@ -978,7 +990,9 @@ void interpret_fetch_bytes(vm::Stack& stack, int mode) {
     } else {
       stack.push_string(std::move(s));
     }
-    stack.push(std::move(cs));
+    if (mode & 2) {
+      stack.push(std::move(cs));
+    }
     if (mode & 4) {
       stack.push_bool(true);
     }
@@ -1009,13 +1023,15 @@ void interpret_cell_remaining(vm::Stack& stack) {
 void interpret_fetch_ref(vm::Stack& stack, int mode) {
   auto cs = stack.pop_cellslice();
   if (!cs->have_refs(1)) {
-    stack.push(std::move(cs));
+    if (mode & 2) {
+      stack.push(std::move(cs));
+    }
     stack.push_bool(false);
     if (!(mode & 4)) {
       throw IntError{"end of data while reading reference from cell"};
     }
   } else {
-    auto cell = (mode & 2) ? cs.write().fetch_ref() : cs.write().prefetch_ref();
+    auto cell = (mode & 2) ? cs.write().fetch_ref() : cs->prefetch_ref();
     if (mode & 2) {
       stack.push(std::move(cs));
     }
@@ -2474,7 +2490,9 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("B>Lu@+ ", std::bind(interpret_bytes_fetch_int, _1, 0x12));
   d.def_stack_word("B>Li@+ ", std::bind(interpret_bytes_fetch_int, _1, 0x13));
   d.def_stack_word("$>B ", interpret_string_to_bytes);
-  d.def_stack_word("Bhash ", interpret_bytes_hash);
+  d.def_stack_word("Bhash ", std::bind(interpret_bytes_hash, _1, true));
+  d.def_stack_word("Bhashu ", std::bind(interpret_bytes_hash, _1, true));
+  d.def_stack_word("BhashB ", std::bind(interpret_bytes_hash, _1, false));
   // cell manipulation (create, write and modify cells)
   d.def_stack_word("<b ", interpret_empty);
   d.def_stack_word("i, ", std::bind(interpret_store, _1, true));
@@ -2496,7 +2514,9 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("brembits ", std::bind(interpret_builder_remaining_bitrefs, _1, 1));
   d.def_stack_word("bremrefs ", std::bind(interpret_builder_remaining_bitrefs, _1, 2));
   d.def_stack_word("brembitrefs ", std::bind(interpret_builder_remaining_bitrefs, _1, 3));
-  d.def_stack_word("hash ", interpret_cell_hash);
+  d.def_stack_word("hash ", std::bind(interpret_cell_hash, _1, true));
+  d.def_stack_word("hashu ", std::bind(interpret_cell_hash, _1, true));
+  d.def_stack_word("hashB ", std::bind(interpret_cell_hash, _1, false));
   // cellslice manipulation (read from cells)
   d.def_stack_word("<s ", interpret_from_cell);
   d.def_stack_word("i@ ", std::bind(interpret_fetch, _1, 1));

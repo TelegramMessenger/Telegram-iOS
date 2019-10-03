@@ -17,6 +17,7 @@
     Copyright 2017-2019 Telegram Systems LLP
 */
 #include "Logging.h"
+#include "utils.h"
 
 #include "auto/tl/tonlib_api.h"
 
@@ -36,11 +37,9 @@ static td::FileLog file_log;
 static td::TsLog ts_log(&file_log);
 static td::NullLog null_log;
 
-td::int32 VERBOSITY_NAME(abc) = VERBOSITY_NAME(DEBUG);
-td::int32 VERBOSITY_NAME(bcd) = VERBOSITY_NAME(DEBUG);
 #define ADD_TAG(tag) \
   { #tag, &VERBOSITY_NAME(tag) }
-static const std::map<td::Slice, int *> log_tags{ADD_TAG(abc), ADD_TAG(bcd)};
+static const std::map<td::Slice, int *> log_tags{ADD_TAG(tonlib_query), ADD_TAG(last_block)};
 #undef ADD_TAG
 
 td::Status Logging::set_current_stream(tonlib_api::object_ptr<tonlib_api::LogStream> stream) {

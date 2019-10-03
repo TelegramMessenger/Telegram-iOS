@@ -120,7 +120,7 @@ public func walletSettingsController(context: AccountContext, tonContext: TonCon
                 actionSheet?.dismissAnimated()
                 let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
                 presentControllerImpl?(controller, nil)
-                let _ = (deleteLocalWalletData(postbox: context.account.postbox, network: context.account.network, tonInstance: tonContext.instance, keychain: tonContext.keychain, walletInfo: walletInfo)
+                let _ = (deleteAllLocalWalletsData(postbox: context.account.postbox, network: context.account.network, tonInstance: tonContext.instance)
                 |> deliverOnMainQueue).start(error: { [weak controller] _ in
                     controller?.dismiss()
                 }, completed: { [weak controller] in

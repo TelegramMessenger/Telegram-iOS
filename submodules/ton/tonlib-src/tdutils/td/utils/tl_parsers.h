@@ -99,6 +99,16 @@ class TlParser {
     }
   }
 
+  bool can_prefetch_int() const {
+    return get_left_len() >= sizeof(int32);
+  }
+
+  int32 prefetch_int_unsafe() const {
+    int32 result;
+    std::memcpy(&result, data, sizeof(int32));
+    return result;
+  }
+
   int32 fetch_int_unsafe() {
     int32 result;
     std::memcpy(&result, data, sizeof(int32));

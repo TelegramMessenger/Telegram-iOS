@@ -219,8 +219,16 @@ public final class TonInstance {
                             return
                         }
                         subscriber.putNext(state)
-                    }, error: { _ in
-                        subscriber.putError(.generic)
+                    }, error: { error in
+                        if let error = error as? TONError {
+                            if error.text.hasPrefix("LITE_SERVER_") {
+                                subscriber.putError(.network)
+                            } else {
+                                subscriber.putError(.generic)
+                            }
+                        } else {
+                            subscriber.putError(.generic)
+                        }
                     }, completed: {
                         subscriber.putCompletion()
                     })
@@ -241,7 +249,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func walletLastTransactionId(address: String) -> Signal<WalletTransactionId?, NoError> {
+    fileprivate func walletLastTransactionId(address: String) -> Signal<WalletTransactionId?, WalletLastTransactionIdError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
@@ -253,7 +261,16 @@ public final class TonInstance {
                             return
                         }
                         subscriber.putNext(state.lastTransactionId.flatMap(WalletTransactionId.init(tonTransactionId:)))
-                    }, error: { _ in
+                    }, error: { error in
+                        if let error = error as? TONError {
+                            if error.text.hasPrefix("ДITE_SERVER_") {
+                                subscriber.putError(.network)
+                            } else {
+                                subscriber.putError(.generic)
+                            }
+                        } else {
+                            subscriber.putError(.generic)
+                        }
                     }, completed: {
                         subscriber.putCompletion()
                     })
@@ -279,7 +296,16 @@ public final class TonInstance {
                             return
                         }
                         subscriber.putNext(transactions.map(WalletTransaction.init(tonTransaction:)))
-                    }, error: { _ in
+                    }, error: { error in
+                        if let error = error as? TONError {
+                            if error.text.hasPrefix("LITE_SERVER_") {
+                                subscriber.putError(.network)
+                            } else {
+                                subscriber.putError(.generic)
+                            }
+                        } else {
+                            subscriber.putError(.generic)
+                        }
                     }, completed: {
                         subscriber.putCompletion()
                     })
@@ -308,10 +334,16 @@ public final class TonInstance {
                         subscriber.putCompletion()
                     }, error: { error in
                         if let error = error as? TONError {
-                            if error.text == "Failed to parse account address" {
+                            if error.text.hasPrefix("INVALID_ACCOUNT_ADDRESS") {
                                 subscriber.putError(.invalidAddress)
                             } else if error.text.hasPrefix("DANGEROUS_TRANSACTION") {
                                 subscriber.putError(.destinationIsNotInitialized)
+                            } else if error.text.hasPrefix("MESSAGE_TOO_LONG") {
+                                subscriber.putError(.messageTooLong)
+                            } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
+                                subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("LITE_SERVER_") {
+                                subscriber.putError(.network)
                             } else {
                                 subscriber.putError(.generic)
                             }
@@ -361,6 +393,29 @@ public final class TonInstance {
                 
                 return disposable
             }
+        }
+    }
+    
+    fileprivate func deleteAllLocalWalletsData() -> Signal<Never, DeleteAllLocalWalletsDataError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.deleteAllKeys().start(next: { _ in
+                        assertionFailure()
+                    }, error: { _ in
+                        subscriber.putError(.generic)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
         }
     }
     
@@ -580,6 +635,24 @@ public func importWallet(postbox: Postbox, network: Network, tonInstance: TonIns
     }
 }
 
+public enum DeleteAllLocalWalletsDataError {
+    case generic
+}
+
+public func deleteAllLocalWalletsData(postbox: Postbox, network: Network, tonInstance: TonInstance) -> Signal<Never, DeleteAllLocalWalletsDataError> {
+    return tonInstance.deleteAllLocalWalletsData()
+    |> then(
+        postbox.transaction { transaction -> Void in
+            transaction.updatePreferencesEntry(key: PreferencesKeys.walletCollection, { current in
+                let walletCollection = (current as? WalletCollection) ?? WalletCollection(wallets: [])
+                return walletCollection
+            })
+        }
+        |> castError(DeleteAllLocalWalletsDataError.self)
+        |> ignoreValues
+    )
+}
+
 public enum DeleteLocalWalletDataError {
     case generic
     case secretDecryptionFailed(TonKeychainDecryptDataError)
@@ -642,6 +715,7 @@ public func walletAddress(publicKey: WalletPublicKey, tonInstance: TonInstance) 
 
 private enum GetWalletStateError {
     case generic
+    case network
 }
 
 private func getWalletState(address: String, tonInstance: TonInstance) -> Signal<(WalletState, Int64), GetWalletStateError> {
@@ -650,6 +724,7 @@ private func getWalletState(address: String, tonInstance: TonInstance) -> Signal
 
 public enum GetCombinedWalletStateError {
     case generic
+    case network
 }
 
 public enum CombinedWalletStateResult {
@@ -682,8 +757,19 @@ public func getCombinedWalletState(postbox: Postbox, subject: CombinedWalletStat
                 |> castError(GetCombinedWalletStateError.self)
                 |> mapToSignal { address -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
                     return getWalletState(address: address, tonInstance: tonInstance)
-                    |> mapError { _ -> GetCombinedWalletStateError in
-                        return .generic
+                    |> retryTonRequest(isNetworkError: { error in
+                        if case .network = error {
+                            return true
+                        } else {
+                            return false
+                        }
+                    })
+                    |> mapError { error -> GetCombinedWalletStateError in
+                        if case .network = error {
+                            return .network
+                        } else {
+                            return .generic
+                        }
                     }
                     |> mapToSignal { walletState, syncUtime -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
                         let topTransactions: Signal<[WalletTransaction], GetCombinedWalletStateError>
@@ -691,8 +777,12 @@ public func getCombinedWalletState(postbox: Postbox, subject: CombinedWalletStat
                             topTransactions = .single(cachedState?.topTransactions ?? [])
                         } else {
                             topTransactions = getWalletTransactions(address: address, previousId: nil, tonInstance: tonInstance)
-                            |> mapError { _ -> GetCombinedWalletStateError in
-                                return .generic
+                            |> mapError { error -> GetCombinedWalletStateError in
+                                if case .network = error {
+                                    return .network
+                                } else {
+                                    return .generic
+                                }
                             }
                         }
                         return topTransactions
@@ -744,6 +834,9 @@ public enum SendGramsFromWalletError {
     case secretDecryptionFailed
     case invalidAddress
     case destinationIsNotInitialized
+    case messageTooLong
+    case notEnoughFunds
+    case network
 }
 
 public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, serverSalt: Data, toAddress: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
@@ -862,6 +955,7 @@ private extension WalletTransaction {
 
 public enum GetWalletTransactionsError {
     case generic
+    case network
 }
 
 public func getWalletTransactions(address: String, previousId: WalletTransactionId?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
@@ -885,18 +979,50 @@ public func getWalletTransactions(address: String, previousId: WalletTransaction
     }
 }
 
+private func retryTonRequest<T, E>(isNetworkError: @escaping (E) -> Bool) -> (Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        return signal
+        |> retry(retryOnError: isNetworkError, delayIncrement: 0.2, maxDelay: 5.0, maxRetries: 3, onQueue: Queue.concurrentDefaultQueue())
+    }
+}
+
+private enum WalletLastTransactionIdError {
+    case generic
+    case network
+}
+
 private func getWalletTransactionsOnce(address: String, previousId: WalletTransactionId?, tonInstance: TonInstance) -> Signal<[WalletTransaction], GetWalletTransactionsError> {
     let previousIdValue: Signal<WalletTransactionId?, GetWalletTransactionsError>
     if let previousId = previousId {
         previousIdValue = .single(previousId)
     } else {
         previousIdValue = tonInstance.walletLastTransactionId(address: address)
-        |> castError(GetWalletTransactionsError.self)
+        |> retryTonRequest(isNetworkError: { error in
+            if case .network = error {
+                return true
+            } else {
+                return false
+            }
+        })
+        |> mapError { error -> GetWalletTransactionsError in
+            if case .network = error {
+                return .network
+            } else {
+                return .generic
+            }
+        }
     }
     return previousIdValue
     |> mapToSignal { previousId in
         if let previousId = previousId {
             return tonInstance.getWalletTransactions(address: address, previousId: previousId)
+            |> retryTonRequest(isNetworkError: { error in
+                if case .network = error {
+                    return true
+                } else {
+                    return false
+                }
+            })
         } else {
             return .single([])
         }

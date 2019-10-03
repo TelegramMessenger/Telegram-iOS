@@ -25,7 +25,6 @@
 
 namespace tonlib {
 td::Result<DecryptedKey> EncryptedKey::decrypt(td::Slice local_password, bool check_public_key) {
-  LOG(ERROR) << "decrypt";
   if (secret.size() != 32) {
     return td::Status::Error("Failed to decrypt key: invalid secret size");
   }

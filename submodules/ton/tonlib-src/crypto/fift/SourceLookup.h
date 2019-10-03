@@ -79,7 +79,7 @@ class SourceLookup {
     if (os_time_) {
       return os_time_->now();
     }
-    return static_cast<td::uint32>(td::Time::now());
+    return static_cast<td::uint32>(td::Clocks::system());
   }
 
  protected:

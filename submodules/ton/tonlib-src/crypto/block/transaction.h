@@ -98,6 +98,8 @@ struct ComputePhaseConfig {
   td::uint64 gas_limit;
   td::uint64 special_gas_limit;
   td::uint64 gas_credit;
+  td::uint64 flat_gas_limit = 0;
+  td::uint64 flat_gas_price = 0;
   static constexpr td::uint64 gas_infty = (1ULL << 63) - 1;
   td::RefInt256 gas_price256;
   td::RefInt256 max_gas_threshold;
@@ -126,6 +128,8 @@ struct ComputePhaseConfig {
   Ref<vm::Cell> get_lib_root() const {
     return libraries ? libraries->get_root_cell() : Ref<vm::Cell>{};
   }
+  bool parse_GasLimitsPrices(Ref<vm::CellSlice> cs, td::RefInt256& freeze_due_limit, td::RefInt256& delete_due_limit);
+  bool parse_GasLimitsPrices(Ref<vm::Cell> cell, td::RefInt256& freeze_due_limit, td::RefInt256& delete_due_limit);
 };
 
 // msg_fwd_fees = (lump_price + ceil((bit_price * msg.bits + cell_price * msg.cells)/2^16)) nanograms

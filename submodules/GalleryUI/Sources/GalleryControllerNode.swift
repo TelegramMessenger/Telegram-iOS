@@ -375,9 +375,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         
         if !self.areControlsHidden {
             if transition < 0.5 {
-                self.statusBar?.updateAlpha(0.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+                self.statusBar?.statusBarStyle = .Ignore
             } else {
-                self.statusBar?.updateAlpha(1.0, transition: .animated(duration: 0.3, curve: .easeInOut))
+                self.statusBar?.statusBarStyle = .White
             }
             self.navigationBar?.alpha = transition
             self.footerNode.alpha = transition

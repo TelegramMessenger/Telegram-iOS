@@ -106,8 +106,8 @@ class ActorExecutor {
     return flags_;
   }
 
-  void start();
-  void finish();
+  void start() noexcept;
+  void finish() noexcept;
 
   bool flush_one(ActorSignals &signals);
   bool flush_one_signal(ActorSignals &signals);

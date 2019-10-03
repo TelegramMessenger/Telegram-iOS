@@ -14,6 +14,17 @@
 namespace ton {
 namespace tonlib_api{
   using namespace td;
+Result<int32> tl_constructor_from_string(tonlib_api::KeyStoreType *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"keyStoreTypeDirectory", -378990038},
+    {"keyStoreTypeInMemory", -2106848825}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
 Result<int32> tl_constructor_from_string(tonlib_api::LogStream *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
     {"logStreamDefault", 1390581436},
@@ -51,14 +62,16 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"exportedPemKey", 1425473725},
     {"inputKey", 869287093},
     {"key", -1978362923},
+    {"keyStoreTypeDirectory", -378990038},
+    {"keyStoreTypeInMemory", -2106848825},
     {"logStreamDefault", 1390581436},
     {"logStreamFile", -1880085930},
     {"logStreamEmpty", -499912244},
     {"logTags", -1604930601},
     {"logVerbosityLevel", 1734624234},
     {"ok", -722616727},
-    {"options", 789823302},
-    {"sendGramsResult", -858318471},
+    {"options", -1924388359},
+    {"sendGramsResult", 426872238},
     {"unpackedAccountAddress", 1892946998},
     {"updateSendLiteServerQuery", -1555130916},
     {"generic.accountStateRaw", -1387096685},
@@ -69,9 +82,9 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"internal.transactionId", -989527262},
     {"raw.accountState", 461615898},
     {"raw.initialAccountState", 777456197},
-    {"raw.message", -259956097},
-    {"raw.transaction", -1159530820},
-    {"raw.transactions", 240548986},
+    {"raw.message", -906281442},
+    {"raw.transaction", 1887601793},
+    {"raw.transactions", -2063931155},
     {"testGiver.accountState", 860930426},
     {"testWallet.accountState", 305698744},
     {"testWallet.initialAccountState", -1231516227},
@@ -91,6 +104,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"changeLocalPassword", -1685491421},
     {"close", -1187782273},
     {"createNewKey", -1861385712},
+    {"deleteAllKeys", 1608776483},
     {"deleteKey", -1579595571},
     {"exportEncryptedKey", 155352861},
     {"exportKey", 399723440},
@@ -254,6 +268,18 @@ Status from_json(tonlib_api::key &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::keyStoreTypeDirectory &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "directory", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.directory_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::keyStoreTypeInMemory &to, JsonObject &from) {
+  return Status::OK();
+}
 Status from_json(tonlib_api::logStreamDefault &to, JsonObject &from) {
   return Status::OK();
 }
@@ -304,9 +330,9 @@ Status from_json(tonlib_api::options &to, JsonObject &from) {
     }
   }
   {
-    TRY_RESULT(value, get_json_object_field(from, "keystore_directory", JsonValue::Type::Null, true));
+    TRY_RESULT(value, get_json_object_field(from, "keystore_type", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
-      TRY_STATUS(from_json(to.keystore_directory_, value));
+      TRY_STATUS(from_json(to.keystore_type_, value));
     }
   }
   return Status::OK();
@@ -316,6 +342,12 @@ Status from_json(tonlib_api::sendGramsResult &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "sent_until", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.sent_until_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "body_hash", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.body_hash_, value));
     }
   }
   return Status::OK();
@@ -490,6 +522,30 @@ Status from_json(tonlib_api::raw_message &to, JsonObject &from) {
     }
   }
   {
+    TRY_RESULT(value, get_json_object_field(from, "fwd_fee", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.fwd_fee_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "ihr_fee", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.ihr_fee_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "created_lt", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.created_lt_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "body_hash", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.body_hash_, value));
+    }
+  }
+  {
     TRY_RESULT(value, get_json_object_field(from, "message", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json_bytes(to.message_, value));
@@ -520,6 +576,18 @@ Status from_json(tonlib_api::raw_transaction &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "fee", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.fee_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "storage_fee", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.storage_fee_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "other_fee", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.other_fee_, value));
     }
   }
   {
@@ -723,6 +791,9 @@ Status from_json(tonlib_api::createNewKey &to, JsonObject &from) {
       TRY_STATUS(from_json_bytes(to.random_extra_seed_, value));
     }
   }
+  return Status::OK();
+}
+Status from_json(tonlib_api::deleteAllKeys &to, JsonObject &from) {
   return Status::OK();
 }
 Status from_json(tonlib_api::deleteKey &to, JsonObject &from) {
@@ -1291,6 +1362,18 @@ void to_json(JsonValueScope &jv, const tonlib_api::key &object) {
   jo << ctie("public_key", ToJson(object.public_key_));
   jo << ctie("secret", ToJson(JsonBytes{object.secret_}));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::KeyStoreType &object) {
+  tonlib_api::downcast_call(const_cast<tonlib_api::KeyStoreType &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
+void to_json(JsonValueScope &jv, const tonlib_api::keyStoreTypeDirectory &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "keyStoreTypeDirectory");
+  jo << ctie("directory", ToJson(object.directory_));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::keyStoreTypeInMemory &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "keyStoreTypeInMemory");
+}
 void to_json(JsonValueScope &jv, const tonlib_api::LogStream &object) {
   tonlib_api::downcast_call(const_cast<tonlib_api::LogStream &>(object), [&jv](const auto &object) { to_json(jv, object); });
 }
@@ -1328,12 +1411,15 @@ void to_json(JsonValueScope &jv, const tonlib_api::options &object) {
   if (object.config_) {
     jo << ctie("config", ToJson(object.config_));
   }
-  jo << ctie("keystore_directory", ToJson(object.keystore_directory_));
+  if (object.keystore_type_) {
+    jo << ctie("keystore_type", ToJson(object.keystore_type_));
+  }
 }
 void to_json(JsonValueScope &jv, const tonlib_api::sendGramsResult &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "sendGramsResult");
   jo << ctie("sent_until", ToJson(object.sent_until_));
+  jo << ctie("body_hash", ToJson(JsonBytes{object.body_hash_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::unpackedAccountAddress &object) {
   auto jo = jv.enter_object();
@@ -1416,6 +1502,10 @@ void to_json(JsonValueScope &jv, const tonlib_api::raw_message &object) {
   jo << ctie("source", ToJson(object.source_));
   jo << ctie("destination", ToJson(object.destination_));
   jo << ctie("value", ToJson(JsonInt64{object.value_}));
+  jo << ctie("fwd_fee", ToJson(JsonInt64{object.fwd_fee_}));
+  jo << ctie("ihr_fee", ToJson(JsonInt64{object.ihr_fee_}));
+  jo << ctie("created_lt", ToJson(JsonInt64{object.created_lt_}));
+  jo << ctie("body_hash", ToJson(JsonBytes{object.body_hash_}));
   jo << ctie("message", ToJson(JsonBytes{object.message_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::raw_transaction &object) {
@@ -1427,6 +1517,8 @@ void to_json(JsonValueScope &jv, const tonlib_api::raw_transaction &object) {
     jo << ctie("transaction_id", ToJson(object.transaction_id_));
   }
   jo << ctie("fee", ToJson(JsonInt64{object.fee_}));
+  jo << ctie("storage_fee", ToJson(JsonInt64{object.storage_fee_}));
+  jo << ctie("other_fee", ToJson(JsonInt64{object.other_fee_}));
   if (object.in_msg_) {
     jo << ctie("in_msg", ToJson(object.in_msg_));
   }
@@ -1513,6 +1605,10 @@ void to_json(JsonValueScope &jv, const tonlib_api::createNewKey &object) {
   jo << ctie("local_password", ToJson(JsonBytes{object.local_password_}));
   jo << ctie("mnemonic_password", ToJson(JsonBytes{object.mnemonic_password_}));
   jo << ctie("random_extra_seed", ToJson(JsonBytes{object.random_extra_seed_}));
+}
+void to_json(JsonValueScope &jv, const tonlib_api::deleteAllKeys &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "deleteAllKeys");
 }
 void to_json(JsonValueScope &jv, const tonlib_api::deleteKey &object) {
   auto jo = jv.enter_object();

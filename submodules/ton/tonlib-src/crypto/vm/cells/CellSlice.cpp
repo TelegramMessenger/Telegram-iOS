@@ -745,6 +745,26 @@ Ref<Cell> CellSlice::fetch_ref() {
   }
 }
 
+bool CellSlice::prefetch_maybe_ref(Ref<vm::Cell>& res) const {
+  auto z = prefetch_ulong(1);
+  if (!z) {
+    res.clear();
+    return true;
+  } else {
+    return z == 1 && prefetch_ref_to(res);
+  }
+}
+
+bool CellSlice::fetch_maybe_ref(Ref<vm::Cell>& res) {
+  auto z = prefetch_ulong(1);
+  if (!z) {
+    res.clear();
+    return advance(1);
+  } else {
+    return z == 1 && prefetch_ref_to(res) && advance_ext(1, 1);
+  }
+}
+
 bool CellSlice::begins_with(unsigned bits, unsigned long long value) const {
   return have(bits) && !((prefetch_ulong(bits) ^ value) & ((1ULL << bits) - 1));
 }

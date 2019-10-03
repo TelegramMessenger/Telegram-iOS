@@ -22,6 +22,8 @@
 #include "tonlib/Config.h"
 #include "tonlib/ExtClient.h"
 
+#include "td/utils/tl_helpers.h"
+
 namespace block {
 struct BlockProofChain;
 }
@@ -89,25 +91,44 @@ struct LastBlockState {
   ton::BlockIdExt last_key_block_id;
   ton::BlockIdExt last_block_id;
   td::int64 utime{0};
+  ton::BlockIdExt init_block_id;
+
+  static constexpr td::int32 magic = 0xa7f171a4;
+  enum Version { None = 0, Magic, InitBlock, Next };
+  static constexpr td::int32 version = Version::Next - 1;
 
   template <class StorerT>
   void store(StorerT &storer) const {
     using td::store;
     using tonlib::store;
+    store(magic, storer);
+    store(version, storer);
+
     store(zero_state_id, storer);
     store(last_key_block_id, storer);
     store(last_block_id, storer);
     store(utime, storer);
+    store(init_block_id, storer);
   }
 
   template <class ParserT>
   void parse(ParserT &parser) {
     using td::parse;
     using tonlib::parse;
+    td::int32 version = 0;
+    if (parser.can_prefetch_int() && parser.prefetch_int_unsafe() == magic) {
+      td::int32 magic;
+      parse(magic, parser);
+      parse(version, parser);
+    }
+
     parse(zero_state_id, parser);
     parse(last_key_block_id, parser);
     parse(last_block_id, parser);
     parse(utime, parser);
+    if (version >= InitBlock) {
+      parse(init_block_id, parser);
+    }
   }
 };
 
@@ -132,20 +153,36 @@ class LastBlock : public td::actor::Actor {
   td::Status fatal_error_;
 
   enum class QueryState { Empty, Active, Done };
-  QueryState get_mc_info_state_{QueryState::Empty};
-  QueryState get_last_block_state_{QueryState::Empty};
-  QueryState check_init_block_state_{QueryState::Empty};
+  QueryState get_mc_info_state_{QueryState::Empty};       // just to check zero state
+  QueryState check_init_block_state_{QueryState::Empty};  // init_block <---> last_key_block (from older to newer)
+  QueryState get_last_block_state_{QueryState::Empty};    // last_key_block_id --> ?
 
   // stats
-  td::Timer total_sync_;
-  td::Timer validate_;
-  td::uint32 queries_;
+  struct Stats {
+    td::Timer total_sync_;
+    td::Timer validate_;
+    td::uint32 queries_;
+
+    void start() {
+      total_sync_ = td::Timer();
+      validate_ = td::Timer(true);
+      queries_ = 0;
+    }
+
+    friend td::StringBuilder &operator<<(td::StringBuilder &sb, const Stats &stats) {
+      return sb << "   net queries: " << stats.queries_ << "\n"
+                << "   total: " << stats.total_sync_ << " validation: " << stats.validate_;
+    }
+  };
+
+  Stats check_init_block_stats_;
+  Stats get_last_block_stats_;
 
   std::vector<td::Promise<LastBlockState>> promises_;
 
-  void do_check_init_block(ton::BlockIdExt from);
+  void do_check_init_block(ton::BlockIdExt from, ton::BlockIdExt to);
   void on_init_block_proof(
-      ton::BlockIdExt from,
+      ton::BlockIdExt from, ton::BlockIdExt to,
       td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_partialBlockProof>> r_block_proof);
   void on_masterchain_info(td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_masterchainInfo>> r_info);
   void do_get_last_block();
@@ -155,7 +192,11 @@ class LastBlock : public td::actor::Actor {
       ton::BlockIdExt from,
       td::Result<ton::ton_api::object_ptr<ton::lite_api::liteServer_partialBlockProof>> r_block_proof);
 
-  void update_zero_state(ton::ZeroStateIdExt zero_state_id);
+  td::Result<std::unique_ptr<block::BlockProofChain>> process_block_proof(
+      ton::BlockIdExt from, ton::ton_api::object_ptr<ton::lite_api::liteServer_partialBlockProof> block_proof);
+
+  void update_state(block::BlockProofChain &chain);
+  void update_zero_state(ton::ZeroStateIdExt zero_state_id, td::Slice source);
 
   bool update_mc_last_block(ton::BlockIdExt mc_block_id);
   bool update_mc_last_key_block(ton::BlockIdExt mc_key_block_id);

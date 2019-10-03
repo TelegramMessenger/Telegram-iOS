@@ -226,7 +226,8 @@ Result<int32> tl_constructor_from_string(ton_api::db_state_Key *object, const st
     {"db.state.key.initBlockId", 1971484899},
     {"db.state.key.gcBlockId", -1015417890},
     {"db.state.key.shardClient", -912576121},
-    {"db.state.key.asyncSerializer", 699304479}
+    {"db.state.key.asyncSerializer", 699304479},
+    {"db.state.key.hardforks", -420206662}
   };
   auto it = m.find(str);
   if (it == m.end()) {
@@ -445,6 +446,17 @@ Result<int32> tl_constructor_from_string(ton_api::tonNode_PreparedState *object,
   }
   return it->second;
 }
+Result<int32> tl_constructor_from_string(ton_api::validator_Group *object, const std::string &str) {
+  static const std::unordered_map<Slice, int32, SliceHash> m = {
+    {"validator.group", -120029535},
+    {"validator.groupEx", 479350270}
+  };
+  auto it = m.find(str);
+  if (it == m.end()) {
+    return Status::Error(str + "Unknown class");
+  }
+  return it->second;
+}
 Result<int32> tl_constructor_from_string(ton_api::validator_config_Local *object, const std::string &str) {
   static const std::unordered_map<Slice, int32, SliceHash> m = {
     {"validator.config.local", 1716256616},
@@ -596,12 +608,14 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"db.state.asyncSerializer", -751883871},
     {"db.state.destroyedSessions", -1381443196},
     {"db.state.gcBlockId", -550453937},
+    {"db.state.hardforks", -2047668988},
     {"db.state.initBlockId", 1932303605},
     {"db.state.key.destroyedSessions", -386404007},
     {"db.state.key.initBlockId", 1971484899},
     {"db.state.key.gcBlockId", -1015417890},
     {"db.state.key.shardClient", -912576121},
     {"db.state.key.asyncSerializer", 699304479},
+    {"db.state.key.hardforks", -420206662},
     {"db.state.shardClient", 186033821},
     {"dht.key", -160964977},
     {"dht.keyDescription", 673009157},
@@ -723,6 +737,7 @@ Result<int32> tl_constructor_from_string(ton_api::Object *object, const std::str
     {"tonNode.success", -1063902129},
     {"tonNode.zeroStateIdExt", 494024110},
     {"validator.group", -120029535},
+    {"validator.groupEx", 479350270},
     {"validator.config.global", -2038562966},
     {"validator.config.local", 1716256616},
     {"validator.config.random.local", 1501795426},
@@ -2554,6 +2569,15 @@ Status from_json(ton_api::db_state_gcBlockId &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(ton_api::db_state_hardforks &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "blocks", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.blocks_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(ton_api::db_state_initBlockId &to, JsonObject &from) {
   {
     TRY_RESULT(value, get_json_object_field(from, "block", JsonValue::Type::Null, true));
@@ -2576,6 +2600,9 @@ Status from_json(ton_api::db_state_key_shardClient &to, JsonObject &from) {
   return Status::OK();
 }
 Status from_json(ton_api::db_state_key_asyncSerializer &to, JsonObject &from) {
+  return Status::OK();
+}
+Status from_json(ton_api::db_state_key_hardforks &to, JsonObject &from) {
   return Status::OK();
 }
 Status from_json(ton_api::db_state_shardClient &to, JsonObject &from) {
@@ -4485,6 +4512,45 @@ Status from_json(ton_api::validator_group &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "shard", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.shard_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "catchain_seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.catchain_seqno_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "config_hash", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.config_hash_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "members", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.members_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(ton_api::validator_groupEx &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "workchain", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.workchain_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "shard", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.shard_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "vertical_seqno", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.vertical_seqno_, value));
     }
   }
   {
@@ -6631,6 +6697,11 @@ void to_json(JsonValueScope &jv, const ton_api::db_state_gcBlockId &object) {
     jo << ctie("block", ToJson(object.block_));
   }
 }
+void to_json(JsonValueScope &jv, const ton_api::db_state_hardforks &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.state.hardforks");
+  jo << ctie("blocks", ToJson(object.blocks_));
+}
 void to_json(JsonValueScope &jv, const ton_api::db_state_initBlockId &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "db.state.initBlockId");
@@ -6660,6 +6731,10 @@ void to_json(JsonValueScope &jv, const ton_api::db_state_key_shardClient &object
 void to_json(JsonValueScope &jv, const ton_api::db_state_key_asyncSerializer &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "db.state.key.asyncSerializer");
+}
+void to_json(JsonValueScope &jv, const ton_api::db_state_key_hardforks &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "db.state.key.hardforks");
 }
 void to_json(JsonValueScope &jv, const ton_api::db_state_shardClient &object) {
   auto jo = jv.enter_object();
@@ -7535,11 +7610,24 @@ void to_json(JsonValueScope &jv, const ton_api::tonNode_zeroStateIdExt &object) 
   jo << ctie("root_hash", ToJson(object.root_hash_));
   jo << ctie("file_hash", ToJson(object.file_hash_));
 }
+void to_json(JsonValueScope &jv, const ton_api::validator_Group &object) {
+  ton_api::downcast_call(const_cast<ton_api::validator_Group &>(object), [&jv](const auto &object) { to_json(jv, object); });
+}
 void to_json(JsonValueScope &jv, const ton_api::validator_group &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "validator.group");
   jo << ctie("workchain", ToJson(object.workchain_));
   jo << ctie("shard", ToJson(JsonInt64{object.shard_}));
+  jo << ctie("catchain_seqno", ToJson(object.catchain_seqno_));
+  jo << ctie("config_hash", ToJson(object.config_hash_));
+  jo << ctie("members", ToJson(object.members_));
+}
+void to_json(JsonValueScope &jv, const ton_api::validator_groupEx &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "validator.groupEx");
+  jo << ctie("workchain", ToJson(object.workchain_));
+  jo << ctie("shard", ToJson(JsonInt64{object.shard_}));
+  jo << ctie("vertical_seqno", ToJson(object.vertical_seqno_));
   jo << ctie("catchain_seqno", ToJson(object.catchain_seqno_));
   jo << ctie("config_hash", ToJson(object.config_hash_));
   jo << ctie("members", ToJson(object.members_));

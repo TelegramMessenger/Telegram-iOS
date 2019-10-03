@@ -417,6 +417,8 @@ public struct NetworkInitializationArguments {
     }
 }
 
+private let cloudDataContext = makeCloudDataContext()
+
 func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
@@ -484,17 +486,18 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             var wrappedAdditionalSource: MTSignal?
             
             if #available(iOS 10.0, *) {
-                let additionalSource = cloudDataAdditionalAddressSource(phoneNumber: .single(phoneNumber ?? ""))
-                wrappedAdditionalSource = MTSignal(generator: { subscriber in
-                    let disposable = additionalSource.start(next: { value in
-                        subscriber?.putNext(value)
-                    }, completed: {
-                        subscriber?.putCompletion()
+                if let cloudDataContext = cloudDataContext {
+                    wrappedAdditionalSource = MTSignal(generator: { subscriber in
+                        let disposable = cloudDataContext.get(phoneNumber: .single(phoneNumber)).start(next: { value in
+                            subscriber?.putNext(value)
+                        }, completed: {
+                            subscriber?.putCompletion()
+                        })
+                        return MTBlockDisposable(block: {
+                            disposable.dispose()
+                        })
                     })
-                    return MTBlockDisposable(block: {
-                        disposable.dispose()
-                    })
-                })
+                }
             }
                 
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber))
@@ -1010,7 +1013,8 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
 }
 
 public func retryRequest<T>(signal: Signal<T, MTRpcError>) -> Signal<T, NoError> {
-    return signal |> retry(0.2, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
+    return signal
+    |> retry(0.2, maxDelay: 5.0, onQueue: Queue.concurrentDefaultQueue())
 }
 
 class Keychain: NSObject, MTKeychain {
@@ -1045,7 +1049,7 @@ class Keychain: NSObject, MTKeychain {
     }
 }
 
-public func makeCloudDataContext() -> Any? {
+func makeCloudDataContext() -> CloudDataContext? {
     if #available(iOS 10.0, *) {
         return CloudDataContextImpl()
     } else {

@@ -751,7 +751,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 strongSelf.didSetContentReady = true
                 strongSelf.contentReady.set(.single(true))
             }
-        }, error: { [weak self] _ in
+        }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
             }
@@ -780,7 +780,14 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 strongSelf.contentReady.set(.single(true))
             }
             
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorTitle, text: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorText, actions: [
+            let text: String
+            switch error {
+            case .generic:
+                text = strongSelf.presentationData.strings.Wallet_Info_RefreshErrorText
+            case .network:
+                text = strongSelf.presentationData.strings.Wallet_Info_RefreshErrorNetworkText
+            }
+            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorTitle, text: text, actions: [
                 TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                 })
             ], actionLayout: .vertical), nil)
