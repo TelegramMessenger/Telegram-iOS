@@ -66,7 +66,10 @@ private final class TonInstanceImpl {
         } else {
             let network = self.network
             instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, blockchainName: self.blockchainName, performExternalRequest: { request in
-                let _ = (network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))).start(next: { result in
+                let _ = (
+                    network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))
+                    |> timeout(10.0, queue: .concurrentDefaultQueue(), alternate: .fail(MTRpcError(errorCode: 500, errorDescription: "NETWORK_ERROR")))
+                ).start(next: { result in
                     switch result {
                     case let .liteResponse(response):
                         request.onResult(response.makeData(), nil)
