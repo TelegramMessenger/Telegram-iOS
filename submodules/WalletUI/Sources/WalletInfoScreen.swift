@@ -692,6 +692,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 return
             }
             let combinedState: CombinedWalletState?
+            var isUpdated = false
             switch value {
             case let .cached(state):
                 if strongSelf.combinedState != nil {
@@ -705,6 +706,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 }
                 combinedState = state
             case let .updated(state):
+                isUpdated = true
                 strongSelf.loadingIndicator.stopAnimating()
                 strongSelf.loadingIndicator.isHidden = true
                 combinedState = state
@@ -729,7 +731,9 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 
                 strongSelf.transactionsLoaded(isReload: true, transactions: combinedState.topTransactions)
                 
-                strongSelf.headerNode.isRefreshing = false
+                if isUpdated {
+                    strongSelf.headerNode.isRefreshing = false
+                }
                 
                 if strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
                     strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: strongSelf.listOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut), isScrolling: false)

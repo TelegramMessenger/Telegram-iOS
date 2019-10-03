@@ -83,7 +83,7 @@ final class WalletRefreshNode: ASDisplayNode {
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = UIImage(bundleImageName: "Wallet/RefreshIcon")
+        self.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Wallet/RefreshIcon"), color: UIColor(white: 0.6, alpha: 1.0))
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(), size: image.size)
         }
@@ -199,7 +199,7 @@ final class WalletRefreshNode: ASDisplayNode {
         
         let iconSize = self.iconNode.image?.size ?? CGSize(width: 20.0, height: 20.0)
         let titleSize = self.titleNode.updateLayout(CGSize(width: 200.0, height: 100.0))
-        let iconSpacing: CGFloat = 5.0
+        let iconSpacing: CGFloat = 1.0
         
         let contentWidth = iconSize.width + titleSize.width + iconSpacing
         let contentOrigin = floor(-contentWidth / 2.0)
