@@ -50,8 +50,7 @@ private func fetchRawData(prefix: String) -> Signal<Data, FetchError> {
 public func cloudDataAdditionalAddressSource(phoneNumber: Signal<String?, NoError>) -> Signal<MTBackupDatacenterData, NoError> {
     return phoneNumber
     |> take(1)
-    |> mapToSignal { _ -> Signal<MTBackupDatacenterData, NoError> in
-        let phoneNumber: String? = "7950"
+    |> mapToSignal { phoneNumber -> Signal<MTBackupDatacenterData, NoError> in
         var prefix = ""
         if let phoneNumber = phoneNumber, phoneNumber.count >= 1 {
             prefix = String(phoneNumber[phoneNumber.startIndex ..< phoneNumber.index(after: phoneNumber.startIndex)])

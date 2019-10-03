@@ -31,6 +31,8 @@ public final class JoinLinkPreviewController: ViewController {
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -76,8 +78,6 @@ public final class JoinLinkPreviewController: ViewController {
     
     override public func loadView() {
         super.loadView()
-        
-        self.statusBar.removeFromSupernode()
     }
     
     override public func viewDidAppear(_ animated: Bool) {

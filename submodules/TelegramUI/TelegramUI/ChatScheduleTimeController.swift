@@ -38,6 +38,8 @@ final class ChatScheduleTimeController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
+        self.statusBar.statusBarStyle = .Ignore
+        
         self.blocksBackgroundWhenInOverlay = true
         
         self.presentationDataDisposable = (context.sharedContext.presentationData
@@ -74,8 +76,6 @@ final class ChatScheduleTimeController: ViewController {
     
     override public func loadView() {
         super.loadView()
-        
-        self.statusBar.removeFromSupernode()
     }
     
     override public func viewDidAppear(_ animated: Bool) {

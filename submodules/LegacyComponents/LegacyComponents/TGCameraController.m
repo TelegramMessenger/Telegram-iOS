@@ -739,7 +739,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     [UIView animateWithDuration:0.3f animations:^
     {
-        [_context setApplicationStatusBarAlpha:1.0f];
+        //[_context setApplicationStatusBarAlpha:1.0f];
     }];
 }
 
@@ -1816,7 +1816,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
     
     [UIView animateWithDuration:0.3f animations:^
     {
-        [_context setApplicationStatusBarAlpha:1.0f];
+        //[_context setApplicationStatusBarAlpha:1.0f];
     }];
     
     [self setInterfaceHidden:true animated:true];
@@ -1892,7 +1892,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
 {
     _finishedWithResult = true;
     
-    [_context setApplicationStatusBarAlpha:1.0f];
+    //[_context setApplicationStatusBarAlpha:1.0f];
     
     self.view.hidden = true;
     

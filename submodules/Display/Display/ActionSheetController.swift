@@ -25,6 +25,7 @@ open class ActionSheetController: ViewController, PresentableController, Standal
         
         super.init(navigationBarPresentationData: nil)
         
+        self.statusBar.statusBarStyle = .Ignore
         self.blocksBackgroundWhenInOverlay = true
     }
     

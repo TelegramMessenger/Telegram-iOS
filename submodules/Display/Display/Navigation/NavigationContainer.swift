@@ -173,7 +173,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 
                 topController.viewWillDisappear(true)
                 let topNode = topController.displayNode
-                bottomController.containerLayoutUpdated(layout.withUpdatedInputHeight(nil), transition: .immediate)
+                var bottomControllerLayout = layout
+                if bottomController.view.disableAutomaticKeyboardHandling.isEmpty {
+                    bottomControllerLayout = bottomControllerLayout.withUpdatedInputHeight(nil)
+                }
+                bottomController.containerLayoutUpdated(bottomControllerLayout, transition: .immediate)
                 bottomController.viewWillAppear(true)
                 let bottomNode = bottomController.displayNode
                 
@@ -274,7 +278,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                         } else {
                             transitionType = .pop
                         }
-                        self.state.pending = PendingChild(value: self.makeChild(layout: layout.withUpdatedInputHeight(nil), value: last), transitionType: transitionType, transition: transition, update: { [weak self] pendingChild in
+                        var updatedLayout = layout
+                        if last.view.disableAutomaticKeyboardHandling.isEmpty {
+                            updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+                        }
+                        self.state.pending = PendingChild(value: self.makeChild(layout: updatedLayout, value: last), transitionType: transitionType, transition: transition, update: { [weak self] pendingChild in
                             self?.pendingChildIsReady(pendingChild)
                         })
                     }
@@ -289,7 +297,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 self.state.pending = nil
                 let previous = self.state.top
                 self.state.top = pending.value
-                self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: layout.withUpdatedInputHeight(nil), transition: pending.transition)
+                var updatedLayout = layout
+                if pending.value.value.view.disableAutomaticKeyboardHandling.isEmpty {
+                    updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+                }
+                self.topTransition(from: previous, to: pending.value, transitionType: pending.transitionType, layout: updatedLayout, transition: pending.transition)
                 statusBarTransition = pending.transition
                 if !self.isReady {
                     self.isReady = true
@@ -307,7 +319,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
         var updatedStatusBarStyle = self.statusBarStyle
         if let top = self.state.top {
             var updatedLayout = layout
-            if let topTransition = self.state.transition {
+            if let topTransition = self.state.transition, top.value.view.disableAutomaticKeyboardHandling.isEmpty {
                 updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
             }
             self.applyLayout(layout: updatedLayout, to: top, isMaster: true, transition: transition)
@@ -408,7 +420,10 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     private func makeChild(layout: ContainerViewLayout, value: ViewController) -> Child {
-        let updatedLayout = layout.withUpdatedInputHeight(nil)
+        var updatedLayout = layout
+        if value.view.disableAutomaticKeyboardHandling.isEmpty {
+            updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
+        }
         value.containerLayoutUpdated(updatedLayout, transition: .immediate)
         return Child(value: value, layout: updatedLayout)
     }
@@ -430,7 +445,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 break
             }
             if updatedLayout.inputHeight != nil {
-                if !self.canHaveKeyboardFocus {
+                if !self.canHaveKeyboardFocus && child.value.view.disableAutomaticKeyboardHandling.isEmpty {
                     updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
                 }
             }
@@ -439,7 +454,7 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 shouldSyncKeyboard = true
             }
             
-            if updatedLayout.inputHeight != nil {
+            if updatedLayout.inputHeight != nil && child.value.view.disableAutomaticKeyboardHandling.isEmpty {
                 if !self.canHaveKeyboardFocus || self.ignoreInputHeight {
                     updatedLayout = updatedLayout.withUpdatedInputHeight(nil)
                 }

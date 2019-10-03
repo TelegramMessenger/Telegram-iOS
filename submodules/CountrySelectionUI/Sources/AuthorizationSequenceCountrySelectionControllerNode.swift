@@ -111,7 +111,6 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         }
         self.sections = sections
         var sectionTitles = sections.map { $0.0 }
-        sectionTitles.insert(UITableView.indexSearch, at: 0)
         self.sectionTitles = sectionTitles
         
         super.init()

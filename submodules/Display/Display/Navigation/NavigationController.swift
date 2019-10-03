@@ -1078,7 +1078,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             if let layout = self.validLayout {
                 self.containerLayoutUpdated(layout, transition: transition)
-                inCallStatusBar.updateState(statusBar: nil, withSafeInsets: false, inCallText: forceInCallStatusBarText, animated: false)
+                inCallStatusBar.updateState(statusBar: nil, withSafeInsets: !layout.safeInsets.top.isZero, inCallText: forceInCallStatusBarText, animated: false)
             }
         } else if let inCallStatusBar = self.inCallStatusBar {
             self.inCallStatusBar = nil

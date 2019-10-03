@@ -93,6 +93,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         })
         self.displayNodeDidLoad()
         
+        self.controllerNode.view.disableAutomaticKeyboardHandling = [.forward, .backward]
+        
         self.controllerNode.signUpWithName = { [weak self] _, _ in
             self?.nextPressed()
         }

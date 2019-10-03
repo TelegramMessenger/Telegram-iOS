@@ -74,6 +74,8 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         self.displayNode = AuthorizationSequencePasswordEntryControllerNode(strings: self.strings, theme: self.theme)
         self.displayNodeDidLoad()
         
+        self.controllerNode.view.disableAutomaticKeyboardHandling = [.forward, .backward]
+        
         self.controllerNode.loginWithCode = { [weak self] _ in
             self?.nextPressed()
         }

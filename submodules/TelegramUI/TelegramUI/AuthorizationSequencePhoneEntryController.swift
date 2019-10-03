@@ -106,6 +106,9 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
             self.controllerNode.codeAndNumber = (code, name, number)
         }
         self.displayNodeDidLoad()
+        
+        self.controllerNode.view.disableAutomaticKeyboardHandling = [.forward, .backward]
+        
         self.controllerNode.selectCountryCode = { [weak self] in
             if let strongSelf = self {
                 let controller = AuthorizationSequenceCountrySelectionController(strings: strongSelf.strings, theme: strongSelf.theme)
@@ -118,8 +121,7 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 controller.dismissed = {
                     self?.controllerNode.activateInput()
                 }
-                strongSelf.controllerNode.view.endEditing(true)
-                strongSelf.present(controller, in: .window(.root))
+                strongSelf.push(controller)
             }
         }
         self.controllerNode.checkPhone = { [weak self] in

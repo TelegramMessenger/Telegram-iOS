@@ -36,7 +36,7 @@
             [subscriber putCompletion];
         } failure:^(__unused NSOperation *operation, __unused NSError *error)
         {
-            [subscriber putError:nil];
+            [subscriber putError:error];
         }];
         
         [operation start];
