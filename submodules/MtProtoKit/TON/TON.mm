@@ -325,7 +325,7 @@ typedef enum {
             make_object<tonlib_api::config>(
                 configString.UTF8String,
                 blockchainName.UTF8String,
-                false,
+                true,
                 false
             ),
             make_object<tonlib_api::keyStoreTypeDirectory>(
