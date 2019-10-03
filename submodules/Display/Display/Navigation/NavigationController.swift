@@ -154,6 +154,13 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     private var _displayNode: ASDisplayNode?
     public var displayNode: ASDisplayNode {
+        if let value = self._displayNode {
+            return value
+        }
+        if !self.isViewLoaded {
+            self.loadView()
+        }
+        
         return self._displayNode!
     }
     

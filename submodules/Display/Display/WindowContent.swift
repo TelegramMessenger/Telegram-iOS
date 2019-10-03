@@ -1082,12 +1082,11 @@ public class Window1 {
     }
     
     public func present(_ controller: ContainableController, on level: PresentationSurfaceLevel, blockInteraction: Bool = false, completion: @escaping () -> Void = {}) {
-        if let navigationController = self._rootController as? NavigationController, let controller = controller as? ViewController {
+        if level.rawValue <= 3, let navigationController = self._rootController as? NavigationController, let controller = controller as? ViewController {
             navigationController.presentOverlay(controller: controller, inGlobal: false)
         } else {
-            assertionFailure()
+            self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
         }
-        //self.presentationContext.present(controller, on: level, blockInteraction: blockInteraction, completion: completion)
     }
     
     public func presentInGlobalOverlay(_ controller: ContainableController) {
