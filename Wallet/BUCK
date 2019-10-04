@@ -1,0 +1,163 @@
+load("//Config:configs.bzl",
+    "app_binary_configs",
+    "library_configs",
+    "info_plist_substitutions",
+)
+
+load("//Config:buck_rule_macros.bzl",
+    "apple_lib",
+    "framework_binary_dependencies",
+    "framework_bundle_dependencies",
+)
+
+framework_dependencies = [
+    "//submodules/MtProtoKit:MtProtoKit",
+    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+    "//submodules/Postbox:Postbox",
+    "//submodules/TelegramCore:TelegramCore",
+    "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+    "//submodules/Display:Display",
+]
+
+resource_dependencies = [
+    "//submodules/TelegramUI:TelegramUIAssets",
+    "//submodules/TelegramUI:TelegramUIResources",
+    "//:AppResources",
+    "//:AppStringResources",
+    "//:InfoPlistStringResources",
+    "//:AppIntentVocabularyResources",
+    "//:Icons",
+    "//:AdditionalIcons",
+    "//:LaunchScreen",
+]
+
+apple_resource(
+    name = "AppResources",
+    files = glob([
+        "Telegram-iOS/Resources/**/*",
+    ], exclude = ["Telegram-iOS/Resources/**/.*"]),
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "AppStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/Localizable.strings",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "AppIntentVocabularyResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/AppIntentVocabulary.plist",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "InfoPlistStringResources",
+    files = [],
+    variants = glob([
+        "Telegram-iOS/*.lproj/InfoPlist.strings",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
+apple_asset_catalog(
+  name = "Icons",
+  dirs = [
+    "Telegram-iOS/Icons.xcassets",
+    "Telegram-iOS/AppIcons.xcassets",
+  ],
+  app_icon = "AppIconLLC",
+  visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "AdditionalIcons",
+    files = glob([
+        "Telegram-iOS/*.png",
+    ]),
+    visibility = ["PUBLIC"],
+)
+
+apple_resource(
+    name = "LaunchScreen",
+    files = [
+        "Telegram-iOS/Base.lproj/LaunchScreen.xib",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+apple_library(
+    name = "AppLibrary",
+    visibility = [
+        "//:",
+        "//...",
+    ],
+    configs = library_configs(),
+    swift_version = native.read_config("swift", "version"),
+    srcs = glob([
+        "Sources/**/*.m",
+        "Sources/**/*.swift",
+    ]),
+    exported_linker_flags = [
+        "-lc++",
+        "-lz"
+    ],
+    deps = [
+        "//submodules/WalletUI:WalletUI",
+    ]
+    + framework_binary_dependencies(framework_dependencies),
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+        "$SDKROOT/System/Library/Frameworks/VideoToolbox.framework",
+    ],
+)
+
+apple_binary(
+    name = "AppBinary",
+    visibility = [
+        "//:",
+        "//...",
+    ],
+    configs = app_binary_configs(),
+    swift_version = native.read_config("swift", "version"),
+    srcs = [
+        "SupportFiles/Empty.swift",
+    ],
+    deps = [
+        ":AppLibrary",
+    ]
+    + resource_dependencies,
+)
+
+apple_bundle(
+    name = "Wallet",
+    visibility = [
+        "//:",
+    ],
+    extension = "app",
+    binary = ":AppBinary",
+    product_name = "Wallet",
+    info_plist = "Info.plist",
+    info_plist_substitutions = app_info_plist_substitutions(),
+    deps = [
+    ]
+    + framework_bundle_dependencies(framework_dependencies),
+)
+
+apple_package(
+    name = "AppPackage",
+    bundle = ":Wallet",
+)
+
+xcode_workspace_config(
+    name = "workspace",
+    workspace_name = "WalletWorkspace",
+    src_target = ":Wallet",
+)

@@ -122,6 +122,24 @@ build_debug_arm64: check_env
     //:IntentsExtension#dwarf-and-dsym,iphoneos-arm64 \
 	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
+build_wallet_debug_arm64: check_env
+	$(BUCK) build \
+	//Wallet:AppPackage#iphoneos-arm64 \
+	//Wallet:Wallet#dwarf-and-dsym,iphoneos-arm64 \
+	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-arm64 \
+	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-arm64 \
+	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/TelegramCore:TelegramCore#shared,iphoneos-arm64 \
+	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/AsyncDisplayKit:AsyncDisplayKit#shared,iphoneos-arm64 \
+	//submodules/Display:Display#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/Display:Display#shared,iphoneos-arm64 \
+	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
+
 build: check_env
 	$(BUCK) build \
 	//:AppPackage#iphoneos-arm64,iphoneos-armv7 \
@@ -216,6 +234,8 @@ app_arm64: build_arm64 package_arm64
 
 app_debug_arm64: build_debug_arm64 package_debug_arm64
 
+wallet_debug_arm64: build_wallet_debug_arm64
+
 build_buckdebug: check_env
 	BUCK_DEBUG_MODE=1 $(BUCK) build \
 	//:AppPackage#iphoneos-arm64 \
@@ -282,8 +302,6 @@ deps: check_env
 	$(BUCK) query "deps(//:AppPackage)" --dot  \
 	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
-
-
 build_openssl: check_env
 	$(BUCK) build \
 	//submodules/openssl:openssl#iphoneos-arm64 \
@@ -303,6 +321,10 @@ clean: kill_xcode
 project: check_env kill_xcode
 	$(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Telegram_Buck.xcworkspace
+
+wallet_project: check_env kill_xcode
+	$(BUCK) project //Wallet:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+	open Wallet/WalletWorkspace.xcworkspace
 
 project_buckdebug: check_env kill_xcode
 	BUCK_DEBUG_MODE=1 $(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
