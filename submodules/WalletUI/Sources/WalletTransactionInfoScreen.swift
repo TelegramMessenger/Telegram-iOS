@@ -479,7 +479,7 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             case let .completed(transaction):
                 transferredValue = transaction.transferredValueWithoutFees
             case let .pending(transaction):
-                transferredValue = transaction.value
+                transferredValue = -transaction.value
             }
             if transferredValue <= 0 {
                 signString = ""
