@@ -32,6 +32,8 @@ public func legacyLocationPickerController(context: AccountContext, selfPeer: Pe
     if namespacesWithEnabledLiveLocation.contains(peer.id.namespace) && !customLocationPicker && hasLiveLocation {
         controller.allowLiveLocationSharing = true
     }
+    controller.view.disablesInteractiveModalDismiss = true
+    controller.view.disablesInteractiveTransitionGestureRecognizer = true
     let navigationController = TGNavigationController(controllers: [controller])!
     controller.navigation_setDismiss({ [weak legacyController] in
         legacyController?.dismiss()

@@ -267,6 +267,9 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
     }
     legacyController.bind(controller: controller)
     
+    controller.view.disablesInteractiveModalDismiss = true
+    controller.view.disablesInteractiveTransitionGestureRecognizer = true
+    
     let presentationDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         if let controller = controller  {
             controller.pallete = legacyLocationPalette(from: presentationData.theme)
