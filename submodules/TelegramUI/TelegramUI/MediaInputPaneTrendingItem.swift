@@ -302,7 +302,7 @@ class MediaInputPaneTrendingItemNode: ListViewItemNode {
             
             return (layout, { [weak self] synchronousLoads in
                 if let strongSelf = self {
-                    if item.topItems.count < Int(item.info.count) && item.topItems.count < 5 && strongSelf.item?.info.id != item.info.id {
+                    if (item.topItems.count < Int(item.info.count) || item.topItems.count < 5) && strongSelf.item?.info.id != item.info.id {
                         strongSelf.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.account.network, postbox: item.account.postbox, id: item.info.id).start())
                     }
                     strongSelf.item = item

@@ -256,6 +256,7 @@
 		<string>firefox-focus</string>
 		<string>ddgQuickLink</string>
 		<string>moovit</string>
+		<string>alook</string>
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>

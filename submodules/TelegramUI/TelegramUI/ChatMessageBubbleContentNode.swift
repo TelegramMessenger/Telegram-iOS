@@ -149,7 +149,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         return false
     }
     
-    func updateSearchTextHighlightState(text: String?) {
+    func updateSearchTextHighlightState(text: String?, messages: [MessageIndex]?) {
     }
     
     func updateAutomaticMediaDownloadSettings(_ settings: MediaAutoDownloadSettings) {

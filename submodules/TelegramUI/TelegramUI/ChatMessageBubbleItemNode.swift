@@ -2676,7 +2676,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
     
     override func updateSearchTextHighlightState() {
         for contentNode in self.contentNodes {
-            contentNode.updateSearchTextHighlightState(text: self.item?.controllerInteraction.searchTextHighightState)
+            contentNode.updateSearchTextHighlightState(text: self.item?.controllerInteraction.searchTextHighightState?.0, messages: self.item?.controllerInteraction.searchTextHighightState?.1)
         }
     }
     

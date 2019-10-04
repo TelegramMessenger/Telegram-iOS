@@ -4880,12 +4880,15 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Words.NotDoneText" = "You didn't have enough time to write those words down.";
 "Wallet.Words.NotDoneOk" = "OK, Sorry";
 "Wallet.Words.NotDoneResponse" = "Apologies Accepted";
-
 "Wallet.Send.ErrorInvalidAddress" = "Invalid wallet address. Please correct and try again.";
 "Wallet.Send.ErrorDecryptionFailed" = "Please make sure that your device has a passcode set in iOS Settings and try again.";
 "Wallet.Send.SendAnyway" = "Send Anyway";
-
 "Wallet.Receive.CreateInvoice" = "Create Invoice";
 "Wallet.Receive.CreateInvoiceInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
+"Wallet.Send.SendingToYourself" = "Sending Grams from a wallet to the same wallet doesn't make sense, you will simply waste a portion of the value on blockchain fees.";
+"Conversation.WalletRequiredTitle" = "Gram Wallet Required";
+"Conversation.WalletRequiredText" = "This link can be used to send money on the TON Blockchain. To do this, you need to set up a Gram wallet first.";
+"Conversation.WalletRequiredNotNow" = "Not Now";
+"Conversation.WalletRequiredSetup" = "Set Up";
 
 "Wallet.CreateInvoice.Title" = "Create Invoice";

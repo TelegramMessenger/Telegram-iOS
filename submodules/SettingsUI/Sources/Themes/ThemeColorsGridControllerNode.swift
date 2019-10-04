@@ -78,6 +78,8 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
     private var customColorItem: ItemListActionItem
     
     let gridNode: GridNode
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     
     private var queuedTransitions: [ThemeColorsGridEntryTransition] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
@@ -92,6 +94,10 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         
         self.gridNode = GridNode()
         self.gridNode.showVerticalScrollIndicator = true
+        self.leftOverlayNode = ASDisplayNode()
+        self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode = ASDisplayNode()
+        self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -210,7 +216,9 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         self.presentationData = presentationData
         
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-    
+        self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        
         self.customColorItem = ItemListActionItem(theme: presentationData.theme, title: presentationData.strings.WallpaperColors_SetCustomColor, kind: .generic, alignment: .natural, sectionId: 0, style: .blocks, action: { [weak self] in
             self?.presentColorPicker()
         })
@@ -259,8 +267,29 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         let imageSize = referenceImageSize.aspectFilled(CGSize(width: floor((layout.size.width - CGFloat(imageCount + 1) * minSpacing) / CGFloat(imageCount)), height: referenceImageSize.height))
         let spacing = floor((layout.size.width - CGFloat(imageCount) * imageSize.width) / CGFloat(imageCount + 1))
         
+        var listInsets = insets
+        if layout.size.width > 480.0 {
+            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+            listInsets.left += inset
+            listInsets.right += inset
+           
+            if self.leftOverlayNode.supernode == nil {
+                self.gridNode.addSubnode(self.leftOverlayNode)
+            }
+            if self.rightOverlayNode.supernode == nil {
+                self.gridNode.addSubnode(self.rightOverlayNode)
+            }
+        } else {
+            if self.leftOverlayNode.supernode != nil {
+                self.leftOverlayNode.removeFromSupernode()
+            }
+            if self.rightOverlayNode.supernode != nil {
+                self.rightOverlayNode.removeFromSupernode()
+            }
+        }
+        
         let makeColorLayout = self.customColorItemNode.asyncLayout()
-        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: insets.left, rightInset: insets.right)
+        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: listInsets.left, rightInset: listInsets.right)
         let (colorLayout, colorApply) = makeColorLayout(self.customColorItem, params, ItemListNeighbors(top: .none, bottom: .none))
         colorApply()
     
@@ -275,6 +304,9 @@ final class ThemeColorsGridControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonInset - UIScreenPixel), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.customColorItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonTopInset), size: colorLayout.contentSize))
     
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: -buttonOffset, width: listInsets.left, height: buttonTopInset + colorLayout.contentSize.height)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - listInsets.right, y: -buttonOffset, width: listInsets.right, height: buttonTopInset + colorLayout.contentSize.height)
+        
         insets.top += spacing + buttonInset
         
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: layout.size, insets: insets, scrollIndicatorInsets: scrollIndicatorInsets, preloadSize: 300.0, type: .fixed(itemSize: imageSize, fillWidth: nil, lineSpacing: spacing, itemSpacing: nil)), transition: transition), itemTransition: .immediate, stationaryItems: .none, updateFirstIndexInSectionOffset: nil), completion: { _ in })

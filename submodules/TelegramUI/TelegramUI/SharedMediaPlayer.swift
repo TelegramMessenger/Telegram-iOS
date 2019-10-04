@@ -426,7 +426,6 @@ final class SharedMediaPlayer {
                     switch playbackItem {
                         case let .audio(player):
                             player.setBaseRate(rateValue)
-                        
                         case let .instantVideo(node):
                             node.setBaseRate(rateValue)
                     }

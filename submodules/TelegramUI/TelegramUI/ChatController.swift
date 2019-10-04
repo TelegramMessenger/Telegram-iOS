@@ -273,6 +273,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private weak var currentContextController: ContextController?
     
     private weak var sendMessageActionsController: ChatSendMessageActionSheetController?
+    private var searchResultsController: ChatSearchResultsController?
     
     private var screenCaptureEventsDisposable: Disposable?
     private let chatAdditionalDataDisposable = MetaDisposable()
@@ -413,7 +414,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {
+            return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()
             }, present: { c, a in
                 self?.present(c, in: .window(.root), with: a, blockInteraction: true)
@@ -760,7 +761,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 case let .url(url):
                                     if isGame {
                                         strongSelf.chatDisplayNode.dismissInput()
-                                        (strongSelf.navigationController as? NavigationController)?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
+                                        strongSelf.effectiveNavigationController?.pushViewController(GameController(context: strongSelf.context, url: url, message: message))
                                     } else {
                                         strongSelf.openUrl(url, concealed: false)
                                     }
@@ -973,7 +974,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.sendMessages([.message(text: command, attributes: attributes, mediaReference: nil, replyToMessageId: (postAsReply && messageId != nil) ? messageId! : nil, localGroupingKey: nil)])
             }
         }, openInstantPage: { [weak self] message, associatedData in
-            if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.navigationController as? NavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
+            if let strongSelf = self, strongSelf.isNodeLoaded, let navigationController = strongSelf.effectiveNavigationController, let message = strongSelf.chatDisplayNode.historyNode.messageInCurrentHistoryView(message.id) {
                 openChatInstantPage(context: strongSelf.context, message: message, sourcePeerType: associatedData?.automaticDownloadPeerType, navigationController: navigationController)
             }
         }, openWallpaper: { [weak self] message in
@@ -1047,7 +1048,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             |> deliverOnMainQueue).start(next: { peer in
                 if let strongSelf = self, !hashtag.isEmpty {
                     let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(searchController)
+                    strongSelf.effectiveNavigationController?.pushViewController(searchController)
                 }
             }))
         }, updateInputState: { [weak self] f in
@@ -1280,7 +1281,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     |> deliverOnMainQueue).start(next: { peer in
                                         if let strongSelf = self {
                                             let searchController = HashtagSearchController(context: strongSelf.context, peer: peer, query: hashtag)
-                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(searchController)
+                                            strongSelf.effectiveNavigationController?.pushViewController(searchController)
                                         }
                                     })
                                 }
@@ -1447,7 +1448,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self?.present(controller, in: .window(.root), with: arguments)
                 }, pushController: { [weak self] controller in
                     if let strongSelf = self {
-                        (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                        strongSelf.effectiveNavigationController?.pushViewController(controller)
                     }
                 }, completed: {})
             }
@@ -1638,7 +1639,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             case .lookup:
                 let controller = UIReferenceLibraryViewController(term: text)
-                if let window = strongSelf.navigationController?.view.window {
+                if let window = strongSelf.effectiveNavigationController?.view.window {
                     controller.popoverPresentationController?.sourceView = window
                     controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
                     window.rootViewController?.present(controller, animated: true)
@@ -1688,7 +1689,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatTitleView?.pressed = { [weak self] in
             if let strongSelf = self {
                 if strongSelf.chatLocation == .peer(strongSelf.context.account.peerId) {
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(PeerMediaCollectionController(context: strongSelf.context, peerId: strongSelf.context.account.peerId))
+                    strongSelf.effectiveNavigationController?.pushViewController(PeerMediaCollectionController(context: strongSelf.context, peerId: strongSelf.context.account.peerId))
                 } else {
                     strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                         return $0.updatedTitlePanelContext {
@@ -1988,7 +1989,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             strongSelf.updateReminderActivity()
                             if let upgradedToPeerId = upgradedToPeerId {
-                                if let navigationController = strongSelf.navigationController as? NavigationController {
+                                if let navigationController = strongSelf.effectiveNavigationController {
                                     var viewControllers = navigationController.viewControllers
                                     if let index = viewControllers.firstIndex(where: { $0 === strongSelf }) {
                                         viewControllers[index] = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(upgradedToPeerId))
@@ -3166,6 +3167,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     return current.updatedSearch(nil)
                 })
                 strongSelf.updateItemNodesSearchTextHighlightStates()
+                strongSelf.searchResultsController = nil
             }
         }, updateMessageSearch: { [weak self] query in
             if let strongSelf = self {
@@ -3177,24 +3179,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
                 strongSelf.updateItemNodesSearchTextHighlightStates()
+                strongSelf.searchResultsController = nil
             }
         }, openSearchResults: { [weak self] in
             if let strongSelf = self, let searchData = strongSelf.presentationInterfaceState.search, let results = searchData.resultsState {
-                let _ = (strongSelf.searchResult.get()
-                |> take(1)
-                |> deliverOnMainQueue).start(next: { [weak self] searchResult in
-                    if let strongSelf = self, let searchResult = searchResult?.0 {
-                        let controller = ChatSearchResultsController(context: strongSelf.context, searchQuery: searchData.query, messages: searchResult.messages, navigateToMessageIndex: { index in
-                            strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
-                        })
-                        strongSelf.chatDisplayNode.dismissInput()
-                        if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
-                            navigationController?.pushViewController(controller)
-                        } else {
-                            strongSelf.push(controller)
-                        }
+                if let controller = strongSelf.searchResultsController {
+                    strongSelf.chatDisplayNode.dismissInput()
+                    if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
+                        navigationController?.pushViewController(controller)
+                    } else {
+                        strongSelf.push(controller)
                     }
-                })
+                } else {
+                    let _ = (strongSelf.searchResult.get()
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] searchResult in
+                        if let strongSelf = self, let searchResult = searchResult?.0 {
+                            let controller = ChatSearchResultsController(context: strongSelf.context, searchQuery: searchData.query, messages: searchResult.messages, navigateToMessageIndex: { index in
+                                strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
+                            })
+                            strongSelf.chatDisplayNode.dismissInput()
+                            if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
+                                navigationController?.pushViewController(controller)
+                            } else {
+                                strongSelf.push(controller)
+                            }
+                            strongSelf.searchResultsController = controller
+                        }
+                    })
+                }
             }
         }, navigateMessageSearch: { [weak self] action in
             if let strongSelf = self {
@@ -3280,7 +3293,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            if let navigationController = strongSelf.navigationController as? NavigationController {
+            if let navigationController = strongSelf.effectiveNavigationController {
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: nil, keepStack: .always))
             }
         }, openPeerInfo: { [weak self] in
@@ -4797,11 +4810,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func updateItemNodesSearchTextHighlightStates() {
         var searchString: String?
+        var resultsMessageIndices: [MessageIndex]?
         if let search = self.presentationInterfaceState.search, let resultsState = search.resultsState, !resultsState.messageIndices.isEmpty {
             searchString = search.query
+            resultsMessageIndices = resultsState.messageIndices
         }
-        if searchString != self.controllerInteraction?.searchTextHighightState {
-            self.controllerInteraction?.searchTextHighightState = searchString
+        if searchString != self.controllerInteraction?.searchTextHighightState?.0 || resultsMessageIndices?.count != self.controllerInteraction?.searchTextHighightState?.1.count {
+            var searchTextHighightState: (String, [MessageIndex])?
+            if let searchString = searchString, let resultsMessageIndices = resultsMessageIndices {
+                searchTextHighightState = (searchString, resultsMessageIndices)
+            }
+            self.controllerInteraction?.searchTextHighightState = searchTextHighightState
             self.chatDisplayNode.historyNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ChatMessageItemView {
                     itemNode.updateSearchTextHighlightState()
@@ -4934,7 +4953,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> deliverOnMainQueue).start(next: { [weak self] peerView in
                             if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios") == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
                                 if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
-                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                                    strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }
                     }))
@@ -5313,11 +5332,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                 }, enqueueMediaMessages: { signals in
                                     if let strongSelf = self {
-                                        strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
+                                        if editingMedia {
+                                            strongSelf.editMessageMediaWithLegacySignals(signals)
+                                        } else {
+                                            strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
+                                        }
                                     }
                                 })
                             }))
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                            strongSelf.effectiveNavigationController?.pushViewController(controller)
                         }
                     }, presentSelectionLimitExceeded: {
                         guard let strongSelf = self else {
@@ -5357,7 +5380,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     strongSelf.chatDisplayNode.dismissInput()
-                    (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyController)
+                    strongSelf.effectiveNavigationController?.pushViewController(legacyController)
                 }
             })
         })
@@ -5384,7 +5407,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, enqueueMediaMessages: { [weak self] signals in
                         if let strongSelf = self {
-                            strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
+                            if editingMessage {
+                                strongSelf.editMessageMediaWithLegacySignals(signals)
+                            } else {
+                                strongSelf.enqueueMediaMessages(signals: signals, silentPosting: silentPosting)
+                            }
                         }
                     })
                 }))
@@ -5412,7 +5439,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             strongSelf.chatDisplayNode.dismissInput()
-            (strongSelf.navigationController as? NavigationController)?.pushViewController(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue, _ in
+            strongSelf.effectiveNavigationController?.pushViewController(legacyLocationPickerController(context: strongSelf.context, selfPeer: selfPeer, peer: peer, sendLocation: { coordinate, venue, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -5457,7 +5484,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         let contactsController = ContactSelectionControllerImpl(ContactSelectionControllerParams(context: self.context, title: { $0.Contacts_Title }, displayDeviceContacts: true))
         contactsController.navigationPresentation = .modal
         self.chatDisplayNode.dismissInput()
-        (self.navigationController as? NavigationController)?.pushViewController(contactsController)
+        self.effectiveNavigationController?.pushViewController(contactsController)
         self.controllerNavigationDisposable.set((contactsController.result
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self, let peer = peer {
@@ -5536,7 +5563,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     strongSelf.sendMessages([message])
                                 }
                             }), completed: nil, cancelled: nil)
-                            (strongSelf.navigationController as? NavigationController)?.pushViewController(contactController)
+                            strongSelf.effectiveNavigationController?.pushViewController(contactController)
                         }
                     }
                 }))
@@ -5546,7 +5573,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func presentPollCreation() {
         if case let .peer(peerId) = self.chatLocation {
-            (self.navigationController as? NavigationController)?.pushViewController(createPollController(context: self.context, peerId: peerId, completion: { [weak self] message in
+            self.effectiveNavigationController?.pushViewController(createPollController(context: self.context, peerId: peerId, completion: { [weak self] message in
                 guard let strongSelf = self else {
                     return
                 }
@@ -5828,10 +5855,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.recorderFeedback?.error()
                                 strongSelf.recorderFeedback = nil
                             } else if let waveform = data.waveform {
-                                var randomId: Int64 = 0
-                                arc4random_buf(&randomId, 8)
-                                
-                                let resource = LocalFileMediaResource(fileId: randomId, size: data.compressedData.count)
+                                let resource = LocalFileMediaResource(fileId: arc4random64(), size: data.compressedData.count)
                                 
                                 strongSelf.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data.compressedData)
                                 
@@ -6145,7 +6169,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (self.presentationInterfaceState.isScheduledMessages && messageId.id != 0 && !Namespaces.Message.allScheduled.contains(messageId.namespace)) {
-                if let navigationController = self.navigationController as? NavigationController {
+                if let navigationController = self.effectiveNavigationController {
                     self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(messageId.peerId), subject: .message(messageId), keepStack: .always))
                 }
             } else if case let .peer(peerId) = self.chatLocation, (messageLocation.peerId == peerId || forceInCurrentChat) {
@@ -6286,7 +6310,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.chatDisplayNode.historyNode.scrollToMessage(from: fromIndex, to: index, animated: animated, scrollPosition: scrollPosition)
                                 completion?()
                             } else {
-                                (strongSelf.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message($0) }))
+                                strongSelf.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(messageLocation.peerId), subject: messageLocation.messageId.flatMap { .message($0) }))
                                 completion?()
                             }
                         }
@@ -6374,14 +6398,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let parentController = strongSelf.parentController {
                             (parentController.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                         } else {
-                            (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                            strongSelf.effectiveNavigationController?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                         }
                     }
                 })
             }
         }
         self.chatDisplayNode.dismissInput()
-        (self.navigationController as? NavigationController)?.pushViewController(controller)
+        self.effectiveNavigationController?.pushViewController(controller)
     }
     
     private func openPeer(peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer, fromMessage: Message?) {
@@ -6421,7 +6445,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
                                     if let strongSelf = self, let peer = peer {
                                         if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
-                                            (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                                            strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                         }
                                     }
                                 }))
@@ -6437,15 +6461,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         })
                                     })
                                     |> deliverOnMainQueue).start(completed: { [weak self] in
-                                        if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+                                        if let strongSelf = self, let navigationController = strongSelf.effectiveNavigationController {
                                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, updateTextInputState: textInputState))
                                         }
                                     })
                                 } else {
-                                    (self.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), subject: subject))
+                                    self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), subject: subject))
                                 }
                             case let .withBotStartPayload(botStart):
-                                (self.navigationController as? NavigationController)?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), botStart: botStart))
+                                self.effectiveNavigationController?.pushViewController(ChatControllerImpl(context: self.context, chatLocation: .peer(peerId), botStart: botStart))
                             default:
                                 break
                         }
@@ -6491,14 +6515,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                     }
                                                 }))
                                                 
-                                                (strongSelf.navigationController as? NavigationController)?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
+                                                strongSelf.effectiveNavigationController?.replaceTopController(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(peerId)), animated: false, ready: ready)
                                             }
                                         })
                                     }
                                 }
                             }
                             self.chatDisplayNode.dismissInput()
-                            (self.navigationController as? NavigationController)?.pushViewController(controller)
+                            self.effectiveNavigationController?.pushViewController(controller)
                         }
                     default:
                         break
@@ -6669,7 +6693,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         if deleteChat {
                             let _ = removePeerChat(account: strongSelf.context.account, peerId: chatPeer.id, reportChatSpam: reportSpam).start()
-                            (strongSelf.navigationController as? NavigationController)?.filterController(strongSelf, animated: true)
+                            strongSelf.effectiveNavigationController?.filterController(strongSelf, animated: true)
                         } else if reportSpam {
                             let _ = TelegramCore.reportPeer(account: strongSelf.context.account, peerId: peer.id, reason: .spam).start()
                         }
@@ -6802,7 +6826,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.commitPurposefulAction()
         self.chatDisplayNode.historyNode.disconnect()
         let _ = removePeerChat(account: self.context.account, peerId: peerId, reportChatSpam: reportChatSpam).start()
-        (self.navigationController as? NavigationController)?.popToRoot(animated: true)
+        self.effectiveNavigationController?.popToRoot(animated: true)
         
         let _ = requestUpdatePeerIsBlocked(account: self.context.account, peerId: peerId, isBlocked: true).start()
     }
@@ -6824,7 +6848,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func openResolved(_ result: ResolvedUrl) {        
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat, navigationController: self.navigationController as? NavigationController, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .chat, navigationController: self.effectiveNavigationController, openPeer: { [weak self] peerId, navigation in
             guard let strongSelf = self else {
                 return
             }
@@ -6834,7 +6858,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if let subject = subject, case let .message(messageId) = subject {
                             strongSelf.navigateToMessage(from: nil, to: .id(messageId))
                         }
-                    } else if let navigationController = strongSelf.navigationController as? NavigationController {
+                    } else if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), subject: subject, keepStack: .always))
                     }
                 case .info:
@@ -6843,7 +6867,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         |> deliverOnMainQueue).start(next: { [weak self] peer in
                             if let strongSelf = self, peer.restrictionText(platform: "ios") == nil {
                                 if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
-                                    (strongSelf.navigationController as? NavigationController)?.pushViewController(infoController)
+                                    strongSelf.effectiveNavigationController?.pushViewController(infoController)
                                 }
                             }
                         }))
@@ -6852,7 +6876,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, {
                             $0.updatedBotStartPayload(startPayload.payload)
                         })
-                    } else if let navigationController = strongSelf.navigationController as? NavigationController {
+                    } else if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peerId), botStart: startPayload))
                     }
                 default:
@@ -6941,7 +6965,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func openUrlIn(_ url: String) {
         let actionSheet = OpenInActionSheetController(context: self.context, item: .url(url: url), openUrl: { [weak self] url in
-            if let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController {
+            if let strongSelf = self, let navigationController = strongSelf.effectiveNavigationController {
                 strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: navigationController, dismissInput: {
                     self?.chatDisplayNode.dismissInput()
                 })
@@ -6997,7 +7021,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     if let selectedTransitionNode = selectedTransitionNode {
-                        if let previewData = chatMessagePreviewControllerData(context: self.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: self.navigationController as? NavigationController) {
+                        if let previewData = chatMessagePreviewControllerData(context: self.context, message: message, standalone: false, reverseMessageGalleryOrder: false, navigationController: self.effectiveNavigationController) {
                             switch previewData {
                                 case let .gallery(gallery):
                                     gallery.setHintWillBePresentedInPreviewingContext(true)
@@ -7080,7 +7104,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
             if let safariController = viewControllerToCommit as? SFSafariViewController {
-                if let window = self.navigationController?.view.window {
+                if let window = self.effectiveNavigationController?.view.window {
                     window.rootViewController?.present(safariController, animated: true)
                 }
             }
@@ -7165,9 +7189,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func debugStreamSingleVideo(_ id: MessageId) {
         let gallery = GalleryController(context: self.context, source: .peerMessagesAtId(id), streamSingleVideo: true, replaceRootController: { [weak self] controller, ready in
             if let strongSelf = self {
-                (strongSelf.navigationController as? NavigationController)?.replaceTopController(controller, animated: false, ready: ready)
+                strongSelf.effectiveNavigationController?.replaceTopController(controller, animated: false, ready: ready)
             }
-        }, baseNavigationController: self.navigationController as? NavigationController)
+        }, baseNavigationController: self.effectiveNavigationController)
         
         self.chatDisplayNode.dismissInput()
         self.present(gallery, in: .window(.root), with: GalleryControllerPresentationArguments(transitionArguments: { [weak self] messageId, media in
@@ -7735,6 +7759,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func openScheduledMessages() {
         let controller = ChatControllerImpl(context: self.context, chatLocation: self.chatLocation, subject: .scheduledMessages)
         controller.navigationPresentation = .modal
-        (self.navigationController as? NavigationController)?.pushViewController(controller)
+        self.effectiveNavigationController?.pushViewController(controller)
+    }
+    
+    private var effectiveNavigationController: NavigationController? {
+        if let navigationController = self.navigationController as? NavigationController {
+            return navigationController
+        } else if case let .inline(navigationController) = self.presentationInterfaceState.mode {
+            return navigationController
+        } else {
+            return nil
+        }
     }
 }

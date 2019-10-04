@@ -37,7 +37,7 @@ final class ThemeAccentColorController: ViewController {
             color = defaultDayAccentColor
         }
         self.initialColor = color
-        self.initialTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true)
+        self.initialTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: currentTheme, accentColor: color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: nil, preview: true) ?? defaultPresentationTheme
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -70,7 +70,7 @@ final class ThemeAccentColorController: ViewController {
                     
                     var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
                     
-                    let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: strongSelf.currentTheme, accentColor: UIColor(rgb: strongSelf.controllerNode.color), serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor)
+                    let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: strongSelf.currentTheme, accentColor: UIColor(rgb: strongSelf.controllerNode.color), serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor) ?? defaultPresentationTheme
                     var chatWallpaper = current.chatWallpaper
                     if let wallpaper = current.themeSpecificChatWallpapers[current.theme.index], wallpaper.hasWallpaper {
                     } else {

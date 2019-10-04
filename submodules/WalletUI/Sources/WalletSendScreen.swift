@@ -456,8 +456,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         var sendEnabled = false
         if let walletState = walletState {
             let textLength: Int = state.comment.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
-        
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && state.comment.count <= walletTextLimit
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && textLength <= walletTextLimit
         }
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
             arguments.proceed()

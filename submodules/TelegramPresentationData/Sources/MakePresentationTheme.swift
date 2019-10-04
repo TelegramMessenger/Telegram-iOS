@@ -18,7 +18,7 @@ public func makeDefaultPresentationTheme(reference: PresentationBuiltinThemeRefe
     return theme
 }
 
-public func makePresentationTheme(mediaBox: MediaBox, themeReference: PresentationThemeReference, accentColor: UIColor?, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, preview: Bool = false) -> PresentationTheme {
+public func makePresentationTheme(mediaBox: MediaBox, themeReference: PresentationThemeReference, accentColor: UIColor?, serviceBackgroundColor: UIColor, baseColor: PresentationThemeBaseColor?, preview: Bool = false) -> PresentationTheme? {
     let theme: PresentationTheme
     switch themeReference {
         case let .builtin(reference):
@@ -27,13 +27,13 @@ public func makePresentationTheme(mediaBox: MediaBox, themeReference: Presentati
             if let path = mediaBox.completedResourcePath(info.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let loadedTheme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 theme = loadedTheme
             } else {
-                theme = makeDefaultPresentationTheme(reference: .dayClassic, accentColor: nil, serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, preview: preview)
+                return nil
             }
         case let .cloud(info):
             if let file = info.theme.file, let path = mediaBox.completedResourcePath(file.resource), let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: .mappedRead), let loadedTheme = makePresentationTheme(data: data, resolvedWallpaper: info.resolvedWallpaper) {
                 theme = loadedTheme
             } else {
-                theme = makeDefaultPresentationTheme(reference: .dayClassic, accentColor: nil, serviceBackgroundColor: serviceBackgroundColor, baseColor: baseColor, preview: preview)
+                return nil
             }
     }
     return theme

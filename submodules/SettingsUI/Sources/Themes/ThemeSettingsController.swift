@@ -58,7 +58,7 @@ func themeDisplayName(strings: PresentationStrings, reference: PresentationTheme
 
 private final class ThemeSettingsControllerArguments {
     let context: AccountContext
-    let updateTheme: (PresentationThemeReference) -> Void
+    let selectTheme: (PresentationThemeReference) -> Void
     let selectFontSize: (PresentationFontSize) -> Void
     let openWallpaperSettings: () -> Void
     let selectAccentColor: (PresentationThemeAccentColor) -> Void
@@ -70,9 +70,9 @@ private final class ThemeSettingsControllerArguments {
     let editTheme: (PresentationCloudTheme) -> Void
     let contextAction: (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void
     
-    init(context: AccountContext, updateTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, PresentationThemeAccentColor?) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, contextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void) {
+    init(context: AccountContext, selectTheme: @escaping (PresentationThemeReference) -> Void, selectFontSize: @escaping (PresentationFontSize) -> Void, openWallpaperSettings: @escaping () -> Void, selectAccentColor: @escaping (PresentationThemeAccentColor) -> Void, openAccentColorPicker: @escaping (PresentationThemeReference, PresentationThemeAccentColor?) -> Void, openAutoNightTheme: @escaping () -> Void, toggleLargeEmoji: @escaping (Bool) -> Void, disableAnimations: @escaping (Bool) -> Void, selectAppIcon: @escaping (String) -> Void, editTheme: @escaping (PresentationCloudTheme) -> Void, contextAction: @escaping (Bool, PresentationThemeReference, ASDisplayNode, ContextGesture?) -> Void) {
         self.context = context
-        self.updateTheme = updateTheme
+        self.selectTheme = selectTheme
         self.selectFontSize = selectFontSize
         self.openWallpaperSettings = openWallpaperSettings
         self.selectAccentColor = selectAccentColor
@@ -319,7 +319,7 @@ private enum ThemeSettingsControllerEntry: ItemListNodeEntry {
                             arguments.editTheme(theme)
                         }
                     } else {
-                        arguments.updateTheme(theme)
+                        arguments.selectTheme(theme)
                     }
                 }, contextAction: { theme, node, gesture in
                     arguments.contextAction(theme.index == currentTheme.index, theme, node, gesture)
@@ -393,7 +393,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     var presentInGlobalOverlayImpl: ((ViewController, Any?) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
     
-    var updateThemeImpl: ((PresentationThemeReference) -> Void)?
+    var selectThemeImpl: ((PresentationThemeReference) -> Void)?
     var moreImpl: (() -> Void)?
     
     let _ = telegramWallpapers(postbox: context.account.postbox, network: context.account.network).start()
@@ -414,8 +414,8 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     let updatedCloudThemes = telegramThemes(postbox: context.account.postbox, network: context.account.network, accountManager: context.sharedContext.accountManager)
     cloudThemes.set(updatedCloudThemes)
     
-    let arguments = ThemeSettingsControllerArguments(context: context, updateTheme: { theme in
-        updateThemeImpl?(theme)
+    let arguments = ThemeSettingsControllerArguments(context: context, selectTheme: { theme in
+        selectThemeImpl?(theme)
     }, selectFontSize: { size in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
             return PresentationThemeSettings(chatWallpaper: current.chatWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: current.themeSpecificChatWallpapers, fontSize: size, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
@@ -424,12 +424,13 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         pushControllerImpl?(ThemeGridController(context: context))
     }, selectAccentColor: { color in
         let _ = updatePresentationThemeSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+            guard let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: current.theme, accentColor: color.color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor) else {
+                return current
+            }
+            
             var themeSpecificAccentColors = current.themeSpecificAccentColors
             themeSpecificAccentColors[current.theme.index] = color
-            
             var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
-            
-            let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: current.theme, accentColor: color.color, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: color.baseColor)
             var chatWallpaper = current.chatWallpaper
             if let wallpaper = current.themeSpecificChatWallpapers[current.theme.index], wallpaper.hasWallpaper {
             } else {
@@ -468,6 +469,9 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             return makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: nil, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: .blue)
         }
         |> deliverOnMainQueue).start(next: { theme in
+            guard let theme = theme else {
+                return
+            }
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let strings = presentationData.strings
             let themeController = ThemePreviewController(context: context, previewTheme: theme, source: .settings(reference))
@@ -476,7 +480,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
             if !isCurrent {
                 items.append(.action(ContextMenuActionItem(text: strings.Theme_Context_Apply, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                     c.dismiss(completion: {
-                        updateThemeImpl?(reference)
+                        selectThemeImpl?(reference)
                     })
                 })))
             }
@@ -517,7 +521,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                                     } else {
                                         newTheme = .builtin(.nightAccent)
                                     }
-                                    updateThemeImpl?(newTheme)
+                                    selectThemeImpl?(newTheme)
                                 }
                                 
                                 let _ = deleteThemeInteractively(account: context.account, accountManager: context.sharedContext.accountManager, theme: theme.theme).start()
@@ -548,7 +552,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
         let disableAnimations = presentationData.disableAnimations
         
         let accentColor = settings.themeSpecificAccentColors[settings.theme.index]?.color
-        let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: settings.themeSpecificAccentColors[settings.theme.index]?.baseColor ?? .blue, preview: true)
+        let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: settings.theme, accentColor: accentColor, serviceBackgroundColor: defaultServiceBackgroundColor, baseColor: settings.themeSpecificAccentColors[settings.theme.index]?.baseColor ?? .blue, preview: true) ?? defaultPresentationTheme
 
         let wallpaper: TelegramWallpaper
         if let themeSpecificWallpaper = settings.themeSpecificChatWallpapers[settings.theme.index] {
@@ -590,8 +594,10 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
     getNavigationControllerImpl = { [weak controller] in
         return controller?.navigationController as? NavigationController
     }
-    updateThemeImpl = { theme in
-        let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil)
+    selectThemeImpl = { theme in
+        guard let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: theme, accentColor: nil, serviceBackgroundColor: .black, baseColor: nil) else {
+            return
+        }
         
         let resolvedWallpaper: Signal<TelegramWallpaper?, NoError>
         if case let .file(file) = presentationTheme.chat.defaultWallpaper, file.id == 0 {
@@ -628,7 +634,7 @@ public func themeSettingsController(context: AccountContext, focusOnItemTag: The
                     if let themeSpecificWallpaper = current.themeSpecificChatWallpapers[updatedTheme.index] {
                         chatWallpaper = themeSpecificWallpaper
                     } else {
-                        let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: updatedTheme, accentColor: current.themeSpecificAccentColors[updatedTheme.index]?.color, serviceBackgroundColor: .black, baseColor: nil)
+                        let presentationTheme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: updatedTheme, accentColor: current.themeSpecificAccentColors[updatedTheme.index]?.color, serviceBackgroundColor: .black, baseColor: nil) ?? defaultPresentationTheme
                         chatWallpaper = resolvedWallpaper ?? presentationTheme.chat.defaultWallpaper
                     }
                     

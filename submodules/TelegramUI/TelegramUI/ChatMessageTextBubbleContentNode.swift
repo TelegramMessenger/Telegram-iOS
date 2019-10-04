@@ -496,12 +496,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
         return nil
     }
     
-    override func updateSearchTextHighlightState(text: String?) {
+    override func updateSearchTextHighlightState(text: String?, messages: [MessageIndex]?) {
         guard let item = self.item else {
             return
         }
         let rectsSet: [[CGRect]]
-        if let text = text, !text.isEmpty {
+        if let text = text, let messages = messages, !text.isEmpty, messages.contains(item.message.index) {
             rectsSet = self.textNode.textRangesRects(text: text)
         } else {
             rectsSet = []

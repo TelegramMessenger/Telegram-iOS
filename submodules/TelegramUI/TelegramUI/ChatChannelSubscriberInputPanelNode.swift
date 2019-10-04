@@ -237,7 +237,12 @@ final class ChatChannelSubscriberInputPanelNode: ChatInputPanelNode {
         let panelHeight = defaultHeight(metrics: metrics)
         
         if self.discussButton.isHidden {
-            self.button.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight))
+            if let action = self.action, action == .muteNotifications || action == .unmuteNotifications {
+                let buttonWidth = self.button.titleNode.calculateSizeThatFits(CGSize(width: width, height: panelHeight)).width + 24.0
+                self.button.frame = CGRect(origin: CGPoint(x: floor((width - buttonWidth) / 2.0), y: 0.0), size: CGSize(width: buttonWidth, height: panelHeight))
+            } else {
+                self.button.frame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: width - leftInset - rightInset, height: panelHeight))
+            }
         } else {
             let availableWidth = min(600.0, width - leftInset - rightInset)
             let leftOffset = floor((width - availableWidth) / 2.0)

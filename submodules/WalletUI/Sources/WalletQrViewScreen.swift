@@ -125,7 +125,7 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         
         self.imageNode = TransformImageNode()
         self.imageNode.clipsToBounds = true
-        self.imageNode.cornerRadius = 12.0
+        self.imageNode.cornerRadius = 14.0
         
         self.iconNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {

@@ -13,6 +13,7 @@ import LocalizedPeerData
 import UrlEscaping
 import StickerResources
 import SaveToCameraRoll
+import TelegramStringFormatting
 
 public struct ShareControllerAction {
     let title: String
@@ -90,10 +91,12 @@ private enum ExternalShareItemsState {
 private struct CollectableExternalShareItem {
     let url: String?
     let text: String
+    let author: String?
+    let timestamp: Int32?
     let mediaReference: AnyMediaReference?
 }
 
-private func collectExternalShareItems(strings: PresentationStrings, postbox: Postbox, collectableItems: [CollectableExternalShareItem], takeOne: Bool = true) -> Signal<ExternalShareItemsState, NoError> {
+private func collectExternalShareItems(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, postbox: Postbox, collectableItems: [CollectableExternalShareItem], takeOne: Bool = true) -> Signal<ExternalShareItemsState, NoError> {
     var signals: [Signal<ExternalShareItemStatus, NoError>] = []
     for item in collectableItems {
         if let mediaReference = item.mediaReference, let file = mediaReference.media as? TelegramMediaFile {
@@ -163,7 +166,18 @@ private func collectExternalShareItems(strings: PresentationStrings, postbox: Po
             }
             signals.append(.single(.done(.text(text))))
         } else if let mediaReference = item.mediaReference, let contact = mediaReference.media as? TelegramMediaContact {
+            let contactData: DeviceContactExtendedData
+            if let vCard = contact.vCardData, let vCardData = vCard.data(using: .utf8), let parsed = DeviceContactExtendedData(vcard: vCardData) {
+                contactData = parsed
+            } else {
+                contactData = DeviceContactExtendedData(basicData: DeviceContactBasicData(firstName: contact.firstName, lastName: contact.lastName, phoneNumbers: [DeviceContactPhoneNumberData(label: "_$!<Mobile>!$_", value: contact.phoneNumber)]), middleName: "", prefix: "", suffix: "", organization: "", jobTitle: "", department: "", emailAddresses: [], urls: [], addresses: [], birthdayDate: nil, socialProfiles: [], instantMessagingProfiles: [])
+            }
             
+            if let vCard = contactData.serializedVCard() {
+                let path = NSTemporaryDirectory() + "\(arc4random64()).lz4v"
+                let fullName = [contact.firstName, contact.lastName].filter { $0.isEmpty }.joined(separator: " ")
+                signals.append(.single(.done(.file(URL(fileURLWithPath: path), "\(fullName).vcf", "text/x-vcard"))))
+            }
         }
         if let url = item.url, let parsedUrl = URL(string: url) {
             if signals.isEmpty || !takeOne {
@@ -172,7 +186,18 @@ private func collectExternalShareItems(strings: PresentationStrings, postbox: Po
         }
         if !item.text.isEmpty {
             if signals.isEmpty || !takeOne {
-                signals.append(.single(.done(.text(item.text))))
+                var text: String = item.text
+                var metadata: [String] = []
+                if let author = item.author {
+                    metadata.append(author)
+                }
+                if let timestamp = item.timestamp {
+                    metadata.append("[\(stringForFullDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat))]")
+                }
+                if !metadata.isEmpty {
+                    text = metadata.joined(separator: ", ") + "\n" + text + "\n"
+                }
+                signals.append(.single(.done(.text(text))))
             }
         }
     }
@@ -512,19 +537,19 @@ public final class ShareController: ViewController {
                 var collectableItems: [CollectableExternalShareItem] = []
                 switch strongSelf.subject {
                     case let .url(text):
-                        collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", mediaReference: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: explicitUrl(text), text: "", author: nil, timestamp: nil, mediaReference: nil))
                     case let .text(string):
-                        collectableItems.append(CollectableExternalShareItem(url: "", text: string, mediaReference: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: string, author: nil, timestamp: nil, mediaReference: nil))
                     case let .quote(text, url):
-                        collectableItems.append(CollectableExternalShareItem(url: "", text: "\"\(text)\"\n\n\(url)", mediaReference: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: "\"\(text)\"\n\n\(url)", author: nil, timestamp: nil, mediaReference: nil))
                     case let .image(representations):
                         let media = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: arc4random64()), representations: representations.map({ $0.representation }), immediateThumbnailData: nil, reference: nil, partialReference: nil)
-                        collectableItems.append(CollectableExternalShareItem(url: "", text: "", mediaReference: .standalone(media: media)))
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: "", author: nil, timestamp: nil, mediaReference: .standalone(media: media)))
                     case let .media(mediaReference):
-                        collectableItems.append(CollectableExternalShareItem(url: "", text: "", mediaReference: mediaReference))
+                        collectableItems.append(CollectableExternalShareItem(url: "", text: "", author: nil, timestamp: nil, mediaReference: mediaReference))
                     case let .mapMedia(media):
                         let latLong = "\(media.latitude),\(media.longitude)"
-                        collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", mediaReference: nil))
+                        collectableItems.append(CollectableExternalShareItem(url: "https://maps.apple.com/maps?ll=\(latLong)&q=\(latLong)&t=m", text: "", author: nil, timestamp: nil, mediaReference: nil))
                     case let .messages(messages):
                         for message in messages {
                             var url: String?
@@ -554,12 +579,18 @@ public final class ShareController: ViewController {
                                     url = "https://t.me/\(addressName)/\(message.id.id)"
                                 }
                             }
-                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
+                            var peer: Peer?
+                            if let authorPeerId = message.author?.id {
+                                peer = message.peers[authorPeerId]
+                            } else if let mainPeer = messageMainPeer(message) {
+                                peer = mainPeer
+                            }
+                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, author: peer?.displayTitle, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
                         }
                     case .fromExternal:
                         break
                 }
-                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, postbox: strongSelf.currentAccount.postbox, collectableItems: collectableItems, takeOne: !strongSelf.immediateExternalShare)
+                return (collectExternalShareItems(strings: strongSelf.presentationData.strings, dateTimeFormat: strongSelf.presentationData.dateTimeFormat, postbox: strongSelf.currentAccount.postbox, collectableItems: collectableItems, takeOne: !strongSelf.immediateExternalShare)
                 |> deliverOnMainQueue)
                 |> map { state in
                     switch state {

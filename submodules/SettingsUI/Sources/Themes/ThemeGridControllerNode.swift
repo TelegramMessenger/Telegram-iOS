@@ -218,6 +218,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
     private var selectionPanelBackgroundNode: ASDisplayNode?
     
     let gridNode: GridNode
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     var navigationBar: NavigationBar?
     
     private var queuedTransitions: [ThemeGridEntryTransition] = []
@@ -244,6 +246,10 @@ final class ThemeGridControllerNode: ASDisplayNode {
         
         self.gridNode = GridNode()
         self.gridNode.showVerticalScrollIndicator = true
+        self.leftOverlayNode = ASDisplayNode()
+        self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode = ASDisplayNode()
+        self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -516,6 +522,8 @@ final class ThemeGridControllerNode: ASDisplayNode {
         self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
         self.searchDisplayController?.updatePresentationData(self.presentationData)
         
+        self.leftOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.backgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
         self.bottomBackgroundNode.backgroundColor = presentationData.theme.list.blocksBackgroundColor
@@ -609,7 +617,28 @@ final class ThemeGridControllerNode: ASDisplayNode {
         let makeGalleryLayout = self.galleryItemNode.asyncLayout()
         let makeDescriptionLayout = self.descriptionItemNode.asyncLayout()
         
-        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: insets.left, rightInset: insets.right)
+        var listInsets = insets
+        if layout.size.width > 480.0 {
+            let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
+            listInsets.left += inset
+            listInsets.right += inset
+            
+            if self.leftOverlayNode.supernode == nil {
+                self.gridNode.addSubnode(self.leftOverlayNode)
+            }
+            if self.rightOverlayNode.supernode == nil {
+                self.gridNode.addSubnode(self.rightOverlayNode)
+            }
+        } else {
+            if self.leftOverlayNode.supernode != nil {
+                self.leftOverlayNode.removeFromSupernode()
+            }
+            if self.rightOverlayNode.supernode != nil {
+                self.rightOverlayNode.removeFromSupernode()
+            }
+        }
+        
+        let params = ListViewItemLayoutParams(width: layout.size.width, leftInset: listInsets.left, rightInset: listInsets.right)
         let (colorLayout, colorApply) = makeColorLayout(self.colorItem, params, ItemListNeighbors(top: .none, bottom: .sameSection(alwaysPlain: false)))
         let (galleryLayout, galleryApply) = makeGalleryLayout(self.galleryItem, params, ItemListNeighbors(top: .sameSection(alwaysPlain: false), bottom: .sameSection(alwaysPlain: true)))
         let (descriptionLayout, descriptionApply) = makeDescriptionLayout(self.descriptionItem, params, ItemListNeighbors(top: .none, bottom: .none))
@@ -631,6 +660,9 @@ final class ThemeGridControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.colorItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonTopInset), size: colorLayout.contentSize))
         transition.updateFrame(node: self.galleryItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonTopInset + colorLayout.contentSize.height), size: galleryLayout.contentSize))
         transition.updateFrame(node: self.descriptionItemNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -buttonOffset + buttonTopInset + colorLayout.contentSize.height + galleryLayout.contentSize.height), size: descriptionLayout.contentSize))
+        
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: -buttonOffset, width: listInsets.left, height: buttonTopInset + colorLayout.contentSize.height + galleryLayout.contentSize.height)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - listInsets.right, y: -buttonOffset, width: listInsets.right, height: buttonTopInset + colorLayout.contentSize.height + galleryLayout.contentSize.height)
         
         insets.top += spacing + buttonInset
         

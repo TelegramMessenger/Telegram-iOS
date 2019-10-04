@@ -124,6 +124,7 @@ private final class MediaPlayerContext {
     
     private var lastStatusUpdateTimestamp: Double?
     private let playerStatus: Promise<MediaPlayerStatus>
+    private let playerStatusValue = Atomic<MediaPlayerStatus?>(value: nil)
     
     fileprivate var actionAtEnd: MediaPlayerActionAtEnd = .stop
     
@@ -290,10 +291,12 @@ private final class MediaPlayerContext {
             loadedDuration = duration
             let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
+            self.playerStatusValue.swap(status)
         } else {
             let duration = seekState?.duration ?? 0.0
             let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: duration, dimensions: CGSize(), timestamp: min(max(timestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: .buffering(initial: false, whilePlaying: action == .play), soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
+            self.playerStatusValue.swap(status)
         }
         
         let frameSource = FFMpegMediaFrameSource(queue: self.queue, postbox: self.postbox, resourceReference: self.resourceReference, tempFilePath: self.tempFilePath, streamable: self.streamable.enabled, video: self.video, preferSoftwareDecoding: self.preferSoftwareDecoding, fetchAutomatically: self.fetchAutomatically, stallDuration: self.streamable.parameters.0, lowWaterDuration: self.streamable.parameters.1, highWaterDuration: self.streamable.parameters.2)
@@ -579,6 +582,12 @@ private final class MediaPlayerContext {
         self.lastStatusUpdateTimestamp = nil
         self.tick()
         self.audioRenderer?.renderer.setBaseRate(baseRate)
+        
+        if case .seeking = self.state, let status = self.playerStatusValue.with({ $0 }) {
+            let status = MediaPlayerStatus(generationTimestamp: CACurrentMediaTime(), duration: status.duration, dimensions: status.dimensions, timestamp: status.timestamp, baseRate: self.baseRate, seekId: self.seekId, status: status.status, soundEnabled: status.soundEnabled)
+            self.playerStatus.set(.single(status))
+            self.playerStatusValue.swap(status)
+        }
     }
     
     fileprivate func setForceAudioToSpeaker(_ value: Bool) {
@@ -868,6 +877,7 @@ private final class MediaPlayerContext {
             }
             let status = MediaPlayerStatus(generationTimestamp: statusTimestamp, duration: duration, dimensions: CGSize(), timestamp: min(max(reportTimestamp, 0.0), duration), baseRate: self.baseRate, seekId: self.seekId, status: playbackStatus, soundEnabled: self.enableSound)
             self.playerStatus.set(.single(status))
+            self.playerStatusValue.swap(status)
         }
         
         if performActionAtEndNow {

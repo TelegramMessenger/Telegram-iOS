@@ -450,7 +450,7 @@
     
     _checked3dTouch = true;
     
-    if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent) {
+    if (_intent == TGMediaAssetsControllerSetProfilePhotoIntent || _intent == TGMediaAssetsControllerSetSignupProfilePhotoIntent || _intent == TGMediaAssetsControllerSetCustomWallpaperIntent) {
         return;
     }
     

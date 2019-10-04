@@ -339,6 +339,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     private var peerPresenceManager: PeerPresenceStatusManager?
     
+    private var cachedChatListText: (String, String)?
     private var cachedChatListSearchResult: CachedChatListSearchResult?
     
     var layoutParams: (ChatListItem, first: Bool, last: Bool, firstWithHeader: Bool, nextIsPinned: Bool, ListViewItemLayoutParams, countersSize: CGFloat)?
@@ -648,6 +649,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
         let currentItem = self.layoutParams?.0
         let currentContentImageMedia = self.contentImageMedia
+        let currentChatListText = self.cachedChatListText
         let currentChatListSearchResult = self.cachedChatListSearchResult
         
         return { item, params, first, last, firstWithHeader, nextIsPinned in
@@ -804,17 +806,56 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             var contentImageMedia: Media?
+            var chatListText: (String, String)?
             var chatListSearchResult: CachedChatListSearchResult?
             
             switch contentData {
-                case let .chat(itemPeer, _, _, messageText):
-                    let messageText = messageText.replacingOccurrences(of: "\n\n", with: " ")
+                case let .chat(itemPeer, _, _, text):
+                    var peerText: String?
+                    if case .groupReference = item.content {
+                        if let messagePeer = itemPeer.chatMainPeer {
+                            peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        }
+                    } else if let message = message, let author = message.author as? TelegramUser, let peer = itemPeer.chatMainPeer, !(peer is TelegramUser) {
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                        } else if !displayAsMessage {
+                            peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                        }
+                    }
+                    
+                    func foldLineBreaks(_ text: String, allowTwoLines: Bool) -> String {
+                        var lines = text.split { $0.isNewline }
+                        var startedBothLines = false
+                        var result = ""
+                        for line in lines {
+                            if result.isEmpty {
+                                result += line
+                            } else {
+                                if allowTwoLines && !startedBothLines {
+                                    result += "\n" + line
+                                    startedBothLines = true
+                                } else {
+                                    result += " " + line
+                                }
+                            }
+                        }
+                        return result
+                    }
+                    
+                    let messageText: String
+                    if let currentChatListText = currentChatListText, currentChatListText.0 == text {
+                        messageText = currentChatListText.1
+                        chatListText = currentChatListText
+                    } else {
+                        messageText = foldLineBreaks(text, allowTwoLines: peerText == nil)
+                        chatListText = (text, messageText)
+                    }
                     
                     if inlineAuthorPrefix == nil, let embeddedState = embeddedState as? ChatEmbeddedInterfaceState {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         
-                        attributedText = NSAttributedString(string: embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " "), font: textFont, textColor: theme.messageTextColor)
+                        attributedText = NSAttributedString(string: foldLineBreaks(embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " "), allowTwoLines: false), font: textFont, textColor: theme.messageTextColor)
                     } else if let message = message {
                         let composedString: NSMutableAttributedString
                         if let inlineAuthorPrefix = inlineAuthorPrefix {
@@ -829,37 +870,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             if let cached = currentChatListSearchResult, cached.matches(text: composedString.string, searchQuery: searchQuery) {
                                 chatListSearchResult = cached
                             } else {
-                                var ranges: [Range<String.Index>] = []
-                                let queryWords = searchQuery.split { !$0.isLetter }.filter { !$0.isEmpty }.map { $0.lowercased() }
-                                
-                                let searchRange = composedString.string.startIndex ..< composedString.string.endIndex
-                                composedString.string.enumerateSubstrings(in: searchRange, options: .byWords) { (substring, range, _, _) in
-                                    guard let substring = substring?.lowercased() else {
-                                        return
-                                    }
-                                    
-                                    for word in queryWords {
-                                        var count = 0
-                                        inner: for (c1, c2) in zip(word, substring) {
-                                            if c1 != c2 {
-                                                break inner
-                                            }
-                                            count += 1
-                                        }
-                                        if count > 0 {
-                                            let length = Double(max(word.count, substring.count))
-                                            if length > 0 {
-                                                let difference = abs(length - Double(count))
-                                                let rating = difference / length
-                                                if rating < 0.33 {
-                                                    ranges.append(range)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                chatListSearchResult = CachedChatListSearchResult(text: composedString.string, searchQuery: searchQuery, resultRanges: ranges)
+                                let (ranges, text) = findSubstringRanges(in: composedString.string, query: searchQuery)
+                                chatListSearchResult = CachedChatListSearchResult(text: text, searchQuery: searchQuery, resultRanges: ranges)
                             }
                         } else {
                             chatListSearchResult = nil
@@ -867,23 +879,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         if let chatListSearchResult = chatListSearchResult {
                             for range in chatListSearchResult.resultRanges {
-                                composedString.addAttribute(.foregroundColor, value: theme.messageHighlightedTextColor, range: NSRange(range, in: composedString.string))
+                                composedString.addAttribute(.foregroundColor, value: theme.messageHighlightedTextColor, range: NSRange(range, in: chatListSearchResult.text))
                             }
                         }
                         
                         attributedText = composedString
-                        
-                        var peerText: String?
-                        if case .groupReference = item.content {
-                            if let messagePeer = itemPeer.chatMainPeer {
-                                peerText = messagePeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                            }
-                        } else if let author = message.author as? TelegramUser, let peer = itemPeer.chatMainPeer, !(peer is TelegramUser) {
-                            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                            } else if !displayAsMessage {
-                                peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
-                            }
-                        }
                         
                         if let peerText = peerText {
                             authorAttributedString = NSAttributedString(string: peerText, font: textFont, textColor: theme.authorNameColor)
@@ -1215,6 +1215,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if let strongSelf = self {
                     strongSelf.layoutParams = (item, first, last, firstWithHeader, nextIsPinned, params, countersSize)
                     strongSelf.contentImageMedia = contentImageMedia
+                    strongSelf.cachedChatListText = chatListText
                     strongSelf.cachedChatListSearchResult = chatListSearchResult
                     
                     strongSelf.contextContainer.frame = CGRect(origin: CGPoint(), size: layout.contentSize)
