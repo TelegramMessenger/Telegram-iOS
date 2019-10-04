@@ -21,14 +21,39 @@ private func generateBackground(theme: PresentationTheme) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 10 + 8)
 }
 
-private func generateShareIcon(theme: PresentationTheme) -> UIImage? {
-    return generateImage(CGSize(width: 19.0, height: 5.0), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(theme.list.itemAccentColor.cgColor)
-        for i in 0 ..< 3 {
-            context.fillEllipse(in: CGRect(origin: CGPoint(x: CGFloat(i) * (5.0 + 2.0), y: 0.0), size: CGSize(width: 5.0, height: 5.0)))
-        }
+private func generateCollapseIcon(theme: PresentationTheme) -> UIImage? {
+    return generateImage(CGSize(width: 38.0, height: 5.0), rotatedContext: { size, context in
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        context.clear(bounds)
+        
+        let path = UIBezierPath(roundedRect: bounds, cornerRadius: 2.5)
+        context.setFillColor(theme.list.controlSecondaryColor.cgColor)
+        context.addPath(path.cgPath)
+        context.fillPath()
     })
+}
+
+private let digitsSet = CharacterSet(charactersIn: "0123456789")
+private func timestampLabelWidthForDuration(_ timestamp: Double) -> CGFloat {
+    let text: String
+    if timestamp > 0 {
+        let timestamp = Int32(timestamp)
+        let hours = timestamp / (60 * 60)
+        let minutes = timestamp % (60 * 60) / 60
+        let seconds = timestamp % 60
+        if hours != 0 {
+            text = String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            text = String(format: "%d:%02d", minutes, seconds)
+        }
+    } else {
+        text = "-:--"
+    }
+    
+    let convertedString = text.components(separatedBy: digitsSet).joined(separator: "8")
+    let string = NSAttributedString(string: convertedString, font: Font.regular(13.0), textColor: .black)
+    let size = string.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: NSStringDrawingOptions.usesLineFragmentOrigin, context: nil).size
+    return size.width
 }
 
 private let titleFont = Font.semibold(17.0)
@@ -112,6 +137,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private var scrubbingDisposable: Disposable?
     private var leftDurationLabelPushed = false
     private var rightDurationLabelPushed = false
+    private var currentDuration: Double = 0.0
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
@@ -128,7 +154,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         self.collapseNode = HighlightableButtonNode()
         self.collapseNode.displaysAsynchronously = false
-        self.collapseNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/CollapseArrow"), color: theme.list.controlSecondaryColor), for: [])
+        self.collapseNode.setImage(generateCollapseIcon(theme: theme), for: [])
         
         self.albumArtNode = TransformImageNode()
         
@@ -141,9 +167,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.descriptionNode.displaysAsynchronously = false
         
         self.shareNode = HighlightableButtonNode()
-        self.shareNode.setImage(generateShareIcon(theme: theme), for: [])
+        self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: theme.list.itemAccentColor), for: [])
         
-        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: theme.list.controlSecondaryColor, foregroundColor: theme.list.itemAccentColor))
+        self.scrubberNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .circle, backgroundColor: theme.list.controlSecondaryColor, foregroundColor: theme.list.itemAccentColor, bufferingColor: theme.list.itemAccentColor.withAlphaComponent(0.4)))
         self.leftDurationLabel = MediaPlayerTimeTextNode(textColor: theme.list.itemSecondaryTextColor)
         self.leftDurationLabel.displaysAsynchronously = false
         self.rightDurationLabel = MediaPlayerTimeTextNode(textColor: theme.list.itemSecondaryTextColor)
@@ -264,6 +290,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 strongSelf.currentItemId = valueItemId
                 strongSelf.scrubberNode.ignoreSeekId = nil
             }
+            
+            var rateButtonIsHidden = true
             strongSelf.shareNode.isHidden = false
             var displayData: SharedMediaPlaybackDisplayData?
             if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
@@ -310,10 +338,22 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                 }
                 
                 if let displayData = displayData, case let .music(_, _, _, long) = displayData, long {
-                    strongSelf.rateButton.isHidden = false
+                    strongSelf.scrubberNode.enableFineScrubbing = true
+                    rateButtonIsHidden = false
                 } else {
-                    strongSelf.rateButton.isHidden = true
+                    strongSelf.scrubberNode.enableFineScrubbing = false
+                    rateButtonIsHidden = true
                 }
+                
+                let duration = value.status.duration
+                if duration != strongSelf.currentDuration {
+                    strongSelf.currentDuration = duration
+                    if let layout = strongSelf.validLayout {
+                        strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .immediate)
+                    }
+                }
+                
+                strongSelf.rateButton.isHidden = rateButtonIsHidden && strongSelf.currentDuration.isZero
             } else {
                 strongSelf.playPauseButton.isEnabled = false
                 strongSelf.backwardButton.isEnabled = false
@@ -324,7 +364,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
             
             if strongSelf.displayData != displayData {
                 strongSelf.displayData = displayData
-                
+                                
                 if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
                     switch source {
                         case let .telegramFile(fileReference):
@@ -377,8 +417,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.theme = theme
         
         self.backgroundNode.image = generateBackground(theme: theme)
-        self.collapseNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/CollapseArrow"), color: theme.list.controlSecondaryColor), for: [])
-        self.shareNode.setImage(generateShareIcon(theme: theme), for: [])
+        self.collapseNode.setImage(generateCollapseIcon(theme: theme), for: [])
+        self.shareNode.setImage(generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Share"), color: theme.list.itemAccentColor), for: [])
         self.scrubberNode.updateColors(backgroundColor: theme.list.controlSecondaryColor, foregroundColor: theme.list.itemAccentColor)
         self.leftDurationLabel.textColor = theme.list.itemSecondaryTextColor
         self.rightDurationLabel.textColor = theme.list.itemSecondaryTextColor
@@ -479,9 +519,9 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private func updateRateButton(_ baseRate: AudioPlaybackRate) {
         switch baseRate {
             case .x2:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateActiveIcon(self.theme), for: [])
+                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateActiveIcon(self.theme), for: [])
             default:
-                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerRateInactiveIcon(self.theme), for: [])
+                self.rateButton.setImage(PresentationResourcesRootController.navigationPlayerMaximizedRateInactiveIcon(self.theme), for: [])
         }
     }
     
@@ -506,7 +546,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         transition.updateFrame(node: self.collapseNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: CGSize(width: width, height: 30.0)))
         
         let sideInset: CGFloat = 20.0
-        let sideButtonsInset: CGFloat = sideInset + 30.0
+        let sideButtonsInset: CGFloat = sideInset + 36.0
         
         let infoVerticalOrigin: CGFloat = panelHeight - OverlayPlayerControlsNode.basePanelHeight + 36.0
         
@@ -598,7 +638,8 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         var rightLabelVerticalOffset: CGFloat = self.rightDurationLabelPushed ? 6.0 : 0.0
         transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 14.0 + rightLabelVerticalOffset), size: CGSize(width: 100.0, height: 20.0)))
         
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0 + 24.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset), size: CGSize(width: 24.0, height: 24.0)))
+        let rateRightOffset = timestampLabelWidthForDuration(self.currentDuration)
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - rateRightOffset - 28.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset), size: CGSize(width: 24.0, height: 24.0)))
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: width, height: panelHeight + 8.0)))
         

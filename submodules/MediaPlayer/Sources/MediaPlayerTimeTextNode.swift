@@ -35,6 +35,20 @@ private struct MediaPlayerTimeTextNodeState: Equatable {
     }
 }
 
+private extension MediaPlayerTimeTextNodeState {
+    var string: String {
+        if let hours = self.hours, let minutes = self.minutes, let seconds = self.seconds {
+            if hours != 0 {
+                return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                return String(format: "%d:%02d", minutes, seconds)
+            }
+        } else {
+            return "-:--"
+        }
+    }
+}
+
 private final class MediaPlayerTimeTextNodeParameters: NSObject {
     let state: MediaPlayerTimeTextNodeState
     let alignment: NSTextAlignment
@@ -160,6 +174,14 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
         }
     }
     
+    private let digitsSet = CharacterSet(charactersIn: "0123456789")
+    private func widthForString(_ string: String) -> CGFloat {
+        let convertedString = string.components(separatedBy: digitsSet).joined(separator: "8")
+        let text = NSAttributedString(string: convertedString, font: textFont, textColor: .black)
+        let size = text.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: NSStringDrawingOptions.usesLineFragmentOrigin, context: nil).size
+        return size.width
+    }
+    
     override public func drawParameters(forAsyncLayer layer: _ASDisplayLayer) -> NSObjectProtocol? {
         return MediaPlayerTimeTextNodeParameters(state: self.state, alignment: self.alignment, mode: self.mode, textColor: self.textColor)
     }
@@ -174,19 +196,8 @@ public final class MediaPlayerTimeTextNode: ASDisplayNode {
         }
         
         if let parameters = parameters as? MediaPlayerTimeTextNodeParameters {
-            let text: String
-            if let hours = parameters.state.hours, let minutes = parameters.state.minutes, let seconds = parameters.state.seconds {
-                if hours != 0 {
-                    text = String(format: "%d:%02d:%02d", hours, minutes, seconds)
-                } else {
-                    text = String(format: "%d:%02d", minutes, seconds)
-                }
-            } else {
-                text = "-:--"
-            }
-            let string = NSAttributedString(string: text, font: textFont, textColor: parameters.textColor)
+            let string = NSAttributedString(string: parameters.state.string, font: textFont, textColor: parameters.textColor)
             let size = string.boundingRect(with: CGSize(width: 200.0, height: 100.0), options: NSStringDrawingOptions.usesLineFragmentOrigin, context: nil).size
-            
             if parameters.alignment == .left {
                 string.draw(at: CGPoint())
             } else {
