@@ -17,6 +17,7 @@ public protocol ContainableController: class {
     
     func combinedSupportedOrientations(currentOrientationToLock: UIInterfaceOrientationMask) -> ViewControllerSupportedOrientations
     var deferScreenEdgeGestures: UIRectEdge { get }
+    var prefersOnScreenNavigationHidden: Bool { get }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition)
     func updateToInterfaceOrientation(_ orientation: UIInterfaceOrientation)

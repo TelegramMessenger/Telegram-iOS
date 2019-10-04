@@ -480,8 +480,8 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         var emptyItem: ItemListControllerEmptyStateItem?
         if let walletState = walletState {
             let textLength: Int = state.comment.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
-        
-            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && state.comment.count <= walletTextLimit
+            sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && textLength <= walletTextLimit
+
             rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
                 arguments.proceed()
             })
@@ -489,7 +489,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
             rightNavigationButton = nil
             emptyItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
-        
+
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Send_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.balance, state: state), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: emptyItem, animateChanges: false)
         

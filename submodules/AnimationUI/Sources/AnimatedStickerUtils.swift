@@ -209,9 +209,7 @@ public func experimentalConvertCompressedLottieToCombinedMp4(data: Data, size: C
                         return
                     }
                     
-                    var randomId: Int64 = 0
-                    arc4random_buf(&randomId, 8)
-                    let path = NSTemporaryDirectory() + "\(randomId).lz4v"
+                    let path = NSTemporaryDirectory() + "\(arc4random64()).lz4v"
                     guard let fileContext = ManagedFile(queue: nil, path: path, mode: .readwrite) else {
                         return
                     }

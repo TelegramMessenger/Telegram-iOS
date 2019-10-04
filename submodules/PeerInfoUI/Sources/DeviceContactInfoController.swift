@@ -1238,10 +1238,10 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
         guard let controller = controller else {
             return
         }
+        controller.view.endEditing(true)
         if let navigationController = controller.navigationController as? NavigationController {
             navigationController.filterController(controller, animated: animated)
         } else {
-            controller.view.endEditing(true)
             controller.dismiss()
         }
     }

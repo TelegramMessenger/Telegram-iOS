@@ -20,21 +20,24 @@
 #define IPHONE_4_NAMESTRING             @"iPhone 4"
 #define IPHONE_4S_NAMESTRING            @"iPhone 4S"
 #define IPHONE_5_NAMESTRING             @"iPhone 5"
-#define IPHONE_5S_NAMESTRING             @"iPhone 5S"
+#define IPHONE_5S_NAMESTRING            @"iPhone 5S"
 #define IPHONE_6_NAMESTRING             @"iPhone 6"
-#define IPHONE_6Plus_NAMESTRING             @"iPhone 6 Plus"
-#define IPHONE_6S_NAMESTRING             @"iPhone 6S"
-#define IPHONE_6SPlus_NAMESTRING             @"iPhone 6S Plus"
+#define IPHONE_6Plus_NAMESTRING         @"iPhone 6 Plus"
+#define IPHONE_6S_NAMESTRING            @"iPhone 6S"
+#define IPHONE_6SPlus_NAMESTRING        @"iPhone 6S Plus"
 #define IPHONE_7_NAMESTRING             @"iPhone 7"
-#define IPHONE_7Plus_NAMESTRING             @"iPhone 7 Plus"
+#define IPHONE_7Plus_NAMESTRING         @"iPhone 7 Plus"
 #define IPHONE_8_NAMESTRING             @"iPhone 8"
-#define IPHONE_8Plus_NAMESTRING             @"iPhone 8 Plus"
+#define IPHONE_8Plus_NAMESTRING         @"iPhone 8 Plus"
 #define IPHONE_X_NAMESTRING             @"iPhone X"
-#define IPHONE_SE_NAMESTRING             @"iPhone SE"
+#define IPHONE_SE_NAMESTRING            @"iPhone SE"
+#define IPHONE_XS_NAMESTRING            @"iPhone XS"
+#define IPHONE_XSMAX_NAMESTRING         @"iPhone XS Max"
+#define IPHONE_XR_NAMESTRING            @"iPhone XR"
+#define IPHONE_11_NAMESTRING            @"iPhone 11"
+#define IPHONE_11PRO_NAMESTRING         @"iPhone 11 Pro"
+#define IPHONE_11PROMAX_NAMESTRING      @"iPhone 11 Pro Max"
 #define IPHONE_UNKNOWN_NAMESTRING       @"Unknown iPhone"
-#define IPHONE_XS_NAMESTRING @"iPhone XS"
-#define IPHONE_XSMAX_NAMESTRING @"iPhone XS Max"
-#define IPHONE_XR_NAMESTRING @"iPhone XR"
 
 #define IPOD_1G_NAMESTRING              @"iPod touch 1G"
 #define IPOD_2G_NAMESTRING              @"iPod touch 2G"
@@ -42,6 +45,7 @@
 #define IPOD_4G_NAMESTRING              @"iPod touch 4G"
 #define IPOD_5G_NAMESTRING              @"iPod touch 5G"
 #define IPOD_6G_NAMESTRING              @"iPod touch 6G"
+#define IPOD_7G_NAMESTRING              @"iPod touch 7G"
 #define IPOD_UNKNOWN_NAMESTRING         @"Unknown iPod"
 
 #define IPAD_1G_NAMESTRING              @"iPad 1G"
@@ -49,12 +53,12 @@
 #define IPAD_3G_NAMESTRING              @"iPad 3G"
 #define IPAD_4G_NAMESTRING              @"iPad 4G"
 #define IPAD_5G_NAMESTRING              @"iPad Air 2"
-#define IPAD_6G_NAMESTRING  @"iPad Pro"
-#define IPAD_PRO_3G_NAMESTRING  @"iPad Pro 12.9 (3rd gen)"
-#define IPAD_PRO_11_NAMESTRING  @"iPad Pro 11"
-#define IPAD_PRO_6G_NAMESTRING  @"iPad (6th gen)"
-#define IPAD_PRO_10_5_NAMESTRING  @"iPad Pro 10.5"
-#define IPAD_PRO_12_9_NAMESTRING  @"iPad Pro 12.9"
+#define IPAD_6G_NAMESTRING              @"iPad Pro"
+#define IPAD_PRO_3G_NAMESTRING          @"iPad Pro 12.9 inch (3rd gen)"
+#define IPAD_PRO_11_NAMESTRING          @"iPad Pro 11 inch"
+#define IPAD_PRO_6G_NAMESTRING          @"iPad (6th gen)"
+#define IPAD_PRO_10_5_NAMESTRING        @"iPad Pro 10.5 inch"
+#define IPAD_PRO_12_9_NAMESTRING        @"iPad Pro 12.9 inch"
 #define IPAD_UNKNOWN_NAMESTRING         @"Unknown iPad"
 
 #define APPLETV_2G_NAMESTRING           @"Apple TV 2G"
@@ -67,7 +71,7 @@
 #define SIMULATOR_NAMESTRING            @"iPhone Simulator"
 #define SIMULATOR_IPHONE_NAMESTRING     @"iPhone Simulator"
 #define SIMULATOR_IPAD_NAMESTRING       @"iPad Simulator"
-#define SIMULATOR_APPLETV_NAMESTRING    @"Apple TV Simulator" // :)
+#define SIMULATOR_APPLETV_NAMESTRING    @"Apple TV Simulator"
 
 /*
  iPad8,5, iPad8,6, iPad8,7, iPad8,8 - iPad Pro 12.9" (3rd gen)
@@ -105,6 +109,9 @@ typedef enum {
     UIDeviceXSiPhone,
     UIDeviceXSMaxiPhone,
     UIDeviceXRiPhone,
+    UIDevice11iPhone,
+    UIDevice11ProiPhone,
+    UIDevice11ProMaxiPhone,
     
     UIDevice1GiPod,
     UIDevice2GiPod,
@@ -112,6 +119,7 @@ typedef enum {
     UIDevice4GiPod,
     UIDevice5GiPod,
     UIDevice6GiPod,
+    UIDevice7GiPod,
     
     UIDevice1GiPad,
     UIDevice2GiPad,
@@ -592,7 +600,9 @@ NSString *suffix = @"";
         case UIDeviceXSiPhone: return IPHONE_XS_NAMESTRING;
         case UIDeviceXSMaxiPhone: return IPHONE_XSMAX_NAMESTRING;
         case UIDeviceXRiPhone: return IPHONE_XR_NAMESTRING;
-            
+        case UIDevice11iPhone: return IPHONE_11_NAMESTRING;
+        case UIDevice11ProiPhone: return IPHONE_11PRO_NAMESTRING;
+        case UIDevice11ProMaxiPhone: return IPHONE_11PROMAX_NAMESTRING;
         case UIDeviceUnknowniPhone: return IPHONE_UNKNOWN_NAMESTRING;
             
         case UIDevice1GiPod: return IPOD_1G_NAMESTRING;
@@ -601,6 +611,7 @@ NSString *suffix = @"";
         case UIDevice4GiPod: return IPOD_4G_NAMESTRING;
         case UIDevice5GiPod: return IPOD_5G_NAMESTRING;
         case UIDevice6GiPod: return IPOD_6G_NAMESTRING;
+        case UIDevice7GiPod: return IPOD_7G_NAMESTRING;
         case UIDeviceUnknowniPod: return IPOD_UNKNOWN_NAMESTRING;
             
         case UIDevice1GiPad : return IPAD_1G_NAMESTRING;
@@ -684,6 +695,10 @@ NSString *suffix = @"";
     if ([platform isEqualToString:@"iPhone11,4"])    return UIDeviceXSMaxiPhone;
     if ([platform isEqualToString:@"iPhone11,8"])    return UIDeviceXRiPhone;
     
+    if ([platform isEqualToString:@"iPhone12,1"])    return UIDevice11iPhone;
+    if ([platform isEqualToString:@"iPhone12,3"])    return UIDevice11ProiPhone;
+    if ([platform isEqualToString:@"iPhone12,5"])    return UIDevice11ProMaxiPhone;
+    
     if ([platform isEqualToString:@"iPhone8,4"])    return UIDeviceSEPhone;
     
     // iPod
@@ -693,6 +708,7 @@ NSString *suffix = @"";
     if ([platform hasPrefix:@"iPod4"])              return UIDevice4GiPod;
     if ([platform hasPrefix:@"iPod5"])              return UIDevice5GiPod;
     if ([platform hasPrefix:@"iPod7"])              return UIDevice6GiPod;
+    if ([platform hasPrefix:@"iPod9"])              return UIDevice7GiPod;
     
     // iPad
     if ([platform hasPrefix:@"iPad1"])              return UIDevice1GiPad;

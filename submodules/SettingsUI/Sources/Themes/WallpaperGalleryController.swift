@@ -384,9 +384,16 @@ public class WallpaperGalleryController: ViewController {
                                     let wallpaper = wallpaper.withUpdatedSettings(updatedSettings)
                                     
                                     let _ = (updatePresentationThemeSettingsInteractively(accountManager: strongSelf.context.sharedContext.accountManager, { current in
-                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers                                        
-                                        themeSpecificChatWallpapers[current.theme.index] = wallpaper
-                                        return PresentationThemeSettings(chatWallpaper: wallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
+                                        var themeSpecificChatWallpapers = current.themeSpecificChatWallpapers
+                                        var chatWallpaper = current.chatWallpaper
+                                        if automaticThemeShouldSwitchNow(settings: current.automaticThemeSwitchSetting, currentTheme: current.theme) {
+                                            themeSpecificChatWallpapers[current.automaticThemeSwitchSetting.theme.index] = wallpaper
+                                        } else {
+                                            themeSpecificChatWallpapers[current.theme.index] = wallpaper
+                                            chatWallpaper = wallpaper
+                                        }
+                                        
+                                        return PresentationThemeSettings(chatWallpaper: chatWallpaper, theme: current.theme, themeSpecificAccentColors: current.themeSpecificAccentColors, themeSpecificChatWallpapers: themeSpecificChatWallpapers, fontSize: current.fontSize, automaticThemeSwitchSetting: current.automaticThemeSwitchSetting, largeEmoji: current.largeEmoji, disableAnimations: current.disableAnimations)
                                     }) |> deliverOnMainQueue).start(completed: {
                                         self?.dismiss(forceAway: true)
                                     })

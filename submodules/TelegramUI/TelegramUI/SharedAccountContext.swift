@@ -18,6 +18,7 @@ import WalletUI
 import LegacyMediaPickerUI
 import LocalMediaResources
 import OverlayStatusController
+import AlertUI
 
 private enum CallStatusText: Equatable {
     case none
@@ -1042,10 +1043,18 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             let tonContext = storedContext.context(config: config, blockchainName: blockchainName)
             
             if wallets.wallets.isEmpty {
-                if let _ = currentPublicKey {
-                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro, walletCreatedPreloadState: nil))
+                if case .send = walletContext {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    let controller = textAlertController(context: context, title: presentationData.strings.Conversation_WalletRequiredTitle, text: presentationData.strings.Conversation_WalletRequiredText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Conversation_WalletRequiredNotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Conversation_WalletRequiredSetup, action: { [weak self] in
+                        self?.openWallet(context: context, walletContext: .generic, present: present)
+                    })])
+                    present(controller)
                 } else {
-                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
+                    if let _ = currentPublicKey {
+                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro, walletCreatedPreloadState: nil))
+                    } else {
+                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
+                    }
                 }
             } else {
                 let walletInfo = wallets.wallets[0].info

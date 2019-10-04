@@ -105,7 +105,7 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
         }
         
         var canCall = true
-        if let user = peer as? TelegramUser, let cachedUserData = transaction.getPeerCachedData(peerId: peerId) as? CachedUserData, !user.flags.contains(.isSupport) && cachedUserData.callsPrivate {
+        if let user = peer as? TelegramUser, let cachedUserData = transaction.getPeerCachedData(peerId: peerId) as? CachedUserData, user.flags.contains(.isSupport) || cachedUserData.callsPrivate {
             canCall = false
         }
         

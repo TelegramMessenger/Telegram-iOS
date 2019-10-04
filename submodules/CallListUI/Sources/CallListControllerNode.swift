@@ -188,6 +188,8 @@ final class CallListControllerNode: ASDisplayNode {
     private let callListDisposable = MetaDisposable()
     
     private let listNode: ListView
+    private let leftOverlayNode: ASDisplayNode
+    private let rightOverlayNode: ASDisplayNode
     private let emptyTextNode: ASTextNode
     
     private let call: (PeerId) -> Void
@@ -210,6 +212,10 @@ final class CallListControllerNode: ASDisplayNode {
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = self.presentationData.theme.list.scrollIndicatorColor
+        self.leftOverlayNode = ASDisplayNode()
+        self.leftOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
+        self.rightOverlayNode = ASDisplayNode()
+        self.rightOverlayNode.backgroundColor = self.presentationData.theme.list.blocksBackgroundColor
         
         self.emptyTextNode = ASTextNode()
         self.emptyTextNode.alpha = 0.0
@@ -385,6 +391,8 @@ final class CallListControllerNode: ASDisplayNode {
     
     func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, disableAnimations: Bool) {
         if theme !== self.currentState.theme || strings !== self.currentState.strings || disableAnimations != self.currentState.disableAnimations {
+            self.leftOverlayNode.backgroundColor = theme.list.blocksBackgroundColor
+            self.rightOverlayNode.backgroundColor = theme.list.blocksBackgroundColor
             switch self.mode {
                 case .tab:
                     self.backgroundColor = theme.chatList.backgroundColor
@@ -536,7 +544,6 @@ final class CallListControllerNode: ASDisplayNode {
         let size = layout.size
         let contentRect = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
 
-        
         let textSize = self.emptyTextNode.measure(CGSize(width: size.width - 20.0, height: size.height))
         transition.updateFrame(node: self.emptyTextNode, frame: CGRect(origin: CGPoint(x: contentRect.minX + floor((contentRect.width - textSize.width) / 2.0), y: contentRect.minY + floor((contentRect.height - textSize.height) / 2.0)), size: textSize))
     }
@@ -552,7 +559,7 @@ final class CallListControllerNode: ASDisplayNode {
         self.listNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         self.listNode.position = CGPoint(x: layout.size.width / 2.0, y: layout.size.height / 2.0)
         
-        updateLayout(layout, navigationBarHeight: navigationBarHeight, transition: transition)
+        self.updateLayout(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
         var duration: Double = 0.0
         var curve: UInt = 0

@@ -156,8 +156,7 @@ private func processedLegacySecureIdAttachmentItems(postbox: Postbox, signal: SS
         guard let image = image else {
             return []
         }
-        var randomId: Int64 = 0
-        arc4random_buf(&randomId, 8)
+        let randomId = arc4random64()
         let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
         let scaledSize = image.size.aspectFitted(CGSize(width: 2048.0, height: 2048.0))
         if let scaledImage = TGScaleImageToPixelSize(image, scaledSize), let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.84) {

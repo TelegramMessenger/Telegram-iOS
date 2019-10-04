@@ -119,6 +119,9 @@ private func allOpenInOptions(context: AccountContext, item: OpenInItem) -> [Ope
                 return .openUrl(url: "ddgQuickLink://\(url)")
             }))
         
+            options.append(OpenInOption(application: .other(title: "Alook Browser", identifier: 1261944766, scheme: "alook", store: nil), action: {
+                return .openUrl(url: "alook://\(url)")
+            }))
         
         case let .location(location, withDirections):
             let lat = location.latitude

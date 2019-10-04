@@ -357,7 +357,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         insets.top += navigationBarHeight
         
         var addedInsets: UIEdgeInsets?
-        if case .tablet = layout.deviceMetrics.type, layout.size.width > 460.0 {
+        if layout.size.width > 480.0 {
             let inset = max(20.0, floor((layout.size.width - 674.0) / 2.0))
             insets.left += inset
             insets.right += inset
@@ -386,8 +386,8 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         
         self.listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, duration: duration, curve: listViewCurve), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
-        self.leftOverlayNode.frame = CGRect(x: 0.0, y: insets.top + 1.0, width: insets.left, height: layout.size.height - insets.top)
-        self.rightOverlayNode.frame = CGRect(x: layout.size.width - insets.right, y: insets.top + 1.0, width: insets.right, height: layout.size.height - insets.top)
+        self.leftOverlayNode.frame = CGRect(x: 0.0, y: 0.0, width: insets.left, height: layout.size.height)
+        self.rightOverlayNode.frame = CGRect(x: layout.size.width - insets.right, y: 0.0, width: insets.right, height: layout.size.height)
         
         if let emptyStateNode = self.emptyStateNode {
             var layout = layout

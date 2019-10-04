@@ -4056,6 +4056,7 @@ Unused sets are archived when you add more.";
 "LogoutOptions.ContactSupportText" = "Tell us about any issues; logging out doesn't usually help.";
 "LogoutOptions.LogOut" = "Log Out";
 "LogoutOptions.LogOutInfo" = "Remember, logging out kills all your Secret Chats.";
+"LogoutOptions.LogOutWalletInfo" = "Logging out will cancel all your secret chats and unlink your Gram wallet from the app.";
 
 "GroupPermission.PermissionGloballyDisabled" = "This permission is disabled in this group.";
 
@@ -4778,8 +4779,8 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Info.YourBalance" = "your balance";
 "Wallet.Info.Receive" = "Receive";
 "Wallet.Info.Send" = "Send";
-"Wallet.Info.RefreshErrorTitle" = "An Error Occurred";
-"Wallet.Info.RefreshErrorText" = "The wallet state can not be retrieved at this time. Please try again later.";
+"Wallet.Info.RefreshErrorTitle" = "No network";
+"Wallet.Info.RefreshErrorText" = "Couldn't refresh balance. Please make sure your internet connection is working and try again.";
 "Wallet.Info.RefreshErrorNetworkText" = "The wallet state can not be retrieved at this time. Please try again later.";
 "Wallet.Info.UnknownTransaction" = "Empty Transaction";
 "Wallet.Info.TransactionTo" = "to";
@@ -4883,16 +4884,20 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Words.NotDoneText" = "You didn't have enough time to write those words down.";
 "Wallet.Words.NotDoneOk" = "OK, Sorry";
 "Wallet.Words.NotDoneResponse" = "Apologies Accepted";
-
-"Wallet.Send.NetworkError" = "Network Error";
-"Wallet.Send.ErrorNotEnoughFunds" = "Not Enough Funds";
+"Wallet.Send.NetworkErrorTitle" = "No network";
+"Wallet.Send.NetworkErrorText" = "Couldn't send grams. Please make sure your internet connection is working and try again.";
+"Wallet.Send.ErrorNotEnoughFundsTitle" = "Insufficient Grams";
+"Wallet.Send.ErrorNotEnoughFundsText" = "Unfortunately, your transfer couldn't be completed. You don't have enough grams.";
 "Wallet.Send.ErrorInvalidAddress" = "Invalid wallet address. Please correct and try again.";
 "Wallet.Send.ErrorDecryptionFailed" = "Please make sure that your device has a passcode set in iOS Settings and try again.";
 "Wallet.Send.UninitializedTitle" = "Warning";
 "Wallet.Send.UninitializedText" = "This address belongs to an empty wallet. Are you sure you want to transfer grams to it?";
 "Wallet.Send.SendAnyway" = "Send Anyway";
-
 "Wallet.Receive.CreateInvoice" = "Create Invoice";
 "Wallet.Receive.CreateInvoiceInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
+"Conversation.WalletRequiredTitle" = "Gram Wallet Required";
+"Conversation.WalletRequiredText" = "This link can be used to send money on the TON Blockchain. To do this, you need to set up a Gram wallet first.";
+"Conversation.WalletRequiredNotNow" = "Not Now";
+"Conversation.WalletRequiredSetup" = "Set Up";
 
 "Wallet.CreateInvoice.Title" = "Create Invoice";

@@ -1221,7 +1221,11 @@ public class Window1 {
     }
     
     private func collectPrefersOnScreenNavigationHidden() -> Bool {
-        var hidden = self.presentationContext.combinedPrefersOnScreenNavigationHidden()
+        var hidden = false
+        if let navigationController = self._rootController as? NavigationController, let overlayController = navigationController.topOverlayController {
+            hidden = hidden || overlayController.prefersOnScreenNavigationHidden
+        }
+        hidden = hidden || self.presentationContext.combinedPrefersOnScreenNavigationHidden()
         
         for controller in self.topLevelOverlayControllers {
             if let controller = controller as? ViewController {

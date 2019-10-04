@@ -21,6 +21,7 @@ static_library(
     	"//submodules/RadialStatusNode:RadialStatusNode",
     	"//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

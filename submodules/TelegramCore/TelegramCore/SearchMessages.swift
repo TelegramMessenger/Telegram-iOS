@@ -133,7 +133,7 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
         return lhs.index > rhs.index
     })
     
-    let completed = renderedMessages.isEmpty
+    let completed = renderedMessages.isEmpty || renderedMessages.count == totalCount
     if let previous = state {
         var currentIds = Set<MessageId>()
         var mergedMessages: [Message] = []

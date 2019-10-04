@@ -140,14 +140,17 @@ public final class WalletSplashScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
+            var title: String?
             let text: String
             switch error {
             case .generic:
                 text = strongSelf.presentationData.strings.Login_UnknownError
             case .network:
-                text = strongSelf.presentationData.strings.Wallet_Send_NetworkError
+                title = strongSelf.presentationData.strings.Wallet_Send_NetworkErrorTitle
+                text = strongSelf.presentationData.strings.Wallet_Send_NetworkErrorText
             case .notEnoughFunds:
-                text = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFunds
+                title = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFundsTitle
+                text = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFundsText
             case .messageTooLong:
                 text = strongSelf.presentationData.strings.Login_UnknownError
             case .invalidAddress:
@@ -173,7 +176,7 @@ public final class WalletSplashScreen: ViewController {
                     text = strongSelf.presentationData.strings.Login_UnknownError
                 }
             }
-            let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+            let controller = textAlertController(context: strongSelf.context, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     navigationController.popViewController(animated: true)
                 }

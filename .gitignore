@@ -31,3 +31,5 @@ Project.xcodeproj/*
 Watch/Watch.xcodeproj/*
 AppBundle.xcworkspace/*
 tools/buck
+*.xcodeproj
+!*_Xcode.xcodeproj

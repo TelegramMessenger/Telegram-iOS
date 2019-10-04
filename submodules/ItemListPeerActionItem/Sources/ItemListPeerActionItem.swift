@@ -215,7 +215,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                         strongSelf.insertSubnode(strongSelf.maskNode, at: 3)
                     }
                     
-                    let hasCorners = params.width > 480
+                    let hasCorners = itemListHasRoundedBlockLayout(params)
                     var hasTopCorners = false
                     var hasBottomCorners = false
                     switch neighbors.top {

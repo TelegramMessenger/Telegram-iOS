@@ -174,6 +174,10 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     }
     
     func setup(item: StickerPaneSearchGlobalItem) {
+        if item.topItems.count < Int(item.info.count) && item.topItems.count < 5 && self.item?.info.id != item.info.id {
+            self.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.account.network, postbox: item.account.postbox, id: item.info.id).start())
+        }
+        
         self.item = item
         self.setNeedsLayout()
         
@@ -210,17 +214,8 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.info.title, font: titleFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0 - installLayout.size.width, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
         let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.strings.StickerPack_StickerCount(item.info.count), font: statusFont, textColor: item.theme.chat.inputMediaPanel.stickersSectionTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.leftInset - params.rightInset - leftInset - rightInset - 20.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-        
-        var topItems = item.topItems
-        if topItems.count > 5 {
-            topItems.removeSubrange(5 ..< topItems.count)
-        }
-        
+                
         let strongSelf = self
-        if item.topItems.count < Int(item.info.count) && item.topItems.count < 5 && strongSelf.item?.info.id != item.info.id {
-            strongSelf.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.account.network, postbox: item.account.postbox, id: item.info.id).start())
-        }
-        strongSelf.item = item
     
         let _ = installApply()
         let _ = titleApply()
@@ -267,6 +262,11 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         let itemSize = CGSize(width: itemSide, height: itemSide)
         var offset = sideInset
         let itemSpacing = (max(0, availableWidth - 5.0 * itemSide - sideInset * 2.0)) / 4.0
+        
+        var topItems = item.topItems
+        if topItems.count > 5 {
+            topItems.removeSubrange(5 ..< topItems.count)
+        }
         
         for i in 0 ..< topItems.count {
             let file = topItems[i].file

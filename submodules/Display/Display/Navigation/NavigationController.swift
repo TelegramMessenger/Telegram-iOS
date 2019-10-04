@@ -108,6 +108,9 @@ open class NavigationController: UINavigationController, ContainableController, 
     public var lockOrientation: Bool = false
     
     public var deferScreenEdgeGestures: UIRectEdge = UIRectEdge()
+    public var prefersOnScreenNavigationHidden: Bool {
+        return (self.topViewController as? ViewController)?.prefersOnScreenNavigationHidden ?? false
+    }
     
     private let mode: NavigationControllerMode
     private var theme: NavigationControllerTheme
@@ -151,6 +154,14 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     override open var topViewController: UIViewController? {
         return self._viewControllers.last
+    }
+    
+    var topOverlayController: ViewController? {
+        if let overlayContainer = self.overlayContainers.last {
+            return overlayContainer.controller
+        } else {
+            return nil
+        }
     }
     
     private var _displayNode: ASDisplayNode?

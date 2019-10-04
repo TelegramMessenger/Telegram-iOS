@@ -467,7 +467,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
             
             let separatorHeight = UIScreenPixel
             
-            let hasCorners = params.width > 480
+            let hasCorners = itemListHasRoundedBlockLayout(params)
             let contentSize: CGSize
             var insets: UIEdgeInsets
             let itemBackgroundColor: UIColor
