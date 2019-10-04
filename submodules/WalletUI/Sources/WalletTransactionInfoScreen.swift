@@ -18,11 +18,13 @@ private final class WalletTransactionInfoControllerArguments {
     let copyWalletAddress: () -> Void
     let sendGrams: () -> Void
     let displayContextMenu: (WalletTransactionInfoEntryTag, String) -> Void
+    let openFeeInfo: () -> Void
     
-    init(copyWalletAddress: @escaping () -> Void, sendGrams: @escaping () -> Void, displayContextMenu: @escaping (WalletTransactionInfoEntryTag, String) -> Void) {
+    init(copyWalletAddress: @escaping () -> Void, sendGrams: @escaping () -> Void, displayContextMenu: @escaping (WalletTransactionInfoEntryTag, String) -> Void, openFeeInfo: @escaping () -> Void) {
         self.copyWalletAddress = copyWalletAddress
         self.sendGrams = sendGrams
         self.displayContextMenu = displayContextMenu
+        self.openFeeInfo = openFeeInfo
     }
 }
 
@@ -55,8 +57,10 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
     case infoSendGrams(PresentationTheme, String)
     case storageFeeHeader(PresentationTheme, String)
     case storageFee(PresentationTheme, String)
+    case storageFeeInfo(PresentationTheme, String)
     case otherFeeHeader(PresentationTheme, String)
     case otherFee(PresentationTheme, String)
+    case otherFeeInfo(PresentationTheme, String)
     case commentHeader(PresentationTheme, String)
     case comment(PresentationTheme, String)
     
@@ -66,9 +70,9 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return WalletTransactionInfoSection.amount.rawValue
         case .infoHeader, .infoAddress, .infoCopyAddress, .infoSendGrams:
             return WalletTransactionInfoSection.info.rawValue
-        case .storageFeeHeader, .storageFee:
+        case .storageFeeHeader, .storageFee, .storageFeeInfo:
             return WalletTransactionInfoSection.storageFee.rawValue
-        case .otherFeeHeader, .otherFee:
+        case .otherFeeHeader, .otherFee, .otherFeeInfo:
             return WalletTransactionInfoSection.otherFee.rawValue
         case .commentHeader, .comment:
             return WalletTransactionInfoSection.comment.rawValue
@@ -91,14 +95,18 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return 5
         case .storageFee:
             return 6
-        case .otherFeeHeader:
+        case .storageFeeInfo:
             return 7
-        case .otherFee:
+        case .otherFeeHeader:
             return 8
-        case .commentHeader:
+        case .otherFee:
             return 9
-        case .comment:
+        case .otherFeeInfo:
             return 10
+        case .commentHeader:
+            return 11
+        case .comment:
+            return 12
         }
     }
     
@@ -130,10 +138,24 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .storageFee(theme, text):
             return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
+        case let .storageFeeInfo(theme, text):
+            return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
+                switch action {
+                case .tap:
+                    arguments.openFeeInfo()
+                }
+            }, style: .blocks)
         case let .otherFeeHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .otherFee(theme, text):
             return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
+        case let .otherFeeInfo(theme, text):
+            return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
+                switch action {
+                case .tap:
+                    arguments.openFeeInfo()
+                }
+            }, style: .blocks)
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, text):
@@ -250,10 +272,12 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
         if transaction.storageFee != 0 {
             entries.append(.storageFeeHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_StorageFeeHeader))
             entries.append(.storageFee(presentationData.theme, formatBalanceText(-transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.storageFeeInfo(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_StorageFeeInfo))
         }
         if transaction.otherFee != 0 {
             entries.append(.otherFeeHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_OtherFeeHeader))
             entries.append(.otherFee(presentationData.theme, formatBalanceText(-transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+            entries.append(.otherFeeInfo(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_OtherFeeInfo))
         }
     }
     
@@ -295,6 +319,9 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
         }
     }, displayContextMenu: { tag, text in
         displayContextMenuImpl?(tag, text)
+    }, openFeeInfo: {
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.Wallet_TransactionInfo_FeeInfoURL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())

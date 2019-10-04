@@ -30,6 +30,7 @@ static_library(
         "//submodules/UrlHandling:UrlHandling",
         "//submodules/UrlEscaping:UrlEscaping",
 	"//submodules/LocalAuth:LocalAuth",
+	"//submodules/ScreenCaptureDetection:ScreenCaptureDetection",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
