@@ -296,14 +296,10 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
 
         if case .tablet = layout.deviceMetrics.type {
-            if case .landscape = layout.orientation {
-                let rotation: CGFloat
-                if UIDevice.current.orientation == .landscapeLeft {
-                    rotation = CGFloat.pi / 2.0
-                } else {
-                    rotation = -CGFloat.pi / 2.0
-                }
+            if UIDevice.current.orientation == .landscapeLeft {
                 self.previewNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+            } else if UIDevice.current.orientation == .landscapeRight {
+                self.previewNode.transform = CATransform3DMakeRotation(-CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
             } else {
                 self.previewNode.transform = CATransform3DIdentity
             }
