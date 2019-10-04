@@ -91,21 +91,21 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return 3
         case .infoSendGrams:
             return 4
-        case .storageFeeHeader:
-            return 5
-        case .storageFee:
-            return 6
-        case .storageFeeInfo:
-            return 7
-        case .otherFeeHeader:
-            return 8
-        case .otherFee:
-            return 9
-        case .otherFeeInfo:
-            return 10
         case .commentHeader:
-            return 11
+            return 5
         case .comment:
+            return 6
+        case .storageFeeHeader:
+            return 7
+        case .storageFee:
+            return 8
+        case .storageFeeInfo:
+            return 9
+        case .otherFeeHeader:
+            return 10
+        case .otherFee:
+            return 11
+        case .otherFeeInfo:
             return 12
         }
     }
@@ -268,6 +268,11 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
         entries.append(.infoSendGrams(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SendGrams))
     }
     
+    if !description.isEmpty {
+        entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CommentHeader))
+        entries.append(.comment(presentationData.theme, description))
+    }
+    
     if case let .completed(transaction) = walletTransaction {
         if transaction.storageFee != 0 {
             entries.append(.storageFeeHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_StorageFeeHeader))
@@ -279,11 +284,6 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
             entries.append(.otherFee(presentationData.theme, formatBalanceText(-transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
             entries.append(.otherFeeInfo(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_OtherFeeInfo))
         }
-    }
-    
-    if !description.isEmpty {
-        entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CommentHeader))
-        entries.append(.comment(presentationData.theme, description))
     }
     
     return entries

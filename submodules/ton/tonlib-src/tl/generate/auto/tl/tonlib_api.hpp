@@ -23,6 +23,9 @@ bool downcast_call(Object &obj, const T &func) {
     case config::ID:
       func(static_cast<config &>(obj));
       return true;
+    case data::ID:
+      func(static_cast<data &>(obj));
+      return true;
     case error::ID:
       func(static_cast<error &>(obj));
       return true;
@@ -154,11 +157,17 @@ bool downcast_call(Function &obj, const T &func) {
     case createNewKey::ID:
       func(static_cast<createNewKey &>(obj));
       return true;
+    case decrypt::ID:
+      func(static_cast<decrypt &>(obj));
+      return true;
     case deleteAllKeys::ID:
       func(static_cast<deleteAllKeys &>(obj));
       return true;
     case deleteKey::ID:
       func(static_cast<deleteKey &>(obj));
+      return true;
+    case encrypt::ID:
+      func(static_cast<encrypt &>(obj));
       return true;
     case exportEncryptedKey::ID:
       func(static_cast<exportEncryptedKey &>(obj));
@@ -201,6 +210,9 @@ bool downcast_call(Function &obj, const T &func) {
       return true;
     case init::ID:
       func(static_cast<init &>(obj));
+      return true;
+    case kdf::ID:
+      func(static_cast<kdf &>(obj));
       return true;
     case onLiteServerQueryError::ID:
       func(static_cast<onLiteServerQueryError &>(obj));
