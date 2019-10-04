@@ -398,21 +398,32 @@ private struct WalletInfoListTransaction {
     let updates: [ListViewUpdateItem]
 }
 
+enum WalletInfoTransaction: Equatable {
+    case completed(WalletTransaction)
+    case pending(PendingWalletTransaction)
+}
+
 private enum WalletInfoListEntryId: Hashable {
     case empty
     case transaction(WalletTransactionId)
+    case pendingTransaction(Data)
 }
 
 private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
     case empty(String)
-    case transaction(Int, WalletTransaction)
+    case transaction(Int, WalletInfoTransaction)
     
     var stableId: WalletInfoListEntryId {
         switch self {
         case .empty:
             return .empty
         case let .transaction(_, transaction):
-            return .transaction(transaction.transactionId)
+            switch transaction {
+            case let .completed(completed):
+                return .transaction(completed.transactionId)
+            case let .pending(pending):
+                return .pendingTransaction(pending.bodyHash)
+            }
         }
     }
     
@@ -435,7 +446,7 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> ListViewItem {
+    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletInfoTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> ListViewItem {
         switch self {
         case let .empty(address):
             return WalletInfoEmptyItem(account: account, theme: theme, strings: strings, address: address, displayAddressContextMenu: { node, frame in
@@ -449,7 +460,7 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> WalletInfoListTransaction {
+private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletInfoTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> WalletInfoListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
@@ -467,7 +478,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private let walletInfo: WalletInfo?
     private let address: String
     
-    private let openTransaction: (WalletTransaction) -> Void
+    private let openTransaction: (WalletInfoTransaction) -> Void
     private let present: (ViewController, Any?) -> Void
     
     private let hapticFeedback = HapticFeedback()
@@ -498,7 +509,10 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     
     private var updateTimestampTimer: SwiftSignalKit.Timer?
     
-    init(account: Account, tonContext: TonContext, presentationData: PresentationData, walletInfo: WalletInfo?, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+    private var pollCombinedStateDisposable: Disposable?
+    private var watchCombinedStateDisposable: Disposable?
+    
+    init(account: Account, tonContext: TonContext, presentationData: PresentationData, walletInfo: WalletInfo?, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
         self.account = account
         self.tonContext = tonContext
         self.presentationData = presentationData
@@ -595,12 +609,55 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             strongSelf.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
         }, queue: .mainQueue())
         self.updateTimestampTimer?.start()
+        
+        let subject: CombinedWalletStateSubject
+        if let walletInfo = walletInfo {
+            subject = .wallet(walletInfo)
+            
+            self.watchCombinedStateDisposable = (account.postbox.preferencesView(keys: [PreferencesKeys.walletCollection])
+            |> deliverOnMainQueue).start(next: { [weak self] view in
+                guard let strongSelf = self, let wallets = view.values[PreferencesKeys.walletCollection] as? WalletCollection else {
+                    return
+                }
+                for wallet in wallets.wallets {
+                    if wallet.info.publicKey == walletInfo.publicKey {
+                        if let state = wallet.state {
+                            if state.pendingTransactions != strongSelf.combinedState?.pendingTransactions || state.timestamp != strongSelf.combinedState?.timestamp {
+                                if !strongSelf.reloadingState {
+                                    strongSelf.updateCombinedState(combinedState: state, isUpdated: true)
+                                }
+                            }
+                        }
+                        break
+                    }
+                }
+            })
+        } else {
+            subject = .address(address)
+        }
+        let pollCombinedState: Signal<Never, NoError> = (
+            getCombinedWalletState(postbox: account.postbox, subject: subject, tonInstance: tonContext.instance)
+            |> ignoreValues
+            |> `catch` { _ -> Signal<Never, NoError> in
+                return .complete()
+            }
+            |> then(
+                Signal<Never, NoError>.complete()
+                |> delay(10.0, queue: .mainQueue())
+            )
+        )
+        |> restart
+        
+        self.pollCombinedStateDisposable = (pollCombinedState
+        |> deliverOnMainQueue).start()
     }
     
     deinit {
         self.stateDisposable.dispose()
         self.transactionListDisposable.dispose()
         self.updateTimestampTimer?.invalidate()
+        self.pollCombinedStateDisposable?.dispose()
+        self.watchCombinedStateDisposable?.dispose()
     }
     
     func scrollToHideHeader() {
@@ -712,49 +769,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 combinedState = state
             }
             
-            strongSelf.combinedState = combinedState
-            if let combinedState = combinedState {
-                strongSelf.headerNode.balanceNode.balance = formatBalanceText(max(0, combinedState.walletState.balance), decimalSeparator: strongSelf.presentationData.dateTimeFormat.decimalSeparator)
-                strongSelf.headerNode.balance = max(0, combinedState.walletState.balance)
-                
-                if strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
-                    strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
-                }
-                
-                strongSelf.reloadingState = false
-                
-                strongSelf.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
-                
-                if strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
-                    strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: strongSelf.listOffset ?? 0.0, transition: .immediate, isScrolling: false)
-                }
-                
-                strongSelf.transactionsLoaded(isReload: true, transactions: combinedState.topTransactions)
-                
-                if isUpdated {
-                    strongSelf.headerNode.isRefreshing = false
-                }
-                
-                if strongSelf.isReady, let (layout, navigationHeight) = strongSelf.validLayout {
-                    strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: strongSelf.listOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut), isScrolling: false)
-                }
-                
-                let wasReady = strongSelf.isReady
-                strongSelf.isReady = strongSelf.combinedState != nil
-                
-                if strongSelf.isReady && !wasReady {
-                    if let (layout, navigationHeight) = strongSelf.validLayout {
-                        strongSelf.headerNode.update(size: strongSelf.headerNode.bounds.size, navigationHeight: navigationHeight, offset: layout.size.height, transition: .immediate, isScrolling: false)
-                    }
-                    
-                    strongSelf.becameReady(animated: strongSelf.didSetContentReady)
-                }
-            }
-            
-            if !strongSelf.didSetContentReady {
-                strongSelf.didSetContentReady = true
-                strongSelf.contentReady.set(.single(true))
-            }
+            strongSelf.updateCombinedState(combinedState: combinedState, isUpdated: isUpdated)
         }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -798,6 +813,52 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         }))
     }
     
+    private func updateCombinedState(combinedState: CombinedWalletState?, isUpdated: Bool) {
+        self.combinedState = combinedState
+        if let combinedState = combinedState {
+            self.headerNode.balanceNode.balance = formatBalanceText(max(0, combinedState.walletState.balance), decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator)
+            self.headerNode.balance = max(0, combinedState.walletState.balance)
+            
+            if self.isReady, let (layout, navigationHeight) = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
+            }
+            
+            self.reloadingState = false
+            
+            self.headerNode.timestamp = Int32(clamping: combinedState.timestamp)
+            
+            if self.isReady, let (layout, navigationHeight) = self.validLayout {
+                self.headerNode.update(size: self.headerNode.bounds.size, navigationHeight: navigationHeight, offset: self.listOffset ?? 0.0, transition: .immediate, isScrolling: false)
+            }
+            
+            self.transactionsLoaded(isReload: true, transactions: combinedState.topTransactions, pendingTransactions: combinedState.pendingTransactions)
+            
+            if isUpdated {
+                self.headerNode.isRefreshing = false
+            }
+            
+            if self.isReady, let (layout, navigationHeight) = self.validLayout {
+                self.headerNode.update(size: self.headerNode.bounds.size, navigationHeight: navigationHeight, offset: self.listOffset ?? 0.0, transition: .animated(duration: 0.2, curve: .easeInOut), isScrolling: false)
+            }
+            
+            let wasReady = self.isReady
+            self.isReady = self.combinedState != nil
+            
+            if self.isReady && !wasReady {
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.headerNode.update(size: self.headerNode.bounds.size, navigationHeight: navigationHeight, offset: layout.size.height, transition: .immediate, isScrolling: false)
+                }
+                
+                self.becameReady(animated: self.didSetContentReady)
+            }
+        }
+        
+        if !self.didSetContentReady {
+            self.didSetContentReady = true
+            self.contentReady.set(.single(true))
+        }
+    }
+    
     private func loadMoreTransactions() {
         if self.loadingMoreTransactions {
             return
@@ -807,7 +868,12 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         if let last = self.currentEntries?.last {
             switch last {
             case let .transaction(_, transaction):
-                lastTransactionId = transaction.transactionId
+                switch transaction {
+                case let .completed(completed):
+                    lastTransactionId = completed.transactionId
+                case .pending:
+                    break
+                }
             case .empty:
                 break
             }
@@ -817,7 +883,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.transactionsLoaded(isReload: false, transactions: transactions)
+            strongSelf.transactionsLoaded(isReload: false, transactions: transactions, pendingTransactions: [])
         }, error: { [weak self] _ in
             guard let strongSelf = self else {
                 return
@@ -825,17 +891,23 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         }))
     }
     
-    private func transactionsLoaded(isReload: Bool, transactions: [WalletTransaction]) {
+    private func transactionsLoaded(isReload: Bool, transactions: [WalletTransaction], pendingTransactions: [PendingWalletTransaction]) {
         self.loadingMoreTransactions = false
         self.canLoadMoreTransactions = transactions.count > 2
         
         var updatedEntries: [WalletInfoListEntry] = []
         if isReload {
-            var existingIds = Set<WalletTransactionId>()
+            var existingIds = Set<WalletInfoListEntryId>()
+            for transaction in pendingTransactions {
+                if !existingIds.contains(.pendingTransaction(transaction.bodyHash)) {
+                    existingIds.insert(.pendingTransaction(transaction.bodyHash))
+                    updatedEntries.append(.transaction(updatedEntries.count, .pending(transaction)))
+                }
+            }
             for transaction in transactions {
-                if !existingIds.contains(transaction.transactionId) {
-                    existingIds.insert(transaction.transactionId)
-                    updatedEntries.append(.transaction(updatedEntries.count, transaction))
+                if !existingIds.contains(.transaction(transaction.transactionId)) {
+                    existingIds.insert(.transaction(transaction.transactionId))
+                    updatedEntries.append(.transaction(updatedEntries.count, .completed(transaction)))
                 }
             }
             if updatedEntries.isEmpty {
@@ -850,19 +922,19 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                     return true
                 }
             }
-            var existingIds = Set<WalletTransactionId>()
+            var existingIds = Set<WalletInfoListEntryId>()
             for entry in updatedEntries {
                 switch entry {
                 case let .transaction(_, transaction):
-                    existingIds.insert(transaction.transactionId)
+                    existingIds.insert(entry.stableId)
                 case .empty:
                     break
                 }
             }
             for transaction in transactions {
-                if !existingIds.contains(transaction.transactionId) {
-                    existingIds.insert(transaction.transactionId)
-                    updatedEntries.append(.transaction(updatedEntries.count, transaction))
+                if !existingIds.contains(.transaction(transaction.transactionId)) {
+                    existingIds.insert(.transaction(transaction.transactionId))
+                    updatedEntries.append(.transaction(updatedEntries.count, .completed(transaction)))
                 }
             }
             if updatedEntries.isEmpty {

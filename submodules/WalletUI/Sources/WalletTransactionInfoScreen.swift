@@ -29,6 +29,8 @@ private final class WalletTransactionInfoControllerArguments {
 private enum WalletTransactionInfoSection: Int32 {
     case amount
     case info
+    case storageFee
+    case otherFee
     case comment
 }
 
@@ -46,11 +48,15 @@ private enum WalletTransactionInfoEntryTag: ItemListItemTag {
 }
 
 private enum WalletTransactionInfoEntry: ItemListNodeEntry {
-    case amount(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, WalletTransaction)
+    case amount(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, WalletInfoTransaction)
     case infoHeader(PresentationTheme, String)
     case infoAddress(PresentationTheme, String, String?)
     case infoCopyAddress(PresentationTheme, String)
     case infoSendGrams(PresentationTheme, String)
+    case storageFeeHeader(PresentationTheme, String)
+    case storageFee(PresentationTheme, String)
+    case otherFeeHeader(PresentationTheme, String)
+    case otherFee(PresentationTheme, String)
     case commentHeader(PresentationTheme, String)
     case comment(PresentationTheme, String)
     
@@ -60,6 +66,10 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return WalletTransactionInfoSection.amount.rawValue
         case .infoHeader, .infoAddress, .infoCopyAddress, .infoSendGrams:
             return WalletTransactionInfoSection.info.rawValue
+        case .storageFeeHeader, .storageFee:
+            return WalletTransactionInfoSection.storageFee.rawValue
+        case .otherFeeHeader, .otherFee:
+            return WalletTransactionInfoSection.otherFee.rawValue
         case .commentHeader, .comment:
             return WalletTransactionInfoSection.comment.rawValue
         }
@@ -77,10 +87,18 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return 3
         case .infoSendGrams:
             return 4
-        case .commentHeader:
+        case .storageFeeHeader:
             return 5
-        case .comment:
+        case .storageFee:
             return 6
+        case .otherFeeHeader:
+            return 7
+        case .otherFee:
+            return 8
+        case .commentHeader:
+            return 9
+        case .comment:
+            return 10
         }
     }
     
@@ -108,6 +126,14 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.sendGrams()
             })
+        case let .storageFeeHeader(theme, text):
+            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+        case let .storageFee(theme, text):
+            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
+        case let .otherFeeHeader(theme, text):
+            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
+        case let .otherFee(theme, text):
+            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, text):
@@ -138,52 +164,68 @@ private func stringForAddress(strings: PresentationStrings, address: WalletTrans
     }
 }
 
-private func extractAddress(_ walletTransaction: WalletTransaction) -> WalletTransactionAddress {
-    let transferredValue = walletTransaction.transferredValueWithoutFees
-    if transferredValue <= 0 {
-        if walletTransaction.outMessages.isEmpty {
-            return .none
+private func extractAddress(_ walletTransaction: WalletInfoTransaction) -> WalletTransactionAddress {
+    switch walletTransaction {
+    case let .completed(walletTransaction):
+        let transferredValue = walletTransaction.transferredValueWithoutFees
+        if transferredValue <= 0 {
+            if walletTransaction.outMessages.isEmpty {
+                return .none
+            } else {
+                var addresses: [String] = []
+                for message in walletTransaction.outMessages {
+                    addresses.append(message.destination)
+                }
+                return .list(addresses)
+            }
         } else {
-            var addresses: [String] = []
+            if let inMessage = walletTransaction.inMessage {
+                return .list([inMessage.source])
+            } else {
+                return .unknown
+            }
+        }
+        return .none
+    case let .pending(pending):
+        return .list([pending.address])
+    }
+}
+
+private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> String {
+    switch walletTransaction {
+    case let .completed(walletTransaction):
+        let transferredValue = walletTransaction.transferredValueWithoutFees
+        var text = ""
+        if transferredValue <= 0 {
             for message in walletTransaction.outMessages {
-                addresses.append(message.destination)
+                if !text.isEmpty {
+                    text.append("\n\n")
+                }
+                text.append(message.textMessage)
             }
-            return .list(addresses)
-        }
-    } else {
-        if let inMessage = walletTransaction.inMessage {
-            return .list([inMessage.source])
         } else {
-            return .unknown
-        }
-    }
-    return .none
-}
-
-private func extractDescription(_ walletTransaction: WalletTransaction) -> String {
-    let transferredValue = walletTransaction.transferredValueWithoutFees
-    var text = ""
-    if transferredValue <= 0 {
-        for message in walletTransaction.outMessages {
-            if !text.isEmpty {
-                text.append("\n\n")
+            if let inMessage = walletTransaction.inMessage {
+                text = inMessage.textMessage
             }
-            text.append(message.textMessage)
         }
-    } else {
-        if let inMessage = walletTransaction.inMessage {
-            text = inMessage.textMessage
-        }
+        return text
+    case let .pending(pending):
+        return String(data: pending.comment, encoding: .utf8) ?? ""
     }
-    return text
 }
 
-private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletTransaction, state: WalletTransactionInfoControllerState, walletInfo: WalletInfo?) -> [WalletTransactionInfoEntry] {
+private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletInfoTransaction, state: WalletTransactionInfoControllerState, walletInfo: WalletInfo?) -> [WalletTransactionInfoEntry] {
     var entries: [WalletTransactionInfoEntry] = []
     
     entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, walletTransaction))
     
-    let transferredValue = walletTransaction.transferredValueWithoutFees
+    let transferredValue: Int64
+    switch walletTransaction {
+    case let .completed(transaction):
+        transferredValue = transaction.transferredValueWithoutFees
+    case let .pending(transaction):
+        transferredValue = transaction.value
+    }
     let address = extractAddress(walletTransaction)
     var singleAddress: String?
     let text = stringForAddress(strings: presentationData.strings, address: address)
@@ -204,6 +246,17 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
         entries.append(.infoSendGrams(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SendGrams))
     }
     
+    if case let .completed(transaction) = walletTransaction {
+        if transaction.storageFee != 0 {
+            entries.append(.storageFeeHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_StorageFeeHeader))
+            entries.append(.storageFee(presentationData.theme, formatBalanceText(-transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+        }
+        if transaction.otherFee != 0 {
+            entries.append(.otherFeeHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_OtherFeeHeader))
+            entries.append(.otherFee(presentationData.theme, formatBalanceText(-transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
+        }
+    }
+    
     if !description.isEmpty {
         entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CommentHeader))
         entries.append(.comment(presentationData.theme, description))
@@ -212,7 +265,7 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     return entries
 }
 
-func walletTransactionInfoController(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo?, walletTransaction: WalletTransaction, enableDebugActions: Bool) -> ViewController {
+func walletTransactionInfoController(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, enableDebugActions: Bool) -> ViewController {
     let statePromise = ValuePromise(WalletTransactionInfoControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: WalletTransactionInfoControllerState())
     let updateState: ((WalletTransactionInfoControllerState) -> WalletTransactionInfoControllerState) -> Void = { f in
@@ -314,11 +367,11 @@ class WalletTransactionHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme
     let strings: PresentationStrings
     let dateTimeFormat: PresentationDateTimeFormat
-    let walletTransaction: WalletTransaction
+    let walletTransaction: WalletInfoTransaction
     let sectionId: ItemListSectionId
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletTransaction, sectionId: ItemListSectionId) {
+    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletInfoTransaction, sectionId: ItemListSectionId) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -421,7 +474,13 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             let signString: String
             let balanceString: String
             let titleColor: UIColor
-            let transferredValue = item.walletTransaction.transferredValueWithoutFees
+            let transferredValue: Int64
+            switch item.walletTransaction {
+            case let .completed(transaction):
+                transferredValue = transaction.transferredValueWithoutFees
+            case let .pending(transaction):
+                transferredValue = transaction.value
+            }
             if transferredValue <= 0 {
                 signString = ""
                 balanceString = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
@@ -443,7 +502,14 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             }
             let titleSign = NSAttributedString(string: signString, font: Font.bold(48.0), textColor: titleColor)
             
-            let subtitle: String = stringForFullDate(timestamp: Int32(clamping: item.walletTransaction.timestamp), strings: item.strings, dateTimeFormat: item.dateTimeFormat)
+            let timestamp: Int64
+            switch item.walletTransaction {
+            case let .completed(transaction):
+                timestamp = transaction.timestamp
+            case let .pending(transaction):
+                timestamp = transaction.timestamp
+            }
+            let subtitle: String = stringForFullDate(timestamp: Int32(clamping: timestamp), strings: item.strings, dateTimeFormat: item.dateTimeFormat)
             
             let (titleSignLayout, titleSignApply) = makeTitleSignLayout(TextNodeLayoutArguments(attributedString: titleSign, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))

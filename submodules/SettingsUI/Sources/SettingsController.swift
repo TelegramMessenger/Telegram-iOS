@@ -782,7 +782,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         let _ = (contextValue.get()
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
-            presentControllerImpl?(usernameSetupController(context: context), nil)
+            pushControllerImpl?(usernameSetupController(context: context))
         })
     }, openProxy: {
         let _ = (contextValue.get()

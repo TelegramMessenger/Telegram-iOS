@@ -471,13 +471,13 @@ public final class StoredTonContext {
         self.keychain = keychain
     }
     
-    public func context(config: String, blockchainName: String) -> TonContext {
+    public func context(config: String, blockchainName: String, enableProxy: Bool) -> TonContext {
         return self.currentInstance.with { data -> TonContext in
             if let instance = data.instance, data.config == config, data.blockchainName == blockchainName {
                 return TonContext(instance: instance, keychain: self.keychain)
             } else {
                 data.config = config
-                let instance = TonInstance(basePath: self.basePath, config: config, blockchainName: blockchainName, network: self.network)
+                let instance = TonInstance(basePath: self.basePath, config: config, blockchainName: blockchainName, network: enableProxy ? self.network : nil)
                 data.instance = instance
                 return TonContext(instance: instance, keychain: self.keychain)
             }

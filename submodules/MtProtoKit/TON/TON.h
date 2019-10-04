@@ -46,8 +46,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, readonly) NSString * _Nonnull source;
 @property (nonatomic, strong, readonly) NSString * _Nonnull destination;
 @property (nonatomic, strong, readonly) NSString * _Nonnull textMessage;
+@property (nonatomic, strong, readonly) NSData * _Nonnull bodyHash;
 
-- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage;
+- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage bodyHash:(NSData * _Nonnull)bodyHash;
 
 @end
 
@@ -77,14 +78,15 @@ NS_ASSUME_NONNULL_BEGIN
 @interface TONSendGramsResult : NSObject
 
 @property (nonatomic, readonly) int64_t sentUntil;
+@property (nonatomic, strong, readonly) NSData * _Nonnull bodyHash;
 
-- (instancetype)initWithSentUntil:(int64_t)sentUntil;
+- (instancetype)initWithSentUntil:(int64_t)sentUntil bodyHash:(NSData *)bodyHash;
 
 @end
 
 @interface TON : NSObject
 
-- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest;
+- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest enableExternalRequests:(bool)enableExternalRequests;
 
 - (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;

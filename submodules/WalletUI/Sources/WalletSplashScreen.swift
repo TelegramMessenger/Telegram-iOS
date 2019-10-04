@@ -135,7 +135,7 @@ public final class WalletSplashScreen: ViewController {
     }
     
     private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
-        let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
+        let _ = (sendGramsFromWallet(postbox: self.context.account.postbox, network: self.context.account.network, tonInstance: self.tonContext.instance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
         |> deliverOnMainQueue).start(error: { [weak self] error in
             guard let strongSelf = self else {
                 return
