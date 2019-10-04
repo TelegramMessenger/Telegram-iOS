@@ -56,11 +56,12 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, readonly) NSData * _Nonnull data;
 @property (nonatomic, strong, readonly) TONTransactionId * _Nonnull transactionId;
 @property (nonatomic, readonly) int64_t timestamp;
-@property (nonatomic, readonly) int64_t fee;
+@property (nonatomic, readonly) int64_t storageFee;
+@property (nonatomic, readonly) int64_t otherFee;
 @property (nonatomic, strong, readonly) TONTransactionMessage * _Nullable inMessage;
 @property (nonatomic, strong, readonly) NSArray<TONTransactionMessage *> * _Nonnull outMessages;
 
-- (instancetype)initWithData:(NSData * _Nonnull)data transactionId:(TONTransactionId * _Nonnull)transactionId timestamp:(int64_t)timestamp fee:(int64_t)fee inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages;
+- (instancetype)initWithData:(NSData * _Nonnull)data transactionId:(TONTransactionId * _Nonnull)transactionId timestamp:(int64_t)timestamp storageFee:(int64_t)storageFee otherFee:(int64_t)otherFee inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages;
 
 @end
 
@@ -88,7 +89,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
 - (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
 - (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
 - (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
 - (MTSignal *)deleteKey:(TONKey *)key;

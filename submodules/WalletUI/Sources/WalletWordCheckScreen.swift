@@ -2078,9 +2078,9 @@ public final class WalletWordCheckScreen: ViewController {
     
     private let startTime: Double
     
-    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult>?
+    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
     
-    public init(context: AccountContext, tonContext: TonContext, mode: WalletWordCheckMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult>?) {
+    public init(context: AccountContext, tonContext: TonContext, mode: WalletWordCheckMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
         self.context = context
         self.tonContext = tonContext
         self.mode = mode

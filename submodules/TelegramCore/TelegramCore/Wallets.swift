@@ -68,7 +68,7 @@ private final class TonInstanceImpl {
             instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, blockchainName: self.blockchainName, performExternalRequest: { request in
                 let _ = (
                     network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))
-                    |> timeout(10.0, queue: .concurrentDefaultQueue(), alternate: .fail(MTRpcError(errorCode: 500, errorDescription: "NETWORK_ERROR")))
+                    |> timeout(20.0, queue: .concurrentDefaultQueue(), alternate: .fail(MTRpcError(errorCode: 500, errorDescription: "NETWORK_ERROR")))
                 ).start(next: { result in
                     switch result {
                     case let .liteResponse(response):
@@ -322,7 +322,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func sendGramsFromWallet(decryptedSecret: Data, localPassword: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
+    fileprivate func sendGramsFromWallet(decryptedSecret: Data, localPassword: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
         let key = TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret)
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -655,7 +655,7 @@ public enum CombinedWalletStateSubject {
     case address(String)
 }
 
-public func getCombinedWalletState(postbox: Postbox, subject: CombinedWalletStateSubject, tonInstance: TonInstance) -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> {
+public func getCombinedWalletState(postbox: Postbox, subject: CombinedWalletStateSubject, tonInstance: TonInstance, onlyCached: Bool = false) -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> {
     switch subject {
     case let .wallet(walletInfo):
         return postbox.transaction { transaction -> CombinedWalletState? in
@@ -669,6 +669,9 @@ public func getCombinedWalletState(postbox: Postbox, subject: CombinedWalletStat
         }
         |> castError(GetCombinedWalletStateError.self)
         |> mapToSignal { cachedState -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
+            if onlyCached {
+                return .single(.cached(cachedState))
+            }
             return .single(.cached(cachedState))
             |> then(
                 tonInstance.walletAddress(publicKey: walletInfo.publicKey)
@@ -757,7 +760,7 @@ public enum SendGramsFromWalletError {
     case network
 }
 
-public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, localPassword: Data, toAddress: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
+public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, localPassword: Data, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
     return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
     |> castError(SendGramsFromWalletError.self)
     |> mapToSignal { fromAddress in
@@ -817,11 +820,12 @@ public final class WalletTransaction: Codable, Equatable {
     public let data: Data
     public let transactionId: WalletTransactionId
     public let timestamp: Int64
-    public let fee: Int64
+    public let storageFee: Int64
+    public let otherFee: Int64
     public let inMessage: WalletTransactionMessage?
     public let outMessages: [WalletTransactionMessage]
     
-    public var transferredValue: Int64 {
+    public var transferredValueWithoutFees: Int64 {
         var value: Int64 = 0
         if let inMessage = self.inMessage {
             value += inMessage.value
@@ -829,15 +833,15 @@ public final class WalletTransaction: Codable, Equatable {
         for message in self.outMessages {
             value -= message.value
         }
-        value -= self.fee
         return value
     }
     
-    init(data: Data, transactionId: WalletTransactionId, timestamp: Int64, fee: Int64, inMessage: WalletTransactionMessage?, outMessages: [WalletTransactionMessage]) {
+    init(data: Data, transactionId: WalletTransactionId, timestamp: Int64, storageFee: Int64, otherFee: Int64, inMessage: WalletTransactionMessage?, outMessages: [WalletTransactionMessage]) {
         self.data = data
         self.transactionId = transactionId
         self.timestamp = timestamp
-        self.fee = fee
+        self.storageFee = storageFee
+        self.otherFee = otherFee
         self.inMessage = inMessage
         self.outMessages = outMessages
     }
@@ -852,7 +856,10 @@ public final class WalletTransaction: Codable, Equatable {
         if lhs.timestamp != rhs.timestamp {
             return false
         }
-        if lhs.fee != rhs.fee {
+        if lhs.storageFee != rhs.storageFee {
+            return false
+        }
+        if lhs.otherFee != rhs.otherFee {
             return false
         }
         if lhs.inMessage != rhs.inMessage {
@@ -867,7 +874,7 @@ public final class WalletTransaction: Codable, Equatable {
 
 private extension WalletTransaction {
     convenience init(tonTransaction: TONTransaction) {
-        self.init(data: tonTransaction.data, transactionId: WalletTransactionId(tonTransactionId: tonTransaction.transactionId), timestamp: tonTransaction.timestamp, fee: tonTransaction.fee, inMessage: tonTransaction.inMessage.flatMap(WalletTransactionMessage.init(tonTransactionMessage:)), outMessages: tonTransaction.outMessages.map(WalletTransactionMessage.init(tonTransactionMessage:)))
+        self.init(data: tonTransaction.data, transactionId: WalletTransactionId(tonTransactionId: tonTransaction.transactionId), timestamp: tonTransaction.timestamp, storageFee: tonTransaction.storageFee, otherFee: tonTransaction.otherFee, inMessage: tonTransaction.inMessage.flatMap(WalletTransactionMessage.init(tonTransactionMessage:)), outMessages: tonTransaction.outMessages.map(WalletTransactionMessage.init(tonTransactionMessage:)))
     }
 }
 

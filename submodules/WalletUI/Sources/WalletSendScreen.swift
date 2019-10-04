@@ -247,6 +247,9 @@ private struct WalletSendScreenState: Equatable {
 }
 
 private func walletSendScreenEntries(presentationData: PresentationData, balance: Int64?, state: WalletSendScreenState) -> [WalletSendScreenEntry] {
+    if balance == nil {
+        return []
+    }
     var entries: [WalletSendScreenEntry] = []
 
     entries.append(.addressHeader(presentationData.theme, presentationData.strings.Wallet_Send_AddressHeader))
@@ -409,7 +412,9 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
             let _ = (serverSaltSignal
             |> deliverOnMainQueue).start(next: { serverSalt in
                 if let serverSalt = serverSalt {
-                    pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, state.comment, randomId, serverSalt), walletCreatedPreloadState: nil))
+                    if let commentData = state.comment.data(using: .utf8) {
+                        pushImpl?(WalletSplashScreen(context: context, tonContext: tonContext, mode: .sending(walletInfo, state.address, amount, commentData, randomId, serverSalt), walletCreatedPreloadState: nil))
+                    }
                 }
             })
         })], allowInputInset: false, dismissAutomatically: false)
@@ -424,7 +429,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         }
     })
     
-    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance)
+    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance, onlyCached: true)
     |> map { combinedState in
         var state: WalletState?
         switch combinedState {
@@ -435,8 +440,24 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
         }
         return state
     }
-    |> `catch` { _ in
+    |> `catch` { _ -> Signal<WalletState?, NoError> in
         return .single(nil)
+        |> then(
+            getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance, onlyCached: false)
+            |> map { combinedState -> WalletState? in
+                var state: WalletState?
+                switch combinedState {
+                case let .cached(combinedState):
+                    state = combinedState?.walletState
+                case let .updated(combinedState):
+                    state = combinedState.walletState
+                }
+                return state
+            }
+            |> `catch` { _ -> Signal<WalletState?, NoError> in
+                return .single(nil)
+            }
+        )
     }
 
     var focusItemTag: ItemListItemTag?
@@ -452,18 +473,25 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
             dismissImpl?()
         })
         
+        let rightNavigationButton: ItemListNavigationButton?
+        
         let amount = amountValue(state.amount)
         var sendEnabled = false
+        var emptyItem: ItemListControllerEmptyStateItem?
         if let walletState = walletState {
             let textLength: Int = state.comment.data(using: .utf8, allowLossyConversion: true)?.count ?? 0
             sendEnabled = isValidAddress(state.address, exactLength: true) && amount > 0 && amount <= walletState.balance && textLength <= walletTextLimit
+
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
+                arguments.proceed()
+            })
+        } else {
+            rightNavigationButton = nil
+            emptyItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)
         }
-        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Send_Send), style: .bold, enabled: sendEnabled, action: {
-            arguments.proceed()
-        })
-        
+
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Send_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.balance, state: state), style: .blocks, focusItemTag: focusItemTag, animateChanges: false)
+        let listState = ItemListNodeState(entries: walletSendScreenEntries(presentationData: presentationData, balance: walletState?.balance, state: state), style: .blocks, focusItemTag: focusItemTag, emptyStateItem: emptyItem, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
