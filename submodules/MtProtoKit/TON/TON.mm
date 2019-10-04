@@ -249,6 +249,8 @@ typedef enum {
         
         _client = std::make_shared<tonlib::Client>();
         
+        [self setupLogging];
+        
         std::weak_ptr<tonlib::Client> weakClient = _client;
         
         NSLock *requestHandlersLock = _requestHandlersLock;
@@ -308,6 +310,20 @@ typedef enum {
         }];
     }
     return self;
+}
+
+- (void)setupLogging {
+#if DEBUG
+    auto query = make_object<tonlib_api::setLogStream>(
+        make_object<tonlib_api::logStreamDefault>()
+    );
+    _client->execute({ INT16_MAX + 1, std::move(query) });
+#else
+    auto query = make_object<tonlib_api::setLogStream>(
+        make_object<tonlib_api::logStreamEmpty>()
+    );
+    _client->execute({ INT16_MAX + 1, std::move(query) });
+#endif
 }
 
 - (MTSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory enableExternalRequests:(bool)enableExternalRequests {

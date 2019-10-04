@@ -831,7 +831,31 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 self.headerNode.update(size: self.headerNode.bounds.size, navigationHeight: navigationHeight, offset: self.listOffset ?? 0.0, transition: .immediate, isScrolling: false)
             }
             
-            self.transactionsLoaded(isReload: true, transactions: combinedState.topTransactions, pendingTransactions: combinedState.pendingTransactions)
+            var updatedTransactions: [WalletTransaction] = combinedState.topTransactions
+            if let currentEntries = self.currentEntries {
+                var existingIds = Set<WalletInfoListEntryId>()
+                for transaction in updatedTransactions {
+                    existingIds.insert(.transaction(transaction.transactionId))
+                }
+                for entry in currentEntries {
+                    switch entry {
+                    case let .transaction(_, transaction):
+                    switch transaction {
+                    case let .completed(transaction):
+                        if !existingIds.contains(.transaction(transaction.transactionId)) {
+                            existingIds.insert(.transaction(transaction.transactionId))
+                            updatedTransactions.append(transaction)
+                        }
+                    case .pending:
+                        break
+                    }
+                    default:
+                        break
+                    }
+                }
+            }
+            
+            self.transactionsLoaded(isReload: true, transactions: updatedTransactions, pendingTransactions: combinedState.pendingTransactions)
             
             if isUpdated {
                 self.headerNode.isRefreshing = false

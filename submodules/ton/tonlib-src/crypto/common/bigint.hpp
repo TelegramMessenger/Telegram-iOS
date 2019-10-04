@@ -1922,7 +1922,7 @@ bool AnyIntView<Tr>::export_bits_any(unsigned char* buff, int offs, unsigned bit
         if (--ptr > buff) {
           *ptr = (unsigned char)(v & 0xff);
         } else {
-          int mask = (-0x100 >> offs) & 0xff;
+          int mask = (0xff00 >> offs) & 0xff;
           if (((unsigned char)v ^ s) & mask) {
             return false;
           }
@@ -1943,7 +1943,7 @@ bool AnyIntView<Tr>::export_bits_any(unsigned char* buff, int offs, unsigned bit
         if (--ptr > buff) {
           *ptr = (unsigned char)(v & 0xff);
         } else {
-          int mask = (-0x100 >> offs) & 0xff;
+          int mask = (0xff00 >> offs) & 0xff;
           if (((unsigned char)v ^ s) & mask) {
             return false;
           }
@@ -1961,7 +1961,7 @@ bool AnyIntView<Tr>::export_bits_any(unsigned char* buff, int offs, unsigned bit
       *ptr = (unsigned char)(v & 0xff);
       v >>= 8;
     }
-    int mask = (-0x100 >> offs) & 0xff;
+    int mask = (0xff00 >> offs) & 0xff;
     if (((unsigned char)v ^ s) & mask) {
       return false;
     }

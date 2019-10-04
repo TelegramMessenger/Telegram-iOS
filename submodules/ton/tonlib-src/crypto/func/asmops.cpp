@@ -149,6 +149,10 @@ AsmOp AsmOp::IntConst(td::RefInt256 x) {
   return AsmOp::Const(dec_string(std::move(x)) + " PUSHINT");
 }
 
+AsmOp AsmOp::BoolConst(bool f) {
+  return AsmOp::Const(f ? "TRUE" : "FALSE");
+}
+
 AsmOp AsmOp::Parse(std::string custom_op) {
   if (custom_op == "NOP") {
     return AsmOp::Nop();

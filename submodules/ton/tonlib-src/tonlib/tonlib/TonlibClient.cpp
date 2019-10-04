@@ -108,7 +108,6 @@ class GetTransactionHistory : public td::actor::Actor {
 
   void check(td::Status status) {
     if (status.is_error()) {
-      LOG(ERROR) << status;
       promise_.set_error(std::move(status));
       stop();
     }
@@ -208,7 +207,7 @@ class GetRawAccountState : public td::actor::Actor {
     auto cell = res.info.root;
     std::ostringstream outp;
     block::gen::t_Account.print_ref(outp, cell);
-    LOG(ERROR) << outp.str();
+    LOG(INFO) << outp.str();
     if (cell.is_null()) {
       return res;
     }
@@ -261,7 +260,8 @@ class GetRawAccountState : public td::actor::Actor {
         ton::lite_api::liteServer_getAccountState(
             ton::create_tl_lite_block_id(last_block_.last_block_id),
             ton::create_tl_object<ton::lite_api::liteServer_accountId>(address_.workchain, address_.addr)),
-        [self = this](auto r_state) { self->with_account_state(std::move(r_state)); });
+        [self = this](auto r_state) { self->with_account_state(std::move(r_state)); },
+        last_block_.last_block_id.id.seqno);
     return td::Status::OK();
   }
 
@@ -681,8 +681,9 @@ td::Result<tonlib_api::object_ptr<tonlib_api::raw_accountState>> to_raw_accountS
                .as_slice()
                .str();
   }
-  return tonlib_api::make_object<tonlib_api::raw_accountState>(
-      raw_state.balance, std::move(code), std::move(data), to_transaction_id(raw_state.info), raw_state.info.gen_utime);
+  return tonlib_api::make_object<tonlib_api::raw_accountState>(raw_state.balance, std::move(code), std::move(data),
+                                                               to_transaction_id(raw_state.info), raw_state.frozen_hash,
+                                                               raw_state.info.gen_utime);
 }
 
 td::Result<std::string> to_std_address_or_throw(td::Ref<vm::CellSlice> cs) {
@@ -802,7 +803,7 @@ td::Result<tonlib_api::object_ptr<tonlib_api::raw_transaction>> to_raw_transacti
 
     std::ostringstream outp;
     block::gen::t_Transaction.print_ref(outp, info.transaction);
-    LOG(ERROR) << outp.str();
+    LOG(INFO) << outp.str();
 
     auto is_just = trans.r1.in_msg->prefetch_long(1);
     if (is_just == trans.r1.in_msg->fetch_long_eof) {
@@ -916,7 +917,7 @@ td::Result<tonlib_api::object_ptr<tonlib_api::generic_AccountState>> to_generic_
   if (raw_state.code.is_null()) {
     return tonlib_api::make_object<tonlib_api::generic_accountStateUninited>(
         tonlib_api::make_object<tonlib_api::uninited_accountState>(raw_state.balance, to_transaction_id(raw_state.info),
-                                                                   raw_state.info.gen_utime));
+                                                                   raw_state.frozen_hash, raw_state.info.gen_utime));
   }
 
   auto code_hash = raw_state.code->prefetch_ref()->get_hash();
@@ -952,7 +953,6 @@ td::Status TonlibClient::do_request(const tonlib_api::raw_sendMessage& request,
   client_.send_query(ton::lite_api::liteServer_sendMessage(vm::std_boc_serialize(message).move_as_ok()),
                      [promise = std::move(promise)](auto r_info) mutable {
                        TRY_RESULT_PROMISE(promise, info, std::move(r_info));
-                       LOG(ERROR) << "info: " << to_string(info);
                        promise.set_value(tonlib_api::make_object<tonlib_api::ok>());
                      });
   return td::Status::OK();
@@ -1041,7 +1041,6 @@ td::Status TonlibClient::do_request(const tonlib_api::testWallet_sendGrams& requ
     return TonlibError::MessageTooLong();
   }
   TRY_RESULT(account_address, get_account_address(request.destination_->account_address_));
-  account_address.bounceable = false;
   TRY_RESULT(input_key, from_tonlib(*request.private_key_));
   auto address = GenericAccount::get_address(
       0 /*zerochain*/, TestWallet::get_init_state(td::Ed25519::PublicKey(input_key.key.public_key.copy())));
@@ -1115,7 +1114,6 @@ td::Status TonlibClient::do_request(const tonlib_api::wallet_sendGrams& request,
   TRY_RESULT_PREFIX(valid_until, td::narrow_cast_safe<td::uint32>(request.valid_until_),
                     TonlibError::InvalidField("valid_until", "overflow"));
   TRY_RESULT(account_address, get_account_address(request.destination_->account_address_));
-  account_address.bounceable = false;
   TRY_RESULT(input_key, from_tonlib(*request.private_key_));
   auto address = GenericAccount::get_address(
       0 /*zerochain*/, Wallet::get_init_state(td::Ed25519::PublicKey(input_key.key.public_key.copy())));
@@ -1167,7 +1165,6 @@ td::Status TonlibClient::do_request(const tonlib_api::testGiver_sendGrams& reque
     return TonlibError::MessageTooLong();
   }
   TRY_RESULT(account_address, get_account_address(request.destination_->account_address_));
-  account_address.bounceable = false;
   auto message = TestGiver::make_a_gift_message(request.seqno_, request.amount_, request.message_, account_address);
   auto message_hash = message->get_hash().as_slice().str();
   td::Promise<object_ptr<tonlib_api::ok>> new_promise =
@@ -1244,7 +1241,7 @@ class GenericSendGrams : public TonlibQueryActor {
   block::StdAddress source_address_;
 
   tonlib_api::object_ptr<tonlib_api::generic_AccountState> destination_state_;
-  bool is_destination_bounce_{false};
+  bool is_destination_bounceable_{false};
 
   void check(td::Status status) {
     if (status.is_error()) {
@@ -1262,7 +1259,7 @@ class GenericSendGrams : public TonlibQueryActor {
       return TonlibError::EmptyField("destination");
     }
     TRY_RESULT(destination_address, get_account_address(send_grams_.destination_->account_address_));
-    is_destination_bounce_ = destination_address.bounceable;
+    is_destination_bounceable_ = destination_address.bounceable;
 
     if (!send_grams_.source_) {
       return TonlibError::EmptyField("destination");
@@ -1332,9 +1329,23 @@ class GenericSendGrams : public TonlibQueryActor {
   td::Status do_on_destination_state(td::Result<tonlib_api::object_ptr<tonlib_api::generic_AccountState>> r_state) {
     TRY_RESULT(state, std::move(r_state));
     destination_state_ = std::move(state);
-    if (destination_state_->get_id() == tonlib_api::generic_accountStateUninited::ID && is_destination_bounce_ &&
-        !send_grams_.allow_send_to_uninited_) {
-      return TonlibError::DangerousTransaction("Transfer to uninited wallet");
+    if (destination_state_->get_id() == tonlib_api::generic_accountStateUninited::ID && is_destination_bounceable_) {
+      //FIXME: after restoration of frozen accounts will be supported
+      if (!static_cast<tonlib_api::generic_accountStateUninited&>(*destination_state_)
+               .account_state_->frozen_hash_.empty()) {
+        return TonlibError::TransferToFrozen();
+        //return TonlibError::DangerousTransaction("Transfer to frozen wallet");
+      }
+      if (send_grams_.allow_send_to_uninited_) {
+        TRY_RESULT(destination_address, get_account_address(send_grams_.destination_->account_address_));
+        destination_address.bounceable = false;
+        auto new_destination_address = destination_address.rserialize(true);
+        LOG(INFO) << "Change destination address from bounceable to non-bounceable "
+                  << send_grams_.destination_->account_address_ << " -> " << new_destination_address;
+        send_grams_.destination_->account_address_ = std::move(new_destination_address);
+      } else {
+        return TonlibError::DangerousTransaction("Transfer to uninited wallet");
+      }
     }
     return do_loop();
   }

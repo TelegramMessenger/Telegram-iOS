@@ -134,6 +134,8 @@ object_ptr<Function> Function::fetch(td::TlParser &p) {
       return liteServer_queryPrefix::fetch(p);
     case liteServer_sendMessage::ID:
       return liteServer_sendMessage::fetch(p);
+    case liteServer_waitMasterchainSeqno::ID:
+      return liteServer_waitMasterchainSeqno::fetch(p);
     default:
       FAIL(PSTRING() << "Unknown constructor found " << td::format::as_hex(constructor));
   }
@@ -2768,6 +2770,58 @@ void liteServer_sendMessage::store(td::TlStorerToString &s, const char *field_na
 liteServer_sendMessage::ReturnType liteServer_sendMessage::fetch_result(td::TlParser &p) {
 #define FAIL(error) p.set_error(error); return ReturnType()
   return TlFetchBoxed<TlFetchObject<liteServer_sendMsgStatus>, 961602967>::parse(p);
+#undef FAIL
+}
+
+liteServer_waitMasterchainSeqno::liteServer_waitMasterchainSeqno()
+  : seqno_()
+  , timeout_ms_()
+{}
+
+liteServer_waitMasterchainSeqno::liteServer_waitMasterchainSeqno(std::int32_t seqno_, std::int32_t timeout_ms_)
+  : seqno_(seqno_)
+  , timeout_ms_(timeout_ms_)
+{}
+
+const std::int32_t liteServer_waitMasterchainSeqno::ID;
+
+object_ptr<liteServer_waitMasterchainSeqno> liteServer_waitMasterchainSeqno::fetch(td::TlParser &p) {
+  return make_object<liteServer_waitMasterchainSeqno>(p);
+}
+
+liteServer_waitMasterchainSeqno::liteServer_waitMasterchainSeqno(td::TlParser &p)
+#define FAIL(error) p.set_error(error)
+  : seqno_(TlFetchInt::parse(p))
+  , timeout_ms_(TlFetchInt::parse(p))
+#undef FAIL
+{}
+
+void liteServer_waitMasterchainSeqno::store(td::TlStorerCalcLength &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1159022446);
+  TlStoreBinary::store(seqno_, s);
+  TlStoreBinary::store(timeout_ms_, s);
+}
+
+void liteServer_waitMasterchainSeqno::store(td::TlStorerUnsafe &s) const {
+  (void)sizeof(s);
+  s.store_binary(-1159022446);
+  TlStoreBinary::store(seqno_, s);
+  TlStoreBinary::store(timeout_ms_, s);
+}
+
+void liteServer_waitMasterchainSeqno::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "liteServer_waitMasterchainSeqno");
+    s.store_field("seqno", seqno_);
+    s.store_field("timeout_ms", timeout_ms_);
+    s.store_class_end();
+  }
+}
+
+liteServer_waitMasterchainSeqno::ReturnType liteServer_waitMasterchainSeqno::fetch_result(td::TlParser &p) {
+#define FAIL(error) p.set_error(error); return ReturnType()
+  return TlFetchBoxed<TlFetchObject<Object>, 695225504>::parse(p);
 #undef FAIL
 }
 }  // namespace lite_api

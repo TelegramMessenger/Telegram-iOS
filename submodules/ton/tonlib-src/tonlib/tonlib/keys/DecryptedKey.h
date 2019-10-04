@@ -56,8 +56,6 @@ struct DecryptedKey {
   std::vector<td::SecureString> mnemonic_words;
   td::Ed25519::PrivateKey private_key;
 
-  static td::SecureString change_local_password(td::Slice secret, td::Slice old_local_password,
-                                                td::Slice new_local_password);
   EncryptedKey encrypt(td::Slice local_password, td::Slice secret = {}) const;
 };
 

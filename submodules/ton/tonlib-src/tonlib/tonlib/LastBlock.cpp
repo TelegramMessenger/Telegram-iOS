@@ -32,7 +32,8 @@ namespace tonlib {
 //
 td::StringBuilder& operator<<(td::StringBuilder& sb, const LastBlockState& state) {
   return sb << td::tag("last_block", state.last_block_id.to_str())
-            << td::tag("last_key_block", state.last_key_block_id.to_str()) << td::tag("utime", state.utime);
+            << td::tag("last_key_block", state.last_key_block_id.to_str()) << td::tag("utime", state.utime)
+            << td::tag("init_block", state.init_block_id.to_str());
 }
 
 LastBlock::LastBlock(ExtClientRef client, LastBlockState state, Config config, td::unique_ptr<Callback> callback)
@@ -40,8 +41,7 @@ LastBlock::LastBlock(ExtClientRef client, LastBlockState state, Config config, t
   client_.set_client(client);
   state_.last_block_id = state_.last_key_block_id;
 
-  VLOG(last_block) << "check_init_block: skip - FIXME before release";
-  check_init_block_state_ = QueryState::Done;
+  VLOG(last_block) << "State: " << state_;
 }
 
 void LastBlock::get_last_block(td::Promise<LastBlockState> promise) {
@@ -87,7 +87,7 @@ void LastBlock::sync_loop() {
     } else {
       check_init_block_state_ = QueryState::Active;
       check_init_block_stats_.start();
-      if (state_.last_block_id.id.seqno >= config_.init_block_id.id.seqno) {
+      if (state_.last_key_block_id.id.seqno >= config_.init_block_id.id.seqno) {
         VLOG(last_block) << "check_init_block: start - init_block -> last_block";
         do_check_init_block(config_.init_block_id, state_.last_key_block_id);
       } else {
@@ -136,7 +136,7 @@ td::Result<std::unique_ptr<block::BlockProofChain>> LastBlock::process_block_pro
   TRY_RESULT(block_proof, std::move(r_block_proof));  //TODO: it is fatal?
   TRY_RESULT_PREFIX(chain, TRY_VM(process_block_proof(from, std::move(block_proof))),
                     TonlibError::ValidateBlockProof());
-  return chain;
+  return std::move(chain);
 }
 
 td::Result<std::unique_ptr<block::BlockProofChain>> LastBlock::process_block_proof(
@@ -148,7 +148,7 @@ td::Result<std::unique_ptr<block::BlockProofChain>> LastBlock::process_block_pro
                                       << ", not from requested block " << from.to_str());
   }
   TRY_STATUS(chain->validate());
-  return chain;
+  return std::move(chain);
 }
 
 void LastBlock::update_state(block::BlockProofChain& chain) {
@@ -162,8 +162,16 @@ void LastBlock::update_state(block::BlockProofChain& chain) {
     update_utime(chain.last_utime);
   }
   if (is_changed) {
-    callback_->on_state_changed(state_);
+    save_state();
   }
+}
+
+void LastBlock::save_state() {
+  if (check_init_block_state_ != QueryState::Done) {
+    VLOG(last_block) << "skip `save_state` because `check_init_block` is not finished";
+    return;
+  }
+  callback_->on_state_changed(state_);
 }
 
 void LastBlock::on_block_proof(
@@ -209,6 +217,9 @@ void LastBlock::on_init_block_proof(
   if (chain->complete) {
     VLOG(last_block) << "check_init_block: done\n" << check_init_block_stats_;
     check_init_block_state_ = QueryState::Done;
+    if (update_init_block(config_.init_block_id)) {
+      save_state();
+    }
     sync_loop();
   } else {
     do_check_init_block(chain->to, to);
@@ -286,6 +297,22 @@ bool LastBlock::update_mc_last_key_block(ton::BlockIdExt mc_key_block_id) {
     //LOG(ERROR) << td::int64(state_.last_key_block_id.id.shard) << " "
     //<< td::base64_encode(state_.last_key_block_id.file_hash.as_slice()) << " "
     //<< td::base64_encode(state_.last_key_block_id.root_hash.as_slice());
+    return true;
+  }
+  return false;
+}
+
+bool LastBlock::update_init_block(ton::BlockIdExt init_block_id) {
+  if (has_fatal_error()) {
+    return false;
+  }
+  if (!init_block_id.is_valid()) {
+    LOG(ERROR) << "Ignore invalid init block";
+    return false;
+  }
+  if (state_.init_block_id != init_block_id) {
+    state_.init_block_id = init_block_id;
+    LOG(INFO) << "Update init block id: " << state_.init_block_id.to_str();
     return true;
   }
   return false;

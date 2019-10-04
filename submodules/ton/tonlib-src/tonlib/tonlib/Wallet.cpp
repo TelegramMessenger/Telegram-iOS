@@ -54,7 +54,7 @@ td::Ref<vm::Cell> Wallet::make_a_gift_message(const td::Ed25519::PrivateKey& pri
       .append_cellslice(binary_bitstring_to_cellslice("b{000100}").move_as_ok())
       .store_long(dest_address.workchain, 8)
       .store_int256(dest_addr, 256);
-  td::int8 send_mode = 3;
+  td::int32 send_mode = 3;
   if (gramms == -1) {
     gramms = 0;
     send_mode += 128;

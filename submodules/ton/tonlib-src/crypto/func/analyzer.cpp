@@ -138,7 +138,7 @@ bool Op::set_var_info_except(const VarDescrList& new_var_info, const std::vector
   }
   VarDescrList tmp_info{new_var_info};
   tmp_info -= var_list;
-  return set_var_info(new_var_info);
+  return set_var_info(tmp_info);
 }
 
 bool Op::set_var_info_except(VarDescrList&& new_var_info, const std::vector<var_idx_t>& var_list) {

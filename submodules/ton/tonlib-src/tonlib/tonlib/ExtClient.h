@@ -57,10 +57,16 @@ class ExtClient {
   void with_last_block(td::Promise<LastBlockState> promise);
 
   template <class QueryT>
-  void send_query(QueryT query, td::Promise<typename QueryT::ReturnType> promise) {
+  void send_query(QueryT query, td::Promise<typename QueryT::ReturnType> promise, td::int32 seq_no = -1) {
     auto raw_query = ton::serialize_tl_object(&query, true);
     td::uint32 tag = td::Random::fast_uint32();
     VLOG(lite_server) << "send query to liteserver: " << tag << " " << to_string(query);
+    if (seq_no >= 0) {
+      auto wait = ton::lite_api::liteServer_waitMasterchainSeqno(seq_no, 5000);
+      VLOG(lite_server) << " with prefix " << to_string(wait);
+      auto prefix = ton::serialize_tl_object(&wait, true);
+      raw_query = td::BufferSlice(PSLICE() << prefix.as_slice() << raw_query.as_slice());
+    }
     td::BufferSlice liteserver_query =
         ton::serialize_tl_object(ton::create_tl_object<ton::lite_api::liteServer_query>(std::move(raw_query)), true);
 

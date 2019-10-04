@@ -24,19 +24,25 @@
 #include "td/utils/crypto.h"
 
 namespace tonlib {
-td::Result<DecryptedKey> EncryptedKey::decrypt(td::Slice local_password, bool check_public_key) {
+td::Result<DecryptedKey> EncryptedKey::decrypt(td::Slice local_password, bool check_public_key, bool old) const {
   if (secret.size() != 32) {
     return td::Status::Error("Failed to decrypt key: invalid secret size");
   }
-  td::SecureString local_password_hash(32);
-  sha256(local_password, local_password_hash.as_mutable_slice());
-  td::SecureString decrypted_secret(32);
-  for (size_t i = 0; i < 32; i++) {
-    decrypted_secret.as_mutable_slice()[i] = secret.as_slice()[i] ^ local_password_hash.as_slice()[i];
+  td::SecureString decrypted_secret;
+  if (old) {
+    decrypted_secret = td::SecureString(32);
+    td::SecureString local_password_hash(32);
+    sha256(local_password, local_password_hash.as_mutable_slice());
+    for (size_t i = 0; i < 32; i++) {
+      decrypted_secret.as_mutable_slice()[i] = secret.as_slice()[i] ^ local_password_hash.as_slice()[i];
+    }
+  } else {
+    decrypted_secret = SimpleEncryption::combine_secrets(secret, local_password);
   }
 
-  td::SecureString encryption_secret(64);
-  pbkdf2_sha512(as_slice(decrypted_secret), "TON local key", PBKDF_ITERATIONS, encryption_secret.as_mutable_slice());
+  td::SecureString encryption_secret =
+      SimpleEncryption::kdf(as_slice(decrypted_secret), "TON local key", EncryptedKey::PBKDF_ITERATIONS);
+
   TRY_RESULT(decrypted_data, SimpleEncryption::decrypt_data(as_slice(encrypted_data), as_slice(encryption_secret)));
 
   RawDecryptedKey raw_decrypted_key;

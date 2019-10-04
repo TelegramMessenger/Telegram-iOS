@@ -3,6 +3,8 @@
 #include "td/utils/Slice.h"
 #include "td/utils/Status.h"
 
+#include <functional>
+
 namespace tonlib {
 class KeyValue {
  public:

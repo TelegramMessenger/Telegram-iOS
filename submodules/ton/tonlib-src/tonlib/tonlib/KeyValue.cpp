@@ -39,7 +39,7 @@ class KeyValueDir : public KeyValue {
   }
 
   td::Status erase(td::Slice key) override {
-    return td::unlink(key.str());
+    return td::unlink(to_file_path(key.str()));
   }
 
   void foreach_key(std::function<void(td::Slice)> f) override {

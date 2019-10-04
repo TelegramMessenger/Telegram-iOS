@@ -527,9 +527,6 @@ int CellBuilder::serialize(unsigned char* buff, int buff_size) const {
 
 CellBuilder* CellBuilder::make_copy() const {
   CellBuilder* c = new CellBuilder();
-  if (!c) {
-    throw CellWriteError();
-  }
   c->bits = bits;
   std::memcpy(c->data, data, (bits + 7) >> 3);
   c->refs_cnt = refs_cnt;

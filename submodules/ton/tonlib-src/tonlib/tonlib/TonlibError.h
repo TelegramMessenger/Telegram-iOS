@@ -128,6 +128,9 @@ struct TonlibError {
   static td::Status NotEnoughFunds() {
     return td::Status::Error(500, "NOT_ENOUGH_FUNDS");
   }
+  static td::Status TransferToFrozen() {
+    return td::Status::Error(500, "TRANSFER_TO_FROZEN");
+  }
 
   static td::Status LiteServer(td::int32 code, td::Slice message) {
     auto f = [&](td::Slice code_description) { return LiteServer(code, code_description, message); };

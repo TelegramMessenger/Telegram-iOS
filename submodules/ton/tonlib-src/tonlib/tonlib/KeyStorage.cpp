@@ -69,7 +69,7 @@ td::Result<DecryptedKey> KeyStorage::export_decrypted_key(InputKey input_key) {
   if (r_encrypted_data.is_error()) {
     r_encrypted_data = kv_->get(to_file_name_old(input_key.key));
     if (r_encrypted_data.is_ok()) {
-      LOG(WARNING) << "Restore private from deprecated location " << to_file_name_old(input_key.key) << " --> "
+      LOG(WARNING) << "Restore private key from deprecated location " << to_file_name_old(input_key.key) << " --> "
                    << to_file_name(input_key.key);
       TRY_STATUS_PREFIX(kv_->set(to_file_name(input_key.key), r_encrypted_data.ok()), TonlibError::Internal());
       kv_->erase(to_file_name_old(input_key.key)).ignore();
@@ -78,9 +78,24 @@ td::Result<DecryptedKey> KeyStorage::export_decrypted_key(InputKey input_key) {
   TRY_RESULT_PREFIX(encrypted_data, std::move(r_encrypted_data), TonlibError::KeyUnknown());
   EncryptedKey encrypted_key{std::move(encrypted_data), td::Ed25519::PublicKey(std::move(input_key.key.public_key)),
                              std::move(input_key.key.secret)};
+  {
+    auto r_decrypted_key = encrypted_key.decrypt(input_key.local_password.copy(), true, true);
+    if (r_decrypted_key.is_ok()) {
+      LOG(WARNING) << "Restore private from deprecated encryption " << to_file_name(input_key.key);
+      auto decrypted_key = r_decrypted_key.move_as_ok();
+      auto key = Key{encrypted_key.public_key.as_octet_string(), encrypted_key.secret.copy()};
+      auto new_encrypted_key = decrypted_key.encrypt(input_key.local_password.copy(), encrypted_key.secret);
+      CHECK(new_encrypted_key.public_key.as_octet_string() == encrypted_key.public_key.as_octet_string());
+      CHECK(new_encrypted_key.secret == encrypted_key.secret);
+      CHECK(new_encrypted_key.decrypt(input_key.local_password.copy()).ok().private_key.as_octet_string() ==
+            decrypted_key.private_key.as_octet_string());
+      kv_->set(to_file_name(key), new_encrypted_key.encrypted_data);
+      return decrypted_key;
+    }
+  }
   TRY_RESULT_PREFIX(decrypted_key, encrypted_key.decrypt(std::move(input_key.local_password)),
                     TonlibError::KeyDecrypt());
-  return decrypted_key;
+  return std::move(decrypted_key);
 }
 
 td::Result<KeyStorage::ExportedKey> KeyStorage::export_key(InputKey input_key) {
@@ -139,14 +154,9 @@ td::Result<KeyStorage::ExportedPemKey> KeyStorage::export_pem_key(InputKey input
 }
 
 td::Result<KeyStorage::Key> KeyStorage::change_local_password(InputKey input_key, td::Slice new_local_password) {
-  auto new_secret =
-      DecryptedKey::change_local_password(input_key.key.secret, input_key.local_password, new_local_password);
-  Key res;
-  res.public_key = std::move(input_key.key.public_key);
-  res.secret = std::move(new_secret);
-  TRY_RESULT_PREFIX(value, kv_->get(to_file_name(input_key.key)), TonlibError::KeyUnknown());
-  TRY_STATUS_PREFIX(kv_->add(to_file_name(res), value), TonlibError::Internal());
-  return std::move(res);
+  auto old_name = to_file_name(input_key.key);
+  TRY_RESULT(decrypted_key, export_decrypted_key(std::move(input_key)));
+  return save_key(std::move(decrypted_key), new_local_password);
 }
 
 td::Result<KeyStorage::Key> KeyStorage::import_pem_key(td::Slice local_password, td::Slice key_password,

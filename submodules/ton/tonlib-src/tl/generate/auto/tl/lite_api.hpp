@@ -178,6 +178,9 @@ bool downcast_call(Function &obj, const T &func) {
     case liteServer_sendMessage::ID:
       func(static_cast<liteServer_sendMessage &>(obj));
       return true;
+    case liteServer_waitMasterchainSeqno::ID:
+      func(static_cast<liteServer_waitMasterchainSeqno &>(obj));
+      return true;
     default:
       return false;
   }

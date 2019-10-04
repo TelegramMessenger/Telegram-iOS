@@ -80,7 +80,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"generic.accountStateTestGiver", 1134654598},
     {"generic.accountStateUninited", -908702008},
     {"internal.transactionId", -989527262},
-    {"raw.accountState", 461615898},
+    {"raw.accountState", 1205935434},
     {"raw.initialAccountState", 777456197},
     {"raw.message", -906281442},
     {"raw.transaction", 1887601793},
@@ -88,7 +88,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"testGiver.accountState", 860930426},
     {"testWallet.accountState", 305698744},
     {"testWallet.initialAccountState", -1231516227},
-    {"uninited.accountState", 1768941188},
+    {"uninited.accountState", -918880075},
     {"wallet.accountState", -1919815977},
     {"wallet.initialAccountState", -1079249978}
   };
@@ -480,6 +480,12 @@ Status from_json(tonlib_api::raw_accountState &to, JsonObject &from) {
     }
   }
   {
+    TRY_RESULT(value, get_json_object_field(from, "frozen_hash", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.frozen_hash_, value));
+    }
+  }
+  {
     TRY_RESULT(value, get_json_object_field(from, "sync_utime", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.sync_utime_, value));
@@ -693,6 +699,12 @@ Status from_json(tonlib_api::uninited_accountState &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "last_transaction_id", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.last_transaction_id_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "frozen_hash", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.frozen_hash_, value));
     }
   }
   {
@@ -1488,6 +1500,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::raw_accountState &object) {
   if (object.last_transaction_id_) {
     jo << ctie("last_transaction_id", ToJson(object.last_transaction_id_));
   }
+  jo << ctie("frozen_hash", ToJson(JsonBytes{object.frozen_hash_}));
   jo << ctie("sync_utime", ToJson(object.sync_utime_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::raw_initialAccountState &object) {
@@ -1564,6 +1577,7 @@ void to_json(JsonValueScope &jv, const tonlib_api::uninited_accountState &object
   if (object.last_transaction_id_) {
     jo << ctie("last_transaction_id", ToJson(object.last_transaction_id_));
   }
+  jo << ctie("frozen_hash", ToJson(JsonBytes{object.frozen_hash_}));
   jo << ctie("sync_utime", ToJson(object.sync_utime_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::wallet_accountState &object) {
