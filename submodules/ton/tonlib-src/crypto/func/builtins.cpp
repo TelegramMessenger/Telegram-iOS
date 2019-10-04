@@ -620,7 +620,7 @@ int compute_compare(td::RefInt256 x, td::RefInt256 y, int mode) {
   if (mode == 7) {
     return s;
   } else {
-    return (mode >> (1 - s)) & 1;
+    return -((mode >> (1 - s)) & 1);
   }
 }
 
@@ -641,8 +641,8 @@ int compute_compare(const VarDescr& x, const VarDescr& y, int mode) {
       return x.always_less(y) ? 1 : (x.always_geq(y) ? 2 : 3);
     case 5:  // <>
       return x.always_neq(y) ? 1 : (x.always_equal(y) ? 2 : 3);
-    case 6:  // >=
-      return x.always_geq(y) ? 1 : (x.always_less(y) ? 2 : 3);
+    case 6:  // <=
+      return x.always_leq(y) ? 1 : (x.always_greater(y) ? 2 : 3);
     case 7:  // <=>
       return x.always_less(y)
                  ? 1
@@ -661,10 +661,11 @@ AsmOp compile_cmp_int(std::vector<VarDescr>& res, std::vector<VarDescr>& args, i
   assert(res.size() == 1 && args.size() == 2);
   VarDescr &r = res[0], &x = args[0], &y = args[1];
   if (x.is_int_const() && y.is_int_const()) {
-    r.set_const(compute_compare(x.int_const, y.int_const, mode));
+    int v = compute_compare(x.int_const, y.int_const, mode);
+    r.set_const(v);
     x.unused();
     y.unused();
-    return push_const(r.int_const);
+    return mode == 7 ? push_const(r.int_const) : AsmOp::BoolConst(v != 0);
   }
   int v = compute_compare(x, y, mode);
   assert(v);
@@ -672,7 +673,7 @@ AsmOp compile_cmp_int(std::vector<VarDescr>& res, std::vector<VarDescr>& args, i
     r.set_const(v - (v >> 2) - 2);
     x.unused();
     y.unused();
-    return push_const(r.int_const);
+    return mode == 7 ? push_const(r.int_const) : AsmOp::BoolConst(v & 1);
   }
   r.val = ~0;
   if (v & 1) {
@@ -957,12 +958,11 @@ void define_builtins() {
                       AsmOp::Nop());
   define_builtin_func("~dump", TypeExpr::new_forall({X}, TypeExpr::new_map(X, TypeExpr::new_tensor({X, Unit}))),
                       AsmOp::Custom("s0 DUMP", 1, 1));
-  define_builtin_func(
-      "run_method0", TypeExpr::new_map(Int, Unit),
-      [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 0, false); }, true);
-  define_builtin_func_x(
-      "run_method1", TypeExpr::new_forall({X}, TypeExpr::new_map(TypeExpr::new_tensor({Int, X}), Unit)),
-      [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 1, false); }, {1, 0}, {}, true);
+  define_builtin_func("run_method0", TypeExpr::new_map(Int, Unit),
+                      [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 0, false); }, true);
+  define_builtin_func_x("run_method1",
+                        TypeExpr::new_forall({X}, TypeExpr::new_map(TypeExpr::new_tensor({Int, X}), Unit)),
+                        [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 1, false); }, {1, 0}, {}, true);
   define_builtin_func_x(
       "run_method2", TypeExpr::new_forall({X, Y}, TypeExpr::new_map(TypeExpr::new_tensor({Int, X, Y}), Unit)),
       [](auto a, auto b, auto c) { return compile_run_method(a, b, c, 2, false); }, {1, 2, 0}, {}, true);

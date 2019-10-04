@@ -48,10 +48,10 @@ private final class TonInstanceImpl {
     private let basePath: String
     private let config: String
     private let blockchainName: String
-    private let network: Network
+    private let network: Network?
     private var instance: TON?
     
-    init(queue: Queue, basePath: String, config: String, blockchainName: String, network: Network) {
+    init(queue: Queue, basePath: String, config: String, blockchainName: String, network: Network?) {
         self.queue = queue
         self.basePath = basePath
         self.config = config
@@ -66,18 +66,25 @@ private final class TonInstanceImpl {
         } else {
             let network = self.network
             instance = TON(keystoreDirectory: self.basePath + "/ton-keystore", config: self.config, blockchainName: self.blockchainName, performExternalRequest: { request in
-                let _ = (
-                    network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))
-                    |> timeout(20.0, queue: .concurrentDefaultQueue(), alternate: .fail(MTRpcError(errorCode: 500, errorDescription: "NETWORK_ERROR")))
-                ).start(next: { result in
-                    switch result {
-                    case let .liteResponse(response):
-                        request.onResult(response.makeData(), nil)
-                    }
-                }, error: { error in
-                    request.onResult(nil, error.errorDescription)
-                })
-            })
+                if let network = network {
+                    Logger.shared.log("TON Proxy", "request: \(request.data.count)")
+                    let _ = (
+                        network.request(Api.functions.wallet.sendLiteRequest(body: Buffer(data: request.data)))
+                        |> timeout(20.0, queue: .concurrentDefaultQueue(), alternate: .fail(MTRpcError(errorCode: 500, errorDescription: "NETWORK_ERROR")))
+                    ).start(next: { result in
+                        switch result {
+                        case let .liteResponse(response):
+                            let data = response.makeData()
+                            Logger.shared.log("TON Proxy", "response: \(data.count)")
+                            request.onResult(data, nil)
+                        }
+                    }, error: { error in
+                        request.onResult(nil, error.errorDescription)
+                    })
+                } else {
+                    request.onResult(nil, "NETWORK_DISABLED")
+                }
+            }, enableExternalRequests: network != nil)
             self.instance = instance
         }
         f(instance)
@@ -88,7 +95,7 @@ public final class TonInstance {
     private let queue: Queue
     private let impl: QueueLocalObject<TonInstanceImpl>
     
-    public init(basePath: String, config: String, blockchainName: String, network: Network) {
+    public init(basePath: String, config: String, blockchainName: String, network: Network?) {
         self.queue = .mainQueue()
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
@@ -322,7 +329,7 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func sendGramsFromWallet(decryptedSecret: Data, localPassword: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
+    fileprivate func sendGramsFromWallet(decryptedSecret: Data, localPassword: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<PendingWalletTransaction, SendGramsFromWalletError> {
         let key = TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret)
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -334,6 +341,7 @@ public final class TonInstance {
                             subscriber.putError(.generic)
                             return
                         }
+                        subscriber.putNext(PendingWalletTransaction(timestamp: Int64(Date().timeIntervalSince1970), validUntilTimestamp: result.sentUntil, bodyHash: result.bodyHash, address: toAddress, value: amount, comment: textMessage))
                         subscriber.putCompletion()
                     }, error: { error in
                         if let error = error as? TONError {
@@ -454,6 +462,7 @@ public struct CombinedWalletState: Codable, Equatable {
     public var walletState: WalletState
     public var timestamp: Int64
     public var topTransactions: [WalletTransaction]
+    public var pendingTransactions: [PendingWalletTransaction]
 }
 
 public struct WalletStateRecord: PostboxCoding, Equatable {
@@ -708,7 +717,29 @@ public func getCombinedWalletState(postbox: Postbox, subject: CombinedWalletStat
                         }
                         return topTransactions
                         |> mapToSignal { topTransactions -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
-                            let combinedState = CombinedWalletState(walletState: walletState, timestamp: syncUtime, topTransactions: topTransactions)
+                            let lastTransactionTimestamp = topTransactions.last?.timestamp
+                            var listTransactionBodyHashes = Set<Data>()
+                            for transaction in topTransactions {
+                                if let message = transaction.inMessage {
+                                    listTransactionBodyHashes.insert(message.bodyHash)
+                                }
+                                for message in transaction.outMessages {
+                                    listTransactionBodyHashes.insert(message.bodyHash)
+                                }
+                            }
+                            let pendingTransactions = (cachedState?.pendingTransactions ?? []).filter { transaction in
+                                if transaction.validUntilTimestamp <= syncUtime {
+                                    return false
+                                } else if let lastTransactionTimestamp = lastTransactionTimestamp, transaction.validUntilTimestamp <= lastTransactionTimestamp {
+                                    return false
+                                } else {
+                                    if listTransactionBodyHashes.contains(transaction.bodyHash) {
+                                        return false
+                                    }
+                                    return true
+                                }
+                            }
+                            let combinedState = CombinedWalletState(walletState: walletState, timestamp: syncUtime, topTransactions: topTransactions, pendingTransactions: pendingTransactions)
                             return postbox.transaction { transaction -> CombinedWalletStateResult in
                                 transaction.updatePreferencesEntry(key: PreferencesKeys.walletCollection, { current in
                                     var walletCollection = (current as? WalletCollection) ?? WalletCollection(wallets: [])
@@ -741,7 +772,7 @@ public func getCombinedWalletState(postbox: Postbox, subject: CombinedWalletStat
             }
             return topTransactions
             |> mapToSignal { topTransactions -> Signal<CombinedWalletStateResult, GetCombinedWalletStateError> in
-                let combinedState = CombinedWalletState(walletState: walletState, timestamp: syncUtime, topTransactions: topTransactions)
+                let combinedState = CombinedWalletState(walletState: walletState, timestamp: syncUtime, topTransactions: topTransactions, pendingTransactions: [])
                 return .single(.updated(combinedState))
             }
         }
@@ -760,11 +791,31 @@ public enum SendGramsFromWalletError {
     case network
 }
 
-public func sendGramsFromWallet(network: Network, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, localPassword: Data, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<Never, SendGramsFromWalletError> {
+public func sendGramsFromWallet(postbox: Postbox, network: Network, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, localPassword: Data, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<[PendingWalletTransaction], SendGramsFromWalletError> {
     return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
     |> castError(SendGramsFromWalletError.self)
-    |> mapToSignal { fromAddress in
+    |> mapToSignal { fromAddress -> Signal<[PendingWalletTransaction], SendGramsFromWalletError> in
         return tonInstance.sendGramsFromWallet(decryptedSecret: decryptedSecret, localPassword: localPassword, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId)
+        |> mapToSignal { result -> Signal<[PendingWalletTransaction], SendGramsFromWalletError> in
+            return postbox.transaction { transaction -> [PendingWalletTransaction] in
+                var updatedPendingTransactions: [PendingWalletTransaction] = []
+                transaction.updatePreferencesEntry(key: PreferencesKeys.walletCollection, { current in
+                    var walletCollection = (current as? WalletCollection) ?? WalletCollection(wallets: [])
+                    for i in 0 ..< walletCollection.wallets.count {
+                        if walletCollection.wallets[i].info.publicKey == walletInfo.publicKey {
+                            if var state = walletCollection.wallets[i].state {
+                                state.pendingTransactions.insert(result, at: 0)
+                                walletCollection.wallets[i].state = state
+                                updatedPendingTransactions = state.pendingTransactions
+                            }
+                        }
+                    }
+                    return walletCollection
+                })
+                return updatedPendingTransactions
+            }
+            |> castError(SendGramsFromWalletError.self)
+        }
     }
 }
 
@@ -785,12 +836,14 @@ public final class WalletTransactionMessage: Codable, Equatable {
     public let source: String
     public let destination: String
     public let textMessage: String
+    public let bodyHash: Data
     
-    init(value: Int64, source: String, destination: String, textMessage: String) {
+    init(value: Int64, source: String, destination: String, textMessage: String, bodyHash: Data) {
         self.value = value
         self.source = source
         self.destination = destination
         self.textMessage = textMessage
+        self.bodyHash = bodyHash
     }
     
     public static func ==(lhs: WalletTransactionMessage, rhs: WalletTransactionMessage) -> Bool {
@@ -806,13 +859,53 @@ public final class WalletTransactionMessage: Codable, Equatable {
         if lhs.textMessage != rhs.textMessage {
             return false
         }
+        if lhs.bodyHash != rhs.bodyHash {
+            return false
+        }
         return true
     }
 }
 
 private extension WalletTransactionMessage {
     convenience init(tonTransactionMessage: TONTransactionMessage) {
-        self.init(value: tonTransactionMessage.value, source: tonTransactionMessage.source, destination: tonTransactionMessage.destination, textMessage: tonTransactionMessage.textMessage)
+        self.init(value: tonTransactionMessage.value, source: tonTransactionMessage.source, destination: tonTransactionMessage.destination, textMessage: tonTransactionMessage.textMessage, bodyHash: tonTransactionMessage.bodyHash)
+    }
+}
+
+public final class PendingWalletTransaction: Codable, Equatable {
+    public let timestamp: Int64
+    public let validUntilTimestamp: Int64
+    public let bodyHash: Data
+    public let address: String
+    public let value: Int64
+    public let comment: Data
+    
+    public init(timestamp: Int64, validUntilTimestamp: Int64, bodyHash: Data, address: String, value: Int64, comment: Data) {
+        self.timestamp = timestamp
+        self.validUntilTimestamp = validUntilTimestamp
+        self.bodyHash = bodyHash
+        self.address = address
+        self.value = value
+        self.comment = comment
+    }
+    
+    public static func ==(lhs: PendingWalletTransaction, rhs: PendingWalletTransaction) -> Bool {
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.validUntilTimestamp != rhs.validUntilTimestamp {
+            return false
+        }
+        if lhs.bodyHash != rhs.bodyHash {
+            return false
+        }
+        if lhs.value != rhs.value {
+            return false
+        }
+        if lhs.comment != rhs.comment {
+            return false
+        }
+        return true
     }
 }
 

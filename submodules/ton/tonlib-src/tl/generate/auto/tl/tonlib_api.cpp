@@ -528,14 +528,16 @@ raw_accountState::raw_accountState()
   , code_()
   , data_()
   , last_transaction_id_()
+  , frozen_hash_()
   , sync_utime_()
 {}
 
-raw_accountState::raw_accountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
+raw_accountState::raw_accountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_, std::string const &frozen_hash_, std::int64_t sync_utime_)
   : balance_(balance_)
   , code_(std::move(code_))
   , data_(std::move(data_))
   , last_transaction_id_(std::move(last_transaction_id_))
+  , frozen_hash_(std::move(frozen_hash_))
   , sync_utime_(sync_utime_)
 {}
 
@@ -548,6 +550,7 @@ void raw_accountState::store(td::TlStorerToString &s, const char *field_name) co
     s.store_bytes_field("code", code_);
     s.store_bytes_field("data", data_);
     if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    s.store_bytes_field("frozen_hash", frozen_hash_);
     s.store_field("sync_utime", sync_utime_);
     s.store_class_end();
   }
@@ -748,12 +751,14 @@ void testWallet_initialAccountState::store(td::TlStorerToString &s, const char *
 uninited_accountState::uninited_accountState()
   : balance_()
   , last_transaction_id_()
+  , frozen_hash_()
   , sync_utime_()
 {}
 
-uninited_accountState::uninited_accountState(std::int64_t balance_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_)
+uninited_accountState::uninited_accountState(std::int64_t balance_, object_ptr<internal_transactionId> &&last_transaction_id_, std::string const &frozen_hash_, std::int64_t sync_utime_)
   : balance_(balance_)
   , last_transaction_id_(std::move(last_transaction_id_))
+  , frozen_hash_(std::move(frozen_hash_))
   , sync_utime_(sync_utime_)
 {}
 
@@ -764,6 +769,7 @@ void uninited_accountState::store(td::TlStorerToString &s, const char *field_nam
     s.store_class_begin(field_name, "uninited_accountState");
     s.store_field("balance", balance_);
     if (last_transaction_id_ == nullptr) { s.store_field("last_transaction_id", "null"); } else { last_transaction_id_->store(s, "last_transaction_id"); }
+    s.store_bytes_field("frozen_hash", frozen_hash_);
     s.store_field("sync_utime", sync_utime_);
     s.store_class_end();
   }

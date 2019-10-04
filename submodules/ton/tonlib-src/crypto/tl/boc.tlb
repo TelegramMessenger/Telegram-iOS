@@ -31,8 +31,9 @@ serialized_boc#b5ee9c72 has_idx:(## 1) has_crc32c:(## 1)
   absent:(##(size * 8)) { roots + absent <= cells }
   tot_cells_size:(##(off_bytes * 8))
   root_list:(roots * ##(size * 8))
-  index:(cells * ##(off_bytes * 8))
+  index:has_idx?(cells * ##(off_bytes * 8))
   cell_data:(tot_cells_size * [ uint8 ])
+  crc32c:has_crc32c?uint32
   = BagOfCells;
 
 compiled_smart_contract

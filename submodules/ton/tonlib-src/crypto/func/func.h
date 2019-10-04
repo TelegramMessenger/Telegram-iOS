@@ -950,6 +950,7 @@ struct AsmOp {
   static AsmOp make_stk2(int a, int b, const char* str, int delta);
   static AsmOp make_stk3(int a, int b, int c, const char* str, int delta);
   static AsmOp IntConst(td::RefInt256 value);
+  static AsmOp BoolConst(bool f);
   static AsmOp Const(std::string push_op) {
     return AsmOp(a_const, 0, 1, std::move(push_op));
   }

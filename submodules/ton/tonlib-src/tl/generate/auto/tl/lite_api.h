@@ -1481,5 +1481,34 @@ class liteServer_sendMessage final : public Function {
   static ReturnType fetch_result(td::TlParser &p);
 };
 
+class liteServer_waitMasterchainSeqno final : public Function {
+ public:
+  std::int32_t seqno_;
+  std::int32_t timeout_ms_;
+
+  liteServer_waitMasterchainSeqno();
+
+  liteServer_waitMasterchainSeqno(std::int32_t seqno_, std::int32_t timeout_ms_);
+
+  static const std::int32_t ID = -1159022446;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<Object>;
+
+  static object_ptr<liteServer_waitMasterchainSeqno> fetch(td::TlParser &p);
+
+  explicit liteServer_waitMasterchainSeqno(td::TlParser &p);
+
+  void store(td::TlStorerCalcLength &s) const final;
+
+  void store(td::TlStorerUnsafe &s) const final;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+
+  static ReturnType fetch_result(td::TlParser &p);
+};
+
 }  // namespace lite_api
 }  // namespace ton

@@ -201,7 +201,9 @@ class LastBlock : public td::actor::Actor {
   bool update_mc_last_block(ton::BlockIdExt mc_block_id);
   bool update_mc_last_key_block(ton::BlockIdExt mc_key_block_id);
   void update_utime(td::int64 utime);
+  bool update_init_block(ton::BlockIdExt init_block_id);
 
+  void save_state();
   void on_sync_ok();
   void on_sync_error(td::Status status);
   void on_fatal_error(td::Status status);

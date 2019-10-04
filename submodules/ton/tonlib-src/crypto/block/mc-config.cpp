@@ -897,7 +897,7 @@ static int process_workchain_shard_hashes(Ref<vm::Cell>& branch, ton::ShardIdFul
   int f = (int)cs.fetch_ulong(1);
   if (f == 1) {
     if ((shard.shard & 1) || cs.size_ext() != 0x20000) {
-      return false;
+      return -1;
     }
     auto left = cs.prefetch_ref(0), right = cs.prefetch_ref(1);
     int r = process_workchain_shard_hashes(left, ton::shard_child(shard, true), func);

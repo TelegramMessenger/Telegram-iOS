@@ -568,13 +568,14 @@ class raw_accountState final : public Object {
   std::string code_;
   std::string data_;
   object_ptr<internal_transactionId> last_transaction_id_;
+  std::string frozen_hash_;
   std::int64_t sync_utime_;
 
   raw_accountState();
 
-  raw_accountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_);
+  raw_accountState(std::int64_t balance_, std::string const &code_, std::string const &data_, object_ptr<internal_transactionId> &&last_transaction_id_, std::string const &frozen_hash_, std::int64_t sync_utime_);
 
-  static const std::int32_t ID = 461615898;
+  static const std::int32_t ID = 1205935434;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -720,13 +721,14 @@ class uninited_accountState final : public Object {
  public:
   std::int64_t balance_;
   object_ptr<internal_transactionId> last_transaction_id_;
+  std::string frozen_hash_;
   std::int64_t sync_utime_;
 
   uninited_accountState();
 
-  uninited_accountState(std::int64_t balance_, object_ptr<internal_transactionId> &&last_transaction_id_, std::int64_t sync_utime_);
+  uninited_accountState(std::int64_t balance_, object_ptr<internal_transactionId> &&last_transaction_id_, std::string const &frozen_hash_, std::int64_t sync_utime_);
 
-  static const std::int32_t ID = 1768941188;
+  static const std::int32_t ID = -918880075;
   std::int32_t get_id() const final {
     return ID;
   }

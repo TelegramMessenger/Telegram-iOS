@@ -35,40 +35,17 @@ DecryptedKey::DecryptedKey(RawDecryptedKey key)
     : DecryptedKey(std::move(key.mnemonic_words), td::Ed25519::PrivateKey(key.private_key.copy())) {
 }
 
-td::SecureString DecryptedKey::change_local_password(td::Slice secret_str, td::Slice old_local_password,
-                                                     td::Slice new_local_password) {
-  CHECK(secret_str.size() == 32);
-  td::SecureString old_local_password_hash(32);
-  sha256(old_local_password, old_local_password_hash.as_mutable_slice());
-  td::SecureString new_local_password_hash(32);
-  sha256(new_local_password, new_local_password_hash.as_mutable_slice());
-
-  td::SecureString new_secret(32);
-  for (size_t i = 0; i < new_secret.size(); i++) {
-    new_secret.as_mutable_slice()[i] =
-        secret_str[i] ^ old_local_password_hash.as_slice()[i] ^ new_local_password_hash.as_slice()[i];
-  }
-  return new_secret;
-}
-
 EncryptedKey DecryptedKey::encrypt(td::Slice local_password, td::Slice old_secret) const {
-  LOG(ERROR) << "encrypt";
   td::SecureString secret(32);
   if (old_secret.size() == td::as_slice(secret).size()) {
     secret.as_mutable_slice().copy_from(old_secret);
   } else {
     td::Random::secure_bytes(secret.as_mutable_slice());
   }
-  td::SecureString local_password_hash(32);
-  sha256(local_password, local_password_hash.as_mutable_slice());
-  td::SecureString decrypted_secret(32);
-  for (size_t i = 0; i < decrypted_secret.size(); i++) {
-    decrypted_secret.as_mutable_slice()[i] = secret.as_slice()[i] ^ local_password_hash.as_slice()[i];
-  }
+  td::SecureString decrypted_secret = SimpleEncryption::combine_secrets(secret, local_password);
 
-  td::SecureString encryption_secret(64);
-  pbkdf2_sha512(as_slice(decrypted_secret), "TON local key", EncryptedKey::PBKDF_ITERATIONS,
-                encryption_secret.as_mutable_slice());
+  td::SecureString encryption_secret =
+      SimpleEncryption::kdf(as_slice(decrypted_secret), "TON local key", EncryptedKey::PBKDF_ITERATIONS);
 
   std::vector<td::SecureString> mnemonic_words_copy;
   for (auto &w : mnemonic_words) {

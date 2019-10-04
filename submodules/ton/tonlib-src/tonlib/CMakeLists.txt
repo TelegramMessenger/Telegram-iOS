@@ -80,7 +80,7 @@ add_executable(tonlib-cli tonlib/tonlib-cli.cpp)
 target_link_libraries(tonlib-cli tonlib tdactor tdutils terminal)
 
 if (NOT CMAKE_CROSSCOMPILING)
-  if (TD_ENABLE_JNI)
+  if (TONLIB_ENABLE_JNI)
 	  #FIXME
 	  #add_dependencies(tonlib tonlib_generate_java_api)
   endif()

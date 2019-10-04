@@ -186,11 +186,21 @@ class TonlibCli : public td::actor::Actor {
     if (cmd.empty()) {
       return;
     }
+    auto to_bool = [](td::Slice word, bool def = false) {
+      if (word.empty()) {
+        return def;
+      }
+      if (word == "0" || word == "FALSE" || word == "false") {
+        return false;
+      }
+      return true;
+    };
     if (cmd == "help") {
       td::TerminalIO::out() << "help - show this help\n";
       td::TerminalIO::out() << "genkey - generate new secret key\n";
       td::TerminalIO::out() << "keys - show all stored keys\n";
       td::TerminalIO::out() << "unpackaddress <address> - validate and parse address\n";
+      td::TerminalIO::out() << "setbounceble <address> [<bounceble>] - change bounceble flag in address\n";
       td::TerminalIO::out() << "importkey - import key\n";
       td::TerminalIO::out() << "deletekeys - delete ALL PRIVATE KEYS\n";
       td::TerminalIO::out() << "exportkey [<key_id>] - export key\n";
@@ -214,6 +224,8 @@ class TonlibCli : public td::actor::Actor {
       try_stop();
     } else if (cmd == "keys") {
       dump_keys();
+    } else if (cmd == "deletekey") {
+      //delete_key(parser.read_word());
     } else if (cmd == "deletekeys") {
       delete_all_keys();
     } else if (cmd == "exportkey") {
@@ -223,15 +235,6 @@ class TonlibCli : public td::actor::Actor {
     } else if (cmd == "setconfig") {
       auto config = parser.read_word();
       auto name = parser.read_word();
-      auto to_bool = [](td::Slice word) {
-        if (word.empty()) {
-          return false;
-        }
-        if (word == "0" || word == "FALSE" || word == "false") {
-          return false;
-        }
-        return true;
-      };
       auto use_callback = parser.read_word();
       auto force = parser.read_word();
       set_config(config, name, to_bool(use_callback), to_bool(force));
@@ -251,6 +254,10 @@ class TonlibCli : public td::actor::Actor {
       get_hints(parser.read_word());
     } else if (cmd == "unpackaddress") {
       unpack_address(parser.read_word());
+    } else if (cmd == "setbounceable") {
+      auto addr = parser.read_word();
+      auto bounceable = parser.read_word();
+      set_bounceable(addr, to_bool(bounceable, true));
     }
   }
 
@@ -322,6 +329,26 @@ class TonlibCli : public td::actor::Actor {
                    return;
                  }
                  LOG(ERROR) << to_string(r_parsed_addr.ok());
+               });
+  }
+
+  void set_bounceable(td::Slice addr, bool bounceable) {
+    send_query(tonlib_api::make_object<tonlib_api::unpackAccountAddress>(addr.str()),
+               [addr = addr.str(), bounceable, this](auto r_parsed_addr) mutable {
+                 if (r_parsed_addr.is_error()) {
+                   LOG(ERROR) << "Failed to parse address: " << r_parsed_addr.error();
+                   return;
+                 }
+                 auto parsed_addr = r_parsed_addr.move_as_ok();
+                 parsed_addr->bounceable_ = bounceable;
+                 this->send_query(tonlib_api::make_object<tonlib_api::packAccountAddress>(std::move(parsed_addr)),
+                                  [](auto r_addr) mutable {
+                                    if (r_addr.is_error()) {
+                                      LOG(ERROR) << "Failed to pack address";
+                                      return;
+                                    }
+                                    td::TerminalIO::out() << r_addr.ok()->account_address_ << "\n";
+                                  });
                });
   }
 
@@ -527,6 +554,25 @@ class TonlibCli : public td::actor::Actor {
     return std::move(res);
   }
 
+  void delete_key(td::Slice key) {
+    auto r_key_i = to_key_i(key);
+    if (r_key_i.is_error()) {
+      td::TerminalIO::out() << "Unknown key id: [" << key << "]\n";
+      return;
+    }
+    using tonlib_api::make_object;
+    auto key_i = r_key_i.move_as_ok();
+    send_query(make_object<tonlib_api::deleteKey>(
+                   make_object<tonlib_api::key>(keys_[key_i].public_key, keys_[key_i].secret.copy())),
+
+               [key = key.str()](auto r_res) {
+                 if (r_res.is_error()) {
+                   td::TerminalIO::out() << "Can't delete key id: [" << key << "] " << r_res.error() << "\n";
+                   return;
+                 }
+                 td::TerminalIO::out() << "Ok\n";
+               });
+  }
   void export_key(td::Slice key) {
     if (key.empty()) {
       dump_keys();
@@ -754,6 +800,11 @@ class TonlibCli : public td::actor::Actor {
   }
   void transfer(Address from, Address to, td::uint64 grams, td::Slice password, td::Slice message,
                 bool allow_send_to_uninited) {
+    auto r_sz = td::to_integer_safe<td::size_t>(message);
+    auto msg = message.str();
+    if (r_sz.is_ok()) {
+      msg = std::string(r_sz.ok(), 'Z');
+    }
     using tonlib_api::make_object;
     auto key = !from.secret.empty()
                    ? make_object<tonlib_api::inputKey>(
@@ -761,7 +812,7 @@ class TonlibCli : public td::actor::Actor {
                    : nullptr;
     send_query(
         make_object<tonlib_api::generic_sendGrams>(std::move(key), std::move(from.address), std::move(to.address),
-                                                   grams, 30, allow_send_to_uninited, message.str()),
+                                                   grams, 60, allow_send_to_uninited, std::move(msg)),
         [this](auto r_res) {
           if (r_res.is_error()) {
             td::TerminalIO::out() << "Can't transfer: " << r_res.error() << "\n";
@@ -879,6 +930,10 @@ int main(int argc, char* argv[]) {
   p.add_option('c', "config", "set lite server config", [&](td::Slice arg) {
     TRY_RESULT(data, td::read_file_str(arg.str()));
     options.config = std::move(data);
+    return td::Status::OK();
+  });
+  p.add_option('N', "config-name", "set lite server config name", [&](td::Slice arg) {
+    options.name = arg.str();
     return td::Status::OK();
   });
   p.add_option('n', "use-callbacks-for-network", "do not use this", [&]() {

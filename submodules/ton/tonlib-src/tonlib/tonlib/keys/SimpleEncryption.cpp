@@ -50,6 +50,12 @@ td::SecureString SimpleEncryption::combine_secrets(td::Slice a, td::Slice b) {
   return res;
 }
 
+td::SecureString SimpleEncryption::kdf(td::Slice secret, td::Slice password, int iterations) {
+  td::SecureString new_secret(64);
+  pbkdf2_sha512(secret, password, iterations, new_secret.as_mutable_slice());
+  return new_secret;
+}
+
 td::SecureString SimpleEncryption::encrypt_data_with_prefix(td::Slice data, td::Slice secret) {
   CHECK(data.size() % 16 == 0);
   auto data_hash = sha256(data);

@@ -1040,7 +1040,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             guard let config = walletConfiguration.config, let blockchainName = walletConfiguration.blockchainName else {
                 return
             }
-            let tonContext = storedContext.context(config: config, blockchainName: blockchainName)
+            let tonContext = storedContext.context(config: config, blockchainName: blockchainName, enableProxy: !walletConfiguration.disableProxy)
             
             if wallets.wallets.isEmpty {
                 if case .send = walletContext {

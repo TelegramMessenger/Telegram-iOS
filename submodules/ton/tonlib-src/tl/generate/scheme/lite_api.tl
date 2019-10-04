@@ -74,3 +74,4 @@ liteServer.getConfigParams mode:# id:tonNode.blockIdExt param_list:(vector int) 
 
 liteServer.queryPrefix = Object; 
 liteServer.query data:bytes = Object;
+liteServer.waitMasterchainSeqno seqno:int timeout_ms:int = Object; // query prefix

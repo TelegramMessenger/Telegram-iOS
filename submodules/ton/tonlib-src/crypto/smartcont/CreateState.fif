@@ -101,8 +101,12 @@ dictnew constant special-dict
   1 'nop
 } ::_ sg~
 
-// gas_price gas_limit spec_limit gas_credit block_gas_limit freeze_due_limit delete_due_limit -- c
-{ 7 0 reverse <b x{de} s, { swap 64 u, } 7 times b>
+// gas_price gas_limit spec_limit gas_credit block_gas_limit freeze_due_limit delete_due_limit b -- c
+{ 7 1 reverse x{de} s, { swap 64 u, } 7 times b>
+} : make-gas-prices-basic
+// gas_price ... delete_due_limit flat_gas_limit flat_gas_rate -- c
+{ 2dup or { <b x{d1} s, rot 64 u, swap 64 u, } { 2drop <b } cond
+  make-gas-prices-basic
 } : make-gas-prices
 { make-gas-prices 20 config! } : config.mc_gas_prices!
 { make-gas-prices 21 config! } : config.gas_prices!

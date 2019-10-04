@@ -50,7 +50,7 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
     if (textMessage == nil) {
         textMessage = @"";
     }
-    return [[TONTransactionMessage alloc] initWithValue:message->value_ source:source destination:destination textMessage:textMessage];
+    return [[TONTransactionMessage alloc] initWithValue:message->value_ source:source destination:destination textMessage:textMessage bodyHash:makeData(message->body_hash_)];
 }
 
 @implementation TONKey
@@ -97,13 +97,14 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONTransactionMessage
 
-- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage {
+- (instancetype)initWithValue:(int64_t)value source:(NSString * _Nonnull)source destination:(NSString * _Nonnull)destination textMessage:(NSString * _Nonnull)textMessage bodyHash:(NSData * _Nonnull)bodyHash {
     self = [super init];
     if (self != nil) {
         _value = value;
         _source = source;
         _destination = destination;
         _textMessage = textMessage;
+        _bodyHash = bodyHash;
     }
     return self;
 }
@@ -143,10 +144,11 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONSendGramsResult
 
-- (instancetype)initWithSentUntil:(int64_t)sentUntil {
+- (instancetype)initWithSentUntil:(int64_t)sentUntil bodyHash:(NSData *)bodyHash {
     self = [super init];
     if (self != nil) {
         _sentUntil = sentUntil;
+        _bodyHash = bodyHash;
     }
     return self;
 }
@@ -234,7 +236,7 @@ typedef enum {
     }
 }
 
-- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest {
+- (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest enableExternalRequests:(bool)enableExternalRequests {
     self = [super init];
     if (self != nil) {
         _queue = [MTQueue mainQueue];
@@ -246,6 +248,8 @@ typedef enum {
         _sendGramRandomIds = [[NSMutableSet alloc] init];
         
         _client = std::make_shared<tonlib::Client>();
+        
+        [self setupLogging];
         
         std::weak_ptr<tonlib::Client> weakClient = _client;
         
@@ -295,7 +299,7 @@ typedef enum {
         [[NSFileManager defaultManager] createDirectoryAtPath:keystoreDirectory withIntermediateDirectories:true attributes:nil error:nil];
         
         MTPipe *initializedStatus = _initializedStatus;
-        [[self requestInitWithConfigString:config blockchainName:blockchainName keystoreDirectory:keystoreDirectory] startWithNext:nil error:^(id error) {
+        [[self requestInitWithConfigString:config blockchainName:blockchainName keystoreDirectory:keystoreDirectory enableExternalRequests:enableExternalRequests] startWithNext:nil error:^(id error) {
             NSString *errorText = @"Unknown error";
             if ([error isKindOfClass:[TONError class]]) {
                 errorText = ((TONError *)error).text;
@@ -308,7 +312,21 @@ typedef enum {
     return self;
 }
 
-- (MTSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory {
+- (void)setupLogging {
+#if DEBUG
+    auto query = make_object<tonlib_api::setLogStream>(
+        make_object<tonlib_api::logStreamDefault>()
+    );
+    _client->execute({ INT16_MAX + 1, std::move(query) });
+#else
+    auto query = make_object<tonlib_api::setLogStream>(
+        make_object<tonlib_api::logStreamEmpty>()
+    );
+    _client->execute({ INT16_MAX + 1, std::move(query) });
+#endif
+}
+
+- (MTSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory enableExternalRequests:(bool)enableExternalRequests {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
@@ -326,7 +344,7 @@ typedef enum {
             make_object<tonlib_api::config>(
                 configString.UTF8String,
                 blockchainName.UTF8String,
-                true,
+                enableExternalRequests,
                 false
             ),
             make_object<tonlib_api::keyStoreTypeDirectory>(
@@ -482,7 +500,7 @@ typedef enum {
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
             } else if (object->get_id() == tonlib_api::sendGramsResult::ID) {
                 auto result = tonlib_api::move_object_as<tonlib_api::sendGramsResult>(object);
-                TONSendGramsResult *sendResult = [[TONSendGramsResult alloc] initWithSentUntil:result->sent_until_];
+                TONSendGramsResult *sendResult = [[TONSendGramsResult alloc] initWithSentUntil:result->sent_until_ bodyHash:makeData(result->body_hash_)];
                 [subscriber putNext:sendResult];
                 [subscriber putCompletion];
             } else {

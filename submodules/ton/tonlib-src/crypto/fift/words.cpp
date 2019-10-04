@@ -764,6 +764,10 @@ void interpret_string_to_bytes(vm::Stack& stack) {
   stack.push_bytes(stack.pop_string());
 }
 
+void interpret_bytes_to_string(vm::Stack& stack) {
+  stack.push_string(stack.pop_bytes());
+}
+
 void interpret_bytes_hash(vm::Stack& stack, bool as_uint) {
   std::string str = stack.pop_bytes();
   unsigned char buffer[32];
@@ -796,7 +800,9 @@ void interpret_store_str(vm::Stack& stack) {
   stack.check_underflow(2);
   auto str = stack.pop_string();
   auto cell = stack.pop_builder();
-  cell.write().store_bytes(str);  // may throw CellWriteError
+  if (!cell.write().store_bytes_bool(str)) {
+    throw IntError{"string does not fit into cell"};
+  }
   stack.push(cell);
 }
 
@@ -804,14 +810,18 @@ void interpret_store_bytes(vm::Stack& stack) {
   stack.check_underflow(2);
   auto str = stack.pop_bytes();
   auto cell = stack.pop_builder();
-  cell.write().store_bytes(str);  // may throw CellWriteError
+  if (!cell.write().store_bytes_bool(str)) {
+    throw IntError{"byte string does not fit into cell"};
+  }
   stack.push(cell);
 }
 
 void interpret_string_to_cellslice(vm::Stack& stack) {
   auto str = stack.pop_string();
   vm::CellBuilder cb;
-  cb.store_bytes(str);  // may throw CellWriteError
+  if (!cb.store_bytes_bool(str)) {
+    throw IntError{"string does not fit into cell"};
+  }
   stack.push_cellslice(td::Ref<vm::CellSlice>{true, cb.finalize()});
 }
 
@@ -819,7 +829,9 @@ void interpret_store_cellslice(vm::Stack& stack) {
   stack.check_underflow(2);
   auto cs = stack.pop_cellslice();
   auto cb = stack.pop_builder();
-  vm::cell_builder_add_slice(cb.write(), *cs);
+  if (!vm::cell_builder_add_slice_bool(cb.write(), *cs)) {
+    throw IntError{"slice does not fit into cell"};
+  }
   stack.push(std::move(cb));
 }
 
@@ -840,9 +852,11 @@ void interpret_concat_cellslice(vm::Stack& stack) {
   auto cs2 = stack.pop_cellslice();
   auto cs1 = stack.pop_cellslice();
   vm::CellBuilder cb;
-  vm::cell_builder_add_slice(cb, *cs1);
-  vm::cell_builder_add_slice(cb, *cs2);
-  stack.push_cellslice(td::Ref<vm::CellSlice>{true, cb.finalize()});
+  if (vm::cell_builder_add_slice_bool(cb, *cs1) && vm::cell_builder_add_slice_bool(cb, *cs2)) {
+    stack.push_cellslice(td::Ref<vm::CellSlice>{true, cb.finalize()});
+  } else {
+    throw IntError{"concatenation of two slices does not fit into a cell"};
+  }
 }
 
 void interpret_concat_cellslice_ref(vm::Stack& stack) {
@@ -862,7 +876,9 @@ void interpret_concat_builders(vm::Stack& stack) {
   stack.check_underflow(2);
   auto cb2 = stack.pop_builder();
   auto cb1 = stack.pop_builder();
-  cb1.write().append_builder(std::move(cb2));
+  if (!cb1.write().append_builder_bool(std::move(cb2))) {
+    throw IntError{"cannot concatenate two builders"};
+  }
   stack.push_builder(std::move(cb1));
 }
 
@@ -2490,6 +2506,7 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("B>Lu@+ ", std::bind(interpret_bytes_fetch_int, _1, 0x12));
   d.def_stack_word("B>Li@+ ", std::bind(interpret_bytes_fetch_int, _1, 0x13));
   d.def_stack_word("$>B ", interpret_string_to_bytes);
+  d.def_stack_word("B>$ ", interpret_bytes_to_string);
   d.def_stack_word("Bhash ", std::bind(interpret_bytes_hash, _1, true));
   d.def_stack_word("Bhashu ", std::bind(interpret_bytes_hash, _1, true));
   d.def_stack_word("BhashB ", std::bind(interpret_bytes_hash, _1, false));

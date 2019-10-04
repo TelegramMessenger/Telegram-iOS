@@ -132,9 +132,7 @@ int main(int argc, char* const argv[]) {
 
   if (!no_env) {
     const char* path = std::getenv("FIFTPATH");
-    if (path) {
-      parse_include_path_set(path ? path : "/usr/lib/fift", source_include_path);
-    }
+    parse_include_path_set(path ? path : "/usr/lib/fift", source_include_path);
   }
   std::string current_dir;
   auto r_current_dir = td::realpath(".");

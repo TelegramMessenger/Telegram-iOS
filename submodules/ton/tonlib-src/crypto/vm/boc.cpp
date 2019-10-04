@@ -75,7 +75,7 @@ td::Result<int> CellSerializationInfo::get_bits(td::Slice cell) const {
   if (data_with_bits) {
     DCHECK(data_len != 0);
     int last = cell[data_offset + data_len - 1];
-    if (!last || last == 0x80) {
+    if (!(last & 0x7f)) {
       return td::Status::Error("overlong encoding");
     }
     return td::narrow_cast<int>((data_len - 1) * 8 + 7 - td::count_trailing_zeroes_non_zero32(last));
@@ -390,15 +390,6 @@ td::uint64 BagOfCells::compute_sizes(int mode, int& r_size, int& o_size) {
   if (rs > 4 || os > 8) {
     r_size = o_size = 0;
     return 0;
-  }
-  if (!(mode & Mode::WithIndex)) {
-    if (rs > 2 || os > 4) {
-      rs = std::max(3, rs);
-      os = 8;
-      data_bytes_adj = data_bytes + (unsigned long long)int_refs * rs + hashes;
-    } else {
-      os = 4;
-    }
   }
   r_size = rs;
   o_size = os;

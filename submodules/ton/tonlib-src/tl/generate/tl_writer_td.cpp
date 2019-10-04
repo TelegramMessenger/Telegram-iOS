@@ -68,7 +68,7 @@ int TD_TL_writer::get_storer_type(const tl::tl_combinator *t, const std::string 
 
 tl::TL_writer::Mode TD_TL_writer::get_parser_mode(int type) const {
   if (tl_name == "tonlib_api") {
-#ifndef TD_ENABLE_JNI  // we need to parse all types in order to implement toString
+#ifndef TONLIB_ENABLE_JNI  // we need to parse all types in order to implement toString
     return Server;
 #endif
   }
