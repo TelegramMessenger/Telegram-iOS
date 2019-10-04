@@ -334,6 +334,26 @@ typedef enum {
 #endif
 }
 
+- (NSData * __nullable)decrypt:(NSData *)encryptedData secret:(NSData *)data {
+    auto query = make_object<tonlib_api::decrypt>(makeSecureString(encryptedData), makeSecureString(data));
+    tonlib_api::object_ptr<tonlib_api::Object> result = _client->execute({ INT16_MAX + 1, std::move(query) }).object;
+    
+    if (result->get_id() == tonlib_api::error::ID) {
+        return nil;
+    } else {
+        tonlib_api::object_ptr<tonlib_api::data> value = tonlib_api::move_object_as<tonlib_api::data>(result);
+        return readSecureString(value->bytes_);
+    }
+}
+- (NSData *)encrypt:(NSData *)decryptedData secret:(NSData *)data {
+    auto query = make_object<tonlib_api::encrypt>(makeSecureString(decryptedData), makeSecureString(data));
+    tonlib_api::object_ptr<tonlib_api::Object> result = _client->execute({ INT16_MAX + 1, std::move(query) }).object;
+    
+    tonlib_api::object_ptr<tonlib_api::data> value = tonlib_api::move_object_as<tonlib_api::data>(result);
+    
+    return readSecureString(value->bytes_);
+}
+
 - (MTSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory enableExternalRequests:(bool)enableExternalRequests {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;

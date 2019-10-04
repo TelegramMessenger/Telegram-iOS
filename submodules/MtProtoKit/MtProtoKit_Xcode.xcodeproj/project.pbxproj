@@ -53,23 +53,6 @@
 		D0185E752089D265005E1A6C /* MTProxyConnectivity.m in Sources */ = {isa = PBXBuildFile; fileRef = D0185E712089D265005E1A6C /* MTProxyConnectivity.m */; };
 		D0185E762089D265005E1A6C /* MTProxyConnectivity.m in Sources */ = {isa = PBXBuildFile; fileRef = D0185E712089D265005E1A6C /* MTProxyConnectivity.m */; };
 		D0185E772089D265005E1A6C /* MTProxyConnectivity.m in Sources */ = {isa = PBXBuildFile; fileRef = D0185E712089D265005E1A6C /* MTProxyConnectivity.m */; };
-		D01B263623324B9000A6448B /* libtdnet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262623324B8F00A6448B /* libtdnet.a */; };
-		D01B263723324B9000A6448B /* libtl_tonlib_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262723324B9000A6448B /* libtl_tonlib_api.a */; };
-		D01B263823324B9000A6448B /* libtdutils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262823324B9000A6448B /* libtdutils.a */; };
-		D01B263923324B9000A6448B /* libtl_lite_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262923324B9000A6448B /* libtl_lite_api.a */; };
-		D01B263A23324B9000A6448B /* libtl-utils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262A23324B9000A6448B /* libtl-utils.a */; };
-		D01B263B23324B9000A6448B /* libton_block.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262B23324B9000A6448B /* libton_block.a */; };
-		D01B263C23324B9000A6448B /* libtonlib.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262C23324B9000A6448B /* libtonlib.a */; };
-		D01B263D23324B9000A6448B /* liblite-client-common.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262D23324B9000A6448B /* liblite-client-common.a */; };
-		D01B263E23324B9000A6448B /* libtddb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262E23324B9000A6448B /* libtddb.a */; };
-		D01B263F23324B9000A6448B /* libadnllite.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B262F23324B9000A6448B /* libadnllite.a */; };
-		D01B264023324B9000A6448B /* libton_crypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B263023324B9000A6448B /* libton_crypto.a */; };
-		D01B264123324B9000A6448B /* libtdactor.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B263123324B9000A6448B /* libtdactor.a */; };
-		D01B264223324B9000A6448B /* libtl-lite-utils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B263223324B9000A6448B /* libtl-lite-utils.a */; };
-		D01B264323324B9100A6448B /* libkeys.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B263323324B9000A6448B /* libkeys.a */; };
-		D01B264423324B9100A6448B /* libtl_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B263423324B9000A6448B /* libtl_api.a */; };
-		D01B264523324B9100A6448B /* libcrc32c.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D01B263523324B9000A6448B /* libcrc32c.a */; };
-		D01B264B23324D4100A6448B /* TON.mm in Sources */ = {isa = PBXBuildFile; fileRef = D08A159C22DD32F20073B508 /* TON.mm */; };
 		D020FAFA1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D020FAFB1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D020FAFC1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */ = {isa = PBXBuildFile; fileRef = D020FAF81D994E3100F279AA /* MTHttpRequestOperation.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -626,6 +609,38 @@
 		D0D225161B4D817B0085E26D /* MtProtoKitDynamic.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D2250B1B4D817B0085E26D /* MtProtoKitDynamic.framework */; };
 		D0D2251D1B4D817B0085E26D /* MtProtoKitDynamicTests.m in Sources */ = {isa = PBXBuildFile; fileRef = D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */; };
 		D0D2689E1D7A055400C422DA /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CD990F1D75C16100F41187 /* libcrypto.a */; };
+		D0D58B282347E5F000CF7782 /* tonlib_api.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58AF52347E5F000CF7782 /* tonlib_api.h */; };
+		D0D58B292347E5F000CF7782 /* TlObject.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58AF72347E5F000CF7782 /* TlObject.h */; };
+		D0D58B2A2347E5F000CF7782 /* tonlib_client_json.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58AF92347E5F000CF7782 /* tonlib_client_json.h */; };
+		D0D58B2B2347E5F000CF7782 /* tonlibjson_export.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58AFA2347E5F000CF7782 /* tonlibjson_export.h */; };
+		D0D58B2C2347E5F000CF7782 /* Client.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58AFB2347E5F000CF7782 /* Client.h */; };
+		D0D58B2D2347E5F000CF7782 /* Slice-decl.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58AFE2347E5F000CF7782 /* Slice-decl.h */; };
+		D0D58B2E2347E5F000CF7782 /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58AFF2347E5F000CF7782 /* config.h */; };
+		D0D58B2F2347E5F000CF7782 /* SharedSlice.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58B002347E5F000CF7782 /* SharedSlice.h */; };
+		D0D58B302347E5F000CF7782 /* Slice.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58B012347E5F000CF7782 /* Slice.h */; };
+		D0D58B312347E5F000CF7782 /* int_types.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58B022347E5F000CF7782 /* int_types.h */; };
+		D0D58B322347E5F000CF7782 /* common.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58B032347E5F000CF7782 /* common.h */; };
+		D0D58B332347E5F000CF7782 /* check.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58B042347E5F000CF7782 /* check.h */; };
+		D0D58B342347E5F000CF7782 /* unique_ptr.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58B052347E5F000CF7782 /* unique_ptr.h */; };
+		D0D58B352347E5F000CF7782 /* platform.h in Headers */ = {isa = PBXBuildFile; fileRef = D0D58B072347E5F000CF7782 /* platform.h */; };
+		D0D58B362347E5F000CF7782 /* libtl-lite-utils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B092347E5F000CF7782 /* libtl-lite-utils.a */; };
+		D0D58B372347E5F000CF7782 /* libtdactor.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B0A2347E5F000CF7782 /* libtdactor.a */; };
+		D0D58B3D2347E5F000CF7782 /* libton_block.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B122347E5F000CF7782 /* libton_block.a */; };
+		D0D58B3E2347E5F000CF7782 /* libadnllite.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B132347E5F000CF7782 /* libadnllite.a */; };
+		D0D58B402347E5F000CF7782 /* libtddb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B152347E5F000CF7782 /* libtddb.a */; };
+		D0D58B412347E5F000CF7782 /* libkeys.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B162347E5F000CF7782 /* libkeys.a */; };
+		D0D58B422347E5F000CF7782 /* libtdnet.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B172347E5F000CF7782 /* libtdnet.a */; };
+		D0D58B432347E5F000CF7782 /* libtdutils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B182347E5F000CF7782 /* libtdutils.a */; };
+		D0D58B442347E5F000CF7782 /* libton_crypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B192347E5F000CF7782 /* libton_crypto.a */; };
+		D0D58B4B2347E5F000CF7782 /* libtl-utils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B212347E5F000CF7782 /* libtl-utils.a */; };
+		D0D58B4C2347E5F000CF7782 /* libtl_lite_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B222347E5F000CF7782 /* libtl_lite_api.a */; };
+		D0D58B4D2347E5F000CF7782 /* libcrc32c.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B232347E5F000CF7782 /* libcrc32c.a */; };
+		D0D58B4E2347E5F000CF7782 /* libtl_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B242347E5F000CF7782 /* libtl_api.a */; };
+		D0D58B4F2347E5F000CF7782 /* libtonlib.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B252347E5F000CF7782 /* libtonlib.a */; };
+		D0D58B502347E5F000CF7782 /* liblite-client-common.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B262347E5F000CF7782 /* liblite-client-common.a */; };
+		D0D58B512347E5F000CF7782 /* libtl_tonlib_api.a in Frameworks */ = {isa = PBXBuildFile; fileRef = D0D58B272347E5F000CF7782 /* libtl_tonlib_api.a */; };
+		D0D58B522347E64000CF7782 /* TON.h in Headers */ = {isa = PBXBuildFile; fileRef = D08A159B22DD32F20073B508 /* TON.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		D0D58B532347E6A100CF7782 /* TON.mm in Sources */ = {isa = PBXBuildFile; fileRef = D08A159C22DD32F20073B508 /* TON.mm */; };
 		D0E2E17720866780005737E8 /* MTDNS.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E2E17520866780005737E8 /* MTDNS.h */; };
 		D0E2E17820866780005737E8 /* MTDNS.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E2E17520866780005737E8 /* MTDNS.h */; };
 		D0E2E17920866780005737E8 /* MTDNS.h in Headers */ = {isa = PBXBuildFile; fileRef = D0E2E17520866780005737E8 /* MTDNS.h */; };
@@ -972,6 +987,48 @@
 		D0D225151B4D817B0085E26D /* MtProtoKitDynamicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MtProtoKitDynamicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0D2251B1B4D817B0085E26D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0D2251C1B4D817B0085E26D /* MtProtoKitDynamicTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MtProtoKitDynamicTests.m; sourceTree = "<group>"; };
+		D0D58AF52347E5F000CF7782 /* tonlib_api.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tonlib_api.h; sourceTree = "<group>"; };
+		D0D58AF72347E5F000CF7782 /* TlObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TlObject.h; sourceTree = "<group>"; };
+		D0D58AF92347E5F000CF7782 /* tonlib_client_json.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tonlib_client_json.h; sourceTree = "<group>"; };
+		D0D58AFA2347E5F000CF7782 /* tonlibjson_export.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = tonlibjson_export.h; sourceTree = "<group>"; };
+		D0D58AFB2347E5F000CF7782 /* Client.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Client.h; sourceTree = "<group>"; };
+		D0D58AFE2347E5F000CF7782 /* Slice-decl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "Slice-decl.h"; sourceTree = "<group>"; };
+		D0D58AFF2347E5F000CF7782 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		D0D58B002347E5F000CF7782 /* SharedSlice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SharedSlice.h; sourceTree = "<group>"; };
+		D0D58B012347E5F000CF7782 /* Slice.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Slice.h; sourceTree = "<group>"; };
+		D0D58B022347E5F000CF7782 /* int_types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = int_types.h; sourceTree = "<group>"; };
+		D0D58B032347E5F000CF7782 /* common.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
+		D0D58B042347E5F000CF7782 /* check.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = check.h; sourceTree = "<group>"; };
+		D0D58B052347E5F000CF7782 /* unique_ptr.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = unique_ptr.h; sourceTree = "<group>"; };
+		D0D58B072347E5F000CF7782 /* platform.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = platform.h; sourceTree = "<group>"; };
+		D0D58B092347E5F000CF7782 /* libtl-lite-utils.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libtl-lite-utils.a"; sourceTree = "<group>"; };
+		D0D58B0A2347E5F000CF7782 /* libtdactor.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtdactor.a; sourceTree = "<group>"; };
+		D0D58B0B2347E5F000CF7782 /* libtonlibjson.0.5.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libtonlibjson.0.5.dylib; sourceTree = "<group>"; };
+		D0D58B0E2347E5F000CF7782 /* TonlibConfigVersion.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TonlibConfigVersion.cmake; sourceTree = "<group>"; };
+		D0D58B0F2347E5F000CF7782 /* TonlibConfig.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TonlibConfig.cmake; sourceTree = "<group>"; };
+		D0D58B102347E5F000CF7782 /* TonlibTargets-release.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "TonlibTargets-release.cmake"; sourceTree = "<group>"; };
+		D0D58B112347E5F000CF7782 /* TonlibTargets.cmake */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TonlibTargets.cmake; sourceTree = "<group>"; };
+		D0D58B122347E5F000CF7782 /* libton_block.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libton_block.a; sourceTree = "<group>"; };
+		D0D58B132347E5F000CF7782 /* libadnllite.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libadnllite.a; sourceTree = "<group>"; };
+		D0D58B142347E5F000CF7782 /* libtonlibjson.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libtonlibjson.dylib; sourceTree = "<group>"; };
+		D0D58B152347E5F000CF7782 /* libtddb.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtddb.a; sourceTree = "<group>"; };
+		D0D58B162347E5F000CF7782 /* libkeys.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libkeys.a; sourceTree = "<group>"; };
+		D0D58B172347E5F000CF7782 /* libtdnet.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtdnet.a; sourceTree = "<group>"; };
+		D0D58B182347E5F000CF7782 /* libtdutils.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtdutils.a; sourceTree = "<group>"; };
+		D0D58B192347E5F000CF7782 /* libton_crypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libton_crypto.a; sourceTree = "<group>"; };
+		D0D58B1B2347E5F000CF7782 /* Lisp.fif */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Lisp.fif; sourceTree = "<group>"; };
+		D0D58B1C2347E5F000CF7782 /* Asm.fif */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Asm.fif; sourceTree = "<group>"; };
+		D0D58B1D2347E5F000CF7782 /* TonUtil.fif */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = TonUtil.fif; sourceTree = "<group>"; };
+		D0D58B1E2347E5F000CF7782 /* Fift.fif */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Fift.fif; sourceTree = "<group>"; };
+		D0D58B1F2347E5F000CF7782 /* Lists.fif */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Lists.fif; sourceTree = "<group>"; };
+		D0D58B202347E5F000CF7782 /* Stack.fif */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Stack.fif; sourceTree = "<group>"; };
+		D0D58B212347E5F000CF7782 /* libtl-utils.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libtl-utils.a"; sourceTree = "<group>"; };
+		D0D58B222347E5F000CF7782 /* libtl_lite_api.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtl_lite_api.a; sourceTree = "<group>"; };
+		D0D58B232347E5F000CF7782 /* libcrc32c.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrc32c.a; sourceTree = "<group>"; };
+		D0D58B242347E5F000CF7782 /* libtl_api.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtl_api.a; sourceTree = "<group>"; };
+		D0D58B252347E5F000CF7782 /* libtonlib.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtonlib.a; sourceTree = "<group>"; };
+		D0D58B262347E5F000CF7782 /* liblite-client-common.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "liblite-client-common.a"; sourceTree = "<group>"; };
+		D0D58B272347E5F000CF7782 /* libtl_tonlib_api.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libtl_tonlib_api.a; sourceTree = "<group>"; };
 		D0E1D6731CBC20BA00B04029 /* SSignalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SSignalKit.framework; path = "../../../../Library/Developer/Xcode/DerivedData/Telegram-iOS-diblohvjozhgaifjcniwdlixlilx/Build/Products/Debug-iphonesimulator/SSignalKit.framework"; sourceTree = "<group>"; };
 		D0E2E17520866780005737E8 /* MTDNS.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MTDNS.h; sourceTree = "<group>"; };
 		D0E2E17620866780005737E8 /* MTDNS.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MTDNS.m; sourceTree = "<group>"; };
@@ -995,27 +1052,27 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D58B512347E5F000CF7782 /* libtl_tonlib_api.a in Frameworks */,
 				D03878A42332504600DB441C /* CFNetwork.framework in Frameworks */,
+				D0D58B412347E5F000CF7782 /* libkeys.a in Frameworks */,
+				D0D58B442347E5F000CF7782 /* libton_crypto.a in Frameworks */,
+				D0D58B362347E5F000CF7782 /* libtl-lite-utils.a in Frameworks */,
 				D03878A22332503E00DB441C /* SystemConfiguration.framework in Frameworks */,
+				D0D58B4E2347E5F000CF7782 /* libtl_api.a in Frameworks */,
+				D0D58B4F2347E5F000CF7782 /* libtonlib.a in Frameworks */,
+				D0D58B502347E5F000CF7782 /* liblite-client-common.a in Frameworks */,
+				D0D58B402347E5F000CF7782 /* libtddb.a in Frameworks */,
+				D0D58B3E2347E5F000CF7782 /* libadnllite.a in Frameworks */,
+				D0D58B372347E5F000CF7782 /* libtdactor.a in Frameworks */,
 				D03878A02332503300DB441C /* Security.framework in Frameworks */,
-				D01B264023324B9000A6448B /* libton_crypto.a in Frameworks */,
-				D01B263C23324B9000A6448B /* libtonlib.a in Frameworks */,
-				D01B263623324B9000A6448B /* libtdnet.a in Frameworks */,
+				D0D58B4B2347E5F000CF7782 /* libtl-utils.a in Frameworks */,
 				D0B4187D1D7E04EB004562A4 /* libcrypto.a in Frameworks */,
+				D0D58B432347E5F000CF7782 /* libtdutils.a in Frameworks */,
+				D0D58B422347E5F000CF7782 /* libtdnet.a in Frameworks */,
+				D0D58B4C2347E5F000CF7782 /* libtl_lite_api.a in Frameworks */,
+				D0D58B3D2347E5F000CF7782 /* libton_block.a in Frameworks */,
+				D0D58B4D2347E5F000CF7782 /* libcrc32c.a in Frameworks */,
 				D038789E2332500A00DB441C /* libc++.tbd in Frameworks */,
-				D01B263723324B9000A6448B /* libtl_tonlib_api.a in Frameworks */,
-				D01B263823324B9000A6448B /* libtdutils.a in Frameworks */,
-				D01B263923324B9000A6448B /* libtl_lite_api.a in Frameworks */,
-				D01B263A23324B9000A6448B /* libtl-utils.a in Frameworks */,
-				D01B263B23324B9000A6448B /* libton_block.a in Frameworks */,
-				D01B263D23324B9000A6448B /* liblite-client-common.a in Frameworks */,
-				D01B263E23324B9000A6448B /* libtddb.a in Frameworks */,
-				D01B263F23324B9000A6448B /* libadnllite.a in Frameworks */,
-				D01B264123324B9000A6448B /* libtdactor.a in Frameworks */,
-				D01B264223324B9000A6448B /* libtl-lite-utils.a in Frameworks */,
-				D01B264323324B9100A6448B /* libkeys.a in Frameworks */,
-				D01B264423324B9100A6448B /* libtl_api.a in Frameworks */,
-				D01B264523324B9100A6448B /* libcrc32c.a in Frameworks */,
 				D0B4187B1D7E04CF004562A4 /* libz.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1621,6 +1678,7 @@
 		D08A158E22DD32740073B508 /* TON */ = {
 			isa = PBXGroup;
 			children = (
+				D0D58AF12347E5F000CF7782 /* macOS */,
 				D018558922DDD36C00AC458A /* include */,
 				D08A159022DD32B40073B508 /* tonlib_client_json.h */,
 				D08A158F22DD32B40073B508 /* tonlibjson_export.h */,
@@ -1774,6 +1832,151 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		D0D58AF12347E5F000CF7782 /* macOS */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AF22347E5F000CF7782 /* include */,
+				D0D58B082347E5F000CF7782 /* lib */,
+			);
+			path = macOS;
+			sourceTree = "<group>";
+		};
+		D0D58AF22347E5F000CF7782 /* include */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AF32347E5F000CF7782 /* auto */,
+				D0D58AF62347E5F000CF7782 /* tl */,
+				D0D58AF82347E5F000CF7782 /* tonlib */,
+				D0D58AFC2347E5F000CF7782 /* td */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		D0D58AF32347E5F000CF7782 /* auto */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AF42347E5F000CF7782 /* tl */,
+			);
+			path = auto;
+			sourceTree = "<group>";
+		};
+		D0D58AF42347E5F000CF7782 /* tl */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AF52347E5F000CF7782 /* tonlib_api.h */,
+			);
+			path = tl;
+			sourceTree = "<group>";
+		};
+		D0D58AF62347E5F000CF7782 /* tl */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AF72347E5F000CF7782 /* TlObject.h */,
+			);
+			path = tl;
+			sourceTree = "<group>";
+		};
+		D0D58AF82347E5F000CF7782 /* tonlib */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AF92347E5F000CF7782 /* tonlib_client_json.h */,
+				D0D58AFA2347E5F000CF7782 /* tonlibjson_export.h */,
+				D0D58AFB2347E5F000CF7782 /* Client.h */,
+			);
+			path = tonlib;
+			sourceTree = "<group>";
+		};
+		D0D58AFC2347E5F000CF7782 /* td */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AFD2347E5F000CF7782 /* utils */,
+			);
+			path = td;
+			sourceTree = "<group>";
+		};
+		D0D58AFD2347E5F000CF7782 /* utils */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58AFE2347E5F000CF7782 /* Slice-decl.h */,
+				D0D58AFF2347E5F000CF7782 /* config.h */,
+				D0D58B002347E5F000CF7782 /* SharedSlice.h */,
+				D0D58B012347E5F000CF7782 /* Slice.h */,
+				D0D58B022347E5F000CF7782 /* int_types.h */,
+				D0D58B032347E5F000CF7782 /* common.h */,
+				D0D58B042347E5F000CF7782 /* check.h */,
+				D0D58B052347E5F000CF7782 /* unique_ptr.h */,
+				D0D58B062347E5F000CF7782 /* port */,
+			);
+			path = utils;
+			sourceTree = "<group>";
+		};
+		D0D58B062347E5F000CF7782 /* port */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58B072347E5F000CF7782 /* platform.h */,
+			);
+			path = port;
+			sourceTree = "<group>";
+		};
+		D0D58B082347E5F000CF7782 /* lib */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58B092347E5F000CF7782 /* libtl-lite-utils.a */,
+				D0D58B0A2347E5F000CF7782 /* libtdactor.a */,
+				D0D58B0B2347E5F000CF7782 /* libtonlibjson.0.5.dylib */,
+				D0D58B0C2347E5F000CF7782 /* cmake */,
+				D0D58B122347E5F000CF7782 /* libton_block.a */,
+				D0D58B132347E5F000CF7782 /* libadnllite.a */,
+				D0D58B142347E5F000CF7782 /* libtonlibjson.dylib */,
+				D0D58B152347E5F000CF7782 /* libtddb.a */,
+				D0D58B162347E5F000CF7782 /* libkeys.a */,
+				D0D58B172347E5F000CF7782 /* libtdnet.a */,
+				D0D58B182347E5F000CF7782 /* libtdutils.a */,
+				D0D58B192347E5F000CF7782 /* libton_crypto.a */,
+				D0D58B1A2347E5F000CF7782 /* fift */,
+				D0D58B212347E5F000CF7782 /* libtl-utils.a */,
+				D0D58B222347E5F000CF7782 /* libtl_lite_api.a */,
+				D0D58B232347E5F000CF7782 /* libcrc32c.a */,
+				D0D58B242347E5F000CF7782 /* libtl_api.a */,
+				D0D58B252347E5F000CF7782 /* libtonlib.a */,
+				D0D58B262347E5F000CF7782 /* liblite-client-common.a */,
+				D0D58B272347E5F000CF7782 /* libtl_tonlib_api.a */,
+			);
+			path = lib;
+			sourceTree = "<group>";
+		};
+		D0D58B0C2347E5F000CF7782 /* cmake */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58B0D2347E5F000CF7782 /* Tonlib */,
+			);
+			path = cmake;
+			sourceTree = "<group>";
+		};
+		D0D58B0D2347E5F000CF7782 /* Tonlib */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58B0E2347E5F000CF7782 /* TonlibConfigVersion.cmake */,
+				D0D58B0F2347E5F000CF7782 /* TonlibConfig.cmake */,
+				D0D58B102347E5F000CF7782 /* TonlibTargets-release.cmake */,
+				D0D58B112347E5F000CF7782 /* TonlibTargets.cmake */,
+			);
+			path = Tonlib;
+			sourceTree = "<group>";
+		};
+		D0D58B1A2347E5F000CF7782 /* fift */ = {
+			isa = PBXGroup;
+			children = (
+				D0D58B1B2347E5F000CF7782 /* Lisp.fif */,
+				D0D58B1C2347E5F000CF7782 /* Asm.fif */,
+				D0D58B1D2347E5F000CF7782 /* TonUtil.fif */,
+				D0D58B1E2347E5F000CF7782 /* Fift.fif */,
+				D0D58B1F2347E5F000CF7782 /* Lists.fif */,
+				D0D58B202347E5F000CF7782 /* Stack.fif */,
+			);
+			path = fift;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -1781,7 +1984,9 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0D58B522347E64000CF7782 /* TON.h in Headers */,
 				D0CD97FD1D74B96300F41187 /* MTBuffer.h in Headers */,
+				D0D58B352347E5F000CF7782 /* platform.h in Headers */,
 				D0CD98131D74B99400F41187 /* MTInternalMessageParser.h in Headers */,
 				D0CD98EE1D75C0C900F41187 /* MTTimeSyncMessageService.h in Headers */,
 				D0CD989F1D74BA6500F41187 /* MTProto.h in Headers */,
@@ -1812,6 +2017,8 @@
 				D0CD98A41D74BA6500F41187 /* MTIncomingMessage.h in Headers */,
 				D0CD97FC1D74B96300F41187 /* MTBadMsgNotificationMessage.h in Headers */,
 				D0CD98121D74B99400F41187 /* MTFutureSaltsMessage.h in Headers */,
+				D0D58B322347E5F000CF7782 /* common.h in Headers */,
+				D0D58B2D2347E5F000CF7782 /* Slice-decl.h in Headers */,
 				D0CD985A1D74B9BF00F41187 /* MTServerDhParamsMessage.h in Headers */,
 				D0CAF2E51D75EA790011F558 /* MTAtomic.h in Headers */,
 				D0CD98A11D74BA6500F41187 /* MTTimeFixContext.h in Headers */,
@@ -1823,6 +2030,7 @@
 				D0CD97D61D74B91E00F41187 /* MTTimer.h in Headers */,
 				D0529D2C21A434BF00D7C3C4 /* MTTransportSchemeStats.h in Headers */,
 				D0CD98F81D75C0E400F41187 /* MTRequestErrorContext.h in Headers */,
+				D0D58B342347E5F000CF7782 /* unique_ptr.h in Headers */,
 				D0CD98A51D74BA6500F41187 /* MTMessageEncryptionKey.h in Headers */,
 				D0CD981D1D74B99400F41187 /* MTPingMessage.h in Headers */,
 				D0CD97F91D74B94B00F41187 /* MTAes.h in Headers */,
@@ -1844,22 +2052,29 @@
 				D0CD981B1D74B99400F41187 /* MTMsgsStateReqMessage.h in Headers */,
 				D0C9322C1E095E280074F044 /* MTNetworkUsageManager.h in Headers */,
 				D0CD98101D74B96F00F41187 /* MTExportedAuthorizationData.h in Headers */,
+				D0D58B2E2347E5F000CF7782 /* config.h in Headers */,
 				D0CD98F71D75C0E400F41187 /* MTRequestContext.h in Headers */,
 				D0E2E17820866780005737E8 /* MTDNS.h in Headers */,
 				D0CD98871D74BA5100F41187 /* MTDatacenterSaltInfo.h in Headers */,
+				D0D58B332347E5F000CF7782 /* check.h in Headers */,
 				D0CD97ED1D74B94300F41187 /* MTInputStream.h in Headers */,
+				D0D58B312347E5F000CF7782 /* int_types.h in Headers */,
 				D0CD98141D74B99400F41187 /* MTMessage.h in Headers */,
 				D0CD987A1D74BA4100F41187 /* MTDatacenterAuthMessageService.h in Headers */,
 				D0CD98861D74BA5100F41187 /* MTDatacenterAuthInfo.h in Headers */,
 				D0CD98B51D74BA7500F41187 /* MTTransport.h in Headers */,
 				D0CD97EC1D74B94300F41187 /* MTOutputStream.h in Headers */,
 				D0CD98701D74B9F700F41187 /* MTDiscoverConnectionSignals.h in Headers */,
+				D0D58B2A2347E5F000CF7782 /* tonlib_client_json.h in Headers */,
 				D0CD97E91D74B94300F41187 /* MTEncryption.h in Headers */,
+				D0D58B292347E5F000CF7782 /* TlObject.h in Headers */,
+				D0D58B2B2347E5F000CF7782 /* tonlibjson_export.h in Headers */,
 				D0C932241E095D6A0074F044 /* MTNetworkUsageCalculationInfo.h in Headers */,
 				D0CD97EB1D74B94300F41187 /* MTQueue.h in Headers */,
 				D0CD98001D74B96300F41187 /* MTDropRpcResultMessage.h in Headers */,
 				D0CD98791D74BA4100F41187 /* MTDatacenterAuthAction.h in Headers */,
 				D0CD981C1D74B99400F41187 /* MTNewSessionCreatedMessage.h in Headers */,
+				D0D58B2F2347E5F000CF7782 /* SharedSlice.h in Headers */,
 				D0CD98781D74BA4100F41187 /* MTDatacenterTransferAuthAction.h in Headers */,
 				D0CD990A1D75C0F300F41187 /* MTResendMessageService.h in Headers */,
 				D020FAFB1D994E3100F279AA /* MTHttpRequestOperation.h in Headers */,
@@ -1871,7 +2086,10 @@
 				D0CAF2DB1D75E31A0011F558 /* MTDisposable.h in Headers */,
 				D0CD98851D74BA5100F41187 /* MTDatacenterAddressSet.h in Headers */,
 				D0CD98B61D74BA7500F41187 /* MTTransportTransaction.h in Headers */,
+				D0D58B2C2347E5F000CF7782 /* Client.h in Headers */,
 				D0CD981E1D74B99400F41187 /* MTPongMessage.h in Headers */,
+				D0D58B282347E5F000CF7782 /* tonlib_api.h in Headers */,
+				D0D58B302347E5F000CF7782 /* Slice.h in Headers */,
 				D0CD98C51D74BA8D00F41187 /* MTTcpConnection.h in Headers */,
 				D0CAF2CD1D75E2570011F558 /* MTSignal.h in Headers */,
 			);
@@ -2291,7 +2509,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D01B264B23324D4100A6448B /* TON.mm in Sources */,
+				D0D58B532347E6A100CF7782 /* TON.mm in Sources */,
 				D0CD99021D75C0ED00F41187 /* MTRequestErrorContext.m in Sources */,
 				D0CD98371D74B9AA00F41187 /* MTMsgsStateInfoMessage.m in Sources */,
 				D0CD99011D75C0ED00F41187 /* MTRequestContext.m in Sources */,
@@ -2729,6 +2947,7 @@
 		C22069C41E8EB4B300E82730 /* AppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -2744,7 +2963,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -2753,6 +2972,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -3009,6 +3229,7 @@
 		D013CAD7209C3BE2009A0B6F /* DebugForkAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -3027,7 +3248,7 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3036,6 +3257,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -3265,6 +3487,7 @@
 		D021D4FE219CB1CD0064BEBA /* DebugFork */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -3284,7 +3507,7 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3293,6 +3516,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -3522,6 +3746,7 @@
 		D0364D4922B3E35B002A6EF0 /* HockeyappMacAlpha */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -3541,7 +3766,7 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3550,6 +3775,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -3758,6 +3984,7 @@
 		D079ABAA1AF39B8000076F59 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -3773,7 +4000,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = "";
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3782,6 +4009,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -3802,6 +4030,7 @@
 		D079ABAB1AF39B8000076F59 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -3817,7 +4046,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3826,6 +4055,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -3948,6 +4178,7 @@
 		D079FD121F06BE440038FADE /* DebugHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -3967,7 +4198,7 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3976,6 +4207,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -4193,6 +4425,7 @@
 		D079FD181F06BE4D0038FADE /* ReleaseAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -4209,7 +4442,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = APPSTORE;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4218,6 +4451,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -4422,6 +4656,7 @@
 		D079FD1E1F06BE540038FADE /* ReleaseHockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -4438,7 +4673,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = STABLE;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4447,6 +4682,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -4651,6 +4887,7 @@
 		D0924FDE1FE52BFE003F693F /* ReleaseHockeyappInternal */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -4666,7 +4903,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4675,6 +4912,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -4879,6 +5117,7 @@
 		D096C2D41CC3C664006D814E /* Hockeyapp */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -4894,7 +5133,7 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -4903,6 +5142,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -5119,6 +5359,7 @@
 		D0ADF92A212B3ACC00310BBC /* DebugAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -5138,7 +5379,7 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -5147,6 +5388,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -5477,6 +5719,7 @@
 		D0CE6EEB213DC2F900BCD44B /* ReleaseAppStoreLLC */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -5493,7 +5736,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = APPSTORE;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -5502,6 +5745,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
@@ -5880,6 +6124,7 @@
 		D0DB57B21E5C4B470071854C /* DebugAppStore */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -5899,7 +6144,7 @@
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/openssl",
-					"$(PROJECT_DIR)/TON/include",
+					"$(PROJECT_DIR)/TON/macOS/include",
 				);
 				INFOPLIST_FILE = MtProtoKitMac/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -5908,6 +6153,7 @@
 					"$(inherited)",
 					"$(PROJECT_DIR)/openssl/OSX",
 					"$(PROJECT_DIR)/TON/lib/macos",
+					"$(PROJECT_DIR)/TON/macOS/lib",
 				);
 				MACH_O_TYPE = mh_dylib;
 				MACOSX_DEPLOYMENT_TARGET = 10.10;
