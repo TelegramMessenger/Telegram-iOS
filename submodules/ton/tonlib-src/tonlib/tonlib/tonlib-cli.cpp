@@ -27,6 +27,7 @@ class TonlibCli : public td::actor::Actor {
     std::string config;
     std::string name;
     std::string key_dir{"."};
+    bool in_memory{false};
     bool use_callbacks_for_network{false};
     bool use_simple_wallet{false};
     bool ignore_cache{false};
@@ -120,7 +121,14 @@ class TonlibCli : public td::actor::Actor {
                       ? make_object<tonlib_api::config>(options_.config, options_.name,
                                                         options_.use_callbacks_for_network, options_.ignore_cache)
                       : nullptr;
-    send_query(make_object<tonlib_api::init>(make_object<tonlib_api::options>(std::move(config), options_.key_dir)),
+
+    tonlib_api::object_ptr<tonlib_api::KeyStoreType> ks_type;
+    if (options_.in_memory) {
+      ks_type = make_object<tonlib_api::keyStoreTypeInMemory>();
+    } else {
+      ks_type = make_object<tonlib_api::keyStoreTypeDirectory>(options_.key_dir);
+    }
+    send_query(make_object<tonlib_api::init>(make_object<tonlib_api::options>(std::move(config), std::move(ks_type))),
                [](auto r_ok) {
                  LOG_IF(ERROR, r_ok.is_error()) << r_ok.error();
                  td::TerminalIO::out() << "Tonlib is inited\n";
@@ -184,6 +192,7 @@ class TonlibCli : public td::actor::Actor {
       td::TerminalIO::out() << "keys - show all stored keys\n";
       td::TerminalIO::out() << "unpackaddress <address> - validate and parse address\n";
       td::TerminalIO::out() << "importkey - import key\n";
+      td::TerminalIO::out() << "deletekeys - delete ALL PRIVATE KEYS\n";
       td::TerminalIO::out() << "exportkey [<key_id>] - export key\n";
       td::TerminalIO::out() << "setconfig <path> [<name>] [<use_callback>] [<force>] - set lite server config\n";
       td::TerminalIO::out() << "getstate <key_id> - get state of simple wallet with requested key\n";
@@ -205,6 +214,8 @@ class TonlibCli : public td::actor::Actor {
       try_stop();
     } else if (cmd == "keys") {
       dump_keys();
+    } else if (cmd == "deletekeys") {
+      delete_all_keys();
     } else if (cmd == "exportkey") {
       export_key(parser.read_word());
     } else if (cmd == "importkey") {
@@ -406,6 +417,27 @@ class TonlibCli : public td::actor::Actor {
     for (size_t i = 0; i < keys_.size(); i++) {
       dump_key(i);
     }
+  }
+  void delete_all_keys() {
+    static td::Slice password = td::Slice("I have written down mnemonic words");
+    td::TerminalIO::out() << "You are going to delete ALL PRIVATE KEYS. To confirm enter `" << password << "`\n";
+    cont_ = [this](td::Slice entered) {
+      if (password == entered) {
+        this->do_delete_all_keys();
+      } else {
+        td::TerminalIO::out() << "Your keys left intact\n";
+      }
+    };
+  }
+
+  void do_delete_all_keys() {
+    send_query(tonlib_api::make_object<tonlib_api::deleteAllKeys>(), [](auto r_res) {
+      if (r_res.is_error()) {
+        td::TerminalIO::out() << "Something went wrong: " << r_res.error() << "\n";
+        return;
+      }
+      td::TerminalIO::out() << "All your keys have been deleted\n";
+    });
   }
 
   std::string key_db_path() {
@@ -822,6 +854,10 @@ int main(int argc, char* argv[]) {
   });
   p.add_option('D', "directory", "set keys directory", [&](td::Slice arg) {
     options.key_dir = arg.str();
+    return td::Status::OK();
+  });
+  p.add_option('M', "in-memory", "store keys only in-memory", [&]() {
+    options.in_memory = true;
     return td::Status::OK();
   });
   p.add_option('E', "execute", "execute one command", [&](td::Slice arg) {

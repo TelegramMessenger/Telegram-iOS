@@ -447,7 +447,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         (controller?.navigationController as? NavigationController)?.pushViewController(value)
     }
     presentControllerImpl = { [weak controller] value, arguments in
-        controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+        controller?.present(value, in: .window(.root), with: arguments)
     }
     dismissImpl = { [weak controller] in
         let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)

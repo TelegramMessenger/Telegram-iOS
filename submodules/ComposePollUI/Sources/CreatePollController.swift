@@ -392,7 +392,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
         controller?.present(c, in: .window(.root), with: a)
     }
     dismissImpl = { [weak controller] in
-        controller?.view.endEditing(true)
+        //controller?.view.endEditing(true)
         controller?.dismiss()
     }
     ensureTextVisibleImpl = { [weak controller] in

@@ -20,18 +20,19 @@
 #include "tonlib/utils.h"
 #include "block/block-auto.h"
 namespace tonlib {
-td::Ref<vm::Cell> GenericAccount::get_init_state(td::Ref<vm::Cell> code, td::Ref<vm::Cell> data) {
+td::Ref<vm::Cell> GenericAccount::get_init_state(td::Ref<vm::Cell> code, td::Ref<vm::Cell> data) noexcept {
   return vm::CellBuilder()
       .append_cellslice(binary_bitstring_to_cellslice("b{00110}").move_as_ok())
       .store_ref(std::move(code))
       .store_ref(std::move(data))
       .finalize();
 }
-block::StdAddress GenericAccount::get_address(ton::WorkchainId workchain_id, const td::Ref<vm::Cell>& init_state) {
+block::StdAddress GenericAccount::get_address(ton::WorkchainId workchain_id,
+                                              const td::Ref<vm::Cell>& init_state) noexcept {
   return block::StdAddress(workchain_id, init_state->get_hash().bits(), true /*bounce*/);
 }
 td::Ref<vm::Cell> GenericAccount::create_ext_message(const block::StdAddress& address, td::Ref<vm::Cell> new_state,
-                                                     td::Ref<vm::Cell> body) {
+                                                     td::Ref<vm::Cell> body) noexcept {
   block::gen::Message::Record message;
   /*info*/ {
     block::gen::CommonMsgInfo::Record_ext_in_msg_info info;

@@ -18,6 +18,7 @@
     Copyright 2017-2019 Telegram Systems LLP
 */
 #include "ExtClientOutbound.h"
+#include "TonlibError.h"
 #include <map>
 namespace tonlib {
 
@@ -40,7 +41,7 @@ class ExtClientOutboundImp : public ExtClientOutbound {
   void on_query_result(td::int64 id, td::Result<td::BufferSlice> r_data, td::Promise<td::Unit> promise) override {
     auto it = queries_.find(id);
     if (it == queries_.end()) {
-      promise.set_error(td::Status::Error(400, "Unknown query id"));
+      promise.set_error(TonlibError::Internal("Unknown query id"));
     }
     it->second.set_result(std::move(r_data));
     queries_.erase(it);
@@ -54,7 +55,7 @@ class ExtClientOutboundImp : public ExtClientOutbound {
 
   void tear_down() override {
     for (auto &it : queries_) {
-      it.second.set_error(td::Status::Error(400, "Query cancelled"));
+      it.second.set_error(TonlibError::Cancelled());
     }
     queries_.clear();
   }

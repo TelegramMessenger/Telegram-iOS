@@ -1,0 +1,44 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <workchain-id> <subwallet-id> [<filename-base>]" cr
+  ."Creates a new high-load wallet in the specified workchain, with the controlling private key saved to or loaded from <filename-base>.pk "
+  ."('new-wallet.pk' by default)" cr 
+  ."<subwallet-id> is the 32-bit identifier of this subwallet among all controlled by the same private key" cr 1 halt
+} : usage
+$# 2- -2 and ' usage if
+
+$1 parse-workchain-id =: wc    // set workchain id from command line argument
+$2 parse-int dup =: subwallet-id   // parse subwallet-id
+32 fits ' usage ifnot
+{ subwallet-id (.) $+ } : +subwallet
+def? $3 { @' $3 } { "new-wallet" } cond constant file-base
+
+."Creating new high-load wallet in workchain " wc . 
+."with subwallet id " subwallet-id . cr
+
+// Create new high-load wallet; source code included from `highload-wallet-code.fif`
+"highload-wallet-code.fif" include
+// code
+<b 0 32 u, subwallet-id 32 i,
+   file-base +".pk" load-generate-keypair
+   constant wallet_pk
+   B, 
+b> // data
+null // no libraries
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hashu wc swap 2dup 2constant wallet_addr
+."new wallet address = " 2dup .addr cr
+2dup file-base +subwallet +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b subwallet-id 32 i, -1 32 i, 0 32 u, false 1 i, b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint rot
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, swap B, swap <s s, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +subwallet +"-query.boc" tuck B>file
+."(Saved wallet creating query to file " type .")" cr

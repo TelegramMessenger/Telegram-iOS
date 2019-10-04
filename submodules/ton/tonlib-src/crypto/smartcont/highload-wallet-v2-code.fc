@@ -1,0 +1,65 @@
+;; Heavy-duty wallet for mass transfers (e.g., for cryptocurrency exchanges)
+;; accepts orders for up to 254 internal messages (transfers) in one external message
+;; this version does not use seqno for replay protection; instead, it remembers all recent query_ids
+;; in this way several external messages with different query_id can be sent in parallel
+
+() recv_internal(slice in_msg) impure {
+  ;; do nothing for internal messages
+}
+
+() recv_external(slice in_msg) impure {
+  var signature = in_msg~load_bits(512);
+  var cs = in_msg;
+  var (subwallet_id, query_id) = (cs~load_uint(32), cs~load_uint(64));
+  var bound = (now() << 32);
+  throw_if(35, query_id < bound);
+  var ds = get_data().begin_parse();
+  var (stored_subwallet, last_cleaned, public_key, old_queries) = (ds~load_uint(32), ds~load_uint(64), ds~load_uint(256), ds~load_dict());
+  ds.end_parse();
+  (_, var found?) = old_queries.udict_get?(64, query_id);
+  throw_if(32, found?);
+  throw_unless(34, subwallet_id == stored_subwallet);
+  throw_unless(35, check_signature(slice_hash(in_msg), signature, public_key));
+  var dict = cs~load_dict();
+  cs.end_parse();
+  accept_message();
+  int i = -1;
+  do {
+    (i, var cs, var f) = dict.idict_get_next?(16, i);
+    if (f) {
+      var mode = cs~load_uint(8);
+      send_raw_message(cs~load_ref(), mode);
+    }
+  } until (~ f);
+  bound -= (64 << 32);   ;; clean up records expired more than 64 seconds ago
+  old_queries~udict_set_builder(64, query_id, begin_cell());
+  var queries = old_queries;
+  do {
+    var (old_queries', i, _, f) = old_queries.udict_delete_get_min(64);
+    f~touch();
+    if (f) {
+      f = (i < bound);
+    }
+    if (f) {
+      old_queries = old_queries';
+      last_cleaned = i;
+    }
+  } until (~ f);
+  set_data(begin_cell()
+    .store_uint(stored_subwallet, 32)
+    .store_uint(last_cleaned, 64)
+    .store_uint(public_key, 256)
+    .store_dict(old_queries)
+    .end_cell());
+}
+
+;; Get methods
+
+;; returns -1 for processed queries, 0 for unprocessed, 1 for unknown (forgotten)
+int processed?(int query_id) method_id {
+  var ds = get_data().begin_parse();
+  var (_, last_cleaned, _, old_queries) = (ds~load_uint(32), ds~load_uint(64), ds~load_uint(256), ds~load_dict());
+  ds.end_parse();
+  (_, var found) = old_queries.udict_get?(64, query_id);
+  return found ? true : - (query_id <= last_cleaned);
+}

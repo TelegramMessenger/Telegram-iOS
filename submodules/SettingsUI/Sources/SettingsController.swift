@@ -1102,9 +1102,13 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     |> mapToSignal { context in
         return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> Bool in
-            let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-            let configuration = WalletConfiguration.with(appConfiguration: appConfiguration)
-            return configuration.config != nil
+            if #available(iOSApplicationExtension 10.3, iOS 10.3, *) {
+                let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
+                let configuration = WalletConfiguration.with(appConfiguration: appConfiguration)
+                return configuration.config != nil
+            } else {
+                return false
+            }
         }
     }
     
@@ -1375,7 +1379,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         (controller?.navigationController as? NavigationController)?.replaceAllButRootController(value, animated: true, animationOptions: [.removeOnMasterDetails])
     }
     presentControllerImpl = { [weak controller] value, arguments in
-        controller?.present(value, in: .window(.root), with: arguments ?? ViewControllerPresentationArguments(presentationAnimation: .modalSheet), blockInteraction: true)
+        controller?.present(value, in: .window(.root), with: arguments, blockInteraction: true)
     }
     presentInGlobalOverlayImpl = { [weak controller] value, arguments in
         controller?.presentInGlobalOverlay(value, with: arguments)

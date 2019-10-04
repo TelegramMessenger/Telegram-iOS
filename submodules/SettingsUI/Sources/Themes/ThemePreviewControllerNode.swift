@@ -271,6 +271,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
     override func didLoad() {
         super.didLoad()
         
+        self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsHorizontalScrollIndicator = false
         self.scrollNode.view.isPagingEnabled = true
         self.scrollNode.view.delegate = self

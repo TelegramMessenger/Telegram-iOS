@@ -275,14 +275,14 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
             UIView.animate(withDuration: 0.3, animations: {
                 let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
                 self.navigationBar?.alpha = alpha
-                self.statusBar?.alpha = alpha
+                self.statusBar?.updateAlpha(alpha, transition: .animated(duration: 0.3, curve: .easeInOut))
                 self.footerNode.alpha = alpha
                 self.updateThumbnailContainerNodeAlpha(.immediate)
             })
         } else {
             let alpha: CGFloat = self.areControlsHidden ? 0.0 : 1.0
             self.navigationBar?.alpha = alpha
-            self.statusBar?.alpha = alpha
+            self.statusBar?.updateAlpha(alpha, transition: .immediate)
             self.footerNode.alpha = alpha
             self.updateThumbnailContainerNodeAlpha(.immediate)
         }
@@ -374,7 +374,11 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         self.updateThumbnailContainerNodeAlpha(.immediate)
         
         if !self.areControlsHidden {
-            self.statusBar?.alpha = transition
+            if transition < 0.5 {
+                self.statusBar?.statusBarStyle = .Ignore
+            } else {
+                self.statusBar?.statusBarStyle = .White
+            }
             self.navigationBar?.alpha = transition
             self.footerNode.alpha = transition
             

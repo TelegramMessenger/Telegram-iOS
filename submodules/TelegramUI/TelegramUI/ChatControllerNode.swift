@@ -1903,6 +1903,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         switch self.chatPresentationInterfaceState.mode {
         case .standard(previewing: true):
+            if let result = self.navigateButtons.hitTest(self.view.convert(point, to: self.navigateButtons.view), with: event) {
+                return result
+            }
             if self.bounds.contains(point) {
                 return self.historyNode.view
             }

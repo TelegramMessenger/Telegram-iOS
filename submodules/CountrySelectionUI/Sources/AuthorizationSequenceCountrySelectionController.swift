@@ -83,7 +83,7 @@ private final class AuthorizationSequenceCountrySelectionNavigationContentNode: 
         self.addSubnode(self.searchBar)
         
         self.searchBar.cancel = { [weak self] in
-            self?.searchBar.deactivate(clear: false)
+            //self?.searchBar.deactivate(clear: false)
             self?.cancel()
         }
         
@@ -159,6 +159,8 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
         
         super.init(navigationBarPresentationData:  NavigationBarPresentationData(theme: NavigationBarTheme(rootControllerTheme: theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
+        self.navigationPresentation = .modal
+        
         self.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
         
         let navigationContentNode = AuthorizationSequenceCountrySelectionNavigationContentNode(theme: theme, strings: strings, cancel: { [weak self] in
@@ -191,7 +193,6 @@ public final class AuthorizationSequenceCountrySelectionController: ViewControll
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.controllerNode.animateIn()
         self.navigationContentNode?.activate()
     }
     

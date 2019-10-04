@@ -197,7 +197,8 @@ int main(int argc, char* argv[]) {
   Client client;
   {
     sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(
-                          make_object<tonlib_api::config>(global_config_str, "", false, false), ".")))
+                          make_object<tonlib_api::config>(global_config_str, "", false, false),
+                          make_object<tonlib_api::keyStoreTypeDirectory>("."))))
         .ensure();
   }
   //dump_transaction_history(client, get_test_giver_address(client));
@@ -211,7 +212,8 @@ int main(int argc, char* argv[]) {
   {
     // init
     sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(
-                          make_object<tonlib_api::config>(global_config_str, "", false, false), ".")))
+                          make_object<tonlib_api::config>(global_config_str, "", false, false),
+                          make_object<tonlib_api::keyStoreTypeDirectory>("."))))
         .ensure();
 
     auto key = sync_send(client, make_object<tonlib_api::createNewKey>(

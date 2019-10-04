@@ -246,7 +246,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     private func updateScrollToTopView() {
-        if self.scrollToTop != nil {
+        /*if self.scrollToTop != nil {
             if let displayNode = self._displayNode , self.scrollToTopView == nil {
                 let scrollToTopView = ScrollToTopView(frame: CGRect(x: 0.0, y: -1.0, width: displayNode.bounds.size.width, height: 1.0))
                 scrollToTopView.action = { [weak self] in
@@ -257,7 +257,7 @@ public enum ViewControllerNavigationPresentation {
                 self.scrollToTopView = scrollToTopView
                 self.view.addSubview(scrollToTopView)
             }
-        } else if let scrollToTopView = self.scrollToTopView {
+        } else*/ if let scrollToTopView = self.scrollToTopView {
             scrollToTopView.removeFromSuperview()
             self.scrollToTopView = nil
         }

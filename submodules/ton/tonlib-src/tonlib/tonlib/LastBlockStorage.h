@@ -20,15 +20,16 @@
 
 #include "tonlib/LastBlock.h"
 
+#include "tonlib/KeyValue.h"
+
 namespace tonlib {
 class LastBlockStorage {
  public:
-  td::Status set_directory(std::string directory);
+  void set_key_value(std::shared_ptr<KeyValue> kv);
   td::Result<LastBlockState> get_state(td::Slice name);
   void save_state(td::Slice name, LastBlockState state);
 
  private:
-  std::string directory_;
-  std::string get_file_name(td::Slice name);
+  std::shared_ptr<KeyValue> kv_;
 };
 }  // namespace tonlib

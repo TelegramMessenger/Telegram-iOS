@@ -67,7 +67,8 @@ EncryptedKey DecryptedKey::encrypt(td::Slice local_password, td::Slice old_secre
   }
 
   td::SecureString encryption_secret(64);
-  pbkdf2_sha512(as_slice(decrypted_secret), "TON local key", PBKDF_ITERATIONS, encryption_secret.as_mutable_slice());
+  pbkdf2_sha512(as_slice(decrypted_secret), "TON local key", EncryptedKey::PBKDF_ITERATIONS,
+                encryption_secret.as_mutable_slice());
 
   std::vector<td::SecureString> mnemonic_words_copy;
   for (auto &w : mnemonic_words) {

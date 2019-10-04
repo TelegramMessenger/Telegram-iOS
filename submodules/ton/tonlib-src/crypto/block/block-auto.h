@@ -3831,24 +3831,25 @@ struct TransactionDescr::Record_trans_ord {
 struct TransactionDescr::Record_trans_tick_tock {
   typedef TransactionDescr type_class;
   bool is_tock;  	// is_tock : Bool
-  Ref<CellSlice> storage;  	// storage : TrStoragePhase
+  Ref<CellSlice> storage_ph;  	// storage_ph : TrStoragePhase
   Ref<CellSlice> compute_ph;  	// compute_ph : TrComputePhase
   Ref<CellSlice> action;  	// action : Maybe ^TrActionPhase
   bool aborted;  	// aborted : Bool
   bool destroyed;  	// destroyed : Bool
   Record_trans_tick_tock() = default;
-  Record_trans_tick_tock(bool _is_tock, Ref<CellSlice> _storage, Ref<CellSlice> _compute_ph, Ref<CellSlice> _action, bool _aborted, bool _destroyed) : is_tock(_is_tock), storage(std::move(_storage)), compute_ph(std::move(_compute_ph)), action(std::move(_action)), aborted(_aborted), destroyed(_destroyed) {}
+  Record_trans_tick_tock(bool _is_tock, Ref<CellSlice> _storage_ph, Ref<CellSlice> _compute_ph, Ref<CellSlice> _action, bool _aborted, bool _destroyed) : is_tock(_is_tock), storage_ph(std::move(_storage_ph)), compute_ph(std::move(_compute_ph)), action(std::move(_action)), aborted(_aborted), destroyed(_destroyed) {}
 };
 
 struct TransactionDescr::Record_trans_split_prepare {
   typedef TransactionDescr type_class;
   Ref<CellSlice> split_info;  	// split_info : SplitMergeInfo
+  Ref<CellSlice> storage_ph;  	// storage_ph : Maybe TrStoragePhase
   Ref<CellSlice> compute_ph;  	// compute_ph : TrComputePhase
   Ref<CellSlice> action;  	// action : Maybe ^TrActionPhase
   bool aborted;  	// aborted : Bool
   bool destroyed;  	// destroyed : Bool
   Record_trans_split_prepare() = default;
-  Record_trans_split_prepare(Ref<CellSlice> _split_info, Ref<CellSlice> _compute_ph, Ref<CellSlice> _action, bool _aborted, bool _destroyed) : split_info(std::move(_split_info)), compute_ph(std::move(_compute_ph)), action(std::move(_action)), aborted(_aborted), destroyed(_destroyed) {}
+  Record_trans_split_prepare(Ref<CellSlice> _split_info, Ref<CellSlice> _storage_ph, Ref<CellSlice> _compute_ph, Ref<CellSlice> _action, bool _aborted, bool _destroyed) : split_info(std::move(_split_info)), storage_ph(std::move(_storage_ph)), compute_ph(std::move(_compute_ph)), action(std::move(_action)), aborted(_aborted), destroyed(_destroyed) {}
 };
 
 struct TransactionDescr::Record_trans_split_install {
@@ -3873,13 +3874,14 @@ struct TransactionDescr::Record_trans_merge_install {
   typedef TransactionDescr type_class;
   Ref<CellSlice> split_info;  	// split_info : SplitMergeInfo
   Ref<Cell> prepare_transaction;  	// prepare_transaction : ^Transaction
+  Ref<CellSlice> storage_ph;  	// storage_ph : Maybe TrStoragePhase
   Ref<CellSlice> credit_ph;  	// credit_ph : Maybe TrCreditPhase
   Ref<CellSlice> compute_ph;  	// compute_ph : TrComputePhase
   Ref<CellSlice> action;  	// action : Maybe ^TrActionPhase
   bool aborted;  	// aborted : Bool
   bool destroyed;  	// destroyed : Bool
   Record_trans_merge_install() = default;
-  Record_trans_merge_install(Ref<CellSlice> _split_info, Ref<Cell> _prepare_transaction, Ref<CellSlice> _credit_ph, Ref<CellSlice> _compute_ph, Ref<CellSlice> _action, bool _aborted, bool _destroyed) : split_info(std::move(_split_info)), prepare_transaction(std::move(_prepare_transaction)), credit_ph(std::move(_credit_ph)), compute_ph(std::move(_compute_ph)), action(std::move(_action)), aborted(_aborted), destroyed(_destroyed) {}
+  Record_trans_merge_install(Ref<CellSlice> _split_info, Ref<Cell> _prepare_transaction, Ref<CellSlice> _storage_ph, Ref<CellSlice> _credit_ph, Ref<CellSlice> _compute_ph, Ref<CellSlice> _action, bool _aborted, bool _destroyed) : split_info(std::move(_split_info)), prepare_transaction(std::move(_prepare_transaction)), storage_ph(std::move(_storage_ph)), credit_ph(std::move(_credit_ph)), compute_ph(std::move(_compute_ph)), action(std::move(_action)), aborted(_aborted), destroyed(_destroyed) {}
 };
 
 extern const TransactionDescr t_TransactionDescr;
@@ -6166,11 +6168,12 @@ extern const StoragePrices t_StoragePrices;
 //
 
 struct GasLimitsPrices final : TLB_Complex {
-  enum { gas_prices, gas_prices_ext };
+  enum { gas_flat_pfx, gas_prices, gas_prices_ext };
   static constexpr int cons_len_exact = 8;
-  static constexpr unsigned char cons_tag[2] = { 0xdd, 0xde };
+  static constexpr unsigned char cons_tag[3] = { 0xd1, 0xdd, 0xde };
   struct Record_gas_prices;
   struct Record_gas_prices_ext;
+  struct Record_gas_flat_pfx;
   bool skip(vm::CellSlice& cs) const override;
   bool validate_skip(vm::CellSlice& cs, bool weak = false) const override;
   bool unpack(vm::CellSlice& cs, Record_gas_prices& data) const;
@@ -6181,6 +6184,14 @@ struct GasLimitsPrices final : TLB_Complex {
   bool cell_unpack(Ref<vm::Cell> cell_ref, Record_gas_prices_ext& data) const;
   bool pack(vm::CellBuilder& cb, const Record_gas_prices_ext& data) const;
   bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_gas_prices_ext& data) const;
+  bool unpack(vm::CellSlice& cs, Record_gas_flat_pfx& data) const;
+  bool unpack_gas_flat_pfx(vm::CellSlice& cs, unsigned long long& flat_gas_limit, unsigned long long& flat_gas_price, Ref<CellSlice>& other) const;
+  bool cell_unpack(Ref<vm::Cell> cell_ref, Record_gas_flat_pfx& data) const;
+  bool cell_unpack_gas_flat_pfx(Ref<vm::Cell> cell_ref, unsigned long long& flat_gas_limit, unsigned long long& flat_gas_price, Ref<CellSlice>& other) const;
+  bool pack(vm::CellBuilder& cb, const Record_gas_flat_pfx& data) const;
+  bool pack_gas_flat_pfx(vm::CellBuilder& cb, unsigned long long flat_gas_limit, unsigned long long flat_gas_price, Ref<CellSlice> other) const;
+  bool cell_pack(Ref<vm::Cell>& cell_ref, const Record_gas_flat_pfx& data) const;
+  bool cell_pack_gas_flat_pfx(Ref<vm::Cell>& cell_ref, unsigned long long flat_gas_limit, unsigned long long flat_gas_price, Ref<CellSlice> other) const;
   bool print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const override;
   std::ostream& print_type(std::ostream& os) const override {
     return os << "GasLimitsPrices";
@@ -6212,6 +6223,15 @@ struct GasLimitsPrices::Record_gas_prices_ext {
   unsigned long long delete_due_limit;  	// delete_due_limit : uint64
   Record_gas_prices_ext() = default;
   Record_gas_prices_ext(unsigned long long _gas_price, unsigned long long _gas_limit, unsigned long long _special_gas_limit, unsigned long long _gas_credit, unsigned long long _block_gas_limit, unsigned long long _freeze_due_limit, unsigned long long _delete_due_limit) : gas_price(_gas_price), gas_limit(_gas_limit), special_gas_limit(_special_gas_limit), gas_credit(_gas_credit), block_gas_limit(_block_gas_limit), freeze_due_limit(_freeze_due_limit), delete_due_limit(_delete_due_limit) {}
+};
+
+struct GasLimitsPrices::Record_gas_flat_pfx {
+  typedef GasLimitsPrices type_class;
+  unsigned long long flat_gas_limit;  	// flat_gas_limit : uint64
+  unsigned long long flat_gas_price;  	// flat_gas_price : uint64
+  Ref<CellSlice> other;  	// other : GasLimitsPrices
+  Record_gas_flat_pfx() = default;
+  Record_gas_flat_pfx(unsigned long long _flat_gas_limit, unsigned long long _flat_gas_price, Ref<CellSlice> _other) : flat_gas_limit(_flat_gas_limit), flat_gas_price(_flat_gas_price), other(std::move(_other)) {}
 };
 
 extern const GasLimitsPrices t_GasLimitsPrices;
@@ -6522,7 +6542,7 @@ extern const ValidatorSignedTempKey t_ValidatorSignedTempKey;
 //
 
 struct ConfigParam final : TLB_Complex {
-  enum { cons32, cons33, cons34, cons35, cons36, cons37, config_mc_block_limits, config_block_limits, cons14, cons0, cons1, cons2, cons3, cons4, cons6, cons7, cons9, cons12, cons15, cons16, cons17, cons18, cons31, cons39, cons28, cons8, cons29, config_mc_gas_prices, config_gas_prices, config_mc_fwd_prices, config_fwd_prices };
+  enum { cons32, cons33, cons34, cons35, cons36, cons37, config_mc_block_limits, config_block_limits, cons14, cons0, cons1, cons2, cons3, cons4, cons6, cons7, cons9, cons12, cons15, cons16, cons17, cons18, cons31, cons39, cons28, cons8, config_mc_gas_prices, config_gas_prices, cons29, config_mc_fwd_prices, config_fwd_prices };
   static constexpr int cons_len_exact = 0;
   int m_;
   ConfigParam(int m) : m_(m) {}

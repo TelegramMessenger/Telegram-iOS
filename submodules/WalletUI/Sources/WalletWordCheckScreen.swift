@@ -2178,30 +2178,8 @@ public final class WalletWordCheckScreen: ViewController {
                     ], actionLayout: .vertical), in: .window(.root))
                     return
                 }
-                let _ = (importWallet(postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain, wordList: enteredWords)
-                |> deliverOnMainQueue).start(next: { walletInfo in
-                    guard let strongSelf = self else {
-                        return
-                    }
-                    if let navigationController = strongSelf.navigationController as? NavigationController {
-                        var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { controller in
-                            if controller is WalletSplashScreen {
-                                return false
-                            }
-                            if controller is WalletWordDisplayScreen {
-                                return false
-                            }
-                            if controller is WalletWordCheckScreen {
-                                return false
-                            }
-                            return true
-                        }
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
-                        strongSelf.view.endEditing(true)
-                        navigationController.setViewControllers(controllers, animated: true)
-                    }
-                }, error: { error in
+                
+                let displayError: () -> Void = {
                     guard let strongSelf = self else {
                         return
                     }
@@ -2210,6 +2188,38 @@ public final class WalletWordCheckScreen: ViewController {
                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
+                }
+                
+                let _ = (getServerWalletSalt(network: strongSelf.context.account.network)
+                |> deliverOnMainQueue).start(next: { serverSalt in
+                    let _ = (importWallet(postbox: strongSelf.context.account.postbox, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain, wordList: enteredWords, localPassword: serverSalt)
+                    |> deliverOnMainQueue).start(next: { walletInfo in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let navigationController = strongSelf.navigationController as? NavigationController {
+                            var controllers = navigationController.viewControllers
+                            controllers = controllers.filter { controller in
+                                if controller is WalletSplashScreen {
+                                    return false
+                                }
+                                if controller is WalletWordDisplayScreen {
+                                    return false
+                                }
+                                if controller is WalletWordCheckScreen {
+                                    return false
+                                }
+                                return true
+                            }
+                            controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                            strongSelf.view.endEditing(true)
+                            navigationController.setViewControllers(controllers, animated: true)
+                        }
+                    }, error: { error in
+                        displayError()
+                    })
+                }, error: { _ in
+                    displayError()
                 })
             }
         }, secondaryAction: { [weak self] in

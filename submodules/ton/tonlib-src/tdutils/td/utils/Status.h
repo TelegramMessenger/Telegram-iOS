@@ -50,6 +50,9 @@
 
 #define TRY_RESULT(name, result) TRY_RESULT_IMPL(TD_CONCAT(TD_CONCAT(r_, name), __LINE__), auto name, result)
 
+#define TRY_RESULT_PROMISE(promise_name, name, result) \
+  TRY_RESULT_PROMISE_IMPL(promise_name, TD_CONCAT(TD_CONCAT(r_, name), __LINE__), auto name, result)
+
 #define TRY_RESULT_ASSIGN(name, result) TRY_RESULT_IMPL(TD_CONCAT(TD_CONCAT(r_, name), __LINE__), name, result)
 
 #define TRY_RESULT_PREFIX(name, result, prefix) \
@@ -78,10 +81,18 @@
   }                                                          \
   name = r_name.move_as_ok();
 
+#define TRY_RESULT_PROMISE_IMPL(promise_name, r_name, name, result) \
+  auto r_name = (result);                                           \
+  if (r_name.is_error()) {                                          \
+    promise_name.set_error(r_name.move_as_error());                 \
+    return;                                                         \
+  }                                                                 \
+  name = r_name.move_as_ok();
+
 #define TRY_RESULT_PROMISE_PREFIX_IMPL(promise_name, r_name, name, result, prefix) \
   auto r_name = (result);                                                          \
   if (r_name.is_error()) {                                                         \
-    promise.set_error(r_name.move_as_error());                                     \
+    promise_name.set_error(r_name.move_as_error_prefix(prefix));                   \
     return;                                                                        \
   }                                                                                \
   name = r_name.move_as_ok();
@@ -298,14 +309,31 @@ class Status {
     return std::move(*this);
   }
 
-  Status move_as_error_prefix(Slice prefix) TD_WARN_UNUSED_RESULT {
+  Status move_as_error_prefix(const Status &status) const TD_WARN_UNUSED_RESULT {
+    return status.move_as_error_suffix(message());
+  }
+
+  Status move_as_error_prefix(Slice prefix) const TD_WARN_UNUSED_RESULT {
     CHECK(is_error());
     Info info = get_info();
     switch (info.error_type) {
       case ErrorType::general:
-        return Error(code(), PSLICE() << prefix << message());
+        return Error(code(), PSLICE() << prefix << " " << message());
       case ErrorType::os:
-        return Status(false, ErrorType::os, code(), PSLICE() << prefix << message());
+        return Status(false, ErrorType::os, code(), PSLICE() << prefix << " " << message());
+      default:
+        UNREACHABLE();
+        return {};
+    }
+  }
+  Status move_as_error_suffix(Slice suffix) const TD_WARN_UNUSED_RESULT {
+    CHECK(is_error());
+    Info info = get_info();
+    switch (info.error_type) {
+      case ErrorType::general:
+        return Error(code(), PSLICE() << message() << " " << suffix);
+      case ErrorType::os:
+        return Status(false, ErrorType::os, code(), PSLICE() << message() << " " << suffix);
       default:
         UNREACHABLE();
         return {};
@@ -487,6 +515,18 @@ class Result {
       status_ = Status::Error<-5>();
     };
     return status_.move_as_error_prefix(prefix);
+  }
+  Status move_as_error_prefix(const Status &prefix) TD_WARN_UNUSED_RESULT {
+    SCOPE_EXIT {
+      status_ = Status::Error<-5>();
+    };
+    return status_.move_as_error_prefix(prefix);
+  }
+  Status move_as_error_suffix(Slice suffix) TD_WARN_UNUSED_RESULT {
+    SCOPE_EXIT {
+      status_ = Status::Error<-5>();
+    };
+    return status_.move_as_error_suffix(suffix);
   }
   const T &ok() const {
     LOG_CHECK(status_.is_ok()) << status_;

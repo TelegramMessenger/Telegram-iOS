@@ -68,29 +68,19 @@ final class NotificationContainerControllerNode: ASDisplayNode {
         if let (item, topItemNode) = self.topItemAndNode {
             if item.groupingKey == key {
                 self.topItemAndNode = nil
+                self.displayingItemsUpdated?(false)
                 topItemNode.animateOut(completion: { [weak self, weak topItemNode] in
                     topItemNode?.removeFromSupernode()
-                    
-                    if let strongSelf = self, strongSelf.topItemAndNode == nil {
-                        strongSelf.displayingItemsUpdated?(false)
-                    }
                 })
             }
         }
     }
     
     func enqueue(_ item: NotificationItem) {
-        var updatedDisplayingItems = false
         if let (_, topItemNode) = self.topItemAndNode {
             topItemNode.animateOut(completion: { [weak self, weak topItemNode] in
                 topItemNode?.removeFromSupernode()
-                
-                if let strongSelf = self, strongSelf.topItemAndNode == nil {
-                    strongSelf.displayingItemsUpdated?(false)
-                }
             })
-        } else {
-            updatedDisplayingItems = true
         }
         
         var useCompactLayout = false
@@ -138,9 +128,7 @@ final class NotificationContainerControllerNode: ASDisplayNode {
             containerNode.animateIn()
         }
         
-        if updatedDisplayingItems {
-            self.displayingItemsUpdated?(true)
-        }
+        self.displayingItemsUpdated?(true)
         
         self.resetTimeoutTimer()
     }
@@ -172,12 +160,9 @@ final class NotificationContainerControllerNode: ASDisplayNode {
             if let strongSelf = self {
                 if let (_, topItemNode) = strongSelf.topItemAndNode {
                     strongSelf.topItemAndNode = nil
+                    strongSelf.displayingItemsUpdated?(false)
                     topItemNode.animateOut(completion: { [weak topItemNode] in
                         topItemNode?.removeFromSupernode()
-                        
-                        if let strongSelf = self, strongSelf.topItemAndNode == nil {
-                            strongSelf.displayingItemsUpdated?(false)
-                        }
                     })
                 }
             }

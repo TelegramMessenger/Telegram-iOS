@@ -28,6 +28,7 @@
 #include "vm/boc.h"
 #include "vm/cells/MerkleProof.h"
 
+#include "tonlib/CellString.h"
 #include "tonlib/utils.h"
 #include "tonlib/TestGiver.h"
 #include "tonlib/TestWallet.h"
@@ -52,6 +53,20 @@
 #include "tonlib/keys/EncryptedKey.h"
 #include "tonlib/keys/Mnemonic.h"
 #include "tonlib/keys/SimpleEncryption.h"
+
+TEST(Tonlib, CellString) {
+  for (unsigned size :
+       {0, 1, 7, 8, 35, 127, 128, 255, 256, (int)vm::CellString::max_bytes - 1, (int)vm::CellString::max_bytes}) {
+    auto str = td::rand_string('a', 'z', size);
+    for (unsigned head : {0, 1, 7, 8, 127, 35 * 8, 127 * 8, 1023, 1024}) {
+      vm::CellBuilder cb;
+      vm::CellString::store(cb, str, head).ensure();
+      auto cs = vm::load_cell_slice(cb.finalize());
+      auto got_str = vm::CellString::load(cs, head).move_as_ok();
+      ASSERT_EQ(str, got_str);
+    }
+  }
+};
 
 using namespace tonlib;
 
@@ -268,20 +283,23 @@ static auto sync_send = [](auto &client, auto query) {
 TEST(Tonlib, InitClose) {
   using tonlib_api::make_object;
   auto cfg = [](auto str) { return make_object<tonlib_api::config>(str, "", false, false); };
+  auto dir = [](auto str) { return make_object<tonlib_api::keyStoreTypeDirectory>(str); };
   {
     Client client;
     sync_send(client, make_object<tonlib_api::close>()).ensure();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "."))).ensure_error();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, dir("."))))
+        .ensure_error();
   }
   {
     Client client;
     sync_send(client, make_object<tonlib_api::init>(nullptr)).ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(cfg("fdajkfldsjkafld"), ".")))
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(cfg("fdajkfldsjkafld"), dir("."))))
         .ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "fdhskfds")))
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, dir("fdhskfds"))))
         .ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "."))).ensure();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "."))).ensure_error();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, dir(".")))).ensure();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, dir("."))))
+        .ensure_error();
 
     td::Slice bad_config = R"abc(
 {
@@ -294,7 +312,8 @@ TEST(Tonlib, InitClose) {
     sync_send(client, make_object<tonlib_api::testGiver_getAccountState>()).ensure_error();
     sync_send(client, make_object<tonlib_api::close>()).ensure();
     sync_send(client, make_object<tonlib_api::close>()).ensure_error();
-    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "."))).ensure_error();
+    sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, dir("."))))
+        .ensure_error();
   }
 }
 
@@ -389,7 +408,9 @@ TEST(Tonlib, ParseAddres) {
   Client client;
 
   // init
-  sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "."))).ensure();
+  sync_send(client, make_object<tonlib_api::init>(
+                        make_object<tonlib_api::options>(nullptr, make_object<tonlib_api::keyStoreTypeDirectory>("."))))
+      .ensure();
 
   sync_send(client, make_object<tonlib_api::unpackAccountAddress>("hello")).ensure_error();
   auto addr =
@@ -409,7 +430,9 @@ TEST(Tonlib, KeysApi) {
   Client client;
 
   // init
-  sync_send(client, make_object<tonlib_api::init>(make_object<tonlib_api::options>(nullptr, "."))).ensure();
+  sync_send(client, make_object<tonlib_api::init>(
+                        make_object<tonlib_api::options>(nullptr, make_object<tonlib_api::keyStoreTypeDirectory>("."))))
+      .ensure();
   auto local_password = td::SecureString("local password");
   auto mnemonic_password = td::SecureString("mnemonic password");
   {

@@ -914,8 +914,10 @@ bool TestNode::do_parse_line() {
     return parse_block_id_ext(blkid) && parse_account_addr(workchain, addr) && parse_lt(lt) && seekeoln() &&
            get_one_transaction(blkid, workchain, addr, lt, true);
   } else if (word == "lasttrans" || word == "lasttransdump") {
-    return parse_account_addr(workchain, addr) && parse_lt(lt) && parse_hash(hash) && seekeoln() &&
-           get_last_transactions(workchain, addr, lt, hash, 10, word == "lasttransdump");
+    count = 10;
+    return parse_account_addr(workchain, addr) && parse_lt(lt) && parse_hash(hash) &&
+           (seekeoln() || parse_uint32(count)) && seekeoln() &&
+           get_last_transactions(workchain, addr, lt, hash, count, word == "lasttransdump");
   } else if (word == "listblocktrans" || word == "listblocktransrev") {
     lt = 0;
     int mode = (word == "listblocktrans" ? 7 : 0x47);

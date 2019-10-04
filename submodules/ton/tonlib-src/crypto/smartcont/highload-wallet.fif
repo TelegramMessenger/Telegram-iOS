@@ -1,0 +1,68 @@
+#!/usr/bin/env fift -s
+"TonUtil.fif" include
+
+{ ."usage: " @' $0 type ." <filename-base> <subwallet-id> <seqno> <order-file> [<savefile>]" cr
+  ."Creates a request with up to 254 orders loaded from <order-file> to high-load (sub)wallet created by new-highload-wallet.fif, with private key loaded from file <filename-base>.pk "
+  ."and address from <filename-base><subwallet-id>.addr, and saves it into <savefile>.boc ('wallet-query.boc' by default)" cr 
+  ."<order-file> is a text file with lines `SEND <dest-addr> <amount>`" cr 1 halt
+} : usage
+$# dup 4 < swap 5 > or ' usage if
+
+$1 =: file-base
+$2 parse-int dup 32 fits ' usage ifnot =: subwallet-id   // parse subwallet-id
+{ subwallet-id (.) $+ } : +subwallet
+$3 parse-int =: seqno
+$4 =: order-file
+def? $5 { @' $5 } { "wallet-query" } cond constant savefile
+3 constant send-mode  // mode for SENDRAWMSG: +1 - sender pays fees, +2 - ignore errors
+60 constant timeout   // external message expires in 60 seconds
+
+file-base +subwallet +".addr" load-address
+2dup 2constant wallet_addr
+."Source wallet address = " 2dup .addr cr 6 .Addr cr
+file-base +".pk" load-keypair nip constant wallet_pk
+
+variable orders   dictnew orders !
+variable order#   order# 0!
+// c --
+{ <s order# @ dup 254 >= abort"more than 254 orders"
+  orders @ 16 udict!+ not abort"cannot add order to dictionary"
+  orders ! order# 1+!
+} : add-order
+// b body -- b'
+{ tuck <s 2dup s-fits? not rot over 1 i, -rot
+  { drop swap ref, } { s, nip } cond
+} : append-msg-body
+// ng wc addr bounce body -- c
+{ <b b{01} s, rot 1 i, b{000100} s, 2swap addr, rot Gram,
+  0 9 64 32 + + 1+ u, swap append-msg-body b>
+} : create-int-msg
+// ng wc addr bnc --
+{ ."Transferring " 3 roll .GR ."to account " 
+  -rot 2dup 4 pick 7 + .Addr ." = " .addr ." bounce=" . cr
+} : .transfer
+// addr$ ng -- c
+{ swap parse-smc-addr  // ng wc addr bnc 
+  2over 2over .transfer
+  <b 0 32 u, b> create-int-msg
+} : create-simple-transfer
+// c m -- c'
+{ <b swap 8 u, swap ref, b> } : create-order
+
+// addr$ ng --
+{ create-simple-transfer send-mode create-order add-order } : send
+{ bl word bl word $>GR send } : SEND
+
+// parse order file
+order-file include
+
+// create external message
+<b subwallet-id 32 i, now timeout + 32 u, seqno 32 u, orders @ dict, b>
+dup ."signing message: " <s csr. cr
+dup hashu wallet_pk ed25519_sign_uint
+<b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s,
+   swap B, swap <s s, b>
+dup ."resulting external message: " <s csr. cr
+2 boc+>B dup Bx. cr
+savefile +".boc" tuck B>file
+."(Saved to file " type .")" cr

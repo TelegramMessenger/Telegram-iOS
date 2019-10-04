@@ -145,6 +145,9 @@ struct EnqueuedMsgDescr {
     return false;
   }
   bool unpack(vm::CellSlice& cs);
+  bool same_workchain() const {
+    return cur_prefix_.workchain == next_prefix_.workchain;
+  }
 };
 
 using compute_shard_end_lt_func_t = std::function<ton::LogicalTime(ton::AccountIdPrefixFull)>;

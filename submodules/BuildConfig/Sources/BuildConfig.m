@@ -694,28 +694,29 @@ API_AVAILABLE(ios(10))
     });
 }
 
-+ (void)decryptApplicationSecret:(NSData * _Nonnull)secret publicKey:(NSData * _Nonnull)publicKey baseAppBundleId:(NSString * _Nonnull)baseAppBundleId completion:(void (^)(NSData * _Nullable))completion {
++ (void)decryptApplicationSecret:(NSData * _Nonnull)secret publicKey:(NSData * _Nonnull)publicKey baseAppBundleId:(NSString * _Nonnull)baseAppBundleId completion:(void (^)(NSData * _Nullable, bool))completion {
     dispatch_async([self encryptionQueue], ^{
         LocalPrivateKey *privateKey = [self getApplicationSecretKey:baseAppBundleId isCheckKey:false];
         if (privateKey == nil) {
-            completion(nil);
+            completion(nil, false);
             return;
         }
         if (privateKey == nil) {
-            completion(nil);
+            completion(nil, false);
             return;
         }
         NSData *currentPublicKey = [privateKey getPublicKey];
         if (currentPublicKey == nil) {
-            completion(nil);
+            completion(nil, false);
             return;
         }
         if (![publicKey isEqualToData:currentPublicKey]) {
-            completion(nil);
+            completion(nil, false);
             return;
         }
-        NSData *result = [privateKey decrypt:secret cancelled:nil];
-        completion(result);
+        bool cancelled = false;
+        NSData *result = [privateKey decrypt:secret cancelled:&cancelled];
+        completion(result, cancelled);
     });
 }
 

@@ -325,10 +325,12 @@ typedef enum {
             make_object<tonlib_api::config>(
                 configString.UTF8String,
                 blockchainName.UTF8String,
-                false,
+                true,
                 false
             ),
-            keystoreDirectory.UTF8String
+            make_object<tonlib_api::keyStoreTypeDirectory>(
+                keystoreDirectory.UTF8String
+            )
         ));
         _client->send({ requestId, std::move(query) });
         
@@ -629,6 +631,28 @@ typedef enum {
                 makeSecureString(key.secret)
             )
         );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[MTBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+}
+
+- (MTSignal *)deleteAllKeys {
+    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else {
+                [subscriber putCompletion];
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::deleteAllKeys>();
         _client->send({ requestId, std::move(query) });
         
         return [[MTBlockDisposable alloc] initWithBlock:^{

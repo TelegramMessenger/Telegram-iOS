@@ -37,7 +37,7 @@ def? $2 { @' $2 } { "new-testgiver" } cond constant file-base
 null // no libraries
 <b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
 dup ."StateInit: " <s csr. cr
-dup hash wc swap 2dup 2constant wallet_addr
+dup hashu wc swap 2dup 2constant wallet_addr
 ."new money giver address = " 2dup .addr cr
 2dup file-base +".addr" save-address-verbose
 ."Non-bounceable address (for init): " 2dup 7 .Addr cr

@@ -18,12 +18,14 @@
 */
 #pragma once
 #include "block/block.h"
+#include "CellString.h"
 namespace tonlib {
 class TestGiver {
  public:
-  static const block::StdAddress& address();
-  static vm::CellHash get_init_code_hash();
+  static constexpr unsigned max_message_size = vm::CellString::max_bytes;
+  static const block::StdAddress& address() noexcept;
+  static vm::CellHash get_init_code_hash() noexcept;
   static td::Ref<vm::Cell> make_a_gift_message(td::uint32 seqno, td::uint64 gramms, td::Slice message,
-                                               const block::StdAddress& dest_address);
+                                               const block::StdAddress& dest_address) noexcept;
 };
 }  // namespace tonlib

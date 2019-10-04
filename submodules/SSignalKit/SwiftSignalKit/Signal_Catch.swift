@@ -135,6 +135,55 @@ public func retry<T, E>(_ delayIncrement: Double, maxDelay: Double, onQueue queu
     }
 }
 
+public func retry<T, E>(retryOnError: @escaping (E) -> Bool, delayIncrement: Double, maxDelay: Double, maxRetries: Int, onQueue queue: Queue) -> (_ signal: Signal<T, E>) -> Signal<T, E> {
+    return { signal in
+        return Signal { subscriber in
+            let shouldRetry = Atomic(value: true)
+            let currentDelay = Atomic<(Double, Int)>(value: (0.0, 0))
+            let currentDisposable = MetaDisposable()
+            
+            let start = recursiveFunction { recurse in
+                let currentShouldRetry = shouldRetry.with { value in
+                    return value
+                }
+                if currentShouldRetry {
+                    let disposable = signal.start(next: { next in
+                        subscriber.putNext(next)
+                    }, error: { error in
+                        if !retryOnError(error) {
+                            subscriber.putError(error)
+                        } else {
+                            let (delay, count) = currentDelay.modify { value, count in
+                                return (min(maxDelay, value + delayIncrement), count + 1)
+                            }
+                            
+                            if count >= maxRetries {
+                                subscriber.putError(error)
+                            } else {
+                                let time: DispatchTime = DispatchTime.now() + Double(delay)
+                                queue.queue.asyncAfter(deadline: time, execute: {
+                                    recurse()
+                                })
+                            }
+                        }
+                    }, completed: {
+                        let _ = shouldRetry.swap(false)
+                        subscriber.putCompletion()
+                    })
+                    currentDisposable.set(disposable)
+                }
+            }
+            
+            start()
+            
+            return ActionDisposable {
+                currentDisposable.dispose()
+                let _ = shouldRetry.swap(false)
+            }
+        }
+    }
+}
+
 public func restartIfError<T, E>(_ signal: Signal<T, E>) -> Signal<T, NoError> {
     return Signal<T, NoError> { subscriber in
         let shouldRetry = Atomic(value: true)

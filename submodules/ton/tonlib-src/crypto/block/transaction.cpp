@@ -672,9 +672,56 @@ bool Transaction::prepare_credit_phase() {
   return true;
 }
 
+bool ComputePhaseConfig::parse_GasLimitsPrices(Ref<vm::Cell> cell, td::RefInt256& freeze_due_limit,
+                                               td::RefInt256& delete_due_limit) {
+  return cell.not_null() &&
+         parse_GasLimitsPrices(vm::load_cell_slice_ref(std::move(cell)), freeze_due_limit, delete_due_limit);
+}
+
+bool ComputePhaseConfig::parse_GasLimitsPrices(Ref<vm::CellSlice> cs, td::RefInt256& freeze_due_limit,
+                                               td::RefInt256& delete_due_limit) {
+  if (cs.is_null()) {
+    return false;
+  }
+  block::gen::GasLimitsPrices::Record_gas_flat_pfx flat;
+  if (tlb::csr_unpack(cs, flat)) {
+    bool ok = parse_GasLimitsPrices(std::move(flat.other), freeze_due_limit, delete_due_limit);
+    flat_gas_limit = flat.flat_gas_limit;
+    flat_gas_price = flat.flat_gas_price;
+    return ok;
+  }
+  flat_gas_limit = flat_gas_price = 0;
+  auto f = [&](const auto& r, td::uint64 spec_limit) {
+    gas_limit = r.gas_limit;
+    special_gas_limit = spec_limit;
+    gas_credit = r.gas_credit;
+    gas_price = r.gas_price;
+    freeze_due_limit = td::RefInt256{true, r.freeze_due_limit};
+    delete_due_limit = td::RefInt256{true, r.delete_due_limit};
+  };
+  block::gen::GasLimitsPrices::Record_gas_prices_ext rec;
+  if (tlb::csr_unpack(cs, rec)) {
+    f(rec, rec.special_gas_limit);
+  } else {
+    block::gen::GasLimitsPrices::Record_gas_prices rec0;
+    if (tlb::csr_unpack(std::move(cs), rec0)) {
+      f(rec0, rec0.gas_limit);
+    } else {
+      return false;
+    }
+  }
+  compute_threshold();
+  return true;
+}
+
 void ComputePhaseConfig::compute_threshold() {
   gas_price256 = td::RefInt256{true, gas_price};
-  max_gas_threshold = td::rshift(gas_price256 * gas_limit, 16, 1);
+  if (gas_limit > flat_gas_limit) {
+    max_gas_threshold =
+        td::rshift(gas_price256 * (gas_limit - flat_gas_limit), 16, 1) + td::make_refint(flat_gas_price);
+  } else {
+    max_gas_threshold = td::make_refint(flat_gas_price);
+  }
 }
 
 td::uint64 ComputePhaseConfig::gas_bought_for(td::RefInt256 nanograms) const {
@@ -684,8 +731,11 @@ td::uint64 ComputePhaseConfig::gas_bought_for(td::RefInt256 nanograms) const {
   if (nanograms >= max_gas_threshold) {
     return gas_limit;
   }
-  auto res = td::div(std::move(nanograms) << 16, gas_price256);
-  return res->to_long();
+  if (nanograms < flat_gas_price) {
+    return 0;
+  }
+  auto res = td::div((std::move(nanograms) - flat_gas_price) << 16, gas_price256);
+  return res->to_long() + flat_gas_limit;
 }
 
 td::RefInt256 ComputePhaseConfig::compute_gas_price(td::uint64 gas_used) const {
@@ -855,6 +905,16 @@ bool Transaction::prepare_compute_phase(const ComputePhaseConfig& cfg) {
     cp.skip_reason = ComputePhase::sk_no_gas;
     return true;
   }
+  // Compute gas limits
+  if (!compute_gas_limits(cp, cfg)) {
+    compute_phase.reset();
+    return false;
+  }
+  if (!cp.gas_limit && !cp.gas_credit) {
+    // no gas
+    cp.skip_reason = ComputePhase::sk_no_gas;
+    return true;
+  }
   if (in_msg_state.not_null()) {
     LOG(DEBUG) << "HASH(in_msg_state) = " << in_msg_state->get_hash().bits().to_hex(256)
                << ", account_state_hash = " << account.state_hash.to_hex();
@@ -882,11 +942,6 @@ bool Transaction::prepare_compute_phase(const ComputePhaseConfig& cfg) {
     return true;
   } else if (in_msg_state.not_null()) {
     unpack_msg_state(true);  // use only libraries
-  }
-  // Compute gas limits
-  if (!compute_gas_limits(cp, cfg)) {
-    compute_phase.reset();
-    return false;
   }
   // initialize VM
   Ref<vm::Stack> stack = prepare_vm_stack(cp);

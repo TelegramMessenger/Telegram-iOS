@@ -247,7 +247,7 @@ public final class LegacyControllerContext: NSObject, LegacyComponentsContext {
     
     public func setApplicationStatusBarAlpha(_ alpha: CGFloat) {
         if let controller = self.controller {
-            controller.statusBar.alpha = alpha
+            controller.statusBar.updateAlpha(alpha, transition: .immediate)
             self.updateDeferScreenEdgeGestures()
         }
     }

@@ -25,9 +25,9 @@
 #include <string>
 
 namespace tonlib {
-constexpr int PBKDF_ITERATIONS = 100000;
 struct DecryptedKey;
 struct EncryptedKey {
+  static constexpr int PBKDF_ITERATIONS = 100000;
   td::SecureString encrypted_data;
   td::Ed25519::PublicKey public_key;
   td::SecureString secret;

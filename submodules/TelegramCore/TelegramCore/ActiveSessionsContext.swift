@@ -100,13 +100,7 @@ public final class ActiveSessionsContext {
                 return .complete()
             }
             
-            var mergedSessions = strongSelf._state.sessions
-            for i in (0 ..< mergedSessions.count).reversed() {
-                if mergedSessions[i].hash != 0 {
-                    mergedSessions.remove(at: i)
-                    break
-                }
-            }
+            let mergedSessions = strongSelf._state.sessions.filter({ $0.hash == 0 })
             
             strongSelf._state = ActiveSessionsContextState(isLoadingMore: strongSelf._state.isLoadingMore, sessions: mergedSessions)
             return .complete()

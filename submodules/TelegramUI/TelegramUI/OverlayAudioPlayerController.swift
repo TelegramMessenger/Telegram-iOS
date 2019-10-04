@@ -79,8 +79,6 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
     
     override public func loadView() {
         super.loadView()
-        
-        self.statusBar.removeFromSupernode()
     }
     
     override public func viewDidAppear(_ animated: Bool) {

@@ -344,6 +344,9 @@ bool downcast_call(Object &obj, const T &func) {
     case db_state_gcBlockId::ID:
       func(static_cast<db_state_gcBlockId &>(obj));
       return true;
+    case db_state_hardforks::ID:
+      func(static_cast<db_state_hardforks &>(obj));
+      return true;
     case db_state_initBlockId::ID:
       func(static_cast<db_state_initBlockId &>(obj));
       return true;
@@ -361,6 +364,9 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case db_state_key_asyncSerializer::ID:
       func(static_cast<db_state_key_asyncSerializer &>(obj));
+      return true;
+    case db_state_key_hardforks::ID:
+      func(static_cast<db_state_key_hardforks &>(obj));
       return true;
     case db_state_shardClient::ID:
       func(static_cast<db_state_shardClient &>(obj));
@@ -724,6 +730,9 @@ bool downcast_call(Object &obj, const T &func) {
       return true;
     case validator_group::ID:
       func(static_cast<validator_group &>(obj));
+      return true;
+    case validator_groupEx::ID:
+      func(static_cast<validator_groupEx &>(obj));
       return true;
     case validator_config_global::ID:
       func(static_cast<validator_config_global &>(obj));
@@ -1470,6 +1479,9 @@ bool downcast_call(db_state_Key &obj, const T &func) {
     case db_state_key_asyncSerializer::ID:
       func(static_cast<db_state_key_asyncSerializer &>(obj));
       return true;
+    case db_state_key_hardforks::ID:
+      func(static_cast<db_state_key_hardforks &>(obj));
+      return true;
     default:
       return false;
   }
@@ -1868,6 +1880,26 @@ bool downcast_call(tonNode_PreparedState &obj, const T &func) {
       return true;
     case tonNode_notFoundState::ID:
       func(static_cast<tonNode_notFoundState &>(obj));
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Calls specified function object with the specified object downcasted to the most-derived type.
+ * \param[in] obj Object to pass as an argument to the function object.
+ * \param[in] func Function object to which the object will be passed.
+ * \returns whether function object call has happened. Should always return true for correct parameters.
+ */
+template <class T>
+bool downcast_call(validator_Group &obj, const T &func) {
+  switch (obj.get_id()) {
+    case validator_group::ID:
+      func(static_cast<validator_group &>(obj));
+      return true;
+    case validator_groupEx::ID:
+      func(static_cast<validator_groupEx &>(obj));
       return true;
     default:
       return false;

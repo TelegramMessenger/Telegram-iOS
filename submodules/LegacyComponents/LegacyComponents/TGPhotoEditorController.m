@@ -475,12 +475,12 @@
         {
             [UIView animateWithDuration:0.3 animations:^
             {
-                [_context setApplicationStatusBarAlpha:1.0f];
+                //[_context setApplicationStatusBarAlpha:1.0f];
             }];
         }
         else
         {
-            [_context setApplicationStatusBarAlpha:1.0f];
+            //[_context setApplicationStatusBarAlpha:1.0f];
         }
     }
     

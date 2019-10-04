@@ -228,6 +228,11 @@ public final class ShareController: ViewController {
         return self.displayNode as! ShareControllerNode
     }
     
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
     private var animatedIn = false
     
     private let sharedContext: SharedAccountContext
@@ -266,6 +271,8 @@ public final class ShareController: ViewController {
         self.presentationData = self.sharedContext.currentPresentationData.with { $0 }
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.statusBar.statusBarStyle = .Ignore
         
         switch subject {
             case let .url(text):
@@ -598,7 +605,7 @@ public final class ShareController: ViewController {
                             return .preparing
                         case let .done(items):
                             if let strongSelf = self, !items.isEmpty {
-                                strongSelf.ready.set(.single(true))
+                                strongSelf._ready.set(.single(true))
                                 var activityItems: [Any] = []
                                 for item in items {
                                     switch item {
@@ -663,13 +670,11 @@ public final class ShareController: ViewController {
                 strongSelf.controllerNode.updatePeers(account: strongSelf.currentAccount, switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
             }
         }))
-        self.ready.set(self.controllerNode.ready.get())
+        self._ready.set(self.controllerNode.ready.get())
     }
     
     override public func loadView() {
         super.loadView()
-        
-        self.statusBar.removeFromSupernode()
     }
     
     override public func viewDidAppear(_ animated: Bool) {

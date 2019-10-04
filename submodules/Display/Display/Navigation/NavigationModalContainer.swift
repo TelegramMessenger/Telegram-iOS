@@ -16,8 +16,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     private(set) var dismissProgress: CGFloat = 0.0
     var isReadyUpdated: (() -> Void)?
     var updateDismissProgress: ((CGFloat, ContainedViewLayoutTransition) -> Void)?
-    var interactivelyDismissed: (() -> Void)?
+    var interactivelyDismissed: ((Bool) -> Void)?
     
+    private var isUpdatingState = false
     private var ignoreScrolling = false
     private var isDismissed = false
     private var isInteractiveDimissEnabled = true
@@ -30,6 +31,12 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             if self.keyboardViewManager !== oldValue {
                 self.container.keyboardViewManager = self.keyboardViewManager
             }
+        }
+    }
+    
+    var canHaveKeyboardFocus: Bool = false {
+        didSet {
+            self.container.canHaveKeyboardFocus = self.canHaveKeyboardFocus
         }
     }
     
@@ -57,7 +64,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
             if !strongSelf.isReady {
                 strongSelf.isReady = true
-                strongSelf.isReadyUpdated?()
+                if !strongSelf.isUpdatingState {
+                    strongSelf.isReadyUpdated?()
+                }
             }
         }
         
@@ -146,8 +155,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                     guard let strongSelf = self else {
                         return
                     }
+                    let hadInputFocus = viewTreeContainsFirstResponder(view: strongSelf.view)
                     strongSelf.keyboardViewManager?.dismissEditingWithoutAnimation(view: strongSelf.view)
-                    strongSelf.interactivelyDismissed?()
+                    strongSelf.interactivelyDismissed?(hadInputFocus)
                 })
             } else {
                 self.horizontalDismissOffset = nil
@@ -188,13 +198,15 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 return
             }
             if targetOffset == 0.0 {
-                strongSelf.interactivelyDismissed?()
+                strongSelf.interactivelyDismissed?(false)
             }
         })
         self.ignoreScrolling = false
         self.dismissProgress = dismissProgress
         
         self.applyDismissProgress(transition: transition, completion: {})
+        
+        self.view.endEditing(true)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -247,7 +259,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 return
             }
             if targetOffset == 0.0 {
-                strongSelf.interactivelyDismissed?()
+                strongSelf.interactivelyDismissed?(false)
             }
         })
         self.ignoreScrolling = false
@@ -272,6 +284,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         if self.isDismissed {
             return
         }
+        
+        self.isUpdatingState = true
         
         self.validLayout = layout
         
@@ -338,6 +352,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         transition.updateFrameAsPositionAndBounds(node: self.container, frame: containerFrame.offsetBy(dx: 0.0, dy: layout.size.height))
         transition.updateTransformScale(node: self.container, scale: containerScale)
         self.container.update(layout: containerLayout, canBeClosed: true, controllers: controllers, transition: transition)
+        
+        self.isUpdatingState = false
     }
     
     func animateIn(transition: ContainedViewLayoutTransition) {

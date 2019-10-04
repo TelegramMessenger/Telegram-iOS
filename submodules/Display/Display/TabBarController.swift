@@ -127,6 +127,15 @@ open class TabBarController: ViewController {
         self.theme = theme
         
         super.init(navigationBarPresentationData: navigationBarPresentationData)
+        
+        self.scrollToTop = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            if let controller = strongSelf.currentController {
+                controller.scrollToTop?()
+            }
+        }
     }
 
     required public init(coder aDecoder: NSCoder) {

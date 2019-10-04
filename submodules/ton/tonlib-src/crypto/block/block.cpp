@@ -368,14 +368,14 @@ std::unique_ptr<MsgProcessedUptoCollection> MsgProcessedUptoCollection::unpack(t
   return v && v->valid ? std::move(v) : std::unique_ptr<MsgProcessedUptoCollection>{};
 }
 
-bool MsgProcessedUpto::contains(const MsgProcessedUpto& other) const& {
+bool MsgProcessedUpto::contains(const MsgProcessedUpto& other) const & {
   return ton::shard_is_ancestor(shard, other.shard) && mc_seqno >= other.mc_seqno &&
          (last_inmsg_lt > other.last_inmsg_lt ||
           (last_inmsg_lt == other.last_inmsg_lt && !(last_inmsg_hash < other.last_inmsg_hash)));
 }
 
 bool MsgProcessedUpto::contains(ton::ShardId other_shard, ton::LogicalTime other_lt, td::ConstBitPtr other_hash,
-                                ton::BlockSeqno other_mc_seqno) const& {
+                                ton::BlockSeqno other_mc_seqno) const & {
   return ton::shard_is_ancestor(shard, other_shard) && mc_seqno >= other_mc_seqno &&
          (last_inmsg_lt > other_lt || (last_inmsg_lt == other_lt && !(last_inmsg_hash < other_hash)));
 }
@@ -552,7 +552,9 @@ bool MsgProcessedUpto::already_processed(const EnqueuedMsgDescr& msg) const {
   if (msg.lt_ == last_inmsg_lt && last_inmsg_hash < msg.hash_) {
     return false;
   }
-  if (ton::shard_contains(shard, msg.cur_prefix_.account_id_prefix)) {
+  if (msg.same_workchain() && ton::shard_contains(shard, msg.cur_prefix_.account_id_prefix)) {
+    // this branch is needed only for messages generated in the same shard
+    // (such messages could have been processed without a reference from the masterchain)
     // ? enable this branch only if an extra boolean parameter is set ?
     return true;
   }

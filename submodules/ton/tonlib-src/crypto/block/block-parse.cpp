@@ -1143,6 +1143,20 @@ bool TrStoragePhase::validate_skip(vm::CellSlice& cs, bool weak) const {
          && t_AccStatusChange.validate_skip(cs, weak);  // status_change:AccStatusChange
 }
 
+bool TrStoragePhase::get_storage_fees(vm::CellSlice& cs, td::RefInt256& storage_fees) const {
+  return t_Grams.as_integer_skip_to(cs, storage_fees);  // storage_fees_collected:Grams
+}
+
+bool TrStoragePhase::maybe_get_storage_fees(vm::CellSlice& cs, td::RefInt256& storage_fees) const {
+  auto z = cs.fetch_ulong(1);
+  if (!z) {
+    storage_fees = td::make_refint(0);
+    return true;
+  } else {
+    return z == 1 && get_storage_fees(cs, storage_fees);
+  }
+}
+
 const TrStoragePhase t_TrStoragePhase;
 
 bool TrCreditPhase::skip(vm::CellSlice& cs) const {
@@ -1322,13 +1336,14 @@ bool TransactionDescr::skip(vm::CellSlice& cs) const {
              && t_TrStoragePhase.skip(cs);  // storage_ph:TrStoragePhase
     case trans_tick_tock:
       return cs.advance(4)                              // trans_tick_tock$001 is_tock:Bool
-             && t_TrStoragePhase.skip(cs)               // storage:TrStoragePhase
+             && t_TrStoragePhase.skip(cs)               // storage_ph:TrStoragePhase
              && t_TrComputePhase.skip(cs)               // compute_ph:TrComputePhase
              && Maybe<RefTo<TrActionPhase>>{}.skip(cs)  // action:(Maybe ^TrActionPhase)
              && cs.advance(2);                          // aborted:Bool destroyed:Bool
     case trans_split_prepare:
       return cs.advance(4)                              // trans_split_prepare$0100
              && t_SplitMergeInfo.skip(cs)               // split_info:SplitMergeInfo
+             && Maybe<TrStoragePhase>{}.skip(cs)        // storage_ph:(Maybe TrStoragePhase)
              && t_TrComputePhase.skip(cs)               // compute_ph:TrComputePhase
              && Maybe<RefTo<TrActionPhase>>{}.skip(cs)  // action:(Maybe ^TrActionPhase)
              && cs.advance(2);                          // aborted:Bool destroyed:Bool
@@ -1346,6 +1361,7 @@ bool TransactionDescr::skip(vm::CellSlice& cs) const {
       return cs.advance(4)                              // trans_merge_install$0111
              && t_SplitMergeInfo.skip(cs)               // split_info:SplitMergeInfo
              && t_Ref_Transaction.skip(cs)              // prepare_transaction:^Transaction
+             && Maybe<TrStoragePhase>{}.skip(cs)        // storage_ph:(Maybe TrStoragePhase)
              && Maybe<TrCreditPhase>{}.skip(cs)         // credit_ph:(Maybe TrCreditPhase)
              && Maybe<TrComputePhase>{}.skip(cs)        // compute_ph:TrComputePhase
              && Maybe<RefTo<TrActionPhase>>{}.skip(cs)  // action:(Maybe ^TrActionPhase)
@@ -1370,13 +1386,14 @@ bool TransactionDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
              && t_TrStoragePhase.validate_skip(cs, weak);  // storage_ph:TrStoragePhase
     case trans_tick_tock:
       return cs.advance(4)                                             // trans_tick_tock$001 is_tock:Bool
-             && t_TrStoragePhase.validate_skip(cs, weak)               // storage:TrStoragePhase
+             && t_TrStoragePhase.validate_skip(cs, weak)               // storage_ph:TrStoragePhase
              && t_TrComputePhase.validate_skip(cs, weak)               // compute_ph:TrComputePhase
              && Maybe<RefTo<TrActionPhase>>{}.validate_skip(cs, weak)  // action:(Maybe ^TrActionPhase)
              && cs.advance(2);                                         // aborted:Bool destroyed:Bool
     case trans_split_prepare:
       return cs.advance(4)                                             // trans_split_prepare$0100
              && t_SplitMergeInfo.validate_skip(cs, weak)               // split_info:SplitMergeInfo
+             && Maybe<TrStoragePhase>{}.validate_skip(cs, weak)        // storage_ph:(Maybe TrStoragePhase)
              && t_TrComputePhase.validate_skip(cs, weak)               // compute_ph:TrComputePhase
              && Maybe<RefTo<TrActionPhase>>{}.validate_skip(cs, weak)  // action:(Maybe ^TrActionPhase)
              && cs.advance(2);                                         // aborted:Bool destroyed:Bool
@@ -1394,6 +1411,7 @@ bool TransactionDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
       return cs.advance(4)                                             // trans_merge_install$0111
              && t_SplitMergeInfo.validate_skip(cs, weak)               // split_info:SplitMergeInfo
              && t_Ref_Transaction.validate_skip(cs, weak)              // prepare_transaction:^Transaction
+             && Maybe<TrStoragePhase>{}.validate_skip(cs, weak)        // storage_ph:(Maybe TrStoragePhase)
              && Maybe<TrCreditPhase>{}.validate_skip(cs, weak)         // credit_ph:(Maybe TrCreditPhase)
              && Maybe<TrComputePhase>{}.validate_skip(cs, weak)        // compute_ph:TrComputePhase
              && Maybe<RefTo<TrActionPhase>>{}.validate_skip(cs, weak)  // action:(Maybe ^TrActionPhase)
@@ -1405,6 +1423,53 @@ bool TransactionDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
 int TransactionDescr::get_tag(const vm::CellSlice& cs) const {
   int t = (int)cs.prefetch_ulong(4);
   return (t >= 0 && t <= 7) ? (t == 3 ? 2 : t) : -1;
+}
+
+bool TransactionDescr::skip_to_storage_phase(vm::CellSlice& cs, bool& found) const {
+  found = false;
+  switch (get_tag(cs)) {
+    case trans_ord:
+      return cs.advance(4 + 1)            // trans_ord$0000 storage_first:Bool
+             && cs.fetch_bool_to(found);  // storage_ph:(Maybe TrStoragePhase)
+    case trans_storage:
+      return cs.advance(4)       // trans_storage$0001
+             && (found = true);  // storage_ph:TrStoragePhase
+    case trans_tick_tock:
+      return cs.advance(4)       // trans_tick_tock$001 is_tock:Bool
+             && (found = true);  // storage_ph:TrStoragePhase
+    case trans_split_prepare:
+      return cs.advance(4)                 // trans_split_prepare$0100
+             && t_SplitMergeInfo.skip(cs)  // split_info:SplitMergeInfo
+             && cs.fetch_bool_to(found);   // storage_ph:(Maybe TrStoragePhase)
+    case trans_split_install:
+      return true;
+    case trans_merge_prepare:
+      return cs.advance(4)                 // trans_merge_prepare$0110
+             && t_SplitMergeInfo.skip(cs)  // split_info:SplitMergeInfo
+             && (found = true);            // storage_ph:TrStoragePhase
+    case trans_merge_install:
+      return cs.advance(4)                  // trans_merge_install$0111
+             && t_SplitMergeInfo.skip(cs)   // split_info:SplitMergeInfo
+             && t_Ref_Transaction.skip(cs)  // prepare_transaction:^Transaction
+             && cs.fetch_bool_to(found);    // storage_ph:(Maybe TrStoragePhase)
+  }
+  return false;
+}
+
+bool TransactionDescr::get_storage_fees(Ref<vm::Cell> cell, td::RefInt256& storage_fees) const {
+  if (cell.is_null()) {
+    return false;
+  }
+  auto cs = vm::load_cell_slice(std::move(cell));
+  bool found;
+  if (!skip_to_storage_phase(cs, found)) {
+    return false;
+  } else if (found) {
+    return t_TrStoragePhase.get_storage_fees(cs, storage_fees);
+  } else {
+    storage_fees = td::make_refint(0);
+    return true;
+  }
 }
 
 const TransactionDescr t_TransactionDescr;
@@ -1445,6 +1510,32 @@ bool Transaction::validate_skip(vm::CellSlice& cs, bool weak) const {
          && t_CurrencyCollection.validate_skip(cs, weak)        // total_fees:CurrencyCollection
          && t_Ref_HashUpdate.validate_skip(cs, weak)            // state_update:^(HASH_UPDATE Account)
          && RefTo<TransactionDescr>{}.validate_skip(cs, weak);  // description:^TransactionDescr
+}
+
+bool Transaction::get_storage_fees(Ref<vm::Cell> cell, td::RefInt256& storage_fees) const {
+  Ref<vm::Cell> tdescr;
+  return get_descr(std::move(cell), tdescr) && t_TransactionDescr.get_storage_fees(std::move(tdescr), storage_fees);
+}
+
+bool Transaction::get_descr(Ref<vm::Cell> cell, Ref<vm::Cell>& tdescr) const {
+  if (cell.is_null()) {
+    return false;
+  } else {
+    auto cs = vm::load_cell_slice(std::move(cell));
+    return cs.is_valid() && get_descr(cs, tdescr) && cs.empty_ext();
+  }
+}
+
+bool Transaction::get_descr(vm::CellSlice& cs, Ref<vm::Cell>& tdescr) const {
+  return cs.advance(
+             4 + 256 + 64 + 256 + 64 + 32 +
+             15)  // transaction$0111 account_addr:uint256 lt:uint64 prev_trans_hash:bits256 prev_trans_lt:uint64 now:uint32 outmsg_cnt:uint15
+         && t_AccountStatus.skip(cs)       // orig_status:AccountStatus
+         && t_AccountStatus.skip(cs)       // end_status:AccountStatus
+         && cs.advance_refs(1)             // ^[ in_msg:(Maybe ^Message) out_msgs:(HashmapE 15 ^Message) ]
+         && t_CurrencyCollection.skip(cs)  // total_fees:CurrencyCollection
+         && cs.advance_refs(1)             // state_update:^(MERKLE_UPDATE Account)
+         && cs.fetch_ref_to(tdescr);       // description:^TransactionDescr
 }
 
 bool Transaction::get_total_fees(vm::CellSlice&& cs, block::CurrencyCollection& total_fees) const {

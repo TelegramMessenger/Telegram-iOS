@@ -8891,6 +8891,7 @@ bool TransactionDescr::skip(vm::CellSlice& cs) const {
         && cs.advance(2);
   case trans_split_prepare:
     return cs.advance(528)
+        && t_Maybe_TrStoragePhase.skip(cs)
         && t_TrComputePhase.skip(cs)
         && t_Maybe_Ref_TrActionPhase.skip(cs)
         && cs.advance(2);
@@ -8902,6 +8903,7 @@ bool TransactionDescr::skip(vm::CellSlice& cs) const {
         && cs.advance(1);
   case trans_merge_install:
     return cs.advance_ext(0x10210)
+        && t_Maybe_TrStoragePhase.skip(cs)
         && t_Maybe_TrCreditPhase.skip(cs)
         && t_TrComputePhase.skip(cs)
         && t_Maybe_Ref_TrActionPhase.skip(cs)
@@ -8932,6 +8934,7 @@ bool TransactionDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
         && cs.advance(2);
   case trans_split_prepare:
     return cs.advance(528)
+        && t_Maybe_TrStoragePhase.validate_skip(cs, weak)
         && t_TrComputePhase.validate_skip(cs, weak)
         && t_Maybe_Ref_TrActionPhase.validate_skip(cs, weak)
         && cs.advance(2);
@@ -8947,6 +8950,7 @@ bool TransactionDescr::validate_skip(vm::CellSlice& cs, bool weak) const {
     return cs.fetch_ulong(4) == 7
         && cs.advance(524)
         && t_Transaction.validate_skip_ref(cs, weak)
+        && t_Maybe_TrStoragePhase.validate_skip(cs, weak)
         && t_Maybe_TrCreditPhase.validate_skip(cs, weak)
         && t_TrComputePhase.validate_skip(cs, weak)
         && t_Maybe_Ref_TrActionPhase.validate_skip(cs, weak)
@@ -8998,7 +9002,7 @@ bool TransactionDescr::cell_unpack_trans_storage(Ref<vm::Cell> cell_ref, Ref<Cel
 bool TransactionDescr::unpack(vm::CellSlice& cs, TransactionDescr::Record_trans_tick_tock& data) const {
   return cs.fetch_ulong(3) == 1
       && cs.fetch_bool_to(data.is_tock)
-      && t_TrStoragePhase.fetch_to(cs, data.storage)
+      && t_TrStoragePhase.fetch_to(cs, data.storage_ph)
       && t_TrComputePhase.fetch_to(cs, data.compute_ph)
       && t_Maybe_Ref_TrActionPhase.fetch_to(cs, data.action)
       && cs.fetch_bool_to(data.aborted)
@@ -9014,6 +9018,7 @@ bool TransactionDescr::cell_unpack(Ref<vm::Cell> cell_ref, TransactionDescr::Rec
 bool TransactionDescr::unpack(vm::CellSlice& cs, TransactionDescr::Record_trans_split_prepare& data) const {
   return cs.fetch_ulong(4) == 4
       && cs.fetch_subslice_to(524, data.split_info)
+      && t_Maybe_TrStoragePhase.fetch_to(cs, data.storage_ph)
       && t_TrComputePhase.fetch_to(cs, data.compute_ph)
       && t_Maybe_Ref_TrActionPhase.fetch_to(cs, data.action)
       && cs.fetch_bool_to(data.aborted)
@@ -9082,6 +9087,7 @@ bool TransactionDescr::unpack(vm::CellSlice& cs, TransactionDescr::Record_trans_
   return cs.fetch_ulong(4) == 7
       && cs.fetch_subslice_to(524, data.split_info)
       && cs.fetch_ref_to(data.prepare_transaction)
+      && t_Maybe_TrStoragePhase.fetch_to(cs, data.storage_ph)
       && t_Maybe_TrCreditPhase.fetch_to(cs, data.credit_ph)
       && t_TrComputePhase.fetch_to(cs, data.compute_ph)
       && t_Maybe_Ref_TrActionPhase.fetch_to(cs, data.action)
@@ -9135,7 +9141,7 @@ bool TransactionDescr::cell_pack_trans_storage(Ref<vm::Cell>& cell_ref, Ref<Cell
 bool TransactionDescr::pack(vm::CellBuilder& cb, const TransactionDescr::Record_trans_tick_tock& data) const {
   return cb.store_long_bool(1, 3)
       && cb.store_ulong_rchk_bool(data.is_tock, 1)
-      && t_TrStoragePhase.store_from(cb, data.storage)
+      && t_TrStoragePhase.store_from(cb, data.storage_ph)
       && t_TrComputePhase.store_from(cb, data.compute_ph)
       && t_Maybe_Ref_TrActionPhase.store_from(cb, data.action)
       && cb.store_ulong_rchk_bool(data.aborted, 1)
@@ -9150,6 +9156,7 @@ bool TransactionDescr::cell_pack(Ref<vm::Cell>& cell_ref, const TransactionDescr
 bool TransactionDescr::pack(vm::CellBuilder& cb, const TransactionDescr::Record_trans_split_prepare& data) const {
   return cb.store_long_bool(4, 4)
       && cb.append_cellslice_chk(data.split_info, 524)
+      && t_Maybe_TrStoragePhase.store_from(cb, data.storage_ph)
       && t_TrComputePhase.store_from(cb, data.compute_ph)
       && t_Maybe_Ref_TrActionPhase.store_from(cb, data.action)
       && cb.store_ulong_rchk_bool(data.aborted, 1)
@@ -9213,6 +9220,7 @@ bool TransactionDescr::pack(vm::CellBuilder& cb, const TransactionDescr::Record_
   return cb.store_long_bool(7, 4)
       && cb.append_cellslice_chk(data.split_info, 524)
       && cb.store_ref_bool(data.prepare_transaction)
+      && t_Maybe_TrStoragePhase.store_from(cb, data.storage_ph)
       && t_Maybe_TrCreditPhase.store_from(cb, data.credit_ph)
       && t_TrComputePhase.store_from(cb, data.compute_ph)
       && t_Maybe_Ref_TrActionPhase.store_from(cb, data.action)
@@ -9254,7 +9262,7 @@ bool TransactionDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
     return cs.advance(3)
         && pp.open("trans_tick_tock")
         && pp.fetch_uint_field(cs, 1, "is_tock")
-        && pp.field("storage")
+        && pp.field("storage_ph")
         && t_TrStoragePhase.print_skip(pp, cs)
         && pp.field("compute_ph")
         && t_TrComputePhase.print_skip(pp, cs)
@@ -9268,6 +9276,8 @@ bool TransactionDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
         && pp.open("trans_split_prepare")
         && pp.field("split_info")
         && t_SplitMergeInfo.print_skip(pp, cs)
+        && pp.field("storage_ph")
+        && t_Maybe_TrStoragePhase.print_skip(pp, cs)
         && pp.field("compute_ph")
         && t_TrComputePhase.print_skip(pp, cs)
         && pp.field("action")
@@ -9300,6 +9310,8 @@ bool TransactionDescr::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
         && t_SplitMergeInfo.print_skip(pp, cs)
         && pp.field("prepare_transaction")
         && t_Transaction.print_ref(pp, cs.fetch_ref())
+        && pp.field("storage_ph")
+        && t_Maybe_TrStoragePhase.print_skip(pp, cs)
         && pp.field("credit_ph")
         && t_Maybe_TrCreditPhase.print_skip(pp, cs)
         && pp.field("compute_ph")
@@ -14089,11 +14101,13 @@ const StoragePrices t_StoragePrices;
 //
 // code for type `GasLimitsPrices`
 //
-constexpr unsigned char GasLimitsPrices::cons_tag[2];
+constexpr unsigned char GasLimitsPrices::cons_tag[3];
 
 int GasLimitsPrices::get_tag(const vm::CellSlice& cs) const {
-  switch (cs.bselect(6, 0x180000000000000ULL)) {
+  switch (cs.bselect(6, 0x1b0000000000000ULL)) {
   case 0:
+    return gas_flat_pfx;
+  case 2:
     return cs.bit_at(6) ? gas_prices_ext : gas_prices;
   default:
     return -1;
@@ -14106,6 +14120,8 @@ int GasLimitsPrices::check_tag(const vm::CellSlice& cs) const {
     return cs.prefetch_ulong(8) == 0xdd ? gas_prices : -1;
   case gas_prices_ext:
     return cs.prefetch_ulong(8) == 0xde ? gas_prices_ext : -1;
+  case gas_flat_pfx:
+    return cs.prefetch_ulong(8) == 0xd1 ? gas_flat_pfx : -1;
   }
   return -1;
 }
@@ -14116,6 +14132,9 @@ bool GasLimitsPrices::skip(vm::CellSlice& cs) const {
     return cs.advance(392);
   case gas_prices_ext:
     return cs.advance(456);
+  case gas_flat_pfx:
+    return cs.advance(136)
+        && skip(cs);
   }
   return false;
 }
@@ -14128,6 +14147,10 @@ bool GasLimitsPrices::validate_skip(vm::CellSlice& cs, bool weak) const {
   case gas_prices_ext:
     return cs.fetch_ulong(8) == 0xde
         && cs.advance(448);
+  case gas_flat_pfx:
+    return cs.fetch_ulong(8) == 0xd1
+        && cs.advance(128)
+        && validate_skip(cs, weak);
   }
   return false;
 }
@@ -14165,6 +14188,32 @@ bool GasLimitsPrices::cell_unpack(Ref<vm::Cell> cell_ref, GasLimitsPrices::Recor
   return unpack(cs, data) && cs.empty_ext();
 }
 
+bool GasLimitsPrices::unpack(vm::CellSlice& cs, GasLimitsPrices::Record_gas_flat_pfx& data) const {
+  return cs.fetch_ulong(8) == 0xd1
+      && cs.fetch_uint_to(64, data.flat_gas_limit)
+      && cs.fetch_uint_to(64, data.flat_gas_price)
+      && fetch_to(cs, data.other);
+}
+
+bool GasLimitsPrices::unpack_gas_flat_pfx(vm::CellSlice& cs, unsigned long long& flat_gas_limit, unsigned long long& flat_gas_price, Ref<CellSlice>& other) const {
+  return cs.fetch_ulong(8) == 0xd1
+      && cs.fetch_uint_to(64, flat_gas_limit)
+      && cs.fetch_uint_to(64, flat_gas_price)
+      && fetch_to(cs, other);
+}
+
+bool GasLimitsPrices::cell_unpack(Ref<vm::Cell> cell_ref, GasLimitsPrices::Record_gas_flat_pfx& data) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack(cs, data) && cs.empty_ext();
+}
+
+bool GasLimitsPrices::cell_unpack_gas_flat_pfx(Ref<vm::Cell> cell_ref, unsigned long long& flat_gas_limit, unsigned long long& flat_gas_price, Ref<CellSlice>& other) const {
+  if (cell_ref.is_null()) { return false; }
+  auto cs = load_cell_slice(std::move(cell_ref));
+  return unpack_gas_flat_pfx(cs, flat_gas_limit, flat_gas_price, other) && cs.empty_ext();
+}
+
 bool GasLimitsPrices::pack(vm::CellBuilder& cb, const GasLimitsPrices::Record_gas_prices& data) const {
   return cb.store_long_bool(0xdd, 8)
       && cb.store_ulong_rchk_bool(data.gas_price, 64)
@@ -14196,6 +14245,30 @@ bool GasLimitsPrices::cell_pack(Ref<vm::Cell>& cell_ref, const GasLimitsPrices::
   return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
 }
 
+bool GasLimitsPrices::pack(vm::CellBuilder& cb, const GasLimitsPrices::Record_gas_flat_pfx& data) const {
+  return cb.store_long_bool(0xd1, 8)
+      && cb.store_ulong_rchk_bool(data.flat_gas_limit, 64)
+      && cb.store_ulong_rchk_bool(data.flat_gas_price, 64)
+      && store_from(cb, data.other);
+}
+
+bool GasLimitsPrices::pack_gas_flat_pfx(vm::CellBuilder& cb, unsigned long long flat_gas_limit, unsigned long long flat_gas_price, Ref<CellSlice> other) const {
+  return cb.store_long_bool(0xd1, 8)
+      && cb.store_ulong_rchk_bool(flat_gas_limit, 64)
+      && cb.store_ulong_rchk_bool(flat_gas_price, 64)
+      && store_from(cb, other);
+}
+
+bool GasLimitsPrices::cell_pack(Ref<vm::Cell>& cell_ref, const GasLimitsPrices::Record_gas_flat_pfx& data) const {
+  vm::CellBuilder cb;
+  return pack(cb, data) && std::move(cb).finalize_to(cell_ref);
+}
+
+bool GasLimitsPrices::cell_pack_gas_flat_pfx(Ref<vm::Cell>& cell_ref, unsigned long long flat_gas_limit, unsigned long long flat_gas_price, Ref<CellSlice> other) const {
+  vm::CellBuilder cb;
+  return pack_gas_flat_pfx(cb, flat_gas_limit, flat_gas_price, std::move(other)) && std::move(cb).finalize_to(cell_ref);
+}
+
 bool GasLimitsPrices::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
   switch (get_tag(cs)) {
   case gas_prices:
@@ -14218,6 +14291,14 @@ bool GasLimitsPrices::print_skip(PrettyPrinter& pp, vm::CellSlice& cs) const {
         && pp.fetch_uint_field(cs, 64, "block_gas_limit")
         && pp.fetch_uint_field(cs, 64, "freeze_due_limit")
         && pp.fetch_uint_field(cs, 64, "delete_due_limit")
+        && pp.close();
+  case gas_flat_pfx:
+    return cs.fetch_ulong(8) == 0xd1
+        && pp.open("gas_flat_pfx")
+        && pp.fetch_uint_field(cs, 64, "flat_gas_limit")
+        && pp.fetch_uint_field(cs, 64, "flat_gas_price")
+        && pp.field("other")
+        && print_skip(pp, cs)
         && pp.close();
   }
   return pp.fail("unknown constructor for GasLimitsPrices");

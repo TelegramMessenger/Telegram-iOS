@@ -185,6 +185,8 @@ class CellSlice : public td::CntObject {
   bool prefetch_ref_to(Ref<Cell>& ref, unsigned offset = 0) const {
     return (ref = prefetch_ref(offset)).not_null();
   }
+  bool fetch_maybe_ref(Ref<Cell>& ref);
+  bool prefetch_maybe_ref(Ref<Cell>& ref) const;
   td::BitSlice fetch_bits(unsigned bits);
   td::BitSlice prefetch_bits(unsigned bits) const;
   td::Ref<CellSlice> fetch_subslice(unsigned bits, unsigned refs = 0);

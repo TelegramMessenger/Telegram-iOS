@@ -47,14 +47,14 @@ null // no libraries
 // Libs{ x{ABACABADABACABA} drop x{AAAA} s>c public_lib x{1234} x{5678} |_ s>c public_lib }Libs
 <b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
 dup ."StateInit: " <s csr. cr
-dup hash wc swap 2dup 2constant wallet_addr
+dup hashu wc swap 2dup 2constant wallet_addr
 ."new wallet address = " 2dup .addr cr
 2dup file-base +".addr" save-address-verbose
 ."Non-bounceable address (for init): " 2dup 7 .Addr cr
 ."Bounceable address (for later access): " 6 .Addr cr
 <b 0 32 u, b>
 dup ."signing message: " <s csr. cr
-dup hash wallet_pk ed25519_sign_uint rot
+dup hashu wallet_pk ed25519_sign_uint rot
 <b b{1000100} s, wallet_addr addr, b{000010} s, swap <s s, b{0} s, swap B, swap <s s, b>
 dup ."External message for initialization is " <s csr. cr
 2 boc+>B dup Bx. cr

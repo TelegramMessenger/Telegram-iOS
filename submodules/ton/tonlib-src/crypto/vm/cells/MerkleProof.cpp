@@ -267,16 +267,18 @@ MerkleProofBuilder::MerkleProofBuilder(Ref<Cell> root)
   usage_root = UsageCell::create(orig_root, usage_tree->root_ptr());
 }
 
-void MerkleProofBuilder::reset(Ref<Cell> root) {
+Ref<Cell> MerkleProofBuilder::init(Ref<Cell> root) {
   usage_tree = std::make_shared<CellUsageTree>();
   orig_root = std::move(root);
   usage_root = UsageCell::create(orig_root, usage_tree->root_ptr());
+  return usage_root;
 }
 
-void MerkleProofBuilder::clear() {
+bool MerkleProofBuilder::clear() {
   usage_tree.reset();
   orig_root.clear();
   usage_root.clear();
+  return true;
 }
 
 Ref<Cell> MerkleProofBuilder::extract_proof() const {

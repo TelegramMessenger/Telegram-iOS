@@ -54,7 +54,7 @@ public extension TermsOfServiceControllerTheme {
     }
 }
 
-public class TermsOfServiceController: ViewController {
+public class TermsOfServiceController: ViewController, StandalonePresentableController {
     private var controllerNode: TermsOfServiceControllerNode {
         return self.displayNode as! TermsOfServiceControllerNode
     }

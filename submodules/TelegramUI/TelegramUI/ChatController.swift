@@ -2313,7 +2313,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private func themeAndStringsUpdated() {
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        switch self.presentationInterfaceState.mode {
+        case .standard:
+            self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+            self.deferScreenEdgeGestures = []
+        case .overlay:
+            self.statusBar.statusBarStyle = .Hide
+            self.deferScreenEdgeGestures = [.top]
+        case .inline:
+            self.statusBar.statusBarStyle = .Ignore
+        }
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings)
         self.updateChatPresentationInterfaceState(animated: false, interactive: false, { state in
@@ -2590,22 +2599,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.historyNode.contentPositionChanged = { [weak self] offset in
             if let strongSelf = self {
                 let offsetAlpha: CGFloat
-                if case let .standard(previewing) = strongSelf.presentationInterfaceState.mode, previewing {
-                    offsetAlpha = 0.0
-                } else {
-                    switch offset {
-                        case let .known(offset):
-                            if offset < 40.0 {
-                                offsetAlpha = 0.0
-                            } else {
-                                offsetAlpha = 1.0
-                            }
-                        case .unknown:
-                            offsetAlpha = 1.0
-                        case .none:
+                switch offset {
+                    case let .known(offset):
+                        if offset < 40.0 {
                             offsetAlpha = 0.0
-                    }
+                        } else {
+                            offsetAlpha = 1.0
+                        }
+                    case .unknown:
+                        offsetAlpha = 1.0
+                    case .none:
+                        offsetAlpha = 0.0
                 }
+                
                 strongSelf.chatDisplayNode.navigateButtons.displayDownButton = !offsetAlpha.isZero
             }
         }

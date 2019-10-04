@@ -43,7 +43,7 @@ public final class TabBarAccountSwitchController: ViewController {
         
         super.init(navigationBarPresentationData: nil)
         
-        self.statusBar.statusBarStyle = .Hide
+        self.statusBar.statusBarStyle = .Ignore
         self.statusBar.ignoreInCall = true
         
         self.lockOrientation = true

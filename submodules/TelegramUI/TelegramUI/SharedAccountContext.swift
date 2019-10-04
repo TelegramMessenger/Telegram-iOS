@@ -843,10 +843,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             } else {
                 text = presentationData.strings.Call_StatusBar("").0
             }
-            
-            self.mainWindow?.setForceInCallStatusBar(text)
+            if let navigationController = self.mainWindow?.viewController as? NavigationController {
+                navigationController.setForceInCallStatusBar(text)
+            }
         } else {
-            self.mainWindow?.setForceInCallStatusBar(nil)
+            if let navigationController = self.mainWindow?.viewController as? NavigationController {
+                navigationController.setForceInCallStatusBar(nil)
+            }
         }
     }
     

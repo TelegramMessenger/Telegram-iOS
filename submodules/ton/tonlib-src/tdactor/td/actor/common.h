@@ -364,7 +364,7 @@ inline void register_actor_info_ptr(core::ActorInfoPtr actor_info_ptr) {
 }
 
 template <class T, class... ArgsT>
-core::ActorInfoPtr create_actor(core::ActorOptions &options, ArgsT &&... args) {
+core::ActorInfoPtr create_actor(core::ActorOptions &options, ArgsT &&... args) noexcept {
   auto *scheduler_context = core::SchedulerContext::get();
   if (!options.has_scheduler()) {
     options.on_scheduler(scheduler_context->get_scheduler_id());
