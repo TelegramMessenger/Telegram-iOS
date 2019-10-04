@@ -293,9 +293,21 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         
         let sideInset: CGFloat = 66.0
         let titleSpacing: CGFloat = 48.0
-        
         let bounds = CGRect(origin: CGPoint(), size: layout.size)
 
+        if case .tablet = layout.deviceMetrics.type {
+            if case .landscape = layout.orientation {
+                let rotation: CGFloat
+                if UIDevice.current.orientation == .landscapeLeft {
+                    rotation = CGFloat.pi / 2.0
+                } else {
+                    rotation = -CGFloat.pi / 2.0
+                }
+                self.previewNode.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+            } else {
+                self.previewNode.transform = CATransform3DIdentity
+            }
+        }
         transition.updateFrame(node: self.previewNode, frame: bounds)
         transition.updateFrame(node: self.fadeNode, frame: bounds)
         
@@ -307,27 +319,26 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
         let dimRect: CGRect
         let controlsAlpha: CGFloat
         if let focusedRect = self.focusedRect {
-            dimAlpha = 1.0
             controlsAlpha = 0.0
+            dimAlpha = 1.0
             let side = max(bounds.width * focusedRect.width, bounds.height * focusedRect.height) * 0.6
             let center = CGPoint(x: (1.0 - focusedRect.center.y) * bounds.width, y: focusedRect.center.x * bounds.height)
             dimRect = CGRect(x: center.x - side / 2.0, y: center.y - side / 2.0, width: side, height: side)
         } else {
-            dimAlpha = 0.625
             controlsAlpha = 1.0
+            dimAlpha = 0.625
             dimRect = CGRect(x: dimInset, y: dimHeight, width: layout.size.width - dimInset * 2.0, height: layout.size.height - dimHeight * 2.0)
         }
     
-        transition.updateFrame(node: self.topDimNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: dimRect.minY))
-        transition.updateFrame(node: self.bottomDimNode, frame: CGRect(x: 0.0, y: dimRect.maxY, width: layout.size.width, height: max(0.0, layout.size.height - dimRect.maxY)))
-        transition.updateFrame(node: self.leftDimNode, frame: CGRect(x: 0.0, y: dimRect.minY, width: max(0.0, dimRect.minX), height: dimRect.height))
-        transition.updateFrame(node: self.rightDimNode, frame: CGRect(x: dimRect.maxX, y: dimRect.minY, width: max(0.0, layout.size.width - dimRect.maxX), height: dimRect.height))
-        
         transition.updateAlpha(node: self.topDimNode, alpha: dimAlpha)
         transition.updateAlpha(node: self.bottomDimNode, alpha: dimAlpha)
         transition.updateAlpha(node: self.leftDimNode, alpha: dimAlpha)
         transition.updateAlpha(node: self.rightDimNode, alpha: dimAlpha)
         
+        transition.updateFrame(node: self.topDimNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: dimRect.minY))
+        transition.updateFrame(node: self.bottomDimNode, frame: CGRect(x: 0.0, y: dimRect.maxY, width: layout.size.width, height: max(0.0, layout.size.height - dimRect.maxY)))
+        transition.updateFrame(node: self.leftDimNode, frame: CGRect(x: 0.0, y: dimRect.minY, width: max(0.0, dimRect.minX), height: dimRect.height))
+        transition.updateFrame(node: self.rightDimNode, frame: CGRect(x: dimRect.maxX, y: dimRect.minY, width: max(0.0, layout.size.width - dimRect.maxX), height: dimRect.height))
         transition.updateFrame(node: self.frameNode, frame: dimRect.insetBy(dx: -2.0, dy: -2.0))
         
         let buttonSize = CGSize(width: 72.0, height: 72.0)

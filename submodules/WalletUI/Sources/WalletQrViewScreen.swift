@@ -155,8 +155,10 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         let imageFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - imageSize.width) / 2.0), y: floor((layout.size.height - imageSize.height - layout.intrinsicInsets.bottom) / 2.0)), size: imageSize)
         transition.updateFrame(node: self.imageNode, frame: imageFrame)
         
-        let iconFrame = imageFrame.insetBy(dx: 106.0, dy: 106.0).offsetBy(dx: 0.0, dy: -2.0)
-        self.iconNode.updateLayout(size: iconFrame.size)
-        transition.updateFrameAsPositionAndBounds(node: self.iconNode, frame: iconFrame)
+        let iconSide = floor(imageSide * 0.24)
+        let iconSize = CGSize(width: iconSide, height: iconSide)
+        self.iconNode.updateLayout(size: iconSize)
+        transition.updateBounds(node: self.iconNode, bounds: CGRect(origin: CGPoint(), size: iconSize))
+        transition.updatePosition(node: self.iconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
     }
 }

@@ -1616,7 +1616,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 let aspectRatio = min(image.size.width, image.size.height) / maxSide
                 if isMemoji || (imageHasTransparency(cgImage) && aspectRatio > 0.85) {
                     self.paste(.sticker(image, isMemoji))
-                    return false
+                    return true
                 }
             }
             

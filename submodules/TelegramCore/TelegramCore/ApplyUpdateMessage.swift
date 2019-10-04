@@ -145,13 +145,21 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
             }
             
             if forwardInfo == nil {
-                for media in media {
+                inner: for media in message.media {
                     if let file = media as? TelegramMediaFile {
-                        if file.isSticker {
-                            sentStickers.append(file)
-                        } else if file.isVideo && file.isAnimated {
-                            sentGifs.append(file)
+                        for attribute in file.attributes {
+                            switch attribute {
+                            case let .Sticker(_, packReference, _):
+                                if packReference != nil {
+                                    sentStickers.append(file)
+                                }
+                            case .Animated:
+                                sentGifs.append(file)
+                            default:
+                                break
+                            }
                         }
+                        break inner
                     }
                 }
             }
@@ -296,13 +304,21 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 }
                 
                 if storeForwardInfo == nil {
-                    for media in media {
+                    inner: for media in message.media {
                         if let file = media as? TelegramMediaFile {
-                            if file.isSticker {
-                                sentStickers.append(file)
-                            } else if file.isVideo && file.isAnimated {
-                                sentGifs.append(file)
+                            for attribute in file.attributes {
+                                switch attribute {
+                                case let .Sticker(_, packReference, _):
+                                    if packReference != nil {
+                                        sentStickers.append(file)
+                                    }
+                                case .Animated:
+                                    sentGifs.append(file)
+                                default:
+                                    break
+                                }
                             }
+                            break inner
                         }
                     }
                 }

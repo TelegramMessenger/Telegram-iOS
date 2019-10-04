@@ -586,13 +586,13 @@ public final class ShareController: ViewController {
                                     url = "https://t.me/\(addressName)/\(message.id.id)"
                                 }
                             }
-                            var peer: Peer?
+                            var peerId: PeerId?
                             if let authorPeerId = message.author?.id {
-                                peer = message.peers[authorPeerId]
+                                peerId = authorPeerId
                             } else if let mainPeer = messageMainPeer(message) {
-                                peer = mainPeer
+                                peerId = mainPeer.id
                             }
-                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, author: peer?.displayTitle, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
+                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, author: nil, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
                         }
                     case .fromExternal:
                         break
