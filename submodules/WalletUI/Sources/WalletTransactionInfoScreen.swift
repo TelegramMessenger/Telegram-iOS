@@ -224,7 +224,7 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     case let .completed(transaction):
         transferredValue = transaction.transferredValueWithoutFees
     case let .pending(transaction):
-        transferredValue = transaction.value
+        transferredValue = -transaction.value
     }
     let address = extractAddress(walletTransaction)
     var singleAddress: String?
