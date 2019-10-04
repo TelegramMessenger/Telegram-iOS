@@ -98,7 +98,7 @@ final class InstantPageAudioNode: ASDisplayNode, InstantPageNode {
         if brightness > 0.5 {
             backgroundAlpha = 0.4
         }
-        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .line, backgroundColor: theme.textCategories.paragraph.color.withAlphaComponent(backgroundAlpha), foregroundColor: theme.textCategories.paragraph.color))
+        self.scrubbingNode = MediaPlayerScrubbingNode(content: .standard(lineHeight: 3.0, lineCap: .round, scrubberHandle: .line, backgroundColor: theme.textCategories.paragraph.color.withAlphaComponent(backgroundAlpha), foregroundColor: theme.textCategories.paragraph.color, bufferingColor: theme.textCategories.paragraph.color.withAlphaComponent(0.5)))
         
         let playlistType: MediaManagerPlayerType
         if let file = self.media.media as? TelegramMediaFile {

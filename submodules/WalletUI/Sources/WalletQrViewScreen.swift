@@ -129,7 +129,7 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         
         self.iconNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
-            self.iconNode.setup(account: context.account, resource: .localFile(path), width: 120, height: 120, mode: .direct)
+            self.iconNode.setup(account: context.account, resource: .localFile(path), width: 240, height: 240, mode: .direct)
             self.iconNode.visibility = true
         }
         

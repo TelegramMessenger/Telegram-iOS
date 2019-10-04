@@ -120,6 +120,18 @@ public struct PresentationResourcesRootController {
         })
     }
     
+    public static func navigationPlayerMaximizedRateActiveIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationPlayerMaximizedRateActiveIcon.rawValue, { theme in
+            return generatePlayerRateIcon(theme.list.itemAccentColor)
+        })
+    }
+    
+    public static func navigationPlayerMaximizedRateInactiveIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.navigationPlayerMaximizedRateInactiveIcon.rawValue, { theme in
+            return generatePlayerRateIcon(theme.list.itemSecondaryTextColor)
+        })
+    }
+    
     public static func navigationPlayerPauseIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.navigationPlayerPauseIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/MinimizedPause"), color: theme.rootController.navigationBar.accentTextColor)
@@ -131,49 +143,7 @@ public struct PresentationResourcesRootController {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/LiveLocationPanelIcon"), color: theme.rootController.navigationBar.accentTextColor)
         })
     }
-    
-    public static func navigationPlayerMaximizedPlayIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerMaximizedPlayIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Play"), color: theme.rootController.navigationBar.primaryTextColor)
-        })
-    }
-    
-    public static func navigationPlayerMaximizedPauseIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerMaximizedPauseIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Pause"), color: theme.rootController.navigationBar.primaryTextColor)
-        })
-    }
-    
-    public static func navigationPlayerMaximizedPreviousIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerMaximizedPreviousIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Previous"), color: theme.rootController.navigationBar.primaryTextColor)
-        })
-    }
-    
-    public static func navigationPlayerMaximizedNextIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerMaximizedNextIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Next"), color: theme.rootController.navigationBar.primaryTextColor)
-        })
-    }
-    
-    public static func navigationPlayerMaximizedShuffleIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerMaximizedShuffleIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Shuffle"), color: theme.rootController.navigationBar.primaryTextColor)
-        })
-    }
-    
-    public static func navigationPlayerMaximizedRepeatIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerMaximizedRepeatIcon.rawValue, { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "GlobalMusicPlayer/Repeat"), color: theme.rootController.navigationBar.primaryTextColor)
-        })
-    }
-    
-    public static func navigationPlayerHandleIcon(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.navigationPlayerHandleIcon.rawValue, { theme in
-            return generateStretchableFilledCircleImage(diameter: 7.0, color: theme.rootController.navigationBar.controlColor)
-        })
-    }
-    
+        
     public static func inAppNotificationBackground(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.inAppNotificationBackground.rawValue, { theme in
             let inset: CGFloat = 16.0

@@ -18,20 +18,40 @@ private func generateHandleBackground(color: UIColor) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 0, topCapHeight: 2)
 }
 
-private final class MediaPlayerScrubbingNodeButton: ASDisplayNode {
+private final class MediaPlayerScrubbingNodeButton: ASDisplayNode, UIGestureRecognizerDelegate {
     var beginScrubbing: (() -> Void)?
     var endScrubbing: ((Bool) -> Void)?
-    var updateScrubbing: ((CGFloat) -> Void)?
+    var updateScrubbing: ((CGFloat, Double) -> Void)?
+    var updateMultiplier: ((Double) -> Void)?
     
     var highlighted: ((Bool) -> Void)?
     
+    var verticalPanEnabled = false
+    var hapticFeedback = HapticFeedback()
+    
+    private var scrubbingMultiplier: Double = 1.0
     private var scrubbingStartLocation: CGPoint?
     
     override func didLoad() {
         super.didLoad()
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true
-        self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        
+        let gestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:)))
+        gestureRecognizer.delegate = self
+        self.view.addGestureRecognizer(gestureRecognizer)
+    }
+    
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        guard let gestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer else {
+            return !self.verticalPanEnabled
+        }
+        let translation = gestureRecognizer.translation(in: gestureRecognizer.view)
+        if self.verticalPanEnabled {
+            return abs(translation.x) > abs(translation.y) || translation.y > 0.0
+        } else {
+            return abs(translation.x) > abs(translation.y)
+        }
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -66,15 +86,38 @@ private final class MediaPlayerScrubbingNodeButton: ASDisplayNode {
             case .changed:
                 if let scrubbingStartLocation = self.scrubbingStartLocation {
                     let delta = location.x - scrubbingStartLocation.x
-                    self.updateScrubbing?(delta / self.bounds.size.width)
+                    var multiplier: Double = 1.0
+                    var skipUpdate = false
+                    if self.verticalPanEnabled, location.y > scrubbingStartLocation.y {
+                        let verticalDelta = abs(location.y - scrubbingStartLocation.y)
+                        if verticalDelta > 150.0 {
+                            multiplier = 0.01
+                        } else if verticalDelta > 100.0 {
+                            multiplier = 0.25
+                        } else if verticalDelta > 50.0 {
+                            multiplier = 0.5
+                        }
+                        if multiplier != self.scrubbingMultiplier {
+                            skipUpdate = true
+                            self.scrubbingMultiplier = multiplier
+                            self.scrubbingStartLocation = CGPoint(x: location.x, y: scrubbingStartLocation.y)
+                            self.updateMultiplier?(multiplier)
+                            
+                            self.hapticFeedback.impact()
+                        }
+                    }
+                    if !skipUpdate {
+                        self.updateScrubbing?(delta / self.bounds.size.width, multiplier)
+                    }
                 }
             case .ended, .cancelled:
                 if let scrubbingStartLocation = self.scrubbingStartLocation {
                     self.scrubbingStartLocation = nil
                     let delta = location.x - scrubbingStartLocation.x
-                    self.updateScrubbing?(delta / self.bounds.size.width)
+                    self.updateScrubbing?(delta / self.bounds.size.width, self.scrubbingMultiplier)
                     self.endScrubbing?(recognizer.state == .ended)
                     self.highlighted?(false)
+                    self.scrubbingMultiplier = 1.0
                 }
             default:
                 break
@@ -106,7 +149,7 @@ public enum MediaPlayerScrubbingNodeHandle {
 }
 
 public enum MediaPlayerScrubbingNodeContent {
-    case standard(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, scrubberHandle: MediaPlayerScrubbingNodeHandle, backgroundColor: UIColor, foregroundColor: UIColor)
+    case standard(lineHeight: CGFloat, lineCap: MediaPlayerScrubbingNodeCap, scrubberHandle: MediaPlayerScrubbingNodeHandle, backgroundColor: UIColor, foregroundColor: UIColor, bufferingColor: UIColor)
     case custom(backgroundNode: ASDisplayNode, foregroundContentNode: ASDisplayNode)
 }
 
@@ -194,10 +237,12 @@ private final class MediaPlayerScrubbingBufferingNode: ASDisplayNode {
             for range in ranges.0.rangeView {
                 let rangeWidth = min(size.width, (CGFloat(range.count) / CGFloat(ranges.1)) * size.width)
                 transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: rangeWidth, height: size.height)))
+                transition.updateAlpha(node: self.foregroundNode, alpha: abs(size.width - rangeWidth) < 1.0 ? 0.0 : 1.0)
                 break
             }
         } else {
             transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: CGSize(width: 0.0, height: size.height)))
+            transition.updateAlpha(node: self.foregroundNode, alpha: 0.0)
         }
     }
 }
@@ -236,6 +281,17 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                     node.handleNodeContainer?.isUserInteractionEnabled = self.enableScrubbing
                 case let .custom(node):
                     node.handleNodeContainer?.isUserInteractionEnabled = self.enableScrubbing
+            }
+        }
+    }
+    
+    public var enableFineScrubbing: Bool = false {
+        didSet {
+            switch self.contentNodes {
+                case let .standard(node):
+                    node.handleNodeContainer?.verticalPanEnabled = self.enableFineScrubbing
+                case let .custom(node):
+                    node.handleNodeContainer?.verticalPanEnabled = self.enableFineScrubbing
             }
         }
     }
@@ -293,13 +349,13 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
     
     private static func contentNodesFromContent(_ content: MediaPlayerScrubbingNodeContent, enableScrubbing: Bool) -> MediaPlayerScrubbingNodeContentNodes {
         switch content {
-            case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor):
+            case let .standard(lineHeight, lineCap, scrubberHandle, backgroundColor, foregroundColor, bufferingColor):
                 let backgroundNode = ASImageNode()
                 backgroundNode.isLayerBacked = true
                 backgroundNode.displaysAsynchronously = false
                 backgroundNode.displayWithoutProcessing = true
                 
-                let bufferingNode = MediaPlayerScrubbingBufferingNode(color: foregroundColor.withAlphaComponent(0.5), lineCap: lineCap, lineHeight: lineHeight)
+                let bufferingNode = MediaPlayerScrubbingBufferingNode(color: bufferingColor, lineCap: lineCap, lineHeight: lineHeight)
                 
                 let foregroundContentNode = ASImageNode()
                 foregroundContentNode.isLayerBacked = true
@@ -421,7 +477,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 strongSelf.displayLink?.isPaused = true
                                 
                                 var timestamp = statusValue.timestamp
-                                if statusValue.generationTimestamp > 0 {
+                                if statusValue.generationTimestamp > 0 && statusValue.status == .playing {
                                     let currentTimestamp = CACurrentMediaTime()
                                     timestamp = timestamp + (currentTimestamp - statusValue.generationTimestamp) * statusValue.baseRate
                                 }
@@ -437,7 +493,6 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                                 strongSelf.updateProgressAnimations()
                                 
                                 highlightedHandleNode.layer.animateSpring(from: 1.0 as NSNumber, to: 0.1875 as NSNumber, keyPath: "transform.scale", duration: 0.65, initialVelocity: 0.0, damping: 120.0, removeOnCompletion: false)
-                                
                             }
                         }
                     }
@@ -453,10 +508,11 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             }
                         }
                     }
-                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
+                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction, multiplier in
                         if let strongSelf = self {
                             if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                                let timestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)))
+                                let delta: Double = (statusValue.duration * Double(addedFraction)) * multiplier
+                                let timestampValue = max(0.0, min(statusValue.duration, scrubbingBeginTimestamp + delta))
                                 strongSelf.scrubbingTimestampValue = timestampValue
                                 strongSelf._scrubbingTimestamp.set(.single(strongSelf.scrubbingTimestampValue))
                                 strongSelf._scrubbingPosition.set(.single(strongSelf.scrubbingTimestampValue.flatMap { $0 / statusValue.duration }))
@@ -465,6 +521,13 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             }
                         }
                     }
+                    handleNodeContainer.updateMultiplier = { [weak self] multiplier in
+                           if let strongSelf = self {
+                               if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                                   strongSelf.scrubbingBeginTimestamp = strongSelf.scrubbingTimestampValue
+                               }
+                           }
+                       }
                     handleNodeContainer.endScrubbing = { [weak self] apply in
                         if let strongSelf = self {
                             strongSelf.scrubbingBeginTimestamp = nil
@@ -513,11 +576,18 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             }
                         }
                     }
-                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction in
+                    handleNodeContainer.updateScrubbing = { [weak self] addedFraction, multiplier in
                         if let strongSelf = self {
                             if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
-                                strongSelf.scrubbingTimestampValue = scrubbingBeginTimestamp + statusValue.duration * Double(addedFraction)
+                                strongSelf.scrubbingTimestampValue = scrubbingBeginTimestamp + (statusValue.duration * Double(addedFraction)) * multiplier
                                 strongSelf.updateProgressAnimations()
+                            }
+                        }
+                    }
+                    handleNodeContainer.updateMultiplier = { [weak self] multiplier in
+                        if let strongSelf = self {
+                            if let statusValue = strongSelf.statusValue, let scrubbingBeginTimestamp = strongSelf.scrubbingBeginTimestamp, Double(0.0).isLess(than: statusValue.duration) {
+                                strongSelf.scrubbingBeginTimestamp = strongSelf.scrubbingTimestampValue
                             }
                         }
                     }
