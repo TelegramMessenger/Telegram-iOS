@@ -37,6 +37,14 @@ static NSString * _Nullable readString(std::string &string) {
     }
 }
 
+static NSData * _Nullable readSecureString(td::SecureString &string) {
+    if (string.size() == 0) {
+        return [NSData data];
+    } else {
+        return [[NSData alloc] initWithBytes:string.data() length:string.size()];
+    }
+}
+
 static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::object_ptr<tonlib_api::raw_message> &message) {
     if (message == nullptr) {
         return nil;
