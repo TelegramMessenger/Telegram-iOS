@@ -112,13 +112,14 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @implementation TONTransaction
 
-- (instancetype)initWithData:(NSData * _Nonnull)data transactionId:(TONTransactionId * _Nonnull)transactionId timestamp:(int64_t)timestamp fee:(int64_t)fee inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages {
+- (instancetype)initWithData:(NSData * _Nonnull)data transactionId:(TONTransactionId * _Nonnull)transactionId timestamp:(int64_t)timestamp storageFee:(int64_t)storageFee otherFee:(int64_t)otherFee inMessage:(TONTransactionMessage * _Nullable)inMessage outMessages:(NSArray<TONTransactionMessage *> * _Nonnull)outMessages {
     self = [super init];
     if (self != nil) {
         _data = data;
         _transactionId = transactionId;
         _timestamp = timestamp;
-        _fee = fee;
+        _storageFee = storageFee;
+        _otherFee = otherFee;
         _inMessage = inMessage;
         _outMessages = outMessages;
     }
@@ -449,7 +450,7 @@ typedef enum {
     }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
 }
 
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSString * _Nonnull)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
+- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
     return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
         if ([_sendGramRandomIds containsObject:@(randomId)]) {
             [_sendGramRandomIds addObject:@(randomId)];
@@ -460,11 +461,6 @@ typedef enum {
         
         NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
-            [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in sendGramsFromKey"]];
-            return [[MTBlockDisposable alloc] initWithBlock:^{}];
-        }
-        NSData *textMessageData = [textMessage dataUsingEncoding:NSUTF8StringEncoding];
-        if (textMessageData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in sendGramsFromKey"]];
             return [[MTBlockDisposable alloc] initWithBlock:^{}];
         }
@@ -507,7 +503,7 @@ typedef enum {
             amount,
             timeout,
             forceIfDestinationNotInitialized,
-            makeString(textMessageData)
+            makeString(textMessage)
         );
         _client->send({ requestId, std::move(query) });
         
@@ -688,7 +684,7 @@ typedef enum {
                             [outMessages addObject:outMessage];
                         }
                     }
-                    [transactions addObject:[[TONTransaction alloc] initWithData:makeData(it->data_) transactionId:transactionId timestamp:it->utime_ fee:it->fee_ inMessage:inMessage outMessages:outMessages]];
+                    [transactions addObject:[[TONTransaction alloc] initWithData:makeData(it->data_) transactionId:transactionId timestamp:it->utime_ storageFee:it->storage_fee_ otherFee:it->other_fee_ inMessage:inMessage outMessages:outMessages]];
                 }
                 [subscriber putNext:transactions];
                 [subscriber putCompletion];

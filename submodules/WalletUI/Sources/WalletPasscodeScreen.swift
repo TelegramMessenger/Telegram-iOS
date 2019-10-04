@@ -14,7 +14,7 @@ import PasscodeInputFieldNode
 
 public enum WalletPasscodeMode {
     case setup
-    case authorizeTransfer(WalletInfo, String, Int64, String)
+    case authorizeTransfer(WalletInfo, String, Int64, Data)
 }
 
 public final class WalletPasscodeScreen: ViewController {

@@ -139,7 +139,7 @@ private func stringForAddress(strings: PresentationStrings, address: WalletTrans
 }
 
 private func extractAddress(_ walletTransaction: WalletTransaction) -> WalletTransactionAddress {
-    let transferredValue = walletTransaction.transferredValue
+    let transferredValue = walletTransaction.transferredValueWithoutFees
     if transferredValue <= 0 {
         if walletTransaction.outMessages.isEmpty {
             return .none
@@ -161,7 +161,7 @@ private func extractAddress(_ walletTransaction: WalletTransaction) -> WalletTra
 }
 
 private func extractDescription(_ walletTransaction: WalletTransaction) -> String {
-    let transferredValue = walletTransaction.transferredValue
+    let transferredValue = walletTransaction.transferredValueWithoutFees
     var text = ""
     if transferredValue <= 0 {
         for message in walletTransaction.outMessages {
@@ -183,7 +183,7 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     
     entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, walletTransaction))
     
-    let transferredValue = walletTransaction.transferredValue
+    let transferredValue = walletTransaction.transferredValueWithoutFees
     let address = extractAddress(walletTransaction)
     var singleAddress: String?
     let text = stringForAddress(strings: presentationData.strings, address: address)
@@ -421,13 +421,13 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             let signString: String
             let balanceString: String
             let titleColor: UIColor
-            let transferredValue = item.walletTransaction.transferredValue
+            let transferredValue = item.walletTransaction.transferredValueWithoutFees
             if transferredValue <= 0 {
-                signString = "-"
+                signString = ""
                 balanceString = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.list.itemPrimaryTextColor
+                titleColor = item.theme.list.itemDestructiveColor
             } else {
-                signString = "+"
+                signString = ""
                 balanceString = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
             }
@@ -474,7 +474,7 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
                     let contentWidth = titleSignLayout.size.width + iconSpacing + titleLayout.size.width + iconSpacing + iconSize.width * 3.0 / 2.0
                     let contentOrigin = floor((params.width - contentWidth) / 2.0)
                     let titleSignFrame = CGRect(origin: CGPoint(x: contentOrigin, y: verticalInset), size: titleSignLayout.size)
-                    let iconFrame = CGRect(origin: CGPoint(x: contentOrigin + titleSignFrame.width * titleScale + iconSpacing, y: titleSignFrame.minY + floor((titleSignFrame.height - iconSize.height) / 2.0) - 2.0), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: contentOrigin + titleSignFrame.width * titleScale + iconSpacing, y: titleSignFrame.minY + floor((titleLayout.size.height - iconSize.height) / 2.0) - 2.0), size: iconSize)
                     let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + iconSpacing, y: verticalInset), size: titleLayout.size)
                     let subtitleFrame = CGRect(origin: CGPoint(x: floor((params.width - subtitleLayout.size.width) / 2.0), y: titleFrame.maxY - 5.0), size: subtitleLayout.size)
                     strongSelf.titleSignNode.position = titleSignFrame.center

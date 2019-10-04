@@ -20,6 +20,8 @@ func formatBalanceText(_ value: Int64, decimalSeparator: String) -> String {
     while true {
         if balanceText.hasSuffix("0") {
             if balanceText.hasSuffix("\(decimalSeparator)0") {
+                balanceText.removeLast()
+                balanceText.removeLast()
                 break
             } else {
                 balanceText.removeLast()

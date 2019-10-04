@@ -4785,6 +4785,8 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Info.TransactionTo" = "to";
 "Wallet.Info.TransactionFrom" = "from";
 "Wallet.Info.Updating" = "updating";
+"Wallet.Info.TransactionStorageFee" = "%@ storage fee";
+"Wallet.Info.TransactionOtherFee" = "%@ transaction fee";
 "Wallet.Qr.ScanCode" = "Scan QR Code";
 "Wallet.Qr.Title" = "QR Code";
 "Wallet.Receive.Title" = "Receive Grams";

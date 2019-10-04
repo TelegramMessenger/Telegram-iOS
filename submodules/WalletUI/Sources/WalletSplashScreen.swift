@@ -26,7 +26,7 @@ public enum WalletSplashMode {
     case created(WalletInfo, [String]?)
     case success(WalletInfo)
     case restoreFailed
-    case sending(WalletInfo, String, Int64, String, Int64, Data)
+    case sending(WalletInfo, String, Int64, Data, Int64, Data)
     case sent(WalletInfo, Int64)
     case secureStorageNotAvailable
     case secureStorageReset(WalletSecureStorageResetReason)
@@ -38,9 +38,9 @@ public final class WalletSplashScreen: ViewController {
     private var presentationData: PresentationData
     private var mode: WalletSplashMode
     
-    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult>?
+    private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
     
-    public init(context: AccountContext, tonContext: TonContext, mode: WalletSplashMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult>?) {
+    public init(context: AccountContext, tonContext: TonContext, mode: WalletSplashMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
         self.context = context
         self.tonContext = tonContext
         self.mode = mode
@@ -57,8 +57,9 @@ public final class WalletSplashScreen: ViewController {
             } else {
                 self.walletCreatedPreloadState = Promise()
                 self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance)
-                |> `catch` { _ -> Signal<CombinedWalletStateResult, NoError> in
-                    return .complete()
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
+                    return .single(nil)
                 })
             }
         case let .success(walletInfo):
@@ -67,8 +68,9 @@ public final class WalletSplashScreen: ViewController {
             } else {
                 self.walletCreatedPreloadState = Promise()
                 self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance)
-                |> `catch` { _ -> Signal<CombinedWalletStateResult, NoError> in
-                    return .complete()
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
+                    return .single(nil)
                 })
             }
         default:
@@ -132,7 +134,7 @@ public final class WalletSplashScreen: ViewController {
         self.push(WalletWordCheckScreen(context: self.context, tonContext: self.tonContext, mode: .import, walletCreatedPreloadState: nil))
     }
     
-    private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: String, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
+    private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
         let _ = (sendGramsFromWallet(network: self.context.account.network, tonInstance: self.tonContext.instance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
         |> deliverOnMainQueue).start(error: { [weak self] error in
             guard let strongSelf = self else {
@@ -308,10 +310,14 @@ public final class WalletSplashScreen: ViewController {
                     if let walletCreatedPreloadState = strongSelf.walletCreatedPreloadState {
                         stateSignal = walletCreatedPreloadState.get()
                         |> map { state -> Bool in
-                            if case .updated = state {
-                                return true
+                            if let state = state {
+                                if case .updated = state {
+                                    return true
+                                } else {
+                                    return false
+                                }
                             } else {
-                                return false
+                                return true
                             }
                         }
                         |> filter { $0 }

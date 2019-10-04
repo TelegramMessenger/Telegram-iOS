@@ -191,13 +191,13 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             let title: String
             let directionText: String
             let titleColor: UIColor
-            let transferredValue = item.walletTransaction.transferredValue
+            let transferredValue = item.walletTransaction.transferredValueWithoutFees
             var text: String = ""
             var description: String = ""
             if transferredValue <= 0 {
-                sign = "-"
+                sign = ""
                 title = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.list.itemPrimaryTextColor
+                titleColor = item.theme.list.itemDestructiveColor
                 if item.walletTransaction.outMessages.isEmpty {
                     directionText = ""
                     text = item.strings.Wallet_Info_UnknownTransaction
@@ -216,7 +216,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     }
                 }
             } else {
-                sign = "+"
+                sign = ""
                 title = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
                 titleColor = item.theme.chatList.secretTitleColor
                 directionText = item.strings.Wallet_Info_TransactionFrom
@@ -226,6 +226,21 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 } else {
                     text = "<unknown>"
                 }
+            }
+            
+            if item.walletTransaction.storageFee != 0 {
+                let feeText = item.strings.Wallet_Info_TransactionStorageFee(formatBalanceText(-item.walletTransaction.storageFee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
+                if !description.isEmpty {
+                    description.append("\n")
+                }
+                description += "\(feeText)"
+            }
+            if item.walletTransaction.otherFee != 0 {
+                let feeText = item.strings.Wallet_Info_TransactionOtherFee(formatBalanceText(-item.walletTransaction.otherFee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
+                if !description.isEmpty {
+                    description.append("\n")
+                }
+                description += "\(feeText)"
             }
             
             let dateText = stringForMessageTimestamp(timestamp: Int32(clamping: item.walletTransaction.timestamp), dateTimeFormat: item.dateTimeFormat)
@@ -318,7 +333,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let titleSignFrame = CGRect(origin: CGPoint(x: leftInset, y: topInset), size: titleSignLayout.size)
                     strongSelf.titleSignNode.frame = titleSignFrame
                     
-                    let iconFrame = CGRect(origin: CGPoint(x: titleSignFrame.maxX + 1.0, y: titleSignFrame.minY + floor((titleSignFrame.height - iconSize.height) / 2.0) - 1.0), size: iconSize)
+                    let iconFrame = CGRect(origin: CGPoint(x: titleSignFrame.maxX + (titleSignFrame.width.isZero ? 0.0 : 1.0), y: titleSignFrame.minY + floor((titleLayout.size.height - iconSize.height) / 2.0) - 1.0), size: iconSize)
                     strongSelf.iconNode.frame = iconFrame
                     
                     let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + 1.0, y: topInset), size: titleLayout.size)
