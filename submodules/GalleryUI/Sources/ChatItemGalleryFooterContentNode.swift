@@ -597,7 +597,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             }
             
             let scrubberFrame = CGRect(origin: CGPoint(x: leftInset, y: scrubberY), size: CGSize(width: width - leftInset - rightInset, height: 34.0))
-            scrubberView.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+            scrubberView.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
             transition.updateFrame(layer: scrubberView.layer, frame: scrubberFrame)
         }
         transition.updateAlpha(node: self.textNode, alpha: displayCaption ? 1.0 : 0.0)

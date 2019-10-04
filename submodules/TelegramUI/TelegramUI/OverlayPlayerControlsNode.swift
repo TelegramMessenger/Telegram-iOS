@@ -31,8 +31,8 @@ private func generateShareIcon(theme: PresentationTheme) -> UIImage? {
     })
 }
 
-private let titleFont = Font.medium(16.0)
-private let descriptionFont = Font.regular(12.0)
+private let titleFont = Font.semibold(17.0)
+private let descriptionFont = Font.regular(17.0)
 
 private func stringsForDisplayData(_ data: SharedMediaPlaybackDisplayData?, theme: PresentationTheme) -> (NSAttributedString?, NSAttributedString?) {
     var titleString: NSAttributedString?
@@ -108,6 +108,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     private var currentAlbumArt: SharedMediaPlaybackAlbumArt?
     private var currentFileReference: FileMediaReference?
     private var statusDisposable: Disposable?
+    
+    private var scrubbingDisposable: Disposable?
+    private var leftDurationLabelPushed = false
+    private var rightDurationLabelPushed = false
     
     private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat)?
     
@@ -223,96 +227,121 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.leftDurationLabel.status = mappedStatus
         self.rightDurationLabel.status = mappedStatus
         
+        self.scrubbingDisposable = (self.scrubberNode.scrubbingPosition
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            let leftDurationLabelPushed: Bool
+            let rightDurationLabelPushed: Bool
+            if let value = value {
+                leftDurationLabelPushed = value < 0.16
+                rightDurationLabelPushed = value > (strongSelf.rateButton.isHidden ? 0.84 : 0.74)
+            } else {
+                leftDurationLabelPushed = false
+                rightDurationLabelPushed = false
+            }
+            if leftDurationLabelPushed != strongSelf.leftDurationLabelPushed || rightDurationLabelPushed != strongSelf.rightDurationLabelPushed {
+                strongSelf.leftDurationLabelPushed = leftDurationLabelPushed
+                strongSelf.rightDurationLabelPushed = rightDurationLabelPushed
+                
+                if let layout = strongSelf.validLayout {
+                    strongSelf.updateLayout(width: layout.0, leftInset: layout.1, rightInset: layout.2, maxHeight: layout.3, transition: .animated(duration: 0.35, curve: .spring))
+                }
+            }
+        })
+        
         self.statusDisposable = (delayedStatus
         |> deliverOnMainQueue).start(next: { [weak self] value in
-            if let strongSelf = self {
-                var valueItemId: SharedMediaPlaylistItemId?
-                if let (_, value) = value, case let .state(state) = value {
-                    valueItemId = state.item.id
+            guard let strongSelf = self else {
+                return
+            }
+            var valueItemId: SharedMediaPlaylistItemId?
+            if let (_, value) = value, case let .state(state) = value {
+                valueItemId = state.item.id
+            }
+            if !areSharedMediaPlaylistItemIdsEqual(valueItemId, strongSelf.currentItemId) {
+                strongSelf.currentItemId = valueItemId
+                strongSelf.scrubberNode.ignoreSeekId = nil
+            }
+            strongSelf.shareNode.isHidden = false
+            var displayData: SharedMediaPlaybackDisplayData?
+            if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
+                let isPaused: Bool
+                switch value.status.status {
+                    case .playing:
+                        isPaused = false
+                    case .paused:
+                        isPaused = true
+                    case let .buffering(_, whilePlaying):
+                        isPaused = !whilePlaying
                 }
-                if !areSharedMediaPlaylistItemIdsEqual(valueItemId, strongSelf.currentItemId) {
-                    strongSelf.currentItemId = valueItemId
-                    strongSelf.scrubberNode.ignoreSeekId = nil
-                }
-                strongSelf.shareNode.isHidden = false
-                var displayData: SharedMediaPlaybackDisplayData?
-                if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading {
-                    let isPaused: Bool
-                    switch value.status.status {
-                        case .playing:
-                            isPaused = false
-                        case .paused:
-                            isPaused = true
-                        case let .buffering(_, whilePlaying):
-                            isPaused = !whilePlaying
-                    }
-                    if strongSelf.currentIsPaused != isPaused {
-                        strongSelf.currentIsPaused = isPaused
-                        
-                        strongSelf.updatePlayPauseButton(paused: isPaused)
-                    }
+                if strongSelf.currentIsPaused != isPaused {
+                    strongSelf.currentIsPaused = isPaused
                     
-                    strongSelf.playPauseButton.isEnabled = true
-                    strongSelf.backwardButton.isEnabled = true
-                    strongSelf.forwardButton.isEnabled = true
-                    
-                    displayData = value.item.displayData
-                    
-                    if value.order != strongSelf.currentOrder {
-                        strongSelf.updateOrder?(value.order)
-                        strongSelf.currentOrder = value.order
-                        strongSelf.updateOrderButton(value.order)
-                    }
-                    if value.looping != strongSelf.currentLooping {
-                        strongSelf.currentLooping = value.looping
-                        strongSelf.updateLoopButton(value.looping)
-                    }
-                    
-                    let baseRate: AudioPlaybackRate
-                    if !value.status.baseRate.isEqual(to: 1.0) {
-                        baseRate = .x2
-                    } else {
-                        baseRate = .x1
-                    }
-                    if baseRate != strongSelf.currentRate {
-                        strongSelf.currentRate = baseRate
-                        strongSelf.updateRateButton(baseRate)
-                    }
-                    
-                    if let displayData = displayData, case let .music(_, _, _, long) = displayData, long {
-                        strongSelf.rateButton.isHidden = false
-                    } else {
-                        strongSelf.rateButton.isHidden = true
-                    }
-                } else {
-                    strongSelf.playPauseButton.isEnabled = false
-                    strongSelf.backwardButton.isEnabled = false
-                    strongSelf.forwardButton.isEnabled = false
-                    strongSelf.rateButton.isHidden = true
-                    displayData = nil
+                    strongSelf.updatePlayPauseButton(paused: isPaused)
                 }
                 
-                if strongSelf.displayData != displayData {
-                    strongSelf.displayData = displayData
-                    
-                    if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
-                        switch source {
-                            case let .telegramFile(fileReference):
-                                strongSelf.currentFileReference = fileReference
-                                if let size = fileReference.media.size {
-                                    strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
-                                    |> map { ranges -> (IndexSet, Int) in
-                                        return (ranges, size)
-                                    }
-                                } else {
-                                    strongSelf.scrubberNode.bufferingStatus = nil
-                                }
-                        }
-                    } else {
-                        strongSelf.scrubberNode.bufferingStatus = nil
-                    }
-                    strongSelf.updateLabels(transition: .immediate)
+                strongSelf.playPauseButton.isEnabled = true
+                strongSelf.backwardButton.isEnabled = true
+                strongSelf.forwardButton.isEnabled = true
+                
+                displayData = value.item.displayData
+                
+                if value.order != strongSelf.currentOrder {
+                    strongSelf.updateOrder?(value.order)
+                    strongSelf.currentOrder = value.order
+                    strongSelf.updateOrderButton(value.order)
                 }
+                if value.looping != strongSelf.currentLooping {
+                    strongSelf.currentLooping = value.looping
+                    strongSelf.updateLoopButton(value.looping)
+                }
+                
+                let baseRate: AudioPlaybackRate
+                if !value.status.baseRate.isEqual(to: 1.0) {
+                    baseRate = .x2
+                } else {
+                    baseRate = .x1
+                }
+                if baseRate != strongSelf.currentRate {
+                    strongSelf.currentRate = baseRate
+                    strongSelf.updateRateButton(baseRate)
+                }
+                
+                if let displayData = displayData, case let .music(_, _, _, long) = displayData, long {
+                    strongSelf.rateButton.isHidden = false
+                } else {
+                    strongSelf.rateButton.isHidden = true
+                }
+            } else {
+                strongSelf.playPauseButton.isEnabled = false
+                strongSelf.backwardButton.isEnabled = false
+                strongSelf.forwardButton.isEnabled = false
+                strongSelf.rateButton.isHidden = true
+                displayData = nil
+            }
+            
+            if strongSelf.displayData != displayData {
+                strongSelf.displayData = displayData
+                
+                if let (_, valueOrLoading) = value, case let .state(value) = valueOrLoading, let source = value.item.playbackData?.source {
+                    switch source {
+                        case let .telegramFile(fileReference):
+                            strongSelf.currentFileReference = fileReference
+                            if let size = fileReference.media.size {
+                                strongSelf.scrubberNode.bufferingStatus = strongSelf.postbox.mediaBox.resourceRangesStatus(fileReference.media.resource)
+                                |> map { ranges -> (IndexSet, Int) in
+                                    return (ranges, size)
+                                }
+                            } else {
+                                strongSelf.scrubberNode.bufferingStatus = nil
+                            }
+                    }
+                } else {
+                    strongSelf.scrubberNode.bufferingStatus = nil
+                }
+                strongSelf.updateLabels(transition: .immediate)
             }
         })
         
@@ -332,6 +361,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     
     deinit {
         self.statusDisposable?.dispose()
+        self.scrubbingDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -378,7 +408,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         
         let sideInset: CGFloat = 20.0
         
-        let infoLabelsLeftInset: CGFloat = 64.0
+        let infoLabelsLeftInset: CGFloat = 60.0
         let infoLabelsRightInset: CGFloat = 32.0
         
         let infoVerticalOrigin: CGFloat = panelHeight - OverlayPlayerControlsNode.basePanelHeight + 36.0
@@ -392,7 +422,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - titleLayout.size.width) / 2.0) : (leftInset + sideInset + infoLabelsLeftInset), y: infoVerticalOrigin + 1.0), size: titleLayout.size))
         let _ = titleApply()
         
-        transition.updateFrame(node: self.descriptionNode, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - descriptionLayout.size.width) / 2.0) : (leftInset + sideInset + infoLabelsLeftInset), y: infoVerticalOrigin + 27.0), size: descriptionLayout.size))
+        transition.updateFrame(node: self.descriptionNode, frame: CGRect(origin: CGPoint(x: self.isExpanded ? floor((width - descriptionLayout.size.width) / 2.0) : (leftInset + sideInset + infoLabelsLeftInset), y: infoVerticalOrigin + 26.0), size: descriptionLayout.size))
         let _ = descriptionApply()
         
         var albumArt: SharedMediaPlaybackAlbumArt?
@@ -469,7 +499,6 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
     func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {
         self.validLayout = (width, leftInset, rightInset, maxHeight)
     
-        
         let panelHeight = OverlayPlayerControlsNode.heightForLayout(width: width, leftInset: leftInset, rightInset: rightInset, maxHeight: maxHeight, isExpanded: self.isExpanded)
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: panelHeight), size: CGSize(width: width, height: UIScreenPixel)))
@@ -562,10 +591,14 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         let scrubberVerticalOrigin: CGFloat = infoVerticalOrigin + 64.0
         
         transition.updateFrame(node: self.scrubberNode, frame: CGRect(origin: CGPoint(x: leftInset +  sideInset, y: scrubberVerticalOrigin - 8.0), size: CGSize(width: width - sideInset * 2.0 - leftInset - rightInset, height: 10.0 + 8.0 * 2.0)))
-        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 14.0), size: CGSize(width: 100.0, height: 20.0)))
-        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 14.0), size: CGSize(width: 100.0, height: 20.0)))
         
-        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0 + 24.0, y: scrubberVerticalOrigin + 10.0), size: CGSize(width: 24.0, height: 24.0)))
+        var leftLabelVerticalOffset: CGFloat = self.leftDurationLabelPushed ? 6.0 : 0.0
+        transition.updateFrame(node: self.leftDurationLabel, frame: CGRect(origin: CGPoint(x: leftInset + sideInset, y: scrubberVerticalOrigin + 14.0 + leftLabelVerticalOffset), size: CGSize(width: 100.0, height: 20.0)))
+        
+        var rightLabelVerticalOffset: CGFloat = self.rightDurationLabelPushed ? 6.0 : 0.0
+        transition.updateFrame(node: self.rightDurationLabel, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0, y: scrubberVerticalOrigin + 14.0 + rightLabelVerticalOffset), size: CGSize(width: 100.0, height: 20.0)))
+        
+        transition.updateFrame(node: self.rateButton, frame: CGRect(origin: CGPoint(x: width - sideInset - rightInset - 100.0 + 24.0, y: scrubberVerticalOrigin + 10.0 + rightLabelVerticalOffset), size: CGSize(width: 24.0, height: 24.0)))
         
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -8.0), size: CGSize(width: width, height: panelHeight + 8.0)))
         

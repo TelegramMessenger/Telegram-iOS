@@ -21,6 +21,10 @@ final class ChatVideoGalleryItemScrubberView: UIView {
     private var playbackStatus: MediaPlayerStatus?
     
     private var fetchStatusDisposable = MetaDisposable()
+    private var scrubbingDisposable = MetaDisposable()
+    
+    private var leftTimestampNodePushed = false
+    private var rightTimestampNodePushed = false
     
     var hideWhenDurationIsUnknown = false {
         didSet {
@@ -103,11 +107,16 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.scrubbingDisposable.dispose()
+        self.fetchStatusDisposable.dispose()
+    }
+    
     func setStatusSignal(_ status: Signal<MediaPlayerStatus, NoError>?) {
         let mappedStatus: Signal<MediaPlayerStatus, NoError>?
         if let status = status {
             mappedStatus = combineLatest(status, self.scrubberNode.scrubbingTimestamp) |> map { status, scrubbingTimestamp -> MediaPlayerStatus in
-                return MediaPlayerStatus(generationTimestamp: status.generationTimestamp, duration: status.duration, dimensions: status.dimensions, timestamp: scrubbingTimestamp ?? status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
+                return MediaPlayerStatus(generationTimestamp: scrubbingTimestamp != nil ? 0 : status.generationTimestamp, duration: status.duration, dimensions: status.dimensions, timestamp: scrubbingTimestamp ?? status.timestamp, baseRate: status.baseRate, seekId: status.seekId, status: status.status, soundEnabled: status.soundEnabled)
             }
         } else {
             mappedStatus = nil
@@ -115,6 +124,30 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         self.scrubberNode.status = mappedStatus
         self.leftTimestampNode.status = mappedStatus
         self.rightTimestampNode.status = mappedStatus
+        
+        self.scrubbingDisposable.set((self.scrubberNode.scrubbingPosition
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            let leftTimestampNodePushed: Bool
+            let rightTimestampNodePushed: Bool
+            if let value = value {
+                leftTimestampNodePushed = value < 0.16
+                rightTimestampNodePushed = value > 0.84
+            } else {
+                leftTimestampNodePushed = false
+                rightTimestampNodePushed = false
+            }
+            if leftTimestampNodePushed != strongSelf.leftTimestampNodePushed || rightTimestampNodePushed != strongSelf.rightTimestampNodePushed {
+                strongSelf.leftTimestampNodePushed = leftTimestampNodePushed
+                strongSelf.rightTimestampNodePushed = rightTimestampNodePushed
+                
+                if let layout = strongSelf.containerLayout {
+                    strongSelf.updateLayout(size: layout.0, leftInset: layout.1, rightInset: layout.2, transition: .animated(duration: 0.35, curve: .spring))
+                }
+            }
+        }))
     }
     
     func setBufferingStatusSignal(_ status: Signal<(IndexSet, Int)?, NoError>?) {
@@ -139,7 +172,7 @@ final class ChatVideoGalleryItemScrubberView: UIView {
                         strongSelf.fileSizeNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: .white)
                         
                         if let (size, leftInset, rightInset) = strongSelf.containerLayout {
-                            strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset)
+                            strongSelf.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .immediate)
                         }
                     }
                 }))
@@ -151,22 +184,25 @@ final class ChatVideoGalleryItemScrubberView: UIView {
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
+    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         self.containerLayout = (size, leftInset, rightInset)
         
         let scrubberHeight: CGFloat = 14.0
         let scrubberInset: CGFloat
-        let timestampOffset: CGFloat
+        let leftTimestampOffset: CGFloat
+        let rightTimestampOffset: CGFloat
         if size.width > size.height {
             scrubberInset = 58.0
-            timestampOffset = 4.0
+            leftTimestampOffset = 4.0
+            rightTimestampOffset = 4.0
         } else {
             scrubberInset = 13.0
-            timestampOffset = 22.0
+            leftTimestampOffset = 22.0 + (self.leftTimestampNodePushed ? 8.0 : 0.0)
+            rightTimestampOffset = 22.0 + (self.rightTimestampNodePushed ? 8.0 : 0.0)
         }
         
-        self.leftTimestampNode.frame = CGRect(origin: CGPoint(x: 12.0, y: timestampOffset), size: CGSize(width: 60.0, height: 20.0))
-        self.rightTimestampNode.frame = CGRect(origin: CGPoint(x: size.width - leftInset - rightInset - 60.0 - 12.0, y: timestampOffset), size: CGSize(width: 60.0, height: 20.0))
+        transition.updateFrame(node: self.leftTimestampNode, frame: CGRect(origin: CGPoint(x: 12.0, y: leftTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
+        transition.updateFrame(node: self.rightTimestampNode, frame: CGRect(origin: CGPoint(x: size.width - leftInset - rightInset - 60.0 - 12.0, y: rightTimestampOffset), size: CGSize(width: 60.0, height: 20.0)))
         
         let fileSize = self.fileSizeNode.measure(size)
         self.fileSizeNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - fileSize.width) / 2.0), y: 22.0), size: fileSize)
