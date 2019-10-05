@@ -1,3 +1,4 @@
+
 load("//Config:utils.bzl", "config_with_updated_linker_flags", "configs_with_config")
 load("//Config:app_configuration.bzl", "appConfig")
 
@@ -403,6 +404,7 @@ def widget_extension_info_plist_substitutions():
         "APP_SPECIFIC_URL_SCHEME": appConfig()["appSpecificUrlScheme"],
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
+        "MinimumOSVersion": "9.0",
     }
     return substitutions
 
@@ -416,6 +418,7 @@ def notification_content_extension_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
+        "MinimumOSVersion": "10.0",
     }
     return substitutions
 
@@ -429,6 +432,7 @@ def notification_service_extension_info_plist_substitutions():
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
+        "MinimumOSVersion": "10.0",
     }
     return substitutions
 
@@ -444,6 +448,7 @@ def intents_extension_info_plist_substitutions():
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "PRODUCT_MODULE_NAME": "SiriIntents",
+        "MinimumOSVersion": "10.0",
     }
     return substitutions
 

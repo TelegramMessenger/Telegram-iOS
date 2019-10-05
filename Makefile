@@ -146,7 +146,7 @@ build_debug_armv7: check_env
     //:NotificationContentExtension#dwarf-and-dsym,iphoneos-armv7 \
     //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-armv7 \
     //:IntentsExtension#dwarf-and-dsym,iphoneos-armv7 \
-	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
+	--verbose 7 ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 build: check_env
 	$(BUCK) build \
@@ -284,7 +284,7 @@ app_arm64: build_arm64 package_arm64
 
 app_debug_arm64: build_debug_arm64 package_debug_arm64
 
-app_debug_armv7: build_debug_armv7 package_debug_armv7
+app_debug_armv7: build_debug_armv7 package_armv7
 
 build_buckdebug: check_env
 	BUCK_DEBUG_MODE=1 $(BUCK) build \
