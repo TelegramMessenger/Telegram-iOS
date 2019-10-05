@@ -12,6 +12,8 @@ static_library(
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
-        "$SDKROOT/System/Library/Frameworks/CloudKit.framework",
+    ],
+    weak_frameworks = [
+        "CloudKit",
     ],
 )

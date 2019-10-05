@@ -111,7 +111,7 @@ else
 		RESULT_IPA_NAME="Telegram-iOS-Hockeyapp-Internal.ipa"
 		RESULT_DSYM_NAME="Telegram-iOS-Hockeyapp-Internal.app.dSYM.zip"
 		FASTLANE_BUILD_CONFIGURATION="internalhockeyapp"
-		APP_TARGET="app_arm64"
+		APP_TARGET="app"
 	elif [ "$1" == "appstore" ]; then
 		BUILD_ENV_SCRIPT="appstore"
 		RESULT_IPA_NAME="Telegram-iOS-AppStoreLLC.ipa"
