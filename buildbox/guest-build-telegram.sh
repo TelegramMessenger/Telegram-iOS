@@ -111,7 +111,7 @@ else
 		RESULT_IPA_NAME="Telegram-iOS-Hockeyapp-Internal.ipa"
 		RESULT_DSYM_NAME="Telegram-iOS-Hockeyapp-Internal.app.dSYM.zip"
 		FASTLANE_BUILD_CONFIGURATION="internalhockeyapp"
-		APP_TARGET="app"
+		APP_TARGET="app_arm64"
 	elif [ "$1" == "appstore" ]; then
 		BUILD_ENV_SCRIPT="appstore"
 		RESULT_IPA_NAME="Telegram-iOS-AppStoreLLC.ipa"
@@ -130,6 +130,7 @@ else
 	export DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS="-t DAV"
 	if [ "$1" == "appstore" ]; then
 		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" xcrun altool --upload-app --type ios --file "$RESULT_IPA_NAME" --username "$FASTLANE_ITC_USERNAME" --password "@env:FASTLANE_PASSWORD"
+		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR" skip_build:1 skip_pilot:1
 	else
 		FASTLANE_PASSWORD="$FASTLANE_PASSWORD" FASTLANE_ITC_TEAM_NAME="$FASTLANE_ITC_TEAM_NAME" fastlane "$FASTLANE_BUILD_CONFIGURATION" build_number:"$BUILD_NUMBER" commit_hash:"$COMMIT_ID" commit_author:"$COMMIT_AUTHOR" skip_build:1
 	fi
