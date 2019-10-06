@@ -152,7 +152,8 @@ private enum StorageUsageEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: StorageUsageControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! StorageUsageControllerArguments
         switch self {
             case let .keepMedia(theme, text, value):
                 return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
@@ -722,7 +723,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
     var dismissImpl: (() -> Void)?
     
     let signal = combineLatest(context.sharedContext.presentationData, cacheSettingsPromise.get(), statsPromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState<StorageUsageEntry>, StorageUsageEntry.ItemGenerationArguments)) in
+        |> map { presentationData, cacheSettings, cacheStats -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let leftNavigationButton = isModal ? ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()
             }) : nil

@@ -148,25 +148,29 @@ public func cachedStickerPack(postbox: Postbox, network: Network, reference: Sti
 }
     
 func cachedStickerPack(transaction: Transaction, reference: StickerPackReference) -> (StickerPackCollectionInfo, [ItemCollectionItem], Bool)? {
-    let namespace = Namespaces.ItemCollection.CloudStickerPacks
+    let namespaces: [Int32] = [Namespaces.ItemCollection.CloudStickerPacks, Namespaces.ItemCollection.CloudMaskPacks]
     switch reference {
         case let .id(id, _):
-            if let currentInfo = transaction.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: namespace, id: id)) as? StickerPackCollectionInfo {
-                let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: namespace, id: id))
-                if !items.isEmpty {
-                    return (currentInfo, items, true)
+            for namespace in namespaces {
+                if let currentInfo = transaction.getItemCollectionInfo(collectionId: ItemCollectionId(namespace: namespace, id: id)) as? StickerPackCollectionInfo {
+                    let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: namespace, id: id))
+                    if !items.isEmpty {
+                        return (currentInfo, items, true)
+                    }
+                }
+                if let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
+                    return (info, cached.items, false)
                 }
             }
-            if let cached = transaction.retrieveItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerPacks, key: CachedStickerPack.cacheKey(ItemCollectionId(namespace: namespace, id: id)))) as? CachedStickerPack, let info = cached.info {
-                return (info, cached.items, false)
-            }
         case let .name(shortName):
-            for info in transaction.getItemCollectionsInfos(namespace: namespace) {
-                if let info = info.1 as? StickerPackCollectionInfo {
-                    if info.shortName == shortName {
-                        let items = transaction.getItemCollectionItems(collectionId: info.id)
-                        if !items.isEmpty {
-                            return (info, items, true)
+            for namespace in namespaces {
+                for info in transaction.getItemCollectionsInfos(namespace: namespace) {
+                    if let info = info.1 as? StickerPackCollectionInfo {
+                        if info.shortName == shortName {
+                            let items = transaction.getItemCollectionItems(collectionId: info.id)
+                            if !items.isEmpty {
+                                return (info, items, true)
+                            }
                         }
                     }
                 }

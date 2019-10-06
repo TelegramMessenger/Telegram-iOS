@@ -90,7 +90,7 @@ td::Result<DecryptedKey> KeyStorage::export_decrypted_key(InputKey input_key) {
       CHECK(new_encrypted_key.decrypt(input_key.local_password.copy()).ok().private_key.as_octet_string() ==
             decrypted_key.private_key.as_octet_string());
       kv_->set(to_file_name(key), new_encrypted_key.encrypted_data);
-      return decrypted_key;
+      return std::move(decrypted_key);
     }
   }
   TRY_RESULT_PREFIX(decrypted_key, encrypted_key.decrypt(std::move(input_key.local_password)),

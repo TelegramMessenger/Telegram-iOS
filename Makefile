@@ -140,6 +140,32 @@ build_wallet_debug_arm64: check_env
 	//submodules/Display:Display#shared,iphoneos-arm64 \
 	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
+build_debug_armv7: check_env
+	$(BUCK) build \
+	//:AppPackage#iphoneos-armv7 \
+	//:Telegram#dwarf-and-dsym,iphoneos-armv7 \
+	//submodules/MtProtoKit:MtProtoKit#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/MtProtoKit:MtProtoKit#shared,iphoneos-armv7 \
+	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-armv7 \
+	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/Postbox:Postbox#shared,iphoneos-armv7 \
+	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/TelegramCore:TelegramCore#shared,iphoneos-armv7 \
+	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/AsyncDisplayKit:AsyncDisplayKit#shared,iphoneos-armv7 \
+	//submodules/Display:Display#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/Display:Display#shared,iphoneos-armv7 \
+	//submodules/TelegramUI:TelegramUI#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/TelegramUI:TelegramUI#shared,iphoneos-armv7 \
+	//:WatchAppExtension#dwarf-and-dsym,watchos-armv7_32,watchos-armv7k \
+	//:ShareExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //:WidgetExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //:NotificationContentExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //:NotificationServiceExtension#dwarf-and-dsym,iphoneos-armv7 \
+    //:IntentsExtension#dwarf-and-dsym,iphoneos-armv7 \
+	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
+
 build: check_env
 	$(BUCK) build \
 	//:AppPackage#iphoneos-arm64,iphoneos-armv7 \
@@ -186,6 +212,26 @@ package_arm64:
 	PACKAGE_BUNDLE_ID="${BUNDLE_ID}" \
 	sh package_app.sh iphoneos-arm64 $(BUCK) $(BUCK_OPTIONS) ${BUCK_RELEASE_OPTIONS}
 
+package_armv7:
+	PACKAGE_DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}" \
+	PACKAGE_CODE_SIGN_IDENTITY="${DISTRIBUTION_CODE_SIGN_IDENTITY}" \
+	PACKAGE_PROVISIONING_PROFILE_APP="${DISTRIBUTION_PROVISIONING_PROFILE_APP}" \
+	PACKAGE_ENTITLEMENTS_APP="${ENTITLEMENTS_APP}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_Share="${DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_SHARE}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_Share="${ENTITLEMENTS_EXTENSION_SHARE}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_Widget="${DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_WIDGET}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_Widget="${ENTITLEMENTS_EXTENSION_WIDGET}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_NotificationService="${DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONSERVICE}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_NotificationService="${ENTITLEMENTS_EXTENSION_NOTIFICATIONSERVICE}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_NotificationContent="${DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONCONTENT}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_NotificationContent="${ENTITLEMENTS_EXTENSION_NOTIFICATIONCONTENT}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_Intents="${DISTRIBUTION_PROVISIONING_PROFILE_EXTENSION_INTENTS}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_Intents="${ENTITLEMENTS_EXTENSION_INTENTS}" \
+	PACKAGE_PROVISIONING_PROFILE_WATCH_APP="${DISTRIBUTION_PROVISIONING_PROFILE_WATCH_APP}" \
+	PACKAGE_PROVISIONING_PROFILE_WATCH_EXTENSION="${DISTRIBUTION_PROVISIONING_PROFILE_WATCH_EXTENSION}" \
+	PACKAGE_BUNDLE_ID="${BUNDLE_ID}" \
+	sh package_app.sh iphoneos-armv7 $(BUCK) $(BUCK_OPTIONS) ${BUCK_RELEASE_OPTIONS}
+
 package_debug_arm64:
 	PACKAGE_DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}" \
 	PACKAGE_CODE_SIGN_IDENTITY="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
@@ -202,11 +248,33 @@ package_debug_arm64:
 	PACKAGE_PROVISIONING_PROFILE_EXTENSION_Intents="${DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_INTENTS}" \
 	PACKAGE_ENTITLEMENTS_EXTENSION_Intents="${ENTITLEMENTS_EXTENSION_INTENTS}" \
 	PACKAGE_PROVISIONING_PROFILE_WATCH_APP="${DEVELOPMENT_PROVISIONING_PROFILE_WATCH_APP}" \
-	PACKAGE_PROVISIONING_PROFILE_WATCH_EXTENSION="${DISTRIBUTION_PROVISIONING_PROFILE_WATCH_EXTENSION}" \
+	PACKAGE_PROVISIONING_PROFILE_WATCH_EXTENSION="${DEVELOPMENT_PROVISIONING_PROFILE_WATCH_EXTENSION}" \
 	PACKAGE_BUNDLE_ID="${BUNDLE_ID}" \
-	ENABLE_GET_TASK_ALLOW=1 \
+	ENABLE_GET_TASK_ALLOW=0 \
 	CODESIGNING_PROFILES_VARIANT="development" \
 	sh package_app.sh iphoneos-arm64 $(BUCK) $(BUCK_OPTIONS) ${BUCK_RELEASE_OPTIONS}
+
+package_debug_armv7:
+	PACKAGE_DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}" \
+	PACKAGE_CODE_SIGN_IDENTITY="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
+	PACKAGE_PROVISIONING_PROFILE_APP="${DEVELOPMENT_PROVISIONING_PROFILE_APP}" \
+	PACKAGE_ENTITLEMENTS_APP="${ENTITLEMENTS_APP}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_Share="${DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_SHARE}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_Share="${ENTITLEMENTS_EXTENSION_SHARE}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_Widget="${DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_WIDGET}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_Widget="${ENTITLEMENTS_EXTENSION_WIDGET}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_NotificationService="${DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONSERVICE}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_NotificationService="${ENTITLEMENTS_EXTENSION_NOTIFICATIONSERVICE}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_NotificationContent="${DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_NOTIFICATIONCONTENT}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_NotificationContent="${ENTITLEMENTS_EXTENSION_NOTIFICATIONCONTENT}" \
+	PACKAGE_PROVISIONING_PROFILE_EXTENSION_Intents="${DEVELOPMENT_PROVISIONING_PROFILE_EXTENSION_INTENTS}" \
+	PACKAGE_ENTITLEMENTS_EXTENSION_Intents="${ENTITLEMENTS_EXTENSION_INTENTS}" \
+	PACKAGE_PROVISIONING_PROFILE_WATCH_APP="${DEVELOPMENT_PROVISIONING_PROFILE_WATCH_APP}" \
+	PACKAGE_PROVISIONING_PROFILE_WATCH_EXTENSION="${DEVELOPMENT_PROVISIONING_PROFILE_WATCH_EXTENSION}" \
+	PACKAGE_BUNDLE_ID="${BUNDLE_ID}" \
+	ENABLE_GET_TASK_ALLOW=0 \
+	CODESIGNING_PROFILES_VARIANT="development" \
+	sh package_app.sh iphoneos-armv7 $(BUCK) $(BUCK_OPTIONS) ${BUCK_RELEASE_OPTIONS}
 
 package:
 	PACKAGE_DEVELOPMENT_TEAM="${DEVELOPMENT_TEAM}" \
@@ -235,6 +303,8 @@ app_arm64: build_arm64 package_arm64
 app_debug_arm64: build_debug_arm64 package_debug_arm64
 
 wallet_debug_arm64: build_wallet_debug_arm64
+
+app_debug_armv7: build_debug_armv7 package_debug_armv7
 
 build_buckdebug: check_env
 	BUCK_DEBUG_MODE=1 $(BUCK) build \
@@ -325,6 +395,10 @@ project: check_env kill_xcode
 wallet_project: check_env kill_xcode
 	$(BUCK) project //Wallet:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Wallet/WalletWorkspace.xcworkspace
+
+project_opt: check_env kill_xcode
+	$(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_RELEASE_OPTIONS}
+	open Telegram_Buck.xcworkspace
 
 project_buckdebug: check_env kill_xcode
 	BUCK_DEBUG_MODE=1 $(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}

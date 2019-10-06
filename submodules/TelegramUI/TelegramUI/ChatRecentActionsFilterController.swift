@@ -204,7 +204,8 @@ private enum ChatRecentActionsFilterEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChatRecentActionsFilterControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChatRecentActionsFilterControllerArguments
         switch self {
             case let .actionsTitle(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -454,7 +455,7 @@ public func channelRecentActionsFilterController(context: AccountContext, peer: 
     
     let signal = combineLatest(presentationDataSignal, statePromise.get(), adminsPromise.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
-    |> map { presentationData, state, admins -> (ItemListControllerState, (ItemListNodeState<ChatRecentActionsFilterEntry>, ChatRecentActionsFilterEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, admins -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })

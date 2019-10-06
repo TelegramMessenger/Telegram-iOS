@@ -74,7 +74,8 @@ private enum ConvertToSupergroupEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ConvertToSupergroupArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ConvertToSupergroupArguments
         switch self {
             case let .info(theme, text):
                 return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
@@ -155,7 +156,7 @@ public func convertToSupergroupController(context: AccountContext, peerId: PeerI
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
         |> deliverOnMainQueue
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<ConvertToSupergroupEntry>, ConvertToSupergroupEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             
             var rightNavigationButton: ItemListNavigationButton?
             if state.isConverting {

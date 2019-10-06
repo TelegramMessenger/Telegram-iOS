@@ -117,6 +117,10 @@ class TonlibClient : public td::actor::Actor {
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::getLogTags& request);
   static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::addLogMessage& request);
 
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::encrypt& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::decrypt& request);
+  static object_ptr<tonlib_api::Object> do_static_request(const tonlib_api::kdf& request);
+
   template <class T, class P>
   td::Status do_request(const T& request, P&& promise) {
     return td::Status::Error(400, "Function is unsupported");

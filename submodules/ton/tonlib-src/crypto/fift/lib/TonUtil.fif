@@ -33,7 +33,7 @@ library TonUtil // TON Blockchain Fift Library
 } : parse-smc-addr
 
 // ( wc addr -- )  Show address in <workchain>:<account> form
-{ swap ._ .":" x. } : .addr
+{ swap ._ .":" 64 0x. } : .addr
 // ( wc addr flags -- )  Show address in base64url form
 { smca>$ type } : .Addr
 // ( wc addr fname -- )  Save address to file in 36-byte format

@@ -17,10 +17,13 @@ private func generateClearIcon(color: UIColor) -> UIImage? {
 public func legacyLocationPickerController(context: AccountContext, selfPeer: Peer, peer: Peer, sendLocation: @escaping (CLLocationCoordinate2D, MapVenue?, String?) -> Void, sendLiveLocation: @escaping (CLLocationCoordinate2D, Int32) -> Void, theme: PresentationTheme, customLocationPicker: Bool = false, hasLiveLocation: Bool = true, presentationCompleted: @escaping () -> Void = {}) -> ViewController {
     let legacyController = LegacyController(presentation: .navigation, theme: theme)
     legacyController.navigationPresentation = .modal
-    legacyController.presentationCompleted = {
-        presentationCompleted()
-    }
     let controller = TGLocationPickerController(context: legacyController.context, intent: customLocationPicker ? TGLocationPickerControllerCustomLocationIntent : TGLocationPickerControllerDefaultIntent)!
+    legacyController.presentationCompleted = { [weak controller] in
+        presentationCompleted()
+        
+        controller?.view.disablesInteractiveModalDismiss = true
+        controller?.view.disablesInteractiveTransitionGestureRecognizer = true
+    }
     controller.peer = makeLegacyPeer(selfPeer)
     controller.receivingPeer = makeLegacyPeer(peer)
     controller.pallete = legacyLocationPalette(from: theme)

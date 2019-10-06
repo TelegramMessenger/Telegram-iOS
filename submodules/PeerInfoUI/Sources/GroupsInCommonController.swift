@@ -85,7 +85,8 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: GroupsInCommonControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! GroupsInCommonControllerArguments
         switch self {
         case let .peerItem(_, theme, strings, dateTimeFormat, nameDisplayOrder, peer):
             return ItemListPeerItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, account: arguments.account, peer: peer, presence: nil, text: .none, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
@@ -157,7 +158,7 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peersPromise.get())
         |> deliverOnMainQueue
-        |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState<GroupsInCommonEntry>, GroupsInCommonEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, peers -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var emptyStateItem: ItemListControllerEmptyStateItem?
             if peers == nil {
                 emptyStateItem = ItemListLoadingIndicatorEmptyStateItem(theme: presentationData.theme)

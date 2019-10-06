@@ -187,7 +187,8 @@ private enum ThemeAutoNightSettingsControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ThemeAutoNightSettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ThemeAutoNightSettingsControllerArguments
         switch self {
             case let .modeDisabled(theme, title, value):
                 return ItemListCheckboxItem(theme: theme, title: title, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
@@ -533,7 +534,7 @@ public func themeAutoNightSettingsController(context: AccountContext) -> ViewCon
     cloudThemes.set(updatedCloudThemes)
     
     let signal = combineLatest(context.sharedContext.presentationData |> deliverOnMainQueue, sharedData |> deliverOnMainQueue, cloudThemes.get() |> deliverOnMainQueue, stagingSettingsPromise.get() |> deliverOnMainQueue)
-    |> map { presentationData, sharedData, cloudThemes, stagingSettings -> (ItemListControllerState, (ItemListNodeState<ThemeAutoNightSettingsControllerEntry>, ThemeAutoNightSettingsControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData, sharedData, cloudThemes, stagingSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let settings = (sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings) ?? PresentationThemeSettings.defaultSettings
         
         let defaultThemes: [PresentationThemeReference] = [.builtin(.night), .builtin(.nightAccent)]

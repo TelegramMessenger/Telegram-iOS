@@ -11,6 +11,7 @@ def apple_lib(
         exported_deps = [],
         additional_linker_flags = None,
         frameworks = [],
+        weak_frameworks = [],
         swift_version = None,
         modular = True,
         compiler_flags = None,
@@ -22,6 +23,8 @@ def apple_lib(
         framework = False):
     swift_version = swift_version or native.read_config('swift', 'version')
     swift_compiler_flags = swift_compiler_flags or []
+
+    resolved_frameworks = frameworks
 
     if native.read_config("xcode", "beta") == "True":
         warning_as_error = False
@@ -59,8 +62,12 @@ def apple_lib(
 
         if native.read_config("custom", "mode") == "project":
             resolved_linker_flags = linker_flags + additional_linker_flags + ["-Wl,-install_name,@rpath/lib%s.dylib" % (name)]
+            resolved_frameworks = resolved_frameworks + ["$SDKROOT/System/Library/Frameworks/%s.framework" % x for x in weak_frameworks]
         else:
             resolved_linker_flags = linker_flags + additional_linker_flags + ["-Wl,-install_name,@rpath/%s.framework/%s" % (name, name)]
+            for framework in weak_frameworks:
+                resolved_linker_flags = resolved_linker_flags + ["-Wl,-weak_framework,%s" % framework]
+
         native.apple_library(
             name = name + "",
             srcs = srcs,
@@ -72,7 +79,7 @@ def apple_lib(
             deps = deps,
             exported_deps = exported_deps,
             extra_xcode_files = extra_xcode_files,
-            frameworks = frameworks,
+            frameworks = resolved_frameworks,
             visibility = visibility,
             swift_version = swift_version,
             configs = dynamic_library_configs(),
@@ -95,6 +102,13 @@ def apple_lib(
             linker_flags = []
 
         resolved_exported_linker_flags = linker_flags + additional_linker_flags
+
+        if native.read_config("custom", "mode") == "project":
+            resolved_frameworks = resolved_frameworks + ["$SDKROOT/System/Library/Frameworks/%s.framework" % x for x in weak_frameworks]
+        else:
+            for framework in weak_frameworks:
+                resolved_exported_linker_flags = resolved_exported_linker_flags + ["-Wl,-weak_framework,%s" % framework]
+
         native.apple_library(
             name = name,
             srcs = srcs,
@@ -104,7 +118,7 @@ def apple_lib(
             exported_deps = exported_deps,
             exported_linker_flags = resolved_exported_linker_flags,
             extra_xcode_files = extra_xcode_files,
-            frameworks = frameworks,
+            frameworks = resolved_frameworks,
             visibility = visibility,
             swift_version = swift_version,
             configs = library_configs(),
@@ -126,6 +140,7 @@ def static_library(
         deps = [],
         additional_linker_flags = None,
         frameworks = [],
+        weak_frameworks = [],
         info_plist = None,
         info_plist_substitutions = {},
         modular = True,
@@ -148,6 +163,7 @@ def static_library(
         deps = deps,
         additional_linker_flags = additional_linker_flags,
         frameworks = frameworks,
+        weak_frameworks = weak_frameworks,
         warning_as_error = warning_as_error,
         suppress_warnings = suppress_warnings
     )
@@ -164,6 +180,7 @@ def framework(
         exported_deps = [],
         additional_linker_flags = None,
         frameworks = [],
+        weak_frameworks = [],
         info_plist = None,
         info_plist_substitutions = {},
         modular = True,
@@ -187,6 +204,7 @@ def framework(
         exported_deps = exported_deps,
         additional_linker_flags = additional_linker_flags,
         frameworks = frameworks,
+        weak_frameworks = weak_frameworks,
         warning_as_error = warning_as_error,
         suppress_warnings = suppress_warnings,
         framework = True

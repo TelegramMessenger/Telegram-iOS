@@ -83,4 +83,11 @@ final class NavigationOverlayContainer: ASDisplayNode {
         self.controller.setIgnoreAppearanceMethodInvocations(false)
         self.controller.viewDidAppear(false)
     }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let result = self.controller.displayNode.hitTest(point, with: event) {
+            return result
+        }
+        return nil
+    }
 }

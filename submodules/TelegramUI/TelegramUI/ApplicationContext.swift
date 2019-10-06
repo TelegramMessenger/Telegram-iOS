@@ -402,11 +402,14 @@ final class AuthorizedApplicationContext {
                             }
                         })
                         if !isMuted {
-                            if inAppNotificationSettings.playSounds {
-                                serviceSoundManager.playIncomingMessageSound()
-                            }
-                            if inAppNotificationSettings.vibrate {
-                                serviceSoundManager.playVibrationSound()
+                            if firstMessage.id.peerId == context.account.peerId, !firstMessage.flags.contains(.WasScheduled) {
+                            } else {
+                                if inAppNotificationSettings.playSounds {
+                                    serviceSoundManager.playIncomingMessageSound()
+                                }
+                                if inAppNotificationSettings.vibrate {
+                                    serviceSoundManager.playVibrationSound()
+                                }
                             }
                         }
                     }

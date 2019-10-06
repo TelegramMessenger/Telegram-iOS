@@ -108,6 +108,8 @@ typedef enum {
 
 @property (nonatomic, readonly) UIUserInterfaceSizeClass currentSizeClass;
 
+@property (nonatomic) CGSize intrinsicSize;
+
 @property (nonatomic, copy) NSArray<id<UIPreviewActionItem>> *(^externalPreviewActionItems)(void);
 @property (nonatomic, copy) void (^customRemoveFromParentViewController)(void);
 @property (nonatomic, copy) void (^customDismissSelf)(void);

@@ -58,7 +58,8 @@ private enum SaveIncomingMediaEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: SaveIncomingMediaControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! SaveIncomingMediaControllerArguments
         switch self {
             case let .header(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -114,7 +115,7 @@ func saveIncomingMediaController(context: AccountContext) -> ViewController {
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings]))
     |> deliverOnMainQueue
-    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<SaveIncomingMediaEntry>, SaveIncomingMediaEntry.ItemGenerationArguments)) in
+    |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let automaticMediaDownloadSettings: MediaAutoDownloadSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
             automaticMediaDownloadSettings = value

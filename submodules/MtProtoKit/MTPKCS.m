@@ -37,6 +37,7 @@ static NSData * _Nullable readPublicKey(EVP_PKEY *subject) {
 }
 
 + (MTPKCS * _Nullable)parse:(const unsigned char *)buffer size:(int)size {
+#if TARGET_OS_IOS
     MTPKCS * _Nullable result = nil;
     PKCS7 *pkcs7 = NULL;
     STACK_OF(X509) *signers = NULL;
@@ -85,6 +86,10 @@ static NSData * _Nullable readPublicKey(EVP_PKEY *subject) {
     result = [[MTPKCS alloc] initWithIssuerName:issuerNameString subjectName:subjectNameString data:data];
     
     return result;
+#else
+    return nil;
+#endif
+   
 }
 
 @end

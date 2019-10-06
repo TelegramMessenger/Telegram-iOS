@@ -81,7 +81,8 @@ private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ConfirmPhoneNumberCodeControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ConfirmPhoneNumberCodeControllerArguments
         switch self {
             case let .codeEntry(theme, strings, title, text):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ConfirmPhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
@@ -157,10 +158,10 @@ protocol ConfirmPhoneNumberCodeController: class {
     func applyCode(_ code: Int)
 }
 
-private final class ConfirmPhoneNumberCodeControllerImpl: ItemListController<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeController {
+private final class ConfirmPhoneNumberCodeControllerImpl: ItemListController, ConfirmPhoneNumberCodeController {
     private let applyCodeImpl: (Int) -> Void
     
-    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
+    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState, Any)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
         self.applyCodeImpl = applyCodeImpl
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -289,7 +290,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
-    |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ConfirmPhoneNumberCodeEntry>, ConfirmPhoneNumberCodeEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })

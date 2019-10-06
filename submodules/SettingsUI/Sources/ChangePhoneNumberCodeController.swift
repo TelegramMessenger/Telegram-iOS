@@ -82,7 +82,8 @@ private enum ChangePhoneNumberCodeEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ChangePhoneNumberCodeControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChangePhoneNumberCodeControllerArguments
         switch self {
             case let .codeEntry(theme, strings, title, text):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: title, textColor: .black), text: text, placeholder: "", type: .number, spacing: 10.0, tag: ChangePhoneNumberCodeTag.input, sectionId: self.section, textUpdated: { updatedText in
@@ -172,10 +173,10 @@ public protocol ChangePhoneNumberCodeController: class {
     func applyCode(_ code: Int)
 }
 
-private final class ChangePhoneNumberCodeControllerImpl: ItemListController<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeController {
+private final class ChangePhoneNumberCodeControllerImpl: ItemListController, ChangePhoneNumberCodeController {
     private let applyCodeImpl: (Int) -> Void
     
-    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
+    init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState, Any)), NoError>, applyCodeImpl: @escaping (Int) -> Void) {
         self.applyCodeImpl = applyCodeImpl
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -294,7 +295,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, currentDataPromise.get() |> deliverOnMainQueue, timeout.get() |> deliverOnMainQueue)
         |> deliverOnMainQueue
-        |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState<ChangePhoneNumberCodeEntry>, ChangePhoneNumberCodeEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, data, timeout -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var rightNavigationButton: ItemListNavigationButton?
             if state.checking {
                 rightNavigationButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})

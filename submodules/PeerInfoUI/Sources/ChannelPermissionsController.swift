@@ -213,7 +213,8 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelPermissionsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelPermissionsControllerArguments
         switch self {
             case let .permissionsHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -756,7 +757,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), viewAndParticipants)
     |> deliverOnMainQueue
-    |> map { presentationData, state, viewAndParticipants -> (ItemListControllerState, (ItemListNodeState<ChannelPermissionsEntry>, ChannelPermissionsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, viewAndParticipants -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let (view, participants) = viewAndParticipants
         
         var rightNavigationButton: ItemListNavigationButton?

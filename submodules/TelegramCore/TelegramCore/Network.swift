@@ -417,8 +417,9 @@ public struct NetworkInitializationArguments {
     }
 }
 
+#if os(iOS)
 private let cloudDataContext = makeCloudDataContext()
-
+#endif
 func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
@@ -484,7 +485,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             
             context.keychain = keychain
             var wrappedAdditionalSource: MTSignal?
-            
+            #if os(iOS)
             if #available(iOS 10.0, *) {
                 if let cloudDataContext = cloudDataContext {
                     wrappedAdditionalSource = MTSignal(generator: { subscriber in
@@ -499,7 +500,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
                     })
                 }
             }
-                
+            #endif
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber))
             
             #if DEBUG
@@ -1048,7 +1049,7 @@ class Keychain: NSObject, MTKeychain {
         
     }
 }
-
+#if os(iOS)
 func makeCloudDataContext() -> CloudDataContext? {
     if #available(iOS 10.0, *) {
         return CloudDataContextImpl()
@@ -1056,3 +1057,4 @@ func makeCloudDataContext() -> CloudDataContext? {
         return nil
     }
 }
+#endif

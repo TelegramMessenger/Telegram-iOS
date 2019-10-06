@@ -150,7 +150,8 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: WalletSendScreenArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! WalletSendScreenArguments
         switch self {
         case let .addressHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -270,7 +271,7 @@ protocol WalletSendScreen {
     
 }
 
-private final class WalletSendScreenImpl: ItemListController<WalletSendScreenEntry>, WalletSendScreen {
+private final class WalletSendScreenImpl: ItemListController, WalletSendScreen {
     
 }
 
@@ -468,7 +469,7 @@ public func walletSendScreen(context: AccountContext, tonContext: TonContext, ra
     }
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, walletState, statePromise.get())
-    |> map { presentationData, walletState, state -> (ItemListControllerState, (ItemListNodeState<WalletSendScreenEntry>, WalletSendScreenEntry.ItemGenerationArguments)) in
+    |> map { presentationData, walletState, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })

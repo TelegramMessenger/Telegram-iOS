@@ -132,7 +132,8 @@ private enum WalletReceiveScreenEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: WalletReceiveScreenArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! WalletReceiveScreenArguments
         switch self {
         case let .addressCode(theme, text):
             return WalletQrCodeItem(theme: theme, address: text, sectionId: self.section, style: .blocks, action: {
@@ -184,7 +185,7 @@ protocol WalletReceiveScreen {
     
 }
 
-private final class WalletReceiveScreenImpl: ItemListController<WalletReceiveScreenEntry>, WalletReceiveScreen {
+private final class WalletReceiveScreenImpl: ItemListController, WalletReceiveScreen {
     
 }
 
@@ -220,7 +221,7 @@ func walletReceiveScreen(context: AccountContext, address: String) -> ViewContro
     
     let signal = context.sharedContext.presentationData
     |> deliverOnMainQueue
-    |> map { presentationData -> (ItemListControllerState, (ItemListNodeState<WalletReceiveScreenEntry>, WalletReceiveScreenEntry.ItemGenerationArguments)) in
+    |> map { presentationData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
             dismissImpl?()
         })

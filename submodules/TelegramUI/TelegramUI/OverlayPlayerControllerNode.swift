@@ -352,8 +352,10 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
                 if let gestureRecognizers = view.gestureRecognizers, view != self.view {
                     for gestureRecognizer in gestureRecognizers {
                         if let panGestureRecognizer = gestureRecognizer as? UIPanGestureRecognizer, gestureRecognizer.isEnabled {
-                            panGestureRecognizer.isEnabled = false
-                            panGestureRecognizer.isEnabled = true
+                            if panGestureRecognizer.state != .began {
+                                panGestureRecognizer.isEnabled = false
+                                panGestureRecognizer.isEnabled = true
+                            }
                         }
                     }
                 }

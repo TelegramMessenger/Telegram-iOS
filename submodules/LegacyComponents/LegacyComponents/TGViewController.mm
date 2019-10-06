@@ -732,7 +732,7 @@ static id<LegacyComponentsContext> _defaultContext = nil;
 - (UIEdgeInsets)controllerInsetForInterfaceOrientation:(UIInterfaceOrientation)orientation
 {
     UIEdgeInsets safeAreaInset = _context.safeAreaInset;
-    CGFloat statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : [TGHacks statusBarHeightForOrientation:orientation];
+    CGFloat statusBarHeight = safeAreaInset.top > FLT_EPSILON ? safeAreaInset.top : 0.0;
     CGFloat keyboardHeight = [self _currentKeyboardHeight:orientation];
     
     CGFloat navigationBarHeight = ([self navigationBarShouldBeHidden] || [self shouldIgnoreNavigationBar]) ? 0 : [self navigationBarHeightForInterfaceOrientation:orientation];

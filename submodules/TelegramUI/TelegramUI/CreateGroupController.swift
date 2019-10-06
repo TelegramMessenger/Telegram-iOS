@@ -193,7 +193,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: CreateGroupArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! CreateGroupArguments
         switch self {
             case let .groupInfo(theme, strings, dateTimeFormat, peer, state, avatar):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: nil, cachedData: nil, state: state, sectionId: ItemListSectionId(self.section), style: .blocks(withTopInset: false, withExtendedBottomInset: false), editingNameUpdated: { editingName in
@@ -584,7 +585,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(addressPromise.get()))
-    |> map { presentationData, state, view, address -> (ItemListControllerState, (ItemListNodeState<CreateGroupEntry>, CreateGroupEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, address -> (ItemListControllerState, (ItemListNodeState, Any)) in
         
         let rightNavigationButton: ItemListNavigationButton
         if state.creating {

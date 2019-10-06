@@ -430,6 +430,34 @@ TEST(Tonlib, ParseAddres) {
   ASSERT_EQ("Uf9Tj6fMJP-OqhAdhKXxq36DL-HYSzCc3-9O6UNzqsgPfdyS", addr_str2->account_address_);
 }
 
+TEST(Tonlib, EncryptionApi) {
+  using tonlib_api::make_object;
+  Client client;
+
+  // init
+  sync_send(client, make_object<tonlib_api::init>(
+                        make_object<tonlib_api::options>(nullptr, make_object<tonlib_api::keyStoreTypeDirectory>("."))))
+      .ensure();
+
+  std::string password = "hello world";
+  std::string data = "very secret data";
+  auto key = std::move(
+      sync_send(client, make_object<tonlib_api::kdf>(td::SecureString(password), td::SecureString("salt"), 100000))
+          .move_as_ok()
+          ->bytes_);
+  auto encrypted = std::move(
+      sync_send(client, make_object<tonlib_api::encrypt>(td::SecureString(data), key.copy())).move_as_ok()->bytes_);
+  auto decrypted =
+      std::move(sync_send(client, make_object<tonlib_api::decrypt>(encrypted.copy(), key.copy())).move_as_ok()->bytes_);
+  ASSERT_EQ(data, decrypted);
+
+  auto bad_key = std::move(sync_send(client, make_object<tonlib_api::kdf>(td::SecureString(password + "BAD"),
+                                                                          td::SecureString("salt"), 100000))
+                               .move_as_ok()
+                               ->bytes_);
+  sync_send(client, make_object<tonlib_api::decrypt>(encrypted.copy(), bad_key.copy())).ensure_error();
+}
+
 TEST(Tonlib, KeysApi) {
   using tonlib_api::make_object;
   Client client;
