@@ -408,7 +408,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                     enableScrolling = false
                     break
                 } else {
-                    if scrollView.isDecelerating && scrollView.contentOffset.y < scrollView.contentInset.top {
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
                         return self.scrollNode.view
                     }
                 }
