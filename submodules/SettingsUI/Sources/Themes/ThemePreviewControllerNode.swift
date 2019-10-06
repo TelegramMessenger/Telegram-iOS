@@ -137,8 +137,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.pageControlNode.pagesCount = 2
         
         self.addSubnode(self.scrollNode)
-        self.chatListBackgroundNode.addSubnode(self.maskNode)
         if !isPreview {
+            self.chatListBackgroundNode.addSubnode(self.maskNode)
             self.addSubnode(self.pageControlBackgroundNode)
             self.addSubnode(self.pageControlNode)
             self.addSubnode(self.toolbarNode)
@@ -398,7 +398,11 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 })
                 itemNode!.isUserInteractionEnabled = false
                 chatNodes.append(itemNode!)
-                self.chatListBackgroundNode.insertSubnode(itemNode!, belowSubnode: self.maskNode)
+                if self.maskNode.supernode != nil {
+                    self.chatListBackgroundNode.insertSubnode(itemNode!, belowSubnode: self.maskNode)
+                } else {
+                    self.chatListBackgroundNode.addSubnode(itemNode!)
+                }
             }
             self.chatNodes = chatNodes
         }
