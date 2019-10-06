@@ -91,13 +91,24 @@ private enum ExternalShareItemsState {
 private struct CollectableExternalShareItem {
     let url: String?
     let text: String
-    let author: String?
+    let author: PeerId?
     let timestamp: Int32?
     let mediaReference: AnyMediaReference?
 }
 
 private func collectExternalShareItems(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, postbox: Postbox, collectableItems: [CollectableExternalShareItem], takeOne: Bool = true) -> Signal<ExternalShareItemsState, NoError> {
     var signals: [Signal<ExternalShareItemStatus, NoError>] = []
+    let authorsPeerIds = collectableItems.compactMap { $0.author }
+    let authorsPromise = Promise<[PeerId: String]>()
+    authorsPromise.set(postbox.transaction { transaction in
+        var result: [PeerId: String] = [:]
+        for peerId in authorsPeerIds {
+            if let title = transaction.getPeer(peerId)?.displayTitle {
+                result[peerId] = title
+            }
+        }
+        return result
+    })
     for item in collectableItems {
         if let mediaReference = item.mediaReference, let file = mediaReference.media as? TelegramMediaFile {
             signals.append(collectExternalShareResource(postbox: postbox, resourceReference: mediaReference.resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes))
@@ -174,9 +185,17 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
             }
             
             if let vCard = contactData.serializedVCard() {
-                let path = NSTemporaryDirectory() + "\(arc4random64()).lz4v"
-                let fullName = [contact.firstName, contact.lastName].filter { $0.isEmpty }.joined(separator: " ")
-                signals.append(.single(.done(.file(URL(fileURLWithPath: path), "\(fullName).vcf", "text/x-vcard"))))
+                let fullName = [contact.firstName, contact.lastName].filter { !$0.isEmpty }.joined(separator: " ")
+                let fileName = "\(fullName).vcf"
+                let randomDirectory = UUID()
+                let safeFileName = fileName.replacingOccurrences(of: "/", with: "_")
+                let fileDirectory = NSTemporaryDirectory() + "\(randomDirectory)"
+                let _ = try? FileManager.default.createDirectory(at: URL(fileURLWithPath: fileDirectory), withIntermediateDirectories: true, attributes: nil)
+                let filePath = fileDirectory + "/\(safeFileName)"
+                let vCardData = vCard.data(using: .utf8)
+                if let _ = try? vCardData?.write(to: URL(fileURLWithPath: filePath)) {
+                    signals.append(.single(.done(.file(URL(fileURLWithPath: filePath), fileName, "text/x-vcard"))))
+                }
             }
         }
         if let url = item.url, let parsedUrl = URL(string: url) {
@@ -186,18 +205,31 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
         }
         if !item.text.isEmpty {
             if signals.isEmpty || !takeOne {
-                var text: String = item.text
-                var metadata: [String] = []
-                if let author = item.author {
-                    metadata.append(author)
+                let author: Signal<String?, NoError>
+                if let peerId = item.author {
+                    author = authorsPromise.get()
+                    |> take(1)
+                    |> map { authors in
+                        return authors[peerId]
+                    }
+                } else {
+                    author = .single(nil)
                 }
-                if let timestamp = item.timestamp {
-                    metadata.append("[\(stringForFullDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat))]")
-                }
-                if !metadata.isEmpty {
-                    text = metadata.joined(separator: ", ") + "\n" + text + "\n"
-                }
-                signals.append(.single(.done(.text(text))))
+                signals.append(author
+                |> map { author in
+                    var text: String = item.text
+                    var metadata: [String] = []
+                    if let author = author {
+                       metadata.append(author)
+                    }
+                    if let timestamp = item.timestamp {
+                        metadata.append("[\(stringForFullDate(timestamp: timestamp, strings: strings, dateTimeFormat: dateTimeFormat))]")
+                    }
+                    if !metadata.isEmpty {
+                        text = metadata.joined(separator: ", ") + "\n" + text + "\n"
+                    }
+                    return .done(.text(text))
+                })
             }
         }
     }
@@ -586,13 +618,16 @@ public final class ShareController: ViewController {
                                     url = "https://t.me/\(addressName)/\(message.id.id)"
                                 }
                             }
-                            var peerId: PeerId?
-                            if let authorPeerId = message.author?.id {
-                                peerId = authorPeerId
-                            } else if let mainPeer = messageMainPeer(message) {
-                                peerId = mainPeer.id
+                            let accountPeerId = strongSelf.currentAccount.peerId
+                            let authorPeerId: PeerId?
+                            if let author = message.effectiveAuthor {
+                                authorPeerId = author.id
+                            } else if message.effectivelyIncoming(accountPeerId) {
+                                authorPeerId = message.id.peerId
+                            } else {
+                                authorPeerId = accountPeerId
                             }
-                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, author: nil, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
+                            collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, author: authorPeerId, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
                         }
                     case .fromExternal:
                         break
