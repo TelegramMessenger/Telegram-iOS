@@ -88,7 +88,7 @@ private enum InstalledStickerPacksEntryId: Hashable {
     }
 }
 
-private enum InstalledStickerPacksEntry: ItemListNodeEntry {
+private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
     case suggestOptions(PresentationTheme, String, String)
     case trending(PresentationTheme, String, Int32)
     case archived(PresentationTheme, String, Int32, [ArchivedStickerPackItem]?)
