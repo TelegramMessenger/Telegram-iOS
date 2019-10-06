@@ -92,6 +92,8 @@ open class TooltipController: ViewController, StandalonePresentableController {
         self.dismissImmediatelyOnLayoutUpdate = dismissImmediatelyOnLayoutUpdate
         
         super.init(navigationBarPresentationData: nil)
+        
+        self.statusBar.statusBarStyle = .Ignore
     }
     
     required public init(coder aDecoder: NSCoder) {
