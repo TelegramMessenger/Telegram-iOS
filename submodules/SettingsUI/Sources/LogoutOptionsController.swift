@@ -70,7 +70,8 @@ private enum LogoutOptionsEntry: ItemListNodeEntry, Equatable {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: LogoutOptionsItemArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! LogoutOptionsItemArguments
         switch self {
             case let .alternativeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
@@ -225,7 +226,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         context.sharedContext.accountManager.accessChallengeData(),
         hasWallets
     )
-    |> map { presentationData, accessChallengeData, hasWallets -> (ItemListControllerState, (ItemListNodeState<LogoutOptionsEntry>, LogoutOptionsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, accessChallengeData, hasWallets -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()
         })

@@ -206,7 +206,8 @@ private enum GroupStickerPackEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: GroupStickerPackSetupControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! GroupStickerPackSetupControllerArguments
         switch self {
             case let .search(theme, strings, prefix, placeholder, value):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: placeholder, type: .regular(capitalization: false, autocorrection: false), spacing: 0.0, clearType: .always, tag: nil, sectionId: self.section, textUpdated: { value in
@@ -409,7 +410,7 @@ public func groupStickerPackSetupController(context: AccountContext, peerId: Pee
     let previousHadData = Atomic<Bool>(value: false)
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, initialData.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, searchState.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
-    |> map { presentationData, state, initialData, view, searchState, sharedData -> (ItemListControllerState, (ItemListNodeState<GroupStickerPackEntry>, GroupStickerPackEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, initialData, view, searchState, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var stickerSettings = StickerSettings.defaultSettings
         if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
             stickerSettings = value

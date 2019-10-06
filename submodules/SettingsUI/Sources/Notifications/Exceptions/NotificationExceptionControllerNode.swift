@@ -508,7 +508,8 @@ private enum NotificationExceptionEntry : ItemListNodeEntry {
     case addException(PresentationTheme, PresentationStrings, NotificationExceptionMode.Mode, Bool)
     case removeAll(PresentationTheme, PresentationStrings)
     
-    func item(_ arguments: NotificationExceptionArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! NotificationExceptionArguments
         switch self {
             case let .search(theme, strings):
                 return NotificationSearchItem(theme: theme, placeholder: strings.Common_Search, activate: {

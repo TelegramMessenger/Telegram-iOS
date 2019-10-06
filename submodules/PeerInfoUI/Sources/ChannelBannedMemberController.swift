@@ -218,7 +218,8 @@ private enum ChannelBannedMemberEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelBannedMemberControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelBannedMemberControllerArguments
         switch self {
             case let .info(theme, strings, dateTimeFormat, peer, presence):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .generic, peer: peer, presence: presence, cachedData: nil, state: ItemListAvatarAndNameInfoItemState(), sectionId: self.section, style: .blocks(withTopInset: true, withExtendedBottomInset: false), editingNameUpdated: { _ in
@@ -512,7 +513,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), combinedView)
     |> deliverOnMainQueue
-    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<ChannelBannedMemberEntry>, ChannelBannedMemberEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let channelView = combinedView.views[.peer(peerId: peerId, components: .all)] as! PeerView
         let memberView = combinedView.views[.peer(peerId: memberId, components: .all)] as! PeerView
         var initialBannedByPeer: Peer?

@@ -125,7 +125,8 @@ private enum ChannelDiscussionGroupSetupControllerEntry: ItemListNodeEntry {
         return lhs.sortIndex < rhs.sortIndex
     }
     
-    func item(_ arguments: ChannelDiscussionGroupSetupControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelDiscussionGroupSetupControllerArguments
         switch self {
             case let .header(theme, strings, title, isGroup, label):
                 return ChannelDiscussionGroupSetupHeaderItem(theme: theme, strings: strings, title: title, isGroup: isGroup, label: label, sectionId: self.section)
@@ -525,7 +526,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView, groupPeers.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, groups -> (ItemListControllerState, (ItemListNodeState<ChannelDiscussionGroupSetupControllerEntry>, ChannelDiscussionGroupSetupControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, groups -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let title: String
         if let peer = view.peers[view.peerId] as? TelegramChannel, case .broadcast = peer.info {
             title = presentationData.strings.Channel_DiscussionGroup

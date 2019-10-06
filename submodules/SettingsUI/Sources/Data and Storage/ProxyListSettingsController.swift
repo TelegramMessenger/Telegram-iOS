@@ -200,7 +200,8 @@ private enum ProxySettingsControllerEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ProxySettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ProxySettingsControllerArguments
         switch self {
             case let .enabled(theme, text, value, createsNew):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: !createsNew, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
@@ -404,7 +405,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
     })
     
     let signal = combineLatest(updatedPresentationData, statePromise.get(), proxySettings.get(), statusesContext.statuses(), network.connectionStatus)
-    |> map { themeAndStrings, state, proxySettings, statuses, connectionStatus -> (ItemListControllerState, (ItemListNodeState<ProxySettingsControllerEntry>, ProxySettingsControllerEntry.ItemGenerationArguments)) in
+    |> map { themeAndStrings, state, proxySettings, statuses, connectionStatus -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var leftNavigationButton: ItemListNavigationButton?
         if case .modal = mode {
             leftNavigationButton = ItemListNavigationButton(content: .text(themeAndStrings.strings.Common_Cancel), style: .regular, enabled: true, action: {
@@ -450,7 +451,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
     dismissImpl = { [weak controller] in
         controller?.dismiss()
     }
-    controller.reorderEntry = { fromIndex, toIndex, entries in
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [ProxySettingsControllerEntry]) -> Void in
         let fromEntry = entries[fromIndex]
         guard case let .server(_, _, _, fromServer, _, _, _, _) = fromEntry else {
             return
@@ -501,7 +502,7 @@ public func proxySettingsController(accountManager: AccountManager, context: Acc
             }
             return current
         }).start()
-    }
+    })
     
     shareProxyListImpl = { [weak controller] in
         guard let context = context, let strongController = controller else {

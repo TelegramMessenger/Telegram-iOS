@@ -174,7 +174,8 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: WalletCreateInvoiceScreenArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! WalletCreateInvoiceScreenArguments
         switch self {
         case let .amountHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -291,7 +292,7 @@ protocol WalletCreateInvoiceScreen {
     
 }
 
-private final class WalletCreateInvoiceScreenImpl: ItemListController<WalletCreateInvoiceScreenEntry>, WalletCreateInvoiceScreen {
+private final class WalletCreateInvoiceScreenImpl: ItemListController, WalletCreateInvoiceScreen {
     
 }
 
@@ -360,7 +361,7 @@ func walletCreateInvoiceScreen(context: AccountContext, address: String) -> View
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<WalletCreateInvoiceScreenEntry>, WalletCreateInvoiceScreenEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var ensureVisibleItemTag: ItemListItemTag?
             if let focusItemTag = state.focusItemTag {
                 ensureVisibleItemTag = focusItemTag

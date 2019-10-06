@@ -198,7 +198,8 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelAdminsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelAdminsControllerArguments
         switch self {
             case let .recentActions(theme, text):
                 return ItemListDisclosureItem(theme: theme, title: text, label: "", sectionId: self.section, style: .blocks, action: {
@@ -681,7 +682,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
     
     let signal = combineLatest(queue: .mainQueue(), presentationDataSignal, statePromise.get(), peerView.get(), adminsPromise.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, admins -> (ItemListControllerState, (ItemListNodeState<ChannelAdminsEntry>, ChannelAdminsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, admins -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let admins = admins, admins.count > 1 {

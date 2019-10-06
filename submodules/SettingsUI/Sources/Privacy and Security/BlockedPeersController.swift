@@ -119,7 +119,8 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: BlockedPeersControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! BlockedPeersControllerArguments
         switch self {
             case let .add(theme, text):
                 return ItemListPeerActionItem(theme: theme, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, sectionId: self.section, editing: false, action: {
@@ -265,7 +266,7 @@ public func blockedPeersController(context: AccountContext, blockedPeersContext:
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), blockedPeersContext.state)
     |> deliverOnMainQueue
-    |> map { presentationData, state, blockedPeersState -> (ItemListControllerState, (ItemListNodeState<BlockedPeersEntry>, BlockedPeersEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, blockedPeersState -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         if !blockedPeersState.peers.isEmpty {
             if state.editing {

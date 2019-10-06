@@ -114,7 +114,8 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: WalletTransactionInfoControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! WalletTransactionInfoControllerArguments
         switch self {
         case let .amount(theme, strings, dateTimeFormat, walletTransaction):
             return WalletTransactionHeaderItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: walletTransaction, sectionId: self.section)
@@ -325,7 +326,7 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     })
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<WalletTransactionInfoEntry>, WalletTransactionInfoEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_TransactionInfo_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletTransactionInfoControllerEntries(presentationData: presentationData, walletTransaction: walletTransaction, state: state, walletInfo: walletInfo), style: .blocks, animateChanges: false)
         

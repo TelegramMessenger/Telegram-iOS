@@ -152,7 +152,8 @@ private enum ArchivedStickerPacksEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ArchivedStickerPacksControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ArchivedStickerPacksControllerArguments
         switch self {
             case let .info(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
@@ -380,7 +381,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, stickerPacks.get() |> deliverOnMainQueue, installedStickerPacks.get() |> deliverOnMainQueue, context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.stickerSettings]) |> deliverOnMainQueue)
         |> deliverOnMainQueue
-        |> map { presentationData, state, packs, installedView, sharedData -> (ItemListControllerState, (ItemListNodeState<ArchivedStickerPacksEntry>, ArchivedStickerPacksEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, packs, installedView, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var stickerSettings = StickerSettings.defaultSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.stickerSettings] as? StickerSettings {
                 stickerSettings = value

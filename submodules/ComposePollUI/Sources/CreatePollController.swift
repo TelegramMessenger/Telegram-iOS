@@ -128,7 +128,8 @@ private enum CreatePollEntry: ItemListNodeEntry {
         return lhs.sortId < rhs.sortId
     }
     
-    func item(_ arguments: CreatePollControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! CreatePollControllerArguments
         switch self {
             case let .textHeader(theme, text, accessoryText):
                 return ItemListSectionHeaderItem(theme: theme, text: text, accessoryText: accessoryText, sectionId: self.section)
@@ -305,7 +306,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
     
     let limitsKey = PostboxViewKey.preferences(keys: Set([PreferencesKeys.limitsConfiguration]))
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, context.account.postbox.combinedView(keys: [limitsKey]))
-    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState<CreatePollEntry>, CreatePollEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, combinedView -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let limitsConfiguration: LimitsConfiguration = (combinedView.views[limitsKey] as? PreferencesView)?.values[PreferencesKeys.limitsConfiguration] as? LimitsConfiguration ?? LimitsConfiguration.defaultValue
         
         var enabled = true
@@ -453,7 +454,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
         })
     }
     
-    controller.reorderEntry = { fromIndex, toIndex, entries in
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [CreatePollEntry]) -> Void in
         let fromEntry = entries[fromIndex]
         guard case let .option(_, _, id, _, _, _, _, _) = fromEntry else {
             return
@@ -512,7 +513,7 @@ public func createPollController(context: AccountContext, peerId: PeerId, comple
             }
             return state
         }
-    }
+    })
     controller.isOpaqueWhenInOverlay = true
     controller.blocksBackgroundWhenInOverlay = true
     controller.experimentalSnapScrollToItem = true

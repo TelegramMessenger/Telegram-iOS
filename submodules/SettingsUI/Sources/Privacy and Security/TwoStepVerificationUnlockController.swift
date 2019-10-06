@@ -119,7 +119,8 @@ private enum TwoStepVerificationUnlockSettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: TwoStepVerificationUnlockSettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! TwoStepVerificationUnlockSettingsControllerArguments
         switch self {
             case let .passwordEntry(theme, strings, text, value):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: text, textColor: theme.list.itemPrimaryTextColor), text: value, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationUnlockSettingsEntryTag.password, sectionId: self.section, textUpdated: { updatedText in
@@ -759,7 +760,7 @@ func twoStepVerificationUnlockSettingsController(context: AccountContext, mode: 
     var didAppear = false
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataPromise.get() |> deliverOnMainQueue) |> deliverOnMainQueue
-    |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationUnlockSettingsEntry>, TwoStepVerificationUnlockSettingsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, data -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         var emptyStateItem: ItemListControllerEmptyStateItem?
         let title: String

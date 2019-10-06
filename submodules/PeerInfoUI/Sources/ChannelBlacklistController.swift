@@ -145,7 +145,8 @@ private enum ChannelBlacklistEntry: ItemListNodeEntry {
         }
     }
     
-    func item(_ arguments: ChannelBlacklistControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelBlacklistControllerArguments
         switch self {
             case let .add(theme, text):
                 return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
@@ -434,7 +435,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
     
     let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get(), peerView.get(), blacklistPromise.get())
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, participants -> (ItemListControllerState, (ItemListNodeState<ChannelBlacklistEntry>, ChannelBlacklistEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, participants -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let participants = participants, !participants.isEmpty {

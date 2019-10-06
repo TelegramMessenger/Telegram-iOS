@@ -9,13 +9,30 @@ import MergeLists
 
 public typealias ItemListSectionId = Int32
 
-public protocol ItemListNodeEntry: Comparable, Identifiable {
-    associatedtype ItemGenerationArguments
-    
-    var section: ItemListSectionId { get }
+public protocol ItemListNodeAnyEntry {
+    var anyId: AnyHashable { get }
     var tag: ItemListItemTag? { get }
+    func isLessThan(_ rhs: ItemListNodeAnyEntry) -> Bool
+    func isEqual(_ rhs: ItemListNodeAnyEntry) -> Bool
+    func item(_ arguments: Any) -> ListViewItem
+}
+
+public protocol ItemListNodeEntry: Comparable, Identifiable, ItemListNodeAnyEntry {
+    var section: ItemListSectionId { get }
+}
+
+public extension ItemListNodeEntry {
+    var anyId: AnyHashable {
+        return self.stableId
+    }
     
-    func item(_ arguments: ItemGenerationArguments) -> ListViewItem
+    func isLessThan(_ rhs: ItemListNodeAnyEntry) -> Bool {
+        return self < (rhs as! Self)
+    }
+    
+    func isEqual(_ rhs: ItemListNodeAnyEntry) -> Bool {
+        return self == (rhs as! Self)
+    }
 }
 
 public extension ItemListNodeEntry {
@@ -28,8 +45,14 @@ private struct ItemListNodeEntryTransition {
     let updates: [ListViewUpdateItem]
 }
 
-private func preparedItemListNodeEntryTransition<Entry: ItemListNodeEntry>(from fromEntries: [Entry], to toEntries: [Entry], arguments: Entry.ItemGenerationArguments) -> ItemListNodeEntryTransition {
-    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
+private func preparedItemListNodeEntryTransition(from fromEntries: [ItemListNodeAnyEntry], to toEntries: [ItemListNodeAnyEntry], arguments: Any) -> ItemListNodeEntryTransition {
+    let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries, isLess: { lhs, rhs in
+        return lhs.isLessThan(rhs)
+    }, isEqual: { lhs, rhs in
+        return lhs.isEqual(rhs)
+    }, getId: { value in
+        return value.anyId
+    })
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
     let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(arguments), directionHint: nil) }
@@ -43,7 +66,7 @@ public enum ItemListStyle {
     case blocks
 }
 
-private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
+private struct ItemListNodeTransition {
     let theme: PresentationTheme
     let entries: ItemListNodeEntryTransition
     let updateStyle: ItemListStyle?
@@ -56,12 +79,12 @@ private struct ItemListNodeTransition<Entry: ItemListNodeEntry> {
     let animated: Bool
     let animateAlpha: Bool
     let crossfade: Bool
-    let mergedEntries: [Entry]
+    let mergedEntries: [ItemListNodeAnyEntry]
     let scrollEnabled: Bool
 }
 
-public struct ItemListNodeState<Entry: ItemListNodeEntry> {
-    let entries: [Entry]
+public final class ItemListNodeState {
+    let entries: [ItemListNodeAnyEntry]
     let style: ItemListStyle
     let emptyStateItem: ItemListControllerEmptyStateItem?
     let searchItem: ItemListControllerSearch?
@@ -72,8 +95,8 @@ public struct ItemListNodeState<Entry: ItemListNodeEntry> {
     let ensureVisibleItemTag: ItemListItemTag?
     let initialScrollToItem: ListViewScrollToItem?
     
-    public init(entries: [Entry], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
-        self.entries = entries
+    public init<T: ItemListNodeEntry>(entries: [T], style: ItemListStyle, focusItemTag: ItemListItemTag? = nil, ensureVisibleItemTag: ItemListItemTag? = nil, emptyStateItem: ItemListControllerEmptyStateItem? = nil, searchItem: ItemListControllerSearch? = nil, initialScrollToItem: ListViewScrollToItem? = nil, crossfadeState: Bool = false, animateChanges: Bool = true, scrollEnabled: Bool = true) {
+        self.entries = entries.map { $0 }
         self.style = style
         self.emptyStateItem = emptyStateItem
         self.searchItem = searchItem
@@ -86,32 +109,32 @@ public struct ItemListNodeState<Entry: ItemListNodeEntry> {
     }
 }
 
-private final class ItemListNodeOpaqueState<Entry: ItemListNodeEntry> {
-    let mergedEntries: [Entry]
+private final class ItemListNodeOpaqueState {
+    let mergedEntries: [ItemListNodeAnyEntry]
     
-    init(mergedEntries: [Entry]) {
+    init(mergedEntries: [ItemListNodeAnyEntry]) {
         self.mergedEntries = mergedEntries
     }
 }
 
-public final class ItemListNodeVisibleEntries<Entry: ItemListNodeEntry>: Sequence {
-    let iterate: () -> Entry?
+public final class ItemListNodeVisibleEntries: Sequence {
+    let iterate: () -> ItemListNodeAnyEntry?
     
-    init(iterate: @escaping () -> Entry?) {
+    init(iterate: @escaping () -> ItemListNodeAnyEntry?) {
         self.iterate = iterate
     }
     
-    public func makeIterator() -> AnyIterator<Entry> {
-        return AnyIterator { () -> Entry? in
+    public func makeIterator() -> AnyIterator<ItemListNodeAnyEntry> {
+        return AnyIterator { () -> ItemListNodeAnyEntry? in
             return self.iterate()
         }
     }
 }
 
-public final class ItemListControllerNodeView<Entry: ItemListNodeEntry>: UITracingLayerView, PreviewingHostView {
+public final class ItemListControllerNodeView: UITracingLayerView, PreviewingHostView {
     var onLayout: (() -> Void)?
     
-    init(controller: ItemListController<Entry>?) {
+    init(controller: ItemListController?) {
         self.controller = controller
         
         super.init(frame: CGRect())
@@ -149,10 +172,10 @@ public final class ItemListControllerNodeView<Entry: ItemListNodeEntry>: UITraci
         })
     }
     
-    weak var controller: ItemListController<Entry>?
+    weak var controller: ItemListController?
 }
 
-open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UIScrollViewDelegate {
+open class ItemListControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var _ready = ValuePromise<Bool>()
     open var ready: Signal<Bool, NoError> {
         return self._ready.get()
@@ -172,7 +195,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
     
     private let transitionDisposable = MetaDisposable()
     
-    private var enqueuedTransitions: [ItemListNodeTransition<Entry>] = []
+    private var enqueuedTransitions: [ItemListNodeTransition] = []
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
     private var theme: PresentationTheme?
@@ -186,12 +209,12 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
     public let updateNavigationOffset: (CGFloat) -> Void
     public var dismiss: (() -> Void)?
     
-    public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)?
+    public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries) -> Void)?
     public var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)?
     public var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)?
     public var contentScrollingEnded: ((ListView) -> Bool)?
     public var searchActivated: ((Bool) -> Void)?
-    public var reorderEntry: ((Int, Int, [Entry]) -> Void)?
+    public var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)?
     public var requestLayout: ((ContainedViewLayoutTransition) -> Void)?
     
     public var enableInteractiveDismiss = false {
@@ -201,7 +224,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
 
     var alwaysSynchronous = false
     
-    public init(controller: ItemListController<Entry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>) {
+    public init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, state: Signal<(PresentationTheme, (ItemListNodeState, Any)), NoError>) {
         self.navigationBar = navigationBar
         self.updateNavigationOffset = updateNavigationOffset
         
@@ -212,7 +235,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         super.init()
         
         self.setViewBlock({ [weak controller] in
-            return ItemListControllerNodeView<Entry>(controller: controller)
+            return ItemListControllerNodeView(controller: controller)
         })
         
         self.backgroundColor = nil
@@ -221,13 +244,13 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         self.addSubnode(self.listNode)
         
         self.listNode.displayedItemRangeChanged = { [weak self] displayedRange, opaqueTransactionState in
-            if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState<Entry>)?.mergedEntries {
+            if let strongSelf = self, let visibleEntriesUpdated = strongSelf.visibleEntriesUpdated, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
                 if let visible = displayedRange.visibleRange {
                     let indexRange = (visible.firstIndex, visible.lastIndex)
                     
                     var index = indexRange.0
-                    let iterator = ItemListNodeVisibleEntries<Entry>(iterate: {
-                        var item: Entry?
+                    let iterator = ItemListNodeVisibleEntries(iterate: {
+                        var item: ItemListNodeAnyEntry?
                         if index <= indexRange.1 {
                             item = mergedEntries[index]
                         }
@@ -240,7 +263,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         }
         
         self.listNode.reorderItem = { [weak self] fromIndex, toIndex, opaqueTransactionState in
-            if let strongSelf = self, let reorderEntry = strongSelf.reorderEntry, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState<Entry>)?.mergedEntries {
+            if let strongSelf = self, let reorderEntry = strongSelf.reorderEntry, let mergedEntries = (opaqueTransactionState as? ItemListNodeOpaqueState)?.mergedEntries {
                 if fromIndex >= 0 && fromIndex < mergedEntries.count && toIndex >= 0 && toIndex < mergedEntries.count {
                     reorderEntry(fromIndex, toIndex, mergedEntries)
                 }
@@ -266,10 +289,14 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
             }
         }
         
-        let previousState = Atomic<ItemListNodeState<Entry>?>(value: nil)
-        self.transitionDisposable.set(((state |> map { theme, stateAndArguments -> ItemListNodeTransition<Entry> in
+        let previousState = Atomic<ItemListNodeState?>(value: nil)
+        self.transitionDisposable.set(((state |> map { theme, stateAndArguments -> ItemListNodeTransition in
             let (state, arguments) = stateAndArguments
-            assert(state.entries == state.entries.sorted())
+            if state.entries.count > 1 {
+                for i in 1 ..< state.entries.count {
+                    assert(state.entries[i - 1].isLessThan(state.entries[i]))
+                }
+            }
             let previous = previousState.swap(state)
             let transition = preparedItemListNodeEntryTransition(from: previous?.entries ?? [], to: state.entries, arguments: arguments)
             var updatedStyle: ItemListStyle?
@@ -297,7 +324,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
     override open func didLoad() {
         super.didLoad()
         
-        (self.view as? ItemListControllerNodeView<Entry>)?.onLayout = { [weak self] in
+        (self.view as? ItemListControllerNodeView)?.onLayout = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -310,7 +337,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
             }
         }
         
-        (self.view as? ItemListControllerNodeView<Entry>)?.hitTestImpl = { [weak self] point, event in
+        (self.view as? ItemListControllerNodeView)?.hitTestImpl = { [weak self] point, event in
             return self?.hitTest(point, with: event)
         }
     }
@@ -416,7 +443,7 @@ open class ItemListControllerNode<Entry: ItemListNodeEntry>: ASDisplayNode, UISc
         }
     }
     
-    private func enqueueTransition(_ transition: ItemListNodeTransition<Entry>) {
+    private func enqueueTransition(_ transition: ItemListNodeTransition) {
         self.enqueuedTransitions.append(transition)
         if self.validLayout != nil {
             self.dequeueTransitions()
