@@ -1,8 +1,6 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -10,43 +8,39 @@ import TelegramCore
 import SolidRoundedButtonNode
 import SwiftSignalKit
 import MergeLists
-import TelegramStringFormatting
 import AnimationUI
 
 public final class WalletInfoScreen: ViewController {
-    private let context: AccountContext
-    private let tonContext: TonContext
+    private let context: WalletContext
     private let walletInfo: WalletInfo?
     private let address: String
     private let enableDebugActions: Bool
     
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     
     private let _ready = Promise<Bool>()
     override public var ready: Promise<Bool> {
         return self._ready
     }
     
-    public init(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo?, address: String, enableDebugActions: Bool) {
+    public init(context: WalletContext, walletInfo: WalletInfo?, address: String, enableDebugActions: Bool) {
         self.context = context
-        self.tonContext = tonContext
         self.walletInfo = walletInfo
         self.address = address
         self.enableDebugActions = enableDebugActions
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.presentationData
         
-        let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: .white, primaryTextColor: .white, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
+        let navigationBarTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: .white, primaryTextColor: .white, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: self.presentationData.theme.navigationBar.badgeBackgroundColor, badgeStrokeColor: self.presentationData.theme.navigationBar.badgeStrokeColor, badgeTextColor: self.presentationData.theme.navigationBar.badgeTextColor)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
         self.statusBar.statusBarStyle = .White
         self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
         if let _ = walletInfo {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Wallet/NavigationSettingsIcon"), color: .white), style: .plain, target: self, action: #selector(self.settingsPressed))
         }
@@ -66,16 +60,16 @@ public final class WalletInfoScreen: ViewController {
     
     @objc private func settingsPressed() {
         if let walletInfo = self.walletInfo {
-        self.push(walletSettingsController(context: self.context, tonContext: self.tonContext, walletInfo: walletInfo))
+        self.push(walletSettingsController(context: self.context, walletInfo: walletInfo))
         }
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletInfoScreenNode(account: self.context.account, tonContext: self.tonContext, presentationData: self.presentationData, walletInfo: self.walletInfo, address: self.address, sendAction: { [weak self] in
+        self.displayNode = WalletInfoScreenNode(context: self.context, presentationData: self.presentationData, walletInfo: self.walletInfo, address: self.address, sendAction: { [weak self] in
             guard let strongSelf = self, let walletInfo = strongSelf.walletInfo else {
                 return
             }
-            strongSelf.push(walletSendScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, randomId: arc4random64(), walletInfo: walletInfo))
+            strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: arc4random64(), walletInfo: walletInfo))
         }, receiveAction: { [weak self] in
             guard let strongSelf = self, let walletInfo = strongSelf.walletInfo else {
                 return
@@ -85,7 +79,7 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(walletTransactionInfoController(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, enableDebugActions: strongSelf.enableDebugActions))
+            strongSelf.push(walletTransactionInfoController(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, enableDebugActions: strongSelf.enableDebugActions))
         }, present: { [weak self] c, a in
             guard let strongSelf = self else {
                 return
@@ -106,7 +100,7 @@ public final class WalletInfoScreen: ViewController {
 }
 
 private final class WalletInfoBalanceNode: ASDisplayNode {
-    let dateTimeFormat: PresentationDateTimeFormat
+    let dateTimeFormat: WalletPresentationDateTimeFormat
     
     let balanceIntegralTextNode: ImmediateTextNode
     let balanceFractionalTextNode: ImmediateTextNode
@@ -131,7 +125,7 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
     
     var isLoading: Bool = true
     
-    init(account: Account, theme: PresentationTheme, dateTimeFormat: PresentationDateTimeFormat) {
+    init(theme: WalletTheme, dateTimeFormat: WalletPresentationDateTimeFormat) {
         self.dateTimeFormat = dateTimeFormat
         
         self.balanceIntegralTextNode = ImmediateTextNode()
@@ -146,7 +140,7 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
         
         self.balanceIconNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
-            self.balanceIconNode.setup(account: account, resource: .localFile(path), width: 120, height: 120, mode: .direct)
+            self.balanceIconNode.setup(resource: .localFile(path), width: 120, height: 120, mode: .direct)
             self.balanceIconNode.visibility = true
         }
         
@@ -210,10 +204,10 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let headerBackgroundNode: ASDisplayNode
     private let headerCornerNode: ASImageNode
     
-    init(account: Account, presentationData: PresentationData, hasActions: Bool, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
+    init(presentationData: WalletPresentationData, hasActions: Bool, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void) {
         self.hasActions = hasActions
         
-        self.balanceNode = WalletInfoBalanceNode(account: account, theme: presentationData.theme, dateTimeFormat: presentationData.dateTimeFormat)
+        self.balanceNode = WalletInfoBalanceNode(theme: presentationData.theme, dateTimeFormat: presentationData.dateTimeFormat)
         
         self.balanceSubtitleNode = ImmediateTextNode()
         self.balanceSubtitleNode.displaysAsynchronously = false
@@ -446,10 +440,10 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
         }
     }
     
-    func item(account: Account, theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, action: @escaping (WalletInfoTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> ListViewItem {
+    func item(theme: WalletTheme, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat, action: @escaping (WalletInfoTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> ListViewItem {
         switch self {
         case let .empty(address):
-            return WalletInfoEmptyItem(account: account, theme: theme, strings: strings, address: address, displayAddressContextMenu: { node, frame in
+            return WalletInfoEmptyItem(theme: theme, strings: strings, address: address, displayAddressContextMenu: { node, frame in
                 displayAddressContextMenu(node, frame)
             })
         case let .transaction(_, transaction):
@@ -460,21 +454,20 @@ private enum WalletInfoListEntry: Equatable, Comparable, Identifiable {
     }
 }
 
-private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], account: Account, presentationData: PresentationData, action: @escaping (WalletInfoTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> WalletInfoListTransaction {
+private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEntries: [WalletInfoListEntry], presentationData: WalletPresentationData, action: @escaping (WalletInfoTransaction) -> Void, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) -> WalletInfoListTransaction {
     let (deleteIndices, indicesAndItems, updateIndices) = mergeListsStableWithUpdates(leftList: fromEntries, rightList: toEntries)
     
     let deletions = deleteIndices.map { ListViewDeleteItem(index: $0, directionHint: nil) }
-    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, displayAddressContextMenu: displayAddressContextMenu), directionHint: nil) }
-    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(account: account, theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, displayAddressContextMenu: displayAddressContextMenu), directionHint: nil) }
+    let insertions = indicesAndItems.map { ListViewInsertItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, displayAddressContextMenu: displayAddressContextMenu), directionHint: nil) }
+    let updates = updateIndices.map { ListViewUpdateItem(index: $0.0, previousIndex: $0.2, item: $0.1.item(theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, action: action, displayAddressContextMenu: displayAddressContextMenu), directionHint: nil) }
     
     return WalletInfoListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
 
 
 private final class WalletInfoScreenNode: ViewControllerTracingNode {
-    private let account: Account
-    private let tonContext: TonContext
-    private var presentationData: PresentationData
+    private let context: WalletContext
+    private var presentationData: WalletPresentationData
     private let walletInfo: WalletInfo?
     private let address: String
     
@@ -512,16 +505,15 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private var pollCombinedStateDisposable: Disposable?
     private var watchCombinedStateDisposable: Disposable?
     
-    init(account: Account, tonContext: TonContext, presentationData: PresentationData, walletInfo: WalletInfo?, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-        self.account = account
-        self.tonContext = tonContext
+    init(context: WalletContext, presentationData: WalletPresentationData, walletInfo: WalletInfo?, address: String, sendAction: @escaping () -> Void, receiveAction: @escaping () -> Void, openTransaction: @escaping (WalletInfoTransaction) -> Void, present: @escaping (ViewController, Any?) -> Void) {
+        self.context = context
         self.presentationData = presentationData
         self.walletInfo = walletInfo
         self.address = address
         self.openTransaction = openTransaction
         self.present = present
         
-        self.headerNode = WalletInfoHeaderNode(account: account, presentationData: presentationData, hasActions: walletInfo != nil, sendAction: sendAction, receiveAction: receiveAction)
+        self.headerNode = WalletInfoHeaderNode(presentationData: presentationData, hasActions: walletInfo != nil, sendAction: sendAction, receiveAction: receiveAction)
         
         self.listNode = ListView()
         self.listNode.verticalScrollIndicatorColor = UIColor(white: 0.0, alpha: 0.3)
@@ -614,7 +606,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         if let walletInfo = walletInfo {
             subject = .wallet(walletInfo)
             
-            self.watchCombinedStateDisposable = (account.postbox.preferencesView(keys: [PreferencesKeys.walletCollection])
+            self.watchCombinedStateDisposable = (context.postbox.preferencesView(keys: [PreferencesKeys.walletCollection])
             |> deliverOnMainQueue).start(next: { [weak self] view in
                 guard let strongSelf = self, let wallets = view.values[PreferencesKeys.walletCollection] as? WalletCollection else {
                     return
@@ -636,7 +628,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             subject = .address(address)
         }
         let pollCombinedState: Signal<Never, NoError> = (
-            getCombinedWalletState(postbox: account.postbox, subject: subject, tonInstance: tonContext.instance)
+            getCombinedWalletState(postbox: context.postbox, subject: subject, tonInstance: context.tonInstance)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
@@ -743,7 +735,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             subject = .address(self.address)
         }
         
-        self.stateDisposable.set((getCombinedWalletState(postbox: self.account.postbox, subject: subject, tonInstance: self.tonContext.instance)
+        self.stateDisposable.set((getCombinedWalletState(postbox: self.context.postbox, subject: subject, tonInstance: self.context.tonInstance)
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return
@@ -806,8 +798,8 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             case .network:
                 text = strongSelf.presentationData.strings.Wallet_Info_RefreshErrorNetworkText
             }
-            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorTitle, text: text, actions: [
-                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+            strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_Info_RefreshErrorTitle, text: text, actions: [
+                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                 })
             ], actionLayout: .vertical), nil)
         }))
@@ -902,7 +894,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 break
             }
         }
-        self.transactionListDisposable.set((getWalletTransactions(address: self.address, previousId: lastTransactionId, tonInstance: self.tonContext.instance)
+        self.transactionListDisposable.set((getWalletTransactions(address: self.address, previousId: lastTransactionId, tonInstance: self.context.tonInstance)
         |> deliverOnMainQueue).start(next: { [weak self] transactions in
             guard let strongSelf = self else {
                 return
@@ -966,7 +958,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             }
         }
         
-        let transaction = preparedTransition(from: self.currentEntries ?? [], to: updatedEntries, account: self.account, presentationData: self.presentationData, action: { [weak self] transaction in
+        let transaction = preparedTransition(from: self.currentEntries ?? [], to: updatedEntries, presentationData: self.presentationData, action: { [weak self] transaction in
             guard let strongSelf = self else {
                 return
             }
@@ -976,7 +968,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
                 return
             }
             let address = strongSelf.address
-            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Conversation_ContextMenuCopy), action: {
+            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Wallet_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Wallet_ContextMenuCopy), action: {
                 UIPasteboard.general.string = address
             })])
             strongSelf.present(contextMenuController, ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in

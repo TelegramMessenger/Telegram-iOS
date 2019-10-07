@@ -12,6 +12,7 @@ import PassportUI
 import LocalAuth
 import CallListUI
 import NotificationSoundSelectionUI
+import PresentationDataUtils
 
 private let maximumNumberOfAccounts = 3
 
@@ -708,7 +709,7 @@ private func languageSearchableItems(context: AccountContext, localizations: [Lo
     
     let applyLocalization: (AccountContext, @escaping (SettingsSearchableItemPresentation, ViewController?) -> Void, String) -> Void = { context, present, languageCode in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
         present(.immediate, controller)
         
         let _ = (downloadAndApplyLocalization(accountManager: context.sharedContext.accountManager, postbox: context.account.postbox, network: context.account.network, languageCode: languageCode)

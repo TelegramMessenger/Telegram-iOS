@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import SearchBarNode
 
 private let searchBarFont = Font.regular(17.0)

@@ -15,6 +15,7 @@ import ShareController
 import OpenInExternalAppUI
 import PeerInfoUI
 import ContextUI
+import PresentationDataUtils
 
 public class PeerMediaCollectionController: TelegramBaseController {
     private var validLayout: ContainerViewLayout?
@@ -805,7 +806,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
                                         guard let strongSelf = self else {
                                             return
                                         }
-                                        strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .success), in: .window(.root))
+                                        strongSelf.present(OverlayStatusController(theme: strongSelf.presentationData.theme, type: .success), in: .window(.root))
                                     }))
                             }
                         })

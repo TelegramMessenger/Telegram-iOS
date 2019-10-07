@@ -1,8 +1,6 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -11,8 +9,41 @@ import SolidRoundedButtonNode
 import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
-import ItemListUI
-import TelegramStringFormatting
+
+private func stringForFullDate(timestamp: Int32, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat) -> String {
+    var t: time_t = Int(timestamp)
+    var timeinfo = tm()
+    localtime_r(&t, &timeinfo);
+    
+    switch timeinfo.tm_mon + 1 {
+    case 1:
+        return strings.Wallet_Time_PreciseDate_m1("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 2:
+        return strings.Wallet_Time_PreciseDate_m2("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 3:
+        return strings.Wallet_Time_PreciseDate_m3("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 4:
+        return strings.Wallet_Time_PreciseDate_m4("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 5:
+        return strings.Wallet_Time_PreciseDate_m5("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 6:
+        return strings.Wallet_Time_PreciseDate_m6("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 7:
+        return strings.Wallet_Time_PreciseDate_m7("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 8:
+        return strings.Wallet_Time_PreciseDate_m8("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 9:
+        return strings.Wallet_Time_PreciseDate_m9("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 10:
+        return strings.Wallet_Time_PreciseDate_m10("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 11:
+        return strings.Wallet_Time_PreciseDate_m11("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    case 12:
+        return strings.Wallet_Time_PreciseDate_m12("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+    default:
+        return ""
+    }
+}
 
 private final class WalletTransactionInfoControllerArguments {
     let copyWalletAddress: () -> Void
@@ -50,19 +81,19 @@ private enum WalletTransactionInfoEntryTag: ItemListItemTag {
 }
 
 private enum WalletTransactionInfoEntry: ItemListNodeEntry {
-    case amount(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, WalletInfoTransaction)
-    case infoHeader(PresentationTheme, String)
-    case infoAddress(PresentationTheme, String, String?)
-    case infoCopyAddress(PresentationTheme, String)
-    case infoSendGrams(PresentationTheme, String)
-    case storageFeeHeader(PresentationTheme, String)
-    case storageFee(PresentationTheme, String)
-    case storageFeeInfo(PresentationTheme, String)
-    case otherFeeHeader(PresentationTheme, String)
-    case otherFee(PresentationTheme, String)
-    case otherFeeInfo(PresentationTheme, String)
-    case commentHeader(PresentationTheme, String)
-    case comment(PresentationTheme, String)
+    case amount(WalletTheme, WalletStrings, WalletPresentationDateTimeFormat, WalletInfoTransaction)
+    case infoHeader(WalletTheme, String)
+    case infoAddress(WalletTheme, String, String?)
+    case infoCopyAddress(WalletTheme, String)
+    case infoSendGrams(WalletTheme, String)
+    case storageFeeHeader(WalletTheme, String)
+    case storageFee(WalletTheme, String)
+    case storageFeeInfo(WalletTheme, String)
+    case otherFeeHeader(WalletTheme, String)
+    case otherFee(WalletTheme, String)
+    case otherFeeInfo(WalletTheme, String)
+    case commentHeader(WalletTheme, String)
+    case comment(WalletTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -176,7 +207,7 @@ private enum WalletTransactionAddress {
     case unknown
 }
 
-private func stringForAddress(strings: PresentationStrings, address: WalletTransactionAddress) -> String {
+private func stringForAddress(strings: WalletStrings, address: WalletTransactionAddress) -> String {
     switch address {
         case let .list(addresses):
             return addresses.map { formatAddress($0) }.joined(separator: "\n\n")
@@ -237,7 +268,7 @@ private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> S
     }
 }
 
-private func walletTransactionInfoControllerEntries(presentationData: PresentationData, walletTransaction: WalletInfoTransaction, state: WalletTransactionInfoControllerState, walletInfo: WalletInfo?) -> [WalletTransactionInfoEntry] {
+private func walletTransactionInfoControllerEntries(presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction, state: WalletTransactionInfoControllerState, walletInfo: WalletInfo?) -> [WalletTransactionInfoEntry] {
     var entries: [WalletTransactionInfoEntry] = []
     
     entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, walletTransaction))
@@ -290,7 +321,7 @@ private func walletTransactionInfoControllerEntries(presentationData: Presentati
     return entries
 }
 
-func walletTransactionInfoController(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, enableDebugActions: Bool) -> ViewController {
+func walletTransactionInfoController(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, enableDebugActions: Bool) -> ViewController {
     let statePromise = ValuePromise(WalletTransactionInfoControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: WalletTransactionInfoControllerState())
     let updateState: ((WalletTransactionInfoControllerState) -> WalletTransactionInfoControllerState) -> Void = { f in
@@ -306,8 +337,8 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
         let address = extractAddress(walletTransaction)
         if case let .list(addresses) = address, let address = addresses.first {
             UIPasteboard.general.string = address
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Wallet_TransactionInfo_AddressCopied, false)), nil)
+            let presentationData = context.presentationData
+            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Wallet_TransactionInfo_AddressCopied, false)), nil)
         }
     }, sendGrams: {
         guard let walletInfo = walletInfo else {
@@ -316,18 +347,18 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
         let address = extractAddress(walletTransaction)
         if case let .list(addresses) = address, let address = addresses.first {
             dismissImpl?()
-            pushImpl?(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address))
+            pushImpl?(walletSendScreen(context: context, randomId: arc4random64(), walletInfo: walletInfo, address: address))
         }
     }, displayContextMenu: { tag, text in
         displayContextMenuImpl?(tag, text)
     }, openFeeInfo: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: presentationData.strings.Wallet_TransactionInfo_FeeInfoURL, forceExternal: true, presentationData: presentationData, navigationController: nil, dismissInput: {})
+        let presentationData = context.presentationData
+        context.openUrl(presentationData.strings.Wallet_TransactionInfo_FeeInfoURL)
     })
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
+    let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), statePromise.get())
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_TransactionInfo_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_TransactionInfo_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletTransactionInfoControllerEntries(presentationData: presentationData, walletTransaction: walletTransaction, state: state, walletInfo: walletInfo), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
@@ -335,7 +366,7 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     |> afterDisposed {
     }
     
-    let controller = ItemListController(context: context, state: signal)
+    let controller = ItemListController(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
     controller.enableInteractiveDismiss = true
     dismissImpl = { [weak controller] in
@@ -350,7 +381,7 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
     }
     displayContextMenuImpl = { [weak controller] tag, value in
         if let strongController = controller {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let presentationData = context.presentationData
             var resultItemNode: ListViewItemNode?
             let _ = strongController.frameForItemNode({ itemNode in
                 if let itemNode = itemNode as? ItemListMultilineTextItemNode {
@@ -365,14 +396,13 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
             })
             if let resultItemNode = resultItemNode {
                 var actions: [ContextMenuAction] = []
-                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: presentationData.strings.Conversation_ContextMenuCopy), action: {
+                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Wallet_ContextMenuCopy, accessibilityLabel: presentationData.strings.Wallet_ContextMenuCopy), action: {
                     UIPasteboard.general.string = value
                 }))
                 if enableDebugActions {
                     if case .address = tag {
                         actions.append(ContextMenuAction(content: .text(title: "View Transactions", accessibilityLabel: "View Transactions"), action: {
-                            pushImpl?(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: nil, address: value, enableDebugActions: enableDebugActions))
-                            //dismissImpl?()
+                            pushImpl?(WalletInfoScreen(context: context, walletInfo: nil, address: value, enableDebugActions: enableDebugActions))
                         }))
                     }
                 }
@@ -392,14 +422,14 @@ func walletTransactionInfoController(context: AccountContext, tonContext: TonCon
 }
 
 class WalletTransactionHeaderItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let dateTimeFormat: PresentationDateTimeFormat
+    let theme: WalletTheme
+    let strings: WalletStrings
+    let dateTimeFormat: WalletPresentationDateTimeFormat
     let walletTransaction: WalletInfoTransaction
     let sectionId: ItemListSectionId
     let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, walletTransaction: WalletInfoTransaction, sectionId: ItemListSectionId) {
+    init(theme: WalletTheme, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat, walletTransaction: WalletInfoTransaction, sectionId: ItemListSectionId) {
         self.theme = theme
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
@@ -512,11 +542,11 @@ private class WalletTransactionHeaderItemNode: ListViewItemNode {
             if transferredValue <= 0 {
                 signString = ""
                 balanceString = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.list.itemDestructiveColor
+                titleColor = item.theme.info.outgoingFundsTitleColor
             } else {
                 signString = ""
                 balanceString = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.chatList.secretTitleColor
+                titleColor = item.theme.info.incomingFundsTitleColor
             }
             
             let title = NSMutableAttributedString()

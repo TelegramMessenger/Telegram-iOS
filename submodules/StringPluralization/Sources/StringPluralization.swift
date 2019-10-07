@@ -1,6 +1,6 @@
 import Foundation
 
-enum PluralizationForm: Int32 {
+public enum PluralizationForm: Int32 {
     case zero = 0
     case one = 1
     case two = 2
@@ -26,7 +26,7 @@ enum PluralizationForm: Int32 {
     }
 }
 
-func presentationStringsPluralizationForm(_ lc: UInt32, _ value: Int32) -> PluralizationForm {
+public func getPluralizationForm(_ lc: UInt32, _ value: Int32) -> PluralizationForm {
     switch numberPluralizationForm(lc, value) {
         case .zero:
             return .zero

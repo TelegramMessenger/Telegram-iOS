@@ -18,6 +18,7 @@ static_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/MergeLists:MergeLists",
     ],

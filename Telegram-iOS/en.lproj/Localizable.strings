@@ -4756,23 +4756,23 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatSearch.ResultsTooltip" = "Tap to view as a list.";
 
-"Updated.JustNow" = "just now";
-"Updated.MinutesAgo_0" = "%@ minutes ago"; //three to ten
-"Updated.MinutesAgo_1" = "1 minute ago"; //one
-"Updated.MinutesAgo_2" = "2 minutes ago"; //two
-"Updated.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
-"Updated.MinutesAgo_many" = "%@ minutes ago"; // more than ten
-"Updated.MinutesAgo_any" = "%@ minutes ago"; // more than ten
-"Updated.HoursAgo_0" = "%@ hours ago";
-"Updated.HoursAgo_1" = "1 hour ago";
-"Updated.HoursAgo_2" = "2 hours ago";
-"Updated.HoursAgo_3_10" = "%@ hours ago";
-"Updated.HoursAgo_any" = "%@ hours ago";
-"Updated.HoursAgo_many" = "%@ hours ago";
-"Updated.HoursAgo_0" = "%@ hours ago";
-"Updated.YesterdayAt" = "yesterday at %@";
-"Updated.AtDate" = "%@";
-"Updated.TodayAt" = "today at %@";
+"Wallet.Updated.JustNow" = "just now";
+"Wallet.Updated.MinutesAgo_0" = "%@ minutes ago"; //three to ten
+"Wallet.Updated.MinutesAgo_1" = "1 minute ago"; //one
+"Wallet.Updated.MinutesAgo_2" = "2 minutes ago"; //two
+"Wallet.Updated.MinutesAgo_3_10" = "%@ minutes ago"; //three to ten
+"Wallet.Updated.MinutesAgo_many" = "%@ minutes ago"; // more than ten
+"Wallet.Updated.MinutesAgo_any" = "%@ minutes ago"; // more than ten
+"Wallet.Updated.HoursAgo_0" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_1" = "1 hour ago";
+"Wallet.Updated.HoursAgo_2" = "2 hours ago";
+"Wallet.Updated.HoursAgo_3_10" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_any" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_many" = "%@ hours ago";
+"Wallet.Updated.HoursAgo_0" = "%@ hours ago";
+"Wallet.Updated.YesterdayAt" = "yesterday at %@";
+"Wallet.Updated.AtDate" = "%@";
+"Wallet.Updated.TodayAt" = "today at %@";
 
 "Wallet.Info.WalletCreated" = "Wallet Created";
 "Wallet.Info.Address" = "Your wallet address";
@@ -4906,3 +4906,60 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.WalletRequiredSetup" = "Set Up";
 
 "Wallet.CreateInvoice.Title" = "Create Invoice";
+
+"Wallet.Navigation.Close" = "Close";
+"Wallet.Navigation.Back" = "Back";
+"Wallet.Navigation.Done" = "Done";
+"Wallet.Navigation.Cancel" = "Cancel";
+"Wallet.Alert.OK" = "OK";
+"Wallet.Alert.Cancel" = "Cancel";
+
+"Wallet.Month.GenJanuary" = "January";
+"Wallet.Month.GenFebruary" = "February";
+"Wallet.Month.GenMarch" = "March";
+"Wallet.Month.GenApril" = "April";
+"Wallet.Month.GenMay" = "May";
+"Wallet.Month.GenJune" = "June";
+"Wallet.Month.GenJuly" = "July";
+"Wallet.Month.GenAugust" = "August";
+"Wallet.Month.GenSeptember" = "September";
+"Wallet.Month.GenOctober" = "October";
+"Wallet.Month.GenNovember" = "November";
+"Wallet.Month.GenDecember" = "December";
+"Wallet.Month.ShortJanuary" = "Jan";
+"Wallet.Month.ShortFebruary" = "Feb";
+"Wallet.Month.ShortMarch" = "Mar";
+"Wallet.Month.ShortApril" = "Apr";
+"Wallet.Month.ShortMay" = "May";
+"Wallet.Month.ShortJune" = "Jun";
+"Wallet.Month.ShortJuly" = "Jul";
+"Wallet.Month.ShortAugust" = "Aug";
+"Wallet.Month.ShortSeptember" = "Sep";
+"Wallet.Month.ShortOctober" = "Oct";
+"Wallet.Month.ShortNovember" = "Nov";
+"Wallet.Month.ShortDecember" = "Dec";
+
+"Wallet.Weekday.Today" = "Today";
+"Wallet.Weekday.Yesterday" = "Yesterday";
+
+"Wallet.Info.TransactionDateHeader" = "%1$@ %2$@";
+"Wallet.Info.TransactionDateHeaderYear" = "%1$@ %2$@, %3$@";
+
+"Wallet.UnknownError" = "An error occurred. Please try again later.";
+
+"Wallet.ContextMenuCopy" = "Copy";
+
+"Wallet.Time.PreciseDate_m1" = "Jan %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m2" = "Feb %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m3" = "Mar %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m4" = "Apr %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m5" = "May %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m6" = "Jun %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m7" = "Jul %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m8" = "Aug %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m9" = "Sep %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m10" = "Oct %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m11" = "Nov %1$@, %2$@ at %3$@";
+"Wallet.Time.PreciseDate_m12" = "Dec %1$@, %2$@ at %3$@";
+
+"Wallet.VoiceOver.Editing.ClearText" = "Clear text";

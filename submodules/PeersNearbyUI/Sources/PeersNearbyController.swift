@@ -8,10 +8,12 @@ import MapKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import DeviceLocationManager
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
@@ -313,7 +315,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
 
         var cancelImpl: (() -> Void)?
         let progressSignal = Signal<Never, NoError> { subscriber in
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                 cancelImpl?()
             }))
             presentControllerImpl?(controller, nil)

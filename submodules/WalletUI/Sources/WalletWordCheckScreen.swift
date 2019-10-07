@@ -1,8 +1,6 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -2071,36 +2069,34 @@ public enum WalletWordCheckMode {
 }
 
 public final class WalletWordCheckScreen: ViewController {
-    private let context: AccountContext
-    private let tonContext: TonContext
-    private var presentationData: PresentationData
+    private let context: WalletContext
+    private var presentationData: WalletPresentationData
     private let mode: WalletWordCheckMode
     
     private let startTime: Double
     
     private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
     
-    public init(context: AccountContext, tonContext: TonContext, mode: WalletWordCheckMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
+    public init(context: WalletContext, mode: WalletWordCheckMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
         self.context = context
-        self.tonContext = tonContext
         self.mode = mode
         self.walletCreatedPreloadState = walletCreatedPreloadState
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.presentationData
         
-        let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
+        let defaultTheme = self.presentationData.theme.navigationBar
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
         self.startTime = Date().timeIntervalSince1970
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.statusBarStyle
         self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -2112,7 +2108,7 @@ public final class WalletWordCheckScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletWordCheckScreenNode(account: self.context.account, presentationData: self.presentationData, mode: self.mode, possibleWordList: possibleWordList, action: { [weak self] in
+        self.displayNode = WalletWordCheckScreenNode(presentationData: self.presentationData, mode: self.mode, possibleWordList: possibleWordList, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -2142,14 +2138,14 @@ public final class WalletWordCheckScreen: ViewController {
                             }
                             return true
                         }
-                        let _ = confirmWalletExported(postbox: strongSelf.context.account.postbox, walletInfo: walletInfo).start()
-                        controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                        let _ = confirmWalletExported(postbox: strongSelf.context.postbox, walletInfo: walletInfo).start()
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
                     }
                 } else {
                     strongSelf.view.endEditing(true)
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_WordCheck_IncorrectHeader, text: strongSelf.presentationData.strings.Wallet_WordCheck_IncorrectText, actions: [
+                    strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_WordCheck_IncorrectHeader, text: strongSelf.presentationData.strings.Wallet_WordCheck_IncorrectText, actions: [
                         TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_WordCheck_TryAgain, action: {
                         }),
                         TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Wallet_WordCheck_ViewWords, action: {
@@ -2172,8 +2168,8 @@ public final class WalletWordCheckScreen: ViewController {
                 }
                 if !allWordsAreValid {
                     strongSelf.view.endEditing(true)
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectTitle, text: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectText, actions: [
-                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                    strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectTitle, text: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectText, actions: [
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
                     return
@@ -2184,15 +2180,15 @@ public final class WalletWordCheckScreen: ViewController {
                         return
                     }
                     strongSelf.view.endEditing(true)
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectTitle, text: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectText, actions: [
-                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                    strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectTitle, text: strongSelf.presentationData.strings.Wallet_WordImport_IncorrectText, actions: [
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
                 }
                 
-                let _ = (getServerWalletSalt(network: strongSelf.context.account.network)
+                let _ = (getServerWalletSalt(network: strongSelf.context.network)
                 |> deliverOnMainQueue).start(next: { serverSalt in
-                    let _ = (importWallet(postbox: strongSelf.context.account.postbox, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain, wordList: enteredWords, localPassword: serverSalt)
+                    let _ = (importWallet(postbox: strongSelf.context.postbox, tonInstance: strongSelf.context.tonInstance, keychain: strongSelf.context.keychain, wordList: enteredWords, localPassword: serverSalt)
                     |> deliverOnMainQueue).start(next: { walletInfo in
                         guard let strongSelf = self else {
                             return
@@ -2211,7 +2207,7 @@ public final class WalletWordCheckScreen: ViewController {
                                 }
                                 return true
                             }
-                            controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                            controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                             strongSelf.view.endEditing(true)
                             navigationController.setViewControllers(controllers, animated: true)
                         }
@@ -2238,7 +2234,7 @@ public final class WalletWordCheckScreen: ViewController {
                     }
                     return true
                 }
-                controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .restoreFailed, walletCreatedPreloadState: nil))
+                controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .restoreFailed, walletCreatedPreloadState: nil))
                 navigationController.setViewControllers(controllers, animated: true)
             }
         })
@@ -2279,7 +2275,7 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    init(theme: PresentationTheme, index: Int, possibleWordList: [String], previous: @escaping (WordCheckInputNode) -> Void, next: @escaping (WordCheckInputNode, Bool) -> Void, isLast: Bool, focused: @escaping (WordCheckInputNode) -> Void, pasteWords: @escaping ([String]) -> Void) {
+    init(theme: WalletTheme, index: Int, possibleWordList: [String], previous: @escaping (WordCheckInputNode) -> Void, next: @escaping (WordCheckInputNode, Bool) -> Void, isLast: Bool, focused: @escaping (WordCheckInputNode) -> Void, pasteWords: @escaping ([String]) -> Void) {
         self.previous = previous
         self.next = next
         self.focused = focused
@@ -2289,15 +2285,15 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
-        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 10.0, color: theme.actionSheet.inputBackgroundColor)
+        self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 10.0, color: theme.setup.inputBackgroundColor)
         
         self.labelNode = ImmediateTextNode()
-        self.labelNode.attributedText = NSAttributedString(string: "\(index + 1):", font: Font.regular(17.0), textColor: theme.actionSheet.inputPlaceholderColor)
+        self.labelNode.attributedText = NSAttributedString(string: "\(index + 1):", font: Font.regular(17.0), textColor: theme.setup.inputPlaceholderColor)
         self.labelNode.textAlignment = .right
         
         self.inputNode = TextFieldNode()
         self.inputNode.textField.font = Font.regular(17.0)
-        self.inputNode.textField.textColor = theme.actionSheet.inputTextColor
+        self.inputNode.textField.textColor = theme.setup.inputTextColor
         var wordTapped: ((String) -> Void)?
         self.inputNode.textField.inputAccessoryView = WordCheckInputAccesssoryView(theme: theme, wordList: possibleWordList, wordTapped: { word in
             wordTapped?(word)
@@ -2316,10 +2312,10 @@ private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {
         } else {
             self.inputNode.textField.returnKeyType = .next
         }
-        self.inputNode.textField.keyboardAppearance = theme.rootController.keyboardColor.keyboardAppearance
+        self.inputNode.textField.keyboardAppearance = theme.keyboardAppearance
         
         self.clearButtonNode = HighlightableButtonNode()
-        self.clearButtonNode.setImage(generateClearIcon(color: theme.actionSheet.inputClearButtonColor.withAlphaComponent(0.7)), for: [])
+        self.clearButtonNode.setImage(generateClearIcon(color: theme.setup.inputClearButtonColor), for: [])
         self.clearButtonNode.isHidden = true
         
         super.init()
@@ -2414,17 +2410,17 @@ private final class WordView: UIView {
     let textNode: ImmediateTextNode
     let separator: UIView
     
-    init(theme: PresentationTheme, string: String, tapped: @escaping () -> Void) {
+    init(theme: WalletTheme, string: String, tapped: @escaping () -> Void) {
         self.string = string
         self.tapped = tapped
         
         let separatorColor: UIColor
         let textColor: UIColor
-        switch theme.rootController.keyboardColor {
-        case .light:
+        switch theme.keyboardAppearance {
+        case .light, .default:
             separatorColor = UIColor(rgb: 0x9e9f9f)
             textColor = .black
-        case .dark:
+        default:
             separatorColor = UIColor(rgb: 0x9e9f9f)
             textColor = .white
         }
@@ -2465,7 +2461,7 @@ private final class WordView: UIView {
 }
 
 private final class WordCheckInputAccesssoryView: UIInputView {
-    private let theme: PresentationTheme
+    private let theme: WalletTheme
     private let wordList: [String]
     private let wordTapped: (String) -> Void
     
@@ -2477,7 +2473,7 @@ private final class WordCheckInputAccesssoryView: UIInputView {
         return CGSize(width: 100.0, height: 44.0)
     }
     
-    init(theme: PresentationTheme, wordList: [String], wordTapped: @escaping (String) -> Void) {
+    init(theme: WalletTheme, wordList: [String], wordTapped: @escaping (String) -> Void) {
         self.theme = theme
         self.wordList = wordList
         self.wordTapped = wordTapped
@@ -2569,7 +2565,7 @@ private final class WordCheckInputAccesssoryView: UIInputView {
 }
 
 private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     private let mode: WalletWordCheckMode
     private let action: () -> Void
     private let secondaryAction: () -> Void
@@ -2592,17 +2588,17 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         return self.inputNodes.map { $0.text }
     }
     
-    init(account: Account, presentationData: PresentationData, mode: WalletWordCheckMode, possibleWordList: [String], action: @escaping () -> Void, secondaryAction: @escaping () -> Void) {
+    init(presentationData: WalletPresentationData, mode: WalletWordCheckMode, possibleWordList: [String], action: @escaping () -> Void, secondaryAction: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         self.action = action
         self.secondaryAction = secondaryAction
         
         self.navigationBackgroundNode = ASDisplayNode()
-        self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.navigationBar.backgroundColor
         self.navigationBackgroundNode.alpha = 0.0
         self.navigationSeparatorNode = ASDisplayNode()
-        self.navigationSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.navigationSeparatorNode.backgroundColor = self.presentationData.theme.navigationBar.separatorColor
         
         self.scrollNode = ASScrollNode()
         self.scrollNode.canCancelAllTouchesInViews = true
@@ -2628,7 +2624,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             buttonText = self.presentationData.strings.Wallet_WordCheck_Continue
             secondaryActionText = ""
             if let path = getAppBundle().path(forResource: "WalletWordCheck", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 238, height: 238, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 238, height: 238, playbackMode: .once, mode: .direct)
                 self.animationNode.visibility = true
             }
         case .import:
@@ -2682,7 +2678,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
         
         self.inputNodes = inputNodes
         
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.setup.buttonFillColor, foregroundColor: self.presentationData.theme.setup.buttonForegroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         super.init()
         

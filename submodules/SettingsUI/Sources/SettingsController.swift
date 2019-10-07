@@ -15,10 +15,12 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import OverlayStatusController
 import AvatarNode
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 import GalleryUI
 import LegacyUI
@@ -782,7 +784,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         |> deliverOnMainQueue
         |> take(1)).start(next: { context in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             let _ = (resolvedUrl.get()
             |> take(1)

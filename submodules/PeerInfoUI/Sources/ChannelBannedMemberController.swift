@@ -6,10 +6,12 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import TelegramStringFormatting
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListAvatarAndNameInfoItem
 
 private final class ChannelBannedMemberControllerArguments {
@@ -673,7 +675,7 @@ public func channelBannedMemberController(context: AccountContext, peerId: PeerI
                                         }, completed: {
                                             if previousRights == nil {
                                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.GroupPermission_AddSuccess, false)), nil)
+                                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.GroupPermission_AddSuccess, false)), nil)
                                             }
                                             updated(cleanResolvedRights.flags.isEmpty ? nil : cleanResolvedRights)
                                             dismissImpl?()

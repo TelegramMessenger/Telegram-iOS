@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 
 class BotCheckoutPriceItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

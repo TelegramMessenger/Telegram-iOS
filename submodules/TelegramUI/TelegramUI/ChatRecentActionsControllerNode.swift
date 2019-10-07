@@ -11,6 +11,7 @@ import SafariServices
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import PresentationDataUtils
 import OpenInExternalAppUI
 import InstantPageUI
 import HashtagSearchUI

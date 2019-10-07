@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import Display
 import AlertUI
+import PresentationDataUtils
 import OverlayStatusController
 
 func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsController: ContactsController?) -> Signal<[ContextMenuItem], NoError> {
@@ -62,7 +63,7 @@ func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsCo
                         var cancelImpl: (() -> Void)?
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                 cancelImpl?()
                             }))
                             contactsController?.present(controller, in: .window(.root))

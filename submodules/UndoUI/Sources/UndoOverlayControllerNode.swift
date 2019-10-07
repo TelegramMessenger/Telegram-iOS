@@ -120,13 +120,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.textNode.maximumNumberOfLines = 2
                 displayUndo = false
                 self.originalRemainingSeconds = 5
-            case let .emoji(account, path, text):
+            case let .emoji(path, text):
                 self.iconNode = nil
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = AnimatedStickerNode()
                 self.animatedStickerNode?.visibility = true
-                self.animatedStickerNode?.setup(account: account, resource: .localFile(path), width: 100, height: 100, playbackMode: .once, mode: .direct)
+                self.animatedStickerNode?.setup(resource: .localFile(path), width: 100, height: 100, playbackMode: .once, mode: .direct)
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)

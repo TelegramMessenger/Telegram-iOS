@@ -17,6 +17,7 @@ static_library(
         "//submodules/ShareController:ShareController",
         "//submodules/StickerResources:StickerResources",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TextFormat:TextFormat",
         "//submodules/MergeLists:MergeLists",
         "//submodules/ActivityIndicator:ActivityIndicator",

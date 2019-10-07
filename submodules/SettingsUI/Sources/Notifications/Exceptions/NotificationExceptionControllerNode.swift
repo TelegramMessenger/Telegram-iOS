@@ -8,6 +8,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import MergeLists
 import AccountContext
 import SearchBarNode

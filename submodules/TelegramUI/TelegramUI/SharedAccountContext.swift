@@ -19,6 +19,7 @@ import LegacyMediaPickerUI
 import LocalMediaResources
 import OverlayStatusController
 import AlertUI
+import PresentationDataUtils
 
 private enum CallStatusText: Equatable {
     case none
@@ -1051,9 +1052,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     present(controller)
                 } else {
                     if let _ = currentPublicKey {
-                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .intro, walletCreatedPreloadState: nil))
+                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .intro, walletCreatedPreloadState: nil))
                     } else {
-                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
+                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
                     }
                 }
             } else {
@@ -1066,20 +1067,20 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             switch walletContext {
                             case .generic:
                                 if exportCompleted {
-                                    present(WalletInfoScreen(context: context, tonContext: tonContext, walletInfo: walletInfo, address: address, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild))
+                                    present(WalletInfoScreen(context: WalletContextImpl(context: context, tonContext: tonContext), walletInfo: walletInfo, address: address, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild))
                                 } else {
-                                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
+                                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
                                 }
                             case let .send(address, amount, comment):
-                                present(walletSendScreen(context: context, tonContext: tonContext, randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
+                                present(walletSendScreen(context: WalletContextImpl(context: context, tonContext: tonContext), randomId: arc4random64(), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
                             }
                             
                         })
                     } else {
-                        present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
+                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
                     }
                 } else {
-                    present(WalletSplashScreen(context: context, tonContext: tonContext, mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
+                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
                 }
             }
         })

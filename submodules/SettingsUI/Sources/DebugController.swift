@@ -13,6 +13,7 @@ import MessageUI
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import WalletUI
@@ -454,7 +455,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
                 let _ = (context.account.postbox.transaction { transaction -> Void in
                     transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
@@ -475,13 +476,13 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     return
                 }
                 let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 arguments.presentController(controller, nil)
                 let _ = (context.account.postbox.optimizeStorage()
                     |> deliverOnMainQueue).start(completed: {
                         controller.dismiss()
                         
-                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
+                        let controller = OverlayStatusController(theme: presentationData.theme, type: .success)
                         arguments.presentController(controller, nil)
                     })
             })

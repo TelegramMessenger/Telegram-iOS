@@ -1,19 +1,15 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import ItemListUI
 import SwiftSignalKit
 import OverlayStatusController
-import ShareController
 
 private final class WalletCreateInvoiceScreenArguments {
-    let context: AccountContext
+    let context: WalletContext
     let updateState: ((WalletCreateInvoiceScreenState) -> WalletCreateInvoiceScreenState) -> Void
     let updateText: (WalletCreateInvoiceScreenEntryTag, String) -> Void
     let selectNextInputItem: (WalletCreateInvoiceScreenEntryTag) -> Void
@@ -24,7 +20,7 @@ private final class WalletCreateInvoiceScreenArguments {
     let displayQrCodeContextMenu: () -> Void
     let scrollToBottom: () -> Void
     
-    init(context: AccountContext, updateState: @escaping ((WalletCreateInvoiceScreenState) -> WalletCreateInvoiceScreenState) -> Void, updateText: @escaping (WalletCreateInvoiceScreenEntryTag, String) -> Void, selectNextInputItem: @escaping (WalletCreateInvoiceScreenEntryTag) -> Void, dismissInput: @escaping () -> Void, copyAddress: @escaping () -> Void, shareAddressLink: @escaping () -> Void, openQrCode: @escaping () -> Void, displayQrCodeContextMenu: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
+    init(context: WalletContext, updateState: @escaping ((WalletCreateInvoiceScreenState) -> WalletCreateInvoiceScreenState) -> Void, updateText: @escaping (WalletCreateInvoiceScreenEntryTag, String) -> Void, selectNextInputItem: @escaping (WalletCreateInvoiceScreenEntryTag) -> Void, dismissInput: @escaping () -> Void, copyAddress: @escaping () -> Void, shareAddressLink: @escaping () -> Void, openQrCode: @escaping () -> Void, displayQrCodeContextMenu: @escaping () -> Void, scrollToBottom: @escaping () -> Void) {
         self.context = context
         self.updateState = updateState
         self.updateText = updateText
@@ -58,16 +54,16 @@ private enum WalletCreateInvoiceScreenEntryTag: ItemListItemTag {
 }
 
 private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
-    case amountHeader(PresentationTheme, String)
-    case amount(PresentationTheme, PresentationStrings, String, String)
-    case commentHeader(PresentationTheme, String)
-    case comment(PresentationTheme, String, String)
-    case addressCode(PresentationTheme, String)
-    case addressHeader(PresentationTheme, String)
-    case address(PresentationTheme, String, Bool)
-    case copyAddress(PresentationTheme, String)
-    case shareAddressLink(PresentationTheme, String)
-    case addressInfo(PresentationTheme, String)
+    case amountHeader(WalletTheme, String)
+    case amount(WalletTheme, WalletStrings, String, String)
+    case commentHeader(WalletTheme, String)
+    case comment(WalletTheme, String, String)
+    case addressCode(WalletTheme, String)
+    case addressHeader(WalletTheme, String)
+    case address(WalletTheme, String, Bool)
+    case copyAddress(WalletTheme, String)
+    case shareAddressLink(WalletTheme, String)
+    case addressInfo(WalletTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -181,7 +177,7 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .amount(theme, strings, placeholder, text):
             return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: text, placeholder: placeholder, type: .decimal, returnKeyType: .next, clearType: .onFocus, tag: WalletCreateInvoiceScreenEntryTag.amount, sectionId: self.section, textUpdated: { text in
-                let text = formatAmountText(text, decimalSeparator: arguments.context.sharedContext.currentPresentationData.with { $0 }.dateTimeFormat.decimalSeparator)
+                let text = formatAmountText(text, decimalSeparator: arguments.context.presentationData.dateTimeFormat.decimalSeparator)
                 arguments.updateText(WalletCreateInvoiceScreenEntryTag.amount, text)
             }, shouldUpdateText: { text in
                 return isValidAmount(text)
@@ -200,7 +196,7 @@ private enum WalletCreateInvoiceScreenEntry: ItemListNodeEntry {
                 if focus {
                     arguments.scrollToBottom()
                 } else {
-                    let presentationData = arguments.context.sharedContext.currentPresentationData.with { $0 }
+                    let presentationData = arguments.context.presentationData
                     arguments.updateState { state in
                         var state = state
                         if !state.amount.isEmpty {
@@ -266,7 +262,7 @@ private struct WalletCreateInvoiceScreenState: Equatable {
     }
 }
 
-private func walletCreateInvoiceScreenEntries(presentationData: PresentationData, address: String, state: WalletCreateInvoiceScreenState) -> [WalletCreateInvoiceScreenEntry] {
+private func walletCreateInvoiceScreenEntries(presentationData: WalletPresentationData, address: String, state: WalletCreateInvoiceScreenState) -> [WalletCreateInvoiceScreenEntry] {
     var entries: [WalletCreateInvoiceScreenEntry] = []
     
     let amount = amountValue(state.amount)
@@ -293,10 +289,9 @@ protocol WalletCreateInvoiceScreen {
 }
 
 private final class WalletCreateInvoiceScreenImpl: ItemListController, WalletCreateInvoiceScreen {
-    
 }
 
-func walletCreateInvoiceScreen(context: AccountContext, address: String) -> ViewController {
+func walletCreateInvoiceScreen(context: WalletContext, address: String) -> ViewController {
     let initialState = WalletCreateInvoiceScreenState(amount: "", comment: "", focusItemTag: nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -332,13 +327,13 @@ func walletCreateInvoiceScreen(context: AccountContext, address: String) -> View
     }, dismissInput: {
         dismissInputImpl?()
     }, copyAddress: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.presentationData
         let state = stateValue.with { $0 }
         
         UIPasteboard.general.string = walletInvoiceUrl(address: address, amount: state.amount, comment: state.comment)
     
         if currentStatusController == nil {
-            let statusController = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Wallet_Receive_InvoiceUrlCopied, false))
+            let statusController = OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Wallet_Receive_InvoiceUrlCopied, false))
             presentControllerImpl?(statusController, nil)
             currentStatusController = statusController
         }
@@ -346,8 +341,7 @@ func walletCreateInvoiceScreen(context: AccountContext, address: String) -> View
         dismissInputImpl?()
         let state = stateValue.with { $0 }
         let url = walletInvoiceUrl(address: address, amount: state.amount, comment: state.comment)
-        let controller = ShareController(context: context, subject: .url(url), preferredAction: .default)
-        presentControllerImpl?(controller, nil)
+        context.shareUrl(url)
     }, openQrCode: {
         dismissInputImpl?()
         let state = stateValue.with { $0 }
@@ -360,24 +354,24 @@ func walletCreateInvoiceScreen(context: AccountContext, address: String) -> View
         ensureItemVisibleImpl?(WalletCreateInvoiceScreenEntryTag.comment, true)
     })
     
-    let signal = combineLatest(queue: .mainQueue(), context.sharedContext.presentationData, statePromise.get())
+    let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), statePromise.get())
         |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var ensureVisibleItemTag: ItemListItemTag?
             if let focusItemTag = state.focusItemTag {
                 ensureVisibleItemTag = focusItemTag
             }
             
-            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+            let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Navigation_Done), style: .bold, enabled: true, action: {
                 dismissImpl?()
             })
             
-            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_CreateInvoice_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+            let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_CreateInvoice_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)
             let listState = ItemListNodeState(entries: walletCreateInvoiceScreenEntries(presentationData: presentationData, address: address, state: state), style: .blocks, ensureVisibleItemTag: ensureVisibleItemTag, animateChanges: false)
             
             return (controllerState, (listState, arguments))
     }
     
-    let controller = WalletCreateInvoiceScreenImpl(context: context, state: signal)
+    let controller = WalletCreateInvoiceScreenImpl(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil)
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     controller.experimentalSnapScrollToItem = true
     presentControllerImpl = { [weak controller] c, a in

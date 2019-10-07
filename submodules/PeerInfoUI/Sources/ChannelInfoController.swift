@@ -8,12 +8,14 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TextFormat
 import OverlayStatusController
 import TelegramStringFormatting
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import GalleryUI
 import LegacyUI
 import ItemListAvatarAndNameInfoItem
@@ -849,7 +851,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
         var cancelImpl: (() -> Void)?
         let progressSignal = Signal<Never, NoError> { subscriber in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                 cancelImpl?()
             }))
             presentControllerImpl?(controller, nil)

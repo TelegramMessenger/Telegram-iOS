@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import StickerPackPreviewUI
@@ -315,7 +316,7 @@ public func archivedStickerPacksController(context: AccountContext, mode: Archiv
         }
         |> deliverOnMainQueue).start(completed: {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
             
             let applyPacks: Signal<Void, NoError> = stickerPacks.get()
             |> filter { $0 != nil }

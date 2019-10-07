@@ -43,6 +43,7 @@ resource_dependencies = [
     "//submodules/LegacyComponents:LegacyComponentsResources",
     "//submodules/TelegramUI:TelegramUIAssets",
     "//submodules/TelegramUI:TelegramUIResources",
+    "//submodules/WalletUI:WalletUIResources",
     "//:AppResources",
     "//:AppStringResources",
     "//:InfoPlistStringResources",

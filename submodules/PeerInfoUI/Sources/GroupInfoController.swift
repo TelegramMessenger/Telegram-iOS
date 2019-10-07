@@ -10,12 +10,14 @@ import TelegramPresentationData
 import SafariServices
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import TextFormat
 import AccountContext
 import TelegramStringFormatting
 import TemporaryCachedPeerDataManager
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import MediaResources
 import PhotoResources
 import GalleryUI

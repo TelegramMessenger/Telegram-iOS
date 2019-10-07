@@ -7,7 +7,6 @@ static_library(
     ]),
     deps = [
     	"//submodules/Display:Display#shared",
-        "//submodules/AccountContext:AccountContext",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -1,14 +1,22 @@
 import Foundation
 import UIKit
 import Display
-import AccountContext
+import SwiftSignalKit
 
-public func textAlertController(context: AccountContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true) -> AlertController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+public final class AlertControllerContext {
+    public let theme: AlertControllerTheme
+    public let themeSignal: Signal<AlertControllerTheme, NoError>
     
-    let controller = standardTextAlertController(theme: AlertControllerTheme(presentationTheme: presentationData.theme), title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset)
-    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
-        controller?.theme = AlertControllerTheme(presentationTheme: presentationData.theme)
+    public init(theme: AlertControllerTheme, themeSignal: Signal<AlertControllerTheme, NoError>) {
+        self.theme = theme
+        self.themeSignal = themeSignal
+    }
+}
+
+public func textAlertController(alertContext: AlertControllerContext, title: String?, text: String, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true) -> AlertController {
+    let controller = standardTextAlertController(theme: alertContext.theme, title: title, text: text, actions: actions, actionLayout: actionLayout, allowInputInset: allowInputInset)
+    let presentationDataDisposable = alertContext.themeSignal.start(next: { [weak controller] theme in
+        controller?.theme = theme
     })
     controller.dismissed = {
         presentationDataDisposable.dispose()
@@ -17,9 +25,8 @@ public func textAlertController(context: AccountContext, title: String?, text: S
     return controller
 }
 
-public func richTextAlertController(context: AccountContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissAutomatically: Bool = true) -> AlertController {
-    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-    let theme = AlertControllerTheme(presentationTheme: presentationData.theme)
+public func richTextAlertController(alertContext: AlertControllerContext, title: NSAttributedString?, text: NSAttributedString, actions: [TextAlertAction], actionLayout: TextAlertContentActionLayout = .horizontal, allowInputInset: Bool = true, dismissAutomatically: Bool = true) -> AlertController {
+    let theme = alertContext.theme
     
     var dismissImpl: (() -> Void)?
     let controller = AlertController(theme: theme, contentNode: TextAlertContentNode(theme: theme, title: title, text: text, actions: actions.map { action in
@@ -34,8 +41,8 @@ public func richTextAlertController(context: AccountContext, title: NSAttributed
         controller?.dismissAnimated()
     }
     
-    let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
-        controller?.theme = AlertControllerTheme(presentationTheme: presentationData.theme)
+    let presentationDataDisposable = alertContext.themeSignal.start(next: { [weak controller] theme in
+        controller?.theme = theme
     })
     controller.dismissed = {
         presentationDataDisposable.dispose()

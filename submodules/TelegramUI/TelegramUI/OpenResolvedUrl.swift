@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import OverlayStatusController
 import AlertUI
+import PresentationDataUtils
 import PassportUI
 import InstantPageUI
 import StickerPackPreviewUI
@@ -127,7 +128,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             }
         case let .cancelAccountReset(phone, hash):
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             present(controller, nil)
             let _ = (requestCancelAccountResetData(network: context.account.network, hash: hash)
             |> deliverOnMainQueue).start(next: { [weak controller] data in
@@ -219,7 +220,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     options = wallpaperOptions
                     color = patternColor
                     intensity = patternIntensity
-                    controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                    controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                     present(controller!, nil)
                 case let .color(color):
                     signal = .single(.color(Int32(color.rgb)))
@@ -276,12 +277,12 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     return disposables
                 }
             }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             present(controller, nil)
             
             var cancelImpl: (() -> Void)?
             let progressSignal = Signal<Never, NoError> { subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                     cancelImpl?()
                 }))
                 present(controller, nil)

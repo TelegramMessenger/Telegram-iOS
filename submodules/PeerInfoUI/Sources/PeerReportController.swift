@@ -6,9 +6,11 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import ContextUI
 import AlertUI
+import PresentationDataUtils
 
 public enum PeerReportSubject {
     case peer(PeerId)

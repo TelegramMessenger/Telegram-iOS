@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 
 class ForwardPrivacyChatPreviewItem: ListViewItem, ItemListItem {

@@ -11,6 +11,7 @@ import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import UrlEscaping
 import UrlHandling

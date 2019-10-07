@@ -1,8 +1,6 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
@@ -49,23 +47,22 @@ private func generateFrameImage() -> UIImage? {
 }
 
 public final class WalletQrScanScreen: ViewController {
-    private let context: AccountContext
+    private let context: WalletContext
     private let completion: (ParsedWalletUrl) -> Void
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     
     private var codeDisposable: Disposable?
     private var inForegroundDisposable: Disposable?
     
-    public init(context: AccountContext, completion: @escaping (ParsedWalletUrl) -> Void) {
+    public init(context: WalletContext, completion: @escaping (ParsedWalletUrl) -> Void) {
         self.context = context
         self.completion = completion
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.presentationData
         
-        let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
         let navigationBarTheme = NavigationBarTheme(buttonColor: .white, disabledButtonColor: .white, primaryTextColor: .white, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: .clear, badgeStrokeColor: .clear, badgeTextColor: .clear)
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
         self.statusBar.statusBarStyle = .White
         
@@ -73,9 +70,9 @@ public final class WalletQrScanScreen: ViewController {
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
         
-        self.inForegroundDisposable = (context.sharedContext.applicationBindings.applicationInForeground
+        self.inForegroundDisposable = (context.inForeground
         |> deliverOnMainQueue).start(next: { [weak self] inForeground in
             guard let strongSelf = self else {
                 return
@@ -122,7 +119,7 @@ public final class WalletQrScanScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.context.sharedContext.openImagePicker(context: strongSelf.context, completion: { image in
+            strongSelf.context.pickImage(completion: { image in
                 let detector = CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: [CIDetectorAccuracy:CIDetectorAccuracyHigh])!
                 if let ciImage = CIImage(image: image) {
                     var options: [String: Any]
@@ -143,10 +140,9 @@ public final class WalletQrScanScreen: ViewController {
                         }
                     }
                 }
-                let controller = textAlertController(context: strongSelf.context, title: nil, text: "No valid QR code detected.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})])
+                let theme = strongSelf.context.presentationData.theme
+                let controller = textAlertController(alertContext: AlertControllerContext(theme: theme.alert, themeSignal: .single(theme.alert)), title: nil, text: "No valid QR code detected.", actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {})])
                 strongSelf.present(controller, in: .window(.root))
-            }, present: { [weak self] c in
-                self?.push(c)
             })
         }
     }
@@ -159,7 +155,7 @@ public final class WalletQrScanScreen: ViewController {
 }
 
 private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
 
     private let previewNode: CameraPreviewNode
     private let fadeNode: ASDisplayNode
@@ -182,7 +178,7 @@ private final class WalletQrScanScreenNode: ViewControllerTracingNode, UIScrollV
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    init(presentationData: PresentationData) {
+    init(presentationData: WalletPresentationData) {
         self.presentationData = presentationData
         
         self.previewNode = CameraPreviewNode()

@@ -199,11 +199,21 @@ final class WriteBuffer {
     }
 }
 
-if CommandLine.arguments.count != 4 {
-    print("Usage: swift GenerateLocalization.swift Localizable.strings Strings.swift Strings.mapping")
+if CommandLine.arguments.count < 4 {
+    print("Usage: swift GenerateLocalization.swift Localizable.strings Strings.swift Strings.mapping [prefix]")
 } else {
+    var filterPrefix: String?
+    if CommandLine.arguments.count > 4 {
+        filterPrefix = CommandLine.arguments[4]
+    }
+    
+    let mappingFileUrl = URL(fileURLWithPath: CommandLine.arguments[3])
+    let mappingFileName = mappingFileUrl.lastPathComponent
+    let mappingFileBaseName = String(mappingFileName[mappingFileName.startIndex ..< mappingFileName.index(mappingFileName.endIndex, offsetBy: -1 - mappingFileUrl.pathExtension.count)])
+    let snakeCaseMappingFileBaseName = mappingFileBaseName.prefix(1).lowercased() + mappingFileBaseName.dropFirst()
+    
     if let rawDict = NSDictionary(contentsOfFile: CommandLine.arguments[1]) {
-        var result = "import Foundation\nimport AppBundle\n\n"
+        var result = "import Foundation\nimport AppBundle\nimport StringPluralization\n\n"
         
         result +=
 """
@@ -239,7 +249,7 @@ private extension PluralizationForm {
     }
 }
 
-public final class PresentationStringsComponent {
+public final class \(mappingFileBaseName)Component {
     public let languageCode: String
     public let localizedName: String
     public let pluralizationRulesCode: String?
@@ -253,7 +263,7 @@ public final class PresentationStringsComponent {
     }
 }
         
-private func getValue(_ primaryComponent: PresentationStringsComponent, _ secondaryComponent: PresentationStringsComponent?, _ key: String) -> String {
+private func getValue(_ primaryComponent: \(mappingFileBaseName)Component, _ secondaryComponent: \(mappingFileBaseName)Component?, _ key: String) -> String {
     if let value = primaryComponent.dict[key] {
         return value
     } else if let secondaryComponent = secondaryComponent, let value = secondaryComponent.dict[key] {
@@ -265,7 +275,7 @@ private func getValue(_ primaryComponent: PresentationStringsComponent, _ second
     }
 }
 
-private func getValueWithForm(_ primaryComponent: PresentationStringsComponent, _ secondaryComponent: PresentationStringsComponent?, _ key: String, _ form: PluralizationForm) -> String {
+private func getValueWithForm(_ primaryComponent: \(mappingFileBaseName)Component, _ secondaryComponent: \(mappingFileBaseName)Component?, _ key: String, _ form: PluralizationForm) -> String {
     let builtKey = key + form.canonicalSuffix
     if let value = primaryComponent.dict[builtKey] {
         return value
@@ -346,7 +356,7 @@ private final class DataReader {
 }
         
 private func loadMapping() -> ([Int], [String], [Int], [Int], [String]) {
-    guard let filePath = getAppBundle().path(forResource: "PresentationStrings", ofType: "mapping") else {
+    guard let filePath = getAppBundle().path(forResource: "\(mappingFileBaseName)", ofType: "mapping") else {
         fatalError()
     }
     guard let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
@@ -381,11 +391,11 @@ private func loadMapping() -> ([Int], [String], [Int], [Int], [String]) {
 
 private let keyMapping: ([Int], [String], [Int], [Int], [String]) = loadMapping()
         
-public final class PresentationStrings {
+public final class \(mappingFileBaseName): Equatable {
     public let lc: UInt32
     
-    public let primaryComponent: PresentationStringsComponent
-    public let secondaryComponent: PresentationStringsComponent?
+    public let primaryComponent: \(mappingFileBaseName)Component
+    public let secondaryComponent: \(mappingFileBaseName)Component?
     public let baseLanguageCode: String
     public let groupingSeparator: String
         
@@ -394,7 +404,13 @@ public final class PresentationStrings {
     private let _ps: [Int: String]
 
 """
-        let rawKeyPairs = rawDict.map({ ($0 as! String, $1 as! String) })
+        var rawKeyPairs = rawDict.map({ ($0 as! String, $1 as! String) })
+        if let filterPrefix = filterPrefix {
+            rawKeyPairs = rawKeyPairs.filter {
+                $0.0.hasPrefix(filterPrefix)
+            }
+        }
+        
         let idKeyPairs = zip(rawKeyPairs, 0 ..< rawKeyPairs.count).map({ pair, index in (pair.0, pair.1, index) })
         
         var pluralizationKeys = Set<String>()
@@ -479,7 +495,7 @@ public final class PresentationStrings {
                     result +=
 """
     public func \(escapedIdentifier(key))(_ selector: Int32, \(argList)) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, selector)
+        let form = getPluralizationForm(self.lc, selector)
         return String(format: self._ps[\(id) * \(PluralizationForm.formCount) + Int(form.rawValue)]!, \(argListAccessor))
     }
 
@@ -488,8 +504,8 @@ public final class PresentationStrings {
                     result +=
 """
     public func \(escapedIdentifier(key))(_ value: Int32) -> String {
-        let form = presentationStringsPluralizationForm(self.lc, value)
-        let stringValue = presentationStringsFormattedNumber(value, self.groupingSeparator)
+        let form = getPluralizationForm(self.lc, value)
+        let stringValue = \(snakeCaseMappingFileBaseName)FormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[\(id) * \(PluralizationForm.formCount) + Int(form.rawValue)]!, stringValue)
     }
 
@@ -503,7 +519,7 @@ public final class PresentationStrings {
         result +=
 """
         
-    public init(primaryComponent: PresentationStringsComponent, secondaryComponent: PresentationStringsComponent?, groupingSeparator: String) {
+    public init(primaryComponent: \(mappingFileBaseName)Component, secondaryComponent: \(mappingFileBaseName)Component?, groupingSeparator: String) {
         self.primaryComponent = primaryComponent
         self.secondaryComponent = secondaryComponent
         self.groupingSeparator = groupingSeparator
@@ -579,7 +595,14 @@ public final class PresentationStrings {
 
 """
         result += "    }\n"
-        result += "}\n\n"
+        result +=
+"""
+    
+    public static func ==(lhs: \(mappingFileBaseName), rhs: \(mappingFileBaseName)) -> Bool {
+        return lhs === rhs
+    }
+"""
+        result += "\n}\n\n"
         let _ = try? FileManager.default.removeItem(atPath: CommandLine.arguments[2])
         let _ = try? FileManager.default.removeItem(atPath: CommandLine.arguments[3])
         let _ = try? result.write(toFile: CommandLine.arguments[2], atomically: true, encoding: .utf8)

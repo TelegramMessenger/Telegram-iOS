@@ -16,6 +16,7 @@ static_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/CallListUI:CallListUI",
         "//submodules/ChatListSearchItemNode:ChatListSearchItemNode",

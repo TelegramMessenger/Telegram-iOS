@@ -9,6 +9,7 @@ import OverlayStatusController
 import AccountContext
 import LegacyUI
 import ImageCompression
+import PresentationDataUtils
 
 enum SecureIdAttachmentMenuType {
     case generic
@@ -64,7 +65,7 @@ func presentLegacySecureIdAttachmentMenu(context: AccountContext, present: @esca
                 return
             }
             uploadStarted = true
-            let statusController = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             let statusDisposable = (Signal<Never, NoError> { subscriber in
                 present(statusController)
                 return ActionDisposable {

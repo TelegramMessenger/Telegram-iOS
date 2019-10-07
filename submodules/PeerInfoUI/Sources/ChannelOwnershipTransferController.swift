@@ -10,6 +10,7 @@ import ActivityIndicator
 import TextFormat
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import PasswordSetupUI
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {

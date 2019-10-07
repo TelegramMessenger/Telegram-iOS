@@ -18,6 +18,7 @@ static_library(
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/DeviceLocationManager:DeviceLocationManager",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ItemListPeerItem:ItemListPeerItem",
         "//submodules/TelegramPermissionsUI:TelegramPermissionsUI",
         "//submodules/ItemListPeerActionItem:ItemListPeerActionItem",

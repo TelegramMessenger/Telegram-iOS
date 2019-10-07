@@ -7,9 +7,11 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 import ItemListPeerActionItem
 
@@ -247,7 +249,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
                     presentControllerImpl?(controller, nil)
@@ -279,7 +281,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                 }, completed: {
                     dismiss()
                     /*let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                     let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
+                     let controller = OverlayStatusController(theme: presentationData.theme, type: .success)
                      presentControllerImpl?(controller, nil)*/
                 }))
             }))
@@ -347,7 +349,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                     var cancelImpl: (() -> Void)?
                     let progressSignal = Signal<Never, NoError> { subscriber in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                             cancelImpl?()
                         }))
                         presentControllerImpl?(controller, nil)
@@ -402,7 +404,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
                                     var cancelImpl: (() -> Void)?
                                     let progressSignal = Signal<Never, NoError> { subscriber in
                                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                             cancelImpl?()
                                         }))
                                         presentControllerImpl?(controller, nil)
@@ -482,7 +484,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             var cancelImpl: (() -> Void)?
             let progressSignal = Signal<Never, NoError> { subscriber in
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                     cancelImpl?()
                 }))
                 presentControllerImpl?(controller, nil)
@@ -513,7 +515,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             }, completed: {
                 if case .group = peer.info {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success)
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .success)
                     presentControllerImpl?(controller, nil)
                     
                     dismissImpl?()

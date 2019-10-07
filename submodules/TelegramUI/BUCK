@@ -87,6 +87,7 @@ framework(
         "//submodules/AccountContext:AccountContext",
         "//submodules/ComposePollUI:ComposePollUI",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/TouchDownGesture:TouchDownGesture",
         "//submodules/SwipeToDismissGesture:SwipeToDismissGesture",
         "//submodules/DirectionalPanGesture:DirectionalPanGesture",

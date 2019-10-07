@@ -6,9 +6,11 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import AuthorizationUI
 
 private final class ChangePhoneNumberCodeControllerArguments {
@@ -272,7 +274,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
                     return $0.withUpdatedChecking(false)
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
                 dismissImpl?()
             }))
         }

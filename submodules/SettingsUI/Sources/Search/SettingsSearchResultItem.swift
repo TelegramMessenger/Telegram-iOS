@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 
 class SettingsSearchResultItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

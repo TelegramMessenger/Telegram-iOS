@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
+import PresentationDataUtils
 
 private let autodownloadSizeValues: [(CGFloat, Int32)] = [
     (0.000, 512 * 1024),

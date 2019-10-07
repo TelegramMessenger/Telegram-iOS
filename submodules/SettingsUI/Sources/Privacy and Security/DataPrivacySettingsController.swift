@@ -7,9 +7,11 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 
 private final class DataPrivacyControllerArguments {
@@ -365,7 +367,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                             return state
                         }
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
+                        presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
                     }))
             }
             dismissAction()
@@ -419,7 +421,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                         return state
                     }
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
+                    presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
                 }))
             }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {})]))
         }
@@ -475,7 +477,7 @@ public func dataPrivacyController(context: AccountContext) -> ViewController {
                                     return state
                                 }
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success))
+                                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .success))
                             }))
                     }
                     dismissAction()

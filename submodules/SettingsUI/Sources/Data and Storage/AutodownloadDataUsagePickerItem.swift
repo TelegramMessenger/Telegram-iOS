@@ -8,6 +8,7 @@ import TelegramUIPreferences
 import TelegramPresentationData
 import LegacyComponents
 import ItemListUI
+import PresentationDataUtils
 
 enum AutomaticDownloadDataUsage: Int {
     case low

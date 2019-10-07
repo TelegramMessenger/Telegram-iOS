@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import EncryptionKeyVisualization
 
 class ItemListSecretChatKeyItem: ListViewItem, ItemListItem {

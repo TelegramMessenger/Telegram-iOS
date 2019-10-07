@@ -108,7 +108,7 @@ final class StickerPackPreviewGridItemNode: GridItemNode {
                         }
                     }
                     let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    self.animationNode?.setup(account: account, resource: .resource(stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    self.animationNode?.setup(resource: .resource(account, stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid && self.interaction?.playAnimatedStickers ?? true
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {

@@ -302,13 +302,12 @@ public struct AnimatedStickerStatus: Equatable {
 }
 
 public enum AnimatedStickerNodeResource {
-    case resource(MediaResource)
+    case resource(Account, MediaResource)
     case localFile(String)
 }
 
 public final class AnimatedStickerNode: ASDisplayNode {
     private let queue: Queue
-    private var account: Account?
     private var fileReference: FileMediaReference?
     private let disposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
@@ -386,7 +385,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.addSubnode(self.renderer!)
     }
 
-    public func setup(account: Account, resource: AnimatedStickerNodeResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
+    public func setup(resource: AnimatedStickerNodeResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
         if width < 2 || height < 2 {
             return
         }
@@ -407,7 +406,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
                 }
             }
             switch resource {
-            case let .resource(resource):
+            case let .resource(account, resource):
                 self.disposable.set((account.postbox.mediaBox.resourceData(resource)
                 |> deliverOnMainQueue).start(next: { data in
                     f(data)
@@ -417,7 +416,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
             }
         case .cached:
             switch resource {
-            case let .resource(resource):
+            case let .resource(account, resource):
                 self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, fitzModifier: fitzModifier, width: width, height: height, synchronousLoad: false)
                 |> deliverOnMainQueue).start(next: { [weak self] data in
                     if let strongSelf = self, data.complete {

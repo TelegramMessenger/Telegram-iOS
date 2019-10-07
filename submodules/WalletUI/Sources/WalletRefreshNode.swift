@@ -2,29 +2,80 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import TelegramPresentationData
 import AppBundle
-import TelegramStringFormatting
 
-private func stringForRelativeUpdateTime(strings: PresentationStrings, day: RelativeTimestampFormatDay, dateTimeFormat: PresentationDateTimeFormat, hours: Int32, minutes: Int32) -> String {
+func stringForShortTimestamp(hours: Int32, minutes: Int32, dateTimeFormat: WalletPresentationDateTimeFormat) -> String {
+    switch dateTimeFormat.timeFormat {
+    case .regular:
+        let hourString: String
+        if hours == 0 {
+            hourString = "12"
+        } else if hours > 12 {
+            hourString = "\(hours - 12)"
+        } else {
+            hourString = "\(hours)"
+        }
+        
+        let periodString: String
+        if hours >= 12 {
+            periodString = "PM"
+        } else {
+            periodString = "AM"
+        }
+        if minutes >= 10 {
+            return "\(hourString):\(minutes) \(periodString)"
+        } else {
+            return "\(hourString):0\(minutes) \(periodString)"
+        }
+    case .military:
+        return String(format: "%02d:%02d", arguments: [Int(hours), Int(minutes)])
+    }
+}
+
+private func stringForTimestamp(day: Int32, month: Int32, year: Int32, dateTimeFormat: WalletPresentationDateTimeFormat) -> String {
+    let separator = dateTimeFormat.dateSeparator
+    switch dateTimeFormat.dateFormat {
+    case .monthFirst:
+        return String(format: "%d%@%d%@%02d", month, separator, day, separator, year - 100)
+    case .dayFirst:
+        return String(format: "%d%@%02d%@%02d", day, separator, month, separator, year - 100)
+    }
+}
+
+private func stringForTimestamp(day: Int32, month: Int32, dateTimeFormat: WalletPresentationDateTimeFormat) -> String {
+    let separator = dateTimeFormat.dateSeparator
+    switch dateTimeFormat.dateFormat {
+    case .monthFirst:
+        return String(format: "%d%@%d", month, separator, day)
+    case .dayFirst:
+        return String(format: "%d%@%02d", day, separator, month)
+    }
+}
+
+private enum RelativeTimestampFormatDay {
+    case today
+    case yesterday
+}
+
+private func stringForRelativeUpdateTime(strings: WalletStrings, day: RelativeTimestampFormatDay, dateTimeFormat: WalletPresentationDateTimeFormat, hours: Int32, minutes: Int32) -> String {
     let dayString: String
     switch day {
     case .today:
-        dayString = strings.Updated_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
+        dayString = strings.Wallet_Updated_TodayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
     case .yesterday:
-        dayString = strings.Updated_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
+        dayString = strings.Wallet_Updated_YesterdayAt(stringForShortTimestamp(hours: hours, minutes: minutes, dateTimeFormat: dateTimeFormat)).0
     }
     return dayString
 }
 
-private func lastUpdateTimestampString(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, statusTimestamp: Int32, relativeTo timestamp: Int32) -> String {
+private func lastUpdateTimestampString(strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat, statusTimestamp: Int32, relativeTo timestamp: Int32) -> String {
     let difference = timestamp - statusTimestamp
     let expanded = true
     if difference < 60 {
-        return strings.Updated_JustNow
+        return strings.Wallet_Updated_JustNow
     } else if difference < 60 * 60 && !expanded {
         let minutes = difference / 60
-        return strings.Updated_MinutesAgo(minutes)
+        return strings.Wallet_Updated_MinutesAgo(minutes)
     } else {
         var t: time_t = time_t(statusTimestamp)
         var timeinfo: tm = tm()
@@ -35,7 +86,7 @@ private func lastUpdateTimestampString(strings: PresentationStrings, dateTimeFor
         localtime_r(&now, &timeinfoNow)
         
         if timeinfo.tm_year != timeinfoNow.tm_year {
-            return strings.Updated_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).0
+            return strings.Wallet_Updated_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).0
         }
         
         let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
@@ -46,14 +97,14 @@ private func lastUpdateTimestampString(strings: PresentationStrings, dateTimeFor
                     day = .today
                 } else {
                     let minutes = difference / (60 * 60)
-                    return strings.Updated_HoursAgo(minutes)
+                    return strings.Wallet_Updated_HoursAgo(minutes)
                 }
             } else {
                 day = .yesterday
             }
             return stringForRelativeUpdateTime(strings: strings, day: day, dateTimeFormat: dateTimeFormat, hours: timeinfo.tm_hour, minutes: timeinfo.tm_min)
         } else {
-            return strings.Updated_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).0
+            return strings.Wallet_Updated_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, year: timeinfo.tm_year, dateTimeFormat: dateTimeFormat)).0
         }
     }
 }
@@ -64,8 +115,8 @@ enum WalletRefreshState: Equatable {
 }
 
 final class WalletRefreshNode: ASDisplayNode {
-    private let strings: PresentationStrings
-    private let dateTimeFormat: PresentationDateTimeFormat
+    private let strings: WalletStrings
+    private let dateTimeFormat: WalletPresentationDateTimeFormat
     private let iconContainer: ASDisplayNode
     private let iconNode: ASImageNode
     private let titleNode: ImmediateTextNode
@@ -74,7 +125,7 @@ final class WalletRefreshNode: ASDisplayNode {
     
     private let animator: ConstantDisplayLinkAnimator
     
-    init(strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) {
+    init(strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat) {
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         

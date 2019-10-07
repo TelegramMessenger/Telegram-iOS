@@ -1,8 +1,6 @@
-import Foundation
+/*import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -18,22 +16,20 @@ public enum WalletPasscodeMode {
 }
 
 public final class WalletPasscodeScreen: ViewController {
-    private let context: AccountContext
-    private let tonContext: TonContext
-    private var presentationData: PresentationData
+    private let context: WalletContext
+    private var presentationData: WalletPresentationData
     private let mode: WalletPasscodeMode
     private let randomId: Int64
     
-    public init(context: AccountContext, tonContext: TonContext, mode: WalletPasscodeMode) {
+    public init(context: WalletContext, mode: WalletPasscodeMode) {
         self.context = context
-        self.tonContext = tonContext
         self.mode = mode
         
         self.randomId = arc4random64()
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.presentationData
         
-        let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
+        let defaultNavigationPresentationData = NavigationBarPresentationData(WalletTheme: self.presentationData.theme, WalletStrings: self.presentationData.strings)
         let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
@@ -45,7 +41,7 @@ public final class WalletPasscodeScreen: ViewController {
         
         self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -58,7 +54,7 @@ public final class WalletPasscodeScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletPasscodeScreenNode(account: self.context.account, presentationData: self.presentationData, mode: self.mode, proceed: { [weak self] in
+        self.displayNode = WalletPasscodeScreenNode(account: self.context.account, WalletPresentationData: self.presentationData, mode: self.mode, proceed: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -113,7 +109,7 @@ public final class WalletPasscodeScreen: ViewController {
 }
 
 private final class WalletPasscodeScreenNode: ViewControllerTracingNode {
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     private let mode: WalletPasscodeMode
     private let requestBiometrics: () -> Void
     
@@ -126,8 +122,8 @@ private final class WalletPasscodeScreenNode: ViewControllerTracingNode {
     
     private let hapticFeedback = HapticFeedback()
     
-    init(account: Account, presentationData: PresentationData, mode: WalletPasscodeMode, proceed: @escaping () -> Void, requestBiometrics: @escaping () -> Void) {
-        self.presentationData = presentationData
+    init(account: Account, presentationData: WalletPresentationData, mode: WalletPasscodeMode, proceed: @escaping () -> Void, requestBiometrics: @escaping () -> Void) {
+        self.presentationData = WalletPresentationData
         self.mode = mode
         self.requestBiometrics = requestBiometrics
         
@@ -251,3 +247,4 @@ private final class WalletPasscodeScreenNode: ViewControllerTracingNode {
         self.hapticFeedback.error()
     }
 }
+*/

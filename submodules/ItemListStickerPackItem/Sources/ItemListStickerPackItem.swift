@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import StickerResources
 import AnimationUI
 
@@ -599,7 +600,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     animationNode = AnimatedStickerNode()
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
-                                    animationNode.setup(account: item.account, resource: .resource(resource), width: 80, height: 80, mode: .cached)
+                                    animationNode.setup(resource: .resource(item.account, resource), width: 80, height: 80, mode: .cached)
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers

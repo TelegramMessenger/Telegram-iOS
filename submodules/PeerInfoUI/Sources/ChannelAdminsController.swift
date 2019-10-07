@@ -7,9 +7,11 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import PresentationDataUtils
 import UndoUI
 import ItemListPeerItem
 import ItemListPeerActionItem
@@ -525,7 +527,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
             guard let peer = peer, let user = user else {
                 return
             }
-            presentControllerImpl?(UndoOverlayController(context: context, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle, peer.displayTitle).0), elevatedLayout: false, action: { _ in }), nil)
+            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle, peer.displayTitle).0), elevatedLayout: false, action: { _ in }), nil)
         })
     }
     

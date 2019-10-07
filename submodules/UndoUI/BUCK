@@ -13,7 +13,6 @@ static_library(
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TextFormat:TextFormat",
-        "//submodules/AccountContext:AccountContext",
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/AppBundle:AppBundle",

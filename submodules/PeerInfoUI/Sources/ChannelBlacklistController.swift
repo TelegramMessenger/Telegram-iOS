@@ -7,9 +7,11 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 
 private final class ChannelBlacklistControllerArguments {
@@ -317,7 +319,7 @@ public func channelBlacklistController(context: AccountContext, peerId: PeerId) 
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 removePeerDisposable.set((context.peerChannelMemberCategoriesContextsManager.updateMemberBannedRights(account: context.account, peerId: peerId, memberId: peer.id, bannedRights: TelegramChatBannedRights(flags: [.banReadMessages], untilDate: Int32.max))
                     |> deliverOnMainQueue).start(error: { [weak progress] _ in

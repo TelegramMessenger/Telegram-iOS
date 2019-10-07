@@ -10,6 +10,7 @@ import TextFormat
 import ProgressNavigationButtonNode
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import PasswordSetupUI
 
 public enum SecureIdRequestResult: String {

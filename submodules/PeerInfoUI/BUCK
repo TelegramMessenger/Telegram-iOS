@@ -15,6 +15,7 @@ static_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ItemListAvatarAndNameInfoItem:ItemListAvatarAndNameInfoItem",
         "//submodules/UndoUI:UndoUI",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",

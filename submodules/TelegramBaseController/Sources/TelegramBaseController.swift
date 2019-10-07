@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import UniversalMediaPlayer
 import AccountContext
 import OverlayStatusController
+import PresentationDataUtils
 
 public enum MediaAccessoryPanelVisibility {
     case none
@@ -560,7 +561,7 @@ open class TelegramBaseController: ViewController, KeyShortcutResponder {
                             var cancelImpl: (() -> Void)?
                             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
                             let progressSignal = Signal<Never, NoError> { subscriber in
-                                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                     cancelImpl?()
                                 }))
                                 self?.present(controller, in: .window(.root))

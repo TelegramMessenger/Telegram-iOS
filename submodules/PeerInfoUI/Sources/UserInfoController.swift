@@ -8,6 +8,7 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import TextFormat
 import OverlayStatusController
@@ -15,6 +16,7 @@ import TelegramStringFormatting
 import AccountContext
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 import GalleryUI
 import ItemListAvatarAndNameInfoItem
@@ -785,7 +787,7 @@ public func openAddPersonContactImpl(context: AccountContext, peerId: PeerId, pu
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                present(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
+                present(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.AddContact_StatusSuccess(peer.compactDisplayTitle).0, true)), nil)
             }
         }), completed: nil, cancelled: nil))
     })
@@ -1065,7 +1067,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         
                         let progressSignal = Signal<Never, NoError> { subscriber in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                             presentControllerImpl?(controller, nil)
                             return ActionDisposable { [weak controller] in
                                 Queue.mainQueue().async() {
@@ -1348,7 +1350,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 let _ = (enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "", attributes: [], mediaReference: .standalone(media: contact), replyToMessageId: nil, localGroupingKey: nil)])
                     |> deliverOnMainQueue).start(next: { [weak controller] _ in
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                        controller?.present(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), in: .window(.root))
+                        controller?.present(OverlayStatusController(theme: presentationData.theme, type: .success), in: .window(.root))
                     })
         })
     }
@@ -1384,7 +1386,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: {
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                         cancelImpl?()
                     }))
                     presentControllerImpl?(controller, nil)

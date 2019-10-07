@@ -22,6 +22,7 @@ static_library(
         "//submodules/DateSelectionUI:DateSelectionUI",
         "//submodules/PasswordSetupUI:PasswordSetupUI",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

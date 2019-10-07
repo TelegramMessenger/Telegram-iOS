@@ -1,9 +1,7 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
 import SwiftSignalKit
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -19,9 +17,8 @@ public enum WalletWordDisplayScreenMode {
 }
 
 public final class WalletWordDisplayScreen: ViewController {
-    private let context: AccountContext
-    private let tonContext: TonContext
-    private var presentationData: PresentationData
+    private let context: WalletContext
+    private var presentationData: WalletPresentationData
     private let walletInfo: WalletInfo
     private let wordList: [String]
     private let mode: WalletWordDisplayScreenMode
@@ -31,30 +28,29 @@ public final class WalletWordDisplayScreen: ViewController {
     
     private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
     
-    public init(context: AccountContext, tonContext: TonContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
+    public init(context: WalletContext, walletInfo: WalletInfo, wordList: [String], mode: WalletWordDisplayScreenMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
         self.context = context
-        self.tonContext = tonContext
         self.walletInfo = walletInfo
         self.wordList = wordList
         self.mode = mode
         self.walletCreatedPreloadState = walletCreatedPreloadState
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.presentationData
         
-        let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
+        let defaultTheme = self.presentationData.theme.navigationBar
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
         self.startTime = Date().timeIntervalSince1970
-        self.idleTimerExtensionDisposable = context.sharedContext.applicationBindings.pushIdleTimerExtension()
+        self.idleTimerExtensionDisposable = context.idleTimerExtension()
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.statusBarStyle
         self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -70,7 +66,7 @@ public final class WalletWordDisplayScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletWordDisplayScreenNode(account: self.context.account, presentationData: self.presentationData, wordList: self.wordList, action: { [weak self] in
+        self.displayNode = WalletWordDisplayScreenNode(presentationData: self.presentationData, wordList: self.wordList, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
@@ -88,12 +84,13 @@ public final class WalletWordDisplayScreen: ViewController {
             minimalTimeout = 60.0
             #endif
             if deltaTime < minimalTimeout {
-                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Words_NotDoneTitle, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Words_NotDoneOk, action: {
+                strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_Words_NotDoneTitle, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Words_NotDoneOk, action: {
                     guard let strongSelf = self else {
                         return
                     }
                     if let path = getAppBundle().path(forResource: "thumbsup", ofType: "tgs") {
-                        strongSelf.present(UndoOverlayController(context: strongSelf.context, content: UndoOverlayContent.emoji(account: strongSelf.context.account, path: path, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneResponse), elevatedLayout: false, animateInAsReplacement: false, action: { _ in }), in: .current)
+                        let controller = UndoOverlayController(presentationData: strongSelf.presentationData, content: UndoOverlayContent.emoji(path: path, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneResponse), elevatedLayout: false, animateInAsReplacement: false, action: { _ in })
+                        strongSelf.present(controller, in: .current)
                     }
                 })]), in: .window(.root))
             } else {
@@ -105,7 +102,7 @@ public final class WalletWordDisplayScreen: ViewController {
                     }
                 }
                 wordIndices.sort()
-                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .verify(strongSelf.walletInfo, strongSelf.wordList, wordIndices), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, mode: .verify(strongSelf.walletInfo, strongSelf.wordList, wordIndices), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
             }
         })
         
@@ -120,7 +117,7 @@ public final class WalletWordDisplayScreen: ViewController {
 }
 
 private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     private let wordList: [String]
     private let action: () -> Void
     
@@ -136,22 +133,22 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     
     private var navigationHeight: CGFloat?
     
-    init(account: Account, presentationData: PresentationData, wordList: [String], action: @escaping () -> Void) {
+    init(presentationData: WalletPresentationData, wordList: [String], action: @escaping () -> Void) {
         self.presentationData = presentationData
         self.wordList = wordList
         self.action = action
         
         self.navigationBackgroundNode = ASDisplayNode()
-        self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.backgroundColor
+        self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.navigationBar.backgroundColor
         self.navigationBackgroundNode.alpha = 0.0
         self.navigationSeparatorNode = ASDisplayNode()
-        self.navigationSeparatorNode.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor
+        self.navigationSeparatorNode.backgroundColor = self.presentationData.theme.navigationBar.separatorColor
         
         self.scrollNode = ASScrollNode()
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletWordList", ofType: "tgs") {
-            self.animationNode.setup(account: account, resource: .localFile(path), width: 264, height: 264, playbackMode: .once, mode: .direct)
+            self.animationNode.setup(resource: .localFile(path), width: 264, height: 264, playbackMode: .once, mode: .direct)
             self.animationNode.visibility = true
         }
         
@@ -200,7 +197,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         self.wordNodes = wordNodes
         
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.setup.buttonFillColor, foregroundColor: self.presentationData.theme.setup.buttonForegroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         super.init()
         

@@ -19,6 +19,7 @@ static_library(
         "//submodules/Stripe:Stripe",
         "//submodules/CountrySelectionUI:CountrySelectionUI",
         "//submodules/AppBundle:AppBundle",
+	"//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

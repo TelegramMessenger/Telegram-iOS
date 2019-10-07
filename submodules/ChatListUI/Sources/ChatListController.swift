@@ -10,6 +10,7 @@ import TelegramBaseController
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import UndoUI
 import TelegramNotices
 import SearchUI
@@ -873,7 +874,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 if let controller = controller as? UndoOverlayController {
                     switch controller.content {
                         case let .archivedChat(archivedChat):
-                            if peerIds.contains(archivedChat.peerId) {
+                            if peerIds.contains(PeerId(archivedChat.peerId)) {
                                 controller.dismiss()
                             }
                         default:
@@ -1210,7 +1211,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                 let context = strongSelf.context
                 let presentationData = strongSelf.presentationData
                 let progressSignal = Signal<Never, NoError> { subscriber in
-                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                    let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                     self?.present(controller, in: .window(.root))
                     return ActionDisposable { [weak controller] in
                         Queue.mainQueue().async() {
@@ -1302,7 +1303,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             })
             
             if value {
-                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveHiddenText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1320,7 +1321,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                     }
                 }), in: .current)
             } else {
-                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedTitle, text: strongSelf.presentationData.strings.ChatList_UndoArchiveRevealedText, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in
                 }), in: .current)
             }
         })
@@ -1414,7 +1415,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 return true
                             })
                             
-                            strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
+                            strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: strongSelf.presentationData.strings.Undo_ChatCleared), elevatedLayout: false, animateInAsReplacement: true, action: { shouldCommit in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -1617,7 +1618,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                         title = ""
                         undo = true
                 }
-                strongSelf.present(UndoOverlayController(context: strongSelf.context, content: .archivedChat(peerId: peerIds[0], title: title, text: text, undo: undo), elevatedLayout: false, animateInAsReplacement: true, action: action), in: .current)
+                let controller = UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .archivedChat(peerId: peerIds[0].toInt64(), title: title, text: text, undo: undo), elevatedLayout: false, animateInAsReplacement: true, action: action)
+                strongSelf.present(controller, in: .current)
                 
                 strongSelf.chatListDisplayNode.playArchiveAnimation()
             })
@@ -1680,7 +1682,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
             return true
         })
         
-        self.present(UndoOverlayController(context: self.context, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] shouldCommit in
             guard let strongSelf = self else {
                 return
             }

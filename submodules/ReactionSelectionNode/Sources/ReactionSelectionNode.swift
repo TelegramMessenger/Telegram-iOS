@@ -135,7 +135,7 @@ final class ReactionNode: ASDisplayNode {
                     renderSize = CGSize(width: intrinsicSize.width * 2.5, height: intrinsicSize.height * 2.5)
                 }
             }
-            self.animationNode.setup(account: account, resource: .localFile(path), width: Int(renderSize.width), height: Int(renderSize.height), mode: .direct)
+            self.animationNode.setup(resource: .localFile(path), width: Int(renderSize.width), height: Int(renderSize.height), mode: .direct)
         case .reply:
             self.intrinsicOffset = CGPoint(x: 0.0, y: 0.0)
             self.imageNode.image = UIImage(named: "Chat/Context Menu/ReactionReply", in: getAppBundle(), compatibleWith: nil)

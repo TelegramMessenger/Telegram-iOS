@@ -7,10 +7,12 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import TemporaryCachedPeerDataManager
 import AlertUI
+import PresentationDataUtils
 import ItemListPeerItem
 import TelegramPermissionsUI
 import ItemListPeerActionItem
@@ -701,7 +703,7 @@ public func channelPermissionsController(context: AccountContext, peerId origina
                 }
                 
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                let progress = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let progress = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(progress, nil)
                 
                 let signal = convertGroupToSupergroup(account: context.account, peerId: view.peerId)

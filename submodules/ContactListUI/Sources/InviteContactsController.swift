@@ -10,6 +10,7 @@ import TelegramPresentationData
 import AccountContext
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import SearchUI
 
 public class InviteContactsController: ViewController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {

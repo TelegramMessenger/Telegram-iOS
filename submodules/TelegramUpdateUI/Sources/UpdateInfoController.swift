@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import ItemListUI
+import PresentationDataUtils
 
 private final class UpdateInfoControllerArguments {
     let openAppStorePage: () -> Void

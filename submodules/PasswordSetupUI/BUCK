@@ -16,6 +16,7 @@ static_library(
         "//submodules/ProgressNavigationButtonNode:ProgressNavigationButtonNode",
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ItemListUI:ItemListUI",
     ],
     frameworks = [

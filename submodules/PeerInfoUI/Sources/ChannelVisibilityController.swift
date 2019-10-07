@@ -7,10 +7,12 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import ShareController
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 import ItemListPeerItem
 
@@ -914,7 +916,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
             if let link = link {
                 UIPasteboard.general.string = link
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
+                presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Username_LinkCopied, false)), nil)
             }
         })
     }, revokePrivateLink: {

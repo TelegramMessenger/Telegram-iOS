@@ -23,6 +23,7 @@ static_library(
         "//submodules/TelegramPermissionsUI:TelegramPermissionsUI",
         "//submodules/TelegramNotices:TelegramNotices",
         "//submodules/AlertUI:AlertUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/ShareController:ShareController",
         "//submodules/AppBundle:AppBundle",
         "//submodules/OverlayStatusController:OverlayStatusController",

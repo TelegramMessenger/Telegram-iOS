@@ -1,8 +1,6 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -11,7 +9,6 @@ import SolidRoundedButtonNode
 import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
-import ItemListUI
 import AlertUI
 import TextFormat
 import LocalAuth
@@ -33,22 +30,20 @@ public enum WalletSplashMode {
 }
 
 public final class WalletSplashScreen: ViewController {
-    private let context: AccountContext
-    private let tonContext: TonContext
-    private var presentationData: PresentationData
+    private let context: WalletContext
+    private var presentationData: WalletPresentationData
     private var mode: WalletSplashMode
     
     private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
     
-    public init(context: AccountContext, tonContext: TonContext, mode: WalletSplashMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
+    public init(context: WalletContext, mode: WalletSplashMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
         self.context = context
-        self.tonContext = tonContext
         self.mode = mode
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.presentationData
         
-        let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
+        let defaultTheme = self.presentationData.theme.navigationBar
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
         switch mode {
         case let .created(walletInfo, _):
@@ -56,7 +51,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.postbox, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -67,7 +62,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.account.postbox, subject: .wallet(walletInfo), tonInstance: tonContext.instance)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.postbox, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -77,9 +72,9 @@ public final class WalletSplashScreen: ViewController {
             self.walletCreatedPreloadState = nil
         }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
-        self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
+        self.statusBar.statusBarStyle = self.presentationData.theme.statusBarStyle
         self.navigationPresentation = .modalInLargeLayout
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
@@ -90,7 +85,7 @@ public final class WalletSplashScreen: ViewController {
             self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_ImportExisting, style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
         case let .sending(walletInfo, address, amount, textMessage, randomId, serverSalt):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
-            let _ = (self.tonContext.keychain.decrypt(walletInfo.encryptedSecret)
+            let _ = (self.context.keychain.decrypt(walletInfo.encryptedSecret)
             |> deliverOnMainQueue).start(next: { [weak self] decryptedSecret in
                 guard let strongSelf = self else {
                     return
@@ -104,7 +99,8 @@ public final class WalletSplashScreen: ViewController {
                     strongSelf.dismiss()
                 } else {
                     let text = strongSelf.presentationData.strings.Wallet_Send_ErrorDecryptionFailed
-                    let controller = textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                    let theme = strongSelf.context.presentationData.theme
+                    let controller = textAlertController(alertContext: AlertControllerContext(theme: theme.alert, themeSignal: .single(theme.alert)), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                         self?.dismiss()
                     })])
                     strongSelf.present(controller, in: .window(.root))
@@ -119,7 +115,7 @@ public final class WalletSplashScreen: ViewController {
             break
         }
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -131,11 +127,11 @@ public final class WalletSplashScreen: ViewController {
     }
     
     @objc private func importPressed() {
-        self.push(WalletWordCheckScreen(context: self.context, tonContext: self.tonContext, mode: .import, walletCreatedPreloadState: nil))
+        self.push(WalletWordCheckScreen(context: self.context, mode: .import, walletCreatedPreloadState: nil))
     }
     
     private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
-        let _ = (sendGramsFromWallet(postbox: self.context.account.postbox, network: self.context.account.network, tonInstance: self.tonContext.instance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
+        let _ = (sendGramsFromWallet(postbox: self.context.postbox, network: self.context.network, tonInstance: self.context.tonInstance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
         |> deliverOnMainQueue).start(error: { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -144,7 +140,7 @@ public final class WalletSplashScreen: ViewController {
             let text: String
             switch error {
             case .generic:
-                text = strongSelf.presentationData.strings.Login_UnknownError
+                text = strongSelf.presentationData.strings.Wallet_UnknownError
             case .network:
                 title = strongSelf.presentationData.strings.Wallet_Send_NetworkErrorTitle
                 text = strongSelf.presentationData.strings.Wallet_Send_NetworkErrorText
@@ -152,7 +148,7 @@ public final class WalletSplashScreen: ViewController {
                 title = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFundsTitle
                 text = strongSelf.presentationData.strings.Wallet_Send_ErrorNotEnoughFundsText
             case .messageTooLong:
-                text = strongSelf.presentationData.strings.Login_UnknownError
+                text = strongSelf.presentationData.strings.Wallet_UnknownError
             case .invalidAddress:
                 text = strongSelf.presentationData.strings.Wallet_Send_ErrorInvalidAddress
             case .secretDecryptionFailed:
@@ -160,8 +156,9 @@ public final class WalletSplashScreen: ViewController {
             case .destinationIsNotInitialized:
                 if !forceIfDestinationNotInitialized {
                     text = strongSelf.presentationData.strings.Wallet_Send_UninitializedText
-                    let controller = textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Wallet_Send_UninitializedTitle, text: text, actions: [
-                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                    let theme = strongSelf.context.presentationData.theme
+                    let controller = textAlertController(alertContext: AlertControllerContext(theme: theme.alert, themeSignal: .single(theme.alert)), title: strongSelf.presentationData.strings.Wallet_Send_UninitializedTitle, text: text, actions: [
+                        TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Wallet_Navigation_Cancel, action: {
                             if let navigationController = strongSelf.navigationController as? NavigationController {
                                 navigationController.popViewController(animated: true)
                             }
@@ -173,10 +170,11 @@ public final class WalletSplashScreen: ViewController {
                     strongSelf.present(controller, in: .window(.root))
                     return
                 } else {
-                    text = strongSelf.presentationData.strings.Login_UnknownError
+                    text = strongSelf.presentationData.strings.Wallet_UnknownError
                 }
             }
-            let controller = textAlertController(context: strongSelf.context, title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+            let theme = strongSelf.presentationData.theme
+            let controller = textAlertController(alertContext: AlertControllerContext(theme: theme.alert, themeSignal: .single(theme.alert)), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                 if let navigationController = strongSelf.navigationController as? NavigationController {
                     navigationController.popViewController(animated: true)
                 }
@@ -187,7 +185,7 @@ public final class WalletSplashScreen: ViewController {
                 return
             }
             if let navigationController = strongSelf.navigationController as? NavigationController {
-                let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
+                let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.context.tonInstance)
                 |> deliverOnMainQueue).start(next: { [weak self] address in
                     guard let strongSelf = self else {
                         return
@@ -195,14 +193,14 @@ public final class WalletSplashScreen: ViewController {
                     var controllers: [UIViewController] = []
                     for controller in navigationController.viewControllers {
                         if let controller = controller as? WalletInfoScreen {
-                            let infoScreen = WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address, enableDebugActions: false)
+                            let infoScreen = WalletInfoScreen(context: strongSelf.context, walletInfo: walletInfo, address: address, enableDebugActions: false)
                             infoScreen.navigationPresentation = controller.navigationPresentation
                             controllers.append(infoScreen)
                         } else {
                             controllers.append(controller)
                         }
                     }
-                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
+                    controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 })
@@ -211,33 +209,33 @@ public final class WalletSplashScreen: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WalletSplashScreenNode(account: self.context.account, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
+        self.displayNode = WalletSplashScreenNode(context: self.context, presentationData: self.presentationData, mode: self.mode, action: { [weak self] in
             guard let strongSelf = self else {
                 return
             }
             switch strongSelf.mode {
             case .intro:
-                let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+                let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
                 let displayError: () -> Void = {
                     guard let strongSelf = self else {
                         return
                     }
                     controller.dismiss()
-                    strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Intro_CreateErrorTitle, text: strongSelf.presentationData.strings.Wallet_Intro_CreateErrorText, actions: [
-                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                    strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_Intro_CreateErrorTitle, text: strongSelf.presentationData.strings.Wallet_Intro_CreateErrorText, actions: [
+                        TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                         })
                     ], actionLayout: .vertical), in: .window(.root))
                 }
                 strongSelf.present(controller, in: .window(.root))
-                let _ = (getServerWalletSalt(network: strongSelf.context.account.network)
+                let _ = (getServerWalletSalt(network: strongSelf.context.network)
                 |> deliverOnMainQueue).start(next: { serverSalt in
-                    let _ = (createWallet(postbox: strongSelf.context.account.postbox, tonInstance: strongSelf.tonContext.instance, keychain: strongSelf.tonContext.keychain, localPassword: serverSalt)
+                    let _ = (createWallet(postbox: strongSelf.context.postbox, tonInstance: strongSelf.context.tonInstance, keychain: strongSelf.context.keychain, localPassword: serverSalt)
                     |> deliverOnMainQueue).start(next: { walletInfo, wordList in
                         guard let strongSelf = self else {
                             return
                         }
                         controller.dismiss()
-                        (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .created(walletInfo, wordList), walletCreatedPreloadState: nil), animated: true)
+                        (strongSelf.navigationController as? NavigationController)?.replaceController(strongSelf, with: WalletSplashScreen(context: strongSelf.context, mode: .created(walletInfo, wordList), walletCreatedPreloadState: nil), animated: true)
                     }, error: { _ in
                         displayError()
                     })
@@ -246,18 +244,17 @@ public final class WalletSplashScreen: ViewController {
                 })
             case let .created(walletInfo, wordList):
                 if let wordList = wordList {
-                    strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                    strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                 } else {
-                    let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, type: .loading(cancelled: nil))
+                    let controller = OverlayStatusController(theme: strongSelf.presentationData.theme, type: .loading(cancelled: nil))
                     strongSelf.present(controller, in: .window(.root))
                     
                     let context = strongSelf.context
-                    let tonContext = strongSelf.tonContext
-                    let _ = (strongSelf.tonContext.keychain.decrypt(walletInfo.encryptedSecret)
+                    let _ = (strongSelf.context.keychain.decrypt(walletInfo.encryptedSecret)
                     |> deliverOnMainQueue).start(next: { [weak controller] decryptedSecret in
-                        let _ = (getServerWalletSalt(network: context.account.network)
+                        let _ = (getServerWalletSalt(network: context.network)
                         |> deliverOnMainQueue).start(next: { [weak controller] serverSalt in
-                            let _ = (walletRestoreWords(tonInstance: tonContext.instance, publicKey: walletInfo.publicKey, decryptedSecret:  decryptedSecret, localPassword: serverSalt)
+                            let _ = (walletRestoreWords(tonInstance: context.tonInstance, publicKey: walletInfo.publicKey, decryptedSecret:  decryptedSecret, localPassword: serverSalt)
                             |> deliverOnMainQueue).start(next: { wordList in
                                 controller?.dismiss()
                                 
@@ -266,7 +263,7 @@ public final class WalletSplashScreen: ViewController {
                                 }
                                 
                                 strongSelf.mode = .created(walletInfo, wordList)
-                                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
+                                strongSelf.push(WalletWordDisplayScreen(context: strongSelf.context, walletInfo: walletInfo, wordList: wordList, mode: .check, walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                             }, error: { _ in
                                 guard let strongSelf = self else {
                                     return
@@ -274,8 +271,8 @@ public final class WalletSplashScreen: ViewController {
                                 
                                 controller?.dismiss()
                                 
-                                strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
-                                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                                strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
+                                    TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                                     })
                                 ], actionLayout: .vertical), in: .window(.root))
                             })
@@ -286,8 +283,8 @@ public final class WalletSplashScreen: ViewController {
                             
                             controller?.dismiss()
                             
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
-                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
+                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                                 })
                             ], actionLayout: .vertical), in: .window(.root))
                         })
@@ -295,15 +292,15 @@ public final class WalletSplashScreen: ViewController {
                         controller?.dismiss()
                         if case .cancelled = error {
                         } else {
-                            strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
-                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                            strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_Created_ExportErrorTitle, text: strongSelf.presentationData.strings.Wallet_Created_ExportErrorText, actions: [
+                                TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Alert_OK, action: {
                                 })
                             ], actionLayout: .vertical), in: .window(.root))
                         }
                     })
                 }
             case let .success(walletInfo):
-                let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
+                let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.context.tonInstance)
                 |> deliverOnMainQueue).start(next: { address in
                     guard let strongSelf = self else {
                         return
@@ -330,7 +327,7 @@ public final class WalletSplashScreen: ViewController {
                     
                     let presentationData = strongSelf.presentationData
                     let progressSignal = Signal<Never, NoError> { subscriber in
-                        let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: nil))
+                        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                         self?.present(controller, in: .window(.root))
                         return ActionDisposable { [weak controller] in
                             Queue.mainQueue().async() {
@@ -369,7 +366,7 @@ public final class WalletSplashScreen: ViewController {
                                 }
                                 return true
                             }
-                            controllers.append(WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address, enableDebugActions: false))
+                            controllers.append(WalletInfoScreen(context: strongSelf.context, walletInfo: walletInfo, address: address, enableDebugActions: false))
                             strongSelf.view.endEditing(true)
                             navigationController.setViewControllers(controllers, animated: true)
                         }
@@ -394,14 +391,14 @@ public final class WalletSplashScreen: ViewController {
                         return true
                     }
                     
-                    let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.tonContext.instance)
+                    let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.context.tonInstance)
                     |> deliverOnMainQueue).start(next: { [weak self] address in
                         guard let strongSelf = self else {
                             return
                         }
                         
                         if !controllers.contains(where: { $0 is WalletInfoScreen }) {
-                            let infoScreen = WalletInfoScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, walletInfo: walletInfo, address: address, enableDebugActions: false)
+                            let infoScreen = WalletInfoScreen(context: strongSelf.context, walletInfo: walletInfo, address: address, enableDebugActions: false)
                             infoScreen.navigationPresentation = .modal
                             controllers.append(infoScreen)
                         }
@@ -424,7 +421,7 @@ public final class WalletSplashScreen: ViewController {
                         }
                         return true
                     }
-                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .intro, walletCreatedPreloadState: nil))
+                    controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .intro, walletCreatedPreloadState: nil))
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 }
@@ -437,7 +434,7 @@ public final class WalletSplashScreen: ViewController {
                 case .notAvailable:
                     strongSelf.dismiss()
                 case .changed:
-                    strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .import, walletCreatedPreloadState: nil))
+                    strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, mode: .import, walletCreatedPreloadState: nil))
                 }
             }
         }, secondaryAction: { [weak self] in
@@ -460,12 +457,12 @@ public final class WalletSplashScreen: ViewController {
                         }
                         return true
                     }
-                    controllers.append(WalletSplashScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .intro, walletCreatedPreloadState: nil))
+                    controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .intro, walletCreatedPreloadState: nil))
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 }
             default:
-                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, tonContext: strongSelf.tonContext, mode: .import, walletCreatedPreloadState: nil))
+                strongSelf.push(WalletWordCheckScreen(context: strongSelf.context, mode: .import, walletCreatedPreloadState: nil))
             }
         }, openTerms: { [weak self] in
             guard let strongSelf = self else {
@@ -475,7 +472,7 @@ public final class WalletSplashScreen: ViewController {
             if url.isEmpty {
                 url = "https://telegram.org/tos/wallet"
             }
-            strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.presentationData, navigationController: strongSelf.navigationController as? NavigationController, dismissInput: {})
+            strongSelf.context.openUrl(url)
         })
         
         self.displayNodeDidLoad()
@@ -489,7 +486,7 @@ public final class WalletSplashScreen: ViewController {
 }
 
 private final class WalletSplashScreenNode: ViewControllerTracingNode {
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     private let mode: WalletSplashMode
     private let secondaryAction: () -> Void
     
@@ -511,7 +508,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         }
     }
     
-    init(account: Account, presentationData: PresentationData, mode: WalletSplashMode, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openTerms: @escaping () -> Void) {
+    init(context: WalletContext, presentationData: WalletPresentationData, mode: WalletSplashMode, action: @escaping () -> Void, secondaryAction: @escaping () -> Void, openTerms: @escaping () -> Void) {
         self.presentationData = presentationData
         self.mode = mode
         self.secondaryAction = secondaryAction
@@ -542,7 +539,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = parseMarkdownIntoAttributedString(self.presentationData.strings.Wallet_Intro_Terms, attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletIntroLoading", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 248, height: 248, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 248, height: 248, mode: .direct)
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
@@ -554,7 +551,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletCreated", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 250, height: 250, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 250, height: 250, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 125.0, height: 125.0)
                 self.animationNode.visibility = true
             }
@@ -566,7 +563,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -578,7 +575,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletNotAvailable", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -590,7 +587,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "SendingGrams", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -604,7 +601,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -612,11 +609,11 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         case .secureStorageNotAvailable:
             title = self.presentationData.strings.Wallet_SecureStorageNotAvailable_Title
             text = NSAttributedString(string: self.presentationData.strings.Wallet_SecureStorageNotAvailable_Text, font: textFont, textColor: textColor)
-            buttonText = self.presentationData.strings.Common_OK
+            buttonText = self.presentationData.strings.Wallet_Alert_OK
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletKeyLock", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 140.0, height: 140.0)
                 self.animationNode.visibility = true
             }
@@ -645,7 +642,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
                     string = self.presentationData.strings.Wallet_SecureStorageReset_PasscodeText
                 }
                 text = NSAttributedString(string: string, font: textFont, textColor: textColor)
-                buttonText = self.presentationData.strings.Common_OK
+                buttonText = self.presentationData.strings.Wallet_Alert_OK
                 secondaryActionText = ""
             case .changed:
                 let string: String
@@ -661,7 +658,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletNotAvailable", ofType: "tgs") {
-                self.animationNode.setup(account: account, resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -692,7 +689,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         
         self.secondaryActionButtonNode = HighlightTrackingButtonNode()
         
-        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(theme: self.presentationData.theme), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.setup.buttonFillColor, foregroundColor: self.presentationData.theme.setup.buttonForegroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         self.buttonNode.isHidden = buttonText.isEmpty
         
         super.init()

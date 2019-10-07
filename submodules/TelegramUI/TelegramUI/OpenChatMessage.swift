@@ -17,6 +17,7 @@ import PeerAvatarGalleryUI
 import PeerInfoUI
 import SettingsUI
 import AlertUI
+import PresentationDataUtils
 
 private enum ChatMessageGalleryControllerData {
     case url(String)

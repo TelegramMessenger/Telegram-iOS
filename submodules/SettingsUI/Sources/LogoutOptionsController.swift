@@ -7,9 +7,11 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import UrlHandling
 
 private struct LogoutOptionsItemArguments {
@@ -172,7 +174,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         
         let openFaq: (Promise<ResolvedUrl>) -> Void = { resolvedUrl in
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
             presentControllerImpl?(controller, nil)
             let _ = (resolvedUrl.get()
             |> take(1)

@@ -11,6 +11,7 @@ import DeviceAccess
 import TelegramUpdateUI
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import TelegramPermissions
 import TelegramNotices
 import LegacyUI

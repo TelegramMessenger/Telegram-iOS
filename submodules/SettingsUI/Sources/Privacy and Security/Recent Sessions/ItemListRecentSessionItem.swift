@@ -7,6 +7,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import TelegramStringFormatting
 
 struct ItemListRecentSessionItemEditing: Equatable {

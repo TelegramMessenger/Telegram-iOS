@@ -3,12 +3,10 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import TelegramPresentationData
-import ItemListUI
 import QrCode
 
 class WalletQrCodeItem: ListViewItem, ItemListItem {
-    let theme: PresentationTheme
+    let theme: WalletTheme
     let address: String
     let sectionId: ItemListSectionId
     let style: ItemListStyle
@@ -16,7 +14,7 @@ class WalletQrCodeItem: ListViewItem, ItemListItem {
     let longTapAction: (() -> Void)?
     public let isAlwaysPlain: Bool = true
     
-    init(theme: PresentationTheme, address: String, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
+    init(theme: WalletTheme, address: String, sectionId: ItemListSectionId, style: ItemListStyle, action: @escaping () -> Void, longTapAction: @escaping () -> Void) {
         self.theme = theme
         self.address = address
         self.sectionId = sectionId
@@ -113,7 +111,7 @@ class WalletQrCodeItemNode: ListViewItemNode {
         let currentItem = self.item
         
         return { item, params, neighbors in
-            var updatedTheme: PresentationTheme?
+            var updatedTheme: WalletTheme?
             var updatedAddress: String?
             
             if currentItem?.theme !== item.theme {

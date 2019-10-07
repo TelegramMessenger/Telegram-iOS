@@ -11,6 +11,7 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import UrlEscaping
 import ShareController

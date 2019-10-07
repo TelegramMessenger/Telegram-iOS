@@ -8,6 +8,7 @@ import TelegramCore
 import LegacyComponents
 import TelegramPresentationData
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 import GalleryUI
 import LegacyUI

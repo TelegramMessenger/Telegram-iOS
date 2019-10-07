@@ -2,23 +2,20 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import TelegramPresentationData
 import TelegramCore
 import AnimationUI
 import SwiftSignalKit
 import AppBundle
 
 class WalletInfoEmptyItem: ListViewItem {
-    let account: Account
-    let theme: PresentationTheme
-    let strings: PresentationStrings
+    let theme: WalletTheme
+    let strings: WalletStrings
     let address: String
     let displayAddressContextMenu: (ASDisplayNode, CGRect) -> Void
     
     let selectable: Bool = false
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, address: String, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) {
-        self.account = account
+    init(theme: WalletTheme, strings: WalletStrings, address: String, displayAddressContextMenu: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.theme = theme
         self.strings = strings
         self.address = address
@@ -27,7 +24,7 @@ class WalletInfoEmptyItem: ListViewItem {
     
     func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
-            let node = WalletInfoEmptyItemNode(account: self.account)
+            let node = WalletInfoEmptyItemNode()
             node.insets = UIEdgeInsets()
             node.layoutForParams(params, item: self, previousItem: previousItem, nextItem: nextItem)
             Queue.mainQueue().async {
@@ -66,12 +63,12 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
     
     private var item: WalletInfoEmptyItem?
     
-    init(account: Account) {
+    init() {
         self.offsetContainer = ASDisplayNode()
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletEmpty", ofType: "tgs") {
-            self.animationNode.setup(account: account, resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
+            self.animationNode.setup(resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
             self.animationNode.visibility = true
         }
         

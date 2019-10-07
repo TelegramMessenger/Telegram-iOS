@@ -57,12 +57,6 @@ public enum PresentationDateFormat {
     case dayFirst
 }
 
-extension PresentationStrings: Equatable {
-    public static func ==(lhs: PresentationStrings, rhs: PresentationStrings) -> Bool {
-        return lhs === rhs
-    }
-}
-
 public final class PresentationData: Equatable {
     public let strings: PresentationStrings
     public let theme: PresentationTheme

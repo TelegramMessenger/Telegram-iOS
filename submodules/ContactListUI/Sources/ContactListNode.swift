@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import DeviceAccess
 import MergeLists
 import ItemListUI
+import PresentationDataUtils
 import MediaResources
 import AccountContext
 import TelegramPermissions

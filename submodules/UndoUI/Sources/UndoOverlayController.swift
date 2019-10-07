@@ -1,22 +1,18 @@
 import Foundation
 import UIKit
 import Display
-import TelegramCore
-import Postbox
 import TelegramPresentationData
-import AccountContext
 
 public enum UndoOverlayContent {
     case removedChat(text: String)
-    case archivedChat(peerId: PeerId, title: String, text: String, undo: Bool)
+    case archivedChat(peerId: Int64, title: String, text: String, undo: Bool)
     case hidArchive(title: String, text: String, undo: Bool)
     case revealedArchive(title: String, text: String, undo: Bool)
     case succeed(text: String)
-    case emoji(account: Account, path: String, text: String)
+    case emoji(path: String, text: String)
 }
 
 public final class UndoOverlayController: ViewController {
-    private let context: AccountContext
     private let presentationData: PresentationData
     public let content: UndoOverlayContent
     private let elevatedLayout: Bool
@@ -25,9 +21,8 @@ public final class UndoOverlayController: ViewController {
     
     private var didPlayPresentationAnimation = false
     
-    public init(context: AccountContext, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (Bool) -> Void) {
-        self.context = context
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+    public init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, animateInAsReplacement: Bool = false, action: @escaping (Bool) -> Void) {
+        self.presentationData = presentationData
         self.content = content
         self.elevatedLayout = elevatedLayout
         self.animateInAsReplacement = animateInAsReplacement

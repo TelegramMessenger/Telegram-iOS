@@ -183,7 +183,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 } |> deliverOnMainQueue).start(completed: {
                     if let strongSelf = self {
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .success), nil)
+                        strongSelf.controllerInteraction.presentController(OverlayStatusController(theme: presentationData.theme, type: .success), nil)
                     }
                 })
             }

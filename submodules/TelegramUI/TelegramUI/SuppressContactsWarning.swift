@@ -6,6 +6,7 @@ import TelegramCore
 import DeviceAccess
 import AccountContext
 import AlertUI
+import PresentationDataUtils
 import TelegramNotices
 
 func presentContactsWarningSuppressionImpl(context: AccountContext, present: (ViewController, Any?) -> Void) {

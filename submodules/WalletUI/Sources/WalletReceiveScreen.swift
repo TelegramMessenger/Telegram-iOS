@@ -1,26 +1,23 @@
 import Foundation
 import UIKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
 import TelegramCore
-import ItemListUI
 import SwiftSignalKit
 import OverlayStatusController
 import ShareController
 
 private final class WalletReceiveScreenArguments {
-    let context: AccountContext
+    let context: WalletContext
     let copyAddress: () -> Void
     let shareAddressLink: () -> Void
     let openQrCode: () -> Void
     let displayQrCodeContextMenu: () -> Void
     let openCreateInvoice: () -> Void
     
-    init(context: AccountContext, copyAddress: @escaping () -> Void, shareAddressLink: @escaping () -> Void, openQrCode: @escaping () -> Void, displayQrCodeContextMenu: @escaping () -> Void, openCreateInvoice: @escaping () -> Void) {
+    init(context: WalletContext, copyAddress: @escaping () -> Void, shareAddressLink: @escaping () -> Void, openQrCode: @escaping () -> Void, displayQrCodeContextMenu: @escaping () -> Void, openCreateInvoice: @escaping () -> Void) {
         self.context = context
         self.copyAddress = copyAddress
         self.shareAddressLink = shareAddressLink
@@ -36,14 +33,14 @@ private enum WalletReceiveScreenSection: Int32 {
 }
 
 private enum WalletReceiveScreenEntry: ItemListNodeEntry {
-    case addressCode(PresentationTheme, String)
-    case addressHeader(PresentationTheme, String)
-    case address(PresentationTheme, String, Bool)
-    case copyAddress(PresentationTheme, String)
-    case shareAddressLink(PresentationTheme, String)
-    case addressInfo(PresentationTheme, String)
-    case invoice(PresentationTheme, String)
-    case invoiceInfo(PresentationTheme, String)
+    case addressCode(WalletTheme, String)
+    case addressHeader(WalletTheme, String)
+    case address(WalletTheme, String, Bool)
+    case copyAddress(WalletTheme, String)
+    case shareAddressLink(WalletTheme, String)
+    case addressInfo(WalletTheme, String)
+    case invoice(WalletTheme, String)
+    case invoiceInfo(WalletTheme, String)
 
     var section: ItemListSectionId {
         switch self {
@@ -165,7 +162,7 @@ private enum WalletReceiveScreenEntry: ItemListNodeEntry {
     }
 }
 
-private func walletReceiveScreenEntries(presentationData: PresentationData, address: String) -> [WalletReceiveScreenEntry] {
+private func walletReceiveScreenEntries(presentationData: WalletPresentationData, address: String) -> [WalletReceiveScreenEntry] {
     var entries: [WalletReceiveScreenEntry] = []
     entries.append(.addressCode(presentationData.theme, walletInvoiceUrl(address: address)))
     entries.append(.addressHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AddressHeader))
@@ -189,7 +186,7 @@ private final class WalletReceiveScreenImpl: ItemListController, WalletReceiveSc
     
 }
 
-func walletReceiveScreen(context: AccountContext, address: String) -> ViewController {
+func walletReceiveScreen(context: WalletContext, address: String) -> ViewController {
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
@@ -197,19 +194,17 @@ func walletReceiveScreen(context: AccountContext, address: String) -> ViewContro
     
     weak var currentStatusController: ViewController?
     let arguments = WalletReceiveScreenArguments(context: context, copyAddress: {
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.presentationData
     
         UIPasteboard.general.string = address
         
         if currentStatusController == nil {
-            let statusController = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .genericSuccess(presentationData.strings.Wallet_Receive_AddressCopied, false))
+            let statusController = OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Wallet_Receive_AddressCopied, false))
             presentControllerImpl?(statusController, nil)
             currentStatusController = statusController
         }
     }, shareAddressLink: {
-        let url = walletInvoiceUrl(address: address)
-        let controller = ShareController(context: context, subject: .url(url), preferredAction: .default)
-        presentControllerImpl?(controller, nil)
+        context.shareUrl(walletInvoiceUrl(address: address))
     }, openQrCode: {
         let url = walletInvoiceUrl(address: address)
         pushImpl?(WalletQrViewScreen(context: context, invoice: url))
@@ -219,20 +214,20 @@ func walletReceiveScreen(context: AccountContext, address: String) -> ViewContro
         pushImpl?(walletCreateInvoiceScreen(context: context, address: address))
     })
     
-    let signal = context.sharedContext.presentationData
+    let signal = Signal<WalletPresentationData, NoError>.single(context.presentationData)
     |> deliverOnMainQueue
     |> map { presentationData -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: .bold, enabled: true, action: {
+        let rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Wallet_Navigation_Done), style: .bold, enabled: true, action: {
             dismissImpl?()
         })
     
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Receive_Title), leftNavigationButton: ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {}), rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_Receive_Title), leftNavigationButton: ItemListNavigationButton(content: .none, style: .regular, enabled: false, action: {}), rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)
         let listState = ItemListNodeState(entries: walletReceiveScreenEntries(presentationData: presentationData, address: address), style: .blocks, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
     
-    let controller = WalletReceiveScreenImpl(context: context, state: signal)
+    let controller = WalletReceiveScreenImpl(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil)
     controller.navigationPresentation = .modal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     presentControllerImpl = { [weak controller] c, a in

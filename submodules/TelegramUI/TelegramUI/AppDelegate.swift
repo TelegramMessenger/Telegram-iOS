@@ -1146,7 +1146,7 @@ final class SharedApplicationContext {
             self.authContextValue = context
             if let context = context {
                 let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
-                let statusController = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings, type: .loading(cancelled: nil))
+                let statusController = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 self.mainWindow.present(statusController, on: .root)
                 let isReady: Signal<Bool, NoError> = context.isReady.get()
                 authContextReadyDisposable.set((isReady

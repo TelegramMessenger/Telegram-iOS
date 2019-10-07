@@ -2,8 +2,6 @@ import Foundation
 import UIKit
 import SwiftSignalKit
 import AppBundle
-import AccountContext
-import TelegramPresentationData
 import AsyncDisplayKit
 import Display
 import Postbox
@@ -11,7 +9,7 @@ import QrCode
 import ShareController
 import AnimationUI
 
-func shareInvoiceQrCode(context: AccountContext, invoice: String) {
+func shareInvoiceQrCode(context: WalletContext, invoice: String) {
     let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")))
     |> map { generator -> UIImage? in
         let imageSize = CGSize(width: 768.0, height: 768.0)
@@ -24,40 +22,40 @@ func shareInvoiceQrCode(context: AccountContext, invoice: String) {
         }
         
         let activityController = UIActivityViewController(activityItems: [image], applicationActivities: nil)
-        context.sharedContext.applicationBindings.presentNativeController(activityController)
+        context.presentNativeController(activityController)
     })
 }
 
 public final class WalletQrViewScreen: ViewController {
-    private let context: AccountContext
+    private let context: WalletContext
     private let invoice: String
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     
     private var previousScreenBrightness: CGFloat?
     private var displayLinkAnimator: DisplayLinkAnimator?
     private let idleTimerExtensionDisposable: Disposable
     
-    public init(context: AccountContext, invoice: String) {
+    public init(context: WalletContext, invoice: String) {
         self.context = context
         self.invoice = invoice
         
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        self.presentationData = context.presentationData
         
-        let defaultNavigationPresentationData = NavigationBarPresentationData(presentationTheme: self.presentationData.theme, presentationStrings: self.presentationData.strings)
-        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultNavigationPresentationData.theme.buttonColor, disabledButtonColor: defaultNavigationPresentationData.theme.disabledButtonColor, primaryTextColor: defaultNavigationPresentationData.theme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultNavigationPresentationData.theme.badgeBackgroundColor, badgeStrokeColor: defaultNavigationPresentationData.theme.badgeStrokeColor, badgeTextColor: defaultNavigationPresentationData.theme.badgeTextColor)
+        let defaultTheme = self.presentationData.theme.navigationBar
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
         
-        self.idleTimerExtensionDisposable = context.sharedContext.applicationBindings.pushIdleTimerExtension()
+        self.idleTimerExtensionDisposable = context.idleTimerExtension()
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: defaultNavigationPresentationData.strings))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.navigationBar?.intrinsicCanTransitionInline = false
         
         self.title = self.presentationData.strings.Wallet_Qr_Title
         
-        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
 
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image:  PresentationResourcesRootController.navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.shareButtonPressed))
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(image:  navigationShareIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.shareButtonPressed))
     }
     
     deinit {
@@ -113,13 +111,13 @@ public final class WalletQrViewScreen: ViewController {
 }
 
 private final class WalletQrViewScreenNode: ViewControllerTracingNode {
-    private var presentationData: PresentationData
+    private var presentationData: WalletPresentationData
     private let invoice: String
     
     private let imageNode: TransformImageNode
     private let iconNode: AnimatedStickerNode
   
-    init(context: AccountContext, presentationData: PresentationData, message: String) {
+    init(context: WalletContext, presentationData: WalletPresentationData, message: String) {
         self.presentationData = presentationData
         self.invoice = message
         
@@ -129,7 +127,7 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         
         self.iconNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
-            self.iconNode.setup(account: context.account, resource: .localFile(path), width: 240, height: 240, mode: .direct)
+            self.iconNode.setup(resource: .localFile(path), width: 240, height: 240, mode: .direct)
             self.iconNode.visibility = true
         }
         

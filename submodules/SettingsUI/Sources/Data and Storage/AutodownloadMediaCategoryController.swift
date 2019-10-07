@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import AccountContext
 
 public func autodownloadDataSizeString(_ size: Int64, decimalSeparator: String = ".") -> String {

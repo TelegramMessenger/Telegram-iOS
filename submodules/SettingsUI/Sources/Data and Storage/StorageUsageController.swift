@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import ItemListUI
+import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import ItemListPeerItem
@@ -501,7 +502,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             var cancelImpl: (() -> Void)?
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let progressSignal = Signal<Never, NoError> { subscriber in
-                                let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                     cancelImpl?()
                                 }))
                                 presentControllerImpl?(controller)
@@ -676,7 +677,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 var cancelImpl: (() -> Void)?
                                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                                 let progressSignal = Signal<Never, NoError> { subscriber in
-                                    let controller = OverlayStatusController(theme: presentationData.theme, strings: presentationData.strings,  type: .loading(cancelled: {
+                                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                                         cancelImpl?()
                                     }))
                                     presentControllerImpl?(controller)
