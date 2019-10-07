@@ -39,6 +39,7 @@ public func secureIdCallbackUrl(with baseUrl: String, peerId: PeerId, result: Se
 final class SecureIdAuthControllerInteraction {
     let updateState: ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void
     let present: (ViewController, Any?) -> Void
+    let push: (ViewController) -> Void
     let checkPassword: (String) -> Void
     let openPasswordHelp: () -> Void
     let setupPassword: () -> Void
@@ -47,9 +48,10 @@ final class SecureIdAuthControllerInteraction {
     let openMention: (TelegramPeerMention) -> Void
     let deleteAll: () -> Void
     
-    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, checkPassword: @escaping (String) -> Void, openPasswordHelp: @escaping () -> Void, setupPassword: @escaping () -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
+    fileprivate init(updateState: @escaping ((SecureIdAuthControllerState) -> SecureIdAuthControllerState) -> Void, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, checkPassword: @escaping (String) -> Void, openPasswordHelp: @escaping () -> Void, setupPassword: @escaping () -> Void, grant: @escaping () -> Void, openUrl: @escaping (String) -> Void, openMention: @escaping (TelegramPeerMention) -> Void, deleteAll: @escaping () -> Void) {
         self.updateState = updateState
         self.present = present
+        self.push = push
         self.checkPassword = checkPassword
         self.openPasswordHelp = openPasswordHelp
         self.setupPassword = setupPassword
@@ -65,7 +67,7 @@ public enum SecureIdAuthControllerMode {
     case list
 }
 
-public final class SecureIdAuthController: ViewController {
+public final class SecureIdAuthController: ViewController, StandalonePresentableController {
     private var controllerNode: SecureIdAuthControllerNode {
         return self.displayNode as! SecureIdAuthControllerNode
     }
@@ -299,6 +301,8 @@ public final class SecureIdAuthController: ViewController {
             self?.updateState(f)
         }, present: { [weak self] c, a in
             self?.present(c, in: .window(.root), with: a)
+        }, push: { [weak self] c in
+            self?.push(c)
         }, checkPassword: { [weak self] password in
             self?.checkPassword(password: password, inBackground: false, completion: {})
         }, openPasswordHelp: { [weak self] in
@@ -359,6 +363,13 @@ public final class SecureIdAuthController: ViewController {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition)
+    }
+    
+    override public func dismiss(completion: (() -> Void)? = nil) {
+        self.controllerNode.animateOut(completion: { [weak self] in
+            self?.presentingViewController?.dismiss(animated: false, completion: nil)
+            completion?()
+        })
     }
     
     private func updateState(animated: Bool = true, _ f: (SecureIdAuthControllerState) -> SecureIdAuthControllerState) {
