@@ -479,7 +479,8 @@ public final class TextNodeLayout: NSObject {
                     
                     lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                     
-                    rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + leftOffset + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: rightOffset - leftOffset, height: lineFrame.size.height)))
+                    let width = abs(rightOffset - leftOffset)
+                    rects.append(CGRect(origin: CGPoint(x: lineFrame.minX + min(leftOffset, rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height)))
                 }
             }
             if !rects.isEmpty {
@@ -571,7 +572,7 @@ public final class TextNodeLayout: NSObject {
                         
                         let width = abs(rightOffset - leftOffset)
                         if width > 1.0 {
-                            rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + (leftOffset < rightOffset ? leftOffset : rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
+                            rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + min(leftOffset, rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
                         }
                     }
                 }
@@ -609,7 +610,8 @@ public final class TextNodeLayout: NSObject {
                 lineFrame = displayLineFrame(frame: lineFrame, isRTL: line.isRTL, boundingRect: CGRect(origin: CGPoint(), size: self.size), cutout: self.cutout)
                 
                 let width = max(0.0, abs(rightOffset - leftOffset))
-                rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + (leftOffset < rightOffset ? leftOffset : rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
+                
+                rects.append((lineFrame, CGRect(origin: CGPoint(x: lineFrame.minX + min(leftOffset, rightOffset) + self.insets.left, y: lineFrame.minY + self.insets.top), size: CGSize(width: width, height: lineFrame.size.height))))
             }
         }
         if !rects.isEmpty {
