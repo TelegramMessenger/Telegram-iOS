@@ -103,7 +103,9 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.navigationPresentation = .modal
+        if case .list = mode {
+            self.navigationPresentation = .modal
+        }
         
         self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         
@@ -290,7 +292,7 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        if !self.didPlayPresentationAnimation {
+        if case .form = self.mode, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             self.controllerNode.animateIn()
         }
@@ -366,10 +368,14 @@ public final class SecureIdAuthController: ViewController, StandalonePresentable
     }
     
     override public func dismiss(completion: (() -> Void)? = nil) {
-        self.controllerNode.animateOut(completion: { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false, completion: nil)
-            completion?()
-        })
+        if case .form = self.mode {
+            self.controllerNode.animateOut(completion: { [weak self] in
+                self?.presentingViewController?.dismiss(animated: false, completion: nil)
+                completion?()
+            })
+        } else {
+            super.dismiss(completion: completion)
+        }
     }
     
     private func updateState(animated: Bool = true, _ f: (SecureIdAuthControllerState) -> SecureIdAuthControllerState) {
