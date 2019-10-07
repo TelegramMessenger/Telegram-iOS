@@ -214,10 +214,10 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
         self.addSubnode(self.descriptionNode)
         self.addSubnode(self.shareNode)
         
-        self.addSubnode(self.scrubberNode)
         self.addSubnode(self.leftDurationLabel)
         self.addSubnode(self.rightDurationLabel)
         self.addSubnode(self.rateButton)
+        self.addSubnode(self.scrubberNode)
         
         self.addSubnode(self.orderButton)
         self.addSubnode(self.loopingButton)
@@ -353,7 +353,7 @@ final class OverlayPlayerControlsNode: ASDisplayNode {
                     }
                 }
                 
-                strongSelf.rateButton.isHidden = rateButtonIsHidden && strongSelf.currentDuration.isZero
+                strongSelf.rateButton.isHidden = rateButtonIsHidden || strongSelf.currentDuration.isZero
             } else {
                 strongSelf.playPauseButton.isEnabled = false
                 strongSelf.backwardButton.isEnabled = false
