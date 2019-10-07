@@ -228,7 +228,16 @@ open class NavigationController: UINavigationController, ContainableController, 
             supportedOrientations = supportedOrientations.intersection(modalContainer.container.combinedSupportedOrientations(currentOrientationToLock: currentOrientationToLock))
         }
         for overlayContrainer in self.overlayContainers {
-            supportedOrientations = supportedOrientations.intersection(overlayContrainer.controller.combinedSupportedOrientations(currentOrientationToLock: currentOrientationToLock))
+            let controller = overlayContrainer.controller
+            if controller.lockOrientation {
+                if let lockedOrientation = controller.lockedOrientation {
+                    supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: lockedOrientation, compactSize: lockedOrientation))
+                } else {
+                    supportedOrientations = supportedOrientations.intersection(ViewControllerSupportedOrientations(regularSize: currentOrientationToLock, compactSize: currentOrientationToLock))
+                }
+            } else {
+                supportedOrientations = supportedOrientations.intersection(controller.supportedOrientations)
+            }
         }
         return supportedOrientations
     }

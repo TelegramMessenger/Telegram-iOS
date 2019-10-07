@@ -264,15 +264,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             let dateText: String
             switch item.walletTransaction {
             case let .completed(transaction):
-                if transaction.storageFee != 0 {
-                    let feeText = item.strings.Wallet_Info_TransactionStorageFee(formatBalanceText(-transaction.storageFee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
-                    if !description.isEmpty {
-                        description.append("\n")
-                    }
-                    description += "\(feeText)"
-                }
-                if transaction.otherFee != 0 {
-                    let feeText = item.strings.Wallet_Info_TransactionOtherFee(formatBalanceText(-transaction.otherFee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
+                let fee = transaction.storageFee + transaction.otherFee
+                if fee != 0 {
+                    let feeText = item.strings.Wallet_Info_TransactionBlockchainFee(formatBalanceText(-fee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
                     if !description.isEmpty {
                         description.append("\n")
                     }

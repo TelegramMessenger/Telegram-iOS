@@ -103,8 +103,8 @@ public struct ItemListControllerState {
     }
 }
 
-open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShortcutResponder, PresentableController {
-    private let state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>
+open class ItemListController: ViewController, KeyShortcutResponder, PresentableController {
+    private let state: Signal<(ItemListControllerState, (ItemListNodeState, Any)), NoError>
     
     private var leftNavigationButtonTitleAndStyle: (ItemListNavigationButtonContent, ItemListNavigationButtonStyle)?
     private var rightNavigationButtonTitleAndStyle: [(ItemListNavigationButtonContent, ItemListNavigationButtonStyle)] = []
@@ -135,7 +135,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var experimentalSnapScrollToItem: Bool = false {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
+                (self.displayNode as! ItemListControllerNode).listNode.experimentalSnapScrollToItem = self.experimentalSnapScrollToItem
             }
         }
     }
@@ -143,7 +143,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var enableInteractiveDismiss = false {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).enableInteractiveDismiss = self.enableInteractiveDismiss
+                (self.displayNode as! ItemListControllerNode).enableInteractiveDismiss = self.enableInteractiveDismiss
             }
         }
     }
@@ -151,15 +151,15 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var alwaysSynchronous = false {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).alwaysSynchronous = self.alwaysSynchronous
+                (self.displayNode as! ItemListControllerNode).alwaysSynchronous = self.alwaysSynchronous
             }
         }
     }
     
-    public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries<Entry>) -> Void)? {
+    public var visibleEntriesUpdated: ((ItemListNodeVisibleEntries) -> Void)? {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).visibleEntriesUpdated = self.visibleEntriesUpdated
+                (self.displayNode as! ItemListControllerNode).visibleEntriesUpdated = self.visibleEntriesUpdated
             }
         }
     }
@@ -167,7 +167,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var visibleBottomContentOffsetChanged: ((ListViewVisibleContentOffset) -> Void)? {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
+                (self.displayNode as! ItemListControllerNode).visibleBottomContentOffsetChanged = self.visibleBottomContentOffsetChanged
             }
         }
     }
@@ -175,7 +175,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var contentOffsetChanged: ((ListViewVisibleContentOffset, Bool) -> Void)? {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).contentOffsetChanged = self.contentOffsetChanged
+                (self.displayNode as! ItemListControllerNode).contentOffsetChanged = self.contentOffsetChanged
             }
         }
     }
@@ -183,7 +183,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var contentScrollingEnded: ((ListView) -> Bool)? {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).contentScrollingEnded = self.contentScrollingEnded
+                (self.displayNode as! ItemListControllerNode).contentScrollingEnded = self.contentScrollingEnded
             }
         }
     }
@@ -191,17 +191,22 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var searchActivated: ((Bool) -> Void)? {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).searchActivated = self.searchActivated
+                (self.displayNode as! ItemListControllerNode).searchActivated = self.searchActivated
             }
         }
     }
     
     public var willScrollToTop: (() -> Void)?
     
-    public var reorderEntry: ((Int, Int, [Entry]) -> Void)? {
+    public func setReorderEntry<T: ItemListNodeEntry>(_ f: @escaping (Int, Int, [T]) -> Void) {
+        self.reorderEntry = { a, b, list in
+            f(a, b, list.map { $0 as! T })
+        }
+    }
+    private var reorderEntry: ((Int, Int, [ItemListNodeAnyEntry]) -> Void)? {
         didSet {
             if self.isNodeLoaded {
-                (self.displayNode as! ItemListControllerNode<Entry>).reorderEntry = self.reorderEntry
+                (self.displayNode as! ItemListControllerNode).reorderEntry = self.reorderEntry
             }
         }
     }
@@ -212,17 +217,20 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     public var willDisappear: ((Bool) -> Void)?
     public var didDisappear: ((Bool) -> Void)?
     
-    convenience public init(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
+    convenience public init<ItemGenerationArguments>(context: AccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         self.init(sharedContext: context.sharedContext, state: state, tabBarItem: tabBarItem)
     }
     
-    convenience public init(sharedContext: SharedAccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
+    convenience public init<ItemGenerationArguments>(sharedContext: SharedAccountContext, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>? = nil) {
         let presentationData = sharedContext.currentPresentationData.with { $0 }
         self.init(theme: presentationData.theme, strings: presentationData.strings, updatedPresentationData: sharedContext.presentationData |> map { ($0.theme, $0.strings) }, state: state, tabBarItem: tabBarItem)
     }
     
-    public init(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState<Entry>, Entry.ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
+    public init<ItemGenerationArguments>(theme: PresentationTheme, strings: PresentationStrings, updatedPresentationData: Signal<(theme: PresentationTheme, strings: PresentationStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
         self.state = state
+        |> map { controllerState, nodeStateAndArgument -> (ItemListControllerState, (ItemListNodeState, Any)) in
+            return (controllerState, (nodeStateAndArgument.0, nodeStateAndArgument.1))
+        }
         
         self.theme = theme
         self.strings = strings
@@ -236,7 +244,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         
         self.scrollToTop = { [weak self] in
             self?.willScrollToTop?()
-            (self?.displayNode as! ItemListControllerNode<Entry>).scrollToTop()
+            (self?.displayNode as! ItemListControllerNode).scrollToTop()
         }
         
         if let tabBarItem = tabBarItem {
@@ -418,7 +426,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
                 }
             }
         } |> map { ($0.theme, $1) }
-        let displayNode = ItemListControllerNode<Entry>(controller: self, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
+        let displayNode = ItemListControllerNode(controller: self, navigationBar: self.navigationBar!, updateNavigationOffset: { [weak self] offset in
             if let strongSelf = self {
                 strongSelf.navigationOffset = offset
             }
@@ -440,7 +448,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         }
         self.displayNode = displayNode
         super.displayNodeDidLoad()
-        self._ready.set((self.displayNode as! ItemListControllerNode<Entry>).ready)
+        self._ready.set((self.displayNode as! ItemListControllerNode).ready)
     }
     
     override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -448,7 +456,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         
         self.validLayout = layout
         
-        (self.displayNode as! ItemListControllerNode<Entry>).containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
+        (self.displayNode as! ItemListControllerNode).containerLayoutUpdated(layout, navigationBarHeight: self.navigationInsetHeight, transition: transition)
     }
 
     @objc func leftNavigationButtonPressed() {
@@ -470,12 +478,12 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     }
     
     public func viewDidAppear(completion: @escaping () -> Void) {
-        (self.displayNode as! ItemListControllerNode<Entry>).listNode.preloadPages = true
+        (self.displayNode as! ItemListControllerNode).listNode.preloadPages = true
         
         if let presentationArguments = self.presentationArguments as? ViewControllerPresentationArguments, !self.didPlayPresentationAnimation {
             self.didPlayPresentationAnimation = true
             if case .modalSheet = presentationArguments.presentationAnimation {
-                (self.displayNode as! ItemListControllerNode<Entry>).animateIn(completion: {
+                (self.displayNode as! ItemListControllerNode).animateIn(completion: {
                     presentationArguments.completion?()
                     completion()
                 })
@@ -506,7 +514,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     
     public func frameForItemNode(_ predicate: (ListViewItemNode) -> Bool) -> CGRect? {
         var result: CGRect?
-        (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
+        (self.displayNode as! ItemListControllerNode).listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListViewItemNode {
                 if predicate(itemNode) {
                     result = itemNode.convert(itemNode.bounds, to: self.displayNode)
@@ -517,7 +525,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     }
     
     public func forEachItemNode(_ f: (ListViewItemNode) -> Void) {
-        (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
+        (self.displayNode as! ItemListControllerNode).listNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ListViewItemNode {
                 f(itemNode)
             }
@@ -525,11 +533,11 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     }
     
     public func ensureItemNodeVisible(_ itemNode: ListViewItemNode, animated: Bool = true) {
-        (self.displayNode as! ItemListControllerNode<Entry>).listNode.ensureItemNodeVisible(itemNode, animated: animated)
+        (self.displayNode as! ItemListControllerNode).listNode.ensureItemNodeVisible(itemNode, animated: animated)
     }
     
     public func afterLayout(_ f: @escaping () -> Void) {
-        (self.displayNode as! ItemListControllerNode<Entry>).afterLayout(f)
+        (self.displayNode as! ItemListControllerNode).afterLayout(f)
     }
     
     public func previewingController(from sourceView: UIView, for location: CGPoint) -> (UIViewController, CGRect)? {
@@ -546,8 +554,8 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
         }
         
         var selectedNode: ItemListItemNode?
-        let listLocation = self.view.convert(location, to:  (self.displayNode as! ItemListControllerNode<Entry>).listNode.view)
-        (self.displayNode as! ItemListControllerNode<Entry>).listNode.forEachItemNode { itemNode in
+        let listLocation = self.view.convert(location, to:  (self.displayNode as! ItemListControllerNode).listNode.view)
+        (self.displayNode as! ItemListControllerNode).listNode.forEachItemNode { itemNode in
             if itemNode.frame.contains(listLocation), let itemNode = itemNode as? ItemListItemNode {
                 selectedNode = itemNode
             }
@@ -570,7 +578,7 @@ open class ItemListController<Entry: ItemListNodeEntry>: ViewController, KeyShor
     }
     
     public func clearItemNodesHighlight(animated: Bool = false) {
-        (self.displayNode as! ItemListControllerNode<Entry>).listNode.clearHighlightAnimated(animated)
+        (self.displayNode as! ItemListControllerNode).listNode.clearHighlightAnimated(animated)
     }
     
     public func previewingCommit(_ viewControllerToCommit: UIViewController) {

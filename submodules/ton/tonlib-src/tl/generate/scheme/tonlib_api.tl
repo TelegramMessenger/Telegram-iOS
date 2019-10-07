@@ -85,6 +85,8 @@ logVerbosityLevel verbosity_level:int32 = LogVerbosityLevel;
 //@description Contains a list of available TDLib internal log tags @tags List of log tags
 logTags tags:vector<string> = LogTags;
 
+data bytes:secureBytes = Data;
+
 ---functions---
 
 init options:options = Ok;
@@ -102,6 +104,10 @@ importKey local_password:secureBytes mnemonic_password:secureBytes exported_key:
 importPemKey local_password:secureBytes key_password:secureBytes exported_key:exportedPemKey = Key;
 importEncryptedKey local_password:secureBytes key_password:secureBytes exported_encrypted_key:exportedEncryptedKey = Key;
 changeLocalPassword input_key:inputKey new_local_password:secureBytes = Key;
+
+encrypt decrypted_data:secureBytes secret:secureBytes = Data;
+decrypt encrypted_data:secureBytes secret:secureBytes = Data;
+kdf password:secureBytes salt:secureBytes iterations:int32 = Data;
 
 unpackAccountAddress account_address:string = UnpackedAccountAddress;
 packAccountAddress account_address:unpackedAccountAddress = AccountAddress;

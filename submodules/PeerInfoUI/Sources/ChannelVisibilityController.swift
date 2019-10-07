@@ -260,7 +260,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: ChannelVisibilityControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! ChannelVisibilityControllerArguments
         switch self {
             case let .typeHeader(theme, title):
                 return ItemListSectionHeaderItem(theme: theme, text: title, sectionId: self.section)
@@ -974,7 +975,7 @@ public func channelVisibilityController(context: AccountContext, peerId: PeerId,
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView, peersDisablingAddressNameAssignment.get() |> deliverOnMainQueue)
     |> deliverOnMainQueue
-    |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState<ChannelVisibilityEntry>, ChannelVisibilityEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view, publicChannelsToRevoke -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peer = peerViewMainPeer(view)
         
         var rightNavigationButton: ItemListNavigationButton?

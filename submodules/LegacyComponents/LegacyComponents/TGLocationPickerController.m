@@ -171,14 +171,14 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         [strongSelf switchToFullscreen];
     };
     
-    _searchBarOverlay = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.navigationController.view.frame.size.width, 64)];
+    _searchBarOverlay = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.navigationController.view.frame.size.width, 44.0f)];
     _searchBarOverlay.alpha = 0.0f;
     _searchBarOverlay.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _searchBarOverlay.backgroundColor = self.pallete != nil ? self.pallete.sectionHeaderBackgroundColor : UIColorRGB(0xf7f7f7);
     _searchBarOverlay.userInteractionEnabled = false;
     [self.navigationController.view addSubview:_searchBarOverlay];
     
-    CGFloat safeAreaInset = self.controllerSafeAreaInset.top > FLT_EPSILON ? self.controllerSafeAreaInset.top : 20;
+    CGFloat safeAreaInset = self.controllerSafeAreaInset.top > FLT_EPSILON ? self.controllerSafeAreaInset.top : 0.0f;
     _searchBarWrapper = [[UIView alloc] initWithFrame:CGRectMake(0, -44 - safeAreaInset, self.navigationController.view.frame.size.width, 44 + safeAreaInset)];
     _searchBarWrapper.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _searchBarWrapper.backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];

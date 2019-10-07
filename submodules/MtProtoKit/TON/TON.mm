@@ -37,6 +37,14 @@ static NSString * _Nullable readString(std::string &string) {
     }
 }
 
+static NSData * _Nullable readSecureString(td::SecureString &string) {
+    if (string.size() == 0) {
+        return [NSData data];
+    } else {
+        return [[NSData alloc] initWithBytes:string.data() length:string.size()];
+    }
+}
+
 static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::object_ptr<tonlib_api::raw_message> &message) {
     if (message == nullptr) {
         return nil;
@@ -324,6 +332,26 @@ typedef enum {
     );
     _client->execute({ INT16_MAX + 1, std::move(query) });
 #endif
+}
+
+- (NSData * __nullable)decrypt:(NSData *)encryptedData secret:(NSData *)data {
+    auto query = make_object<tonlib_api::decrypt>(makeSecureString(encryptedData), makeSecureString(data));
+    tonlib_api::object_ptr<tonlib_api::Object> result = _client->execute({ INT16_MAX + 1, std::move(query) }).object;
+    
+    if (result->get_id() == tonlib_api::error::ID) {
+        return nil;
+    } else {
+        tonlib_api::object_ptr<tonlib_api::data> value = tonlib_api::move_object_as<tonlib_api::data>(result);
+        return readSecureString(value->bytes_);
+    }
+}
+- (NSData *)encrypt:(NSData *)decryptedData secret:(NSData *)data {
+    auto query = make_object<tonlib_api::encrypt>(makeSecureString(decryptedData), makeSecureString(data));
+    tonlib_api::object_ptr<tonlib_api::Object> result = _client->execute({ INT16_MAX + 1, std::move(query) }).object;
+    
+    tonlib_api::object_ptr<tonlib_api::data> value = tonlib_api::move_object_as<tonlib_api::data>(result);
+    
+    return readSecureString(value->bytes_);
 }
 
 - (MTSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory enableExternalRequests:(bool)enableExternalRequests {

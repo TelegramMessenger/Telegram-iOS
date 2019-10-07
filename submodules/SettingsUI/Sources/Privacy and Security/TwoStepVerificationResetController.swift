@@ -83,7 +83,8 @@ private enum TwoStepVerificationResetEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: TwoStepVerificationResetControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! TwoStepVerificationResetControllerArguments
         switch self {
             case let .codeEntry(theme, strings, placeholder, text):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: placeholder, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .password, spacing: 10.0, tag: TwoStepVerificationResetTag.input, sectionId: self.section, textUpdated: { updatedText in
@@ -201,7 +202,7 @@ func twoStepVerificationResetController(context: AccountContext, emailPattern: S
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get()) |> deliverOnMainQueue
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<TwoStepVerificationResetEntry>, TwoStepVerificationResetEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 dismissImpl?()

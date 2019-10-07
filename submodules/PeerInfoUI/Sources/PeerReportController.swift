@@ -249,7 +249,8 @@ private enum PeerReportControllerEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: PeerReportControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! PeerReportControllerArguments
         switch self {
             case let .text(theme, title, value):
                 return ItemListMultilineInputItem(theme: theme, text: value, placeholder: title, maxLength: nil, sectionId: self.section, style: .blocks, textUpdated: { text in
@@ -293,7 +294,7 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
     let reportDisposable = MetaDisposable()
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<PeerReportControllerEntry>, PeerReportControllerEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let rightButton: ItemListNavigationButton
         if state.isReporting {
             rightButton = ItemListNavigationButton(content: .none, style: .activity, enabled: true, action: {})

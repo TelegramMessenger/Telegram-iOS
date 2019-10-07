@@ -251,6 +251,8 @@ public func legacyLocationController(message: Message?, mapMedia: TelegramMediaM
     
     controller.onViewDidAppear = { [weak controller] in
         if let strongController = controller {
+            strongController.view.disablesInteractiveModalDismiss = true
+            strongController.view.disablesInteractiveTransitionGestureRecognizer = true
             strongController.locationMapView.interactiveTransitionGestureRecognizerTest = { point -> Bool in
                 return point.x > 30.0
             }

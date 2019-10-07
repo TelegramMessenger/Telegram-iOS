@@ -89,7 +89,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: UsernameSetupControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! UsernameSetupControllerArguments
         switch self {
             case let .editablePublicLink(theme, strings, prefix, currentText, text):
                 return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: prefix, textColor: theme.list.itemPrimaryTextColor), text: text, placeholder: "", type: .username, spacing: 10.0, clearType: .always, tag: UsernameEntryTag.username, sectionId: self.section, textUpdated: { updatedText in
@@ -283,7 +284,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     |> deliverOnMainQueue
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView)
-        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<UsernameSetupEntry>, UsernameSetupEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
             let peer = peerViewMainPeer(view)
             
             var rightNavigationButton: ItemListNavigationButton?

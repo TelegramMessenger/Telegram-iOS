@@ -703,6 +703,9 @@ public final class MediaPlayerAudioRenderer {
     public init(audioSession: MediaPlayerAudioSessionControl, playAndRecord: Bool, forceAudioToSpeaker: Bool, baseRate: Double, updatedRate: @escaping () -> Void, audioPaused: @escaping () -> Void) {
         var audioClock: CMClock?
         CMAudioClockCreate(allocator: nil, clockOut: &audioClock)
+        if audioClock == nil {
+            audioClock = CMClockGetHostTimeClock()
+        }
         self.audioClock = audioClock!
         
         var audioTimebase: CMTimebase?

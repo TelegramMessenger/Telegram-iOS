@@ -34,3 +34,15 @@ AppBundle.xcworkspace/*
 tools/buck
 *.xcodeproj
 !*_Xcode.xcodeproj
+submodules/MtProtoKit/TON/macOS/lib/libtonlibjson.0.5.dylib
+submodules/MtProtoKit/TON/macOS/lib/libtonlibjson.dylib
+submodules/MtProtoKit/TON/macOS/lib/cmake/Tonlib/TonlibConfig.cmake
+submodules/MtProtoKit/TON/macOS/lib/cmake/Tonlib/TonlibConfigVersion.cmake
+submodules/MtProtoKit/TON/macOS/lib/cmake/Tonlib/TonlibTargets-release.cmake
+submodules/MtProtoKit/TON/macOS/lib/cmake/Tonlib/TonlibTargets.cmake
+submodules/MtProtoKit/TON/macOS/lib/fift/Asm.fif
+submodules/MtProtoKit/TON/macOS/lib/fift/Fift.fif
+submodules/MtProtoKit/TON/macOS/lib/fift/Lisp.fif
+submodules/MtProtoKit/TON/macOS/lib/fift/Lists.fif
+submodules/MtProtoKit/TON/macOS/lib/fift/Stack.fif
+submodules/MtProtoKit/TON/macOS/lib/fift/TonUtil.fif

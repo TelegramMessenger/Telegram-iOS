@@ -50,6 +50,8 @@ class bip39Hints;
 
 class config;
 
+class data;
+
 class error;
 
 class exportedEncryptedKey;
@@ -160,6 +162,22 @@ class config final : public Object {
   config(std::string const &config_, std::string const &blockchain_name_, bool use_callbacks_for_network_, bool ignore_cache_);
 
   static const std::int32_t ID = -1538391496;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class data final : public Object {
+ public:
+  td::SecureString bytes_;
+
+  data();
+
+  explicit data(td::SecureString &&bytes_);
+
+  static const std::int32_t ID = -414733967;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -844,6 +862,25 @@ class createNewKey final : public Function {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class decrypt final : public Function {
+ public:
+  td::SecureString encrypted_data_;
+  td::SecureString secret_;
+
+  decrypt();
+
+  decrypt(td::SecureString &&encrypted_data_, td::SecureString &&secret_);
+
+  static const std::int32_t ID = 357991854;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<data>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class deleteAllKeys final : public Function {
  public:
 
@@ -873,6 +910,25 @@ class deleteKey final : public Function {
   }
 
   using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class encrypt final : public Function {
+ public:
+  td::SecureString decrypted_data_;
+  td::SecureString secret_;
+
+  encrypt();
+
+  encrypt(td::SecureString &&decrypted_data_, td::SecureString &&secret_);
+
+  static const std::int32_t ID = -1821422820;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<data>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
@@ -1130,6 +1186,26 @@ class init final : public Function {
   }
 
   using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class kdf final : public Function {
+ public:
+  td::SecureString password_;
+  td::SecureString salt_;
+  std::int32_t iterations_;
+
+  kdf();
+
+  kdf(td::SecureString &&password_, td::SecureString &&salt_, std::int32_t iterations_);
+
+  static const std::int32_t ID = -1667861635;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<data>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };

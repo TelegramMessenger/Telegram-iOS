@@ -147,7 +147,8 @@ enum BotReceiptEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: BotReceiptControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! BotReceiptControllerArguments
         switch self {
             case let .header(theme, invoice, botName):
                 return BotCheckoutHeaderItem(account: arguments.account, theme: theme, invoice: invoice, botName: botName, sectionId: self.section)
@@ -253,7 +254,7 @@ private func availablePaymentMethods(current: BotCheckoutPaymentMethod?) -> [Bot
     return []
 }
 
-final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
+final class BotReceiptControllerNode: ItemListControllerNode {
     private let context: AccountContext
     private let dismissAnimated: () -> Void
     
@@ -264,7 +265,7 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
     
     private let actionButton: BotCheckoutActionButton
     
-    init(controller: ItemListController<BotReceiptEntry>?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
+    init(controller: ItemListController?, navigationBar: NavigationBar, updateNavigationOffset: @escaping (CGFloat) -> Void, context: AccountContext, invoice: TelegramMediaInvoice, messageId: MessageId, dismissAnimated: @escaping () -> Void) {
         self.context = context
         self.dismissAnimated = dismissAnimated
         
@@ -272,8 +273,8 @@ final class BotReceiptControllerNode: ItemListControllerNode<BotReceiptEntry> {
         
         let arguments = BotReceiptControllerArguments(account: context.account)
         
-        let signal: Signal<(PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)), NoError> = combineLatest(context.sharedContext.presentationData, receiptData.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
-            |> map { presentationData, receiptData, botPeer -> (PresentationTheme, (ItemListNodeState<BotReceiptEntry>, BotReceiptEntry.ItemGenerationArguments)) in
+        let signal: Signal<(PresentationTheme, (ItemListNodeState, Any)), NoError> = combineLatest(context.sharedContext.presentationData, receiptData.get(), context.account.postbox.loadedPeerWithId(messageId.peerId))
+            |> map { presentationData, receiptData, botPeer -> (PresentationTheme, (ItemListNodeState, Any)) in
                 let nodeState = ItemListNodeState(entries: botReceiptControllerEntries(presentationData: presentationData, invoice: invoice, formInvoice: receiptData?.0, formInfo: receiptData?.1, shippingOption: receiptData?.2, paymentMethodTitle: receiptData?.3, botPeer: botPeer), style: .plain, focusItemTag: nil, emptyStateItem: nil, animateChanges: false)
                 
                 return (presentationData.theme, (nodeState, arguments))

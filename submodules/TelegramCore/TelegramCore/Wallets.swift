@@ -423,6 +423,34 @@ public final class TonInstance {
             return disposable
         }
     }
+    fileprivate func encrypt(_ decryptedData: Data, secret: Data) -> Signal<Data, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    subscriber.putNext(ton.encrypt(decryptedData, secret: secret))
+                    subscriber.putCompletion()
+                }
+            }
+            
+            return disposable
+        }
+    }
+    fileprivate func decrypt(_ encryptedData: Data, secret: Data) -> Signal<Data?, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    subscriber.putNext(ton.decrypt(encryptedData, secret: secret))
+                    subscriber.putCompletion()
+                }
+            }
+            
+            return disposable
+        }
+    }
 }
 
 public struct WalletPublicKey: Codable, Hashable {
@@ -539,6 +567,13 @@ public func availableWallets(postbox: Postbox) -> Signal<WalletCollection, NoErr
 
 public enum CreateWalletError {
     case generic
+}
+
+public func tonlibEncrypt(tonInstance: TonInstance, decryptedData: Data, secret: Data) -> Signal<Data, NoError> {
+    return tonInstance.encrypt(decryptedData, secret: secret)
+}
+public func tonlibDecrypt(tonInstance: TonInstance, encryptedData: Data, secret: Data) -> Signal<Data?, NoError> {
+    return tonInstance.decrypt(encryptedData, secret: secret)
 }
 
 public func createWallet(postbox: Postbox, tonInstance: TonInstance, keychain: TonKeychain, localPassword: Data) -> Signal<(WalletInfo, [String]), CreateWalletError> {

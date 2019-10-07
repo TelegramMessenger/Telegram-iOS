@@ -77,7 +77,8 @@ private enum VoiceCallDataSavingEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: VoiceCallDataSavingControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! VoiceCallDataSavingControllerArguments
         switch self {
             case let .never(theme, text, value):
                 return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: value, zeroSeparatorInsets: false, sectionId: self.section, action: {
@@ -148,7 +149,7 @@ func voiceCallDataSavingController(context: AccountContext) -> ViewController {
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, sharedSettings) |> deliverOnMainQueue
-        |> map { presentationData, sharedSettings -> (ItemListControllerState, (ItemListNodeState<VoiceCallDataSavingEntry>, VoiceCallDataSavingEntry.ItemGenerationArguments)) in
+        |> map { presentationData, sharedSettings -> (ItemListControllerState, (ItemListNodeState, Any)) in
             
             let dataSaving = effectiveDataSaving(for: sharedSettings.0, autodownloadSettings: sharedSettings.1)
             

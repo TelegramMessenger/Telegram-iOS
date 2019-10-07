@@ -28,6 +28,7 @@
 #include "tonlib/TestGiver.h"
 #include "tonlib/utils.h"
 #include "tonlib/keys/Mnemonic.h"
+#include "tonlib/keys/SimpleEncryption.h"
 
 #include "tonlib/TonlibError.h"
 
@@ -444,7 +445,7 @@ tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::static_request(
 
   tonlib_api::object_ptr<tonlib_api::Object> response;
   downcast_call(*function, [&response](auto& request) { response = TonlibClient::do_static_request(request); });
-  VLOG(tonlib_query) << "  answer static query " << to_string(function);
+  VLOG(tonlib_query) << "  answer static query " << to_string(response);
   return response;
 }
 
@@ -466,6 +467,9 @@ bool TonlibClient::is_static_request(td::int32 id) {
     case tonlib_api::setLogTagVerbosityLevel::ID:
     case tonlib_api::getLogTagVerbosityLevel::ID:
     case tonlib_api::addLogMessage::ID:
+    case tonlib_api::encrypt::ID:
+    case tonlib_api::decrypt::ID:
+    case tonlib_api::kdf::ID:
       return true;
     default:
       return false;
@@ -1631,6 +1635,30 @@ tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(const
 tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(const tonlib_api::addLogMessage& request) {
   Logging::add_message(request.verbosity_level_, request.text_);
   return tonlib_api::make_object<tonlib_api::ok>();
+}
+
+tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(const tonlib_api::encrypt& request) {
+  return tonlib_api::make_object<tonlib_api::data>(
+      SimpleEncryption::encrypt_data(request.decrypted_data_, request.secret_));
+}
+
+tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(const tonlib_api::decrypt& request) {
+  auto r_data = SimpleEncryption::decrypt_data(request.encrypted_data_, request.secret_);
+  if (r_data.is_ok()) {
+    return tonlib_api::make_object<tonlib_api::data>(r_data.move_as_ok());
+  } else {
+    return status_to_tonlib_api(r_data.error().move_as_error_prefix(TonlibError::KeyDecrypt()));
+  }
+}
+
+tonlib_api::object_ptr<tonlib_api::Object> TonlibClient::do_static_request(const tonlib_api::kdf& request) {
+  auto max_iterations = 10000000;
+  if (request.iterations_ < 0 || request.iterations_ > max_iterations) {
+    return status_to_tonlib_api(
+        TonlibError::InvalidField("iterations", PSLICE() << "must be between 0 and " << max_iterations));
+  }
+  return tonlib_api::make_object<tonlib_api::data>(
+      SimpleEncryption::kdf(request.password_, request.salt_, request.iterations_));
 }
 
 }  // namespace tonlib

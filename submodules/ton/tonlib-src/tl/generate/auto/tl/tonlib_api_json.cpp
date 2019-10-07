@@ -56,6 +56,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Object *object, const std::
     {"accountAddress", 755613099},
     {"bip39Hints", 1012243456},
     {"config", -1538391496},
+    {"data", -414733967},
     {"error", -1679978726},
     {"exportedEncryptedKey", 2024406612},
     {"exportedKey", -1449248297},
@@ -104,8 +105,10 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"changeLocalPassword", -1685491421},
     {"close", -1187782273},
     {"createNewKey", -1861385712},
+    {"decrypt", 357991854},
     {"deleteAllKeys", 1608776483},
     {"deleteKey", -1579595571},
+    {"encrypt", -1821422820},
     {"exportEncryptedKey", 155352861},
     {"exportKey", 399723440},
     {"exportPemKey", -2047752448},
@@ -120,6 +123,7 @@ Result<int32> tl_constructor_from_string(tonlib_api::Function *object, const std
     {"importKey", -1607900903},
     {"importPemKey", 76385617},
     {"init", -2014661877},
+    {"kdf", -1667861635},
     {"onLiteServerQueryError", -677427533},
     {"onLiteServerQueryResult", 2056444510},
     {"options.setConfig", 646497241},
@@ -192,6 +196,15 @@ Status from_json(tonlib_api::config &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "ignore_cache", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.ignore_cache_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::data &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "bytes", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.bytes_, value));
     }
   }
   return Status::OK();
@@ -805,6 +818,21 @@ Status from_json(tonlib_api::createNewKey &to, JsonObject &from) {
   }
   return Status::OK();
 }
+Status from_json(tonlib_api::decrypt &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "encrypted_data", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.encrypted_data_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "secret", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.secret_, value));
+    }
+  }
+  return Status::OK();
+}
 Status from_json(tonlib_api::deleteAllKeys &to, JsonObject &from) {
   return Status::OK();
 }
@@ -813,6 +841,21 @@ Status from_json(tonlib_api::deleteKey &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "key", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.key_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::encrypt &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "decrypted_data", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.decrypted_data_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "secret", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.secret_, value));
     }
   }
   return Status::OK();
@@ -1005,6 +1048,27 @@ Status from_json(tonlib_api::init &to, JsonObject &from) {
     TRY_RESULT(value, get_json_object_field(from, "options", JsonValue::Type::Null, true));
     if (value.type() != JsonValue::Type::Null) {
       TRY_STATUS(from_json(to.options_, value));
+    }
+  }
+  return Status::OK();
+}
+Status from_json(tonlib_api::kdf &to, JsonObject &from) {
+  {
+    TRY_RESULT(value, get_json_object_field(from, "password", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.password_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "salt", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json_bytes(to.salt_, value));
+    }
+  }
+  {
+    TRY_RESULT(value, get_json_object_field(from, "iterations", JsonValue::Type::Null, true));
+    if (value.type() != JsonValue::Type::Null) {
+      TRY_STATUS(from_json(to.iterations_, value));
     }
   }
   return Status::OK();
@@ -1339,6 +1403,11 @@ void to_json(JsonValueScope &jv, const tonlib_api::config &object) {
   jo << ctie("use_callbacks_for_network", ToJson(object.use_callbacks_for_network_));
   jo << ctie("ignore_cache", ToJson(object.ignore_cache_));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::data &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "data");
+  jo << ctie("bytes", ToJson(JsonBytes{object.bytes_}));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::error &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "error");
@@ -1620,6 +1689,12 @@ void to_json(JsonValueScope &jv, const tonlib_api::createNewKey &object) {
   jo << ctie("mnemonic_password", ToJson(JsonBytes{object.mnemonic_password_}));
   jo << ctie("random_extra_seed", ToJson(JsonBytes{object.random_extra_seed_}));
 }
+void to_json(JsonValueScope &jv, const tonlib_api::decrypt &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "decrypt");
+  jo << ctie("encrypted_data", ToJson(JsonBytes{object.encrypted_data_}));
+  jo << ctie("secret", ToJson(JsonBytes{object.secret_}));
+}
 void to_json(JsonValueScope &jv, const tonlib_api::deleteAllKeys &object) {
   auto jo = jv.enter_object();
   jo << ctie("@type", "deleteAllKeys");
@@ -1630,6 +1705,12 @@ void to_json(JsonValueScope &jv, const tonlib_api::deleteKey &object) {
   if (object.key_) {
     jo << ctie("key", ToJson(object.key_));
   }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::encrypt &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "encrypt");
+  jo << ctie("decrypted_data", ToJson(JsonBytes{object.decrypted_data_}));
+  jo << ctie("secret", ToJson(JsonBytes{object.secret_}));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::exportEncryptedKey &object) {
   auto jo = jv.enter_object();
@@ -1733,6 +1814,13 @@ void to_json(JsonValueScope &jv, const tonlib_api::init &object) {
   if (object.options_) {
     jo << ctie("options", ToJson(object.options_));
   }
+}
+void to_json(JsonValueScope &jv, const tonlib_api::kdf &object) {
+  auto jo = jv.enter_object();
+  jo << ctie("@type", "kdf");
+  jo << ctie("password", ToJson(JsonBytes{object.password_}));
+  jo << ctie("salt", ToJson(JsonBytes{object.salt_}));
+  jo << ctie("iterations", ToJson(object.iterations_));
 }
 void to_json(JsonValueScope &jv, const tonlib_api::onLiteServerQueryError &object) {
   auto jo = jv.enter_object();

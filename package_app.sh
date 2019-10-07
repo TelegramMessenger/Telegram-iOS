@@ -187,7 +187,7 @@ for ITEM in $APP_ITEMS_WITH_PROVISIONING_PROFILE; do
 	        if [ "$ENABLE_GET_TASK_ALLOW" == "1" ]; then
 	        	KEY="com.apple.security.get-task-allow"
 	        	PLUTIL_KEY=$(echo "$KEY" | sed 's/\./\\\./g')
-	        	plutil -insert "$PLUTIL_KEY" -xml "<false/>" "$PROFILE_ENTITLEMENTS_PATH"
+	        	plutil -insert "$PLUTIL_KEY" -xml "<true/>" "$PROFILE_ENTITLEMENTS_PATH"
 	        fi
 
 	        ENTITLEMENTS_VAR=PACKAGE_ENTITLEMENTS_$ITEM

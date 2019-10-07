@@ -343,7 +343,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: SelectivePrivacySettingsControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! SelectivePrivacySettingsControllerArguments
         switch self {
             case let .forwardsPreviewHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, multiline: true, sectionId: self.section)
@@ -932,7 +933,7 @@ func selectivePrivacySettingsController(context: AccountContext, kind: Selective
     }
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), peerName) |> deliverOnMainQueue
-    |> map { presentationData, state, peerName -> (ItemListControllerState, (ItemListNodeState<SelectivePrivacySettingsEntry>, SelectivePrivacySettingsEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, peerName -> (ItemListControllerState, (ItemListNodeState, Any)) in
         
         let title: String
         switch kind {

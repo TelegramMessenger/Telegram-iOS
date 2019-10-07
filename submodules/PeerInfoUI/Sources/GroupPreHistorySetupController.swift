@@ -76,7 +76,8 @@ private enum GroupPreHistorySetupEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: GroupPreHistorySetupArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! GroupPreHistorySetupArguments
         switch self {
             case let .header(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -138,7 +139,7 @@ public func groupPreHistorySetupController(context: AccountContext, peerId: Peer
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.viewTracker.peerView(peerId))
     |> deliverOnMainQueue
-    |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState<GroupPreHistorySetupEntry>, GroupPreHistorySetupEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let defaultValue: Bool = (view.cachedData as? CachedChannelData)?.flags.contains(.preHistoryEnabled) ?? false
         let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
             dismissImpl?()

@@ -20,7 +20,8 @@ static_library(
     ], exclude = [
         "rlottie/src/lottie/rapidjson/msinttypes/**/*",
     ]) + [
-        "LottieInstance.h"
+        "LottieInstance.h",
+        "config.h",
     ],
     exported_headers = [
         "LottieInstance.h"

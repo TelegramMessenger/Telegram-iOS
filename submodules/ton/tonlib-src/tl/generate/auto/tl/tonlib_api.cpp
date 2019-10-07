@@ -82,6 +82,24 @@ void config::store(td::TlStorerToString &s, const char *field_name) const {
   }
 }
 
+data::data()
+  : bytes_()
+{}
+
+data::data(td::SecureString &&bytes_)
+  : bytes_(std::move(bytes_))
+{}
+
+const std::int32_t data::ID;
+
+void data::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "data");
+    s.store_bytes_field("bytes", bytes_);
+    s.store_class_end();
+  }
+}
+
 error::error()
   : code_()
   , message_()
@@ -898,6 +916,27 @@ void createNewKey::store(td::TlStorerToString &s, const char *field_name) const 
   }
 }
 
+decrypt::decrypt()
+  : encrypted_data_()
+  , secret_()
+{}
+
+decrypt::decrypt(td::SecureString &&encrypted_data_, td::SecureString &&secret_)
+  : encrypted_data_(std::move(encrypted_data_))
+  , secret_(std::move(secret_))
+{}
+
+const std::int32_t decrypt::ID;
+
+void decrypt::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "decrypt");
+    s.store_bytes_field("encrypted_data", encrypted_data_);
+    s.store_bytes_field("secret", secret_);
+    s.store_class_end();
+  }
+}
+
 deleteAllKeys::deleteAllKeys() {
 }
 
@@ -924,6 +963,27 @@ void deleteKey::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "deleteKey");
     if (key_ == nullptr) { s.store_field("key", "null"); } else { key_->store(s, "key"); }
+    s.store_class_end();
+  }
+}
+
+encrypt::encrypt()
+  : decrypted_data_()
+  , secret_()
+{}
+
+encrypt::encrypt(td::SecureString &&decrypted_data_, td::SecureString &&secret_)
+  : decrypted_data_(std::move(decrypted_data_))
+  , secret_(std::move(secret_))
+{}
+
+const std::int32_t encrypt::ID;
+
+void encrypt::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "encrypt");
+    s.store_bytes_field("decrypted_data", decrypted_data_);
+    s.store_bytes_field("secret", secret_);
     s.store_class_end();
   }
 }
@@ -1200,6 +1260,30 @@ void init::store(td::TlStorerToString &s, const char *field_name) const {
   if (!LOG_IS_STRIPPED(ERROR)) {
     s.store_class_begin(field_name, "init");
     if (options_ == nullptr) { s.store_field("options", "null"); } else { options_->store(s, "options"); }
+    s.store_class_end();
+  }
+}
+
+kdf::kdf()
+  : password_()
+  , salt_()
+  , iterations_()
+{}
+
+kdf::kdf(td::SecureString &&password_, td::SecureString &&salt_, std::int32_t iterations_)
+  : password_(std::move(password_))
+  , salt_(std::move(salt_))
+  , iterations_(iterations_)
+{}
+
+const std::int32_t kdf::ID;
+
+void kdf::store(td::TlStorerToString &s, const char *field_name) const {
+  if (!LOG_IS_STRIPPED(ERROR)) {
+    s.store_class_begin(field_name, "kdf");
+    s.store_bytes_field("password", password_);
+    s.store_bytes_field("salt", salt_);
+    s.store_field("iterations", iterations_);
     s.store_class_end();
   }
 }

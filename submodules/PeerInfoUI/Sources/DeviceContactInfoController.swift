@@ -372,7 +372,8 @@ private enum DeviceContactInfoEntry: ItemListNodeEntry {
         return lhs.sortIndex < rhs.sortIndex
     }
     
-    func item(_ arguments: DeviceContactInfoControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! DeviceContactInfoControllerArguments
         switch self {
             case let .info(_, theme, strings, dateTimeFormat, peer, state, jobSummary, isPlain):
                 return ItemListAvatarAndNameInfoItem(account: arguments.account, theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, mode: .contact, peer: peer, presence: nil, label: jobSummary, cachedData: nil, state: state, sectionId: self.section, style: arguments.isPlain ? .plain : .blocks(withTopInset: false, withExtendedBottomInset: true), editingNameUpdated: { editingName in
@@ -750,7 +751,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     return entries
 }
 
-private final class DeviceContactInfoController: ItemListController<DeviceContactInfoEntry>, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
+private final class DeviceContactInfoController: ItemListController, MFMessageComposeViewControllerDelegate, UINavigationControllerDelegate {
     private var composer: MFMessageComposeViewController?
     func inviteContact(presentationData: PresentationData, numbers: [String]) {
         if MFMessageComposeViewController.canSendText() {
@@ -1020,7 +1021,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
     
     let previousEditingPhoneIds = Atomic<Set<Int64>?>(value: nil)
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), contactData)
-    |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState<DeviceContactInfoEntry>, DeviceContactInfoEntry.ItemGenerationArguments)) in
+    |> map { presentationData, state, peerAndContactData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var leftNavigationButton: ItemListNavigationButton?
         switch subject {
             case .vcard:

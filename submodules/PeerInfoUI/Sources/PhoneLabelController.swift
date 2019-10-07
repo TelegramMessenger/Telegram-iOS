@@ -55,7 +55,8 @@ private enum PhoneLabelEntry: ItemListNodeEntry {
         return lhs.index < rhs.index
     }
     
-    func item(_ arguments: PhoneLabelArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! PhoneLabelArguments
         switch self {
         case let .label(_, theme, value, text, selected):
             return ItemListCheckboxItem(theme: theme, title: text, style: .left, checked: selected, zeroSeparatorInsets: false, sectionId: self.section, action: {
@@ -107,7 +108,7 @@ public func phoneLabelController(context: AccountContext, currentLabel: String, 
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())
-        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState<PhoneLabelEntry>, PhoneLabelEntry.ItemGenerationArguments)) in
+        |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
             
             let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
                 arguments.cancel()

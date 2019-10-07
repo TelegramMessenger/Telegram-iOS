@@ -98,6 +98,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (MTSignal *)deleteAllKeys;
 - (MTSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash;
 
+- (NSData *)encrypt:(NSData *)decryptedData secret:(NSData *)data;
+- (NSData * __nullable)decrypt:(NSData *)encryptedData secret:(NSData *)data;
+
 @end
 
 NS_ASSUME_NONNULL_END

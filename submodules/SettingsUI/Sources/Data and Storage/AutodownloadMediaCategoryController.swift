@@ -168,7 +168,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
         return lhs.stableId < rhs.stableId
     }
     
-    func item(_ arguments: AutodownloadMediaCategoryControllerArguments) -> ListViewItem {
+    func item(_ arguments: Any) -> ListViewItem {
+        let arguments = arguments as! AutodownloadMediaCategoryControllerArguments
         switch self {
             case let .peerHeader(theme, text):
                 return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
@@ -398,7 +399,7 @@ func autodownloadMediaCategoryController(context: AccountContext, connectionType
     initialValuePromise.set(currentAutodownloadSettings())
     
     let signal = combineLatest(context.sharedContext.presentationData, context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.autodownloadSettings, ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings])) |> deliverOnMainQueue
-        |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState<AutodownloadMediaCategoryEntry>, AutodownloadMediaCategoryEntry.ItemGenerationArguments)) in
+        |> map { presentationData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
             var automaticMediaDownloadSettings: MediaAutoDownloadSettings
             if let value = sharedData.entries[ApplicationSpecificSharedDataKeys.automaticMediaDownloadSettings] as? MediaAutoDownloadSettings {
                 automaticMediaDownloadSettings = value

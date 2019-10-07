@@ -339,7 +339,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             let verticalInset: CGFloat = 44.0
             
             let maxSide = max(layout.size.width, layout.size.height)
-            let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: layout.size.height - verticalInset * 2.0)
+            let minSide = min(layout.size.width, layout.size.height)
+            let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
             containerFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
             containerScale = 1.0
             
@@ -407,7 +408,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                     enableScrolling = false
                     break
                 } else {
-                    if scrollView.isDecelerating && scrollView.contentOffset.y < scrollView.contentInset.top {
+                    if scrollView.isDecelerating && scrollView.contentOffset.y < -scrollView.contentInset.top {
                         return self.scrollNode.view
                     }
                 }

@@ -321,7 +321,9 @@ NSData *MTRsaEncrypt(NSString *publicKey, NSData *data)
     BIGNUM *a = BN_bin2bn(data.bytes, (int)data.length, NULL);
     BIGNUM *r = BN_new();
     
-    BN_mod_exp(r, a, rsaKey->e, rsaKey->n, ctx);
+    
+    
+    BN_mod_exp(r, a, RSA_get0_e(rsaKey), RSA_get0_n(rsaKey), ctx);
     
     unsigned char *res = malloc((size_t)BN_num_bytes(r));
     int resLen = BN_bn2bin(r, res);
