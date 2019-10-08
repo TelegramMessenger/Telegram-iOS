@@ -20,6 +20,7 @@ static_library(
         "//submodules/CheckNode:CheckNode",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AccountContext:AccountContext",
+        "//submodules/AnimationUI:AnimationUI",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

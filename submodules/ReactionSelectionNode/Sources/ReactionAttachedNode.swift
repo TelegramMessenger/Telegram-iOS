@@ -1,6 +1,6 @@
 import Foundation
 import AsyncDisplayKit
-import AnimationUI
+import AnimatedStickerNode
 import Display
 import Postbox
 import TelegramCore
