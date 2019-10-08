@@ -16,7 +16,7 @@ public struct PresentationResourcesSettings {
     public static let appearance = UIImage(bundleImageName: "Settings/MenuIcons/Appearance")?.precomposed()
     public static let language = UIImage(bundleImageName: "Settings/MenuIcons/Language")?.precomposed()
 
-    public static let wallet = UIImage(bundleImageName: "Settings/MenuIcons/Wallet")?.precomposed()
+    public static let wallet = generateTintedImage(image: UIImage(bundleImageName: "Settings/MenuIcons/Wallet"), color: UIColor(rgb: 0x1b1b1c))
     public static let passport = UIImage(bundleImageName: "Settings/MenuIcons/Passport")?.precomposed()
     public static let watch = UIImage(bundleImageName: "Settings/MenuIcons/Watch")?.precomposed()
     

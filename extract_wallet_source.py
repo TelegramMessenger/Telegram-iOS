@@ -56,6 +56,7 @@ shutil.copytree('Config', destination + '/' + 'Config')
 
 copy_files = [
     '.buckconfig',
+    '.gitignore',
     'Utils.makefile',
     'Wallet.makefile',
     'check_env.sh',
