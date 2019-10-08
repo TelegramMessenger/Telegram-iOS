@@ -4756,7 +4756,7 @@ Any member of this group will be able to see messages in the channel.";
 
 "ChatSearch.ResultsTooltip" = "Tap to view as a list.";
 
-"Updated.JustNow" = "just now";
+"Updated.JustNow" = "updated just now";
 "Updated.MinutesAgo_0" = "%@ minutes ago"; //three to ten
 "Updated.MinutesAgo_1" = "1 minute ago"; //one
 "Updated.MinutesAgo_2" = "2 minutes ago"; //two
@@ -4778,6 +4778,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Info.Address" = "Your wallet address";
 "Wallet.Info.YourBalance" = "your balance";
 "Wallet.Info.Receive" = "Receive";
+"Wallet.Info.ReceiveGrams" = "Receive Grams";
 "Wallet.Info.Send" = "Send";
 "Wallet.Info.RefreshErrorTitle" = "No network";
 "Wallet.Info.RefreshErrorText" = "Couldn't refresh balance. Please make sure your internet connection is working and try again.";
