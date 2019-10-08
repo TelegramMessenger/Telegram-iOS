@@ -29,7 +29,7 @@ public final class OpenInOption {
     public let action: () -> OpenInAction
     
     public init(identifier: String, application: OpenInApplication, action: @escaping () -> OpenInAction) {
-        self.!identifier = identifier
+        self.identifier = identifier
         self.application = application
         self.action = action
     }
