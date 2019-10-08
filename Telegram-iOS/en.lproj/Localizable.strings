@@ -4906,3 +4906,11 @@ Any member of this group will be able to see messages in the channel.";
 "Conversation.WalletRequiredSetup" = "Set Up";
 
 "Wallet.CreateInvoice.Title" = "Create Invoice";
+
+"AutoNightTheme.System" = "System";
+
+"ChatSettings.OpenLinksIn" = "Open Links in";
+
+"WebBrowser.Title" = "Web Browser";
+"WebBrowser.DefaultBrowser" = "DEFAULT WEB BROWSER";
+"WebBrowser.InAppSafari" = "In-App Safari";

@@ -191,18 +191,20 @@ public class ItemListMultilineTextItemNode: ListViewItemNode {
             var boldFont = titleBoldFont
             var italicFont = titleItalicFont
             var boldItalicFont = titleBoldItalicFont
+            var alignment = NSTextAlignment.natural
             if case .monospace = item.font {
                 baseFont = Font.monospace(17.0)
                 linkFont = Font.monospace(17.0)
                 boldFont = Font.semiboldMonospace(17.0)
                 italicFont = Font.italicMonospace(17.0)
                 boldItalicFont = Font.semiboldItalicMonospace(17.0)
+                alignment = .justified
             }
             
             let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntityTypes)
             let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: titleFont)
             
-            let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: alignment, cutout: nil, insets: UIEdgeInsets()))
             
             let contentSize: CGSize
             let insets: UIEdgeInsets

@@ -281,7 +281,7 @@ public final class ShareController: ViewController {
     private let peers = Promise<([(RenderedPeer, PeerPresence?)], Peer)>()
     private let peersDisposable = MetaDisposable()
     private let readyDisposable = MetaDisposable()
-    private let acountActiveDisposable = MetaDisposable()
+    private let accountActiveDisposable = MetaDisposable()
     
     private var defaultAction: ShareControllerAction?
     
@@ -411,7 +411,7 @@ public final class ShareController: ViewController {
     deinit {
         self.peersDisposable.dispose()
         self.readyDisposable.dispose()
-        self.acountActiveDisposable.dispose()
+        self.accountActiveDisposable.dispose()
     }
     
     override public func loadDisplayNode() {
@@ -787,7 +787,7 @@ public final class ShareController: ViewController {
     
     private func switchToAccount(account: Account, animateIn: Bool) {
         self.currentAccount = account
-        self.acountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
+        self.accountActiveDisposable.set(self.sharedContext.setAccountUserInterfaceInUse(account.id))
         
         self.peers.set(combineLatest(
             self.currentAccount.postbox.loadedPeerWithId(self.currentAccount.peerId)
@@ -837,5 +837,9 @@ public final class ShareController: ViewController {
                 }
             }
         }))
+    }
+    
+    public func send(peerId: PeerId) {
+        self.controllerNode.send(peerId: peerId)
     }
 }

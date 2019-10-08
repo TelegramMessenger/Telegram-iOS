@@ -170,7 +170,8 @@ private func walletReceiveScreenEntries(presentationData: PresentationData, addr
     entries.append(.addressCode(presentationData.theme, walletInvoiceUrl(address: address)))
     entries.append(.addressHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AddressHeader))
     
-    entries.append(.address(presentationData.theme, formatAddress(address), true))
+    let addressText = formatAddress(address)
+    entries.append(.address(presentationData.theme, addressText, true))
     entries.append(.copyAddress(presentationData.theme, presentationData.strings.Wallet_Receive_CopyAddress))
     entries.append(.shareAddressLink(presentationData.theme, presentationData.strings.Wallet_Receive_ShareAddress))
     entries.append(.addressInfo(presentationData.theme, presentationData.strings.Wallet_Receive_ShareUrlInfo))

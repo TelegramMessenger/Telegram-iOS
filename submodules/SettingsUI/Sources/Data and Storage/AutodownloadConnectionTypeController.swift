@@ -39,6 +39,7 @@ private enum AutodownloadMediaCategorySection: Int32 {
     case master
     case dataUsage
     case types
+    case lowDataMode
 }
 
 private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
@@ -50,6 +51,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
     case videos(PresentationTheme, String, String, Bool)
     case files(PresentationTheme, String, String, Bool)
     case voiceMessagesInfo(PresentationTheme, String)
+    case lowDataMode(PresentationTheme, String, Bool)
+    case lowDataModeInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -59,6 +62,8 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 return AutodownloadMediaCategorySection.dataUsage.rawValue
             case .typesHeader, .photos, .videos, .files, .voiceMessagesInfo:
                 return AutodownloadMediaCategorySection.types.rawValue
+            case .lowDataMode, .lowDataModeInfo:
+                return AutodownloadMediaCategorySection.lowDataMode.rawValue
         }
     }
     
@@ -80,6 +85,10 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 return 6
             case .voiceMessagesInfo:
                 return 7
+            case .lowDataMode:
+                return 8
+            case .lowDataModeInfo:
+                return 9
         }
     }
     
@@ -133,6 +142,18 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .lowDataMode(lhsTheme, lhsText, lhsValue):
+                if case let .lowDataMode(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                    return true
+                } else {
+                    return false
+                }
+            case let .lowDataModeInfo(lhsTheme, lhsText):
+                if case let .lowDataModeInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -168,6 +189,12 @@ private enum AutodownloadMediaCategoryEntry: ItemListNodeEntry {
                     arguments.customize(.file)
                 })
             case let .voiceMessagesInfo(theme, text):
+                return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
+            case let .lowDataMode(theme, text, value):
+                return ItemListSwitchItem(theme: theme, title: text, value: value, enableInteractiveChanges: true, enabled: true, sectionId: self.section, style: .blocks, updated: { value in
+                    
+                })
+            case let .lowDataModeInfo(theme, text):
                 return ItemListTextItem(theme: theme, text: .plain(text), sectionId: self.section)
         }
     }
@@ -271,6 +298,11 @@ private func autodownloadMediaConnectionTypeControllerEntries(presentationData: 
     entries.append(.videos(presentationData.theme, presentationData.strings.AutoDownloadSettings_Videos, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: video, category: .video), master))
     entries.append(.files(presentationData.theme, presentationData.strings.AutoDownloadSettings_Files, stringForAutomaticDownloadPeers(strings: presentationData.strings, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator, peers: file, category: .file), master))
     entries.append(.voiceMessagesInfo(presentationData.theme, presentationData.strings.AutoDownloadSettings_VoiceMessagesInfo))
+    
+    if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+        entries.append(.lowDataMode(presentationData.theme, "Follow Low Data Mode", true))
+        entries.append(.lowDataModeInfo(presentationData.theme, "The app won't download media automatically if Low Data Mode is active."))
+    }
     
     return entries
 }
