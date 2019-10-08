@@ -24,10 +24,11 @@ def app_binary_configs():
     config = {
         "ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES": "YES",
         "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
+        "EXECUTABLE_NAME": "Wallet",
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier(suffix=""),
         "CODE_SIGN_ENTITLEMENTS": get_codesign_entitlements("app"),
         "DEVELOPMENT_TEAM": get_development_team(),
-        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIconLLC",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIconWallet",
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
         "APP_NAME": "TON Wallet",
@@ -45,14 +46,14 @@ def app_binary_configs():
 def app_info_plist_substitutions():
     substitutions = {
         "DEVELOPMENT_LANGUAGE": DEVELOPMENT_LANGUAGE,
-        "EXECUTABLE_NAME": "TON Wallet",
+        "EXECUTABLE_NAME": "Wallet",
         "PRODUCT_BUNDLE_IDENTIFIER": bundle_identifier(suffix=""),
         "PRODUCT_NAME": "TON Wallet",
         "APP_NAME": "TON Wallet",
         "CURRENT_PROJECT_VERSION": "1",
         "BUILD_NUMBER": get_build_number(),
         "PRODUCT_BUNDLE_SHORT_VERSION": get_short_version(),
-        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIconLLC",
+        "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIconWallet",
         "TARGETED_DEVICE_FAMILY": "1,2",
     }
     return substitutions

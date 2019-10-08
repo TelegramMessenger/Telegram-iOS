@@ -242,7 +242,7 @@ func cornersImage(_ theme: WalletTheme, top: Bool, bottom: Bool) -> UIImage? {
 
 func itemListClearInputIcon(_ theme: WalletTheme) -> UIImage? {
     return theme.image(WalletThemeResourceKey.itemListClearInputIcon.rawValue, { theme in
-        return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.list.inputClearButtonColor)
+        return generateTintedImage(image: UIImage(bundleImageName: "Wallet/ClearInput"), color: theme.list.inputClearButtonColor)
     })
 }
 

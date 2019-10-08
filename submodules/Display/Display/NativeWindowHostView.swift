@@ -389,6 +389,10 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
         hostView?.presentNative?(controller)
     }
     
+    hostView.nativeController = { [weak rootViewController] in
+        return rootViewController
+    }
+    
     window.hitTestImpl = { [weak hostView] point, event in
         return hostView?.hitTest?(point, event)
     }

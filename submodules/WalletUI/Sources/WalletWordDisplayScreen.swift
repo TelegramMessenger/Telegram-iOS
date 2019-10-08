@@ -77,9 +77,9 @@ public final class WalletWordDisplayScreen: ViewController {
             let deltaTime = Date().timeIntervalSince1970 - strongSelf.startTime
             let minimalTimeout: Double
             #if DEBUG
-            minimalTimeout = 60.0
+            minimalTimeout = 5.0
             #else
-            minimalTimeout = 60.0
+            minimalTimeout = 30.0
             #endif
             if deltaTime < minimalTimeout {
                 strongSelf.present(standardTextAlertController(theme: strongSelf.presentationData.theme.alert, title: strongSelf.presentationData.strings.Wallet_Words_NotDoneTitle, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneText, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Wallet_Words_NotDoneOk, action: {

@@ -68,6 +68,10 @@
 	</dict>
 	<key>NSFaceIDUsageDescription</key>
 	<string>For better security, please allow TON Wallet to use your Face ID to authenticate payments.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Please allow TON Wallet access to your camera for scanning QR codes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Please allow TON Wallet access to your Photo Stream in case you need to scan a QR code from a picture.</string>
 	<key>UIDeviceFamily</key>
 	<array>
 		<integer>1</integer>

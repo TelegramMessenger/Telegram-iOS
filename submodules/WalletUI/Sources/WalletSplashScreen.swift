@@ -71,7 +71,7 @@ public final class WalletSplashScreen: ViewController {
             self.walletCreatedPreloadState = nil
         }
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Intro_NotNow, close: self.presentationData.strings.Wallet_Navigation_Close)))
         
         self.statusBar.statusBarStyle = self.presentationData.theme.statusBarStyle
         self.navigationPresentation = .modalInLargeLayout
@@ -79,9 +79,7 @@ public final class WalletSplashScreen: ViewController {
         self.navigationBar?.intrinsicCanTransitionInline = false
         
         switch self.mode {
-        case .intro:
-            self.navigationItem.setLeftBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_NotNow, style: .plain, target: self, action: #selector(self.backPressed)), animated: false)
-            self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_ImportExisting, style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
+        case let .intro: self.navigationItem.setRightBarButton(UIBarButtonItem(title: self.presentationData.strings.Wallet_Intro_ImportExisting, style: .plain, target: self, action: #selector(self.importPressed)), animated: false)
         case let .sending(walletInfo, address, amount, textMessage, randomId, serverSalt):
             self.navigationItem.setLeftBarButton(UIBarButtonItem(customDisplayNode: ASDisplayNode())!, animated: false)
             let _ = (self.context.keychain.decrypt(walletInfo.encryptedSecret)

@@ -2248,7 +2248,7 @@ public final class WalletWordCheckScreen: ViewController {
 }
 
 private func generateClearIcon(color: UIColor) -> UIImage? {
-    return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: color)
+    return generateTintedImage(image: UIImage(bundleImageName: "Wallet/ClearInput"), color: color)
 }
 
 private final class WordCheckInputNode: ASDisplayNode, UITextFieldDelegate {

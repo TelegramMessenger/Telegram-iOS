@@ -52,7 +52,7 @@ apple_asset_catalog(
   dirs = [
     "Icons.xcassets",
   ],
-  app_icon = "AppIconLLC",
+  app_icon = "AppIconWallet",
   visibility = ["PUBLIC"],
 )
 

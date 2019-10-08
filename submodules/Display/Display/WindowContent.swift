@@ -211,6 +211,7 @@ public final class WindowHostView {
     var present: ((ContainableController, PresentationSurfaceLevel, Bool, @escaping () -> Void) -> Void)?
     var presentInGlobalOverlay: ((_ controller: ContainableController) -> Void)?
     var presentNative: ((UIViewController) -> Void)?
+    var nativeController: (() -> UIViewController?)?
     var updateSize: ((CGSize, Double) -> Void)?
     var layoutSubviews: (() -> Void)?
     var updateToInterfaceOrientation: ((UIInterfaceOrientation) -> Void)?
@@ -1109,7 +1110,9 @@ public class Window1 {
     }
     
     public func presentNative(_ controller: UIViewController) {
-        
+        if let nativeController = self.hostView.nativeController?() {
+            nativeController.present(controller, animated: true, completion: nil)
+        }
     }
     
     private func panGestureBegan(location: CGPoint) {

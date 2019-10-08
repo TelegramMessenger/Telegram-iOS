@@ -11,7 +11,7 @@ apple_resource(
 apple_asset_catalog(
     name = 'WalletUIAssets',
     dirs = [
-        "Images.xcassets",
+        "WalletImages.xcassets",
     ],
     visibility = ["PUBLIC"],
 )

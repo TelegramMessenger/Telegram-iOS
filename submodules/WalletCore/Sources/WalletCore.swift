@@ -477,7 +477,7 @@ public struct CombinedWalletState: Codable, Equatable {
     public var pendingTransactions: [PendingWalletTransaction]
 }
 
-public struct WalletStateRecord: Equatable {
+public struct WalletStateRecord: Codable, Equatable {
     public let info: WalletInfo
     public var exportCompleted: Bool
     public var state: CombinedWalletState?

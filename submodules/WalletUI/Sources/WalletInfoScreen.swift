@@ -201,6 +201,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
     private let refreshNode: WalletRefreshNode
     private let balanceSubtitleNode: ImmediateTextNode
     private let receiveButtonNode: SolidRoundedButtonNode
+    private let receiveGramsButtonNode: SolidRoundedButtonNode
     private let sendButtonNode: SolidRoundedButtonNode
     private let headerBackgroundNode: ASDisplayNode
     private let headerCornerNode: ASImageNode
@@ -229,6 +230,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 1)
         
         self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
         self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: UIImage(bundleImageName: "Wallet/SendButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
@@ -239,6 +241,7 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.headerCornerNode)
         if hasActions {
             self.addSubnode(self.receiveButtonNode)
+            self.addSubnode(self.receiveGramsButtonNode)
             self.addSubnode(self.sendButtonNode)
         }
         self.addSubnode(self.balanceNode)
@@ -246,6 +249,9 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         self.addSubnode(self.refreshNode)
         
         self.receiveButtonNode.pressed = {
+            receiveAction()
+        }
+        self.receiveGramsButtonNode.pressed = {
             receiveAction()
         }
         self.sendButtonNode.pressed = {
@@ -332,18 +338,18 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         let sendButtonFrame = CGRect(origin: CGPoint(x: leftButtonFrame.maxX + sideInset, y: leftButtonFrame.minY), size: CGSize(width: size.width - leftButtonFrame.maxX - sideInset * 2.0, height: buttonHeight))
         let fullButtonFrame = CGRect(origin: CGPoint(x: sideInset, y: buttonOffset - sideInset - buttonHeight), size: CGSize(width: size.width - sideInset * 2.0, height: buttonHeight))
         
-        var receiveButtonFrame: CGRect
         if let balance = self.balance, balance > 0 {
-            receiveButtonFrame = leftButtonFrame
+            self.receiveGramsButtonNode.isHidden = true
             self.receiveButtonNode.isHidden = false
             self.sendButtonNode.isHidden = false
         } else {
-            receiveButtonFrame = fullButtonFrame
             if self.balance == nil {
+                self.receiveGramsButtonNode.isHidden = true
                 self.receiveButtonNode.isHidden = true
                 self.sendButtonNode.isHidden = true
             } else {
-                self.receiveButtonNode.isHidden = false
+                self.receiveGramsButtonNode.isHidden = false
+                self.receiveButtonNode.isHidden = true
                 self.sendButtonNode.isHidden = true
             }
         }
@@ -357,9 +363,12 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             self.refreshNode.isHidden = false
         }
         
-        transition.updateFrame(node: self.receiveButtonNode, frame: receiveButtonFrame)
+        transition.updateFrame(node: self.receiveGramsButtonNode, frame: fullButtonFrame)
+        transition.updateAlpha(node: self.receiveGramsButtonNode, alpha: buttonAlpha)
+        transition.updateFrame(node: self.receiveButtonNode, frame: leftButtonFrame)
         transition.updateAlpha(node: self.receiveButtonNode, alpha: buttonAlpha)
-        self.receiveButtonNode.updateLayout(width: receiveButtonFrame.width, transition: transition)
+        self.receiveGramsButtonNode.updateLayout(width: fullButtonFrame.width, transition: transition)
+        self.receiveButtonNode.updateLayout(width: leftButtonFrame.width, transition: transition)
         transition.updateFrame(node: self.sendButtonNode, frame: sendButtonFrame)
         transition.updateAlpha(node: self.sendButtonNode, alpha: buttonAlpha)
         self.sendButtonNode.updateLayout(width: sendButtonFrame.width, transition: transition)
@@ -372,12 +381,16 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
         if let result = self.receiveButtonNode.hitTest(self.view.convert(point, to: self.receiveButtonNode.view), with: event) {
             return result
         }
+        if let result = self.receiveGramsButtonNode.hitTest(self.view.convert(point, to: self.receiveGramsButtonNode.view), with: event) {
+            return result
+        }
         return nil
     }
     
     func becameReady(animated: Bool) {
         if animated {
             self.sendButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.receiveGramsButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.receiveButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.balanceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             self.balanceSubtitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
