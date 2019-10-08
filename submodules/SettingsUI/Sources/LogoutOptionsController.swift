@@ -218,10 +218,7 @@ func logoutOptionsController(context: AccountContext, navigationController: Navi
         presentControllerImpl?(alertController, nil)
     })
     
-    let hasWallets = availableWallets(postbox: context.account.postbox)
-    |> map { wallets in
-        return !wallets.wallets.isEmpty
-    }
+    let hasWallets = context.hasWallets
     
     let signal = combineLatest(queue: .mainQueue(),
         context.sharedContext.presentationData,

@@ -1172,9 +1172,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
         return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         |> map { view -> Bool in
             if #available(iOSApplicationExtension 10.3, iOS 10.3, *) {
-                let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-                let configuration = WalletConfiguration.with(appConfiguration: appConfiguration)
-                return configuration.config != nil
+                return true
             } else {
                 return false
             }

@@ -4,12 +4,11 @@ import AppBundle
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import TelegramCore
 import Camera
 import GlassButtonNode
-import UrlHandling
 import CoreImage
 import AlertUI
+import WalletUrl
 
 private func generateFrameImage() -> UIImage? {
     return generateImage(CGSize(width: 64.0, height: 64.0), contextGenerator: { size, context in

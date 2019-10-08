@@ -3,14 +3,12 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SolidRoundedButtonNode
-import UndoUI
 import AlertUI
 import SwiftSignalKit
-import TextFormat
-import AnimationUI
+import AnimatedStickerNode
+import WalletCore
+import Markdown
 
 private let possibleWordList: [String] = [
     "abandon",
@@ -2138,7 +2136,7 @@ public final class WalletWordCheckScreen: ViewController {
                             }
                             return true
                         }
-                        let _ = confirmWalletExported(postbox: strongSelf.context.postbox, walletInfo: walletInfo).start()
+                        let _ = confirmWalletExported(storage: strongSelf.context.storage, publicKey: walletInfo.publicKey).start()
                         controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .success(walletInfo), walletCreatedPreloadState: strongSelf.walletCreatedPreloadState))
                         strongSelf.view.endEditing(true)
                         navigationController.setViewControllers(controllers, animated: true)
@@ -2186,9 +2184,9 @@ public final class WalletWordCheckScreen: ViewController {
                     ], actionLayout: .vertical), in: .window(.root))
                 }
                 
-                let _ = (getServerWalletSalt(network: strongSelf.context.network)
+                let _ = (strongSelf.context.getServerSalt()
                 |> deliverOnMainQueue).start(next: { serverSalt in
-                    let _ = (importWallet(postbox: strongSelf.context.postbox, tonInstance: strongSelf.context.tonInstance, keychain: strongSelf.context.keychain, wordList: enteredWords, localPassword: serverSalt)
+                    let _ = (importWallet(storage: strongSelf.context.storage, tonInstance: strongSelf.context.tonInstance, keychain: strongSelf.context.keychain, wordList: enteredWords, localPassword: serverSalt)
                     |> deliverOnMainQueue).start(next: { walletInfo in
                         guard let strongSelf = self else {
                             return
@@ -2624,7 +2622,7 @@ private final class WalletWordCheckScreenNode: ViewControllerTracingNode, UIScro
             buttonText = self.presentationData.strings.Wallet_WordCheck_Continue
             secondaryActionText = ""
             if let path = getAppBundle().path(forResource: "WalletWordCheck", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 238, height: 238, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 238, height: 238, playbackMode: .once, mode: .direct)
                 self.animationNode.visibility = true
             }
         case .import:

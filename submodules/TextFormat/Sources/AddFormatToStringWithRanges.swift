@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Markdown
 
 public func addAttributesToStringWithRanges(_ stringWithRanges: (String, [(Int, NSRange)]), body: MarkdownAttributeSet, argumentAttributes: [Int: MarkdownAttributeSet], textAlignment: NSTextAlignment = .natural) -> NSAttributedString {
     let result = NSMutableAttributedString()

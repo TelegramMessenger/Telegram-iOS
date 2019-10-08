@@ -8,6 +8,7 @@ import ItemListUI
 import PresentationDataUtils
 import TextFormat
 import AppBundle
+import Markdown
 
 class ChannelDiscussionGroupSetupHeaderItem: ListViewItem, ItemListItem {
     let theme: PresentationTheme

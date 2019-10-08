@@ -2,15 +2,10 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import TelegramPresentationData
 import ActivityIndicator
 
 public final class ProgressNavigationButtonNode: ASDisplayNode {
     private var indicatorNode: ActivityIndicator
-    
-    convenience public init(theme: PresentationTheme) {
-        self.init(color: theme.rootController.navigationBar.accentTextColor)
-    }
     
     public init(color: UIColor) {
         self.indicatorNode = ActivityIndicator(type: .custom(color, 22.0, 1.0, false))

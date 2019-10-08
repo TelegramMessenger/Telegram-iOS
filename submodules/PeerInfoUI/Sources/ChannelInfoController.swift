@@ -24,6 +24,7 @@ import PeerAvatarGalleryUI
 import NotificationMuteSettingsUI
 import MapResourceToAvatarSizes
 import NotificationSoundSelectionUI
+import Markdown
 
 private final class ChannelInfoControllerArguments {
     let account: Account

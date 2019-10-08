@@ -83,6 +83,8 @@ framework(
         "//submodules/HorizontalPeerItem:HorizontalPeerItem",
         "//submodules/CheckNode:CheckNode",
         "//submodules/AnimationUI:AnimationUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/ActionSheetPeerItem:ActionSheetPeerItem",
         "//submodules/AccountContext:AccountContext",
         "//submodules/ComposePollUI:ComposePollUI",
@@ -184,6 +186,8 @@ framework(
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AppBundle:AppBundle",
         "//submodules/WalletUI:WalletUI",
+        "//submodules/WalletCore:WalletCore",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

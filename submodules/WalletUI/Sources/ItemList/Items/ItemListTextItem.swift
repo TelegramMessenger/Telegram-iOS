@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import TextFormat
+import Markdown
 
 enum ItemListTextItemText {
     case plain(String)
@@ -114,7 +114,7 @@ class ItemListTextItemNode: ListViewItemNode {
                     attributedText = NSAttributedString(string: text, font: titleFont, textColor: item.theme.list.freeTextColor)
                 case let .markdown(text):
                     attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.freeTextColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: item.theme.list.freeTextColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.theme.list.itemAccentColor), linkAttribute: { contents in
-                        return (TelegramTextAttributes.URL, contents)
+                        return ("URL", contents)
                     }))
             }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
@@ -160,7 +160,7 @@ class ItemListTextItemNode: ListViewItemNode {
                             let titleFrame = self.titleNode.frame
                             if let item = self.item, titleFrame.contains(location) {
                                 if let (_, attributes) = self.titleNode.attributesAtPoint(CGPoint(x: location.x - titleFrame.minX, y: location.y - titleFrame.minY)) {
-                                    if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                                    if let url = attributes[NSAttributedString.Key(rawValue: "URL")] as? String {
                                         item.linkAction?(.tap(url))
                                     }
                                 }

@@ -4,10 +4,12 @@ import AsyncDisplayKit
 import Display
 import SwiftSignalKit
 import TelegramPresentationData
-import AnimationUI
 import TextFormat
+import Markdown
 import RadialStatusNode
 import AppBundle
+import AnimatedStickerNode
+import AnimationUI
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let elevatedLayout: Bool
@@ -126,7 +128,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.animationNode = nil
                 self.animatedStickerNode = AnimatedStickerNode()
                 self.animatedStickerNode?.visibility = true
-                self.animatedStickerNode?.setup(resource: .localFile(path), width: 100, height: 100, playbackMode: .once, mode: .direct)
+                self.animatedStickerNode?.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 100, height: 100, playbackMode: .once, mode: .direct)
                 
                 let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
                 let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)

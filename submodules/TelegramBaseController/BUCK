@@ -18,6 +18,7 @@ static_library(
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

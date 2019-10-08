@@ -350,7 +350,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                         for (content, style, _) in rightNavigationButtonTitleAndStyle {
                             let item: UIBarButtonItem
                             if case .activity = style {
-                                item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: controllerState.theme))
+                                item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: controllerState.theme.rootController.navigationBar.controlColor))
                             } else {
                                 let action: Selector = (index == 0 && rightNavigationButtonTitleAndStyle.count > 1) ? #selector(strongSelf.secondaryRightNavigationButtonPressed) : #selector(strongSelf.rightNavigationButtonPressed)
                                 switch content {
@@ -407,7 +407,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
                         var items = strongSelf.navigationItem.rightBarButtonItems ?? []
                         for i in 0 ..< strongSelf.rightNavigationButtonTitleAndStyle.count {
                             if case .activity = strongSelf.rightNavigationButtonTitleAndStyle[i].1 {
-                                items[i] = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: controllerState.theme))!
+                                items[i] = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: controllerState.theme.rootController.navigationBar.controlColor))!
                             }
                         }
                         strongSelf.navigationItem.setRightBarButtonItems(items, animated: false)

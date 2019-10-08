@@ -21,7 +21,8 @@ static_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/MergeLists:MergeLists",
         "//submodules/ActivityIndicator:ActivityIndicator",
-        "//submodules/AnimationUI:AnimationUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

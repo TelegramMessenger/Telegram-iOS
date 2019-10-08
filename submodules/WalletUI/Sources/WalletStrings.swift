@@ -414,12 +414,12 @@ public final class WalletStrings: Equatable {
     public var Wallet_Info_RefreshErrorText: String { return self._s[188]! }
     public var Wallet_SecureStorageReset_Title: String { return self._s[189]! }
     public var Wallet_Receive_CommentHeader: String { return self._s[190]! }
-    public func Wallet_Updated_HoursAgo(_ value: Int32) -> String {
+    public func Wallet_Updated_MinutesAgo(_ value: Int32) -> String {
         let form = getPluralizationForm(self.lc, value)
         let stringValue = walletStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[0 * 6 + Int(form.rawValue)]!, stringValue)
     }
-    public func Wallet_Updated_MinutesAgo(_ value: Int32) -> String {
+    public func Wallet_Updated_HoursAgo(_ value: Int32) -> String {
         let form = getPluralizationForm(self.lc, value)
         let stringValue = walletStringsFormattedNumber(value, self.groupingSeparator)
         return String(format: self._ps[1 * 6 + Int(form.rawValue)]!, stringValue)

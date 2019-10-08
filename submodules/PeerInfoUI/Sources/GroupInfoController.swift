@@ -36,6 +36,7 @@ import MapResourceToAvatarSizes
 import NotificationSoundSelectionUI
 import ItemListAddressItem
 import AppBundle
+import Markdown
 
 private final class GroupInfoArguments {
     let context: AccountContext

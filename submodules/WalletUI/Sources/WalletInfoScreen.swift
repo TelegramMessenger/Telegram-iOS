@@ -3,12 +3,11 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SolidRoundedButtonNode
 import SwiftSignalKit
 import MergeLists
-import AnimationUI
+import AnimatedStickerNode
+import WalletCore
 
 public final class WalletInfoScreen: ViewController {
     private let context: WalletContext
@@ -69,7 +68,9 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self, let walletInfo = strongSelf.walletInfo else {
                 return
             }
-            strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: arc4random64(), walletInfo: walletInfo))
+            var randomId: Int64 = 0
+            arc4random_buf(&randomId, 8)
+            strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo))
         }, receiveAction: { [weak self] in
             guard let strongSelf = self, let walletInfo = strongSelf.walletInfo else {
                 return
@@ -140,7 +141,7 @@ private final class WalletInfoBalanceNode: ASDisplayNode {
         
         self.balanceIconNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
-            self.balanceIconNode.setup(resource: .localFile(path), width: 120, height: 120, mode: .direct)
+            self.balanceIconNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 120, height: 120, mode: .direct)
             self.balanceIconNode.visibility = true
         }
         
@@ -606,12 +607,12 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
         if let walletInfo = walletInfo {
             subject = .wallet(walletInfo)
             
-            self.watchCombinedStateDisposable = (context.postbox.preferencesView(keys: [PreferencesKeys.walletCollection])
-            |> deliverOnMainQueue).start(next: { [weak self] view in
-                guard let strongSelf = self, let wallets = view.values[PreferencesKeys.walletCollection] as? WalletCollection else {
+            self.watchCombinedStateDisposable = (context.storage.watchWalletRecords()
+            |> deliverOnMainQueue).start(next: { [weak self] records in
+                guard let strongSelf = self else {
                     return
                 }
-                for wallet in wallets.wallets {
+                for wallet in records {
                     if wallet.info.publicKey == walletInfo.publicKey {
                         if let state = wallet.state {
                             if state.pendingTransactions != strongSelf.combinedState?.pendingTransactions || state.timestamp != strongSelf.combinedState?.timestamp {
@@ -628,7 +629,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             subject = .address(address)
         }
         let pollCombinedState: Signal<Never, NoError> = (
-            getCombinedWalletState(postbox: context.postbox, subject: subject, tonInstance: context.tonInstance)
+            getCombinedWalletState(storage: context.storage, subject: subject, tonInstance: context.tonInstance)
             |> ignoreValues
             |> `catch` { _ -> Signal<Never, NoError> in
                 return .complete()
@@ -735,7 +736,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             subject = .address(self.address)
         }
         
-        self.stateDisposable.set((getCombinedWalletState(postbox: self.context.postbox, subject: subject, tonInstance: self.context.tonInstance)
+        self.stateDisposable.set((getCombinedWalletState(storage: self.context.storage, subject: subject, tonInstance: self.context.tonInstance)
         |> deliverOnMainQueue).start(next: { [weak self] value in
             guard let strongSelf = self else {
                 return

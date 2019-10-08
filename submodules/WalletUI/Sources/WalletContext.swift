@@ -1,17 +1,21 @@
 import Foundation
 import UIKit
-import Postbox
-import TelegramCore
 import SwiftSignalKit
+import WalletCore
+
+public enum WalletContextGetServerSaltError {
+    case generic
+}
 
 public protocol WalletContext {
-    var postbox: Postbox { get }
-    var network: Network { get }
+    var storage: WalletStorageInterface { get }
     var tonInstance: TonInstance { get }
     var keychain: TonKeychain { get }
     var presentationData: WalletPresentationData { get }
     
     var inForeground: Signal<Bool, NoError> { get }
+    
+    func getServerSalt() -> Signal<Data, WalletContextGetServerSaltError>
     
     func presentNativeController(_ controller: UIViewController)
     

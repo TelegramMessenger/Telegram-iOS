@@ -1,6 +1,5 @@
 import Foundation
 import UIKit
-import Display
 
 private let controlStartCharactersSet = CharacterSet(charactersIn: "[*")
 private let controlCharactersSet = CharacterSet(charactersIn: "[]()*_-\\")

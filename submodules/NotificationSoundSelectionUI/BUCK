@@ -14,6 +14,7 @@ static_library(
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -18,6 +18,7 @@ static_library(
         "//submodules/ActivityIndicator:ActivityIndicator",
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

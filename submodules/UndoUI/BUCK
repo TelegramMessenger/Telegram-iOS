@@ -13,8 +13,10 @@ static_library(
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
         "//submodules/RadialStatusNode:RadialStatusNode",
         "//submodules/AnimationUI:AnimationUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/AppBundle:AppBundle",
     ],
     frameworks = [

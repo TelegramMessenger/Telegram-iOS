@@ -4,10 +4,8 @@ import SwiftSignalKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
 import QrCode
-import ShareController
-import AnimationUI
+import AnimatedStickerNode
 
 func shareInvoiceQrCode(context: WalletContext, invoice: String) {
     let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")))
@@ -127,7 +125,7 @@ private final class WalletQrViewScreenNode: ViewControllerTracingNode {
         
         self.iconNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
-            self.iconNode.setup(resource: .localFile(path), width: 240, height: 240, mode: .direct)
+            self.iconNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 240, height: 240, mode: .direct)
             self.iconNode.visibility = true
         }
         

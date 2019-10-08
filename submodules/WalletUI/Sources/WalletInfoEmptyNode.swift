@@ -2,8 +2,7 @@ import Foundation
 import UIKit
 import Display
 import AsyncDisplayKit
-import TelegramCore
-import AnimationUI
+import AnimatedStickerNode
 import SwiftSignalKit
 import AppBundle
 
@@ -68,7 +67,7 @@ final class WalletInfoEmptyItemNode: ListViewItemNode {
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletEmpty", ofType: "tgs") {
-            self.animationNode.setup(resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 280, height: 280, playbackMode: .once, mode: .direct)
             self.animationNode.visibility = true
         }
         

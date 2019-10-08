@@ -3,12 +3,10 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SolidRoundedButtonNode
-import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
+import WalletCore
 
 private final class WalletSettingsControllerArguments {
     let exportWallet: () -> Void
@@ -104,7 +102,7 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
         presentControllerImpl?(controller, nil)
         let _ = (context.keychain.decrypt(walletInfo.encryptedSecret)
         |> deliverOnMainQueue).start(next: { [weak controller] decryptedSecret in
-            let _ = (getServerWalletSalt(network: context.network)
+            let _ = (context.getServerSalt()
             |> deliverOnMainQueue).start(next: { serverSalt in
                 let _ = (walletRestoreWords(tonInstance: context.tonInstance, publicKey: walletInfo.publicKey, decryptedSecret:  decryptedSecret, localPassword: serverSalt)
                 |> deliverOnMainQueue).start(next: { [weak controller] wordList in
@@ -128,7 +126,7 @@ public func walletSettingsController(context: WalletContext, walletInfo: WalletI
                 actionSheet?.dismissAnimated()
                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
                 presentControllerImpl?(controller, nil)
-                let _ = (deleteAllLocalWalletsData(postbox: context.postbox, network: context.network, tonInstance: context.tonInstance)
+                let _ = (deleteAllLocalWalletsData(storage: context.storage, tonInstance: context.tonInstance)
                 |> deliverOnMainQueue).start(error: { [weak controller] _ in
                     controller?.dismiss()
                 }, completed: { [weak controller] in

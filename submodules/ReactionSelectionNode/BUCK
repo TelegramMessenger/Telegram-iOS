@@ -10,7 +10,8 @@ static_library(
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
-        "//submodules/AnimationUI:AnimationUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     frameworks = [

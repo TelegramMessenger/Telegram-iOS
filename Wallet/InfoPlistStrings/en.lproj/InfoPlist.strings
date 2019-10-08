@@ -1,0 +1,5 @@
+/* Localized versions of Info.plist keys */
+
+"NSCameraUsageDescription" = "We need this so that you can take and share photos and videos.";
+"NSPhotoLibraryUsageDescription" = "We need this so that you can share photos and videos from your photo library.";
+"NSFaceIDUsageDescription" = "For better security, please allow TON Wallet to use your Face ID to authenticate payments.";

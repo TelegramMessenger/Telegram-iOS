@@ -6,6 +6,7 @@ import TelegramUIPreferences
 import TextFormat
 import LocalizedPeerData
 import Display
+import Markdown
 
 private let titleFont = Font.regular(13.0)
 private let titleBoldFont = Font.bold(13.0)

@@ -4,6 +4,7 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 import TextFormat
+import Markdown
 
 private func roundCorners(diameter: CGFloat) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(CGSize(width: diameter, height: diameter), false, 0.0)

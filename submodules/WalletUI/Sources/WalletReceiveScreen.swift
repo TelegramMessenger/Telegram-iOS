@@ -3,11 +3,8 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SwiftSignalKit
 import OverlayStatusController
-import ShareController
 
 private final class WalletReceiveScreenArguments {
     let context: WalletContext
@@ -141,7 +138,7 @@ private enum WalletReceiveScreenEntry: ItemListNodeEntry {
         case let .addressHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .address(theme, text, monospace):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], font: monospace ? .monospace : .default, sectionId: self.section, style: .blocks)
+            return ItemListMultilineTextItem(theme: theme, text: text, font: monospace ? .monospace : .default, sectionId: self.section, style: .blocks)
         case let .copyAddress(theme, text):
             return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
                 arguments.copyAddress()

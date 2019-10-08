@@ -12,6 +12,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import PasswordSetupUI
+import Markdown
 
 private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UITextFieldDelegate {
     private var theme: PresentationTheme

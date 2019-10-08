@@ -23,6 +23,7 @@ static_library(
         "//submodules/PasswordSetupUI:PasswordSetupUI",
         "//submodules/AppBundle:AppBundle",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import AccountContext
 import LiveLocationManager
 import TemporaryCachedPeerDataManager
+import WalletCore
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -130,6 +131,13 @@ public final class AccountContextImpl: AccountContext {
     
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
+    
+    public var hasWallets: Signal<Bool, NoError> {
+        return WalletStorageInterfaceImpl(postbox: self.account.postbox).getWalletRecords()
+        |> map { records in
+            return !records.isEmpty
+        }
+    }
     
     public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: StoredTonContext?, limitsConfiguration: LimitsConfiguration) {
         self.sharedContextImpl = sharedContext

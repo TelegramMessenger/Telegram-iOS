@@ -1,7 +1,19 @@
 import Foundation
 import UIKit
 import AsyncDisplayKit
-import TelegramPresentationData
+import Display
+
+private func generateIndefiniteActivityIndicatorImage(color: UIColor, diameter: CGFloat = 22.0, lineWidth: CGFloat = 2.0) -> UIImage? {
+    return generateImage(CGSize(width: diameter, height: diameter), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.setStrokeColor(color.cgColor)
+        context.setLineWidth(lineWidth)
+        context.setLineCap(.round)
+        let cutoutAngle: CGFloat = CGFloat.pi * 30.0 / 180.0
+        context.addArc(center: CGPoint(x: size.width / 2.0, y: size.height / 2.0), radius: size.width / 2.0 - lineWidth / 2.0, startAngle: 0.0, endAngle: CGFloat.pi * 2.0 - cutoutAngle, clockwise: false)
+        context.strokePath()
+    })
+}
 
 private func convertIndicatorColor(_ color: UIColor) -> UIColor {
     if color.isEqual(UIColor(rgb: 0x007ee5)) {
@@ -16,13 +28,13 @@ private func convertIndicatorColor(_ color: UIColor) -> UIColor {
 }
 
 public enum ActivityIndicatorType: Equatable {
-    case navigationAccent(PresentationTheme)
+    case navigationAccent(UIColor)
     case custom(UIColor, CGFloat, CGFloat, Bool)
     
     public static func ==(lhs: ActivityIndicatorType, rhs: ActivityIndicatorType) -> Bool {
         switch lhs {
-        case let .navigationAccent(lhsTheme):
-            if case let .navigationAccent(rhsTheme) = rhs, lhsTheme === rhsTheme {
+        case let .navigationAccent(lhsColor):
+            if case let .navigationAccent(rhsColor) = rhs, lhsColor.isEqual(rhsColor) {
                 return true
             } else {
                 return false
@@ -46,15 +58,15 @@ public final class ActivityIndicator: ASDisplayNode {
     public var type: ActivityIndicatorType {
         didSet {
             switch self.type {
-            case let .navigationAccent(theme):
-                self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
+            case let .navigationAccent(color):
+                self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color)
             case let .custom(color, diameter, lineWidth, _):
                 self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
             }
             
             switch self.type {
-            case let .navigationAccent(theme):
-                self.indicatorView?.color = theme.rootController.navigationBar.controlColor
+            case let .navigationAccent(color):
+                self.indicatorView?.color = color
             case let .custom(color, _, _, _):
                 self.indicatorView?.color = convertIndicatorColor(color)
             }
@@ -90,8 +102,8 @@ public final class ActivityIndicator: ASDisplayNode {
         }
         
         switch type {
-        case let .navigationAccent(theme):
-            self.indicatorNode.image = PresentationResourcesRootController.navigationIndefiniteActivityImage(theme)
+        case let .navigationAccent(color):
+            self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color)
         case let .custom(color, diameter, lineWidth, forceCustom):
             self.indicatorNode.image = generateIndefiniteActivityIndicatorImage(color: color, diameter: diameter, lineWidth: lineWidth)
             if forceCustom {
@@ -105,8 +117,8 @@ public final class ActivityIndicator: ASDisplayNode {
         
         let indicatorView = UIActivityIndicatorView(style: .whiteLarge)
         switch self.type {
-        case let .navigationAccent(theme):
-            indicatorView.color = theme.rootController.navigationBar.controlColor
+        case let .navigationAccent(color):
+            indicatorView.color = color
         case let .custom(color, _, _, forceCustom):
             indicatorView.color = convertIndicatorColor(color)
             if !forceCustom {

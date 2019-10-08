@@ -26,6 +26,7 @@ static_library(
         "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

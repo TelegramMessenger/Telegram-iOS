@@ -12,6 +12,7 @@ static_library(
 	"//submodules/TelegramPresentationData:TelegramPresentationData",
 	"//submodules/AlertUI:AlertUI",
 	"//submodules/ItemListUI:ItemListUI",
+	"//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

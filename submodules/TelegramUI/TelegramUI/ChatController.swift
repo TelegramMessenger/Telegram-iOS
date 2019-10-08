@@ -48,6 +48,7 @@ import ReactionSelectionNode
 import MessageReactionListUI
 import AppBundle
 import WalletUI
+import WalletUrl
 
 public enum ChatControllerPeekActions {
     case standard

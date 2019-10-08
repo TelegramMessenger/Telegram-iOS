@@ -7,6 +7,7 @@ import SwiftSignalKit
 import Display
 import DeviceLocationManager
 import TemporaryCachedPeerDataManager
+import WalletCore
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -457,6 +458,26 @@ private final class TonInstanceData {
     var instance: TonInstance?
 }
 
+private final class TonNetworkProxyImpl: TonNetworkProxy {
+    private let network: Network
+    
+    init(network: Network) {
+        self.network = network
+    }
+    
+    func request(data: Data, timeout timeoutValue: Double, completion: @escaping (TonNetworkProxyResult) -> Void) -> Disposable {
+        return (walletProxyRequest(network: self.network, data: data)
+        |> timeout(timeoutValue, queue: .concurrentDefaultQueue(), alternate: .fail(.generic(500, "Local Timeout")))).start(next: { data in
+            completion(.reponse(data))
+        }, error: { error in
+            switch error {
+            case let .generic(_, text):
+                completion(.error(text))
+            }
+        })
+    }
+}
+
 public final class StoredTonContext {
     private let basePath: String
     private let postbox: Postbox
@@ -477,7 +498,7 @@ public final class StoredTonContext {
                 return TonContext(instance: instance, keychain: self.keychain)
             } else {
                 data.config = config
-                let instance = TonInstance(basePath: self.basePath, config: config, blockchainName: blockchainName, network: enableProxy ? self.network : nil)
+                let instance = TonInstance(basePath: self.basePath, config: config, blockchainName: blockchainName, proxy: enableProxy ? TonNetworkProxyImpl(network: self.network) : nil)
                 data.instance = instance
                 return TonContext(instance: instance, keychain: self.keychain)
             }
@@ -506,6 +527,7 @@ public protocol AccountContext: class {
     var peerChannelMemberCategoriesContextsManager: PeerChannelMemberCategoriesContextsManager { get }
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
+    var hasWallets: Signal<Bool, NoError> { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     

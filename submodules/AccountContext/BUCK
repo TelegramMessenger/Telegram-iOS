@@ -15,6 +15,7 @@ static_library(
     	"//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#dynamic",
     	"//submodules/Postbox:Postbox#dynamic",
     	"//submodules/TelegramCore:TelegramCore#dynamic",
+	"//submodules/WalletCore:WalletCore",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

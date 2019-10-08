@@ -12,6 +12,7 @@ static_library(
     	"//submodules/PlatformRestrictionMatching:PlatformRestrictionMatching",
     	"//submodules/LocalizedPeerData:LocalizedPeerData",
     	"//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
     	"//submodules/TelegramUIPreferences:TelegramUIPreferences",
     	"//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AppBundle:AppBundle",

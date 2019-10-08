@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 import Display
-import LegacyComponents
+import AppBundle
 
 public enum OverlayStatusControllerType {
     case loading(cancelled: (() -> Void)?)
@@ -12,11 +12,11 @@ public enum OverlayStatusControllerType {
 }
 
 private enum OverlayStatusContentController {
-    case loading(TGProgressWindowController)
-    case progress(TGProgressWindowController)
-    case shieldSuccess(TGProxyWindowController, Bool)
-    case genericSuccess(TGProxyWindowController, Bool)
-    case starSuccess(TGProxyWindowController)
+    case loading(ProgressWindowController)
+    case progress(ProgressWindowController)
+    case shieldSuccess(ProxyWindowController, Bool)
+    case genericSuccess(ProxyWindowController, Bool)
+    case starSuccess(ProxyWindowController)
     
     var view: UIView {
         switch self {
@@ -84,21 +84,21 @@ private final class OverlayStatusControllerNode: ViewControllerTracingNode {
         var isUserInteractionEnabled = true
         switch type {
             case let .loading(cancelled):
-                let controller = TGProgressWindowController(light: style == .light)!
+                let controller = ProgressWindowController(light: style == .light)!
                 controller.cancelled = {
                     cancelled?()
                 }
                 self.contentController = .loading(controller)
             case .success:
-                self.contentController = .progress(TGProgressWindowController(light: style == .light))
+                self.contentController = .progress(ProgressWindowController(light: style == .light))
             case let .shieldSuccess(text, increasedDelay):
-                self.contentController = .shieldSuccess(TGProxyWindowController(light: style == .light, text: text, shield: true, star: false), increasedDelay)
+                self.contentController = .shieldSuccess(ProxyWindowController(light: style == .light, text: text, icon: ProxyWindowController.generateShieldImage(style == .light), isShield: true), increasedDelay)
             case let .genericSuccess(text, increasedDelay):
-                let controller = TGProxyWindowController(light: style == .light, text: text, shield: false, star: false)!
+                let controller = ProxyWindowController(light: style == .light, text: text, icon: nil, isShield: false)!
                 self.contentController = .genericSuccess(controller, increasedDelay)
                 isUserInteractionEnabled = false
             case let .starSuccess(text):
-                self.contentController = .genericSuccess(TGProxyWindowController(light: style == .light, text: text, shield: false, star: true), false)
+                self.contentController = .genericSuccess(ProxyWindowController(light: style == .light, text: text, icon: UIImage(bundleImageName: "Star"), isShield: false), false)
         }
         
         super.init()

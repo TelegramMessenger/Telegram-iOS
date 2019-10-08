@@ -1,0 +1,14 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "Markdown",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
+    ],
+)

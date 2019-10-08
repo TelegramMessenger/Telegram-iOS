@@ -8,6 +8,14 @@ apple_resource(
     visibility = ["PUBLIC"],
 )
 
+apple_asset_catalog(
+    name = 'WalletUIAssets',
+    dirs = [
+        "Images.xcassets",
+    ],
+    visibility = ["PUBLIC"],
+)
+
 static_library(
     name = "WalletUI",
     srcs = glob([
@@ -17,24 +25,24 @@ static_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
-        "//submodules/Postbox:Postbox#shared",
-        "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/OverlayStatusController:OverlayStatusController",
         "//submodules/AppBundle:AppBundle",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
-        "//submodules/UndoUI:UndoUI",
         "//submodules/AlertUI:AlertUI",
-        "//submodules/TextFormat:TextFormat",
         "//submodules/Camera:Camera",
-        "//submodules/PasscodeInputFieldNode:PasscodeInputFieldNode",
         "//submodules/QrCode:QrCode",
         "//submodules/MergeLists:MergeLists",
         "//submodules/GlassButtonNode:GlassButtonNode",
-        "//submodules/UrlHandling:UrlHandling",
         "//submodules/UrlEscaping:UrlEscaping",
         "//submodules/LocalAuth:LocalAuth",
         "//submodules/ScreenCaptureDetection:ScreenCaptureDetection",
-	"//submodules/AnimationUI:AnimationUI",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/WalletUrl:WalletUrl",
+        "//submodules/WalletCore:WalletCore",
+        "//submodules/StringPluralization:StringPluralization",
+        "//submodules/ActivityIndicator:ActivityIndicator",
+        "//submodules/ProgressNavigationButtonNode:ProgressNavigationButtonNode",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

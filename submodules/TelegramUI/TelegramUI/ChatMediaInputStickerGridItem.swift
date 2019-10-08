@@ -8,7 +8,8 @@ import Postbox
 import TelegramPresentationData
 import StickerResources
 import AccountContext
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 enum ChatMediaInputStickerGridSectionAccessory {
     case none
@@ -299,7 +300,7 @@ final class ChatMediaInputStickerGridItemNode: GridItemNode {
                 self.didSetUpAnimationNode = true
                 let dimensions = item.stickerItem.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                 let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                self.animationNode?.setup(resource: .resource(item.account, item.stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                self.animationNode?.setup(source: AnimatedStickerResourceSource(account: item.account, resource: item.stickerItem.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
             }
         }
     }

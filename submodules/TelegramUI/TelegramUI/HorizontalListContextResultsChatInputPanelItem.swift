@@ -9,7 +9,8 @@ import AVFoundation
 import RadialStatusNode
 import StickerResources
 import PhotoResources
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account
@@ -386,7 +387,7 @@ final class HorizontalListContextResultsChatInputPanelItemNode: ListViewItemNode
                             }
                             let dimensions = animatedStickerFile.dimensions ?? CGSize(width: 512.0, height: 512.0)
                             let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                            animationNode.setup(resource: .resource(item.account, animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                            animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: animatedStickerFile.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                         }
                     }
                     

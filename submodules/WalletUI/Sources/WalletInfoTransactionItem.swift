@@ -3,7 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import TelegramCore
 
 private let transactionIcon = UIImage(bundleImageName: "Wallet/TransactionGem")?.precomposed()
 

@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TextFormat
+import Markdown
 
 private let infoFont = Font.regular(14.0)
 private let passwordFont = Font.regular(16.0)

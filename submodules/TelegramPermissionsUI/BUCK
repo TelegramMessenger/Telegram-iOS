@@ -14,11 +14,13 @@ static_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
         "//submodules/TelegramPermissions:TelegramPermissions",
         "//submodules/DeviceAccess:DeviceAccess",
         "//submodules/PeersNearbyIconNode:PeersNearbyIconNode",
         "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

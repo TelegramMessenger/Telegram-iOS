@@ -6,6 +6,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import TextFormat
+import Markdown
 
 private let titleFont = Font.regular(12.0)
 private let subtitleFont = Font.regular(10.0)

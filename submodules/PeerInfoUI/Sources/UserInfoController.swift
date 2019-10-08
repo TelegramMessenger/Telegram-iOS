@@ -23,6 +23,7 @@ import ItemListAvatarAndNameInfoItem
 import PeerAvatarGalleryUI
 import NotificationMuteSettingsUI
 import NotificationSoundSelectionUI
+import Markdown
 
 private final class UserInfoControllerArguments {
     let account: Account

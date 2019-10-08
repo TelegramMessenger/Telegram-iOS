@@ -11,6 +11,7 @@ import TextFormat
 import AccountContext
 import LocalizedPeerData
 import ContextUI
+import Markdown
 
 private let nameFont = Font.medium(14.0)
 

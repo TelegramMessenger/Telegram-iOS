@@ -11,6 +11,7 @@ import TextFormat
 import AccountContext
 import AlertUI
 import PresentationDataUtils
+import Markdown
 
 private final class TwoStepVerificationResetControllerArguments {
     let updateEntryText: (String) -> Void

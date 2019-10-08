@@ -9,6 +9,7 @@ static_library(
         "//submodules/TelegramCore:TelegramCore#dynamic",
         "//submodules/Display:Display#dynamic",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

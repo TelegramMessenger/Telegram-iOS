@@ -3,6 +3,7 @@ import TelegramCore
 import Display
 import TelegramPresentationData
 import TextFormat
+import Markdown
 
 public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, strings: PresentationStrings, primaryColor: UIColor, accentColor: UIColor) -> NSAttributedString {
     switch type {

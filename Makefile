@@ -50,6 +50,24 @@ BUCK_OPTIONS=\
 	--config custom.developmentProvisioningProfileWatchExtension="${DEVELOPMENT_PROVISIONING_PROFILE_WATCH_EXTENSION}" \
 	--config custom.distributionProvisioningProfileWatchExtension="${DISTRIBUTION_PROVISIONING_PROFILE_WATCH_EXTENSION}"
 
+WALLET_BUCK_OPTIONS=\
+	--config custom.appVersion="1.0" \
+	--config custom.developmentCodeSignIdentity="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
+	--config custom.distributionCodeSignIdentity="${DISTRIBUTION_CODE_SIGN_IDENTITY}" \
+	--config custom.developmentTeam="${DEVELOPMENT_TEAM}" \
+	--config custom.baseApplicationBundleId="${WALLET_BUNDLE_ID}" \
+	--config custom.buildNumber="${BUILD_NUMBER}" \
+	--config custom.entitlementsApp="${WALLET_ENTITLEMENTS_APP}" \
+	--config custom.developmentProvisioningProfileApp="${WALLET_DEVELOPMENT_PROVISIONING_PROFILE_APP}" \
+	--config custom.distributionProvisioningProfileApp="${WALLET_DISTRIBUTION_PROVISIONING_PROFILE_APP}" \
+	--config custom.apiId="${API_ID}" \
+	--config custom.apiHash="${API_HASH}" \
+	--config custom.hockeyAppId="${HOCKEYAPP_ID}" \
+	--config custom.isInternalBuild="${IS_INTERNAL_BUILD}" \
+	--config custom.isAppStoreBuild="${IS_APPSTORE_BUILD}" \
+	--config custom.appStoreId="${APPSTORE_ID}" \
+	--config custom.appSpecificUrlScheme="${APP_SPECIFIC_URL_SCHEME}"
+
 BUCK_THREADS_OPTIONS=--config build.threads=$(shell sysctl -n hw.logicalcpu)
 
 BUCK_CACHE_OPTIONS=
@@ -138,7 +156,7 @@ build_wallet_debug_arm64: check_env
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#shared,iphoneos-arm64 \
 	//submodules/Display:Display#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/Display:Display#shared,iphoneos-arm64 \
-	${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
+	${WALLET_BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_CACHE_OPTIONS}
 
 build_debug_armv7: check_env
 	$(BUCK) build \
@@ -392,8 +410,12 @@ project: check_env kill_xcode
 	$(BUCK) project //:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Telegram_Buck.xcworkspace
 
+wallet_deps: check_env
+	$(BUCK) query "deps(//Wallet:AppPackage)"  \
+	${WALLET_BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
 wallet_project: check_env kill_xcode
-	$(BUCK) project //Wallet:workspace --config custom.mode=project ${BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+	$(BUCK) project //Wallet:workspace --config custom.mode=project ${WALLET_BUCK_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 	open Wallet/WalletWorkspace.xcworkspace
 
 project_opt: check_env kill_xcode

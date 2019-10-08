@@ -332,7 +332,7 @@ public final class SecureIdAuthController: ViewController {
                 return
             }
             
-            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
             strongSelf.navigationItem.rightBarButtonItem = item
             strongSelf.deleteDisposable.set((deleteSecureIdValues(network: strongSelf.context.account.network, keys: Set(values.map({ $0.value.key })))
             |> deliverOnMainQueue).start(completed: {
@@ -387,7 +387,7 @@ public final class SecureIdAuthController: ViewController {
             
             if previousHadProgress != updatedHasProgress {
                 if updatedHasProgress {
-                    let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: self.presentationData.theme))
+                    let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.controlColor))
                     self.navigationItem.rightBarButtonItem = item
                 } else {
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: PresentationResourcesRootController.navigationInfoIcon(self.presentationData.theme), style: .plain, target: self, action: #selector(self.infoPressed))

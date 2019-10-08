@@ -20,6 +20,7 @@ import ReactionSelectionNode
 import PersistentStringHash
 import GridMessageSelectionNode
 import AppBundle
+import Markdown
 
 private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> [(Message, AnyClass)] {
     var result: [(Message, AnyClass)] = []

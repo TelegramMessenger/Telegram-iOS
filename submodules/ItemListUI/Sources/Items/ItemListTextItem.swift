@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import SwiftSignalKit
 import TelegramPresentationData
 import TextFormat
+import Markdown
 
 public enum ItemListTextItemText {
     case plain(String)

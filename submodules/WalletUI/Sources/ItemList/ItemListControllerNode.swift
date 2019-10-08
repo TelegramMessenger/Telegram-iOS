@@ -3,7 +3,6 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import SwiftSignalKit
-import TelegramCore
 import MergeLists
 
 typealias ItemListSectionId = Int32

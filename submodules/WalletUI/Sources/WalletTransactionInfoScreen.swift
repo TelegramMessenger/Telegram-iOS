@@ -3,12 +3,10 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SolidRoundedButtonNode
-import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
+import WalletCore
 
 private func stringForFullDate(timestamp: Int32, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat) -> String {
     var t: time_t = Int(timestamp)
@@ -153,7 +151,7 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
         case let .infoHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .infoAddress(theme, text, address):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], font: .monospace, sectionId: self.section, style: .blocks, longTapAction: address == nil ? nil : {
+            return ItemListMultilineTextItem(theme: theme, text: text, font: .monospace, sectionId: self.section, style: .blocks, longTapAction: address == nil ? nil : {
                 if let address = address {
                 arguments.displayContextMenu(WalletTransactionInfoEntryTag.address, address)
                 }
@@ -169,7 +167,7 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
         case let .storageFeeHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .storageFee(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
+            return ItemListMultilineTextItem(theme: theme, text: text, sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
         case let .storageFeeInfo(theme, text):
             return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
                 switch action {
@@ -180,7 +178,7 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
         case let .otherFeeHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .otherFee(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
+            return ItemListMultilineTextItem(theme: theme, text: text, sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
         case let .otherFeeInfo(theme, text):
             return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
                 switch action {
@@ -191,7 +189,7 @@ private enum WalletTransactionInfoEntry: ItemListNodeEntry {
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, enabledEntityTypes: [], sectionId: self.section, style: .blocks, longTapAction: {
+            return ItemListMultilineTextItem(theme: theme, text: text, sectionId: self.section, style: .blocks, longTapAction: {
                 arguments.displayContextMenu(WalletTransactionInfoEntryTag.comment, text)
             }, tag: WalletTransactionInfoEntryTag.comment)
         }
@@ -347,7 +345,9 @@ func walletTransactionInfoController(context: WalletContext, walletInfo: WalletI
         let address = extractAddress(walletTransaction)
         if case let .list(addresses) = address, let address = addresses.first {
             dismissImpl?()
-            pushImpl?(walletSendScreen(context: context, randomId: arc4random64(), walletInfo: walletInfo, address: address))
+            var randomId: Int64 = 0
+            arc4random_buf(&randomId, 8)
+            pushImpl?(walletSendScreen(context: context, randomId: randomId, walletInfo: walletInfo, address: address))
         }
     }, displayContextMenu: { tag, text in
         displayContextMenuImpl?(tag, text)

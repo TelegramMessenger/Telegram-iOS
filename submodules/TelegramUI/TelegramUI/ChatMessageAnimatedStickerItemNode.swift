@@ -13,8 +13,10 @@ import AccountContext
 import MediaResources
 import StickerResources
 import ContextUI
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 import Emoji
+import Markdown
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -313,7 +315,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let file = file {
                     let dimensions = file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                     let fittedSize = isEmoji ? dimensions.aspectFilled(CGSize(width: 384.0, height: 384.0)) : dimensions.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                    self.animationNode.setup(resource: .resource(item.context.account, file.resource), fitzModifier: fitzModifier, width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
+                    self.animationNode.setup(source: AnimatedStickerResourceSource(account: item.context.account, resource: file.resource, fitzModifier: fitzModifier), width: Int(fittedSize.width), height: Int(fittedSize.height), playbackMode: playbackMode, mode: .cached)
                 }
             }
         }

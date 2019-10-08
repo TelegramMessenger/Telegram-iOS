@@ -3,8 +3,6 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController

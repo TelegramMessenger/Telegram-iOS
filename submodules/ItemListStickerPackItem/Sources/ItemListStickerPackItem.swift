@@ -9,7 +9,8 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import StickerResources
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 public struct ItemListStickerPackItemEditing: Equatable {
     public var editable: Bool
@@ -600,7 +601,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     animationNode = AnimatedStickerNode()
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
-                                    animationNode.setup(resource: .resource(item.account, resource), width: 80, height: 80, mode: .cached)
+                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource), width: 80, height: 80, mode: .cached)
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers

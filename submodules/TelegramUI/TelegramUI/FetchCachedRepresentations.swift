@@ -16,7 +16,7 @@ import Lottie
 import MediaResources
 import PhotoResources
 import ImageBlur
-import AnimationUI
+import TelegramAnimatedStickerNode
 import WallpaperResources
 
 public func fetchCachedResourceRepresentation(account: Account, resource: MediaResource, representation: CachedMediaResourceRepresentation) -> Signal<CachedMediaResourceRepresentationResult, NoError> {

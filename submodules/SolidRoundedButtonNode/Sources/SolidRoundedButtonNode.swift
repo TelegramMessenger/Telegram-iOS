@@ -2,7 +2,6 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
-import TelegramPresentationData
 
 private let textFont: UIFont = Font.regular(16.0)
 
@@ -13,12 +12,6 @@ public final class SolidRoundedButtonTheme {
     public init(backgroundColor: UIColor, foregroundColor: UIColor) {
         self.backgroundColor = backgroundColor
         self.foregroundColor = foregroundColor
-    }
-}
-
-public extension SolidRoundedButtonTheme {
-    convenience init(theme: PresentationTheme) {
-        self.init(backgroundColor: theme.list.itemCheckColors.fillColor, foregroundColor: theme.list.itemCheckColors.foregroundColor)
     }
 }
 

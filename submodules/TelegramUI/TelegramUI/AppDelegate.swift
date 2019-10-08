@@ -26,6 +26,8 @@ import SettingsUI
 import AppBundle
 import WalletUI
 import UrlHandling
+import WalletUrl
+import WalletCore
 
 private let handleVoipNotifications = false
 

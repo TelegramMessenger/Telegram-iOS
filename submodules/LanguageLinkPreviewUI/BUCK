@@ -14,6 +14,7 @@ static_library(
         "//submodules/TelegramPresentationData:TelegramPresentationData",
         "//submodules/AccountContext:AccountContext",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
         "//submodules/ShareController:ShareController",
         "//submodules/AlertUI:AlertUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",

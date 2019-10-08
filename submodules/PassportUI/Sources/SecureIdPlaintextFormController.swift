@@ -71,7 +71,7 @@ public final class SecureIdPlaintextFormController: FormController<SecureIdPlain
             if let strongSelf = self {
                 switch state {
                     case .inProgress:
-                        strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+                        strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
                     case .nextAvailable, .nextNotAvailable:
                         if strongSelf.navigationItem.rightBarButtonItem !== strongSelf.nextItem {
                             strongSelf.navigationItem.rightBarButtonItem = strongSelf.nextItem

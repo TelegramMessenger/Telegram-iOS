@@ -9,6 +9,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import AppBundle
+import Markdown
 
 private final class ChangePhoneNumberIntroControllerNode: ASDisplayNode {
     var presentationData: PresentationData

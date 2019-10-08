@@ -13,6 +13,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import PasswordSetupUI
+import Markdown
 
 private final class TwoStepVerificationUnlockSettingsControllerArguments {
     let updatePasswordText: (String) -> Void

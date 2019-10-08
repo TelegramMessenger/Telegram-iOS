@@ -4,12 +4,10 @@ import AppBundle
 import SwiftSignalKit
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SolidRoundedButtonNode
-import UndoUI
 import AlertUI
-import AnimationUI
+import AnimatedStickerNode
+import WalletCore
 
 public enum WalletWordDisplayScreenMode {
     case check
@@ -79,7 +77,7 @@ public final class WalletWordDisplayScreen: ViewController {
             let deltaTime = Date().timeIntervalSince1970 - strongSelf.startTime
             let minimalTimeout: Double
             #if DEBUG
-            minimalTimeout = 1.0
+            minimalTimeout = 60.0
             #else
             minimalTimeout = 60.0
             #endif
@@ -88,10 +86,7 @@ public final class WalletWordDisplayScreen: ViewController {
                     guard let strongSelf = self else {
                         return
                     }
-                    if let path = getAppBundle().path(forResource: "thumbsup", ofType: "tgs") {
-                        let controller = UndoOverlayController(presentationData: strongSelf.presentationData, content: UndoOverlayContent.emoji(path: path, text: strongSelf.presentationData.strings.Wallet_Words_NotDoneResponse), elevatedLayout: false, animateInAsReplacement: false, action: { _ in })
-                        strongSelf.present(controller, in: .current)
-                    }
+                    (strongSelf.displayNode as! WalletWordDisplayScreenNode).displayToast()
                 })]), in: .window(.root))
             } else {
                 var wordIndices: [Int] = []
@@ -131,6 +126,9 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     private let wordNodes: [(ImmediateTextNode, ImmediateTextNode, ImmediateTextNode)]
     private let buttonNode: SolidRoundedButtonNode
     
+    private var toastNode: ToastNode?
+    
+    private var validLayout: (ContainerViewLayout, CGFloat)?
     private var navigationHeight: CGFloat?
     
     init(presentationData: WalletPresentationData, wordList: [String], action: @escaping () -> Void) {
@@ -148,7 +146,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         
         self.animationNode = AnimatedStickerNode()
         if let path = getAppBundle().path(forResource: "WalletWordList", ofType: "tgs") {
-            self.animationNode.setup(resource: .localFile(path), width: 264, height: 264, playbackMode: .once, mode: .direct)
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 264, height: 264, playbackMode: .once, mode: .direct)
             self.animationNode.visibility = true
         }
         
@@ -283,6 +281,7 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     }
     
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationHeight)
         self.navigationHeight = navigationHeight
         
         let sideInset: CGFloat = 32.0
@@ -384,5 +383,29 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
         self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: max(layout.size.height, buttonFrame.maxY + scrollBottomInset))
         
         self.updateTitle()
+    }
+    
+    func displayToast() {
+        if self.toastNode != nil {
+            return
+        }
+        
+        if let path = getAppBundle().path(forResource: "WalletApologiesAccepted", ofType: "tgs") {
+            let toastNode = ToastNode(theme: self.presentationData.theme, animationPath: path, text: self.presentationData.strings.Wallet_Words_NotDoneResponse)
+            self.toastNode = toastNode
+            if let (layout, navigationHeight) = self.validLayout {
+                toastNode.update(layout: layout, transition: .immediate)
+            }
+            self.addSubnode(toastNode)
+            toastNode.show(removed: { [weak self, weak toastNode] in
+                guard let strongSelf = self, let toastNode = toastNode else {
+                    return
+                }
+                toastNode.removeFromSupernode()
+                if toastNode === strongSelf.toastNode {
+                    strongSelf.toastNode = nil
+                }
+            })
+        }
     }
 }

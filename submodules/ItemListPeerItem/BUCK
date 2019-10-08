@@ -18,6 +18,7 @@ static_library(
         "//submodules/ItemListUI:ItemListUI",
         "//submodules/TelegramUIPreferences:TelegramUIPreferences",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

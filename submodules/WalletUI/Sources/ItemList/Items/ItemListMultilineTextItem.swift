@@ -3,8 +3,6 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import SwiftSignalKit
-import TextFormat
-import AccountContext
 
 enum ItemListMultilineTextBaseFont {
     case `default`
@@ -14,22 +12,20 @@ enum ItemListMultilineTextBaseFont {
 class ItemListMultilineTextItem: ListViewItem, ItemListItem {
     let theme: WalletTheme
     let text: String
-    let enabledEntityTypes: EnabledEntityTypes
     let font: ItemListMultilineTextBaseFont
     let sectionId: ItemListSectionId
     let style: ItemListStyle
     let action: (() -> Void)?
     let longTapAction: (() -> Void)?
-    let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
+    let linkItemAction: ((String) -> Void)?
     
     let tag: Any?
     
     let selectable: Bool
     
-    init(theme: WalletTheme, text: String, enabledEntityTypes: EnabledEntityTypes, font: ItemListMultilineTextBaseFont = .default, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil, tag: Any? = nil) {
+    init(theme: WalletTheme, text: String, font: ItemListMultilineTextBaseFont = .default, sectionId: ItemListSectionId, style: ItemListStyle, action: (() -> Void)? = nil, longTapAction: (() -> Void)? = nil, linkItemAction: ((String) -> Void)? = nil, tag: Any? = nil) {
         self.theme = theme
         self.text = text
-        self.enabledEntityTypes = enabledEntityTypes
         self.font = font
         self.sectionId = sectionId
         self.style = style
@@ -198,8 +194,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                 boldItalicFont = Font.semiboldItalicMonospace(17.0)
             }
             
-            let entities = generateTextEntities(item.text, enabledTypes: item.enabledEntityTypes)
-            let string = stringWithAppliedEntities(item.text, entities: entities, baseColor: textColor, linkColor: item.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: titleFont)
+            let string = NSAttributedString(string: item.text, font: baseFont, textColor: textColor)
             
             let (titleLayout, titleApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: string, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
@@ -357,7 +352,7 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                     switch gesture {
                         case .tap, .longTap:
                             if let item = self.item, let linkItem = self.linkItemAtPoint(location) {
-                                item.linkItemAction?(gesture == .tap ? .tap : .longTap, linkItem)
+                                item.linkItemAction?(linkItem)
                             }
                         default:
                             break
@@ -368,18 +363,10 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
         }
     }
     
-    private func linkItemAtPoint(_ point: CGPoint) -> TextLinkItem? {
+    private func linkItemAtPoint(_ point: CGPoint) -> String? {
         let textNodeFrame = self.textNode.frame
         if let (_, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
-            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
-                return .url(url)
-            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
-                return .mention(peerName)
-            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
-                return .hashtag(hashtag.peerName, hashtag.hashtag)
-            } else {
-                return nil
-            }
+            return nil
         }
         return nil
     }
@@ -395,11 +382,6 @@ class ItemListMultilineTextItemNode: ListViewItemNode {
                 let textNodeFrame = self.textNode.frame
                 if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
                     let possibleNames: [String] = [
-                        TelegramTextAttributes.URL,
-                        TelegramTextAttributes.PeerMention,
-                        TelegramTextAttributes.PeerTextMention,
-                        TelegramTextAttributes.BotCommand,
-                        TelegramTextAttributes.Hashtag
                     ]
                     for name in possibleNames {
                         if let _ = attributes[NSAttributedString.Key(rawValue: name)] {

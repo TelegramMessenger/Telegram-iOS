@@ -1,4 +1,7 @@
-load("//Config:configs.bzl", "library_configs", "dynamic_library_configs", "info_plist_substitutions")
+load("//Config:utils.bzl",
+    "library_configs",
+    "dynamic_library_configs",
+)
 
 def apple_lib(
         name,

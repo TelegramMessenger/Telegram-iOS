@@ -3,15 +3,14 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SolidRoundedButtonNode
-import AnimationUI
 import SwiftSignalKit
 import OverlayStatusController
 import AlertUI
-import TextFormat
 import LocalAuth
+import AnimatedStickerNode
+import WalletCore
+import Markdown
 
 public enum WalletSecureStorageResetReason {
     case notAvailable
@@ -51,7 +50,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.postbox, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -62,7 +61,7 @@ public final class WalletSplashScreen: ViewController {
                 self.walletCreatedPreloadState = walletCreatedPreloadState
             } else {
                 self.walletCreatedPreloadState = Promise()
-                self.walletCreatedPreloadState?.set(getCombinedWalletState(postbox: context.postbox, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
+                self.walletCreatedPreloadState?.set(getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance)
                 |> map(Optional.init)
                 |> `catch` { _ -> Signal<CombinedWalletStateResult?, NoError> in
                     return .single(nil)
@@ -131,7 +130,7 @@ public final class WalletSplashScreen: ViewController {
     }
     
     private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
-        let _ = (sendGramsFromWallet(postbox: self.context.postbox, network: self.context.network, tonInstance: self.context.tonInstance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
+        let _ = (sendGramsFromWallet(storage: self.context.storage, tonInstance: self.context.tonInstance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
         |> deliverOnMainQueue).start(error: { [weak self] error in
             guard let strongSelf = self else {
                 return
@@ -227,9 +226,9 @@ public final class WalletSplashScreen: ViewController {
                     ], actionLayout: .vertical), in: .window(.root))
                 }
                 strongSelf.present(controller, in: .window(.root))
-                let _ = (getServerWalletSalt(network: strongSelf.context.network)
+                let _ = (strongSelf.context.getServerSalt()
                 |> deliverOnMainQueue).start(next: { serverSalt in
-                    let _ = (createWallet(postbox: strongSelf.context.postbox, tonInstance: strongSelf.context.tonInstance, keychain: strongSelf.context.keychain, localPassword: serverSalt)
+                    let _ = (createWallet(storage: strongSelf.context.storage, tonInstance: strongSelf.context.tonInstance, keychain: strongSelf.context.keychain, localPassword: serverSalt)
                     |> deliverOnMainQueue).start(next: { walletInfo, wordList in
                         guard let strongSelf = self else {
                             return
@@ -252,7 +251,7 @@ public final class WalletSplashScreen: ViewController {
                     let context = strongSelf.context
                     let _ = (strongSelf.context.keychain.decrypt(walletInfo.encryptedSecret)
                     |> deliverOnMainQueue).start(next: { [weak controller] decryptedSecret in
-                        let _ = (getServerWalletSalt(network: context.network)
+                        let _ = (context.getServerSalt()
                         |> deliverOnMainQueue).start(next: { [weak controller] serverSalt in
                             let _ = (walletRestoreWords(tonInstance: context.tonInstance, publicKey: walletInfo.publicKey, decryptedSecret:  decryptedSecret, localPassword: serverSalt)
                             |> deliverOnMainQueue).start(next: { wordList in
@@ -539,7 +538,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = parseMarkdownIntoAttributedString(self.presentationData.strings.Wallet_Intro_Terms, attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletIntroLoading", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 248, height: 248, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 248, height: 248, mode: .direct)
                 self.animationSize = CGSize(width: 124.0, height: 124.0)
                 self.animationNode.visibility = true
             }
@@ -551,7 +550,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletCreated", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 250, height: 250, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 250, height: 250, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 125.0, height: 125.0)
                 self.animationNode.visibility = true
             }
@@ -563,7 +562,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -575,7 +574,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletNotAvailable", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -587,7 +586,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "SendingGrams", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -601,7 +600,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }
@@ -613,7 +612,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletKeyLock", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 280, height: 280, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 280, height: 280, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 140.0, height: 140.0)
                 self.animationNode.visibility = true
             }
@@ -658,7 +657,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "WalletNotAvailable", ofType: "tgs") {
-                self.animationNode.setup(resource: .localFile(path), width: 260, height: 260, playbackMode: .once, mode: .direct)
+                self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
                 self.animationNode.visibility = true
             }

@@ -15,6 +15,7 @@ import UrlEscaping
 import PassportUI
 import UrlHandling
 import WalletUI
+import WalletUrl
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId

@@ -9,6 +9,7 @@ import TelegramPresentationData
 import CheckNode
 import TextFormat
 import AccountContext
+import Markdown
 
 private let textFont = Font.regular(13.0)
 private let boldTextFont = Font.semibold(13.0)

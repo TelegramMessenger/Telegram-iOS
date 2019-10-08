@@ -1,15 +1,10 @@
 import Foundation
 import SwiftSignalKit
-import Postbox
-import TelegramCore
 import Compression
 import Display
 import AsyncDisplayKit
 import RLottieBinding
 import GZip
-import Tuples
-import MediaResources
-import StickerResources
 
 private let sharedQueue = Queue()
 
@@ -301,14 +296,29 @@ public struct AnimatedStickerStatus: Equatable {
     }
 }
 
-public enum AnimatedStickerNodeResource {
-    case resource(Account, MediaResource)
-    case localFile(String)
+public protocol AnimatedStickerNodeSource {
+    func cachedDataPath(width: Int, height: Int) -> Signal<String, NoError>
+    func directDataPath() -> Signal<String, NoError>
+}
+
+public final class AnimatedStickerNodeLocalFileSource: AnimatedStickerNodeSource {
+    public let path: String
+    
+    public init(path: String) {
+        self.path = path
+    }
+    
+    public func directDataPath() -> Signal<String, NoError> {
+        return .single(self.path)
+    }
+    
+    public func cachedDataPath(width: Int, height: Int) -> Signal<String, NoError> {
+        return .never()
+    }
 }
 
 public final class AnimatedStickerNode: ASDisplayNode {
     private let queue: Queue
-    private var fileReference: FileMediaReference?
     private let disposable = MetaDisposable()
     private let fetchDisposable = MetaDisposable()
     private let eventsNode: AnimatedStickerNodeDisplayEvents
@@ -321,7 +331,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
     
     private let timer = Atomic<SwiftSignalKit.Timer?>(value: nil)
     
-    private var directData: Tuple4<Data, String, Int, Int>?
+    private var directData: (Data, String, Int, Int)?
     private var cachedData: Data?
     
     private var renderer: (AnimationRenderer & ASDisplayNode)?
@@ -385,19 +395,19 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.addSubnode(self.renderer!)
     }
 
-    public func setup(resource: AnimatedStickerNodeResource, fitzModifier: EmojiFitzModifier? = nil, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
+    public func setup(source: AnimatedStickerNodeSource, width: Int, height: Int, playbackMode: AnimatedStickerPlaybackMode = .loop, mode: AnimatedStickerMode) {
         if width < 2 || height < 2 {
             return
         }
         self.playbackMode = playbackMode
         switch mode {
         case .direct:
-            let f: (MediaResourceData) -> Void = { [weak self] data in
-                guard let strongSelf = self, data.complete else {
+            let f: (String) -> Void = { [weak self] path in
+                guard let strongSelf = self else {
                     return
                 }
-                if let directData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead]) {
-                    strongSelf.directData = Tuple(directData, data.path, width, height)
+                if let directData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                    strongSelf.directData = (directData, path, width, height)
                 }
                 if strongSelf.isPlaying {
                     strongSelf.play()
@@ -405,32 +415,23 @@ public final class AnimatedStickerNode: ASDisplayNode {
                     strongSelf.play(firstFrame: true)
                 }
             }
-            switch resource {
-            case let .resource(account, resource):
-                self.disposable.set((account.postbox.mediaBox.resourceData(resource)
-                |> deliverOnMainQueue).start(next: { data in
-                    f(data)
-                }))
-            case let .localFile(path):
-                f(MediaResourceData(path: path, offset: 0, size: Int(Int32.max - 1), complete: true))
-            }
+            self.disposable.set((source.directDataPath()
+            |> deliverOnMainQueue).start(next: { path in
+                f(path)
+            }))
         case .cached:
-            switch resource {
-            case let .resource(account, resource):
-                self.disposable.set((chatMessageAnimationData(postbox: account.postbox, resource: resource, fitzModifier: fitzModifier, width: width, height: height, synchronousLoad: false)
-                |> deliverOnMainQueue).start(next: { [weak self] data in
-                    if let strongSelf = self, data.complete {
-                        strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: data.path), options: [.mappedRead])
-                        if strongSelf.isPlaying {
-                            strongSelf.play()
-                        } else if strongSelf.canDisplayFirstFrame {
-                            strongSelf.play(firstFrame: true)
-                        }
-                    }
-                }))
-            case .localFile:
-                break
-            }
+            self.disposable.set((source.cachedDataPath(width: width, height: height)
+            |> deliverOnMainQueue).start(next: { [weak self] path in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.cachedData = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead])
+                if strongSelf.isPlaying {
+                    strongSelf.play()
+                } else if strongSelf.canDisplayFirstFrame {
+                    strongSelf.play(firstFrame: true)
+                }
+            }))
         }
     }
     
@@ -466,7 +467,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.queue.async { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource?
             if let directData = directData {
-                maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData._0, width: directData._2, height: directData._3)
+                maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
             } else if let cachedData = cachedData {
                 if #available(iOS 9.0, *) {
                     maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData)
@@ -539,7 +540,7 @@ public final class AnimatedStickerNode: ASDisplayNode {
         self.queue.async { [weak self] in
             var maybeFrameSource: AnimatedStickerFrameSource?
             if let directData = directData {
-                maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData._0, width: directData._2, height: directData._3)
+                maybeFrameSource = AnimatedStickerDirectFrameSource(queue: queue, data: directData.0, width: directData.2, height: directData.3)
             } else if let cachedData = cachedData {
                 if #available(iOS 9.0, *) {
                     maybeFrameSource = AnimatedStickerCachedFrameSource(queue: queue, data: cachedData)

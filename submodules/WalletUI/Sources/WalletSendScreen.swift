@@ -3,13 +3,12 @@ import UIKit
 import AppBundle
 import AsyncDisplayKit
 import Display
-import Postbox
-import TelegramCore
 import SwiftSignalKit
 import AlertUI
-import TextFormat
-import UrlHandling
 import OverlayStatusController
+import WalletUrl
+import WalletCore
+import Markdown
 
 private let balanceIcon = UIImage(bundleImageName: "Wallet/TransactionGem")?.precomposed()
 
@@ -281,7 +280,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
     }
     
     let serverSaltValue = Promise<Data?>()
-    serverSaltValue.set(getServerWalletSalt(network: context.network)
+    serverSaltValue.set(context.getServerSalt()
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Data?, NoError> in
         return .single(nil)
@@ -419,8 +418,8 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         }
     })
     
-    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(postbox: context.postbox, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: true)
-    |> map { combinedState in
+    let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: true)
+    |> map { combinedState -> WalletState? in
         var state: WalletState?
         switch combinedState {
         case let .cached(combinedState):
@@ -433,7 +432,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
     |> `catch` { _ -> Signal<WalletState?, NoError> in
         return .single(nil)
         |> then(
-            getCombinedWalletState(postbox: context.postbox, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: false)
+            getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: false)
             |> map { combinedState -> WalletState? in
                 var state: WalletState?
                 switch combinedState {

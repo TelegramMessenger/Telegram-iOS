@@ -7,7 +7,8 @@ import AsyncDisplayKit
 import Postbox
 import StickerResources
 import AccountContext
-import AnimationUI
+import AnimatedStickerNode
+import TelegramAnimatedStickerNode
 
 final class HorizontalStickerGridItem: GridItem {
     let account: Account
@@ -111,7 +112,7 @@ final class HorizontalStickerGridItemNode: GridItemNode {
                     }
                     let dimensions = item.file.dimensions ?? CGSize(width: 512.0, height: 512.0)
                     let fittedDimensions = dimensions.aspectFitted(CGSize(width: 160.0, height: 160.0))
-                    animationNode.setup(resource: .resource(account, item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
+                    animationNode.setup(source: AnimatedStickerResourceSource(account: account, resource: item.file.resource), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), mode: .cached)
                     
                     self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(item.file), resource: item.file.resource).start())
                 } else {

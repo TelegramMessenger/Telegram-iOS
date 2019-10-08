@@ -54,7 +54,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         self.membersButton = HighlightableButtonNode()
         self.measureResultsLabel = TextNode()
         self.resultsButton = HighlightableButtonNode()
-        self.activityIndicator = ActivityIndicator(type: .navigationAccent(theme))
+        self.activityIndicator = ActivityIndicator(type: .navigationAccent(theme.rootController.navigationBar.buttonColor))
         self.activityIndicator.isHidden = true
         
         super.init()

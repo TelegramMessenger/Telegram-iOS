@@ -20,6 +20,7 @@ import LocalMediaResources
 import OverlayStatusController
 import AlertUI
 import PresentationDataUtils
+import WalletCore
 
 private enum CallStatusText: Equatable {
     case none
@@ -1031,7 +1032,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return
         }
         let _ = (combineLatest(queue: .mainQueue(),
-            availableWallets(postbox: context.account.postbox),
+            WalletStorageInterfaceImpl(postbox: context.account.postbox).getWalletRecords(),
             storedContext.keychain.encryptionPublicKey(),
             context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
         )
@@ -1043,7 +1044,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             }
             let tonContext = storedContext.context(config: config, blockchainName: blockchainName, enableProxy: !walletConfiguration.disableProxy)
             
-            if wallets.wallets.isEmpty {
+            if wallets.isEmpty {
                 if case .send = walletContext {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     let controller = textAlertController(context: context, title: presentationData.strings.Conversation_WalletRequiredTitle, text: presentationData.strings.Conversation_WalletRequiredText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Conversation_WalletRequiredNotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Conversation_WalletRequiredSetup, action: { [weak self] in
@@ -1058,8 +1059,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     }
                 }
             } else {
-                let walletInfo = wallets.wallets[0].info
-                let exportCompleted = wallets.wallets[0].exportCompleted
+                let walletInfo = wallets[0].info
+                let exportCompleted = wallets[0].exportCompleted
                 if let currentPublicKey = currentPublicKey {
                     if currentPublicKey == walletInfo.encryptedSecret.publicKey {
                         let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)

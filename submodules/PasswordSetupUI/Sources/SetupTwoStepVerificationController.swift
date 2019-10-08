@@ -122,7 +122,7 @@ public class SetupTwoStepVerificationController: ViewController {
                 case .none:
                     item = nil
                 case .activity:
-                    item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+                    item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
                 case let .button(title, _):
                     item = UIBarButtonItem(title: title, style: .done, target: strongSelf, action: #selector(strongSelf.nextPressed))
             }

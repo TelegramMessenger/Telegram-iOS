@@ -118,7 +118,7 @@ final class SecureIdDocumentFormController: FormController<SecureIdDocumentFormS
             if let strongSelf = self {
                 switch state {
                     case .inProgress:
-                        strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(theme: strongSelf.presentationData.theme))
+                        strongSelf.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: strongSelf.presentationData.theme.rootController.navigationBar.controlColor))
                     case .saveAvailable, .saveNotAvailable:
                         if strongSelf.navigationItem.rightBarButtonItem !== strongSelf.doneItem {
                             strongSelf.navigationItem.rightBarButtonItem = strongSelf.doneItem

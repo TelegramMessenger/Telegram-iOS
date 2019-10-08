@@ -78,6 +78,7 @@ static_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/ContextUI:ContextUI",
         "//submodules/WalletUI:WalletUI",
+        "//submodules/Markdown:Markdown",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

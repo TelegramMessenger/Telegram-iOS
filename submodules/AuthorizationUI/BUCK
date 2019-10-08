@@ -10,6 +10,7 @@ static_library(
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/Display:Display#shared",
     	"//submodules/TextFormat:TextFormat",
+        "//submodules/Markdown:Markdown",
         "//submodules/TelegramPresentationData:TelegramPresentationData",
     ],
     frameworks = [
