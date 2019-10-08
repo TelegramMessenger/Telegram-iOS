@@ -155,14 +155,44 @@ private func preparedShareItem(account: Account, to peerId: PeerId, value: [Stri
                 }
             }
             if isGif {
-                return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: "animation/gif", attributes: [.ImageSize(size: image.size), .Animated, .FileName(fileName: fileName ?? "animation.gif")], hintFileIsLarge: data.count > 5 * 1024 * 1024)
-                |> mapError { _ -> Void in return Void() }
-                |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
-                    switch event {
-                        case let .progress(value):
-                            return .single(.progress(value))
-                        case let .result(media):
-                            return .single(.done(.media(media)))
+                let convertedData = Signal<(Data, CGSize, Double, Bool), NoError> { subscriber in
+                    let disposable = MetaDisposable()
+                    let signalDisposable = TGGifConverter.convertGif(toMp4: data).start(next: { next in
+                        if let result = next as? NSDictionary, let path = result["path"] as? String, let convertedData = try? Data(contentsOf: URL(fileURLWithPath: path)), let duration = result["duration"] as? Double {
+                            subscriber.putNext((convertedData, image.size, duration, true))
+                            subscriber.putCompletion()
+                        }
+                    }, error: { _ in
+                        subscriber.putNext((data, image.size, 0, false))
+                        subscriber.putCompletion()
+                    }, completed: nil)
+                    disposable.set(ActionDisposable {
+                        signalDisposable?.dispose()
+                    })
+                    return disposable
+                }
+                
+                return convertedData
+                |> castError(Void.self)
+                |> mapToSignal { data, dimensions, duration, converted in
+                    var attributes: [TelegramMediaFileAttribute] = []
+                    let mimeType: String
+                    if converted {
+                        mimeType = "video/mp4"
+                        attributes = [.Video(duration: Int(duration), size: dimensions, flags: [.supportsStreaming]), .Animated, .FileName(fileName: "animation.mp4")]
+                    } else {
+                        mimeType = "animation/gif"
+                        attributes = [.ImageSize(size: dimensions), .Animated, .FileName(fileName: fileName ?? "animation.gif")]
+                    }
+                    return standaloneUploadedFile(account: account, peerId: peerId, text: "", source: .data(data), mimeType: mimeType, attributes: attributes, hintFileIsLarge: data.count > 5 * 1024 * 1024)
+                    |> mapError { _ -> Void in return Void() }
+                    |> mapToSignal { event -> Signal<PreparedShareItem, Void> in
+                        switch event {
+                            case let .progress(value):
+                                return .single(.progress(value))
+                            case let .result(media):
+                                return .single(.done(.media(media)))
+                        }
                     }
                 }
             } else {

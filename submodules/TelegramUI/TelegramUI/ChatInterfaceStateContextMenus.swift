@@ -775,14 +775,14 @@ func chatAvailableMessageActionsImpl(postbox: Postbox, accountPeerId: PeerId, me
                     }
                     if let peer = transaction.getPeer(id.peerId), let channel = peer as? TelegramChannel {
                         if !message.flags.contains(.Incoming) {
-                            optionsMap[id]!.insert(.deleteGlobally)
+                            optionsMap[id]!.insert(.deleteLocally)
                         } else {
                             if channel.hasPermission(.deleteAllMessages) {
-                                optionsMap[id]!.insert(.deleteGlobally)
+                                optionsMap[id]!.insert(.deleteLocally)
                             }
                         }
                     } else {
-                        optionsMap[id]!.insert(.deleteGlobally)
+                        optionsMap[id]!.insert(.deleteLocally)
                     }
                 } else if id.peerId == accountPeerId {
                     if !(message.flags.isSending || message.flags.contains(.Failed)) {

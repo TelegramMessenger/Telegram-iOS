@@ -131,7 +131,7 @@ private final class UniversalVideoGalleryItemPictureInPictureNode: ASDisplayNode
     
     func updateLayout(_ size: CGSize, transition: ContainedViewLayoutTransition) {
         let iconSize = self.iconNode.image?.size ?? CGSize()
-        let textSize = self.textNode.measure(CGSize(width: size.width - 20.0, height: CGFloat.greatestFiniteMagnitude))
+        let textSize = self.textNode.measure(CGSize(width: max(0.0, size.width - 20.0), height: CGFloat.greatestFiniteMagnitude))
         let spacing: CGFloat = 10.0
         let contentHeight = iconSize.height + spacing + textSize.height
         let contentVerticalOrigin = floor((size.height - contentHeight) / 2.0)

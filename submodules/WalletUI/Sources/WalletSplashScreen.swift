@@ -491,6 +491,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
     
     private let iconNode: ASImageNode
     private var animationSize: CGSize = CGSize()
+    private var animationOffset: CGPoint = CGPoint()
     private let animationNode: AnimatedStickerNode
     private let alternativeAnimationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
@@ -564,6 +565,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
+                self.animationOffset = CGPoint(x: 14.0, y: 0.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -602,6 +604,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
             if let path = getAppBundle().path(forResource: "WalletDone", ofType: "tgs") {
                 self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 260, height: 260, playbackMode: .once, mode: .direct)
                 self.animationSize = CGSize(width: 130.0, height: 130.0)
+                self.animationOffset = CGPoint(x: 14.0, y: 0.0)
                 self.animationNode.visibility = true
             }
             secondaryActionText = ""
@@ -799,7 +802,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         
         contentVerticalOrigin = min(contentVerticalOrigin, maxContentVerticalOrigin)
         
-        let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: contentVerticalOrigin), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
+        let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0) + self.animationOffset.x, y: contentVerticalOrigin + self.animationOffset.y), size: iconSize).offsetBy(dx: iconOffset.x, dy: iconOffset.y)
         transition.updateFrameAdditive(node: self.iconNode, frame: iconFrame)
         self.animationNode.updateLayout(size: iconFrame.size)
         transition.updateFrameAdditive(node: self.animationNode, frame: iconFrame)
