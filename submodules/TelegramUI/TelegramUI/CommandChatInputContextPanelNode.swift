@@ -59,7 +59,7 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
     private var currentEntries: [CommandChatInputContextPanelEntry]?
     
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
     override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings) {
         self.listView = ListView()
@@ -181,9 +181,9 @@ final class CommandChatInputContextPanelNode: ChatInputContextPanelNode {
         return max(size.height - minimumItemHeights, 0.0)
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let hadValidLayout = self.validLayout != nil
-        self.validLayout = (size, leftInset, rightInset)
+        self.validLayout = (size, leftInset, rightInset, bottomInset)
         
         var insets = UIEdgeInsets()
         insets.top = self.topInsetForLayout(size: size)

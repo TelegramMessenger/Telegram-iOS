@@ -99,7 +99,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
     private let clippingNode: ASDisplayNode
     private let gridNode: GridNode
     
-    private var validLayout: (CGSize, CGFloat, CGFloat, ChatPresentationInterfaceState)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState)?
     private var currentEntries: [StickerEntry] = []
     private var enqueuedTransitions: [StickerEntryTransition] = []
     
@@ -246,7 +246,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         self.currentEntries = entries
         
         if let validLayout = self.validLayout {
-            self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate, interfaceState: validLayout.3)
+            self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, bottomInset: validLayout.3, transition: .immediate, interfaceState: validLayout.4)
         }
         
         let transition = preparedGridEntryTransition(account: self.context.account, from: previousEntries, to: entries, stickersInteraction: self.stickersInteraction, interfaceInteraction: self.interfaceInteraction!)
@@ -267,7 +267,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         }
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let sideInsets: CGFloat = 10.0 + leftInset
         let contentWidth = min(size.width - sideInsets - sideInsets, max(24.0, CGFloat(self.currentEntries.count) * 66.0 + 6.0))
         
@@ -298,7 +298,7 @@ final class HorizontalStickersChatContextPanelNode: ChatInputContextPanelNode {
         self.gridNode.transaction(GridNodeTransaction(deleteItems: [], insertItems: [], updateItems: [], scrollToItem: nil, updateLayout: GridNodeUpdateLayout(layout: GridNodeLayout(size: CGSize(width: gridFrame.size.height, height: gridFrame.size.width), insets: UIEdgeInsets(top: 3.0, left: 0.0, bottom: 3.0, right: 0.0), preloadSize: 100.0, type: .fixed(itemSize: CGSize(width: 66.0, height: 66.0), fillWidth: nil, lineSpacing: 0.0, itemSpacing: nil)), transition: .immediate), itemTransition: .immediate, stationaryItems: .all, updateFirstIndexInSectionOffset: nil), completion: { _ in })
         
         let dequeue = self.validLayout == nil
-        self.validLayout = (size, leftInset, rightInset, interfaceState)
+        self.validLayout = (size, leftInset, rightInset, bottomInset, interfaceState)
         
         if dequeue {
             self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)

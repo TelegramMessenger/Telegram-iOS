@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import AvatarNode
+import ContextUI
 
 private let normalFont = UIFont(name: ".SFCompactRounded-Semibold", size: 16.0)!
 private let smallFont = UIFont(name: ".SFCompactRounded-Semibold", size: 12.0)!
@@ -27,7 +28,11 @@ final class ChatAvatarNavigationNodeView: UIView, PreviewingHostView {
 }
 
 final class ChatAvatarNavigationNode: ASDisplayNode {
+    private let containerNode: ContextControllerSourceNode
     let avatarNode: AvatarNode
+    
+    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    
     weak var chatController: ChatControllerImpl? {
         didSet {
             if self.isNodeLoaded {
@@ -37,6 +42,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     }
     
     override init() {
+        self.containerNode = ContextControllerSourceNode()
         self.avatarNode = AvatarNode(font: normalFont)
         
         super.init()
@@ -45,7 +51,15 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             return ChatAvatarNavigationNodeView()
         })
         
-        self.addSubnode(self.avatarNode)
+        self.containerNode.addSubnode(self.avatarNode)
+        self.addSubnode(self.containerNode)
+        
+        self.containerNode.activated = { [weak self] gesture in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
     }
     
     override func didLoad() {
@@ -69,12 +83,14 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
             if !self.avatarNode.bounds.size.equalTo(bounds.size) {
                 self.avatarNode.font = smallFont
             }
-            self.avatarNode.frame = bounds.offsetBy(dx: 8.0, dy: 0.0)
+            self.containerNode.frame = bounds.offsetBy(dx: 8.0, dy: 0.0)
+            self.avatarNode.frame = bounds
         } else {
             if !self.avatarNode.bounds.size.equalTo(bounds.size) {
                 self.avatarNode.font = normalFont
             }
-            self.avatarNode.frame = bounds.offsetBy(dx: 10.0, dy: 1.0)
+            self.containerNode.frame = bounds.offsetBy(dx: 10.0, dy: 1.0)
+            self.avatarNode.frame = bounds
         }
     }
 }

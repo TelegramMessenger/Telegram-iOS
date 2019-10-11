@@ -1089,12 +1089,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     startPanelFrame.origin.y = referenceFrame.maxY - panelFrame.height
                 }
                 inputContextPanelNode.frame = startPanelFrame
-                inputContextPanelNode.updateLayout(size: startPanelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                inputContextPanelNode.updateLayout(size: startPanelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             }
             
             if !inputContextPanelNode.frame.equalTo(panelFrame) || inputContextPanelNode.theme !== self.chatPresentationInterfaceState.theme {
                 transition.updateFrame(node: inputContextPanelNode, frame: panelFrame)
-                inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                inputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
             }
         }
         
@@ -1102,10 +1102,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             let panelFrame = overlayContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
             if immediatelyLayoutOverlayContextPanelAndAnimateAppearance {
                 overlayContextPanelNode.frame = panelFrame
-                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
+                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: .immediate, interfaceState: self.chatPresentationInterfaceState)
             } else if !overlayContextPanelNode.frame.equalTo(panelFrame) {
                 transition.updateFrame(node: overlayContextPanelNode, frame: panelFrame)
-                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                overlayContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
             }
         }
         
