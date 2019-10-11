@@ -4,7 +4,7 @@ import SwiftSignalKitMac
 import MtProtoKitMac
 #else
 import SwiftSignalKit
-import MtProtoKit
+import TonBinding
 #endif
 
 public struct TonKeychainEncryptedData: Codable, Equatable {
@@ -100,6 +100,24 @@ public final class TonInstance {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return TonInstanceImpl(queue: queue, basePath: basePath, config: config, blockchainName: blockchainName, proxy: proxy)
         })
+    }
+    
+    public func updateConfig(config: String, blockchainName: String) -> Signal<Never, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.updateConfig(config, blockchainName: blockchainName).start(next: nil, error: { _ in
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            return disposable
+        }
     }
     
     fileprivate func exportKey(key: TONKey, localPassword: Data) -> Signal<[String], NoError> {

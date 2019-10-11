@@ -6,7 +6,6 @@ static_library(
         "Sources/**/*.swift",
     ]),
     deps = [
-        "//submodules/MtProtoKit:MtProtoKit#shared",
 	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/TonBinding:TonBinding",
     ],

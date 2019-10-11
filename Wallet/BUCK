@@ -13,7 +13,6 @@ load("//Config:buck_rule_macros.bzl",
 )
 
 framework_dependencies = [
-    "//submodules/MtProtoKit:MtProtoKit",
     "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     "//submodules/Display:Display",

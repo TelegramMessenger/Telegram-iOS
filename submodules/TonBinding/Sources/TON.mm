@@ -1,9 +1,6 @@
 #import "TON.h"
 
-#import "MTLogging.h"
 #import "tonlib/Client.h"
-#import "MTQueue.h"
-#import "MTSignal.h"
 
 static td::SecureString makeSecureString(NSData * _Nonnull data) {
     if (data == nil || data.length == 0) {
@@ -226,9 +223,10 @@ typedef enum {
     uint64_t _nextRequestId;
     NSLock *_requestHandlersLock;
     NSMutableDictionary<NSNumber *, TONRequestHandler *> *_requestHandlers;
-    MTPipe *_initializedStatus;
+    SPipe *_initializedStatus;
     NSMutableSet *_sendGramRandomIds;
-    MTQueue *_queue;
+    SQueue *_queue;
+    bool _enableExternalRequests;
 }
 
 @end
@@ -247,13 +245,14 @@ typedef enum {
 - (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest enableExternalRequests:(bool)enableExternalRequests {
     self = [super init];
     if (self != nil) {
-        _queue = [MTQueue mainQueue];
+        _queue = [SQueue mainQueue];
         _requestHandlersLock = [[NSLock alloc] init];
         _requestHandlers = [[NSMutableDictionary alloc] init];
-        _initializedStatus = [[MTPipe alloc] initWithReplay:true];
+        _initializedStatus = [[SPipe alloc] initWithReplay:true];
         _initializedStatus.sink(@(TONInitializationStatusInitializing));
         _nextRequestId = 1;
         _sendGramRandomIds = [[NSMutableSet alloc] init];
+        _enableExternalRequests = enableExternalRequests;
         
         _client = std::make_shared<tonlib::Client>();
         
@@ -306,7 +305,7 @@ typedef enum {
         
         [[NSFileManager defaultManager] createDirectoryAtPath:keystoreDirectory withIntermediateDirectories:true attributes:nil error:nil];
         
-        MTPipe *initializedStatus = _initializedStatus;
+        SPipe *initializedStatus = _initializedStatus;
         [[self requestInitWithConfigString:config blockchainName:blockchainName keystoreDirectory:keystoreDirectory enableExternalRequests:enableExternalRequests] startWithNext:nil error:^(id error) {
             NSString *errorText = @"Unknown error";
             if ([error isKindOfClass:[TONError class]]) {
@@ -354,8 +353,8 @@ typedef enum {
     return readSecureString(value->bytes_);
 }
 
-- (MTSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory enableExternalRequests:(bool)enableExternalRequests {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)requestInitWithConfigString:(NSString *)configString blockchainName:(NSString *)blockchainName keystoreDirectory:(NSString *)keystoreDirectory enableExternalRequests:(bool)enableExternalRequests {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -381,13 +380,42 @@ typedef enum {
         ));
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)updateConfig:(NSString *)config blockchainName:(NSString *)blockchainName {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else {
+                [subscriber putCompletion];
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::options_setConfig>(
+            make_object<tonlib_api::config>(
+                config.UTF8String,
+                blockchainName.UTF8String,
+                _enableExternalRequests,
+                false
+            )
+        );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
+}
+
+- (SSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -417,17 +445,17 @@ typedef enum {
         );
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         NSData *publicKeyData = [publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in getWalletAccountAddressWithPublicKey"]];
-            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+            return [[SBlockDisposable alloc] initWithBlock:^{}];
         }
         
         uint64_t requestId = _nextRequestId;
@@ -453,13 +481,13 @@ typedef enum {
         );
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)getAccountStateWithAddress:(NSString *)accountAddress {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -491,34 +519,34 @@ typedef enum {
         auto query = make_object<tonlib_api::generic_getAccountState>(make_object<tonlib_api::accountAddress>(accountAddress.UTF8String));
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         if ([_sendGramRandomIds containsObject:@(randomId)]) {
             [_sendGramRandomIds addObject:@(randomId)];
             
-            return [[MTBlockDisposable alloc] initWithBlock:^{
+            return [[SBlockDisposable alloc] initWithBlock:^{
             }];
         }
         
         NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in sendGramsFromKey"]];
-            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+            return [[SBlockDisposable alloc] initWithBlock:^{}];
         }
         
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
         __weak TON *weakSelf = self;
-        MTQueue *queue = _queue;
+        SQueue *queue = _queue;
         _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
             if (object->get_id() == tonlib_api::error::ID) {
-                [queue dispatchOnQueue:^{
+                [queue dispatch:^{
                     __strong TON *strongSelf = weakSelf;
                     if (strongSelf != nil) {
                         [_sendGramRandomIds removeObject:@(randomId)];
@@ -553,17 +581,17 @@ typedef enum {
         );
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in exportKey"]];
-            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+            return [[SBlockDisposable alloc] initWithBlock:^{}];
         }
         
         uint64_t requestId = _nextRequestId;
@@ -601,13 +629,13 @@ typedef enum {
         );
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -642,17 +670,17 @@ typedef enum {
             make_object<tonlib_api::exportedKey>(std::move(wordVector)));
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)deleteKey:(TONKey *)key {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)deleteKey:(TONKey *)key {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         NSData *publicKeyData = [key.publicKey dataUsingEncoding:NSUTF8StringEncoding];
         if (publicKeyData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in deleteKey"]];
-            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+            return [[SBlockDisposable alloc] initWithBlock:^{}];
         }
         
         uint64_t requestId = _nextRequestId;
@@ -675,13 +703,13 @@ typedef enum {
         );
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)deleteAllKeys {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)deleteAllKeys {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         uint64_t requestId = _nextRequestId;
         _nextRequestId += 1;
         
@@ -697,17 +725,17 @@ typedef enum {
         auto query = make_object<tonlib_api::deleteAllKeys>();
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (MTSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash {
-    return [[[[MTSignal alloc] initWithGenerator:^id<MTDisposable>(MTSubscriber *subscriber) {
+- (SSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         NSData *addressData = [address dataUsingEncoding:NSUTF8StringEncoding];
         if (addressData == nil) {
             [subscriber putError:[[TONError alloc] initWithText:@"Error encoding UTF8 string in getTransactionListWithAddress"]];
-            return [[MTBlockDisposable alloc] initWithBlock:^{}];
+            return [[SBlockDisposable alloc] initWithBlock:^{}];
         }
         
         uint64_t requestId = _nextRequestId;
@@ -750,9 +778,9 @@ typedef enum {
         );
         _client->send({ requestId, std::move(query) });
         
-        return [[MTBlockDisposable alloc] initWithBlock:^{
+        return [[SBlockDisposable alloc] initWithBlock:^{
         }];
-    }] startOn:[MTQueue mainQueue]] deliverOn:[MTQueue mainQueue]];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
 @end

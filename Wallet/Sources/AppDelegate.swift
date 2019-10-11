@@ -5,7 +5,6 @@ import BuildConfig
 import WalletUI
 import WalletCore
 import AVFoundation
-import MtProtoKit
 
 private func encodeText(_ string: String, _ key: Int) -> String {
     var result = ""
@@ -366,6 +365,7 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
         
         self.storage = WalletStorageInterfaceImpl(path: basePath + "/data")
         self.window = window
+        
         self.tonInstance = TonInstance(
             basePath: basePath + "/keys",
             config: config,
@@ -544,6 +544,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             ), backgroundDetailsMode: nil
         )
         
+        mainWindow.viewController = navigationController
+        
+        self.window?.makeKeyAndVisible()
+        
         let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
         print("Starting with \(documentsPath)")
         
@@ -573,230 +577,87 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 }
 """
         
-        let walletContext = WalletContextImpl(basePath: documentsPath, config: config, blockchainName: "testnet", navigationBarTheme: navigationBarTheme, window: mainWindow)
-        self.walletContext = walletContext
+        let updatedConfigSignal: Signal<String, NoError> = Signal { subscriber in
+            let downloadTask = URLSession.shared.downloadTask(with: URL(string: "https://test.ton.org/ton-lite-client-test1.config.json")!, completionHandler: { location, _, error in
+                if let location = location, let data = try? Data(contentsOf: location), let string = String(data: data, encoding: .utf8) {
+                    subscriber.putNext(string)
+                    subscriber.putCompletion()
+                }
+            })
+            downloadTask.resume()
+            
+            return ActionDisposable {
+            }
+        }
         
-        let _ = (combineLatest(queue: .mainQueue(),
-            walletContext.storage.getWalletRecords(),
-            walletContext.keychain.encryptionPublicKey()
-        )
-        |> deliverOnMainQueue).start(next: { records, publicKey in
-            if let record = records.first {
-                if let publicKey = publicKey {
-                    print("publicKey = \(publicKey.base64EncodedString())")
-                    if record.info.encryptedSecret.publicKey == publicKey {
-                        if record.exportCompleted {
-                            let _ = (walletAddress(publicKey: record.info.publicKey, tonInstance: walletContext.tonInstance)
-                            |> deliverOnMainQueue).start(next: { address in
-                                let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: record.info, address: address, enableDebugActions: false)
+        let updatedConfig = Promise<String>()
+        updatedConfig.set(updatedConfigSignal)
+        
+        let configPath = documentsPath + "/config"
+        var initialConfig: Signal<String, NoError> = .complete()
+        if let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)), let string = String(data: data, encoding: .utf8) {
+            initialConfig = .single(string)
+        } else {
+            initialConfig = updatedConfig.get() |> take(1)
+        }
+        
+        let _ = (initialConfig
+        |> deliverOnMainQueue).start(next: { initialConfig in
+            let walletContext = WalletContextImpl(basePath: documentsPath, config: initialConfig, blockchainName: "testnet", navigationBarTheme: navigationBarTheme, window: mainWindow)
+            self.walletContext = walletContext
+            
+            let _ = (updatedConfig.get()
+            |> deliverOnMainQueue).start(next: { config in
+                if config != initialConfig {
+                    walletContext.tonInstance.updateConfig(config: config, blockchainName: "testnet")
+                }
+            })
+            
+            let _ = (combineLatest(queue: .mainQueue(),
+                walletContext.storage.getWalletRecords(),
+                walletContext.keychain.encryptionPublicKey()
+            )
+            |> deliverOnMainQueue).start(next: { records, publicKey in
+                if let record = records.first {
+                    if let publicKey = publicKey {
+                        print("publicKey = \(publicKey.base64EncodedString())")
+                        if record.info.encryptedSecret.publicKey == publicKey {
+                            if record.exportCompleted {
+                                let _ = (walletAddress(publicKey: record.info.publicKey, tonInstance: walletContext.tonInstance)
+                                |> deliverOnMainQueue).start(next: { address in
+                                    let infoScreen = WalletInfoScreen(context: walletContext, walletInfo: record.info, address: address, enableDebugActions: false)
 
-                                navigationController.setViewControllers([infoScreen], animated: false)
-                            })
+                                    navigationController.setViewControllers([infoScreen], animated: false)
+                                })
+                            } else {
+                                let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(record.info, nil), walletCreatedPreloadState: nil)
+                                
+                                navigationController.setViewControllers([createdScreen], animated: false)
+                            }
                         } else {
-                            let createdScreen = WalletSplashScreen(context: walletContext, mode: .created(record.info, nil), walletCreatedPreloadState: nil)
+                            let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil)
                             
-                            navigationController.setViewControllers([createdScreen], animated: false)
+                            navigationController.setViewControllers([splashScreen], animated: false)
                         }
                     } else {
-                        let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil)
+                        let splashScreen = WalletSplashScreen(context: walletContext, mode: WalletSplashMode.secureStorageReset(.notAvailable), walletCreatedPreloadState: nil)
                         
                         navigationController.setViewControllers([splashScreen], animated: false)
                     }
                 } else {
-                    let splashScreen = WalletSplashScreen(context: walletContext, mode: WalletSplashMode.secureStorageReset(.notAvailable), walletCreatedPreloadState: nil)
-                    
-                    navigationController.setViewControllers([splashScreen], animated: false)
+                    if publicKey != nil {
+                        let splashScreen = WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)
+                        
+                        navigationController.setViewControllers([splashScreen], animated: false)
+                    } else {
+                        let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil)
+                        
+                        navigationController.setViewControllers([splashScreen], animated: false)
+                    }
                 }
-            } else {
-                if publicKey != nil {
-                    let splashScreen = WalletSplashScreen(context: walletContext, mode: .intro, walletCreatedPreloadState: nil)
-                    
-                    navigationController.setViewControllers([splashScreen], animated: false)
-                } else {
-                    let splashScreen = WalletSplashScreen(context: walletContext, mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil)
-                    
-                    navigationController.setViewControllers([splashScreen], animated: false)
-                }
-            }
+            })
         })
-        mainWindow.viewController = navigationController
-        
-        self.window?.makeKeyAndVisible()
         
         return true
     }
 }
-
-private final class Serialization: NSObject, MTSerialization {
-    func currentLayer() -> UInt {
-        return 106
-    }
-    
-    func parseMessage(_ data: Data!) -> Any! {
-        return nil
-    }
-    
-    func exportAuthorization(_ datacenterId: Int32, data: AutoreleasingUnsafeMutablePointer<NSData?>!) -> MTExportAuthorizationResponseParser! {
-        return nil
-    }
-    
-    func importAuthorization(_ authId: Int32, bytes: Data!) -> Data! {
-        return Data()
-    }
-    
-    func requestDatacenterAddress(with data: AutoreleasingUnsafeMutablePointer<NSData?>!) -> MTRequestDatacenterAddressListParser! {
-        return { _ in
-            return nil
-        }
-    }
-    
-    func requestNoop(_ data: AutoreleasingUnsafeMutablePointer<NSData?>!) -> MTRequestNoopParser! {
-        return { _ in
-            return nil
-        }
-    }
-}
-
-private final class Keychain: NSObject, MTKeychain {
-    let get: (String) -> Data?
-    let set: (String, Data) -> Void
-    let remove: (String) -> Void
-    
-    init(get: @escaping (String) -> Data?, set: @escaping (String, Data) -> Void, remove: @escaping (String) -> Void) {
-        self.get = get
-        self.set = set
-        self.remove = remove
-    }
-    
-    func setObject(_ object: Any!, forKey aKey: String!, group: String!) {
-        if let object = object {
-            let data = NSKeyedArchiver.archivedData(withRootObject: object)
-            self.set(group + ":" + aKey, data)
-        } else {
-            self.remove(group + ":" + aKey)
-        }
-    }
-    
-    func object(forKey aKey: String!, group: String!) -> Any! {
-        if let data = self.get(group + ":" + aKey) {
-            return NSKeyedUnarchiver.unarchiveObject(with: data as Data)
-        }
-        return nil
-    }
-    
-    func removeObject(forKey aKey: String!, group: String!) {
-        self.remove(group + ":" + aKey)
-    }
-    
-    func dropGroup(_ group: String!) {
-        
-    }
-}
-
-private final class TonProxyImpl: TonNetworkProxy {
-    private let context: MTContext
-    private let mtProto: MTProto
-    private let requestService: MTRequestMessageService
-    
-    init() {
-        let serialization = Serialization()
-        
-        var apiEnvironment = MTApiEnvironment()
-        
-        apiEnvironment.apiId = 8
-        apiEnvironment.langPack = "ios"
-        apiEnvironment.layer = serialization.currentLayer() as NSNumber
-        apiEnvironment.disableUpdates = true
-        apiEnvironment = apiEnvironment.withUpdatedLangPackCode("en")
-        
-        self.context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, isTestingEnvironment: false, useTempAuthKeys: false)
-        
-        let seedAddressList: [Int: [String]]
-        
-        seedAddressList = [
-            1: ["149.154.175.50", "2001:b28:f23d:f001::a"],
-            2: ["149.154.167.50", "2001:67c:4e8:f002::a"],
-            3: ["149.154.175.100", "2001:b28:f23d:f003::a"],
-            4: ["149.154.167.91", "2001:67c:4e8:f004::a"],
-            5: ["149.154.171.5", "2001:b28:f23f:f005::a"]
-        ]
-        
-        for (id, ips) in seedAddressList {
-            self.context.setSeedAddressSetForDatacenterWithId(id, seedAddressSet: MTDatacenterAddressSet(addressList: ips.map { MTDatacenterAddress(ip: $0, port: 443, preferForMedia: false, restrictToTcp: false, cdn: false, preferForProxy: false, secret: nil)! }))
-        }
-        
-        let keychainDict = Atomic<[String: Data]>(value: [:])
-        self.context.keychain = Keychain(get: { key in
-            return keychainDict.with { dict -> Data? in
-                return dict[key]
-            }
-        }, set: { key, value in
-            let _ = keychainDict.modify { dict in
-                var dict = dict
-                dict[key] = value
-                return dict
-            }
-        }, remove: { key in
-            let _ = keychainDict.modify { dict in
-                var dict = dict
-                dict.removeValue(forKey: key)
-                return dict
-            }
-        })
-        
-        let mtProto = MTProto(context: self.context, datacenterId: 2, usageCalculationInfo: nil)!
-        mtProto.useTempAuthKeys = self.context.useTempAuthKeys
-        mtProto.checkForProxyConnectionIssues = false
-        
-        self.mtProto = mtProto
-        
-        self.requestService = MTRequestMessageService(context: context)!
-        mtProto.add(self.requestService)
-        
-        self.mtProto.resume()
-    }
-    
-    func request(data: Data, timeout: Double, completion: @escaping (TonNetworkProxyResult) -> Void) -> Disposable {
-        let request = MTRequest()
-        let outputStream = MTOutputStream()
-        
-        //wallet.sendLiteRequest#e2c9d33e body:bytes = wallet.LiteResponse;
-        outputStream.write(Int32(bitPattern: 0xe2c9d33e as UInt32))
-        outputStream.writeBytes(data)
-        
-        request.setPayload(outputStream.currentBytes(), metadata: "wallet.sendLiteRequest", shortMetadata: "wallet.sendLiteRequest", responseParser: { response in
-            guard let response = response else {
-                return nil
-            }
-            let inputStream = MTInputStream(data: response)!
-            //wallet.liteResponse#764386d7 response:bytes = wallet.LiteResponse;
-            let signature = inputStream.readInt32()
-            if (signature != 0x764386d7 as Int32) {
-                return nil
-            }
-            return inputStream.readBytes()
-        })
-        
-        request.dependsOnPasswordEntry = false
-        request.shouldContinueExecutionWithErrorContext = { _ in
-            return true
-        };
-        
-        request.completed = { response, _, error in
-            if let response = response as? Data {
-                completion(.reponse(response))
-            } else {
-                completion(.error(error?.errorDescription ?? "UNKNOWN ERROR"))
-            }
-        }
-        
-        let requestId = request.internalId
-        
-        self.requestService.add(request)
-        
-        return ActionDisposable { [weak self] in
-            self?.requestService.removeRequest(byInternalId: requestId)
-        }
-    }
-}
-

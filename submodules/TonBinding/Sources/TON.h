@@ -1,8 +1,7 @@
 #import <Foundation/Foundation.h>
+#import <SSignalKit/SSignalKit.h>
 
 NS_ASSUME_NONNULL_BEGIN
-
-@class MTSignal;
 
 @interface TONError : NSObject
 
@@ -88,15 +87,17 @@ NS_ASSUME_NONNULL_BEGIN
 
 - (instancetype)initWithKeystoreDirectory:(NSString *)keystoreDirectory config:(NSString *)config blockchainName:(NSString *)blockchainName performExternalRequest:(void (^)(TONExternalRequest * _Nonnull))performExternalRequest enableExternalRequests:(bool)enableExternalRequests;
 
-- (MTSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
-- (MTSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
-- (MTSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
-- (MTSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
-- (MTSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
-- (MTSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
-- (MTSignal *)deleteKey:(TONKey *)key;
-- (MTSignal *)deleteAllKeys;
-- (MTSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash;
+- (SSignal *)updateConfig:(NSString *)config blockchainName:(NSString *)blockchainName;
+
+- (SSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
+- (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
+- (SSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
+- (SSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
+- (SSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
+- (SSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
+- (SSignal *)deleteKey:(TONKey *)key;
+- (SSignal *)deleteAllKeys;
+- (SSignal *)getTransactionListWithAddress:(NSString * _Nonnull)address lt:(int64_t)lt hash:(NSData * _Nonnull)hash;
 
 - (NSData *)encrypt:(NSData *)decryptedData secret:(NSData *)data;
 - (NSData * __nullable)decrypt:(NSData *)encryptedData secret:(NSData *)data;

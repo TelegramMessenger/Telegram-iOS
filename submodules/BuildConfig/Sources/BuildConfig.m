@@ -10,11 +10,17 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-#ifdef BUCK
-#import <MtProtoKit/MtProtoKit.h>
-#else
-#import <MtProtoKitDynamic/MtProtoKitDynamic.h>
-#endif
+#import <CommonCrypto/CommonCrypto.h>
+#import <CommonCrypto/CommonDigest.h>
+
+#import <PKCS/PKCS.h>
+
+static NSData *sha1(NSData *data) {
+    uint8_t digest[20];
+    CC_SHA1(data.bytes, (CC_LONG)data.length, digest);
+    
+    return [[NSData alloc] initWithBytes:digest length:20];
+}
 
 static NSString *telegramApplicationSecretKey = @"telegramApplicationSecretKey_v3";
 
@@ -376,7 +382,7 @@ API_AVAILABLE(ios(10))
             _dataDict[@"name"] = signature.subjectName;
         }
         if (signature.data != nil) {
-            _dataDict[@"data"] = [MTSha1(signature.data) base64EncodedStringWithOptions:0];
+            _dataDict[@"data"] = [sha1(signature.data) base64EncodedStringWithOptions:0];
             _dataDict[@"data1"] = [signature.data base64EncodedStringWithOptions:0];
         }
     }

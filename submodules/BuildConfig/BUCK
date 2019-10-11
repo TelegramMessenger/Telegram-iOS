@@ -22,7 +22,7 @@ static_library(
         "Sources/*.h",
     ]),
     deps = [
-        "//submodules/MtProtoKit:MtProtoKit#shared",
+        "//submodules/PKCS:PKCS",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
