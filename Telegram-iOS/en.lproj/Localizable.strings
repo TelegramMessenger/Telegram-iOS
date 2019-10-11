@@ -4213,6 +4213,13 @@ Unused sets are archived when you add more.";
 
 "ChatList.DeleteForCurrentUser" = "Delete just for me";
 "ChatList.DeleteForEveryone" = "Delete for me and %@";
+"ChatList.DeleteForEveryoneConfirmationTitle" = "Warning!";
+"ChatList.DeleteForEveryoneConfirmationText" = "This will **delete all messages** in this chat for **both participants**.";
+"ChatList.DeleteForEveryoneConfirmationAction" = "Delete All";
+
+"ChatList.DeleteSavedMessagesConfirmationTitle" = "Warning!";
+"ChatList.DeleteSavedMessagesConfirmationText" = "This will **delete all messages** in this chat.";
+"ChatList.DeleteSavedMessagesConfirmationAction" = "Delete All";
 
 "ChatList.ClearChatConfirmation" = "Are you sure you want to delete all\nmessages in the chat with %@?";
 

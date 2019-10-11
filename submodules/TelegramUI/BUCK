@@ -189,6 +189,7 @@ framework(
         "//submodules/WalletCore:WalletCore",
         "//submodules/Markdown:Markdown",
         "//submodules/SearchPeerMembers:SearchPeerMembers",
+        "//submodules/WidgetItems:WidgetItems",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
