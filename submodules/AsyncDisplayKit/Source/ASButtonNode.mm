@@ -71,6 +71,8 @@
   ASLockScopeSelf();
   if (!_imageNode) {
     _imageNode = [[ASImageNode alloc] init];
+    _imageNode.displayWithoutProcessing = true;
+    _imageNode.displaysAsynchronously = false;
     [_imageNode setLayerBacked:YES];
   }
   return _imageNode;
@@ -81,6 +83,8 @@
   ASLockScopeSelf();
   if (!_backgroundImageNode) {
     _backgroundImageNode = [[ASImageNode alloc] init];
+    _backgroundImageNode.displayWithoutProcessing = true;
+    _backgroundImageNode.displaysAsynchronously = false;
     [_backgroundImageNode setLayerBacked:YES];
     [_backgroundImageNode setContentMode:UIViewContentModeScaleToFill];
   }
