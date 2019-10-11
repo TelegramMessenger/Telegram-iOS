@@ -10,15 +10,18 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import ItemListPeerItem
+import ContextUI
 
 private final class GroupsInCommonControllerArguments {
     let account: Account
     
     let openPeer: (PeerId) -> Void
+    let contextAction: (Peer, ASDisplayNode, ContextGesture?) -> Void
     
-    init(account: Account, openPeer: @escaping (PeerId) -> Void) {
+    init(account: Account, openPeer: @escaping (PeerId) -> Void, contextAction: @escaping (Peer, ASDisplayNode, ContextGesture?) -> Void) {
         self.account = account
         self.openPeer = openPeer
+        self.contextAction = contextAction
     }
 }
 
@@ -94,6 +97,8 @@ private enum GroupsInCommonEntry: ItemListNodeEntry {
                 arguments.openPeer(peer.id)
             }, setPeerIdWithRevealedOptions: { _, _ in
             }, removePeer: { _ in
+            }, contextAction: { node, gesture in
+                arguments.contextAction(peer, node, gesture)
             })
         }
     }
@@ -133,11 +138,15 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
     var pushControllerImpl: ((ViewController) -> Void)?
     var getNavigationControllerImpl: (() -> NavigationController?)?
     
+    var contextActionImpl: ((Peer, ASDisplayNode, ContextGesture?) -> Void)?
+    
     let arguments = GroupsInCommonControllerArguments(account: context.account, openPeer: { memberId in
         guard let navigationController = getNavigationControllerImpl?() else {
             return
         }
         context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(memberId), animated: true))
+    }, contextAction: { peer, node, gesture in
+        contextActionImpl?(peer, node, gesture)
     })
     
     let peersSignal: Signal<[Peer]?, NoError> = .single(nil) |> then(groupsInCommon(account: context.account, peerId: peerId) |> mapToSignal { peerIds -> Signal<[Peer], NoError> in
@@ -185,5 +194,42 @@ public func groupsInCommonController(context: AccountContext, peerId: PeerId) ->
     getNavigationControllerImpl = { [weak controller] in
         return controller?.navigationController as? NavigationController
     }
+    contextActionImpl = { [weak controller] peer, node, gesture in
+        guard let controller = controller else {
+            return
+        }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+        chatController.canReadHistory.set(false)
+        let items: [ContextMenuItem] = [
+            .action(ContextMenuActionItem(text: presentationData.strings.Conversation_LinkDialogOpen, icon: { _ in nil }, action: { _, f in
+                f(.dismissWithoutContent)
+                arguments.openPeer(peer.id)
+            }))
+        ]
+        let contextController = ContextController(account: context.account, theme: presentationData.theme, strings: presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(items), reactionItems: [], gesture: gesture)
+        controller.presentInGlobalOverlay(contextController)
+    }
     return controller
+}
+
+private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
+    let controller: ViewController
+    weak var sourceNode: ASDisplayNode?
+    
+    init(controller: ViewController, sourceNode: ASDisplayNode?) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+    
+    func transitionInfo() -> ContextControllerTakeControllerInfo? {
+        let sourceNode = self.sourceNode
+        return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
+            if let sourceNode = sourceNode {
+                return (sourceNode, sourceNode.bounds)
+            } else {
+                return nil
+            }
+        })
+    }
 }
