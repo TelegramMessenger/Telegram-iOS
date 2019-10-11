@@ -65,6 +65,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var items: Signal<[ContextMenuItem], NoError>
     private let beginDismiss: (ContextMenuActionResult) -> Void
     private let reactionSelected: (String) -> Void
+    private let beganAnimatingOut: () -> Void
     private let getController: () -> ContextController?
     private weak var gesture: ContextGesture?
     
@@ -105,13 +106,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let itemsDisposable = MetaDisposable()
     
-    init(account: Account, controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void) {
+    init(account: Account, controller: ContextController, theme: PresentationTheme, strings: PresentationStrings, source: ContextContentSource, items: Signal<[ContextMenuItem], NoError>, reactionItems: [ReactionContextItem], beginDismiss: @escaping (ContextMenuActionResult) -> Void, recognizer: TapLongTapOrDoubleTapGestureRecognizer?, gesture: ContextGesture?, reactionSelected: @escaping (String) -> Void, beganAnimatingOut: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.source = source
         self.items = items
         self.beginDismiss = beginDismiss
         self.reactionSelected = reactionSelected
+        self.beganAnimatingOut = beganAnimatingOut
         self.gesture = gesture
         
         self.getController = { [weak controller] in
@@ -152,10 +154,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.contentContainerNode = ContextContentContainerNode()
         
+        var feedbackTap: (() -> Void)?
+        
         self.actionsContainerNode = ContextActionsContainerNode(theme: theme, items: [], getController: { [weak controller] in
             return controller
         }, actionSelected: { result in
             beginDismiss(result)
+        }, feedbackTap: {
+            feedbackTap?()
         })
         
         if !reactionItems.isEmpty {
@@ -166,6 +172,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         super.init()
+        
+        feedbackTap = { [weak self] in
+            self?.hapticFeedback.tap()
+        }
         
         self.scrollNode.view.delegate = self
         
@@ -586,6 +596,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func animateOut(result initialResult: ContextMenuActionResult, completion: @escaping () -> Void) {
+        self.beganAnimatingOut()
+        
         var transitionDuration: Double = 0.2
         var transitionCurve: ContainedViewLayoutTransitionCurve = .easeInOut
         
@@ -945,6 +957,8 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return self?.getController()
         }, actionSelected: { [weak self] result in
             self?.beginDismiss(result)
+        }, feedbackTap: { [weak self] in
+            self?.hapticFeedback.tap()
         })
         self.scrollNode.insertSubnode(self.actionsContainerNode, aboveSubnode: previousActionsContainerNode)
         
@@ -1088,12 +1102,24 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, transition: actionsContainerTransition)
-                    let contentScale = (layout.size.width - actionsSideInset * 2.0) / layout.size.width
+                    let constrainedWidth: CGFloat
+                    if layout.size.width < layout.size.height {
+                        constrainedWidth = layout.size.width
+                    } else {
+                        constrainedWidth = floor(layout.size.width / 2.0)
+                    }
+                    
+                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, transition: actionsContainerTransition)
+                    let contentScale = (constrainedWidth - actionsSideInset * 2.0) / constrainedWidth
                     var contentUnscaledSize: CGSize
                     if case .compact = layout.metrics.widthClass {
-                        let proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
-                        contentUnscaledSize = CGSize(width: layout.size.width, height: max(400.0, proposedContentHeight))
+                        let proposedContentHeight: CGFloat
+                        if layout.size.width < layout.size.height {
+                            proposedContentHeight = layout.size.height - topEdge - contentActionsSpacing - actionsSize.height - layout.intrinsicInsets.bottom - actionsBottomInset
+                        } else {
+                            proposedContentHeight = layout.size.height - topEdge - topEdge
+                        }
+                        contentUnscaledSize = CGSize(width: constrainedWidth, height: max(100.0, proposedContentHeight))
                         
                         if let preferredSize = contentParentNode.controller.preferredContentSizeForLayout(ContainerViewLayout(size: contentUnscaledSize, metrics: LayoutMetrics(widthClass: .compact, heightClass: .compact), deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(), safeInsets: UIEdgeInsets(), statusBarHeight: nil, inputHeight: nil, inputHeightIsInteractivellyChanging: false, inVoiceOver: false)) {
                             contentUnscaledSize = preferredSize
@@ -1115,16 +1141,22 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     var originalContentFrame: CGRect
                     var contentHeight: CGFloat
                     if case .compact = layout.metrics.widthClass {
-                        originalActionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: min(maximumActionsFrameOrigin, floor((layout.size.height - contentActionsSpacing - contentSize.height) / 2.0) + contentSize.height + contentActionsSpacing)), size: actionsSize)
-                        originalContentFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: originalActionsFrame.minY - contentActionsSpacing - contentSize.height), size: contentSize)
-                        if originalContentFrame.minY < topEdge {
-                            let requiredOffset = topEdge - originalContentFrame.minY
-                            let availableOffset = max(0.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - originalActionsFrame.maxY)
-                            let offset = min(requiredOffset, availableOffset)
-                            originalActionsFrame = originalActionsFrame.offsetBy(dx: 0.0, dy: offset)
-                            originalContentFrame = originalContentFrame.offsetBy(dx: 0.0, dy: offset)
+                        if layout.size.width < layout.size.height {
+                            originalActionsFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: min(maximumActionsFrameOrigin, floor((layout.size.height - contentActionsSpacing - contentSize.height) / 2.0) + contentSize.height + contentActionsSpacing)), size: actionsSize)
+                            originalContentFrame = CGRect(origin: CGPoint(x: actionsSideInset, y: originalActionsFrame.minY - contentActionsSpacing - contentSize.height), size: contentSize)
+                            if originalContentFrame.minY < topEdge {
+                                let requiredOffset = topEdge - originalContentFrame.minY
+                                let availableOffset = max(0.0, layout.size.height - layout.intrinsicInsets.bottom - actionsBottomInset - originalActionsFrame.maxY)
+                                let offset = min(requiredOffset, availableOffset)
+                                originalActionsFrame = originalActionsFrame.offsetBy(dx: 0.0, dy: offset)
+                                originalContentFrame = originalContentFrame.offsetBy(dx: 0.0, dy: offset)
+                            }
+                            contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalContentFrame.minY + contentTopInset)
+                        } else {
+                            originalContentFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - contentSize.width - actionsSideInset - actionsSize.width) / 2.0), y: floor((layout.size.height - contentSize.height) / 2.0)), size: contentSize)
+                            originalActionsFrame = CGRect(origin: CGPoint(x: originalContentFrame.maxX + actionsSideInset, y: max(topEdge, originalContentFrame.minY)), size: actionsSize)
+                            contentHeight = max(layout.size.height, max(originalContentFrame.maxY, originalActionsFrame.maxY))
                         }
-                        contentHeight = max(layout.size.height, max(layout.size.height, originalActionsFrame.maxY + actionsBottomInset) - originalContentFrame.minY + contentTopInset)
                     } else {
                         originalContentFrame = CGRect(origin: CGPoint(x: floor(originalProjectedContentViewFrame.1.midX - contentSize.width / 2.0), y: floor(originalProjectedContentViewFrame.1.midY - contentSize.height / 2.0)), size: contentSize)
                         originalContentFrame.origin.x = min(originalContentFrame.origin.x, layout.size.width - actionsSideInset - contentSize.width)
@@ -1342,6 +1374,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
                 return
             }
             strongSelf.reactionSelected?(value)
+        }, beganAnimatingOut: { [weak self] in
+            self?.statusBar.statusBarStyle = .Ignore
         })
         
         self.displayNodeDidLoad()

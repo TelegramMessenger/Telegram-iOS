@@ -3,6 +3,35 @@ import AsyncDisplayKit
 import Display
 import TelegramPresentationData
 
+private final class ContextActionsSelectionGestureRecognizer: UIPanGestureRecognizer {
+    var updateLocation: ((CGPoint, Bool) -> Void)?
+    var completed: ((Bool) -> Void)?
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        
+        self.updateLocation?(touches.first!.location(in: self.view), false)
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesMoved(touches, with: event)
+        
+        self.updateLocation?(touches.first!.location(in: self.view), true)
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        
+        self.completed?(true)
+    }
+    
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        
+        self.completed?(false)
+    }
+}
+
 private enum ContextItemNode {
     case action(ContextActionNode)
     case itemSeparator(ASDisplayNode)
@@ -12,8 +41,14 @@ private enum ContextItemNode {
 final class ContextActionsContainerNode: ASDisplayNode {
     private var effectView: UIVisualEffectView?
     private var itemNodes: [ContextItemNode]
+    private let feedbackTap: () -> Void
     
-    init(theme: PresentationTheme, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+    private(set) var gesture: UIGestureRecognizer?
+    private var currentHighlightedActionNode: ContextActionNode?
+    
+    init(theme: PresentationTheme, items: [ContextMenuItem], getController: @escaping () -> ContextController?, actionSelected: @escaping (ContextMenuActionResult) -> Void, feedbackTap: @escaping () -> Void) {
+        self.feedbackTap = feedbackTap
+        
         var itemNodes: [ContextItemNode] = []
         for i in 0 ..< items.count {
             switch items[i] {
@@ -43,6 +78,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.itemNodes.forEach({ itemNode in
             switch itemNode {
             case let .action(actionNode):
+                actionNode.isUserInteractionEnabled = false
                 self.addSubnode(actionNode)
             case let .itemSeparator(separatorNode):
                 self.addSubnode(separatorNode)
@@ -50,6 +86,36 @@ final class ContextActionsContainerNode: ASDisplayNode {
                 self.addSubnode(separatorNode)
             }
         })
+        
+        let gesture = ContextActionsSelectionGestureRecognizer(target: nil, action: nil)
+        self.gesture = gesture
+        gesture.updateLocation = { [weak self] point, moved in
+            guard let strongSelf = self else {
+                return
+            }
+            let actionNode = strongSelf.actionNode(at: point)
+            if actionNode !== strongSelf.currentHighlightedActionNode {
+                if actionNode != nil, moved {
+                    strongSelf.feedbackTap()
+                }
+                strongSelf.currentHighlightedActionNode?.setIsHighlighted(false)
+            }
+            strongSelf.currentHighlightedActionNode = actionNode
+            actionNode?.setIsHighlighted(true)
+        }
+        gesture.completed = { [weak self] performAction in
+            guard let strongSelf = self else {
+                return
+            }
+            if let currentHighlightedActionNode = strongSelf.currentHighlightedActionNode {
+                strongSelf.currentHighlightedActionNode = nil
+                currentHighlightedActionNode.setIsHighlighted(false)
+                if performAction {
+                    currentHighlightedActionNode.performAction()
+                }
+            }
+        }
+        self.view.addGestureRecognizer(gesture)
     }
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
