@@ -21,6 +21,19 @@ private func cancelScrollViewGestures(view: UIView?) {
     }
 }
 
+private func cancelOtherGestures(gesture: TapLongTapOrDoubleTapGestureRecognizer, view: UIView) {
+    if let gestureRecognizers = view.gestureRecognizers {
+        for recognizer in gestureRecognizers {
+            if let recognizer = recognizer as? TapLongTapOrDoubleTapGestureRecognizer, recognizer !== gesture {
+                recognizer.cancel()
+            }
+        }
+    }
+    for subview in view.subviews {
+        cancelOtherGestures(gesture: gesture, view: subview)
+    }
+}
+
 private class TapLongTapOrDoubleTapGestureRecognizerTimerTarget: NSObject {
     weak var target: TapLongTapOrDoubleTapGestureRecognizer?
     
@@ -119,6 +132,9 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
         if let (location, _) = self.touchLocationAndTimestamp {
             self.lastRecognizedGestureAndLocation = (.longTap, location)
             if let longTap = self.longTap {
+                if let window = self.view?.window {
+                    cancelOtherGestures(gesture: self, view: window)
+                }
                 self.recognizedLongTap = true
                 self.state = .began
                 longTap(location, self)
