@@ -70,7 +70,7 @@ class NavigationTransitionCoordinator {
         
         switch transition {
             case .Push:
-                self.container.insertSubnode(topNode, belowSubnode: topNode)
+                self.container.addSubnode(topNode)
             case .Pop:
                 self.container.insertSubnode(bottomNode, belowSubnode: topNode)
         }
