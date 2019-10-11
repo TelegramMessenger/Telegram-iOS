@@ -16,6 +16,7 @@ static_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/LocalizedPeerData:LocalizedPeerData",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
