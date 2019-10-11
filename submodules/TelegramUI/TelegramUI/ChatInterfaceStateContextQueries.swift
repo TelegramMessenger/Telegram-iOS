@@ -8,6 +8,7 @@ import LegacyComponents
 import TextFormat
 import AccountContext
 import Emoji
+import SearchPeerMembers
 
 enum ChatContextQueryError {
     case inlineBotLocationRequest(PeerId)

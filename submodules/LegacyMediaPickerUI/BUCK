@@ -24,6 +24,7 @@ static_library(
         "//submodules/LegacyUI:LegacyUI",
         "//submodules/MimeTypes:MimeTypes",
         "//submodules/LocalMediaResources:LocalMediaResources",
+        "//submodules/SearchPeerMembers:SearchPeerMembers",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
