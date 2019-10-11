@@ -62,6 +62,7 @@ public enum ViewControllerNavigationPresentation {
     case `default`
     case master
     case modal
+    case standaloneModal
     case modalInLargeLayout
 }
 
@@ -439,7 +440,11 @@ public enum ViewControllerNavigationPresentation {
     
     override open func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         if let navigationController = self.navigationController as? NavigationController {
-            navigationController.filterController(self, animated: flag)
+            var animated = flag
+            if case .standaloneModal = self.navigationPresentation {
+                animated = false
+            }
+            navigationController.filterController(self, animated: animated)
         } else {
             assertionFailure()
         }

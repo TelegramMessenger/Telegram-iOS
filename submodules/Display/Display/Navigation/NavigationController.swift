@@ -537,6 +537,11 @@ open class NavigationController: UINavigationController, ContainableController, 
         for i in (0 ..< navigationLayout.modal.count).reversed() {
             let modalContainer = self.modalContainers[i]
             
+            var isStandaloneModal = false
+            if case .standaloneModal = modalContainer.container.controllers.first?.navigationPresentation {
+                isStandaloneModal = true
+            }
+            
             let containerTransition: ContainedViewLayoutTransition
             if modalContainer.supernode == nil {
                 containerTransition = .immediate
@@ -572,7 +577,9 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             if modalContainer.supernode != nil {
-                visibleModalCount += 1
+                if !isStandaloneModal || visibleModalCount != 0 {
+                    visibleModalCount += 1
+                }
                 if previousModalContainer == nil {
                     topModalDismissProgress = modalContainer.dismissProgress
                     if case .compact = layout.metrics.widthClass {
@@ -587,6 +594,14 @@ open class NavigationController: UINavigationController, ContainableController, 
                     modalContainer.canHaveKeyboardFocus = false
                 }
                 previousModalContainer = modalContainer
+                if isStandaloneModal {
+                    switch modalContainer.container.statusBarStyle {
+                    case .Hide:
+                        statusBarHidden = true
+                    default:
+                        break
+                    }
+                }
             }
         }
         

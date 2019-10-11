@@ -289,6 +289,11 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         
         self.validLayout = layout
         
+        var isStandaloneModal = false
+        if case .standaloneModal = controllers.first?.navigationPresentation {
+            isStandaloneModal = true
+        }
+        
         transition.updateFrame(node: self.dim, frame: CGRect(origin: CGPoint(), size: layout.size))
         self.ignoreScrolling = true
         self.scrollNode.view.isScrollEnabled = (layout.inputHeight == nil || layout.inputHeight == 0.0) && self.isInteractiveDimissEnabled
@@ -302,6 +307,8 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         }
         self.ignoreScrolling = false
         
+        self.scrollNode.view.isScrollEnabled = !isStandaloneModal
+        
         let containerLayout: ContainerViewLayout
         let containerFrame: CGRect
         let containerScale: CGFloat
@@ -310,14 +317,28 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             self.panRecognizer?.isEnabled = true
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.25)
             self.container.clipsToBounds = true
-            self.container.cornerRadius = 10.0
-            if #available(iOS 11.0, *) {
-                self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+            if isStandaloneModal {
+                self.container.cornerRadius = 0.0
+            } else {
+                self.container.cornerRadius = 10.0
             }
             
-            var topInset: CGFloat = 10.0
-            if let statusBarHeight = layout.statusBarHeight {
-                topInset += statusBarHeight
+            if #available(iOS 11.0, *) {
+                if layout.safeInsets.bottom.isZero {
+                    self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+                } else {
+                    self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+                }
+            }
+            
+            var topInset: CGFloat
+            if isStandaloneModal {
+                topInset = 0.0
+            } else {
+                topInset = 10.0
+                if let statusBarHeight = layout.statusBarHeight {
+                    topInset += statusBarHeight
+                }
             }
             
             containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
@@ -358,8 +379,11 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     }
     
     func animateIn(transition: ContainedViewLayoutTransition) {
-        transition.updateAlpha(node: self.dim, alpha: 1.0)
-        transition.animatePositionAdditive(node: self.container, offset: CGPoint(x: 0.0, y: self.bounds.height + self.container.bounds.height / 2.0 - (self.container.position.y - self.bounds.height)))
+        if case .standaloneModal = self.container.controllers.first?.navigationPresentation {
+        } else {
+            transition.updateAlpha(node: self.dim, alpha: 1.0)
+            transition.animatePositionAdditive(node: self.container, offset: CGPoint(x: 0.0, y: self.bounds.height + self.container.bounds.height / 2.0 - (self.container.position.y - self.bounds.height)))
+        }
     }
     
     func dismiss(transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) -> ContainedViewLayoutTransition {
@@ -367,15 +391,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             controller.viewWillDisappear(transition.isAnimated)
         }
         
-        if transition.isAnimated {
-            let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-            let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
-            alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
-            positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0 + self.bounds.height), beginWithCurrentState: true, completion: { [weak self] _ in
-                completion()
-            })
-            return positionTransition
-        } else {
+        if case .standaloneModal = self.container.controllers.first?.navigationPresentation {
             for controller in self.container.controllers {
                 controller.setIgnoreAppearanceMethodInvocations(true)
                 controller.displayNode.removeFromSupernode()
@@ -384,6 +400,25 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
             completion()
             return transition
+        } else {
+            if transition.isAnimated {
+                let alphaTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+                let positionTransition: ContainedViewLayoutTransition = .animated(duration: 0.25, curve: .easeInOut)
+                alphaTransition.updateAlpha(node: self.dim, alpha: 0.0, beginWithCurrentState: true)
+                positionTransition.updatePosition(node: self.container, position: CGPoint(x: self.container.position.x, y: self.bounds.height + self.container.bounds.height / 2.0 + self.bounds.height), beginWithCurrentState: true, completion: { [weak self] _ in
+                    completion()
+                })
+                return positionTransition
+            } else {
+                for controller in self.container.controllers {
+                    controller.setIgnoreAppearanceMethodInvocations(true)
+                    controller.displayNode.removeFromSupernode()
+                    controller.setIgnoreAppearanceMethodInvocations(false)
+                    controller.viewDidDisappear(transition.isAnimated)
+                }
+                completion()
+                return transition
+            }
         }
     }
     
