@@ -747,12 +747,12 @@ public enum SendGramsFromWalletError {
     case network
 }
 
-public func sendGramsFromWallet(storage: WalletStorageInterface, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, localPassword: Data, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<[PendingWalletTransaction], SendGramsFromWalletError> {
+public func sendGramsFromWallet(storage: WalletStorageInterface, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, localPassword: Data, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<PendingWalletTransaction, SendGramsFromWalletError> {
     return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
     |> castError(SendGramsFromWalletError.self)
-    |> mapToSignal { fromAddress -> Signal<[PendingWalletTransaction], SendGramsFromWalletError> in
+    |> mapToSignal { fromAddress -> Signal<PendingWalletTransaction, SendGramsFromWalletError> in
         return tonInstance.sendGramsFromWallet(decryptedSecret: decryptedSecret, localPassword: localPassword, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId)
-        |> mapToSignal { result -> Signal<[PendingWalletTransaction], SendGramsFromWalletError> in
+        |> mapToSignal { result -> Signal<PendingWalletTransaction, SendGramsFromWalletError> in
             return storage.updateWalletRecords { records in
                 var records = records
                 for i in 0 ..< records.count {
@@ -765,15 +765,8 @@ public func sendGramsFromWallet(storage: WalletStorageInterface, tonInstance: To
                 }
                 return records
             }
-            |> map { records -> [PendingWalletTransaction] in
-                for i in 0 ..< records.count {
-                    if records[i].info.publicKey == walletInfo.publicKey {
-                        if let state = records[i].state {
-                            return state.pendingTransactions
-                        }
-                    }
-                }
-                return []
+            |> map { _ -> PendingWalletTransaction in
+                return result
             }
             |> castError(SendGramsFromWalletError.self)
         }
