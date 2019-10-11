@@ -12,6 +12,7 @@ import ActivityIndicator
 import TelegramStringFormatting
 import PeerPresenceStatusManager
 import ChatTitleActivityNode
+import LocalizedPeerData
 
 enum ChatTitleContent {
     case peer(peerView: PeerView, onlineMemberCount: Int32?, isScheduledMessages: Bool)

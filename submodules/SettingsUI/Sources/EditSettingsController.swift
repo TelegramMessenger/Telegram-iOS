@@ -396,7 +396,7 @@ func editSettingsController(context: AccountContext, currentName: ItemListAvatar
         }
         
         var updateNameSignal: Signal<Void, NoError> = .complete()
-        if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
+        if let updateName = updateName, case let .personName(firstName, lastName, _) = updateName {
             updateNameSignal = updateAccountPeerName(account: context.account, firstName: firstName, lastName: lastName)
         }
         var updateBioSignal: Signal<Void, NoError> = .complete()

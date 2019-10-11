@@ -219,8 +219,8 @@ public func createChannelController(context: AccountContext) -> ViewController {
             switch editingName {
             case let .title(title, type):
                 current.editingName = .title(title: String(title.prefix(255)), type: type)
-            case let  .personName(firstName, lastName):
-                current.editingName = .personName(firstName: String(firstName.prefix(255)), lastName: String(lastName.prefix(255)))
+            case let  .personName(firstName, lastName, _):
+                current.editingName = .personName(firstName: String(firstName.prefix(255)), lastName: String(lastName.prefix(255)), phone: "")
             }
             return current
         }

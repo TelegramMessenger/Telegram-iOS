@@ -83,7 +83,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, source: ChatC
             }
         }
         
-        if !isSavedMessages, let peer = peer as? TelegramUser, !peer.flags.contains(.isSupport) && peer.botInfo == nil {
+        if !isSavedMessages, let peer = peer as? TelegramUser, !peer.flags.contains(.isSupport) && peer.botInfo == nil && !peer.isDeleted {
             if !transaction.isPeerContact(peerId: peer.id) {
                 items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_AddToContacts, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     context.sharedContext.openAddPersonContact(context: context, peerId: peerId, pushController: { controller in

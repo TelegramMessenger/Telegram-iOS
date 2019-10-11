@@ -498,7 +498,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                     if let addressName = peer.addressName, !addressName.isEmpty {
                         discussionGroupTitle = "@\(addressName)"
                     } else {
-                        discussionGroupTitle = peer.displayTitle
+                        discussionGroupTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                     }
                 } else {
                     discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
@@ -533,7 +533,7 @@ private func channelInfoEntries(account: Account, presentationData: Presentation
                         if let addressName = peer.addressName, !addressName.isEmpty {
                             discussionGroupTitle = "@\(addressName)"
                         } else {
-                            discussionGroupTitle = peer.displayTitle
+                            discussionGroupTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                         }
                     } else if canEditChannel {
                         discussionGroupTitle = presentationData.strings.Channel_DiscussionGroupAdd
@@ -754,7 +754,7 @@ public func channelInfoController(context: AccountContext, peerId: PeerId) -> Vi
                 let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                 let _ = currentAvatarMixin.swap(mixin)
                 mixin.requestSearchController = { assetsController in
-                    let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle, completion: { result in
+                    let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { result in
                         assetsController?.dismiss()
                         completedImpl(result)
                     }))

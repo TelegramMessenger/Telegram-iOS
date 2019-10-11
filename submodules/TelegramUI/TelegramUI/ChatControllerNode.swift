@@ -465,7 +465,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 self.navigationBar?.isHidden = true
             }
             if self.overlayNavigationBar == nil {
-                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, close: { [weak self] in
+                let overlayNavigationBar = ChatOverlayNavigationBar(theme: self.chatPresentationInterfaceState.theme, strings: self.chatPresentationInterfaceState.strings, nameDisplayOrder: self.chatPresentationInterfaceState.nameDisplayOrder, close: { [weak self] in
                     self?.dismissAsOverlay()
                 })
                 overlayNavigationBar.peerView = self.peerView
@@ -1190,7 +1190,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }
             let panelFrame = dismissedInputContextPanelNode.placement == .overTextInput ? inputContextPanelsOverMainPanelFrame : inputContextPanelsFrame
             if !dismissedInputContextPanelNode.frame.equalTo(panelFrame) {
-                dismissedInputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition, interfaceState: self.chatPresentationInterfaceState)
+                dismissedInputContextPanelNode.updateLayout(size: panelFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: 0.0, transition: transition, interfaceState: self.chatPresentationInterfaceState)
                 transition.updateFrame(node: dismissedInputContextPanelNode, frame: panelFrame, completion: { _ in
                     frameCompleted = true
                     completed()

@@ -12,6 +12,7 @@ import AlertUI
 import PresentationDataUtils
 import ItemListAvatarAndNameInfoItem
 import Emoji
+import LocalizedPeerData
 
 private let rankMaxLength: Int32 = 16
 

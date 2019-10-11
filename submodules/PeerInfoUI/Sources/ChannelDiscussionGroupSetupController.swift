@@ -168,9 +168,9 @@ private func channelDiscussionGroupSetupControllerEntries(presentationData: Pres
     if let linkedDiscussionPeerId = cachedData.linkedDiscussionPeerId {
         if let group = view.peers[linkedDiscussionPeerId] {
             if case .group = peer.info {
-                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle, true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), true, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             } else {
-                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle, false, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
+                entries.append(.header(presentationData.theme, presentationData.strings, group.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), false, presentationData.strings.Channel_DiscussionGroup_HeaderLabel))
             }
             
             entries.append(.group(0, presentationData.theme, presentationData.strings, group, presentationData.nameDisplayOrder))
@@ -244,7 +244,8 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             guard let peer = peer else {
                 return
             }
-            pushControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle + " Chat", mode: .supergroup, completion: { groupId, dismiss in
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            pushControllerImpl?(context.sharedContext.makeCreateGroupController(context: context, peerIds: [], initialTitle: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder) + " Chat", mode: .supergroup, completion: { groupId, dismiss in
                 var applySignal = updateGroupDiscussionForChannel(network: context.account.network, postbox: context.account.postbox, channelId: peerId, groupId: groupId)
                 var cancelImpl: (() -> Void)?
                 let progressSignal = Signal<Never, NoError> { subscriber in
@@ -305,7 +306,7 @@ public func channelDiscussionGroupSetupController(context: AccountContext, peerI
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let actionSheet = ActionSheetController(presentationTheme: presentationData.theme)
             actionSheet.setItemGroups([ActionSheetItemGroup(items: [
-                ChannelDiscussionGroupActionSheetItem(context: context, channelPeer: channelPeer, groupPeer: groupPeer, strings: presentationData.strings),
+                ChannelDiscussionGroupActionSheetItem(context: context, channelPeer: channelPeer, groupPeer: groupPeer, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder),
                 ActionSheetButtonItem(title: presentationData.strings.Channel_DiscussionGroup_LinkGroup, color: .accent, action: { [weak actionSheet] in
                     actionSheet?.dismissAnimated()
                     

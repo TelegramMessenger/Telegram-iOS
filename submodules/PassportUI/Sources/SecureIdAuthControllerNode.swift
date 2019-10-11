@@ -6,6 +6,7 @@ import AsyncDisplayKit
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import ActivityIndicator
 import AccountContext
 
@@ -43,7 +44,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
         self.activityIndicator.isHidden = true
         
         self.scrollNode = ASScrollNode()
-        self.headerNode = SecureIdAuthHeaderNode(account: context.account, theme: presentationData.theme, strings: presentationData.strings)
+        self.headerNode = SecureIdAuthHeaderNode(account: context.account, theme: presentationData.theme, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder)
         self.acceptNode = SecureIdAuthAcceptNode(title: presentationData.strings.Passport_Authorize, theme: presentationData.theme)
         
         super.init()
@@ -303,7 +304,7 @@ final class SecureIdAuthControllerNode: ViewControllerTracingNode {
                                     current.updateValues(formData.values)
                                     contentNode = current
                                 } else {
-                                    let current = SecureIdAuthFormContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, peer: encryptedFormData.servicePeer, privacyPolicyUrl: encryptedFormData.form.termsUrl, form: formData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, openField: { [weak self] field in
+                                    let current = SecureIdAuthFormContentNode(theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peer: encryptedFormData.servicePeer, privacyPolicyUrl: encryptedFormData.form.termsUrl, form: formData, primaryLanguageByCountry: encryptedFormData.primaryLanguageByCountry, openField: { [weak self] field in
                                         if let strongSelf = self {
                                             switch field {
                                                 case .identity, .address:

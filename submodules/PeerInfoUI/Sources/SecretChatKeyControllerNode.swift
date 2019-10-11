@@ -8,6 +8,7 @@ import TelegramPresentationData
 import TextFormat
 import AccountContext
 import EncryptionKeyVisualization
+import LocalizedPeerData
 
 private func processHexString(_ string: String) -> String {
     var result = ""

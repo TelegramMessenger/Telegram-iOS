@@ -12,7 +12,7 @@ private func accountInfo(account: Account) -> Signal<StoredAccountInfo, NoError>
         if let addressName = peer.addressName {
             return "\(addressName)"
         }
-        return peer.displayTitle
+        return peer.debugDisplayTitle
     }
     
     let primaryDatacenterId = Int32(account.network.datacenterId)

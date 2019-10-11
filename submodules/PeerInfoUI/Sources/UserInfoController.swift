@@ -24,6 +24,7 @@ import PeerAvatarGalleryUI
 import NotificationMuteSettingsUI
 import NotificationSoundSelectionUI
 import Markdown
+import LocalizedPeerData
 
 private final class UserInfoControllerArguments {
     let account: Account
@@ -1031,9 +1032,9 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                 } else {
                     let text: String
                     if value {
-                        text = presentationData.strings.UserInfo_BlockConfirmation(peer.displayTitle).0
+                        text = presentationData.strings.UserInfo_BlockConfirmation(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                     } else {
-                        text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle).0
+                        text = presentationData.strings.UserInfo_UnblockConfirmation(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0
                     }
                     presentControllerImpl?(textAlertController(context: context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_No, action: {}), TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Yes, action: {
                         updatePeerBlockedDisposable.set(requestUpdatePeerIsBlocked(account: context.account, peerId: peer.id, isBlocked: value).start())
@@ -1254,7 +1255,7 @@ public func userInfoController(context: AccountContext, peerId: PeerId, mode: Pe
                         }
                     }
                     
-                    if let updateName = updateName, case let .personName(firstName, lastName) = updateName {
+                    if let updateName = updateName, case let .personName(firstName, lastName, _) = updateName {
                         updatePeerNameDisposable.set((updateContactName(account: context.account, peerId: peerId, firstName: firstName, lastName: lastName)
                         |> deliverOnMainQueue).start(error: { _ in
                             updateState { state in

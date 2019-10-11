@@ -9,6 +9,7 @@ import Display
 import AlertUI
 import PresentationDataUtils
 import OverlayStatusController
+import LocalizedPeerData
 
 func contactContextMenuItems(context: AccountContext, peerId: PeerId, contactsController: ContactsController?) -> Signal<[ContextMenuItem], NoError> {
     let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
