@@ -549,33 +549,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         self.window?.makeKeyAndVisible()
         
         let documentsPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0]
+        #if DEBUG
         print("Starting with \(documentsPath)")
-        
-        let config =
-"""
-{
-  "liteservers": [
-    {
-      "ip": 1137658550,
-      "port": 4924,
-      "id": {
-        "@type": "pub.ed25519",
-        "key": "peJTw/arlRfssgTuf9BMypJzqOi7SXEqSPSWiEw2U1M="
-      }
-    }
-  ],
-  "validator": {
-    "@type": "validator.config.global",
-    "zero_state": {
-      "workchain": -1,
-      "shard": -9223372036854775808,
-      "seqno": 0,
-      "root_hash": "VCSXxDHhTALFxReyTZRd8E4Ya3ySOmpOWAS4rBX9XBY=",
-      "file_hash": "eh9yveSz1qMdJ7mOsO+I+H77jkLr9NpAuEkoJuseXBo="
-    }
-  }
-}
-"""
+        #endif
         
         let updatedConfigSignal: Signal<String, NoError> = Signal { subscriber in
             let downloadTask = URLSession.shared.downloadTask(with: URL(string: "https://test.ton.org/ton-lite-client-test1.config.json")!, completionHandler: { location, _, error in
@@ -609,7 +585,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             let _ = (updatedConfig.get()
             |> deliverOnMainQueue).start(next: { config in
                 if config != initialConfig {
-                    walletContext.tonInstance.updateConfig(config: config, blockchainName: "testnet")
+                    let _ = walletContext.tonInstance.updateConfig(config: config, blockchainName: "testnet").start()
                 }
             })
             
