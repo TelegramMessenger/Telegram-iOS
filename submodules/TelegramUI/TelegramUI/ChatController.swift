@@ -4488,6 +4488,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             print()
         }
         
+        switch self.presentationInterfaceState.mode {
+        case .standard, .inline:
+                break
+        case .overlay:
+            if layout.safeInsets.top.isZero {
+                self.statusBar.statusBarStyle = .Hide
+            } else {
+                self.statusBar.statusBarStyle = .Ignore
+            }
+        }
+        
         self.chatDisplayNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationHeight, transition: transition, listViewTransaction: { updateSizeAndInsets, additionalScrollDistance, scrollToTop, completion in
             self.chatDisplayNode.historyNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, additionalScrollDistance: additionalScrollDistance, scrollToTop: scrollToTop, completion: completion)
         })
@@ -4823,7 +4834,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
                 self.deferScreenEdgeGestures = []
             case .overlay:
-                self.statusBar.statusBarStyle = .Hide
                 self.deferScreenEdgeGestures = [.top]
             case .inline:
                 self.statusBar.statusBarStyle = .Ignore

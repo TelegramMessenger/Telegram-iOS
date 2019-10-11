@@ -532,6 +532,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         var previousModalContainer: NavigationModalContainer?
         var visibleModalCount = 0
+        var hasVisibleStandaloneModal = false
         var topModalDismissProgress: CGFloat = 0.0
         
         for i in (0 ..< navigationLayout.modal.count).reversed() {
@@ -577,8 +578,12 @@ open class NavigationController: UINavigationController, ContainableController, 
             }
             
             if modalContainer.supernode != nil {
-                if !isStandaloneModal || visibleModalCount != 0 {
+                if !hasVisibleStandaloneModal && !isStandaloneModal {
                     visibleModalCount += 1
+                }
+                if isStandaloneModal {
+                    hasVisibleStandaloneModal = true
+                    visibleModalCount = 0
                 }
                 if previousModalContainer == nil {
                     topModalDismissProgress = modalContainer.dismissProgress

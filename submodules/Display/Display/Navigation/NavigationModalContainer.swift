@@ -334,20 +334,25 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             var topInset: CGFloat
             if isStandaloneModal {
                 topInset = 0.0
+                containerLayout = layout
+                
+                let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: containerLayout.size)
+                containerScale = 1.0
+                containerFrame = unscaledFrame
             } else {
                 topInset = 10.0
                 if let statusBarHeight = layout.statusBarHeight {
                     topInset += statusBarHeight
                 }
+                
+                containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
+                let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - coveredByModalTransition * 10.0), size: containerLayout.size)
+                let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
+                containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
+                let maxScaledTopInset: CGFloat = topInset - 10.0
+                let scaledTopInset: CGFloat = topInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
+                containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
             }
-            
-            containerLayout = ContainerViewLayout(size: CGSize(width: layout.size.width, height: layout.size.height - topInset), metrics: layout.metrics, deviceMetrics: layout.deviceMetrics, intrinsicInsets: UIEdgeInsets(top: 0.0, left: layout.intrinsicInsets.left, bottom: layout.intrinsicInsets.bottom, right: layout.intrinsicInsets.right), safeInsets: UIEdgeInsets(top: 0.0, left: layout.safeInsets.left, bottom: layout.safeInsets.bottom, right: layout.safeInsets.right), statusBarHeight: nil, inputHeight: layout.inputHeight, inputHeightIsInteractivellyChanging: layout.inputHeightIsInteractivellyChanging, inVoiceOver: layout.inVoiceOver)
-            let unscaledFrame = CGRect(origin: CGPoint(x: 0.0, y: topInset - coveredByModalTransition * 10.0), size: containerLayout.size)
-            let maxScale: CGFloat = (containerLayout.size.width - 16.0 * 2.0) / containerLayout.size.width
-            containerScale = 1.0 * (1.0 - coveredByModalTransition) + maxScale * coveredByModalTransition
-            let maxScaledTopInset: CGFloat = topInset - 10.0
-            let scaledTopInset: CGFloat = topInset * (1.0 - coveredByModalTransition) + maxScaledTopInset * coveredByModalTransition
-            containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
         case .regular:
             self.panRecognizer?.isEnabled = false
             self.dim.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
