@@ -539,7 +539,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             let modalContainer = self.modalContainers[i]
             
             var isStandaloneModal = false
-            if case .standaloneModal = modalContainer.container.controllers.first?.navigationPresentation {
+            if let controller = modalContainer.container.controllers.first, case .standaloneModal = controller.navigationPresentation {
                 isStandaloneModal = true
             }
             

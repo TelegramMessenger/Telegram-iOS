@@ -290,7 +290,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         self.validLayout = layout
         
         var isStandaloneModal = false
-        if case .standaloneModal = controllers.first?.navigationPresentation {
+        if let controller = controllers.first, case .standaloneModal = controller.navigationPresentation {
             isStandaloneModal = true
         }
         
@@ -384,7 +384,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
     }
     
     func animateIn(transition: ContainedViewLayoutTransition) {
-        if case .standaloneModal = self.container.controllers.first?.navigationPresentation {
+        if let controller = self.container.controllers.first, case .standaloneModal = controller.navigationPresentation {
         } else {
             transition.updateAlpha(node: self.dim, alpha: 1.0)
             transition.animatePositionAdditive(node: self.container, offset: CGPoint(x: 0.0, y: self.bounds.height + self.container.bounds.height / 2.0 - (self.container.position.y - self.bounds.height)))
@@ -396,7 +396,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             controller.viewWillDisappear(transition.isAnimated)
         }
         
-        if case .standaloneModal = self.container.controllers.first?.navigationPresentation {
+        if let firstController = self.container.controllers.first, case .standaloneModal = firstController.navigationPresentation {
             for controller in self.container.controllers {
                 controller.setIgnoreAppearanceMethodInvocations(true)
                 controller.displayNode.removeFromSupernode()
