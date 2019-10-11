@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import SwiftSignalKit
 
-private func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) -> Bool {
+func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) -> Bool {
     guard let window = view.window else {
         return false
     }
@@ -182,6 +182,7 @@ final class GlobalOverlayPresentationContext {
             self.readyChanged(wasReady: wasReady)
         } else if self.ready {
             for controller in self.controllers {
+                transition.updateFrame(node: controller.displayNode, frame: CGRect(origin: CGPoint(), size: layout.size))
                 controller.containerLayoutUpdated(layout, transition: transition)
             }
         }
