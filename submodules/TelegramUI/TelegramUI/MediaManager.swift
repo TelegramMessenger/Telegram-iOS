@@ -239,11 +239,11 @@ public final class MediaManagerImpl: NSObject, MediaManager {
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
                             nowPlayingInfo[MPMediaItemPropertyArtist] = subtitleText
                         case let .voice(author, _):
-                            let titleText: String = author?.displayTitle ?? ""
+                            let titleText: String = author?.debugDisplayTitle ?? ""
                             
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
                         case let .instantVideo(author, _, _):
-                            let titleText: String = author?.displayTitle ?? ""
+                            let titleText: String = author?.debugDisplayTitle ?? ""
                             
                             nowPlayingInfo[MPMediaItemPropertyTitle] = titleText
                     }

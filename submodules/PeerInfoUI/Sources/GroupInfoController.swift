@@ -37,6 +37,7 @@ import NotificationSoundSelectionUI
 import ItemListAddressItem
 import AppBundle
 import Markdown
+import LocalizedPeerData
 
 private final class GroupInfoArguments {
     let context: AccountContext
@@ -872,7 +873,7 @@ private func groupInfoEntries(account: Account, presentationData: PresentationDa
                             if let addressName = peer.addressName, !addressName.isEmpty {
                                 peerTitle = "@\(addressName)"
                             } else {
-                                peerTitle = peer.displayTitle
+                                peerTitle = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             }
                             entries.append(GroupInfoEntry.linkedChannelSetup(presentationData.theme, presentationData.strings.Group_LinkedChannel, peerTitle))
                         }
@@ -1434,7 +1435,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                     let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasPhotos, hasViewButton: false, personalPhoto: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: false)!
                     let _ = currentAvatarMixin.swap(mixin)
                     mixin.requestSearchController = { assetsController in
-                        let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle, completion: { result in
+                        let controller = WebSearchController(context: context, peer: peer, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { result in
                             assetsController?.dismiss()
                             completedImpl(result)
                         }))
@@ -1627,7 +1628,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
                         let result = ValuePromise<Bool>()
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                         if let contactsController = contactsController {
-                            let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle).0, actions: [
+                            let alertController = textAlertController(context: context, title: nil, text: presentationData.strings.GroupInfo_AddParticipantConfirmation(peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0, actions: [
                                 TextAlertAction(type: .genericAction, title: presentationData.strings.Common_No, action: {
                                     result.set(false)
                                 }),
@@ -2029,7 +2030,8 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             guard let peer = peerView.peers[peerView.peerId] else {
                 return
             }
-            let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle, address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let mapMedia = TelegramMediaMap(latitude: location.latitude, longitude: location.longitude, geoPlace: nil, venue: MapVenue(title: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), address: location.address, provider: nil, id: nil, type: nil), liveBroadcastingTimeout: nil)
             let controller = legacyLocationController(message: nil, mapMedia: mapMedia, context: context, openPeer: { _ in }, sendLiveLocation: { _, _ in }, stopLiveLocation: {}, openUrl: { url in
                 context.sharedContext.applicationBindings.openUrl(url)
             })

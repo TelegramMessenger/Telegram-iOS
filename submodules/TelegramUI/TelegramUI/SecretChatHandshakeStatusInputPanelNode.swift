@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import LocalizedPeerData
 
 final class SecretChatHandshakeStatusInputPanelNode: ChatInputPanelNode {
     private let button: HighlightableButtonNode

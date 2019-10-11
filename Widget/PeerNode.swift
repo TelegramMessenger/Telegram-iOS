@@ -1,7 +1,6 @@
 import Foundation
-import Postbox
-import TelegramCore
 import UIKit
+import WidgetItems
 
 private extension UIColor {
     convenience init(rgb: UInt32) {
@@ -53,7 +52,7 @@ private let deviceColorSpace: CGColorSpace = {
     }
 }()
 
-private func avatarViewLettersImage(size: CGSize, peerId: PeerId, accountPeerId: PeerId, letters: [String]) -> UIImage? {
+private func avatarViewLettersImage(size: CGSize, peerId: Int64, accountPeerId: Int64, letters: [String]) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     let context = UIGraphicsGetCurrentContext()
     
@@ -61,7 +60,7 @@ private func avatarViewLettersImage(size: CGSize, peerId: PeerId, accountPeerId:
     context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
     context?.clip()
     
-    let colorIndex = abs(Int(accountPeerId.id + peerId.id))
+    let colorIndex = abs(Int(accountPeerId + peerId))
     
     let colorsArray = gradientColors[colorIndex % gradientColors.count]
     var locations: [CGFloat] = [1.0, 0.0]
@@ -98,13 +97,13 @@ private func avatarViewLettersImage(size: CGSize, peerId: PeerId, accountPeerId:
 private let avatarSize = CGSize(width: 50.0, height: 50.0)
 
 private final class AvatarView: UIImageView {
-    init(account: Account, peer: Peer, size: CGSize) {
+    init(accountPeerId: Int64, peer: WidgetDataPeer, size: CGSize) {
         super.init(frame: CGRect())
         
-        if let resource = peer.smallProfileImage?.resource, let path = account.postbox.mediaBox.completedResourcePath(resource), let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+        if let path = peer.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
             self.image = roundImage
         } else {
-            self.image = avatarViewLettersImage(size: size, peerId: peer.id, accountPeerId: account.peerId, letters: peer.displayLetters)
+            self.image = avatarViewLettersImage(size: size, peerId: peer.id, accountPeerId: accountPeerId, letters: peer.letters)
         }
     }
     
@@ -114,19 +113,20 @@ private final class AvatarView: UIImageView {
 }
 
 final class PeerView: UIView {
-    let peer: Peer
+    let peer: WidgetDataPeer
     private let avatarView: AvatarView
     private let titleLabel: UILabel
     
     private let tapped: () -> Void
     
-    init(account: Account, peer: Peer, tapped: @escaping () -> Void) {
+    init(accountPeerId: Int64, peer: WidgetDataPeer, tapped: @escaping () -> Void) {
         self.peer = peer
         self.tapped = tapped
-        self.avatarView = AvatarView(account: account, peer: peer, size: avatarSize)
+        self.avatarView = AvatarView(accountPeerId: accountPeerId, peer: peer, size: avatarSize)
         
         self.titleLabel = UILabel()
-        self.titleLabel.text = peer.compactDisplayTitle
+        let title = peer.name
+        self.titleLabel.text = title
         self.titleLabel.textColor = .black
         self.titleLabel.font = UIFont.systemFont(ofSize: 11.0)
         self.titleLabel.lineBreakMode = .byTruncatingTail

@@ -9,30 +9,7 @@ public extension Peer {
     var debugDisplayTitle: String {
         switch self {
         case let user as TelegramUser:
-            return user.name
-        case let group as TelegramGroup:
-            return group.title
-        case let channel as TelegramChannel:
-            return channel.title
-        default:
-            return ""
-        }
-    }
-    
-    var displayTitle: String {
-        return self.debugDisplayTitle
-    }
-    
-    var compactDisplayTitle: String {
-        switch self {
-        case let user as TelegramUser:
-            if let firstName = user.firstName {
-                return firstName
-            } else if let lastName = user.lastName {
-                return lastName
-            } else {
-                return ""
-            }
+            return user.nameOrPhone
         case let group as TelegramGroup:
             return group.title
         case let channel as TelegramChannel:

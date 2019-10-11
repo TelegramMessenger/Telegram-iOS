@@ -184,7 +184,7 @@ private struct ResolvedChatListResetRange {
                     let previousPeerIds = transaction.resetChatList(keepPeerNamespaces: [Namespaces.Peer.SecretChat], upperBound: range.local.upperBound ?? ChatListIndex.absoluteUpperBound, lowerBound: range.local.lowerBound)
                     #if DEBUG
                     for peerId in previousPeerIds {
-                        print("pre \(peerId) [\(transaction.getPeer(peerId)?.displayTitle ?? "nil")]")
+                        print("pre \(peerId) [\(transaction.getPeer(peerId)?.debugDisplayTitle ?? "nil")]")
                     }
                     print("pre hash \(range.local.hash)")
                     print("")
@@ -193,7 +193,7 @@ private struct ResolvedChatListResetRange {
                     for entry in range.local.entries {
                         switch entry {
                             case let .peer(index, readState, topMessageAttributes, tagSummary, interfaceState):
-                                print("val \(index.messageIndex.id.peerId) [\(transaction.getPeer(index.messageIndex.id.peerId)?.displayTitle ?? "nil")]")
+                                print("val \(index.messageIndex.id.peerId) [\(transaction.getPeer(index.messageIndex.id.peerId)?.debugDisplayTitle ?? "nil")]")
                                 combineChatListNamespaceEntryHash(index: index, readState: readState, topMessageAttributes: topMessageAttributes, tagSummary: nil, interfaceState: nil, into: &preRecalculatedHash)
                             default:
                                 break
@@ -220,7 +220,7 @@ private struct ResolvedChatListResetRange {
                             }
                         }
                         combineChatListNamespaceEntryHash(index: ChatListIndex(pinningIndex: nil, messageIndex: index), readState: range.remote.readStates[index.id.peerId]?[Namespaces.Message.Cloud], topMessageAttributes: topMessageAttributes, tagSummary: nil, interfaceState: nil, into: &hash)
-                        print("upd \(index.id.peerId) [\(transaction.getPeer(index.id.peerId)?.displayTitle ?? "nil")]")
+                        print("upd \(index.id.peerId) [\(transaction.getPeer(index.id.peerId)?.debugDisplayTitle ?? "nil")]")
                     })
                     print("upd hash \(hash)")
                     #endif

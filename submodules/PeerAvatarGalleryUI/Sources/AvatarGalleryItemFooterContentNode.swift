@@ -21,6 +21,7 @@ private let dateFont = Font.regular(14.0)
 
 final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     private let context: AccountContext
+    private var presentationData: PresentationData
     private var strings: PresentationStrings
     private var dateTimeFormat: PresentationDateTimeFormat
     
@@ -42,6 +43,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
     
     init(context: AccountContext, presentationData: PresentationData) {
         self.context = context
+        self.presentationData = presentationData
         self.strings = presentationData.strings
         self.dateTimeFormat = presentationData.dateTimeFormat
         
@@ -82,7 +84,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var dateText: String?
         switch entry {
             case let .image(_, _, peer, date, _, _):
-                nameText = peer.displayTitle
+                nameText = peer.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
                 dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date)
             default:
                 break

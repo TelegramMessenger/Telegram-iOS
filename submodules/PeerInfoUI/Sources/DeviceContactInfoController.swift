@@ -17,6 +17,7 @@ import MediaResources
 import ItemListAvatarAndNameInfoItem
 import Geocoding
 import ItemListAddressItem
+import LocalizedPeerData
 
 private enum DeviceContactInfoAction {
     case sendMessage
@@ -598,7 +599,7 @@ private func deviceContactInfoEntries(account: Account, presentationData: Presen
     var personName: (String, String) = (contactData.basicData.firstName, contactData.basicData.lastName)
     if let editingName = editingName {
         switch editingName {
-        case let .personName(firstName, lastName):
+        case let .personName(firstName, lastName, _):
             personName = (firstName, lastName)
         default:
             break
@@ -803,7 +804,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 initialState.nextPhoneNumber += 1
             }
         }
-        initialState.editingState = DeviceContactInfoEditingState(editingName: .personName(firstName: firstName, lastName: lastName))
+        initialState.editingState = DeviceContactInfoEditingState(editingName: .personName(firstName: firstName, lastName: lastName, phone: ""))
     }
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
@@ -1053,7 +1054,7 @@ public func deviceContactInfoController(context: AccountContext, subject: Device
                 }
             }
             var composedContactData: DeviceContactExtendedData?
-            if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
+            if let editingName = state.editingState?.editingName, case let .personName(firstName, lastName, _) = editingName, (!firstName.isEmpty || !lastName.isEmpty) {
                 var urls = filteredData.urls
                 if let createForPeer = createForPeer {
                     let appProfile = DeviceContactUrlData(appProfile: createForPeer.id)

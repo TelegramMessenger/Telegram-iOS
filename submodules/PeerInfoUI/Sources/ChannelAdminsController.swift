@@ -221,7 +221,7 @@ private enum ChannelAdminsEntry: ItemListNodeEntry {
                                 if peer.id == participant.peer.id {
                                     peerText = strings.Channel_Management_LabelAdministrator
                                 } else {
-                                    peerText = strings.Channel_Management_PromotedBy(peer.displayTitle).0
+                                    peerText = strings.Channel_Management_PromotedBy(peer.displayTitle(strings: strings, displayOrder: nameDisplayOrder)).0
                                 }
                             } else {
                                 peerText = ""
@@ -527,7 +527,7 @@ public func channelAdminsController(context: AccountContext, peerId: PeerId, loa
             guard let peer = peer, let user = user else {
                 return
             }
-            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle, peer.displayTitle).0), elevatedLayout: false, action: { _ in }), nil)
+            presentControllerImpl?(UndoOverlayController(presentationData: context.sharedContext.currentPresentationData.with { $0 }, content: .succeed(text: presentationData.strings.Channel_OwnershipTransfer_TransferCompleted(user.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).0), elevatedLayout: false, action: { _ in }), nil)
         })
     }
     

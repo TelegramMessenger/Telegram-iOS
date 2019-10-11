@@ -37,6 +37,19 @@ private func cancelParentGestures(view: UIView) {
     }
 }
 
+private func cancelOtherGestures(gesture: ContextGesture, view: UIView) {
+    if let gestureRecognizers = view.gestureRecognizers {
+        for recognizer in gestureRecognizers {
+            if let recognizer = recognizer as? ContextGesture, recognizer !== gesture {
+                recognizer.cancel()
+            }
+        }
+    }
+    for subview in view.subviews {
+        cancelOtherGestures(gesture: gesture, view: subview)
+    }
+}
+
 public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDelegate {
     private var currentProgress: CGFloat = 0.0
     private var delayTimer: Timer?
@@ -104,6 +117,9 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                             strongSelf.animator?.invalidate()
                             strongSelf.activated?(strongSelf)
                             if let view = strongSelf.view?.superview {
+                                if let window = view.window {
+                                    cancelOtherGestures(gesture: strongSelf, view: window)
+                                }
                                 cancelParentGestures(view: view)
                             }
                             strongSelf.state = .began

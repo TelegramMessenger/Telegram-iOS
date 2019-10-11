@@ -76,7 +76,7 @@ public final class TelegramUser: Peer {
     public let restrictionInfo: PeerAccessRestrictionInfo?
     public let flags: UserInfoFlags
     
-    public var name: String {
+    public var nameOrPhone: String {
         if let firstName = self.firstName {
             if let lastName = self.lastName {
                 return "\(firstName) \(lastName)"
@@ -85,6 +85,20 @@ public final class TelegramUser: Peer {
             }
         } else if let lastName = self.lastName {
             return lastName
+        } else if let phone = self.phone, !phone.isEmpty {
+            return phone
+        } else {
+            return ""
+        }
+    }
+    
+    public var shortNameOrPhone: String {
+        if let firstName = self.firstName {
+            return firstName
+        } else if let lastName = self.lastName {
+            return lastName
+        } else if let phone = self.phone, !phone.isEmpty {
+            return phone
         } else {
             return ""
         }

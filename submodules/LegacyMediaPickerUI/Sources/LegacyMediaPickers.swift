@@ -22,7 +22,7 @@ public func configureLegacyAssetPicker(_ controller: TGMediaAssetsController, co
     
     controller.captionsEnabled = captionsEnabled
     controller.inhibitDocumentCaptions = false
-    controller.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
+    controller.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
     if peer.id != context.account.peerId {
         if peer is TelegramUser {
             controller.hasTimer = hasSchedule
@@ -67,7 +67,7 @@ public func legacyAssetPicker(context: AccountContext, presentationData: Present
                     } else {
                         Queue.mainQueue().async {
                             subscriber.putNext({ context in
-                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia, selectionLimit: Int32(selectionLimit))
+                                let controller = TGMediaAssetsController(context: context, assetGroup: group, intent: intent, recipientName: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, inhibitSelection: editingMedia, selectionLimit: Int32(selectionLimit))
                                 return controller!
                             })
                             subscriber.putCompletion()
@@ -76,7 +76,7 @@ public func legacyAssetPicker(context: AccountContext, presentationData: Present
                 })
             } else {
                 subscriber.putNext({ context in
-                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer?.displayTitle, saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, selectionLimit: Int32(selectionLimit))
+                    let controller = TGMediaAssetsController(context: context, assetGroup: nil, intent: intent, recipientName: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), saveEditedPhotos: !isSecretChat && saveEditedPhotos, allowGrouping: allowGrouping, selectionLimit: Int32(selectionLimit))
                     return controller!
                 })
                 subscriber.putCompletion()

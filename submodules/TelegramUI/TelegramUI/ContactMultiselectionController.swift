@@ -183,7 +183,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
                                 displayCountAlert = true
                                 updatedState = updatedState.withToggledPeerId(.peer(peer.id))
                             } else {
-                                addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle)
+                                addedToken = EditableTokenListToken(id: peer.id, title: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder))
                             }
                         }
                         updatedCount = updatedState.selectedPeerIndices.count

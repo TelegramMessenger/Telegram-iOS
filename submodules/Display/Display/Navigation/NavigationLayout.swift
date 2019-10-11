@@ -10,6 +10,7 @@ enum RootNavigationLayout {
 
 struct ModalContainerLayout {
     var controllers: [ViewController]
+    var isStandalone: Bool
 }
 
 struct NavigationLayout {
@@ -23,6 +24,7 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
     for controller in controllers {
         let requiresModal: Bool
         var beginsModal: Bool = false
+        var isStandalone: Bool = false
         switch controller.navigationPresentation {
         case .default:
             requiresModal = false
@@ -31,6 +33,10 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
         case .modal:
             requiresModal = true
             beginsModal = true
+        case .standaloneModal:
+            requiresModal = true
+            beginsModal = true
+            isStandalone = true
         case .modalInLargeLayout:
             switch layout.metrics.widthClass {
             case .compact:
@@ -40,13 +46,17 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
             }
         }
         if requiresModal {
-            if beginsModal || modalStack.isEmpty {
-                modalStack.append(ModalContainerLayout(controllers: [controller]))
+            if beginsModal || modalStack.isEmpty || modalStack[modalStack.count - 1].isStandalone {
+                modalStack.append(ModalContainerLayout(controllers: [controller], isStandalone: isStandalone))
             } else {
                 modalStack[modalStack.count - 1].controllers.append(controller)
             }
         } else if !modalStack.isEmpty {
-            modalStack[modalStack.count - 1].controllers.append(controller)
+            if modalStack[modalStack.count - 1].isStandalone {
+                modalStack.append(ModalContainerLayout(controllers: [controller], isStandalone: isStandalone))
+            } else {
+                modalStack[modalStack.count - 1].controllers.append(controller)
+            }
         } else {
             rootControllers.append(controller)
         }

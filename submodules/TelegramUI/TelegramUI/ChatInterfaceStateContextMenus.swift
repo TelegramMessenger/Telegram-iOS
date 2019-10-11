@@ -119,6 +119,12 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
     guard !chatPresentationInterfaceState.isScheduledMessages else {
         return false
     }
+    switch chatPresentationInterfaceState.mode {
+    case .inline:
+        return false
+    default:
+        break
+    }
     
     var canReply = false
     switch chatPresentationInterfaceState.chatLocation {

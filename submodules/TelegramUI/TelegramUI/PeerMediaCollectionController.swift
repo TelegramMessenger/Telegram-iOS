@@ -16,6 +16,7 @@ import OpenInExternalAppUI
 import PeerInfoUI
 import ContextUI
 import PresentationDataUtils
+import LocalizedPeerData
 
 public class PeerMediaCollectionController: TelegramBaseController {
     private var validLayout: ContainerViewLayout?

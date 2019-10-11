@@ -35,6 +35,8 @@ public final class WalletSplashScreen: ViewController {
     
     private let walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?
     
+    private let actionDisposable = MetaDisposable()
+    
     public init(context: WalletContext, mode: WalletSplashMode, walletCreatedPreloadState: Promise<CombinedWalletStateResult?>?) {
         self.context = context
         self.mode = mode
@@ -119,6 +121,10 @@ public final class WalletSplashScreen: ViewController {
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.actionDisposable.dispose()
+    }
+    
     @objc private func backPressed() {
         self.dismiss()
     }
@@ -129,7 +135,85 @@ public final class WalletSplashScreen: ViewController {
     
     private func sendGrams(walletInfo: WalletInfo, decryptedSecret: Data, address: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, randomId: Int64, serverSalt: Data) {
         let _ = (sendGramsFromWallet(storage: self.context.storage, tonInstance: self.context.tonInstance, walletInfo: walletInfo, decryptedSecret: decryptedSecret, localPassword: serverSalt, toAddress: address, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: 0, randomId: randomId)
-        |> deliverOnMainQueue).start(error: { [weak self] error in
+        |> deliverOnMainQueue).start(next: { [weak self] sentTransaction in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.navigationItem.setRightBarButton(UIBarButtonItem(title: strongSelf.presentationData.strings.Wallet_WordImport_Continue, style: .plain, target: strongSelf, action: #selector(strongSelf.sendGramsContinuePressed)), animated: false)
+            
+            let check = getCombinedWalletState(storage: strongSelf.context.storage, subject: .wallet(walletInfo), tonInstance: strongSelf.context.tonInstance)
+            |> mapToSignal { state -> Signal<Bool, GetCombinedWalletStateError> in
+                switch state {
+                case .cached:
+                    return .complete()
+                case let .updated(state):
+                    if !state.pendingTransactions.contains(where: { $0.bodyHash == sentTransaction.bodyHash }) {
+                        return .single(true)
+                    } else {
+                        return .complete()
+                    }
+                }
+            }
+            |> then(
+                .complete()
+                |> delay(3.0, queue: .concurrentDefaultQueue())
+            )
+            |> restart
+            |> take(1)
+            
+            strongSelf.actionDisposable.set(check.start(error: { _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.context.tonInstance)
+                    |> deliverOnMainQueue).start(next: { [weak self] address in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        var controllers: [UIViewController] = []
+                        for controller in navigationController.viewControllers {
+                            if let controller = controller as? WalletInfoScreen {
+                                let infoScreen = WalletInfoScreen(context: strongSelf.context, walletInfo: walletInfo, address: address, enableDebugActions: false)
+                                infoScreen.navigationPresentation = controller.navigationPresentation
+                                controllers.append(infoScreen)
+                            } else {
+                                controllers.append(controller)
+                            }
+                        }
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
+                        strongSelf.view.endEditing(true)
+                        navigationController.setViewControllers(controllers, animated: true)
+                    })
+                }
+            }, completed: {
+                guard let strongSelf = self else {
+                    return
+                }
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.context.tonInstance)
+                    |> deliverOnMainQueue).start(next: { [weak self] address in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        var controllers: [UIViewController] = []
+                        for controller in navigationController.viewControllers {
+                            if let controller = controller as? WalletInfoScreen {
+                                let infoScreen = WalletInfoScreen(context: strongSelf.context, walletInfo: walletInfo, address: address, enableDebugActions: false)
+                                infoScreen.navigationPresentation = controller.navigationPresentation
+                                controllers.append(infoScreen)
+                            } else {
+                                controllers.append(controller)
+                            }
+                        }
+                        controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
+                        strongSelf.view.endEditing(true)
+                        navigationController.setViewControllers(controllers, animated: true)
+                    })
+                }
+            }))
+        }, error: { [weak self] error in
             guard let strongSelf = self else {
                 return
             }
@@ -177,32 +261,48 @@ public final class WalletSplashScreen: ViewController {
                 }
             })])
             strongSelf.present(controller, in: .window(.root))
-        }, completed: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            if let navigationController = strongSelf.navigationController as? NavigationController {
-                let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: strongSelf.context.tonInstance)
+        })
+    }
+    
+    @objc private func sendGramsContinuePressed() {
+        switch self.mode {
+            case let .sending(sending):
+            if let navigationController = self.navigationController as? NavigationController {
+                var controllers = navigationController.viewControllers
+                controllers = controllers.filter { controller in
+                    if controller is WalletSendScreen {
+                        return false
+                    }
+                    if controller is WalletSplashScreen {
+                        return false
+                    }
+                    if controller is WalletWordDisplayScreen {
+                        return false
+                    }
+                    if controller is WalletWordCheckScreen {
+                        return false
+                    }
+                    return true
+                }
+                
+                let _ = (walletAddress(publicKey: sending.0.publicKey, tonInstance: self.context.tonInstance)
                 |> deliverOnMainQueue).start(next: { [weak self] address in
                     guard let strongSelf = self else {
                         return
                     }
-                    var controllers: [UIViewController] = []
-                    for controller in navigationController.viewControllers {
-                        if let controller = controller as? WalletInfoScreen {
-                            let infoScreen = WalletInfoScreen(context: strongSelf.context, walletInfo: walletInfo, address: address, enableDebugActions: false)
-                            infoScreen.navigationPresentation = controller.navigationPresentation
-                            controllers.append(infoScreen)
-                        } else {
-                            controllers.append(controller)
-                        }
+                    
+                    if !controllers.contains(where: { $0 is WalletInfoScreen }) {
+                        let infoScreen = WalletInfoScreen(context: strongSelf.context, walletInfo: sending.0, address: address, enableDebugActions: false)
+                        infoScreen.navigationPresentation = .modal
+                        controllers.append(infoScreen)
                     }
-                    controllers.append(WalletSplashScreen(context: strongSelf.context, mode: .sent(walletInfo, amount), walletCreatedPreloadState: nil))
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 })
             }
-        })
+        default:
+            break
+        }
     }
     
     override public func loadDisplayNode() {
@@ -422,8 +522,40 @@ public final class WalletSplashScreen: ViewController {
                     strongSelf.view.endEditing(true)
                     navigationController.setViewControllers(controllers, animated: true)
                 }
-            case .sending:
-                break
+            case let .sending(sending):
+                if let navigationController = strongSelf.navigationController as? NavigationController {
+                    var controllers = navigationController.viewControllers
+                    controllers = controllers.filter { controller in
+                        if controller is WalletSendScreen {
+                            return false
+                        }
+                        if controller is WalletSplashScreen {
+                            return false
+                        }
+                        if controller is WalletWordDisplayScreen {
+                            return false
+                        }
+                        if controller is WalletWordCheckScreen {
+                            return false
+                        }
+                        return true
+                    }
+                    
+                    let _ = (walletAddress(publicKey: sending.0.publicKey, tonInstance: strongSelf.context.tonInstance)
+                    |> deliverOnMainQueue).start(next: { [weak self] address in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if !controllers.contains(where: { $0 is WalletInfoScreen }) {
+                            let infoScreen = WalletInfoScreen(context: strongSelf.context, walletInfo: sending.0, address: address, enableDebugActions: false)
+                            infoScreen.navigationPresentation = .modal
+                            controllers.append(infoScreen)
+                        }
+                        strongSelf.view.endEditing(true)
+                        navigationController.setViewControllers(controllers, animated: true)
+                    })
+                }
             case .secureStorageNotAvailable:
                 strongSelf.dismiss()
             case let .secureStorageReset(reason):
@@ -494,7 +626,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
     private let alternativeAnimationNode: AnimatedStickerNode
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
-    private let buttonNode: SolidRoundedButtonNode
+    let buttonNode: SolidRoundedButtonNode
     private let termsNode: ImmediateTextNode
     private let secondaryActionTitleNode: ImmediateTextNode
     private let secondaryActionButtonNode: HighlightTrackingButtonNode
@@ -521,6 +653,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         let title: String
         let text: NSAttributedString
         let buttonText: String
+        var buttonHidden: Bool = false
         let termsText: NSAttributedString
         let secondaryActionText: String
         
@@ -582,7 +715,8 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         case .sending:
             title = self.presentationData.strings.Wallet_Sending_Title
             text = NSAttributedString(string: self.presentationData.strings.Wallet_Sending_Text, font: textFont, textColor: textColor)
-            buttonText = ""
+            buttonText = self.presentationData.strings.Wallet_Sent_Title
+            buttonHidden = true
             termsText = NSAttributedString(string: "")
             self.iconNode.image = nil
             if let path = getAppBundle().path(forResource: "SendingGrams", ofType: "tgs") {
@@ -690,7 +824,7 @@ private final class WalletSplashScreenNode: ViewControllerTracingNode {
         self.secondaryActionButtonNode = HighlightTrackingButtonNode()
         
         self.buttonNode = SolidRoundedButtonNode(title: buttonText, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.setup.buttonFillColor, foregroundColor: self.presentationData.theme.setup.buttonForegroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
-        self.buttonNode.isHidden = buttonText.isEmpty
+        self.buttonNode.isHidden = buttonText.isEmpty || buttonHidden
         
         super.init()
         

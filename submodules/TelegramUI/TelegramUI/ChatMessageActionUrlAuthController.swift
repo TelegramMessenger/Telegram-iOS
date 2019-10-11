@@ -6,6 +6,7 @@ import Display
 import Postbox
 import TelegramCore
 import TelegramPresentationData
+import TelegramUIPreferences
 import CheckNode
 import TextFormat
 import AccountContext
@@ -20,6 +21,7 @@ private func formattedText(_ text: String, color: UIColor, textAlignment: NSText
 
 private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
+    private let nameDisplayOrder: PresentationPersonNameOrder
     private let defaultUrl: String
     private let domain: String
     private let bot: Peer
@@ -60,8 +62,9 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         }
     }
     
-    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, defaultUrl: String, domain: String, bot: Peer, requestWriteAccess: Bool, displayName: String, actions: [TextAlertAction]) {
+    init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, defaultUrl: String, domain: String, bot: Peer, requestWriteAccess: Bool, displayName: String, actions: [TextAlertAction]) {
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         self.defaultUrl = defaultUrl
         self.domain = domain
         self.bot = bot
@@ -160,7 +163,7 @@ private final class ChatMessageActionUrlAuthAlertContentNode: AlertContentNode {
         
         self.textNode.attributedText = formattedText(strings.Conversation_OpenBotLinkText(self.defaultUrl).0, color: theme.primaryColor, textAlignment: .center)
         self.authorizeLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkLogin(self.domain, self.displayName).0, color: theme.primaryColor)
-        self.allowWriteLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkAllowMessages(self.bot.displayTitle).0, color: theme.primaryColor)
+        self.allowWriteLabelNode.attributedText = formattedText(strings.Conversation_OpenBotLinkAllowMessages(self.bot.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder)).0, color: theme.primaryColor)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {
@@ -314,7 +317,7 @@ func chatMessageActionUrlAuthController(context: AccountContext, defaultUrl: Str
             open(contentNode.authorize, contentNode.allowWriteAccess)
         }
     })]
-    contentNode = ChatMessageActionUrlAuthAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: displayName, actions: actions)
+    contentNode = ChatMessageActionUrlAuthAlertContentNode(theme: AlertControllerTheme(presentationTheme: theme), ptheme: theme, strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, defaultUrl: defaultUrl, domain: domain, bot: bot, requestWriteAccess: requestWriteAccess, displayName: displayName, actions: actions)
     let controller = AlertController(theme: AlertControllerTheme(presentationTheme: theme), contentNode: contentNode!)
     dismissImpl = { [weak controller] animated in
         if animated {

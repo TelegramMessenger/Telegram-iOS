@@ -2225,7 +2225,8 @@ public final class Postbox {
             
             var anchor: HistoryViewInputAnchor = .upperBound
             switch peerIds {
-                case let .single(peerId):
+            case let .single(peerId):
+                if self.chatListTable.getPeerChatListIndex(peerId: peerId) != nil {
                     if let combinedState = self.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
                         switch state.1 {
                             case let .idBased(maxIncomingReadId, _, _, _, _):
@@ -2236,32 +2237,33 @@ public final class Postbox {
                     } else if let scrollIndex = self.peerChatInterfaceStateTable.get(peerId)?.historyScrollMessageIndex {
                         anchor = .index(scrollIndex)
                     }
-                case let .associated(mainId, associatedId):
-                    var ids: [PeerId] = []
-                    ids.append(mainId)
-                    if let associatedId = associatedId {
-                        ids.append(associatedId.peerId)
-                    }
-                    
-                    var found = false
-                    loop: for peerId in ids.reversed() {
-                        if let combinedState = self.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
-                            found = true
-                            switch state.1 {
-                                case let .idBased(maxIncomingReadId, _, _, _, _):
-                                    anchor = .message(MessageId(peerId: peerId, namespace: state.0, id: maxIncomingReadId))
-                                case let .indexBased(maxIncomingReadIndex, _, _, _):
-                                    anchor = .index(maxIncomingReadIndex)
-                            }
-                            break loop
-                        }
-                    }
+                }
+            case let .associated(mainId, associatedId):
+                var ids: [PeerId] = []
+                ids.append(mainId)
+                if let associatedId = associatedId {
+                    ids.append(associatedId.peerId)
+                }
                 
-                    if !found {
-                        if let scrollIndex = self.peerChatInterfaceStateTable.get(mainId)?.historyScrollMessageIndex {
-                            anchor = .index(scrollIndex)
+                var found = false
+                loop: for peerId in ids.reversed() {
+                    if self.chatListTable.getPeerChatListIndex(peerId: mainId) != nil, let combinedState = self.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
+                        found = true
+                        switch state.1 {
+                            case let .idBased(maxIncomingReadId, _, _, _, _):
+                                anchor = .message(MessageId(peerId: peerId, namespace: state.0, id: maxIncomingReadId))
+                            case let .indexBased(maxIncomingReadIndex, _, _, _):
+                                anchor = .index(maxIncomingReadIndex)
                         }
+                        break loop
                     }
+                }
+            
+                if !found {
+                    if let scrollIndex = self.peerChatInterfaceStateTable.get(mainId)?.historyScrollMessageIndex {
+                        anchor = .index(scrollIndex)
+                    }
+                }
             }
             return self.syncAroundMessageHistoryViewForPeerId(subscriber: subscriber, peerIds: peerIds, count: count, anchor: anchor, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: topTaggedMessageIdNamespaces, tagMask: tagMask, namespaces: namespaces, orderStatistics: orderStatistics, additionalData: additionalData)
         })

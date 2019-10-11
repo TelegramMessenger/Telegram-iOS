@@ -134,13 +134,7 @@ final class ContactsControllerNode: ASDisplayNode {
         }
         
         contextAction = { [weak self] peer, node, gesture in
-            guard let strongSelf = self, let contactsController = strongSelf.controller else {
-                return
-            }
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
-            chatController.canReadHistory.set(false)
-            let contextController = ContextController(account: strongSelf.context.account, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: strongSelf.context, peerId: peer.id, contactsController: contactsController), reactionItems: [], gesture: gesture)
-            contactsController.presentInGlobalOverlay(contextController)
+            self?.contextAction(peer: peer, node: node, gesture: gesture)
         }
     }
     
@@ -185,6 +179,16 @@ final class ContactsControllerNode: ASDisplayNode {
         self.contactListNode.frame = CGRect(origin: CGPoint(), size: layout.size)
     }
     
+    private func contextAction(peer: Peer, node: ASDisplayNode, gesture: ContextGesture?) {
+        guard let contactsController = self.controller else {
+            return
+        }
+        let chatController = self.context.sharedContext.makeChatController(context: self.context, chatLocation: .peer(peer.id), subject: nil, botStart: nil, mode: .standard(previewing: true))
+        chatController.canReadHistory.set(false)
+        let contextController = ContextController(account: self.context.account, theme: self.presentationData.theme, strings: self.presentationData.strings, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: contactContextMenuItems(context: self.context, peerId: peer.id, contactsController: contactsController), reactionItems: [], gesture: gesture)
+        contactsController.presentInGlobalOverlay(contextController)
+    }
+    
     func activateSearch(placeholderNode: SearchBarPlaceholderNode) {
         guard let (containerLayout, navigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return
@@ -194,6 +198,8 @@ final class ContactsControllerNode: ASDisplayNode {
             if let requestOpenPeerFromSearch = self?.requestOpenPeerFromSearch {
                 requestOpenPeerFromSearch(peer)
             }
+        }, contextAction: { [weak self] peer, node, gesture in
+            self?.contextAction(peer: peer, node: node, gesture: gesture)
         }), cancel: { [weak self] in
             if let requestDeactivateSearch = self?.requestDeactivateSearch {
                 requestDeactivateSearch()

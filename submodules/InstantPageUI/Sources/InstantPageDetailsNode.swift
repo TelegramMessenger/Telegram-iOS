@@ -6,6 +6,7 @@ import Postbox
 import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
+import TelegramUIPreferences
 import AccountContext
 
 private let detailsInset: CGFloat = 17.0
@@ -14,6 +15,7 @@ private let titleInset: CGFloat = 22.0
 final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     private let context: AccountContext
     private let strings: PresentationStrings
+    private let nameDisplayOrder: PresentationPersonNameOrder
     private let theme: InstantPageTheme
     let item: InstantPageDetailsItem
     
@@ -33,9 +35,10 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var requestLayoutUpdate: ((Bool) -> Void)?
     
-    init(context: AccountContext, strings: PresentationStrings, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.context = context
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         self.theme = theme
         self.item = item
         
@@ -62,7 +65,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: self.expanded)
         self.separatorNode = ASDisplayNode()
         
-        self.contentNode = InstantPageContentNode(context: context, strings: strings, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl)
+        self.contentNode = InstantPageContentNode(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl)
         
         super.init()
         

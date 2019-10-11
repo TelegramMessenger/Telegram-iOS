@@ -114,7 +114,7 @@ class WebSearchGalleryController: ViewController {
             self?.dismiss(forceAway: true)
         }, selectionState: selectionState, editingState: editingState)
         
-        if let title = peer?.displayTitle {
+        if let title = peer?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) {
             let recipientNode = GalleryNavigationRecipientNode(color: .white, title: title)
             let leftItem = UIBarButtonItem(customDisplayNode: recipientNode)
             self.navigationItem.leftBarButtonItem = leftItem
