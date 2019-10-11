@@ -241,10 +241,8 @@ apple_binary(
         "@executable_path/../../Frameworks",
     ],
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-        "//submodules/TelegramCore:TelegramCore#shared",
-        "//submodules/Postbox:Postbox#shared",
         "//submodules/BuildConfig:BuildConfig",
+        "//submodules/WidgetItems:WidgetItems",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
