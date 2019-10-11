@@ -324,6 +324,8 @@ public final class SharedWakeupManager {
     private func updateAccounts(hasTasks: Bool) {
         if self.inForeground || self.hasActiveAudioSession || self.isInBackgroundExtension || (hasTasks && self.currentExternalCompletion != nil) || self.activeExplicitExtensionTimer != nil {
             for (account, primary, tasks) in self.accountsAndTasks {
+                account.postbox.setCanBeginTransactions(true)
+                
                 if (self.inForeground && primary) || !tasks.isEmpty || (self.activeExplicitExtensionTimer != nil && primary) {
                     account.shouldBeServiceTaskMaster.set(.single(.always))
                 } else {
@@ -335,6 +337,7 @@ public final class SharedWakeupManager {
             }
         } else {
             for (account, _, _) in self.accountsAndTasks {
+                account.postbox.setCanBeginTransactions(false)
                 account.shouldBeServiceTaskMaster.set(.single(.never))
                 account.shouldKeepOnlinePresence.set(.single(false))
                 account.shouldKeepBackgroundDownloadConnections.set(.single(false))
