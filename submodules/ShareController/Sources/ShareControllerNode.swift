@@ -618,7 +618,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         }
         
         let animated = self.peersContentNode == nil
-        let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, account: account, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
+        let peersContentNode = SharePeersContainerNode(sharedContext: self.sharedContext, account: account, switchableAccounts: switchableAccounts, theme: self.presentationData.theme, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder, peers: peers, accountPeer: accountPeer, controllerInteraction: self.controllerInteraction!, externalShare: self.externalShare, switchToAnotherAccount: { [weak self] in
             self?.switchToAnotherAccount?()
         })
         self.peersContentNode = peersContentNode

@@ -10,6 +10,7 @@ import AccountContext
 import RadialStatusNode
 import ScreenCaptureDetection
 import AppBundle
+import LocalizedPeerData
 
 private func galleryMediaForMedia(media: Media) -> Media? {
     if let media = media as? TelegramMediaImage {

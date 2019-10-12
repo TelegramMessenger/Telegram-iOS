@@ -7,6 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import Photos
 import TelegramPresentationData
+import TelegramUIPreferences
 import TextFormat
 import TelegramStringFormatting
 import AccountContext
@@ -14,6 +15,7 @@ import RadialStatusNode
 import ShareController
 import OpenInExternalAppUI
 import AppBundle
+import LocalizedPeerData
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: .white)
@@ -105,6 +107,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let context: AccountContext
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var nameOrder: PresentationPersonNameOrder
     private var dateTimeFormat: PresentationDateTimeFormat
     
     private let deleteButton: UIButton
@@ -241,6 +244,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.context = context
         self.theme = presentationData.theme
         self.strings = presentationData.strings
+        self.nameOrder = presentationData.nameDisplayOrder
         self.dateTimeFormat = presentationData.dateTimeFormat
         
         self.deleteButton = UIButton()
@@ -439,9 +443,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         var authorNameText: String?
         
         if let author = message.effectiveAuthor {
-            authorNameText = author.displayTitle
+            authorNameText = author.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         } else if let peer = message.peers[message.id.peerId] {
-            authorNameText = peer.displayTitle
+            authorNameText = peer.displayTitle(strings: self.strings, displayOrder: self.nameOrder)
         }
         
         let dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: message.timestamp)

@@ -241,10 +241,8 @@ apple_binary(
         "@executable_path/../../Frameworks",
     ],
     deps = [
-        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-        "//submodules/TelegramCore:TelegramCore#shared",
-        "//submodules/Postbox:Postbox#shared",
         "//submodules/BuildConfig:BuildConfig",
+        "//submodules/WidgetItems:WidgetItems",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/UIKit.framework",
@@ -434,6 +432,10 @@ apple_binary(
     ]),
     compiler_flags = [
         "-DTARGET_OS_WATCH=1",
+    ],
+    linker_flags = [
+        "-e",
+        "_NSExtensionMain",
     ],
     configs = watch_extension_binary_configs(),
     frameworks = [

@@ -10,7 +10,8 @@ enum RootNavigationLayout {
 
 struct ModalContainerLayout {
     var controllers: [ViewController]
-    var flat: Bool
+    var isFlat: Bool
+    var isStandalone: Bool
 }
 
 struct NavigationLayout {
@@ -24,7 +25,8 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
     for controller in controllers {
         let requiresModal: Bool
         var beginsModal: Bool = false
-        var flatModal: Bool = false
+        var isFlat: Bool = false
+        var isStandalone: Bool = false
         switch controller.navigationPresentation {
         case .default:
             requiresModal = false
@@ -36,7 +38,11 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
         case .flatModal:
             requiresModal = true
             beginsModal = true
-            flatModal = true
+            isFlat = true
+        case .standaloneModal:
+            requiresModal = true
+            beginsModal = true
+            isStandalone = true
         case .modalInLargeLayout:
             switch layout.metrics.widthClass {
             case .compact:
@@ -48,13 +54,19 @@ func makeNavigationLayout(mode: NavigationControllerMode, layout: ContainerViewL
         if requiresModal {
             controller._presentedInModal = true
             if beginsModal || modalStack.isEmpty {
-                modalStack.append(ModalContainerLayout(controllers: [controller], flat: flatModal))
+                modalStack.append(ModalContainerLayout(controllers: [controller], isFlat: isFlat))
+            if beginsModal || modalStack.isEmpty || modalStack[modalStack.count - 1].isStandalone {
+                modalStack.append(ModalContainerLayout(controllers: [controller], isStandalone: isStandalone))
             } else {
                 modalStack[modalStack.count - 1].controllers.append(controller)
             }
         } else if !modalStack.isEmpty {
             controller._presentedInModal = true
-            modalStack[modalStack.count - 1].controllers.append(controller)
+            if modalStack[modalStack.count - 1].isStandalone {
+                modalStack.append(ModalContainerLayout(controllers: [controller], isStandalone: isStandalone))
+            } else {
+                modalStack[modalStack.count - 1].controllers.append(controller)
+            }
         } else {
             controller._presentedInModal = false
             rootControllers.append(controller)

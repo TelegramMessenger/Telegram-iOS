@@ -371,7 +371,11 @@ final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
                 switch transitionType {
                 case .push:
-                    strongSelf.syncKeyboard(leftEdge: topFrame.minX - bottomFrame.width, transition: transition)
+                    if let _ = strongSelf.state.transition, let top = strongSelf.state.top, viewTreeContainsFirstResponder(view: top.value.view) {
+                        strongSelf.syncKeyboard(leftEdge: topFrame.minX, transition: transition)
+                    } else {
+                        strongSelf.syncKeyboard(leftEdge: topFrame.minX - bottomFrame.width, transition: transition)
+                    }
                 case .pop:
                     strongSelf.syncKeyboard(leftEdge: topFrame.minX, transition: transition)
                 }

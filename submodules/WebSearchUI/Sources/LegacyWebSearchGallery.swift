@@ -312,9 +312,9 @@ private func galleryItems(account: Account, results: [ChatContextResult], curren
     return (galleryItems, focusItem)
 }
 
-func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, theme: PresentationTheme, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, present: (ViewController, Any?) -> Void) {
-    let legacyController = LegacyController(presentation: .custom, theme: theme, initialLayout: nil)
-    legacyController.statusBar.statusBarStyle = theme.rootController.statusBarStyle.style
+func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, presentationData: PresentationData, results: [ChatContextResult], current: ChatContextResult, selectionContext: TGMediaSelectionContext?, editingContext: TGMediaEditingContext, updateHiddenMedia: @escaping (String?) -> Void, initialLayout: ContainerViewLayout?, transitionHostView: @escaping () -> UIView?, transitionView: @escaping (ChatContextResult) -> UIView?, completed: @escaping (ChatContextResult) -> Void, present: (ViewController, Any?) -> Void) {
+    let legacyController = LegacyController(presentation: .custom, theme: presentationData.theme, initialLayout: nil)
+    legacyController.statusBar.statusBarStyle = presentationData.theme.rootController.statusBarStyle.style
     
     let controller = TGModernGalleryController(context: legacyController.context)!
     controller.asyncTransitionIn = true
@@ -322,9 +322,9 @@ func presentLegacyWebSearchGallery(context: AccountContext, peer: Peer?, theme: 
     
     let (items, focusItem) = galleryItems(account: context.account, results: results, current: current, selectionContext: selectionContext, editingContext: editingContext)
     
-    let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: false, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle)!
+    let model = TGMediaPickerGalleryModel(context: legacyController.context, items: items, focus: focusItem, selectionContext: selectionContext, editingContext: editingContext, hasCaptions: false, allowCaptionEntities: true, hasTimer: false, onlyCrop: false, inhibitDocumentCaptions: false, hasSelectionPanel: false, hasCamera: false, recipientName: peer?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))!
     if let peer = peer {
-        model.suggestionContext = legacySuggestionContext(account: context.account, peerId: peer.id)
+        model.suggestionContext = legacySuggestionContext(context: context, peerId: peer.id)
     }
     controller.model = model
     model.controller = controller

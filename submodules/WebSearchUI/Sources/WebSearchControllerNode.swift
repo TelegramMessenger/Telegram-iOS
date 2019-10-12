@@ -129,6 +129,7 @@ class WebSearchControllerNode: ASDisplayNode {
     private let peer: Peer?
     private var theme: PresentationTheme
     private var strings: PresentationStrings
+    private var presentationData: PresentationData
     private let mode: WebSearchMode
     
     private let controllerInteraction: WebSearchControllerInteraction
@@ -177,10 +178,11 @@ class WebSearchControllerNode: ASDisplayNode {
     var cancel: (() -> Void)?
     var dismissInput: (() -> Void)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
+    init(context: AccountContext, presentationData: PresentationData, controllerInteraction: WebSearchControllerInteraction, peer: Peer?, mode: WebSearchMode) {
         self.context = context
-        self.theme = theme
-        self.strings = strings
+        self.theme = presentationData.theme
+        self.strings = presentationData.strings
+        self.presentationData = presentationData
         self.controllerInteraction = controllerInteraction
         self.peer = peer
         self.mode = mode
@@ -266,7 +268,7 @@ class WebSearchControllerNode: ASDisplayNode {
                     entries.append(WebSearchRecentQueryEntry(index: i, query: queries[i]))
                 }
                 
-                let header = ChatListSearchItemHeader(type: .recentPeers, theme: interfaceState.presentationData.theme, strings:interfaceState.presentationData.strings, actionTitle: strings.WebSearch_RecentSectionClear, action: {
+                let header = ChatListSearchItemHeader(type: .recentPeers, theme: interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, actionTitle: interfaceState.presentationData.strings.WebSearch_RecentSectionClear, action: {
                     _ = clearRecentWebSearchQueries(postbox: strongSelf.context.account.postbox).start()
                 })
                 
@@ -687,7 +689,7 @@ class WebSearchControllerNode: ASDisplayNode {
         if self.controllerInteraction.selectionState != nil {
             if let state = self.webSearchInterfaceState.state, state.scope == .images {
                 if let results = self.currentProcessedResults?.results {
-                    presentLegacyWebSearchGallery(context: self.context, peer: self.peer, theme: self.theme, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
+                    presentLegacyWebSearchGallery(context: self.context, peer: self.peer, presentationData: self.presentationData, results: results, current: currentResult, selectionContext: self.controllerInteraction.selectionState, editingContext: self.controllerInteraction.editingState, updateHiddenMedia: { [weak self] id in
                         self?.hiddenMediaId.set(.single(id))
                     }, initialLayout: self.containerLayout?.0, transitionHostView: { [weak self] in
                         return self?.gridNode.view

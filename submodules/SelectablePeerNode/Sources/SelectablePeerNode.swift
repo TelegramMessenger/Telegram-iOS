@@ -10,6 +10,7 @@ import AvatarNode
 import PeerOnlineMarkerNode
 import LegacyComponents
 import ContextUI
+import LocalizedPeerData
 
 private let avatarFont = UIFont(name: ".SFCompactRounded-Semibold", size: 24.0)!
 private let textFont = Font.regular(11.0)
@@ -86,7 +87,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         didSet {
             if !self.theme.isEqual(to: oldValue) {
                 if let peer = self.peer, let mainPeer = peer.chatMainPeer {
-                    self.textNode.attributedText = NSAttributedString(string: mainPeer.displayTitle, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : (peer.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor), paragraphAlignment: .center)
+                    self.textNode.attributedText = NSAttributedString(string: mainPeer.debugDisplayTitle, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : (peer.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor), paragraphAlignment: .center)
                 }
             }
         }

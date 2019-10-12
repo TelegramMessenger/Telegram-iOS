@@ -106,9 +106,9 @@ private enum BlockedPeersEntry: ItemListNodeEntry {
         switch lhs {
             case .add:
                 if case .add = rhs {
-                    return true
-                } else {
                     return false
+                } else {
+                    return true
                 }
             case let .peerItem(index, _, _, _, _, _, _, _):
                 switch rhs {

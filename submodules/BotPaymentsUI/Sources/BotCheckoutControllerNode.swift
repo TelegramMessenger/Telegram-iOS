@@ -239,7 +239,7 @@ private func botCheckoutControllerEntries(presentationData: PresentationData, st
     
     var botName = ""
     if let botPeer = botPeer {
-        botName = botPeer.displayTitle
+        botName = botPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     }
     entries.append(.header(presentationData.theme, invoice, botName))
     
@@ -852,7 +852,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                             }
                             
                             let amount = NSDecimalNumber(value: Double(totalAmount) * 0.01)
-                            items.append(PKPaymentSummaryItem(label: botPeer.displayTitle, amount: amount))
+                            items.append(PKPaymentSummaryItem(label: botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), amount: amount))
                             
                             request.paymentSummaryItems = items
                             
@@ -885,7 +885,7 @@ final class BotCheckoutControllerNode: ItemListControllerNode, PKPaymentAuthoriz
                     if value {
                         strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)
                     } else {
-                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle, providerPeer.displayTitle).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: strongSelf.presentationData.strings.Checkout_LiabilityAlertTitle, text: strongSelf.presentationData.strings.Checkout_LiabilityAlert(botPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), providerPeer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).0, actions: [TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: { }), TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {
                             if let strongSelf = self {
                                 let _ = ApplicationSpecificNotice.setBotPaymentLiability(accountManager: strongSelf.context.sharedContext.accountManager, peerId: strongSelf.messageId.peerId).start()
                                 strongSelf.pay(savedCredentialsToken: savedCredentialsToken, liabilityNoticeAccepted: true)

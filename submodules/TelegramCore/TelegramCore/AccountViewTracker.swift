@@ -865,7 +865,7 @@ public final class AccountViewTracker {
         }
     }
     
-    func wrappedMessageHistorySignal(chatLocation: ChatLocation, signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
+    func wrappedMessageHistorySignal(chatLocation: ChatLocation, signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>, addHoleIfNeeded: Bool) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         let history = withState(signal, { [weak self] () -> Int32 in
             if let strongSelf = self {
                 return OSAtomicIncrement32(&strongSelf.nextViewId)
@@ -901,18 +901,39 @@ public final class AccountViewTracker {
         
         if case let .peer(peerId) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
             return Signal { subscriber in
-                let disposable = history.start(next: { next in
-                    subscriber.putNext(next)
-                }, error: { error in
-                    subscriber.putError(error)
-                }, completed: {
-                    subscriber.putCompletion()
-                })
-                let polled = self.polledChannel(peerId: peerId).start()
-                return ActionDisposable {
-                    disposable.dispose()
-                    polled.dispose()
+                let combinedDisposable = MetaDisposable()
+                self.queue.async {
+                    var addHole = false
+                    if let context = self.channelPollingContexts[peerId] {
+                        if context.subscribers.isEmpty {
+                            addHole = true
+                        }
+                    } else {
+                        addHole = true
+                    }
+                    if addHole {
+                        let _ = self.account?.postbox.transaction({ transaction -> Void in
+                            if transaction.getPeerChatListIndex(peerId) == nil {
+                                if let message = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud) {
+                                    transaction.addHole(peerId: peerId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: message.id + 1 ... (Int32.max - 1))
+                                }
+                            }
+                        }).start()
+                    }
+                    let disposable = history.start(next: { next in
+                        subscriber.putNext(next)
+                    }, error: { error in
+                        subscriber.putError(error)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    let polled = self.polledChannel(peerId: peerId).start()
+                    combinedDisposable.set(ActionDisposable {
+                        disposable.dispose()
+                        polled.dispose()
+                    })
                 }
+                return combinedDisposable
             }
         } else {
             return history
@@ -952,7 +973,7 @@ public final class AccountViewTracker {
     public func aroundMessageOfInterestHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
             let signal = account.postbox.aroundMessageOfInterestHistoryViewForChatLocation(chatLocation, count: count, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
-            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
+            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, addHoleIfNeeded: true)
         } else {
             return .never()
         }
@@ -961,7 +982,7 @@ public final class AccountViewTracker {
     public func aroundIdMessageHistoryViewForLocation(_ chatLocation: ChatLocation, count: Int, messageId: MessageId, tagMask: MessageTags? = nil, orderStatistics: MessageHistoryViewOrderStatistics = [], additionalData: [AdditionalMessageHistoryViewData] = []) -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> {
         if let account = self.account {
             let signal = account.postbox.aroundIdMessageHistoryViewForLocation(chatLocation, count: count, messageId: messageId, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
-            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
+            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, addHoleIfNeeded: false)
         } else {
             return .never()
         }
@@ -979,7 +1000,7 @@ public final class AccountViewTracker {
                     inputAnchor = .index(index)
             }
             let signal = account.postbox.aroundMessageHistoryViewForLocation(chatLocation, anchor: inputAnchor, count: count, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: [Namespaces.Message.Cloud], tagMask: tagMask, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: orderStatistics, additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData))
-            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal)
+            return wrappedMessageHistorySignal(chatLocation: chatLocation, signal: signal, addHoleIfNeeded: false)
         } else {
             return .never()
         }

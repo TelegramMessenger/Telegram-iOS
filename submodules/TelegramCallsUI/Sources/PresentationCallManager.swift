@@ -297,7 +297,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
                     guard let strongSelf = self, let peer = peer else {
                         return
                     }
-                    strongSelf.callKitIntegration?.startCall(account: account, peerId: peerId, displayTitle: peer.displayTitle)
+                    strongSelf.callKitIntegration?.startCall(account: account, peerId: peerId, displayTitle: peer.debugDisplayTitle)
                 }))
             }
             if let currentCall = self.currentCall {

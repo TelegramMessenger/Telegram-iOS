@@ -283,7 +283,7 @@ public final class WebSearchController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = WebSearchControllerNode(context: self.context, theme: self.interfaceState.presentationData.theme, strings: interfaceState.presentationData.strings, controllerInteraction: self.controllerInteraction!, peer: self.peer, mode: self.mode.mode)
+        self.displayNode = WebSearchControllerNode(context: self.context, presentationData: self.interfaceState.presentationData, controllerInteraction: self.controllerInteraction!, peer: self.peer, mode: self.mode.mode)
         self.controllerNode.requestUpdateInterfaceState = { [weak self] animated, f in
             if let strongSelf = self {
                 strongSelf.updateInterfaceState(f)

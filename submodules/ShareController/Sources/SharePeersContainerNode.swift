@@ -6,6 +6,7 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 import TelegramPresentationData
+import TelegramUIPreferences
 import MergeLists
 import AvatarNode
 import AccountContext
@@ -75,6 +76,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private let account: Account
     private let theme: PresentationTheme
     private let strings: PresentationStrings
+    private let nameDisplayOrder: PresentationPersonNameOrder
     private let controllerInteraction: ShareControllerInteraction
     private let switchToAnotherAccount: () -> Void
     
@@ -104,11 +106,12 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     
     let peersValue = Promise<[(RenderedPeer, PeerPresence?)]>()
     
-    init(sharedContext: SharedAccountContext, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
+    init(sharedContext: SharedAccountContext, account: Account, switchableAccounts: [AccountWithInfo], theme: PresentationTheme, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, peers: [(RenderedPeer, PeerPresence?)], accountPeer: Peer, controllerInteraction: ShareControllerInteraction, externalShare: Bool, switchToAnotherAccount: @escaping () -> Void) {
         self.sharedContext = sharedContext
         self.account = account
         self.theme = theme
         self.strings = strings
+        self.nameDisplayOrder = nameDisplayOrder
         self.controllerInteraction = controllerInteraction
         self.accountPeer = accountPeer
         self.switchToAnotherAccount = switchToAnotherAccount
@@ -372,7 +375,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 if peer.peerId == self.accountPeer.id {
                     text = self.strings.DialogList_SavedMessages
                 } else {
-                    text = peer.chatMainPeer?.displayTitle ?? ""
+                    text = peer.chatMainPeer?.displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder) ?? ""
                 }
                 
                 if !string.isEmpty {

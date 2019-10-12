@@ -1106,6 +1106,12 @@ public class Window1 {
     }
     
     public func presentInGlobalOverlay(_ controller: ContainableController) {
+        if let controller = controller as? ViewController {
+            if let navigationController = self._rootController as? NavigationController {
+                navigationController.presentOverlay(controller: controller, inGlobal: true)
+                return
+            }
+        }
         self.overlayPresentationContext.present(controller)
     }
     

@@ -176,7 +176,7 @@ private func botReceiptControllerEntries(presentationData: PresentationData, inv
     
     var botName = ""
     if let botPeer = botPeer {
-        botName = botPeer.displayTitle
+        botName = botPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
     }
     entries.append(.header(presentationData.theme, invoice, botName))
     

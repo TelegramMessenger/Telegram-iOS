@@ -19,26 +19,6 @@ private func getFirstResponder(_ view: UIView) -> UIView? {
     }
 }
 
-private func isViewVisibleInHierarchy(_ view: UIView, _ initial: Bool = true) -> Bool {
-    guard let window = view.window else {
-        return false
-    }
-    if view.isHidden || view.alpha == 0.0 {
-        return false
-    }
-    if view.superview === window {
-        return true
-    } else if let superview = view.superview {
-        if initial && view.frame.minY >= superview.frame.height {
-            return false
-        } else {
-            return isViewVisibleInHierarchy(superview, false)
-        }
-    } else {
-        return false
-    }
-}
-
 class KeyboardManager {
     private let host: StatusBarHost
     

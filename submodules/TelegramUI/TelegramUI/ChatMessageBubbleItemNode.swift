@@ -1189,7 +1189,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePrevewItemNode 
                 } else {
                     if let currentForwardInfo = currentForwardInfo, forwardInfo.author == nil && currentForwardInfo.0 != nil {
                         forwardSource = nil
-                        forwardAuthorSignature = currentForwardInfo.0?.displayTitle
+                        forwardAuthorSignature = currentForwardInfo.0?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     } else {
                         forwardSource = forwardInfo.author
                         forwardAuthorSignature = forwardInfo.authorSignature

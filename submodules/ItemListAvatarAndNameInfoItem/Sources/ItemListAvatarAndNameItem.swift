@@ -26,13 +26,13 @@ public enum ItemListAvatarAndNameInfoItemTitleType {
 }
 
 public enum ItemListAvatarAndNameInfoItemName: Equatable {
-    case personName(firstName: String, lastName: String)
+    case personName(firstName: String, lastName: String, phone: String)
     case title(title: String, type: ItemListAvatarAndNameInfoItemTitleType)
     
     public init(_ peer: Peer) {
         switch peer.indexName {
-        case let .personName(first, last, _, _):
-            self = .personName(firstName: first, lastName: last)
+        case let .personName(first, last, _, phone):
+            self = .personName(firstName: first, lastName: last, phone: phone ?? "")
         case let .title(title, _):
             let type: ItemListAvatarAndNameInfoItemTitleType
             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
@@ -46,7 +46,7 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
     
     public var composedTitle: String {
         switch self {
-        case let .personName(firstName, lastName):
+        case let .personName(firstName, lastName, phone):
             if !firstName.isEmpty && !lastName.isEmpty {
                 return firstName + " " + lastName
             } else if !firstName.isEmpty {
@@ -61,7 +61,21 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
     
     public func composedDisplayTitle(strings: PresentationStrings) -> String {
         switch self {
-        case let .personName(firstName, lastName):
+        case let .personName(firstName, lastName, phone):
+            if !firstName.isEmpty {
+                if !lastName.isEmpty {
+                    return "\(firstName) \(lastName)"
+                } else {
+                    return firstName
+                }
+            } else if !lastName.isEmpty {
+                return lastName
+            } else if !phone.isEmpty {
+                return formatPhoneNumber("+\(phone)")
+            } else {
+                return strings.User_DeletedAccount
+            }
+            
             if !firstName.isEmpty && !lastName.isEmpty {
                 return firstName + " " + lastName
             } else if !firstName.isEmpty {
@@ -76,10 +90,10 @@ public enum ItemListAvatarAndNameInfoItemName: Equatable {
         }
     }
     
-    public  var isEmpty: Bool {
+    public var isEmpty: Bool {
         switch self {
-        case let .personName(firstName, _):
-            return firstName.isEmpty
+        case let .personName(firstName, lastName, phone):
+            return firstName.isEmpty && lastName.isEmpty && phone.isEmpty
         case let .title(title, _):
             return title.isEmpty
         }
@@ -559,7 +573,9 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                     }
                     
                     if item.call != nil {
-                        strongSelf.addSubnode(strongSelf.callButton)
+                        if strongSelf.callButton.supernode == nil {
+                            strongSelf.addSubnode(strongSelf.callButton)
+                        }
                         
                         strongSelf.callButton.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 44.0 - 10.0, y: floor((contentSize.height - 44.0) / 2.0) - 2.0), size: CGSize(width: 44.0, height: 44.0))
                     } else if strongSelf.callButton.supernode != nil {
@@ -695,7 +711,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         }
                         let keyboardAppearance = item.theme.rootController.keyboardColor.keyboardAppearance
                         switch editingName {
-                            case let .personName(firstName, lastName):
+                            case let .personName(firstName, lastName, _):
                                 if strongSelf.inputSeparator == nil {
                                     let inputSeparator = ASDisplayNode()
                                     inputSeparator.isLayerBacked = true
@@ -1006,7 +1022,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
         if let item = self.item, let currentEditingName = item.state.editingName {
             var editingName: ItemListAvatarAndNameInfoItemName?
             if let inputFirstField = self.inputFirstField, let inputSecondField = self.inputSecondField {
-                editingName = .personName(firstName: inputFirstField.text ?? "", lastName: inputSecondField.text ?? "")
+                editingName = .personName(firstName: inputFirstField.text ?? "", lastName: inputSecondField.text ?? "", phone: "")
             } else if let inputFirstField = self.inputFirstField {
                 if case let .title(_, type) = currentEditingName {
                     editingName = .title(title: inputFirstField.text ?? "", type: type)

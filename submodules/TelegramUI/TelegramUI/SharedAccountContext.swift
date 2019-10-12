@@ -143,6 +143,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     
     private let displayUpgradeProgress: (Float?) -> Void
     
+    private var widgetDataContext: WidgetDataContext?
+    
     public init(mainWindow: Window1?, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, rootPath: String, legacyBasePath: String?, legacyCache: LegacyCache?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
         assert(Queue.mainQueue().isCurrent())
         
@@ -609,6 +611,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let _ = managedCleanupAccounts(networkArguments: networkArguments, accountManager: self.accountManager, rootPath: rootPath, auxiliaryMethods: telegramAccountAuxiliaryMethods, encryptionParameters: encryptionParameters).start()
         
         self.updateNotificationTokensRegistration()
+        
+        self.widgetDataContext = WidgetDataContext(basePath: self.basePath, activeAccount: self.activeAccounts
+        |> map { primary, _, _ in
+            return primary
+        })
     }
     
     deinit {

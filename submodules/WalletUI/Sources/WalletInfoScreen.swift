@@ -513,7 +513,6 @@ private func preparedTransition(from fromEntries: [WalletInfoListEntry], to toEn
     return WalletInfoListTransaction(deletions: deletions, insertions: insertions, updates: updates)
 }
 
-
 private final class WalletInfoScreenNode: ViewControllerTracingNode {
     private let context: WalletContext
     private var presentationData: WalletPresentationData
@@ -684,7 +683,7 @@ private final class WalletInfoScreenNode: ViewControllerTracingNode {
             }
             |> then(
                 Signal<Never, NoError>.complete()
-                |> delay(10.0, queue: .mainQueue())
+                |> delay(5.0, queue: .mainQueue())
             )
         )
         |> restart

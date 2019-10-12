@@ -299,7 +299,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
         }
     }
     
-    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         let listHeight: CGFloat = 105.0
         
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - listHeight), size: CGSize(width: size.width, height: UIScreenPixel)))
