@@ -110,6 +110,7 @@ class ItemListController: ViewController, KeyShortcutResponder, PresentableContr
     
     private var theme: WalletTheme
     private var strings: WalletStrings
+    private var hasNavigationBarSeparator: Bool
     
     private var validLayout: ContainerViewLayout?
     
@@ -212,7 +213,7 @@ class ItemListController: ViewController, KeyShortcutResponder, PresentableContr
     var willDisappear: ((Bool) -> Void)?
     var didDisappear: ((Bool) -> Void)?
     
-    init<ItemGenerationArguments>(theme: WalletTheme, strings: WalletStrings, updatedPresentationData: Signal<(theme: WalletTheme, strings: WalletStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?) {
+    init<ItemGenerationArguments>(theme: WalletTheme, strings: WalletStrings, updatedPresentationData: Signal<(theme: WalletTheme, strings: WalletStrings), NoError>, state: Signal<(ItemListControllerState, (ItemListNodeState, ItemGenerationArguments)), NoError>, tabBarItem: Signal<ItemListControllerTabBarItem, NoError>?, hasNavigationBarSeparator: Bool = true) {
         self.state = state
         |> map { controllerState, nodeStateAndArgument -> (ItemListControllerState, (ItemListNodeState, Any)) in
             return (controllerState, (nodeStateAndArgument.0, nodeStateAndArgument.1))
@@ -220,8 +221,16 @@ class ItemListController: ViewController, KeyShortcutResponder, PresentableContr
         
         self.theme = theme
         self.strings = strings
+        self.hasNavigationBarSeparator = hasNavigationBarSeparator
         
-        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: theme.navigationBar, strings: NavigationBarStrings(back: strings.Wallet_Navigation_Back, close: strings.Wallet_Navigation_Close)))
+        let navigationBarTheme: NavigationBarTheme
+        if hasNavigationBarSeparator {
+            navigationBarTheme = theme.navigationBar
+        } else {
+            navigationBarTheme = NavigationBarTheme(buttonColor: theme.navigationBar.buttonColor, disabledButtonColor: theme.navigationBar.disabledButtonColor, primaryTextColor: theme.navigationBar.primaryTextColor, backgroundColor: theme.list.itemBlocksBackgroundColor, separatorColor: theme.list.itemBlocksBackgroundColor, badgeBackgroundColor: theme.navigationBar.badgeBackgroundColor, badgeStrokeColor: theme.navigationBar.badgeStrokeColor, badgeTextColor: theme.navigationBar.badgeTextColor)
+        }
+        
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: strings.Wallet_Navigation_Back, close: strings.Wallet_Navigation_Close)))
         
         self.isOpaqueWhenInOverlay = true
         self.blocksBackgroundWhenInOverlay = true
@@ -381,7 +390,14 @@ class ItemListController: ViewController, KeyShortcutResponder, PresentableContr
                     if strongSelf.theme !== controllerState.theme {
                         strongSelf.theme = controllerState.theme
                         
-                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: strongSelf.theme.navigationBar, strings: NavigationBarStrings(back: strongSelf.strings.Wallet_Navigation_Back, close: strongSelf.strings.Wallet_Navigation_Close)))
+                        let navigationBarTheme: NavigationBarTheme
+                        if strongSelf.hasNavigationBarSeparator {
+                            navigationBarTheme = strongSelf.theme.navigationBar
+                        } else {
+                            navigationBarTheme = NavigationBarTheme(buttonColor: strongSelf.theme.navigationBar.buttonColor, disabledButtonColor: strongSelf.theme.navigationBar.disabledButtonColor, primaryTextColor: strongSelf.theme.navigationBar.primaryTextColor, backgroundColor: strongSelf.theme.list.itemBlocksBackgroundColor, separatorColor: strongSelf.theme.list.itemBlocksBackgroundColor, badgeBackgroundColor: strongSelf.theme.navigationBar.badgeBackgroundColor, badgeStrokeColor: strongSelf.theme.navigationBar.badgeStrokeColor, badgeTextColor: strongSelf.theme.navigationBar.badgeTextColor)
+                        }
+                        
+                        strongSelf.navigationBar?.updatePresentationData(NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: strongSelf.strings.Wallet_Navigation_Back, close: strongSelf.strings.Wallet_Navigation_Close)))
                         strongSelf.statusBar.statusBarStyle = strongSelf.theme.statusBarStyle
                         
                         var items = strongSelf.navigationItem.rightBarButtonItems ?? []

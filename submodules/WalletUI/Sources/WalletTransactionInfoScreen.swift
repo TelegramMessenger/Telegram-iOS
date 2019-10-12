@@ -7,196 +7,48 @@ import SolidRoundedButtonNode
 import SwiftSignalKit
 import OverlayStatusController
 import WalletCore
+import AnimatedStickerNode
 
 private func stringForFullDate(timestamp: Int32, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat) -> String {
     var t: time_t = Int(timestamp)
     var timeinfo = tm()
     localtime_r(&t, &timeinfo);
     
+    let dayString = "\(timeinfo.tm_mday)"
+    let yearString = "\(2000 + timeinfo.tm_year - 100)"
+    let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)
+    
+    let monthFormat: (String, String, String) -> (String, [(Int, NSRange)])
     switch timeinfo.tm_mon + 1 {
     case 1:
-        return strings.Wallet_Time_PreciseDate_m1("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m1
     case 2:
-        return strings.Wallet_Time_PreciseDate_m2("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m2
     case 3:
-        return strings.Wallet_Time_PreciseDate_m3("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m3
     case 4:
-        return strings.Wallet_Time_PreciseDate_m4("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m4
     case 5:
-        return strings.Wallet_Time_PreciseDate_m5("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m5
     case 6:
-        return strings.Wallet_Time_PreciseDate_m6("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m6
     case 7:
-        return strings.Wallet_Time_PreciseDate_m7("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m7
     case 8:
-        return strings.Wallet_Time_PreciseDate_m8("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m8
     case 9:
-        return strings.Wallet_Time_PreciseDate_m9("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m9
     case 10:
-        return strings.Wallet_Time_PreciseDate_m10("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m10
     case 11:
-        return strings.Wallet_Time_PreciseDate_m11("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m11
     case 12:
-        return strings.Wallet_Time_PreciseDate_m12("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Wallet_Time_PreciseDate_m12
     default:
         return ""
     }
-}
 
-private final class WalletTransactionInfoControllerArguments {
-    let copyWalletAddress: () -> Void
-    let sendGrams: () -> Void
-    let displayContextMenu: (WalletTransactionInfoEntryTag, String) -> Void
-    let openFeeInfo: () -> Void
-    
-    init(copyWalletAddress: @escaping () -> Void, sendGrams: @escaping () -> Void, displayContextMenu: @escaping (WalletTransactionInfoEntryTag, String) -> Void, openFeeInfo: @escaping () -> Void) {
-        self.copyWalletAddress = copyWalletAddress
-        self.sendGrams = sendGrams
-        self.displayContextMenu = displayContextMenu
-        self.openFeeInfo = openFeeInfo
-    }
-}
-
-private enum WalletTransactionInfoSection: Int32 {
-    case amount
-    case info
-    case storageFee
-    case otherFee
-    case comment
-}
-
-private enum WalletTransactionInfoEntryTag: ItemListItemTag {
-    case address
-    case comment
-    
-    func isEqual(to other: ItemListItemTag) -> Bool {
-        if let other = other as? WalletTransactionInfoEntryTag {
-            return self == other
-        } else {
-            return false
-        }
-    }
-}
-
-private enum WalletTransactionInfoEntry: ItemListNodeEntry {
-    case amount(WalletTheme, WalletStrings, WalletPresentationDateTimeFormat, WalletInfoTransaction)
-    case infoHeader(WalletTheme, String)
-    case infoAddress(WalletTheme, String, String?)
-    case infoCopyAddress(WalletTheme, String)
-    case infoSendGrams(WalletTheme, String)
-    case storageFeeHeader(WalletTheme, String)
-    case storageFee(WalletTheme, String)
-    case storageFeeInfo(WalletTheme, String)
-    case otherFeeHeader(WalletTheme, String)
-    case otherFee(WalletTheme, String)
-    case otherFeeInfo(WalletTheme, String)
-    case commentHeader(WalletTheme, String)
-    case comment(WalletTheme, String)
-    
-    var section: ItemListSectionId {
-        switch self {
-        case .amount:
-            return WalletTransactionInfoSection.amount.rawValue
-        case .infoHeader, .infoAddress, .infoCopyAddress, .infoSendGrams:
-            return WalletTransactionInfoSection.info.rawValue
-        case .storageFeeHeader, .storageFee, .storageFeeInfo:
-            return WalletTransactionInfoSection.storageFee.rawValue
-        case .otherFeeHeader, .otherFee, .otherFeeInfo:
-            return WalletTransactionInfoSection.otherFee.rawValue
-        case .commentHeader, .comment:
-            return WalletTransactionInfoSection.comment.rawValue
-        }
-    }
-    
-    var stableId: Int32 {
-        switch self {
-        case .amount:
-            return 0
-        case .infoHeader:
-            return 1
-        case .infoAddress:
-            return 2
-        case .infoCopyAddress:
-            return 3
-        case .infoSendGrams:
-            return 4
-        case .commentHeader:
-            return 5
-        case .comment:
-            return 6
-        case .storageFeeHeader:
-            return 7
-        case .storageFee:
-            return 8
-        case .storageFeeInfo:
-            return 9
-        case .otherFeeHeader:
-            return 10
-        case .otherFee:
-            return 11
-        case .otherFeeInfo:
-            return 12
-        }
-    }
-    
-    static func <(lhs: WalletTransactionInfoEntry, rhs: WalletTransactionInfoEntry) -> Bool {
-        return lhs.stableId < rhs.stableId
-    }
-    
-    func item(_ arguments: Any) -> ListViewItem {
-        let arguments = arguments as! WalletTransactionInfoControllerArguments
-        switch self {
-        case let .amount(theme, strings, dateTimeFormat, walletTransaction):
-            return WalletTransactionHeaderItem(theme: theme, strings: strings, dateTimeFormat: dateTimeFormat, walletTransaction: walletTransaction, sectionId: self.section)
-        case let .infoHeader(theme, text):
-            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-        case let .infoAddress(theme, text, address):
-            return ItemListMultilineTextItem(theme: theme, text: text, font: .monospace, sectionId: self.section, style: .blocks, longTapAction: address == nil ? nil : {
-                if let address = address {
-                arguments.displayContextMenu(WalletTransactionInfoEntryTag.address, address)
-                }
-            }, tag: WalletTransactionInfoEntryTag.address)
-        case let .infoCopyAddress(theme, text):
-            return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                arguments.copyWalletAddress()
-            })
-        case let .infoSendGrams(theme, text):
-            return ItemListActionItem(theme: theme, title: text, kind: .generic, alignment: .natural, sectionId: self.section, style: .blocks, action: {
-                arguments.sendGrams()
-            })
-        case let .storageFeeHeader(theme, text):
-            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-        case let .storageFee(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
-        case let .storageFeeInfo(theme, text):
-            return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
-                switch action {
-                case .tap:
-                    arguments.openFeeInfo()
-                }
-            }, style: .blocks)
-        case let .otherFeeHeader(theme, text):
-            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-        case let .otherFee(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, sectionId: self.section, style: .blocks, longTapAction: nil, tag: nil)
-        case let .otherFeeInfo(theme, text):
-            return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section, linkAction: { action in
-                switch action {
-                case .tap:
-                    arguments.openFeeInfo()
-                }
-            }, style: .blocks)
-        case let .commentHeader(theme, text):
-            return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
-        case let .comment(theme, text):
-            return ItemListMultilineTextItem(theme: theme, text: text, sectionId: self.section, style: .blocks, longTapAction: {
-                arguments.displayContextMenu(WalletTransactionInfoEntryTag.comment, text)
-            }, tag: WalletTransactionInfoEntryTag.comment)
-        }
-    }
-}
-
-private struct WalletTransactionInfoControllerState: Equatable {
+    return monthFormat(dayString, yearString, timeString).0
 }
 
 private enum WalletTransactionAddress {
@@ -266,359 +118,339 @@ private func extractDescription(_ walletTransaction: WalletInfoTransaction) -> S
     }
 }
 
-private func walletTransactionInfoControllerEntries(presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction, state: WalletTransactionInfoControllerState, walletInfo: WalletInfo?) -> [WalletTransactionInfoEntry] {
-    var entries: [WalletTransactionInfoEntry] = []
+private func messageBubbleImage(incoming: Bool, fillColor: UIColor, strokeColor: UIColor) -> UIImage {
+    let diameter: CGFloat = 36.0
+    let corner: CGFloat = 7.0
     
-    entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, walletTransaction))
-    
-    let transferredValue: Int64
-    switch walletTransaction {
-    case let .completed(transaction):
-        transferredValue = transaction.transferredValueWithoutFees
-    case let .pending(transaction):
-        transferredValue = -transaction.value
-    }
-    let address = extractAddress(walletTransaction)
-    var singleAddress: String?
-    let text = stringForAddress(strings: presentationData.strings, address: address)
-    let description = extractDescription(walletTransaction)
-    
-    if transferredValue <= 0 {
-        entries.append(.infoHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_RecipientHeader))
-    } else {
-        entries.append(.infoHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SenderHeader))
-    }
-    var singleAddres: String?
-    if case let .list(list) = address, list.count == 1 {
-        singleAddres = list.first
-    }
-    entries.append(.infoAddress(presentationData.theme, text, singleAddres))
-    if case .list = address, walletInfo != nil {
-        entries.append(.infoCopyAddress(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CopyAddress))
-        entries.append(.infoSendGrams(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_SendGrams))
-    }
-    
-    if !description.isEmpty {
-        entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_CommentHeader))
-        entries.append(.comment(presentationData.theme, description))
-    }
-    
-    if case let .completed(transaction) = walletTransaction {
-        if transaction.storageFee != 0 {
-            entries.append(.storageFeeHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_StorageFeeHeader))
-            entries.append(.storageFee(presentationData.theme, formatBalanceText(-transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.storageFeeInfo(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_StorageFeeInfo))
-        }
-        if transaction.otherFee != 0 {
-            entries.append(.otherFeeHeader(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_OtherFeeHeader))
-            entries.append(.otherFee(presentationData.theme, formatBalanceText(-transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)))
-            entries.append(.otherFeeInfo(presentationData.theme, presentationData.strings.Wallet_TransactionInfo_OtherFeeInfo))
-        }
-    }
-    
-    return entries
-}
-
-func walletTransactionInfoController(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, enableDebugActions: Bool) -> ViewController {
-    let statePromise = ValuePromise(WalletTransactionInfoControllerState(), ignoreRepeated: true)
-    let stateValue = Atomic(value: WalletTransactionInfoControllerState())
-    let updateState: ((WalletTransactionInfoControllerState) -> WalletTransactionInfoControllerState) -> Void = { f in
-        statePromise.set(stateValue.modify { f($0) })
-    }
-    
-    var dismissImpl: (() -> Void)?
-    var presentControllerImpl: ((ViewController, Any?) -> Void)?
-    var pushImpl: ((ViewController) -> Void)?
-    var displayContextMenuImpl: ((WalletTransactionInfoEntryTag, String) -> Void)?
-    
-    let arguments = WalletTransactionInfoControllerArguments(copyWalletAddress: {
-        let address = extractAddress(walletTransaction)
-        if case let .list(addresses) = address, let address = addresses.first {
-            UIPasteboard.general.string = address
-            let presentationData = context.presentationData
-            presentControllerImpl?(OverlayStatusController(theme: presentationData.theme, type: .genericSuccess(presentationData.strings.Wallet_TransactionInfo_AddressCopied, false)), nil)
-        }
-    }, sendGrams: {
-        guard let walletInfo = walletInfo else {
-            return
-        }
-        let address = extractAddress(walletTransaction)
-        if case let .list(addresses) = address, let address = addresses.first {
-            dismissImpl?()
-            var randomId: Int64 = 0
-            arc4random_buf(&randomId, 8)
-            pushImpl?(walletSendScreen(context: context, randomId: randomId, walletInfo: walletInfo, address: address))
-        }
-    }, displayContextMenu: { tag, text in
-        displayContextMenuImpl?(tag, text)
-    }, openFeeInfo: {
-        let presentationData = context.presentationData
-        context.openUrl(presentationData.strings.Wallet_TransactionInfo_FeeInfoURL)
-    })
-    
-    let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), statePromise.get())
-    |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.Wallet_TransactionInfo_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Wallet_Navigation_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: walletTransactionInfoControllerEntries(presentationData: presentationData, walletTransaction: walletTransaction, state: state, walletInfo: walletInfo), style: .blocks, animateChanges: false)
+    return generateImage(CGSize(width: 42.0, height: diameter), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
         
-        return (controllerState, (listState, arguments))
-    }
-    |> afterDisposed {
-    }
-    
-    let controller = ItemListController(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil)
-    controller.navigationPresentation = .modal
-    controller.enableInteractiveDismiss = true
-    dismissImpl = { [weak controller] in
-        controller?.view.endEditing(true)
-        controller?.dismiss()
-    }
-    presentControllerImpl = { [weak controller] c, a in
-        controller?.present(c, in: .window(.root), with: a)
-    }
-    pushImpl = { [weak controller] c in
-        controller?.push(c)
-    }
-    displayContextMenuImpl = { [weak controller] tag, value in
-        if let strongController = controller {
-            let presentationData = context.presentationData
-            var resultItemNode: ListViewItemNode?
-            let _ = strongController.frameForItemNode({ itemNode in
-                if let itemNode = itemNode as? ItemListMultilineTextItemNode {
-                    if let itemTag = itemNode.tag as? WalletTransactionInfoEntryTag {
-                        if itemTag == tag {
-                            resultItemNode = itemNode
-                            return true
-                        }
-                    }
-                }
-                return false
-            })
-            if let resultItemNode = resultItemNode {
-                var actions: [ContextMenuAction] = []
-                actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Wallet_ContextMenuCopy, accessibilityLabel: presentationData.strings.Wallet_ContextMenuCopy), action: {
-                    UIPasteboard.general.string = value
-                }))
-                if enableDebugActions {
-                    if case .address = tag {
-                        actions.append(ContextMenuAction(content: .text(title: "View Transactions", accessibilityLabel: "View Transactions"), action: {
-                            pushImpl?(WalletInfoScreen(context: context, walletInfo: nil, address: value, enableDebugActions: enableDebugActions))
-                        }))
-                    }
-                }
-                let contextMenuController =  ContextMenuController(actions: actions)
-                strongController.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak resultItemNode] in
-                    if let strongController = controller, let resultItemNode = resultItemNode {
-                        return (resultItemNode, resultItemNode.contentBounds.insetBy(dx: 0.0, dy: -2.0), strongController.displayNode, strongController.view.bounds)
-                    } else {
-                        return nil
-                    }
-                }))
-            }
-        }
-    }
-    
-    return controller
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.scaleBy(x: incoming ? 1.0 : -1.0, y: -1.0)
+        context.translateBy(x: -size.width / 2.0 + 0.5, y: -size.height / 2.0 + 0.5)
+        
+        let lineWidth: CGFloat = 1.0
+        context.setFillColor(fillColor.cgColor)
+        context.setLineWidth(lineWidth)
+        context.setStrokeColor(strokeColor.cgColor)
+        
+        let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
+        context.strokePath()
+        
+        let _ = try? drawSvgPath(context, path: "M6,17.5 C6,7.83289181 13.8350169,0 23.5,0 C33.1671082,0 41,7.83501688 41,17.5 C41,27.1671082 33.1649831,35 23.5,35 C19.2941198,35 15.4354328,33.5169337 12.4179496,31.0453367 C9.05531719,34.9894816 -2.41102995e-08,35 0,35 C5.972003,31.5499861 6,26.8616169 6,26.8616169 L6,17.5 L6,17.5 ")
+        context.fillPath()
+    })!.stretchableImage(withLeftCapWidth: incoming ? Int(corner + diameter / 2.0) : Int(diameter / 2.0), topCapHeight: Int(diameter / 2.0))
 }
 
-class WalletTransactionHeaderItem: ListViewItem, ItemListItem {
-    let theme: WalletTheme
-    let strings: WalletStrings
-    let dateTimeFormat: WalletPresentationDateTimeFormat
-    let walletTransaction: WalletInfoTransaction
-    let sectionId: ItemListSectionId
-    let isAlwaysPlain: Bool = true
+final class WalletTransactionInfoScreen: ViewController {
+    private let context: WalletContext
+    private let walletInfo: WalletInfo?
+    private let walletTransaction: WalletInfoTransaction
+    private var presentationData: WalletPresentationData
     
-    init(theme: WalletTheme, strings: WalletStrings, dateTimeFormat: WalletPresentationDateTimeFormat, walletTransaction: WalletInfoTransaction, sectionId: ItemListSectionId) {
-        self.theme = theme
-        self.strings = strings
-        self.dateTimeFormat = dateTimeFormat
+    private var previousScreenBrightness: CGFloat?
+    private var displayLinkAnimator: DisplayLinkAnimator?
+    private let idleTimerExtensionDisposable: Disposable
+    
+    public init(context: WalletContext, walletInfo: WalletInfo?, walletTransaction: WalletInfoTransaction, enableDebugActions: Bool) {
+        self.context = context
+        self.walletInfo = walletInfo
         self.walletTransaction = walletTransaction
-        self.sectionId = sectionId
+        
+        self.presentationData = context.presentationData
+        
+        let defaultTheme = self.presentationData.theme.navigationBar
+        let navigationBarTheme = NavigationBarTheme(buttonColor: defaultTheme.buttonColor, disabledButtonColor: defaultTheme.disabledButtonColor, primaryTextColor: defaultTheme.primaryTextColor, backgroundColor: .clear, separatorColor: .clear, badgeBackgroundColor: defaultTheme.badgeBackgroundColor, badgeStrokeColor: defaultTheme.badgeStrokeColor, badgeTextColor: defaultTheme.badgeTextColor)
+        
+        self.idleTimerExtensionDisposable = context.idleTimerExtension()
+        
+        super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: navigationBarTheme, strings: NavigationBarStrings(back: self.presentationData.strings.Wallet_Navigation_Back, close: self.presentationData.strings.Wallet_Navigation_Close)))
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
+        self.navigationBar?.intrinsicCanTransitionInline = false
+        
+        self.navigationPresentation = .flatModal
+        self.navigationItem.leftBarButtonItem = UIBarButtonItem(customView: UIView())
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Back, style: .plain, target: nil, action: nil)
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Wallet_Navigation_Done, style: .done, target: self, action: #selector(self.donePressed))
     }
     
-    func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
-        async {
-            let node = WalletTransactionHeaderItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-            
-            node.contentSize = layout.contentSize
-            node.insets = layout.insets
-            
-            Queue.mainQueue().async {
-                completion(node, {
-                    return (nil, { _ in apply() })
-                })
-            }
-        }
+    deinit {
+        self.idleTimerExtensionDisposable.dispose()
     }
     
-    func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
-        Queue.mainQueue().async {
-            guard let nodeValue = node() as? WalletTransactionHeaderItemNode else {
-                assertionFailure()
+    required init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    override public func loadDisplayNode() {
+        self.displayNode = WalletTransactionInfoScreenNode(context: self.context, presentationData: self.presentationData, walletTransaction: self.walletTransaction)
+        (self.displayNode as! WalletTransactionInfoScreenNode).send = { [weak self] address in
+            guard let strongSelf = self else {
                 return
             }
-            
-            let makeLayout = nodeValue.asyncLayout()
-            
-            async {
-                let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-                Queue.mainQueue().async {
-                    completion(layout, { _ in
-                        apply()
-                    })
-                }
+            var randomId: Int64 = 0
+            arc4random_buf(&randomId, 8)
+            if let walletInfo = strongSelf.walletInfo {
+                strongSelf.push(walletSendScreen(context: strongSelf.context, randomId: randomId, walletInfo: walletInfo, address: address))
+                strongSelf.dismiss()
             }
         }
+        (self.displayNode as! WalletTransactionInfoScreenNode).displayFeesTooltip = { [weak self] node, rect in
+            guard let strongSelf = self else {
+                return
+            }
+            var string = NSMutableAttributedString(string: "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and for processing your transactions. More info", font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+            string.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor(rgb: 0x6bb2ff), range: NSMakeRange(string.string.count - 10, 10))
+            let controller = TooltipController(content: .attributedText(string), timeout: 3.0, dismissByTapOutside: true, dismissByTapOutsideSource: false, dismissImmediatelyOnLayoutUpdate: false)
+            strongSelf.present(controller, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
+                if let strongSelf = self {
+                    return (node.view, rect.insetBy(dx: 0.0, dy: -4.0))
+                }
+                return nil
+            }))
+        }
+        self.displayNodeDidLoad()
+    }
+    
+    private let measureTextNode = TextNode()
+    override func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
+        let text = NSAttributedString(string: extractDescription(self.walletTransaction), font: Font.regular(17.0), textColor: .black)
+        let makeTextLayout = TextNode.asyncLayout(self.measureTextNode)
+        let (textLayout, _) = makeTextLayout(TextNodeLayoutArguments(attributedString: text, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: layout.size.width - 36.0 * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+        var textHeight = textLayout.size.height
+        if textHeight > 0.0 {
+            textHeight += 24.0
+        }
+        let insets = layout.insets(options: [])
+        return CGSize(width: layout.size.width, height: 428.0 + insets.bottom + textHeight)
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        (self.displayNode as! WalletTransactionInfoScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationHeight, transition: transition)
+    }
+    
+    @objc private func donePressed() {
+        self.dismiss()
     }
 }
 
-private let titleFont = Font.regular(14.0)
-private let titleBoldFont = Font.semibold(14.0)
+private let integralFont = Font.medium(48.0)
+private let fractionalFont = Font.medium(24.0)
 
-private class WalletTransactionHeaderItemNode: ListViewItemNode {
-    private let titleSignNode: TextNode
-    private let titleNode: TextNode
-    private let subtitleNode: TextNode
-    private let iconNode: ASImageNode
+private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
+    private let context: WalletContext
+    private var presentationData: WalletPresentationData
+    private let walletTransaction: WalletInfoTransaction
+    private let incoming: Bool
+    
+    private let titleNode: ImmediateTextNode
+    private let timeNode: ImmediateTextNode
+    
+    private let amountNode: ImmediateTextNode
+    private let iconNode: AnimatedStickerNode
     private let activateArea: AccessibilityAreaNode
+    private let feesNode: ImmediateTextNode
+    private let feesButtonNode: ASButtonNode
     
-    private var item: WalletTransactionHeaderItem?
+    private let commentBackgroundNode: ASImageNode
+    private let commentTextNode: ImmediateTextNode
     
-    init() {
-        self.titleSignNode = TextNode()
-        self.titleSignNode.isUserInteractionEnabled = false
-        self.titleSignNode.contentMode = .left
-        self.titleSignNode.contentsScale = UIScreen.main.scale
+    private let addressTextNode: ImmediateTextNode
+    
+    private let buttonNode: SolidRoundedButtonNode
+    
+    var send: ((String) -> Void)?
+    var displayFeesTooltip: ((ASDisplayNode, CGRect) -> Void)?
+  
+    init(context: WalletContext, presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction) {
+        self.context = context
+        self.presentationData = presentationData
+        self.walletTransaction = walletTransaction
         
-        self.titleNode = TextNode()
-        self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.contentMode = .left
-        self.titleNode.contentsScale = UIScreen.main.scale
+        self.titleNode = ImmediateTextNode()
+        self.titleNode.textAlignment = .center
+        self.titleNode.maximumNumberOfLines = 1
         
-        self.subtitleNode = TextNode()
-        self.subtitleNode.isUserInteractionEnabled = false
-        self.subtitleNode.contentMode = .left
-        self.subtitleNode.contentsScale = UIScreen.main.scale
+        self.timeNode = ImmediateTextNode()
+        self.timeNode.textAlignment = .center
+        self.timeNode.maximumNumberOfLines = 1
         
-        self.iconNode = ASImageNode()
-        self.iconNode.displaysAsynchronously = false
-        self.iconNode.displayWithoutProcessing = true
-        self.iconNode.image = UIImage(bundleImageName: "Wallet/BalanceGem")?.precomposed()
+        self.amountNode = ImmediateTextNode()
+        self.amountNode.textAlignment = .center
+        self.amountNode.maximumNumberOfLines = 1
         
+        self.iconNode = AnimatedStickerNode()
+        if let path = getAppBundle().path(forResource: "WalletIntroStatic", ofType: "tgs") {
+            self.iconNode.setup(source: AnimatedStickerNodeLocalFileSource(path: path), width: 120, height: 120, mode: .direct)
+            self.iconNode.visibility = true
+        }
+        
+        self.feesNode = ImmediateTextNode()
+        self.feesNode.textAlignment = .center
+        self.feesNode.maximumNumberOfLines = 2
+        self.feesNode.lineSpacing = 0.35
+        
+        self.feesButtonNode = ASButtonNode()
+        
+        self.commentBackgroundNode = ASImageNode()
+        self.commentBackgroundNode.contentMode = .scaleToFill
+        
+        self.commentTextNode = ImmediateTextNode()
+        self.commentTextNode.textAlignment = .natural
+        self.commentTextNode.maximumNumberOfLines = 0
+        
+        self.addressTextNode = ImmediateTextNode()
+        self.addressTextNode.maximumNumberOfLines = 4
+        self.addressTextNode.textAlignment = .justified
+        self.addressTextNode.lineSpacing = 0.35
+        
+        self.buttonNode = SolidRoundedButtonNode(title: "", icon: nil, theme: SolidRoundedButtonTheme(backgroundColor: self.presentationData.theme.setup.buttonFillColor, foregroundColor: self.presentationData.theme.setup.buttonForegroundColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+               
         self.activateArea = AccessibilityAreaNode()
-        self.activateArea.accessibilityTraits = .staticText
         
-        super.init(layerBacked: false, dynamicBounce: false)
+        let timestamp: Int64
+        let transferredValue: Int64
+        switch walletTransaction {
+        case let .completed(transaction):
+            timestamp = transaction.timestamp
+            transferredValue = transaction.transferredValueWithoutFees
+        case let .pending(transaction):
+            timestamp = transaction.timestamp
+            transferredValue = -transaction.value
+        }
+        self.incoming = transferredValue > 0
         
-        self.addSubnode(self.titleSignNode)
+        super.init()
+        
+        self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
+        
         self.addSubnode(self.titleNode)
-        self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.timeNode)
+        self.addSubnode(self.amountNode)
         self.addSubnode(self.iconNode)
-        self.addSubnode(self.activateArea)
-    }
+        self.addSubnode(self.feesNode)
+        self.addSubnode(self.feesButtonNode)
+        self.addSubnode(self.commentBackgroundNode)
+        self.addSubnode(self.commentTextNode)
+        self.addSubnode(self.addressTextNode)
+        self.addSubnode(self.buttonNode)
     
-    func asyncLayout() -> (_ item: WalletTransactionHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
-        let makeTitleSignLayout = TextNode.asyncLayout(self.titleSignNode)
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
-        let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
-        let iconSize = self.iconNode.image?.size ?? CGSize(width: 10.0, height: 10.0)
+        let titleFont = Font.semibold(17.0)
+        let subtitleFont = Font.regular(13.0)
+        let addressFont = Font.monospace(17.0)
+        let textColor = self.presentationData.theme.list.itemPrimaryTextColor
+        let seccondaryTextColor = self.presentationData.theme.list.itemSecondaryTextColor
         
-        return { item, params, neighbors in
-            let leftInset: CGFloat = 15.0 + params.leftInset
-            let verticalInset: CGFloat = 24.0
-            
-            let signString: String
-            let balanceString: String
-            let titleColor: UIColor
-            let transferredValue: Int64
-            switch item.walletTransaction {
-            case let .completed(transaction):
-                transferredValue = transaction.transferredValueWithoutFees
-            case let .pending(transaction):
-                transferredValue = -transaction.value
+        self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_TransactionInfo_Title, font: titleFont, textColor: textColor)
+        
+       
+        self.timeNode.attributedText = NSAttributedString(string: stringForFullDate(timestamp: Int32(clamping: timestamp), strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat), font: subtitleFont, textColor: seccondaryTextColor)
+                
+        let amountString: String
+        let amountColor: UIColor
+        if transferredValue <= 0 {
+            amountString = "\(formatBalanceText(-transferredValue, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator))"
+            amountColor = self.presentationData.theme.info.outgoingFundsTitleColor
+        } else {
+            amountString = "\(formatBalanceText(transferredValue, decimalSeparator: self.presentationData.dateTimeFormat.decimalSeparator))"
+            amountColor = self.presentationData.theme.info.incomingFundsTitleColor
+        }
+        self.amountNode.attributedText = amountAttributedString(amountString, integralFont: integralFont, fractionalFont: fractionalFont, color: amountColor)
+        
+        var feesString: String = ""
+        if case let .completed(transaction) = walletTransaction {
+            if transaction.storageFee != 0 {
+                feesString.append(formatBalanceText(transaction.storageFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " storage fee")
             }
-            if transferredValue <= 0 {
-                signString = ""
-                balanceString = "\(formatBalanceText(-transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.info.outgoingFundsTitleColor
-            } else {
-                signString = ""
-                balanceString = "\(formatBalanceText(transferredValue, decimalSeparator: item.dateTimeFormat.decimalSeparator))"
-                titleColor = item.theme.info.incomingFundsTitleColor
-            }
-            
-            let title = NSMutableAttributedString()
-            if let range = balanceString.range(of: item.dateTimeFormat.decimalSeparator) {
-                let integralPart = String(balanceString[..<range.lowerBound])
-                let fractionalPart = String(balanceString[range.lowerBound...])
-                title.append(NSAttributedString(string: integralPart, font: Font.bold(48.0), textColor: titleColor))
-                title.append(NSAttributedString(string: fractionalPart, font: Font.bold(24.0), textColor: titleColor))
-            } else {
-                title.append(NSAttributedString(string: balanceString, font: Font.bold(48.0), textColor: titleColor))
-            }
-            let titleSign = NSAttributedString(string: signString, font: Font.bold(48.0), textColor: titleColor)
-            
-            let timestamp: Int64
-            switch item.walletTransaction {
-            case let .completed(transaction):
-                timestamp = transaction.timestamp
-            case let .pending(transaction):
-                timestamp = transaction.timestamp
-            }
-            let subtitle: String = stringForFullDate(timestamp: Int32(clamping: timestamp), strings: item.strings, dateTimeFormat: item.dateTimeFormat)
-            
-            let (titleSignLayout, titleSignApply) = makeTitleSignLayout(TextNodeLayoutArguments(attributedString: titleSign, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            
-            let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: subtitle, font: Font.regular(13.0), textColor: item.theme.list.freeTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            
-            let contentSize: CGSize
-            
-            contentSize = CGSize(width: params.width, height: titleLayout.size.height + verticalInset + verticalInset)
-            let insets = itemListNeighborsGroupedInsets(neighbors)
-            
-            let titleScale: CGFloat = min(1.0, (params.width - 40.0 - iconSize.width) / titleLayout.size.width)
-            
-            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            
-            return (layout, { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.item = item
-                    
-                    strongSelf.activateArea.frame = CGRect(origin: CGPoint(x: params.leftInset, y: 0.0), size: CGSize(width: params.width - params.leftInset - params.rightInset, height: layout.contentSize.height))
-                    //strongSelf.activateArea.accessibilityLabel = attributedText.string
-                    
-                    let _ = titleSignApply()
-                    let _ = titleApply()
-                    let _ = subtitleApply()
-                    
-                    let iconSpacing: CGFloat = 4.0
-                    let contentWidth = titleSignLayout.size.width + iconSpacing + titleLayout.size.width + iconSpacing + iconSize.width * 3.0 / 2.0
-                    let contentOrigin = floor((params.width - contentWidth) / 2.0)
-                    let titleSignFrame = CGRect(origin: CGPoint(x: contentOrigin, y: verticalInset), size: titleSignLayout.size)
-                    let iconFrame = CGRect(origin: CGPoint(x: contentOrigin + titleSignFrame.width * titleScale + iconSpacing, y: titleSignFrame.minY + floor((titleLayout.size.height - iconSize.height) / 2.0) - 2.0), size: iconSize)
-                    let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + iconSpacing, y: verticalInset), size: titleLayout.size)
-                    let subtitleFrame = CGRect(origin: CGPoint(x: floor((params.width - subtitleLayout.size.width) / 2.0), y: titleFrame.maxY - 5.0), size: subtitleLayout.size)
-                    strongSelf.titleSignNode.position = titleSignFrame.center
-                    strongSelf.titleSignNode.bounds = CGRect(origin: CGPoint(), size: titleSignFrame.size)
-                    strongSelf.titleSignNode.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
-                    strongSelf.titleNode.position = titleFrame.center
-                    strongSelf.titleNode.bounds = CGRect(origin: CGPoint(), size: titleFrame.size)
-                    strongSelf.titleNode.transform = CATransform3DMakeScale(titleScale, titleScale, 1.0)
-                    strongSelf.subtitleNode.frame = subtitleFrame
-                    strongSelf.iconNode.frame = iconFrame
+            if transaction.otherFee != 0 {
+                if !feesString.isEmpty {
+                    feesString.append("\n")
                 }
-            })
+                feesString.append(formatBalanceText(transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " transaction fee")
+            }
+            
+            if !feesString.isEmpty {
+                feesString.append("(?)")
+            }
+        }
+        self.feesNode.attributedText = NSAttributedString(string: feesString, font: subtitleFont, textColor: seccondaryTextColor)
+        
+        self.feesButtonNode.addTarget(self, action: #selector(feesPressed), forControlEvents: .touchUpInside)
+        
+        self.commentBackgroundNode.image = messageBubbleImage(incoming: transferredValue > 0, fillColor: UIColor(rgb: 0xf1f1f5), strokeColor: UIColor(rgb: 0xf1f1f5))
+        self.commentTextNode.attributedText = NSAttributedString(string: extractDescription(walletTransaction), font: Font.regular(17.0), textColor: .black)
+        
+        let address = extractAddress(walletTransaction)
+        var singleAddress: String?
+        if case let .list(list) = address, list.count == 1 {
+            singleAddress = list.first
+        }
+        
+        if let address = singleAddress {
+            self.addressTextNode.attributedText = NSAttributedString(string: formatAddress(address), font: addressFont, textColor: textColor, paragraphAlignment: .justified)
+            self.buttonNode.title = "Send Grams to This Address"
+
+            self.buttonNode.pressed = { [weak self] in
+                self?.send?(address)
+            }
         }
     }
     
-    override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
-        self.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.4)
+    @objc private func feesPressed() {
+        self.displayFeesTooltip?(self.feesNode, self.feesNode.bounds)
     }
-    
-    override func animateRemoved(_ currentTimestamp: Double, duration: Double) {
-        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
+
+    func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        var insets = layout.insets(options: [])
+        insets.top += navigationHeight
+        let inset: CGFloat = 22.0
+        
+        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let titleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: 10.0), size: titleSize)
+        transition.updateFrame(node: self.titleNode, frame: titleFrame)
+        
+        let subtitleSize = self.timeNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let subtitleFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - subtitleSize.width) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
+        transition.updateFrame(node: self.timeNode, frame: subtitleFrame)
+        
+        let amountSize = self.amountNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let amountFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - amountSize.width) / 2.0) + 18.0, y: 90.0), size: amountSize)
+        transition.updateFrame(node: self.amountNode, frame: amountFrame)
+        
+        let iconSize = CGSize(width: 50.0, height: 50.0)
+        let iconFrame = CGRect(origin: CGPoint(x: amountFrame.minX - iconSize.width, y: amountFrame.minY), size: iconSize)
+        self.iconNode.updateLayout(size: iconFrame.size)
+        self.iconNode.frame = iconFrame
+        
+        let feesSize = self.feesNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let feesFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - feesSize.width) / 2.0), y: amountFrame.maxY + 8.0), size: feesSize)
+        transition.updateFrame(node: self.feesNode, frame: feesFrame)
+        transition.updateFrame(node: self.feesButtonNode, frame: feesFrame)
+        
+        let commentSize = self.commentTextNode.updateLayout(CGSize(width: layout.size.width - 36.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let commentFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - commentSize.width) / 2.0), y: amountFrame.maxY + 84.0), size: CGSize(width: commentSize.width, height: commentSize.height))
+        transition.updateFrame(node: self.commentTextNode, frame: commentFrame)
+        
+        var commentBackgroundFrame = commentSize.width > 0.0 ? commentFrame.insetBy(dx: -11.0, dy: -7.0) : CGRect()
+        commentBackgroundFrame.size.width += 7.0
+        if self.incoming {
+            commentBackgroundFrame.origin.x -= 7.0
+        }
+        transition.updateFrame(node: self.commentBackgroundNode, frame: commentBackgroundFrame)
+        
+        let buttonSideInset: CGFloat = 16.0
+        let bottomInset = insets.bottom + 10.0
+        let buttonWidth = layout.size.width - buttonSideInset * 2.0
+        let buttonHeight: CGFloat = 50.0
+        
+        let buttonFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - buttonWidth) / 2.0), y: layout.size.height - bottomInset - buttonHeight), size: CGSize(width: buttonWidth, height: buttonHeight))
+        transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
+        self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
+        
+        let addressSize = self.addressTextNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        transition.updateFrame(node: self.addressTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - addressSize.width) / 2.0), y: buttonFrame.minY - addressSize.height - 44.0), size: addressSize))
     }
 }

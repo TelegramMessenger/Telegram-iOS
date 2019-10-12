@@ -105,7 +105,7 @@ enum NavigationPreviousAction: Equatable {
 open class NavigationBar: ASDisplayNode {
     private var presentationData: NavigationBarPresentationData
     
-    private var validLayout: (CGSize, CGFloat, CGFloat)?
+    private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     private var requestedLayout: Bool = false
     var requestContainerLayout: (ContainedViewLayoutTransition) -> Void = { _ in }
     
@@ -789,16 +789,16 @@ open class NavigationBar: ASDisplayNode {
         
         if let validLayout = self.validLayout, self.requestedLayout {
             self.requestedLayout = false
-            self.updateLayout(size: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2, transition: .immediate)
+            self.updateLayout(size: validLayout.0, defaultHeight: validLayout.1, leftInset: validLayout.2, rightInset: validLayout.3, transition: .immediate)
         }
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
+    func updateLayout(size: CGSize, defaultHeight: CGFloat, leftInset: CGFloat, rightInset: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.layoutSuspended {
             return
         }
         
-        self.validLayout = (size, leftInset, rightInset)
+        self.validLayout = (size, defaultHeight, leftInset, rightInset)
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -809,7 +809,7 @@ open class NavigationBar: ASDisplayNode {
             let contentNodeFrame: CGRect
             switch contentNode.mode {
                 case .replacement:
-                    expansionHeight = contentNode.height - 44.0
+                    expansionHeight = contentNode.height - defaultHeight
                     contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
                 case .expansion:
                     expansionHeight = contentNode.height
@@ -821,7 +821,7 @@ open class NavigationBar: ASDisplayNode {
         
         transition.updateFrame(node: self.stripeNode, frame: CGRect(x: 0.0, y: size.height, width: size.width, height: UIScreenPixel))
         
-        let nominalHeight: CGFloat = self.collapsed ? 32.0 : 44.0
+        let nominalHeight: CGFloat = self.collapsed ? 32.0 : defaultHeight
         let contentVerticalOrigin = size.height - nominalHeight - expansionHeight
         
         var leftTitleInset: CGFloat = leftInset + 1.0
@@ -1063,16 +1063,16 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
-    public var contentHeight: CGFloat {
+    public func contentHeight(defaultHeight: CGFloat) -> CGFloat {
         if let contentNode = self.contentNode {
             switch contentNode.mode {
                 case .expansion:
-                    return 44.0 + contentNode.height
+                    return defaultHeight + contentNode.height
                 case .replacement:
                     return contentNode.height
             }
         } else {
-            return 44.0
+            return defaultHeight
         }
     }
     

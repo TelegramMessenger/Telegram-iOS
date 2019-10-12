@@ -162,7 +162,7 @@ private final class NetworkTypeManagerImpl {
     var currentCellularType: CellularNetworkType
     var cellularTypeObserver: NSObjectProtocol?
     #endif
-    
+        
     init(queue: Queue, updated: @escaping (NetworkType) -> Void) {
         self.queue = queue
         self.updated = updated

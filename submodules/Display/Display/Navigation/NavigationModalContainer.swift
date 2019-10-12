@@ -5,6 +5,7 @@ import SwiftSignalKit
 
 final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private var theme: NavigationControllerTheme
+    let flat: Bool
     
     private let dim: ASDisplayNode
     private let scrollNode: ASScrollNode
@@ -40,8 +41,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         }
     }
     
-    init(theme: NavigationControllerTheme, controllerRemoved: @escaping (ViewController) -> Void) {
+    init(theme: NavigationControllerTheme, flat: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
         self.theme = theme
+        self.flat = flat
         
         self.dim = ASDisplayNode()
         self.dim.alpha = 0.0
@@ -316,6 +318,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
             
             var topInset: CGFloat = 10.0
+            if self.flat, let preferredSize = controllers.last?.preferredContentSizeForLayout(layout) {
+                topInset = layout.size.height - preferredSize.height
+            }
             if let statusBarHeight = layout.statusBarHeight {
                 topInset += statusBarHeight
             }

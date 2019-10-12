@@ -31,13 +31,19 @@ public struct WalletPresentationDateTimeFormat: Equatable {
 }
 
 public final class WalletInfoTheme {
+    public let buttonBackgroundColor: UIColor
+    public let buttonTextColor: UIColor
     public let incomingFundsTitleColor: UIColor
     public let outgoingFundsTitleColor: UIColor
     
     public init(
+        buttonBackgroundColor: UIColor,
+        buttonTextColor: UIColor,
         incomingFundsTitleColor: UIColor,
         outgoingFundsTitleColor: UIColor
     ) {
+        self.buttonBackgroundColor = buttonBackgroundColor
+        self.buttonTextColor = buttonTextColor
         self.incomingFundsTitleColor = incomingFundsTitleColor
         self.outgoingFundsTitleColor = outgoingFundsTitleColor
     }

@@ -376,7 +376,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let iconFrame = CGRect(origin: CGPoint(x: titleSignFrame.maxX + (titleSignFrame.width.isZero ? 0.0 : 1.0), y: titleSignFrame.minY + floor((titleLayout.size.height - iconSize.height) / 2.0) - 1.0), size: iconSize)
                     strongSelf.iconNode.frame = iconFrame
                     
-                    let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + 1.0, y: topInset), size: titleLayout.size)
+                    let titleFrame = CGRect(origin: CGPoint(x: iconFrame.maxX + 3.0, y: topInset), size: titleLayout.size)
                     strongSelf.titleNode.frame = titleFrame
                     
                     let directionFrame = CGRect(origin: CGPoint(x: titleFrame.maxX + 3.0, y: titleFrame.maxY - directionLayout.size.height - 1.0), size: directionLayout.size)

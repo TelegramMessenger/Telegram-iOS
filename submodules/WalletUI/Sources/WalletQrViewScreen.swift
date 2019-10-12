@@ -7,23 +7,6 @@ import Display
 import QrCode
 import AnimatedStickerNode
 
-func shareInvoiceQrCode(context: WalletContext, invoice: String) {
-    let _ = (qrCode(string: invoice, color: .black, backgroundColor: .white, icon: .custom(UIImage(bundleImageName: "Wallet/QrGem")))
-    |> map { generator -> UIImage? in
-        let imageSize = CGSize(width: 768.0, height: 768.0)
-        let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets(), scale: 1.0))
-        return context?.generateImage()
-    }
-    |> deliverOnMainQueue).start(next: { image in
-        guard let image = image else {
-            return
-        }
-        
-        let activityController = UIActivityViewController(activityItems: [image], applicationActivities: nil)
-        context.presentNativeController(activityController)
-    })
-}
-
 public final class WalletQrViewScreen: ViewController {
     private let context: WalletContext
     private let invoice: String
@@ -104,7 +87,7 @@ public final class WalletQrViewScreen: ViewController {
     }
     
     @objc private func shareButtonPressed() {
-        shareInvoiceQrCode(context: self.context, invoice: self.invoice)
+        //shareInvoiceQrCode(context: self.context, invoice: self.invoice)
     }
 }
 

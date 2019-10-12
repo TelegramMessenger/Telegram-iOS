@@ -161,7 +161,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         }
         self.membersButton.isHidden = (!(interfaceState.search?.query.isEmpty ?? true)) || self.displayActivity || !canSearchMembers
         
-        let resultsEnabled = (resultCount ?? 0) > 5
+        let resultsEnabled = (resultCount ?? 0) > 0
         self.resultsButton.setTitle(resultsText ?? "", with: labelFont, with: resultsEnabled ? interfaceState.theme.chat.inputPanel.panelControlAccentColor : interfaceState.theme.chat.inputPanel.primaryTextColor, for: .normal)
         self.resultsButton.isUserInteractionEnabled = resultsEnabled
         

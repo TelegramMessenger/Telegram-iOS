@@ -324,7 +324,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             if let existingModalContainer = existingModalContainer {
                 modalContainer = existingModalContainer
             } else {
-                modalContainer = NavigationModalContainer(theme: self.theme, controllerRemoved: { [weak self] controller in
+                modalContainer = NavigationModalContainer(theme: self.theme, flat: navigationLayout.modal[i].flat, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
                 self.modalContainers.append(modalContainer)
@@ -427,6 +427,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         var previousModalContainer: NavigationModalContainer?
         var visibleModalCount = 0
+        var topModalIsFlat = false
         var topModalDismissProgress: CGFloat = 0.0
         
         for i in (0 ..< navigationLayout.modal.count).reversed() {
@@ -483,6 +484,8 @@ open class NavigationController: UINavigationController, ContainableController, 
                 }
                 previousModalContainer = modalContainer
             }
+            
+            topModalIsFlat = modalContainer.flat
         }
         
         switch navigationLayout.root {
@@ -607,7 +610,7 @@ open class NavigationController: UINavigationController, ContainableController, 
                 let effectiveRootModalDismissProgress: CGFloat
                 let additionalModalFrameProgress: CGFloat
                 if visibleModalCount == 1 {
-                    effectiveRootModalDismissProgress = topModalDismissProgress
+                    effectiveRootModalDismissProgress = topModalIsFlat ? 1.0 : topModalDismissProgress
                     additionalModalFrameProgress = 0.0
                 } else if visibleModalCount == 2 {
                     effectiveRootModalDismissProgress = 0.0
@@ -667,7 +670,10 @@ open class NavigationController: UINavigationController, ContainableController, 
                     }
                     let maxScale: CGFloat
                     let maxOffset: CGFloat
-                    if visibleModalCount == 1 {
+                    if topModalIsFlat {
+                        maxScale = 1.0
+                        maxOffset = 0.0
+                    } else if visibleModalCount == 1 {
                         maxScale = (layout.size.width - 16.0 * 2.0) / layout.size.width
                         maxOffset = (topInset - (layout.size.height - layout.size.height * maxScale) / 2.0)
                     } else {

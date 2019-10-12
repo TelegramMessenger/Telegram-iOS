@@ -62,6 +62,7 @@ public enum ViewControllerNavigationPresentation {
     case `default`
     case master
     case modal
+    case flatModal
     case modalInLargeLayout
 }
 
@@ -121,6 +122,7 @@ public enum ViewControllerNavigationPresentation {
     }
     
     open var navigationPresentation: ViewControllerNavigationPresentation = .default
+    var _presentedInModal: Bool = false
     
     public var presentationArguments: Any?
     
@@ -319,7 +321,14 @@ public enum ViewControllerNavigationPresentation {
     
     private func updateNavigationBarLayout(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         let statusBarHeight: CGFloat = layout.statusBarHeight ?? 0.0
-        let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight ?? 44.0)
+        let defaultNavigationBarHeight: CGFloat
+        if self._presentedInModal {
+            defaultNavigationBarHeight = 56.0
+        } else {
+            defaultNavigationBarHeight = 44.0
+        }
+        let navigationBarHeight: CGFloat = statusBarHeight + (self.navigationBar?.contentHeight(defaultHeight: defaultNavigationBarHeight) ?? defaultNavigationBarHeight)
+
         let navigationBarOffset: CGFloat
         if statusBarHeight.isZero {
             navigationBarOffset = 0.0
@@ -342,7 +351,7 @@ public enum ViewControllerNavigationPresentation {
             if let contentNode = navigationBar.contentNode, case .expansion = contentNode.mode, !self.displayNavigationBar {
                 navigationBarFrame.origin.y += contentNode.height + statusBarHeight
             }
-            navigationBar.updateLayout(size: navigationBarFrame.size, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
+            navigationBar.updateLayout(size: navigationBarFrame.size, defaultHeight: defaultNavigationBarHeight, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: transition)
             if !transition.isAnimated {
                 navigationBar.layer.cancelAnimationsRecursive(key: "bounds")
                 navigationBar.layer.cancelAnimationsRecursive(key: "position")

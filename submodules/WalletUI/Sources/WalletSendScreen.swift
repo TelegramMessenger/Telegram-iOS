@@ -55,20 +55,20 @@ private enum WalletSendScreenEntryTag: ItemListItemTag {
 }
 
 private enum WalletSendScreenEntry: ItemListNodeEntry {
+    case amount(WalletTheme, String)
+    case balance(WalletTheme, String, String, Bool)
     case addressHeader(WalletTheme, String)
     case address(WalletTheme, String, String)
     case addressInfo(WalletTheme, String)
-    case amountHeader(WalletTheme, String, String?, Bool)
-    case amount(WalletTheme, WalletStrings, String, String)
     case commentHeader(WalletTheme, String)
     case comment(WalletTheme, String, String)
     
     var section: ItemListSectionId {
         switch self {
+        case .amount, .balance:
+            return WalletSendScreenSection.amount.rawValue
         case .addressHeader, .address, .addressInfo:
             return WalletSendScreenSection.address.rawValue
-        case .amountHeader, .amount:
-            return WalletSendScreenSection.amount.rawValue
         case .commentHeader, .comment:
             return WalletSendScreenSection.comment.rawValue
         }
@@ -76,15 +76,15 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
     
     var stableId: Int32 {
         switch self {
-        case .addressHeader:
-            return 0
-        case .address:
-            return 1
-        case .addressInfo:
-            return 2
-        case .amountHeader:
-            return 3
         case .amount:
+            return 0
+        case .balance:
+            return 1
+        case .addressHeader:
+            return 2
+        case .address:
+            return 3
+        case .addressInfo:
             return 4
         case .commentHeader:
             return 5
@@ -95,6 +95,18 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
     
     static func ==(lhs: WalletSendScreenEntry, rhs: WalletSendScreenEntry) -> Bool {
         switch lhs {
+        case let .amount(lhsTheme, lhsAmount):
+            if case let .amount(rhsTheme, rhsAmount) = rhs, lhsTheme === rhsTheme, lhsAmount == rhsAmount {
+                return true
+            } else {
+                return false
+            }
+        case let .balance(lhsTheme, lhsTitle, lhsBalance, lhsInsufficient):
+            if case let .balance(rhsTheme, rhsTitle, rhsBalance, rhsInsufficient) = rhs, lhsTheme === rhsTheme, lhsTitle == rhsTitle, lhsBalance == rhsBalance, lhsInsufficient == rhsInsufficient {
+                return true
+            } else {
+                return false
+            }
         case let .addressHeader(lhsTheme, lhsText):
             if case let .addressHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                 return true
@@ -109,18 +121,6 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             }
         case let .addressInfo(lhsTheme, lhsText):
             if case let .addressInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                return true
-            } else {
-                return false
-            }
-        case let .amountHeader(lhsTheme, lhsText, lhsBalance, lhsInsufficient):
-            if case let .amountHeader(rhsTheme, rhsText, rhsBalance, rhsInsufficient) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsBalance == rhsBalance, lhsInsufficient == rhsInsufficient {
-                return true
-            } else {
-                return false
-            }
-        case let .amount(lhsTheme, lhsStrings, lhsPlaceholder, lhsAmount):
-            if case let .amount(rhsTheme, rhsStrings, rhsPlaceholder, rhsAmount) = rhs, lhsTheme === rhsTheme, lhsStrings === rhsStrings, lhsPlaceholder == rhsPlaceholder, lhsAmount == rhsAmount {
                 return true
             } else {
                 return false
@@ -147,6 +147,33 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
     func item(_ arguments: Any) -> ListViewItem {
         let arguments = arguments as! WalletSendScreenArguments
         switch self {
+        case let .amount(theme, text):
+            return WalletAmountItem(theme: theme, amount: text, sectionId: self.section, textUpdated: { text in
+                let text = formatAmountText(text, decimalSeparator: arguments.context.presentationData.dateTimeFormat.decimalSeparator)
+                arguments.updateText(WalletSendScreenEntryTag.amount, text)
+            }, shouldUpdateText: { text in
+                return isValidAmount(text)
+            }, processPaste: { pastedText in
+                if isValidAmount(pastedText) {
+                    let presentationData = arguments.context.presentationData
+                    return normalizedStringForGramsString(pastedText, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+                } else {
+                    return text
+                }
+            }, updatedFocus: { focus in
+                if !focus {
+                    let presentationData = arguments.context.presentationData
+                    arguments.updateState { state in
+                        var state = state
+                        if !state.amount.isEmpty {
+                            state.amount = normalizedStringForGramsString(state.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
+                        }
+                        return state
+                    }
+                }
+            }, tag: WalletSendScreenEntryTag.amount)
+        case let .balance(theme, title, balance, insufficient):
+            return WalletBalanceItem(theme: theme, title: title, value: balance, insufficient: insufficient, sectionId: self.section)
         case let .addressHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .address(theme, placeholder, address):
@@ -190,35 +217,6 @@ private enum WalletSendScreenEntry: ItemListNodeEntry {
             }))
         case let .addressInfo(theme, text):
             return ItemListTextItem(theme: theme, text: .markdown(text), sectionId: self.section)
-        case let .amountHeader(theme, text, balance, insufficient):
-            return ItemListSectionHeaderItem(theme: theme, text: text, activityIndicator: balance == nil ? .right : .none, accessoryText: balance.flatMap { ItemListSectionHeaderAccessoryText(value: $0, color: insufficient ? .destructive : .generic, icon: balanceIcon) }, sectionId: self.section)
-        case let .amount(theme, strings, placeholder, text):
-            return ItemListSingleLineInputItem(theme: theme, strings: strings, title: NSAttributedString(string: ""), text: text, placeholder: placeholder, type: .decimal, returnKeyType: .next, clearType: .onFocus, tag: WalletSendScreenEntryTag.amount, sectionId: self.section, textUpdated: { text in
-                let text = formatAmountText(text, decimalSeparator: arguments.context.presentationData.dateTimeFormat.decimalSeparator)
-                arguments.updateText(WalletSendScreenEntryTag.amount, text)
-            }, shouldUpdateText: { text in
-                return isValidAmount(text)
-            }, processPaste: { pastedText in
-                if isValidAmount(pastedText) {
-                    let presentationData = arguments.context.presentationData
-                    return normalizedStringForGramsString(pastedText, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
-                } else {
-                    return text
-                }
-            }, updatedFocus: { focus in
-                if !focus {
-                    let presentationData = arguments.context.presentationData
-                    arguments.updateState { state in
-                        var state = state
-                        if !state.amount.isEmpty {
-                            state.amount = normalizedStringForGramsString(state.amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)
-                        }
-                        return state
-                    }
-                }
-            }, action: {
-                arguments.selectNextInputItem(WalletSendScreenEntryTag.amount)
-            })
         case let .commentHeader(theme, text):
             return ItemListSectionHeaderItem(theme: theme, text: text, sectionId: self.section)
         case let .comment(theme, placeholder, value):
@@ -247,15 +245,15 @@ private func walletSendScreenEntries(presentationData: WalletPresentationData, b
     }
     var entries: [WalletSendScreenEntry] = []
 
+    let amount = amountValue(state.amount)
+    let balance = max(0, balance ?? 0)
+    entries.append(.amount(presentationData.theme, state.amount ?? ""))
+    entries.append(.balance(presentationData.theme, presentationData.strings.Wallet_Send_Balance("").0, formatBalanceText(balance, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), balance == 0 || (amount > 0 && balance < amount)))
+    
     entries.append(.addressHeader(presentationData.theme, presentationData.strings.Wallet_Send_AddressHeader))
     entries.append(.address(presentationData.theme, presentationData.strings.Wallet_Send_AddressText, state.address))
     entries.append(.addressInfo(presentationData.theme, presentationData.strings.Wallet_Send_AddressInfo))
-    
-    let amount = amountValue(state.amount)
-    let balance = max(0, balance ?? 0)
-    entries.append(.amountHeader(presentationData.theme, presentationData.strings.Wallet_Receive_AmountHeader, presentationData.strings.Wallet_Send_Balance(formatBalanceText(balance, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator)).0, balance == 0 || (amount > 0 && balance < amount)))
-    entries.append(.amount(presentationData.theme, presentationData.strings, presentationData.strings.Wallet_Send_AmountText, state.amount ?? ""))
-    
+        
     entries.append(.commentHeader(presentationData.theme, presentationData.strings.Wallet_Receive_CommentHeader))
     entries.append(.comment(presentationData.theme, presentationData.strings.Wallet_Receive_CommentInfo, state.comment))
     return entries
@@ -450,10 +448,10 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
     }
 
     var focusItemTag: ItemListItemTag?
-    if address == nil {
-        focusItemTag = WalletSendScreenEntryTag.address
-    } else if amount == nil {
+    if amount == nil {
         focusItemTag = WalletSendScreenEntryTag.amount
+    } else if address == nil {
+        focusItemTag = WalletSendScreenEntryTag.address
     }
     
     let signal = combineLatest(queue: .mainQueue(), .single(context.presentationData), walletState, statePromise.get())
@@ -485,7 +483,7 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         return (controllerState, (listState, arguments))
     }
     
-    let controller = WalletSendScreenImpl(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil)
+    let controller = WalletSendScreenImpl(theme: context.presentationData.theme, strings: context.presentationData.strings, updatedPresentationData: .single((context.presentationData.theme, context.presentationData.strings)), state: signal, tabBarItem: nil, hasNavigationBarSeparator: false)
     controller.navigationPresentation = .modal
     controller.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     presentControllerImpl = { [weak controller] c, a in

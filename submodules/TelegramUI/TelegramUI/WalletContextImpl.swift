@@ -136,6 +136,8 @@ final class WalletContextImpl: WalletContext {
         self.presentationData = WalletPresentationData(
             theme: WalletTheme(
                 info: WalletInfoTheme(
+                    buttonBackgroundColor: UIColor(rgb: 0x32aafe),
+                    buttonTextColor: .white,
                     incomingFundsTitleColor: theme.chatList.secretTitleColor,
                     outgoingFundsTitleColor: theme.list.itemDestructiveColor
             ), setup: WalletSetupTheme(

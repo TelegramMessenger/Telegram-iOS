@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UrlEscaping
 
 let walletAddressLength: Int = 48
@@ -185,4 +186,18 @@ func walletInvoiceUrl(address: String, amount: String? = nil, comment: String? =
         arguments += "text=\(urlEncodedStringFromString(comment))"
     }
     return "ton://transfer/\(address)\(arguments)"
+}
+
+private let amountDelimeterCharacters = CharacterSet(charactersIn: "0123456789").inverted
+func amountAttributedString(_ string: String, integralFont: UIFont, fractionalFont: UIFont, color: UIColor) -> NSAttributedString {
+    let result = NSMutableAttributedString()
+    if let range = string.rangeOfCharacter(from: amountDelimeterCharacters) {
+        let integralPart = String(string[..<range.lowerBound])
+        let fractionalPart = String(string[range.lowerBound...])
+        result.append(NSAttributedString(string: integralPart, font: integralFont, textColor: color))
+        result.append(NSAttributedString(string: fractionalPart, font: fractionalFont, textColor: color))
+    } else {
+        result.append(NSAttributedString(string: string, font: integralFont, textColor: color))
+    }
+    return result
 }
