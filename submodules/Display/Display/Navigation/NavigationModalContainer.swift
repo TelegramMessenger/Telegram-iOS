@@ -5,7 +5,7 @@ import SwiftSignalKit
 
 final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private var theme: NavigationControllerTheme
-    let flat: Bool
+    let isFlat: Bool
     
     private let dim: ASDisplayNode
     private let scrollNode: ASScrollNode
@@ -41,9 +41,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         }
     }
     
-    init(theme: NavigationControllerTheme, flat: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
+    init(theme: NavigationControllerTheme, isFlat: Bool, controllerRemoved: @escaping (ViewController) -> Void) {
         self.theme = theme
-        self.flat = flat
+        self.isFlat = isFlat
         
         self.dim = ASDisplayNode()
         self.dim.alpha = 0.0
@@ -325,13 +325,6 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 self.container.cornerRadius = 10.0
             }
             
-            var topInset: CGFloat = 10.0
-            if self.flat, let preferredSize = controllers.last?.preferredContentSizeForLayout(layout) {
-                topInset = layout.size.height - preferredSize.height
-            }
-            if let statusBarHeight = layout.statusBarHeight {
-                topInset += statusBarHeight
-
             if #available(iOS 11.0, *) {
                 if layout.safeInsets.bottom.isZero {
                     self.container.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
@@ -350,6 +343,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
                 containerFrame = unscaledFrame
             } else {
                 topInset = 10.0
+                if self.isFlat, let preferredSize = controllers.last?.preferredContentSizeForLayout(layout) {
+                    topInset = layout.size.height - preferredSize.height
+                }
                 if let statusBarHeight = layout.statusBarHeight {
                     topInset += statusBarHeight
                 }

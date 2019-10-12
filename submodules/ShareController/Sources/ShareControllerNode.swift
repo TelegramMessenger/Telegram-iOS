@@ -498,7 +498,11 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     @objc func actionButtonPressed() {
-        if self.controllerInteraction!.selectedPeers.isEmpty {
+        
+    }
+    
+    func send(peerId: PeerId?) {
+        if peerId == nil && self.controllerInteraction!.selectedPeers.isEmpty {
             if let defaultAction = self.defaultAction {
                 defaultAction.action()
             }
@@ -513,13 +517,20 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
             
             self.inputFieldNode.deactivateInput()
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.12, curve: .easeInOut)
+            let transition: ContainedViewLayoutTransition = peerId != nil ? .immediate : .animated(duration: 0.12, curve: .easeInOut)
             transition.updateAlpha(node: self.actionButtonNode, alpha: 0.0)
             transition.updateAlpha(node: self.inputFieldNode, alpha: 0.0)
             transition.updateAlpha(node: self.actionSeparatorNode, alpha: 0.0)
             transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
             
-            if let signal = self.share?(self.inputFieldNode.text, self.controllerInteraction!.selectedPeers.map { $0.peerId }) {
+            let peerIds: [PeerId]
+            if let peerId = peerId {
+                peerIds = [peerId]
+            } else {
+                peerIds = self.controllerInteraction!.selectedPeers.map { $0.peerId }
+            }
+            
+            if let signal = self.share?(self.inputFieldNode.text, peerIds) {
                 self.transitionToContentNode(ShareLoadingContainerNode(theme: self.presentationData.theme, forceNativeAppearance: true), fastOut: true)
                 let timestamp = CACurrentMediaTime()
                 var wasDone = false

@@ -384,7 +384,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             if let existingModalContainer = existingModalContainer {
                 modalContainer = existingModalContainer
             } else {
-                modalContainer = NavigationModalContainer(theme: self.theme, flat: navigationLayout.modal[i].isFlat, controllerRemoved: { [weak self] controller in
+                modalContainer = NavigationModalContainer(theme: self.theme, isFlat: navigationLayout.modal[i].isFlat, controllerRemoved: { [weak self] controller in
                     self?.controllerRemoved(controller)
                 })
                 self.modalContainers.append(modalContainer)

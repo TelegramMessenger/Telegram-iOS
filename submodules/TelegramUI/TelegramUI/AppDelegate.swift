@@ -732,15 +732,26 @@ final class SharedApplicationContext {
         })
         #endif
         
+        let systemUserInterfaceStyle: WindowUserInterfaceStyle
+        if #available(iOS 12.0, iOSApplicationExtension 12.0, *) {
+            if let userInterfaceStyle = self.window?.traitCollection.userInterfaceStyle {
+                systemUserInterfaceStyle = WindowUserInterfaceStyle(style: userInterfaceStyle)
+            } else {
+                systemUserInterfaceStyle = .light
+            }
+        } else {
+            systemUserInterfaceStyle = .light
+        }
+        
         let sharedContextSignal = accountManagerSignal
         |> deliverOnMainQueue
         |> take(1)
         |> deliverOnMainQueue
         |> take(1)
         |> mapToSignal { accountManager -> Signal<(AccountManager, InitialPresentationDataAndSettings), NoError> in
-            return currentPresentationDataAndSettings(accountManager: accountManager)
-                |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
-                    return (accountManager, initialPresentationDataAndSettings)
+            return currentPresentationDataAndSettings(accountManager: accountManager, systemUserInterfaceStyle: systemUserInterfaceStyle)
+            |> map { initialPresentationDataAndSettings -> (AccountManager, InitialPresentationDataAndSettings) in
+                return (accountManager, initialPresentationDataAndSettings)
             }
         }
         |> deliverOnMainQueue
