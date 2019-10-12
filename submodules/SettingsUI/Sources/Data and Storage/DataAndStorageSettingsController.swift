@@ -10,7 +10,6 @@ import TelegramUIPreferences
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
-import OpenInExternalAppUI
 
 private final class DataAndStorageControllerArguments {
     let openStorageUsage: () -> Void
@@ -24,9 +23,8 @@ private final class DataAndStorageControllerArguments {
     let toggleAutoplayGifs: (Bool) -> Void
     let toggleAutoplayVideos: (Bool) -> Void
     let toggleDownloadInBackground: (Bool) -> Void
-    let openBrowserSelection: () -> Void
     
-    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void, openBrowserSelection: @escaping () -> Void) {
+    init(openStorageUsage: @escaping () -> Void, openNetworkUsage: @escaping () -> Void, openProxy: @escaping () -> Void,  openAutomaticDownloadConnectionType: @escaping (AutomaticDownloadConnectionType) -> Void, resetAutomaticDownload: @escaping () -> Void, openVoiceUseLessData: @escaping () -> Void, openSaveIncomingPhotos: @escaping () -> Void, toggleSaveEditedPhotos: @escaping (Bool) -> Void, toggleAutoplayGifs: @escaping (Bool) -> Void, toggleAutoplayVideos: @escaping (Bool) -> Void, toggleDownloadInBackground: @escaping (Bool) -> Void) {
         self.openStorageUsage = openStorageUsage
         self.openNetworkUsage = openNetworkUsage
         self.openProxy = openProxy
@@ -38,7 +36,6 @@ private final class DataAndStorageControllerArguments {
         self.toggleAutoplayGifs = toggleAutoplayGifs
         self.toggleAutoplayVideos = toggleAutoplayVideos
         self.toggleDownloadInBackground = toggleDownloadInBackground
-        self.openBrowserSelection = openBrowserSelection
     }
 }
 
@@ -82,7 +79,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
     case otherHeader(PresentationTheme, String)
     case saveIncomingPhotos(PresentationTheme, String)
     case saveEditedPhotos(PresentationTheme, String, Bool)
-    case openLinksIn(PresentationTheme, String, String)
     case downloadInBackground(PresentationTheme, String, Bool)
     case downloadInBackgroundInfo(PresentationTheme, String)
     case connectionHeader(PresentationTheme, String)
@@ -98,7 +94,7 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return DataAndStorageSection.autoPlay.rawValue
             case .voiceCallsHeader, .useLessVoiceData:
                 return DataAndStorageSection.voiceCalls.rawValue
-            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .openLinksIn, .downloadInBackground, .downloadInBackgroundInfo:
+            case .otherHeader, .saveIncomingPhotos, .saveEditedPhotos, .downloadInBackground, .downloadInBackgroundInfo:
                 return DataAndStorageSection.other.rawValue
             case .connectionHeader, .connectionProxy:
                 return DataAndStorageSection.connection.rawValue
@@ -135,16 +131,14 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return 12
             case .saveEditedPhotos:
                 return 13
-            case .openLinksIn:
-                return 14
             case .downloadInBackground:
-                return 15
+                return 14
             case .downloadInBackgroundInfo:
-                return 16
+                return 15
             case .connectionHeader:
-                return 17
+                return 16
             case .connectionProxy:
-                return 18
+                return 17
         }
     }
     
@@ -234,12 +228,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .openLinksIn(lhsTheme, lhsText, lhsValue):
-                if case let .openLinksIn(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
             case let .downloadInBackground(lhsTheme, lhsText, lhsValue):
                 if case let .downloadInBackground(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -324,10 +312,6 @@ private enum DataAndStorageEntry: ItemListNodeEntry {
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleSaveEditedPhotos(value)
                 }, tag: DataAndStorageEntryTag.saveEditedPhotos)
-            case let .openLinksIn(theme, text, value):
-                return ItemListDisclosureItem(theme: theme, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    arguments.openBrowserSelection()
-                })
             case let .downloadInBackground(theme, text, value):
                 return ItemListSwitchItem(theme: theme, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
                     arguments.toggleDownloadInBackground(value)
@@ -430,7 +414,7 @@ private func stringForAutoDownloadSetting(strings: PresentationStrings, decimalS
     }
 }
 
-private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData, defaultWebBrowser: String) -> [DataAndStorageEntry] {
+private func dataAndStorageControllerEntries(state: DataAndStorageControllerState, data: DataAndStorageData, presentationData: PresentationData) -> [DataAndStorageEntry] {
     var entries: [DataAndStorageEntry] = []
     
     entries.append(.storageUsage(presentationData.theme, presentationData.strings.ChatSettings_Cache))
@@ -454,9 +438,6 @@ private func dataAndStorageControllerEntries(state: DataAndStorageControllerStat
     entries.append(.otherHeader(presentationData.theme, presentationData.strings.ChatSettings_Other))
     entries.append(.saveIncomingPhotos(presentationData.theme, presentationData.strings.Settings_SaveIncomingPhotos))
     entries.append(.saveEditedPhotos(presentationData.theme, presentationData.strings.Settings_SaveEditedPhotos, data.generatedMediaStoreSettings.storeEditedPhotos))
-    
-    entries.append(.openLinksIn(presentationData.theme, presentationData.strings.ChatSettings_OpenLinksIn, defaultWebBrowser))
-    
     entries.append(.downloadInBackground(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackground, data.automaticMediaDownloadSettings.downloadInBackground))
     entries.append(.downloadInBackgroundInfo(presentationData.theme, presentationData.strings.ChatSettings_DownloadInBackgroundInfo))
     
@@ -576,30 +557,19 @@ func dataAndStorageController(context: AccountContext, focusOnItemTag: DataAndSt
             settings.autoplayVideos = value
             return settings
         }).start()
-    }, toggleDownloadInBackground: { value in
+    },  toggleDownloadInBackground: { value in
         let _ = updateMediaDownloadSettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
             var settings = settings
             settings.downloadInBackground = value
             return settings
         }).start()
-    }, openBrowserSelection: {
-        let controller = webBrowserSettingsController(context: context)
-        pushControllerImpl?(controller)
     })
 
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataAndStorageDataPromise.get(), context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])) |> deliverOnMainQueue
-    |> map { presentationData, state, dataAndStorageData, sharedData -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let webBrowserSettings = (sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings) ?? WebBrowserSettings.defaultSettings
-        let options = availableOpenInOptions(context: context, item: .url(url: "http://telegram.org"))
-        let defaultWebBrowser: String
-        if let option = options.first(where: { $0.identifier == webBrowserSettings.defaultWebBrowser }) {
-            defaultWebBrowser = option.title
-        } else {
-            defaultWebBrowser = presentationData.strings.WebBrowser_InAppSafari
-        }
+    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), dataAndStorageDataPromise.get()) |> deliverOnMainQueue
+    |> map { presentationData, state, dataAndStorageData -> (ItemListControllerState, (ItemListNodeState, Any)) in
         
         let controllerState = ItemListControllerState(theme: presentationData.theme, title: .text(presentationData.strings.ChatSettings_Title), leftNavigationButton: nil, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData, defaultWebBrowser: defaultWebBrowser), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(entries: dataAndStorageControllerEntries(state: state, data: dataAndStorageData, presentationData: presentationData), style: .blocks, ensureVisibleItemTag: focusOnItemTag, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

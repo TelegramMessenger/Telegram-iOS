@@ -27,7 +27,7 @@ private enum ChatMessageGalleryControllerData {
     case stickerPack(StickerPackReference)
     case audio(TelegramMediaFile)
     case document(TelegramMediaFile)
-    case gallery(Signal<GalleryController, NoError>)
+    case gallery(GalleryController)
     case secretGallery(SecretMediaPreviewController)
     case chatAvatars(AvatarGalleryController, Media)
     case theme(TelegramMediaFile)
@@ -149,7 +149,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                             let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                                 navigationController?.replaceTopController(controller, animated: false, ready: ready)
                                 }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                            return .gallery(.single(gallery))
+                            return .gallery(gallery)
                         }
                     }
                     #if DEBUG
@@ -157,7 +157,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                         let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                             navigationController?.replaceTopController(controller, animated: false, ready: ready)
                             }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                        return .gallery(.single(gallery))
+                        return .gallery(gallery)
                     }
                     #endif
                 }
@@ -166,7 +166,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                     let gallery = GalleryController(context: context, source: .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
                         navigationController?.replaceTopController(controller, animated: false, ready: ready)
                         }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                    return .gallery(.single(gallery))
+                    return .gallery(gallery)
                 }
                 
                 if !file.isVideo {
@@ -178,25 +178,11 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                 let gallery = SecretMediaPreviewController(context: context, messageId: message.id)
                 return .secretGallery(gallery)
             } else {
-                let startTimecode: Signal<Double?, NoError>
-                if let timecode = timecode {
-                    startTimecode = .single(timecode)
-                } else {
-                    startTimecode = mediaPlaybackStoredState(postbox: context.account.postbox, messageId: message.id)
-                    |> map { state in
-                        return state?.timestamp
-                    }
-                }
-                
-                return .gallery(startTimecode
-                |> deliverOnMainQueue
-                |> map { timecode in
-                    let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                        navigationController?.replaceTopController(controller, animated: false, ready: ready)
+                let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
+                    navigationController?.replaceTopController(controller, animated: false, ready: ready)
                     }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                    gallery.temporaryDoNotWaitForReady = autoplayingVideo
-                    return gallery
-                })
+                gallery.temporaryDoNotWaitForReady = autoplayingVideo
+                return .gallery(gallery)
             }
         }
     }
@@ -216,8 +202,7 @@ func chatMessagePreviewControllerData(context: AccountContext, message: Message,
     if let mediaData = chatMessageGalleryControllerData(context: context, message: message, navigationController: navigationController, standalone: standalone, reverseMessageGalleryOrder: reverseMessageGalleryOrder, mode: .default, synchronousLoad: true, actionInteraction: nil) {
         switch mediaData {
             case let .gallery(gallery):
-                break
-                //return .gallery(gallery)
+                return .gallery(gallery)
             case let .instantPage(gallery, centralIndex, galleryMedia):
                 return .instantPage(gallery, centralIndex, galleryMedia)
             default:
@@ -325,16 +310,13 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 return true
             case let .gallery(gallery):
                 params.dismissInput()
-                let _ = (gallery
-                |> deliverOnMainQueue).start(next: { gallery in
-                    params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
-                        let selectedTransitionNode = params.transitionNode(messageId, media)
-                        if let selectedTransitionNode = selectedTransitionNode {
-                            return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
-                        }
-                        return nil
-                    }))
-                })
+                params.present(gallery, GalleryControllerPresentationArguments(transitionArguments: { messageId, media in
+                    let selectedTransitionNode = params.transitionNode(messageId, media)
+                    if let selectedTransitionNode = selectedTransitionNode {
+                        return GalleryTransitionArguments(transitionNode: selectedTransitionNode, addToTransitionSurface: params.addToTransitionSurface)
+                    }
+                    return nil
+                }))
                 return true
             case let .secretGallery(gallery):
                 params.dismissInput()

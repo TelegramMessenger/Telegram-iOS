@@ -12,21 +12,6 @@ private let defaultOrientations: UIInterfaceOrientationMask = {
     }
 }()
 
-public enum WindowUserInterfaceStyle {
-    case light
-    case dark
-    
-    @available(iOS 12.0, *)
-    public init(style: UIUserInterfaceStyle) {
-        switch style {
-        case .light, .unspecified:
-            self = .light
-        case .dark:
-            self = .dark
-        }
-    }
-}
-
 public final class PreviewingHostViewDelegate {
     public let controllerForLocation: (UIView, CGPoint) -> (UIViewController, CGRect)?
     public let commitController: (UIViewController) -> Void
@@ -73,11 +58,6 @@ private final class WindowRootViewController: UIViewController, UIViewController
     
     var presentController: ((UIViewController, PresentationSurfaceLevel, Bool, (() -> Void)?) -> Void)?
     var transitionToSize: ((CGSize, Double) -> Void)?
-    
-    private var _systemUserInterfaceStyle = ValuePromise<WindowUserInterfaceStyle>(ignoreRepeated: true)
-    var systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError> {
-        return self._systemUserInterfaceStyle.get()
-    }
     
     var orientations: UIInterfaceOrientationMask = defaultOrientations {
         didSet {
@@ -126,12 +106,6 @@ private final class WindowRootViewController: UIViewController, UIViewController
         return orientations
     }
     
-    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
-        if #available(iOS 12.0, *) {
-            self._systemUserInterfaceStyle.set(WindowUserInterfaceStyle(style: self.traitCollection.userInterfaceStyle))
-        }
-    }
-    
     init() {
         super.init(nibName: nil, bundle: nil)
         
@@ -143,12 +117,6 @@ private final class WindowRootViewController: UIViewController, UIViewController
                     strongSelf.updatePreviewingRegistration()
                 }
             })
-        }
-        
-        if #available(iOS 12.0, *) {
-            self._systemUserInterfaceStyle.set(WindowUserInterfaceStyle(style: self.traitCollection.userInterfaceStyle))
-        } else {
-            self._systemUserInterfaceStyle.set(.light)
         }
     }
     
@@ -382,7 +350,7 @@ public func nativeWindowHostView() -> (UIWindow & WindowHost, WindowHostView) {
     
     let hostView = WindowHostView(containerView: rootViewController.view, eventView: window, isRotating: {
         return window.isRotating()
-    }, systemUserInterfaceStyle: rootViewController.systemUserInterfaceStyle, updateSupportedInterfaceOrientations: { orientations in
+    }, updateSupportedInterfaceOrientations: { orientations in
         rootViewController.orientations = orientations
     }, updateDeferScreenEdgeGestures: { edges in
         rootViewController.gestureEdges = edges

@@ -66,7 +66,7 @@ final class ThemeUpdateManagerImpl: ThemeUpdateManager {
             validIds.insert(themeSettings.theme.index)
             themes[themeSettings.theme.index] = (themeSettings.theme, false)
         }
-        if case .cloud = themeSettings.automaticThemeSwitchSetting.theme, themeSettings.automaticThemeSwitchSetting.trigger != .explicitNone {
+        if case .cloud = themeSettings.automaticThemeSwitchSetting.theme, themeSettings.automaticThemeSwitchSetting.trigger != .none {
             validIds.insert(themeSettings.automaticThemeSwitchSetting.theme.index)
             themes[themeSettings.automaticThemeSwitchSetting.theme.index] = (themeSettings.automaticThemeSwitchSetting.theme, true)
         }

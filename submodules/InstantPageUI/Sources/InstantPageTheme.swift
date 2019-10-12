@@ -285,10 +285,10 @@ func instantPageThemeTypeForSettingsAndTime(themeSettings: PresentationThemeSett
                 
                 var fallback = true
                 if let themeSettings = themeSettings {
-                    if case .explicitNone = themeSettings.automaticThemeSwitchSetting.trigger {
+                    if case .none = themeSettings.automaticThemeSwitchSetting.trigger {
                     } else {
                         fallback = false
-                        useDarkTheme = automaticThemeShouldSwitchNow(settings: themeSettings.automaticThemeSwitchSetting, systemUserInterfaceStyle: .light)
+                        useDarkTheme = automaticThemeShouldSwitchNow(settings: themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
                     }
                 }
                 if fallback, let time = time {

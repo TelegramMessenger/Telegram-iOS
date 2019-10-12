@@ -10,14 +10,12 @@ import MtProtoKit
 import MtProtoKitDynamic
 #endif
 import TelegramPresentationData
-import TelegramUIPreferences
 import AccountContext
 import UrlEscaping
 import PassportUI
 import UrlHandling
 import WalletUI
 import WalletUrl
-import OpenInExternalAppUI
 
 public struct ParsedSecureIdUrl {
     public let peerId: PeerId
@@ -643,42 +641,20 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
-                let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
-                |> take(1)
-                |> map { sharedData -> WebBrowserSettings in
-                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings] as? WebBrowserSettings {
-                         return current
-                     } else {
-                         return WebBrowserSettings.defaultSettings
-                     }
-                 }
-
-                let _ = (settings
-                |> deliverOnMainQueue).start(next: { settings in
-                    if settings.defaultWebBrowser == nil {
-                        if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
-                            if let window = navigationController?.view.window {
-                                let controller = SFSafariViewController(url: parsedUrl)
-                                if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
-                                    controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
-                                    controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
-                                }
-                                window.rootViewController?.present(controller, animated: true)
-                            } else {
-                                context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
-                            }
-                        } else {
-                            context.sharedContext.applicationBindings.openUrl(url)
+                if #available(iOSApplicationExtension 9.0, iOS 9.0, *) {
+                    if let window = navigationController?.view.window {
+                        let controller = SFSafariViewController(url: parsedUrl)
+                        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+                            controller.preferredBarTintColor = presentationData.theme.rootController.navigationBar.backgroundColor
+                            controller.preferredControlTintColor = presentationData.theme.rootController.navigationBar.accentTextColor
                         }
+                        window.rootViewController?.present(controller, animated: true)
                     } else {
-                        let openInOptions = availableOpenInOptions(context: context, item: .url(url: url))
-                        if let option = openInOptions.first(where: { $0.identifier == settings.defaultWebBrowser }) {
-                            if case let .openUrl(url) = option.action() {
-                                context.sharedContext.applicationBindings.openUrl(url)
-                            }
-                        }
+                        context.sharedContext.applicationBindings.openUrl(parsedUrl.absoluteString)
                     }
-                })
+                } else {
+                    context.sharedContext.applicationBindings.openUrl(url)
+                }
             }
         } else {
             context.sharedContext.applicationBindings.openUrl(url)

@@ -194,7 +194,7 @@ public final class InitialPresentationDataAndSettings {
     }
 }
 
-public func currentPresentationDataAndSettings(accountManager: AccountManager, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<InitialPresentationDataAndSettings, NoError> {
+public func currentPresentationDataAndSettings(accountManager: AccountManager) -> Signal<InitialPresentationDataAndSettings, NoError> {
     return accountManager.transaction { transaction -> InitialPresentationDataAndSettings in
         let localizationSettings: LocalizationSettings?
         if let current = transaction.getSharedData(SharedDataKeys.localizationSettings) as? LocalizationSettings {
@@ -248,7 +248,7 @@ public func currentPresentationDataAndSettings(accountManager: AccountManager, s
         var effectiveChatWallpaper: TelegramWallpaper = themeSettings.chatWallpaper
         
         let parameters = AutomaticThemeSwitchParameters(settings: themeSettings.automaticThemeSwitchSetting)
-        if automaticThemeShouldSwitchNow(parameters, systemUserInterfaceStyle: systemUserInterfaceStyle) {
+        if automaticThemeShouldSwitchNow(parameters, currentTheme: themeSettings.theme) {
             effectiveTheme = themeSettings.automaticThemeSwitchSetting.theme
         } else {
             effectiveTheme = themeSettings.theme
@@ -289,8 +289,7 @@ private func roundTimeToDay(_ timestamp: Int32) -> Int32 {
 }
 
 private enum PreparedAutomaticThemeSwitchTrigger {
-    case explicitNone
-    case system
+    case none
     case time(fromSeconds: Int32, toSeconds: Int32)
     case brightness(threshold: Double)
 }
@@ -302,10 +301,8 @@ private struct AutomaticThemeSwitchParameters {
     init(settings: AutomaticThemeSwitchSetting) {
         let trigger: PreparedAutomaticThemeSwitchTrigger
         switch settings.trigger {
-            case .system:
-                trigger = .system
-            case .explicitNone:
-                trigger = .explicitNone
+            case .none:
+                trigger = .none
             case let .timeBased(setting):
                 let fromValue: Int32
                 let toValue: Int32
@@ -327,12 +324,10 @@ private struct AutomaticThemeSwitchParameters {
     }
 }
 
-private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchParameters, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Bool {
+private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchParameters, currentTheme: PresentationThemeReference) -> Bool {
     switch parameters.trigger {
-        case .explicitNone:
+        case .none:
             return false
-        case .system:
-            return systemUserInterfaceStyle == .dark
         case let .time(fromValue, toValue):
             let roundedTimestamp = roundTimeToDay(Int32(Date().timeIntervalSince1970))
             if roundedTimestamp >= fromValue || roundedTimestamp <= toValue {
@@ -345,21 +340,21 @@ private func automaticThemeShouldSwitchNow(_ parameters: AutomaticThemeSwitchPar
     }
 }
 
-public func automaticThemeShouldSwitchNow(settings: AutomaticThemeSwitchSetting, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Bool {
+public func automaticThemeShouldSwitchNow(settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Bool {
     let parameters = AutomaticThemeSwitchParameters(settings: settings)
-    return automaticThemeShouldSwitchNow(parameters, systemUserInterfaceStyle: systemUserInterfaceStyle)
+    return automaticThemeShouldSwitchNow(parameters, currentTheme: currentTheme)
 }
 
-private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting, systemUserInterfaceStyle: WindowUserInterfaceStyle) -> Signal<Bool, NoError> {
-    if case .explicitNone = settings.trigger {
+private func automaticThemeShouldSwitch(_ settings: AutomaticThemeSwitchSetting, currentTheme: PresentationThemeReference) -> Signal<Bool, NoError> {
+    if case .none = settings.trigger {
         return .single(false)
     } else {
         return Signal { subscriber in
             let parameters = AutomaticThemeSwitchParameters(settings: settings)
-            subscriber.putNext(automaticThemeShouldSwitchNow(parameters, systemUserInterfaceStyle: systemUserInterfaceStyle))
+            subscriber.putNext(automaticThemeShouldSwitchNow(parameters, currentTheme: currentTheme))
             
             let timer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: {
-                subscriber.putNext(automaticThemeShouldSwitchNow(parameters, systemUserInterfaceStyle: systemUserInterfaceStyle))
+                subscriber.putNext(automaticThemeShouldSwitchNow(parameters, currentTheme: currentTheme))
             }, queue: Queue.mainQueue())
             timer.start()
             
@@ -471,9 +466,9 @@ public func chatServiceBackgroundColor(wallpaper: TelegramWallpaper, mediaBox: M
     }
 }
 
-public func updatedPresentationData(accountManager: AccountManager, applicationInForeground: Signal<Bool, NoError>, systemUserInterfaceStyle: Signal<WindowUserInterfaceStyle, NoError>) -> Signal<PresentationData, NoError> {
-    return combineLatest(accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.presentationThemeSettings, ApplicationSpecificSharedDataKeys.contactSynchronizationSettings]), systemUserInterfaceStyle)
-    |> mapToSignal { sharedData, systemUserInterfaceStyle -> Signal<PresentationData, NoError> in
+public func updatedPresentationData(accountManager: AccountManager, applicationInForeground: Signal<Bool, NoError>) -> Signal<PresentationData, NoError> {
+    return accountManager.sharedData(keys: [SharedDataKeys.localizationSettings, ApplicationSpecificSharedDataKeys.presentationThemeSettings, ApplicationSpecificSharedDataKeys.contactSynchronizationSettings])
+    |> mapToSignal { sharedData -> Signal<PresentationData, NoError> in
         let themeSettings: PresentationThemeSettings
         if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationThemeSettings] as? PresentationThemeSettings {
             themeSettings = current
@@ -496,7 +491,7 @@ public func updatedPresentationData(accountManager: AccountManager, applicationI
             return applicationInForeground
             |> mapToSignal { inForeground -> Signal<PresentationData, NoError> in
                 if inForeground {
-                    return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, systemUserInterfaceStyle: systemUserInterfaceStyle)
+                    return automaticThemeShouldSwitch(themeSettings.automaticThemeSwitchSetting, currentTheme: themeSettings.theme)
                     |> distinctUntilChanged
                     |> map { shouldSwitch in
                         var effectiveTheme: PresentationThemeReference
