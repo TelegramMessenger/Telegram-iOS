@@ -990,9 +990,6 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
         if topItemIndexAndMinY.0 == 0 {
             var offsetValue: CGFloat = -(topItemIndexAndMinY.1 - self.insets.top)
-            if self.areAllItemsOnScreen() {
-                offsetValue = 0.0
-            }
             offset = .known(offsetValue)
         } else if topItemIndexAndMinY.0 == -1 {
             offset = .none
