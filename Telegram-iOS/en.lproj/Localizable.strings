@@ -4794,7 +4794,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Info.TransactionTo" = "to";
 "Wallet.Info.TransactionFrom" = "from";
 "Wallet.Info.Updating" = "updating";
-"Wallet.Info.TransactionBlockchainFee" = "%@ blockchain fee";
+"Wallet.Info.TransactionBlockchainFee" = "%@ blockchain fees";
 "Wallet.Info.TransactionPendingHeader" = "Pending";
 "Wallet.Qr.ScanCode" = "Scan QR Code";
 "Wallet.Qr.Title" = "QR Code";
@@ -4971,3 +4971,5 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Time.PreciseDate_m12" = "Dec %1$@, %2$@ at %3$@";
 
 "Wallet.VoiceOver.Editing.ClearText" = "Clear text";
+
+"Wallet.Receive.ShareInvoiceUrlInfo" = "Share this link with other Gram wallet owners to receive %@ Grams from them.";

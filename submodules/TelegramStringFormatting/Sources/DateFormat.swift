@@ -47,34 +47,41 @@ public func stringForFullDate(timestamp: Int32, strings: PresentationStrings, da
     var timeinfo = tm()
     localtime_r(&t, &timeinfo);
     
+    let dayString = "\(timeinfo.tm_mday)"
+    let yearString = "\(2000 + timeinfo.tm_year - 100)"
+    let timeString = stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)
+    
+    let monthFormat: (String, String, String) -> (String, [(Int, NSRange)])
     switch timeinfo.tm_mon + 1 {
     case 1:
-        return strings.Time_PreciseDate_m1("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m1
     case 2:
-        return strings.Time_PreciseDate_m2("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m2
     case 3:
-        return strings.Time_PreciseDate_m3("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m3
     case 4:
-        return strings.Time_PreciseDate_m4("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m4
     case 5:
-        return strings.Time_PreciseDate_m5("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m5
     case 6:
-        return strings.Time_PreciseDate_m6("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m6
     case 7:
-        return strings.Time_PreciseDate_m7("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m7
     case 8:
-        return strings.Time_PreciseDate_m8("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m8
     case 9:
-        return strings.Time_PreciseDate_m9("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m9
     case 10:
-        return strings.Time_PreciseDate_m10("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m10
     case 11:
-        return strings.Time_PreciseDate_m11("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m11
     case 12:
-        return strings.Time_PreciseDate_m12("\(timeinfo.tm_mday)", "\(2000 + timeinfo.tm_year - 100)", stringForShortTimestamp(hours: Int32(timeinfo.tm_hour), minutes: Int32(timeinfo.tm_min), dateTimeFormat: dateTimeFormat)).0
+        monthFormat = strings.Time_PreciseDate_m12
     default:
         return ""
     }
+
+    return monthFormat(dayString, yearString, timeString).0
 }
 
 public func stringForDate(timestamp: Int32, strings: PresentationStrings) -> String {

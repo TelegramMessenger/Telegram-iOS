@@ -30,7 +30,11 @@ final class TooltipControllerNode: ASDisplayNode {
         self.imageNode.image = content.image
         
         self.textNode = ImmediateTextNode()
-        self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+        if case let .attributedText(text) = content {
+            self.textNode.attributedText = text
+        } else {
+            self.textNode.attributedText = NSAttributedString(string: content.text, font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
+        }
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         self.textNode.maximumNumberOfLines = 0

@@ -5,12 +5,15 @@ import SwiftSignalKit
 
 public enum TooltipControllerContent: Equatable {
     case text(String)
+    case attributedText(NSAttributedString)
     case iconAndText(UIImage, String)
     
     var text: String {
         switch self {
             case let .text(text), let .iconAndText(_, text):
                 return text
+            case let .attributedText(text):
+                return text.string
         }
     }
     

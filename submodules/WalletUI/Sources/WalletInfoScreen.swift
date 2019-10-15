@@ -9,6 +9,39 @@ import MergeLists
 import AnimatedStickerNode
 import WalletCore
 
+private class WalletInfoTitleView: UIView, NavigationBarTitleView {
+    private let buttonView: HighlightTrackingButton
+    private let action: () -> Void
+    
+    init(action: @escaping () -> Void) {
+        self.action = action
+        
+        self.buttonView = HighlightTrackingButton()
+        
+        super.init(frame: CGRect())
+        
+        self.addSubview(self.buttonView)
+        
+        self.buttonView.addTarget(self, action: #selector(self.buttonPressed), for: .touchUpInside)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    @objc private func buttonPressed() {
+        self.action()
+    }
+    
+    func animateLayoutTransition() {
+
+    }
+    
+    func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
+        self.buttonView.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height))
+    }
+}
+
 public final class WalletInfoScreen: ViewController {
     private let context: WalletContext
     private let walletInfo: WalletInfo?
@@ -44,6 +77,8 @@ public final class WalletInfoScreen: ViewController {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(image: generateTintedImage(image: UIImage(bundleImageName: "Wallet/NavigationSettingsIcon"), color: .white), style: .plain, target: self, action: #selector(self.settingsPressed))
         }
         
+        self.navigationItem.titleView = WalletInfoTitleView(action: { [weak self] in self?.scrollToTop?() })
+        
         self.scrollToTop = { [weak self] in
             (self?.displayNode as? WalletInfoScreenNode)?.scrollToTop()
         }
@@ -75,12 +110,12 @@ public final class WalletInfoScreen: ViewController {
             guard let strongSelf = self, let walletInfo = strongSelf.walletInfo else {
                 return
             }
-            strongSelf.push(walletReceiveScreen(context: strongSelf.context, address: strongSelf.address))
+            strongSelf.push(WalletReceiveScreen(context: strongSelf.context, mode: .receive(address: strongSelf.address)))
         }, openTransaction: { [weak self] transaction in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.push(walletTransactionInfoController(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, enableDebugActions: strongSelf.enableDebugActions))
+            strongSelf.push(WalletTransactionInfoScreen(context: strongSelf.context, walletInfo: strongSelf.walletInfo, walletTransaction: transaction, enableDebugActions: strongSelf.enableDebugActions))
         }, present: { [weak self] c, a in
             guard let strongSelf = self else {
                 return
@@ -229,9 +264,9 @@ private final class WalletInfoHeaderNode: ASDisplayNode {
             context.fillEllipse(in: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 20.0, height: 20.0)))
         })?.stretchableImage(withLeftCapWidth: 10, topCapHeight: 1)
         
-        self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
-        self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
-        self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: UIImage(bundleImageName: "Wallet/SendButtonIcon"), theme: SolidRoundedButtonTheme(backgroundColor: .white, foregroundColor: .black), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.receiveButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Receive, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.receiveGramsButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_ReceiveGrams, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/ReceiveButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor), height: 50.0, cornerRadius: 10.0, gloss: false)
+        self.sendButtonNode = SolidRoundedButtonNode(title: presentationData.strings.Wallet_Info_Send, icon: generateTintedImage(image: UIImage(bundleImageName: "Wallet/SendButtonIcon"), color: presentationData.theme.info.buttonTextColor), theme: SolidRoundedButtonTheme(backgroundColor: presentationData.theme.info.buttonBackgroundColor, foregroundColor: presentationData.theme.info.buttonTextColor), height: 50.0, cornerRadius: 10.0, gloss: false)
         
         self.refreshNode = WalletRefreshNode(strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat)
         

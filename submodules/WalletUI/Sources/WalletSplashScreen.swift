@@ -486,6 +486,9 @@ public final class WalletSplashScreen: ViewController {
                         if controller is WalletWordCheckScreen {
                             return false
                         }
+                        if controller is WalletTransactionInfoScreen {
+                            return false
+                        }
                         return true
                     }
                     
