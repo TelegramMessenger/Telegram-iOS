@@ -35,7 +35,7 @@ static bool readCGFloat(NSString *string, int *position, CGFloat *result) {
     int length = (int)string.length;
     while (*position < length) {
         unichar c = [string characterAtIndex:*position];
-        *position++;
+        (*position)++;
         
         if (c == '.') {
             if (seenDot) {
@@ -316,7 +316,7 @@ static bool ProxyWindowIsLight = true;
         dismissBlock();
     }];
     
-    if (_icon == nil) {
+    if (_isShield) {
         dispatchAfter(0.15, dispatch_get_main_queue(), ^{
             [_spinner setSucceed];
         });
