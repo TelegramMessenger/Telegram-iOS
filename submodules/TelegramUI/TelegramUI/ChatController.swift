@@ -187,7 +187,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let unblockingPeer = ValuePromise<Bool>(false, ignoreRepeated: true)
     private let searching = ValuePromise<Bool>(false, ignoreRepeated: true)
-    private let searchResult = Promise<(SearchMessagesResult, SearchMessagesState)?>()
+    private let searchResult = Promise<(SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)?>()
     private let loadingMessage = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     private var preloadHistoryPeerId: PeerId?
@@ -3227,9 +3227,33 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = (strongSelf.searchResult.get()
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] searchResult in
-                        if let strongSelf = self, let searchResult = searchResult?.0 {
-                            let controller = ChatSearchResultsController(context: strongSelf.context, searchQuery: searchData.query, messages: searchResult.messages, navigateToMessageIndex: { index in
+                        if let strongSelf = self, let (searchResult, searchState, searchLocation) = searchResult {
+                            
+                            let controller = ChatSearchResultsController(context: strongSelf.context, location: searchLocation, searchQuery: searchData.query, searchResult: searchResult, searchState: searchState, navigateToMessageIndex: { index in
                                 strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
+                            }, resultsUpdated: { results, state in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                let updatedValue: (SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)? = (results, state, searchLocation)
+                                strongSelf.searchResult.set(.single(updatedValue))
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
+                                    if let data = current.search {
+                                        let messageIndices = results.messages.map({ $0.index }).sorted()
+                                        var currentIndex = messageIndices.last
+                                        if let previousResultId = data.resultsState?.currentId {
+                                            for index in messageIndices {
+                                                if index.id >= previousResultId {
+                                                    currentIndex = index
+                                                    break
+                                                }
+                                            }
+                                        }
+                                        return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, state: state, totalCount: results.totalCount, completed: results.completed)))
+                                    } else {
+                                        return current
+                                    }
+                                })
                             })
                             strongSelf.chatDisplayNode.dismissInput()
                             if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
@@ -4958,15 +4982,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var items: [ActionSheetItem] = []
                 
                 if self.presentationInterfaceState.isScheduledMessages {
-                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.ScheduledMessages_ClearAllConfirmation, color: .destructive, action: { [weak actionSheet] in
+                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.ScheduledMessages_ClearAllConfirmation, color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        beginClear(.scheduledMessages)
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                            }),
+                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                beginClear(.scheduledMessages)
+                            })
+                        ], parseMarkdown: true), in: .window(.root))
                     }))
                 } else if canRemoveGlobally {
                     items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: mainPeer, chatPeer: chatPeer, action: .clearHistory, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
-                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak actionSheet] in
-                        beginClear(.forEveryone)
+                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForEveryone(mainPeer.compactDisplayTitle).0, color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                            }),
+                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                beginClear(.forEveryone)
+                            })
+                        ], parseMarkdown: true), in: .window(.root))
                     }))
                     items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteForCurrentUser, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
@@ -4974,9 +5020,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }))
                 } else {
                     items.append(ActionSheetTextItem(title: text))
-                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ClearAll, color: .destructive, action: { [weak actionSheet] in
+                    items.append(ActionSheetButtonItem(title: self.presentationData.strings.Conversation_ClearAll, color: .destructive, action: { [weak self, weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        beginClear(.forLocalPeer)
+                        
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.present(standardTextAlertController(theme: AlertControllerTheme(presentationTheme: strongSelf.presentationData.theme), title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationTitle, text: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationText, actions: [
+                            TextAlertAction(type: .genericAction, title: strongSelf.presentationData.strings.Common_Cancel, action: {
+                            }),
+                            TextAlertAction(type: .destructiveAction, title: strongSelf.presentationData.strings.ChatList_DeleteSavedMessagesConfirmationAction, action: {
+                                beginClear(.forLocalPeer)
+                            })
+                        ], parseMarkdown: true), in: .window(.root))
                     }))
                 }
 
@@ -6094,7 +6151,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
                         let search = searchMessages(account: self.context.account, location: searchState.location, query: searchState.query, state: nil, limit: limit)
                         |> delay(0.2, queue: Queue.mainQueue())
-                        self.searchResult.set(search |> map(Optional.init))
+                        self.searchResult.set(search
+                        |> map { (result, state) -> (SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)? in
+                            return (result, state, searchState.location)
+                        })
                         
                         searchDisposable.set((search
                         |> deliverOnMainQueue).start(next: { [weak self] results, updatedState in
