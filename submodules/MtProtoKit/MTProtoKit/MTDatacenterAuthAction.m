@@ -79,7 +79,7 @@
         if (alreadyCompleted) {
             [self complete];
         } else {
-            _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId usageCalculationInfo:nil];
+            _authMtProto = [[MTProto alloc] initWithContext:context datacenterId:_datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
             _authMtProto.cdn = isCdn;
             _authMtProto.useUnauthorizedMode = true;
             if (_tempAuth) {

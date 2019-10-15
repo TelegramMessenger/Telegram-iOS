@@ -101,6 +101,7 @@
 - (void)publicKeysForDatacenterWithIdRequired:(NSInteger)datacenterId;
 
 - (void)removeAllAuthTokens;
+- (void)removeTokenForDatacenterWithId:(NSInteger)datacenterId;
 - (id)authTokenForDatacenterWithId:(NSInteger)datacenterId;
 - (void)updateAuthTokenForDatacenterWithId:(NSInteger)datacenterId authToken:(id)authToken;
 
