@@ -428,6 +428,8 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
         self.presentationData = WalletPresentationData(
             theme: WalletTheme(
                 info: WalletInfoTheme(
+                    buttonBackgroundColor: accentColor,
+                    buttonTextColor: .white,
                     incomingFundsTitleColor: UIColor(rgb: 0x00b12c),
                     outgoingFundsTitleColor: UIColor(rgb: 0xff3b30)
                 ), setup: WalletSetupTheme(
