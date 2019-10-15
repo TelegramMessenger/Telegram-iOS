@@ -2093,7 +2093,7 @@ private func recordPeerActivityTimestamp(peerId: PeerId, timestamp: Int32, into 
     }
 }
 
-func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
+func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountPeerId: PeerId, mediaBox: MediaBox, encryptionProvider: EncryptionProvider, transaction: Transaction, auxiliaryMethods: AccountAuxiliaryMethods, finalState: AccountFinalState) -> AccountReplayedFinalState? {
     let verified = verifyTransaction(transaction, finalState: finalState.state)
     if !verified {
         Logger.shared.log("State", "failed to verify final state")
@@ -2551,7 +2551,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
                 }
                 updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: presences)
             case let .UpdateSecretChat(chat, _):
-                updateSecretChat(accountPeerId: accountPeerId, transaction: transaction, chat: chat, requestData: nil)
+                updateSecretChat(encryptionProvider: encryptionProvider, accountPeerId: accountPeerId, transaction: transaction, chat: chat, requestData: nil)
             case let .AddSecretMessages(messages):
                 for message in messages {
                     let peerId = message.peerId
@@ -2869,7 +2869,7 @@ func replayFinalState(accountManager: AccountManager, postbox: Postbox, accountP
         inner: while true {
             let keychain = (transaction.getPeerChatState(peerId) as? SecretChatState)?.keychain
             if processSecretChatIncomingEncryptedOperations(transaction: transaction, peerId: peerId) {
-                let processResult = processSecretChatIncomingDecryptedOperations(mediaBox: mediaBox, transaction: transaction, peerId: peerId)
+                let processResult = processSecretChatIncomingDecryptedOperations(encryptionProvider: encryptionProvider, mediaBox: mediaBox, transaction: transaction, peerId: peerId)
                 if !processResult.addedMessages.isEmpty {
                     let currentInclusion = transaction.getPeerChatListInclusion(peerId)
                     if let groupId = currentInclusion.groupId, groupId == Namespaces.PeerGroup.archive {

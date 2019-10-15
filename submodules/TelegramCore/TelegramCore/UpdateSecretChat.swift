@@ -21,7 +21,7 @@ struct SecretChatRequestData {
     let a: MemoryBuffer
 }
 
-func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
+func updateSecretChat(encryptionProvider: EncryptionProvider, accountPeerId: PeerId, transaction: Transaction, chat: Api.EncryptedChat, requestData: SecretChatRequestData?) {
     let currentPeer = transaction.getPeer(chat.peerId) as? TelegramSecretChat
     let currentState = transaction.getPeerChatState(chat.peerId) as? SecretChatState
     let settings = transaction.getPreferencesEntry(key: PreferencesKeys.secretChatSettings) as? SecretChatSettings ?? SecretChatSettings.defaultSettings
@@ -33,14 +33,14 @@ func updateSecretChat(accountPeerId: PeerId, transaction: Transaction, chat: Api
                     let pData = p.makeData()
                     let aData = a.makeData()
                     
-                    if !MTCheckIsSafeGAOrB(gAOrB.makeData(), pData) {
+                    if !MTCheckIsSafeGAOrB(encryptionProvider, gAOrB.makeData(), pData) {
                         var updatedState = currentState
                         updatedState = updatedState.withUpdatedEmbeddedState(.terminated)
                         transaction.setPeerChatState(chat.peerId, state: updatedState)
                         return
                     }
                     
-                    var key = MTExp(gAOrB.makeData(), aData, pData)!
+                    var key = MTExp(encryptionProvider, gAOrB.makeData(), aData, pData)!
                     
                     if key.count > 256 {
                         key.count = 256

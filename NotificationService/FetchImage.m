@@ -1,10 +1,7 @@
 #import "FetchImage.h"
 
-#ifdef BUCK
 #import <MTProtoKit/MTProtoKit.h>
-#else
-#import <MTProtoKitDynamic/MTProtoKitDynamic.h>
-#endif
+#import <OpenSSLEncryptionProvider/OpenSSLEncryptionProvider.h>
 
 #import "Serialization.h"
 
@@ -87,7 +84,7 @@ dispatch_block_t fetchImage(BuildConfig *buildConfig, AccountProxyConnection * _
         apiEnvironment = [apiEnvironment withUpdatedSocksProxySettings:[[MTSocksProxySettings alloc] initWithIp:proxyConnection.host port:(uint16_t)proxyConnection.port username:proxyConnection.username password:proxyConnection.password secret:proxyConnection.secret]];
     }
     
-    MTContext *context = [[MTContext alloc] initWithSerialization:serialization apiEnvironment:apiEnvironment isTestingEnvironment:account.isTestingEnvironment useTempAuthKeys:false];
+    MTContext *context = [[MTContext alloc] initWithSerialization:serialization encryptionProvider:[[OpenSSLEncryptionProvider alloc] init] apiEnvironment:apiEnvironment isTestingEnvironment:account.isTestingEnvironment useTempAuthKeys:false];
     
     NSDictionary *seedAddressList = @{};
     
@@ -135,7 +132,7 @@ dispatch_block_t fetchImage(BuildConfig *buildConfig, AccountProxyConnection * _
         [context updateAuthInfoForDatacenterWithId:[datacenterId intValue] authInfo:[[MTDatacenterAuthInfo alloc] initWithAuthKey:info.masterKey.data authKeyId:info.masterKey.keyId saltSet:@[] authKeyAttributes:@{} mainTempAuthKey:nil mediaTempAuthKey:nil]];
     }
     
-    MTProto * mtProto = [[MTProto alloc] initWithContext:context datacenterId:datacenterId usageCalculationInfo:nil];
+    MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
     mtProto.useTempAuthKeys = context.useTempAuthKeys;
     mtProto.checkForProxyConnectionIssues = false;
     

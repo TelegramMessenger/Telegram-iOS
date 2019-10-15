@@ -15,7 +15,7 @@ import Foundation
     #endif
     import UIKit
 #endif
-
+import EncryptionProvider
 
 public protocol AccountState: PostboxCoding {
     func equalsTo(_ other: AccountState) -> Bool
@@ -571,7 +571,7 @@ func sha512Digest(_ data : Data) -> Data {
     }
 }
 
-func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) -> (Data, TwoStepPasswordDerivation)? {
+func passwordUpdateKDF(encryptionProvider: EncryptionProvider, password: String, derivation: TwoStepPasswordDerivation) -> (Data, TwoStepPasswordDerivation)? {
     guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
         return nil
     }
@@ -609,7 +609,7 @@ func passwordUpdateKDF(password: String, derivation: TwoStepPasswordDerivation) 
             
             let x = sha256Digest(nextSalt2 + pbkdfResult + nextSalt2)
             
-            let gx = MTExp(g, x, p)!
+            let gx = MTExp(encryptionProvider, g, x, p)!
             
             return (gx, .sha256_sha256_PBKDF2_HMAC_sha512_sha256_srp(salt1: nextSalt1, salt2: nextSalt2, iterations: iterations, g: gValue, p: p))
     }
@@ -653,7 +653,7 @@ private func paddedXor(_ a: Data, _ b: Data) -> Data {
     return a
 }
 
-func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSessionData: TwoStepSRPSessionData) -> PasswordKDFResult? {
+func passwordKDF(encryptionProvider: EncryptionProvider, password: String, derivation: TwoStepPasswordDerivation, srpSessionData: TwoStepSRPSessionData) -> PasswordKDFResult? {
     guard let passwordData = password.data(using: .utf8, allowLossyConversion: true) else {
         return nil
     }
@@ -679,15 +679,15 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSes
                 })
             }
             
-            if !MTCheckIsSafeB(srpSessionData.B, p) {
+            if !MTCheckIsSafeB(encryptionProvider, srpSessionData.B, p) {
                 return nil
             }
             
             let B = paddedToLength(what: srpSessionData.B, to: p)
-            let A = paddedToLength(what: MTExp(g, a, p)!, to: p)
+            let A = paddedToLength(what: MTExp(encryptionProvider, g, a, p)!, to: p)
             let u = sha256Digest(A + B)
             
-            if MTIsZero(u) {
+            if MTIsZero(encryptionProvider, u) {
                 return nil
             }
             
@@ -699,18 +699,18 @@ func passwordKDF(password: String, derivation: TwoStepPasswordDerivation, srpSes
             
             let x = sha256Digest(salt2 + pbkdfResult + salt2)
             
-            let gx = MTExp(g, x, p)!
+            let gx = MTExp(encryptionProvider, g, x, p)!
             
             let k = sha256Digest(p + paddedToLength(what: g, to: p))
             
-            let s1 = MTModSub(B, MTModMul(k, gx, p)!, p)!
+            let s1 = MTModSub(encryptionProvider, B, MTModMul(encryptionProvider, k, gx, p)!, p)!
             
-            if !MTCheckIsSafeGAOrB(s1, p) {
+            if !MTCheckIsSafeGAOrB(encryptionProvider, s1, p) {
                 return nil
             }
             
-            let s2 = MTAdd(a, MTMul(u, x)!)!
-            let S = MTExp(s1, s2, p)!
+            let s2 = MTAdd(encryptionProvider, a, MTMul(encryptionProvider, u, x)!)!
+            let S = MTExp(encryptionProvider, s1, s2, p)!
             let K = sha256Digest(paddedToLength(what: S, to: p))
             let m1 = paddedXor(sha256Digest(p), sha256Digest(paddedToLength(what: g, to: p)))
             let m2 = sha256Digest(salt1)
@@ -788,7 +788,7 @@ func verifyPassword(_ account: UnauthorizedAccount, password: String) -> Signal<
             return .fail(MTRpcError(errorCode: 400, errorDescription: "INTERNAL_NO_PASSWORD"))
         }
         
-        let kdfResult = passwordKDF(password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData)
+        let kdfResult = passwordKDF(encryptionProvider: account.network.encryptionProvider, password: password, derivation: currentPasswordDerivation, srpSessionData: srpSessionData)
         
         if let kdfResult = kdfResult {
             return account.network.request(Api.functions.auth.checkPassword(password: .inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))), automaticFloodWait: false)

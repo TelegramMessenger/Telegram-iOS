@@ -1,9 +1,9 @@
-
-
 #ifndef MTEncryption_H
 #define MTEncryption_H
 
 #import <Foundation/Foundation.h>
+
+#import <EncryptionProvider/EncryptionProvider.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,22 +29,22 @@ void MTAesDecryptBytesInplaceAndModifyIv(void *data, NSInteger length, NSData *k
 NSData *MTAesEncrypt(NSData *data, NSData *key, NSData *iv);
 NSData *MTAesDecrypt(NSData *data, NSData *key, NSData *iv);
 NSData *MTRsaEncrypt(NSString *publicKey, NSData *data);
-NSData *MTExp(NSData *base, NSData *exp, NSData *modulus);
-NSData *MTModSub(NSData *a, NSData *b, NSData *modulus);
-NSData *MTModMul(NSData *a, NSData *b, NSData *modulus);
-NSData *MTMul(NSData *a, NSData *b);
-NSData *MTAdd(NSData *a, NSData *b);
+NSData *MTExp(id<EncryptionProvider> provider, NSData *base, NSData *exp, NSData *modulus);
+NSData *MTModSub(id<EncryptionProvider> provider, NSData *a, NSData *b, NSData *modulus);
+NSData *MTModMul(id<EncryptionProvider> provider, NSData *a, NSData *b, NSData *modulus);
+NSData *MTMul(id<EncryptionProvider> provider, NSData *a, NSData *b);
+NSData *MTAdd(id<EncryptionProvider> provider, NSData *a, NSData *b);
 bool MTFactorize(uint64_t what, uint64_t *resA, uint64_t *resB);
-bool MTIsZero(NSData *value);
+bool MTIsZero(id<EncryptionProvider> provider, NSData *value);
     
 NSData *MTAesCtrDecrypt(NSData *data, NSData *key, NSData *iv);
     
 @protocol MTKeychain;
 bool MTCheckIsSafeG(unsigned int g);
-bool MTCheckIsSafeB(NSData *b, NSData *p);
-bool MTCheckIsSafePrime(NSData *numberBytes, id<MTKeychain> keychain);
-bool MTCheckIsSafeGAOrB(NSData *gAOrB, NSData *p);
-bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
+bool MTCheckIsSafeB(id<EncryptionProvider> provider, NSData *b, NSData *p);
+bool MTCheckIsSafePrime(id<EncryptionProvider> provider, NSData *numberBytes, id<MTKeychain> keychain);
+bool MTCheckIsSafeGAOrB(id<EncryptionProvider> provider, NSData *gAOrB, NSData *p);
+bool MTCheckMod(id<EncryptionProvider> provider, NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
     
 @interface MTAesCtr : NSObject
 
@@ -59,9 +59,9 @@ bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain);
 
 @end
     
-uint64_t MTRsaFingerprint(NSString *key);
+uint64_t MTRsaFingerprint(id<EncryptionProvider> provider, NSString *key);
     
-NSData *MTRsaEncryptPKCS1OAEP(NSString *key, NSData *data);
+NSData *MTRsaEncryptPKCS1OAEP(id<EncryptionProvider> provider, NSString *key, NSData *data);
     
 @interface MTBackupDatacenterAddress : NSObject
 
@@ -80,7 +80,7 @@ NSData *MTRsaEncryptPKCS1OAEP(NSString *key, NSData *data);
 
 @end
 
-MTBackupDatacenterData *MTIPDataDecode(NSData *data, NSString *phoneNumber);
+MTBackupDatacenterData *MTIPDataDecode(id<EncryptionProvider> provider, NSData *data, NSString *phoneNumber);
     
 NSData * _Nullable MTPBKDF2(NSData * _Nonnull data, NSData * _Nonnull salt, int rounds);
 

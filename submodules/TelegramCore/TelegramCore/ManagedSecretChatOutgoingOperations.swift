@@ -195,7 +195,7 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
     |> mapToSignal { config -> Signal<Void, NoError> in
         let p = config.p.makeData()
         
-        if !MTCheckIsSafeGAOrB(gA.makeData(), p) {
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gA.makeData(), p) {
             return postbox.transaction { transaction -> Void in
                 let removed = transaction.operationLogRemoveEntry(peerId: peerId, tag: OperationLogTags.SecretOutgoing, tagLocalIndex: tagLocalIndex)
                 assert(removed)
@@ -219,9 +219,9 @@ private func initialHandshakeAccept(postbox: Postbox, network: Network, peerId: 
         
         let bData = b.makeData()
         
-        let gb = MTExp(g, bData, p)!
+        let gb = MTExp(network.encryptionProvider, g, bData, p)!
         
-        var key = MTExp(gA.makeData(), bData, p)!
+        var key = MTExp(network.encryptionProvider, gA.makeData(), bData, p)!
         
         if key.count > 256 {
             key.count = 256
@@ -293,7 +293,7 @@ private func pfsRequestKey(postbox: Postbox, network: Network, peerId: PeerId, l
         let p = config.p.makeData()
         
         let aData = a.makeData()
-        let ga = MTExp(g, aData, p)!
+        let ga = MTExp(network.encryptionProvider, g, aData, p)!
         
         return postbox.transaction { transaction -> Signal<Void, NoError> in
             if let state = transaction.getPeerChatState(peerId) as? SecretChatState {
@@ -321,9 +321,9 @@ private func pfsAcceptKey(postbox: Postbox, network: Network, peerId: PeerId, la
         
         let bData = b.makeData()
         
-        let gb = MTExp(g, bData, p)!
+        let gb = MTExp(network.encryptionProvider, g, bData, p)!
         
-        var key = MTExp(gA.makeData(), bData, p)!
+        var key = MTExp(network.encryptionProvider, gA.makeData(), bData, p)!
         
         if key.count > 256 {
             key.count = 256

@@ -8,6 +8,8 @@ import Foundation
     import TelegramApi
 #endif
 
+import EncryptionProvider
+
 private enum MessageParsingError: Error {
     case contentParsingError
     case unsupportedLayer
@@ -64,7 +66,7 @@ struct SecretChatOperationProcessResult {
     let addedMessages: [StoreMessage]
 }
 
-func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transaction: Transaction, peerId: PeerId) -> SecretChatOperationProcessResult {
+func processSecretChatIncomingDecryptedOperations(encryptionProvider: EncryptionProvider, mediaBox: MediaBox, transaction: Transaction, peerId: PeerId) -> SecretChatOperationProcessResult {
     if let state = transaction.getPeerChatState(peerId) as? SecretChatState, let peer = transaction.getPeer(peerId) as? TelegramSecretChat {
         var removeTagLocalIndices: [Int32] = []
         var updatedState = state
@@ -257,7 +259,7 @@ func processSecretChatIncomingDecryptedOperations(mediaBox: MediaBox, transactio
                                     updatedPeer = updatedPeer.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)
                                     updatedState = updatedState.withUpdatedMessageAutoremoveTimeout(timeout == 0 ? nil : timeout)
                                 case let .rekeyAction(action):
-                                    updatedState = secretChatAdvanceRekeySessionIfNeeded(transaction: transaction, peerId: peerId, state: updatedState, action: action)
+                                    updatedState = secretChatAdvanceRekeySessionIfNeeded(encryptionProvider: encryptionProvider, transaction: transaction, peerId: peerId, state: updatedState, action: action)
                                 case let .deleteMessages(globallyUniqueIds):
                                     var messageIds: [MessageId] = []
                                     for id in globallyUniqueIds {

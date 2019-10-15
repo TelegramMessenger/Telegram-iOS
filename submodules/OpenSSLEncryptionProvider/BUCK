@@ -1,0 +1,21 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "OpenSSLEncryptionProvider",
+    srcs = glob([
+        "Sources/**/*.m",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
+    ]),
+    exported_headers = glob([
+        "Sources/**/*.h",
+    ]),
+    deps = [
+        "//submodules/EncryptionProvider:EncryptionProvider",
+        "//submodules/openssl:openssl",
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

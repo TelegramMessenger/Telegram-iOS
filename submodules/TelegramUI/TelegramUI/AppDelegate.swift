@@ -28,6 +28,7 @@ import WalletUI
 import UrlHandling
 import WalletUrl
 import WalletCore
+import OpenSSLEncryptionProvider
 
 private let handleVoipNotifications = false
 
@@ -387,7 +388,7 @@ final class SharedApplicationContext {
                 Logger.shared.log("data", "can't deserialize")
             }
             return data
-        })
+        }, encryptionProvider: OpenSSLEncryptionProvider())
         
         guard let appGroupUrl = maybeAppGroupUrl else {
             UIAlertView(title: nil, message: "Error 2", delegate: nil, cancelButtonTitle: "OK").show()
