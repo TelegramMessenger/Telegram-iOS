@@ -343,6 +343,11 @@ build_openssl: check_env
 	//submodules/openssl:openssl#iphoneos-arm64 \
 	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
+build_libphonenumber: check_env
+	$(BUCK) build \
+	//submodules/libphonenumber:libphonenumber#iphoneos-arm64 \
+	${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
 build_ton: check_env
 	$(BUCK) build \
 	//submodules/ton:ton#iphoneos-arm64 \
