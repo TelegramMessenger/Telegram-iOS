@@ -7,8 +7,6 @@ framework(
         "MtProtoKit/*.m",
         "thirdparty/AFNetworking/*.m",
         "thirdparty/AsyncSocket/*.m",
-        "TON/*.m",
-        "TON/*.mm",
     ]),
     headers = merge_maps([
         glob_map(glob([
@@ -16,7 +14,6 @@ framework(
             "MtProtoKit/*.h",
             "thirdparty/AFNetworking/*.h",
             "thirdparty/AsyncSocket/*.h",
-            "TON/*.h",
         ])),
     ]),
     exported_headers = [
@@ -78,13 +75,10 @@ framework(
         "MTProxyConnectivity.h",
         "MTGzip.h",
         "MTDatacenterVerificationData.h",
-        "MTPKCS.h",
-        "TON/TON.h",
     ],
     visibility = ["PUBLIC"],
     deps = [
-        "//submodules/openssl:openssl",
-        "//submodules/ton:ton",
+        "//submodules/EncryptionProvider:EncryptionProvider",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
