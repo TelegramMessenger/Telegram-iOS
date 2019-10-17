@@ -528,6 +528,7 @@ public protocol AccountContext: class {
     var wallpaperUploadManager: WallpaperUploadManager? { get }
     var watchManager: WatchManager? { get }
     var hasWallets: Signal<Bool, NoError> { get }
+    var hasWalletAccess: Signal<Bool, NoError> { get }
     
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     

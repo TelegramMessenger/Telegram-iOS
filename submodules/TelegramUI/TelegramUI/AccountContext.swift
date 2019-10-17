@@ -10,6 +10,7 @@ import AccountContext
 import LiveLocationManager
 import TemporaryCachedPeerDataManager
 import WalletCore
+import WalletUI
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -137,6 +138,22 @@ public final class AccountContextImpl: AccountContext {
         |> map { records in
             return !records.isEmpty
         }
+    }
+    
+    public var hasWalletAccess: Signal<Bool, NoError> {
+        return self.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
+        |> map { view -> Bool in
+            guard let appConfiguration = view.values[PreferencesKeys.appConfiguration] as? AppConfiguration else {
+                return false
+            }
+            let walletConfiguration = WalletConfiguration.with(appConfiguration: appConfiguration)
+            if walletConfiguration.config != nil && walletConfiguration.blockchainName != nil {
+                return true
+            } else {
+                return false
+            }
+        }
+        |> distinctUntilChanged
     }
     
     public init(sharedContext: SharedAccountContextImpl, account: Account, tonContext: StoredTonContext?, limitsConfiguration: LimitsConfiguration) {
