@@ -2,6 +2,7 @@ import Foundation
 import CloudKit
 import MtProtoKit
 import SwiftSignalKit
+import EncryptionProvider
 
 private enum FetchError {
     case generic
@@ -119,9 +120,12 @@ public protocol CloudDataContext {
 @available(iOS 10.0, *)
 public final class CloudDataContextImpl: CloudDataContext {
     private let queue = Queue()
+    private let encryptionProvider: EncryptionProvider
     private let impl: QueueLocalObject<CloudDataContextObject>
     
-    public init() {
+    public init(encryptionProvider: EncryptionProvider) {
+        self.encryptionProvider = encryptionProvider
+        
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
             return CloudDataContextObject(queue: queue)
@@ -129,6 +133,7 @@ public final class CloudDataContextImpl: CloudDataContext {
     }
     
     public func get(phoneNumber: Signal<String?, NoError>) -> Signal<MTBackupDatacenterData, NoError> {
+        let encryptionProvider = self.encryptionProvider
         return phoneNumber
         |> take(1)
         |> mapToSignal { phoneNumber -> Signal<MTBackupDatacenterData, NoError> in
@@ -140,7 +145,7 @@ public final class CloudDataContextImpl: CloudDataContext {
                 let disposable = MetaDisposable()
                 self.impl.with { impl in
                     disposable.set(impl.get(prefix: prefix).start(next: { data in
-                        if let data = data, let datacenterData = MTIPDataDecode(data, phoneNumber ?? "") {
+                        if let data = data, let datacenterData = MTIPDataDecode(encryptionProvider, data, phoneNumber ?? "") {
                             subscriber.putNext(datacenterData)
                             subscriber.putCompletion()
                         } else {

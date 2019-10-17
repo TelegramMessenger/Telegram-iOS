@@ -23,97 +23,87 @@
 #import "MTSignal.h"
 #import "MTDNS.h"
 
-#import <openssl/bn.h>
+#import <EncryptionProvider/EncryptionProvider.h>
 
-static BIGNUM *get_y2(BIGNUM *x, const BIGNUM *mod, BN_CTX *big_num_context) {
+static id<MTBignum> get_y2(id<MTBignum> x, id<MTBignum> mod, id<MTBignumContext> context) {
     // returns y^2 = x^3 + 486662 * x^2 + x
-    BIGNUM *y = BN_dup(x);
+    id<MTBignum> y = [context clone:x];
     assert(y != NULL);
-    BIGNUM *coef = BN_new();
-    BN_set_word(coef, 486662);
-    BN_mod_add(y, y, coef, mod, big_num_context);
-    BN_mod_mul(y, y, x, mod, big_num_context);
-    BN_one(coef);
-    BN_mod_add(y, y, coef, mod, big_num_context);
-    BN_mod_mul(y, y, x, mod, big_num_context);
-    BN_clear_free(coef);
+    id<MTBignum> coef = [context create];
+    [context assignWordTo:coef value:486662];
+    [context modAddInto:y a:y b:coef mod:mod];
+    [context modMulInto:y a:y b:x mod:mod];
+    [context assignOneTo:coef];
+    [context modAddInto:y a:y b:coef mod:mod];
+    [context modMulInto:y a:y b:x mod:mod];
     return y;
 }
 
-static BIGNUM *get_double_x(BIGNUM *x, const BIGNUM *mod, BN_CTX *big_num_context) {
+static id<MTBignum> get_double_x(id<MTBignum> x, id<MTBignum> mod, id<MTBignumContext> context) {
     // returns x_2 =(x^2 - 1)^2/(4*y^2)
-    BIGNUM *denominator = get_y2(x, mod, big_num_context);
+    id<MTBignum> denominator = get_y2(x, mod, context);
     assert(denominator != NULL);
-    BIGNUM *coef = BN_new();
-    BN_set_word(coef, 4);
-    BN_mod_mul(denominator, denominator, coef, mod, big_num_context);
+    id<MTBignum> coef = [context create];
+    [context assignWordTo:coef value:4];
+    [context modMulInto:denominator a:denominator b:coef mod:mod];
     
-    BIGNUM *numerator = BN_new();
+    id<MTBignum> numerator = [context create];
     assert(numerator != NULL);
-    BN_mod_mul(numerator, x, x, mod, big_num_context);
-    BN_one(coef);
-    BN_mod_sub(numerator, numerator, coef, mod, big_num_context);
-    BN_mod_mul(numerator, numerator, numerator, mod, big_num_context);
+    [context modMulInto:numerator a:x b:x mod:mod];
+    [context assignOneTo:coef];
+    [context modSubInto:numerator a:numerator b:coef mod:mod];
+    [context modMulInto:numerator a:numerator b:numerator mod:mod];
     
-    BN_mod_inverse(denominator, denominator, mod, big_num_context);
-    BN_mod_mul(numerator, numerator, denominator, mod, big_num_context);
+    [context modInverseInto:denominator a:denominator mod:mod];
+    [context modMulInto:numerator a:numerator b:denominator mod:mod];
     
-    BN_clear_free(coef);
-    BN_clear_free(denominator);
     return numerator;
 }
 
-static void generate_public_key(unsigned char key[32]) {
-    BIGNUM *mod = NULL;
-    BN_hex2bn(&mod, "7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed");
-    BIGNUM *pow = NULL;
-    BN_hex2bn(&pow, "3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6");
-    BN_CTX *big_num_context = BN_CTX_new();
-    assert(big_num_context != NULL);
+static void generate_public_key(unsigned char key[32], id<EncryptionProvider> provider) {
+    id<MTBignumContext> context = [provider createBignumContext];
+    assert(context != NULL);
+    id<MTBignum> mod = [context create];
+    [context assignHexTo:mod value:@"7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed"];
+    id<MTBignum> pow = [context create];
+    [context assignHexTo:pow value:@"3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff6"];
     
-    BIGNUM *x = BN_new();
+    id<MTBignum> x = [context create];
     while (1) {
         int randomResult = SecRandomCopyBytes(kSecRandomDefault, 32, key);
         assert(randomResult == errSecSuccess);
         
         key[31] &= 127;
-        BN_bin2bn(key, 32, x);
-        assert(x != NULL);
-        BN_mod_mul(x, x, x, mod, big_num_context);
+        [context assignBinTo:x value:[NSData dataWithBytesNoCopy:key length:32 freeWhenDone:false]];
         
-        BIGNUM *y = get_y2(x, mod, big_num_context);
+        [context modMulInto:x a:x b:x mod:mod];
         
-        BIGNUM *r = BN_new();
-        BN_mod_exp(r, y, pow, mod, big_num_context);
-        BN_clear_free(y);
-        if (BN_is_one(r)) {
-            BN_clear_free(r);
+        id<MTBignum> y = get_y2(x, mod, context);
+        
+        id<MTBignum> r = [context create];
+        [context modExpInto:r a:y b:pow mod:mod];
+        if ([context isOne:r]) {
             break;
         }
-        BN_clear_free(r);
     }
     
     int i;
     for (i = 0; i < 3; i++) {
-        BIGNUM *x2 = get_double_x(x, mod, big_num_context);
-        BN_clear_free(x);
+        id<MTBignum> x2 = get_double_x(x, mod, context);
         x = x2;
     }
     
-    int num_size = BN_num_bytes(x);
+    NSData *xBytes = [context getBin:x];
+    
+    int num_size = (int)[xBytes length];
     assert(num_size <= 32);
     memset(key, '\0', 32 - num_size);
-    BN_bn2bin(x, key + (32 - num_size));
+    [xBytes getBytes:key + (32 - num_size) length:[xBytes length]];
     for (i = 0; i < 16; i++) {
         unsigned char t = key[i];
         key[i] = key[31 - i];
         key[31 - i] = t;
     }
-    
-    BN_clear_free(x);
-    BN_CTX_free(big_num_context);
-    BN_clear_free(pow);
-    BN_clear_free(mod);
 }
 
 @interface MTTcpConnectionData : NSObject
@@ -265,7 +255,9 @@ struct ctr_state {
 @end
 
 @interface MTTcpConnection () <GCDAsyncSocketDelegate>
-{   
+{
+    id<EncryptionProvider> _encryptionProvider;
+    
     GCDAsyncSocket *_socket;
     bool _closed;
     
@@ -340,6 +332,8 @@ struct ctr_state {
     if (self != nil)
     {
         _internalId = [[MTInternalId(MTTcpConnection) alloc] init];
+        
+        _encryptionProvider = context.encryptionProvider;
         
         _scheme = scheme;
         
@@ -590,7 +584,7 @@ struct ctr_state {
                             [helloData appendBytes:s6 length:117];
                             
                             uint8_t r2[32];
-                            generate_public_key(r2);
+                            generate_public_key(r2, strongSelf->_encryptionProvider);
                             
                             [helloData appendBytes:r2 length:32];
                             

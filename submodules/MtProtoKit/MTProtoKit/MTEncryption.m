@@ -8,22 +8,12 @@
 #import <CommonCrypto/CommonCrypto.h>
 #import <CommonCrypto/CommonDigest.h>
 
-#include <openssl/bn.h>
-#include <openssl/err.h>
-#include <openssl/rsa.h>
+#import <EncryptionProvider/EncryptionProvider.h>
 
 #import "MTAes.h"
 #import "MTRsa.h"
 
 #import "MTBuffer.h"
-
-#if TARGET_OS_IOS
-#   include <openssl/pem.h>
-#else
-#   include <openssl/pem.h>
-#endif
-
-#include <openssl/aes.h>
 
 #import "MTBufferReader.h"
 
@@ -340,167 +330,124 @@ NSData *MTRsaEncrypt(NSString *publicKey, NSData *data)
 #endif
 }
 
-NSData *MTExp(NSData *base, NSData *exp, NSData *modulus)
+NSData *MTExp(id<EncryptionProvider> provider, NSData *base, NSData *exp, NSData *modulus)
 {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnBase = BN_bin2bn(base.bytes, (int)base.length, NULL);
-    BN_set_flags(bnBase, BN_FLG_CONSTTIME);
-
-    BIGNUM *bnExp = BN_bin2bn(exp.bytes, (int)exp.length, NULL);
-    BN_set_flags(bnExp, BN_FLG_CONSTTIME);
+    id<MTBignumContext> context = [provider createBignumContext];
     
-    BIGNUM *bnModulus = BN_bin2bn(modulus.bytes, (int)modulus.length, NULL);
-    BN_set_flags(bnModulus, BN_FLG_CONSTTIME);
+    id<MTBignum> bnBase = [context create];
+    [context assignBinTo:bnBase value:base];
+    [context setConstantTime:bnBase];
     
-    BIGNUM *bnRes = BN_new();
-    BN_set_flags(bnModulus, BN_FLG_CONSTTIME);
+    id<MTBignum> bnExp = [context create];
+    [context assignBinTo:bnExp value:exp];
+    [context setConstantTime:bnExp];
     
-    BN_mod_exp(bnRes, bnBase, bnExp, bnModulus, ctx);
+    id<MTBignum> bnModulus = [context create];
+    [context assignBinTo:bnModulus value:modulus];
+    [context setConstantTime:bnModulus];
     
-    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
-    int resLen = BN_bn2bin(bnRes, res);
+    id<MTBignum> bnRes = [context create];
+    [context setConstantTime:bnRes];
     
-    BN_CTX_free(ctx);
-    BN_free(bnBase);
-    BN_free(bnExp);
-    BN_free(bnModulus);
-    BN_free(bnRes);
+    [context modExpInto:bnRes a:bnBase b:bnExp mod:bnModulus];
     
-    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
-    free(res);
+    NSData *result = [context getBin:bnRes];
     
     return result;
 }
 
-NSData *MTModSub(NSData *a, NSData *b, NSData *modulus) {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+NSData *MTModSub(id<EncryptionProvider> provider, NSData *a, NSData *b, NSData *modulus) {
+    id<MTBignumContext> context = [provider createBignumContext];
     
-    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    id<MTBignum> bnA = [context create];
+    [context assignBinTo:bnA value:a];
     
-    BIGNUM *bnModulus = BN_bin2bn(modulus.bytes, (int)modulus.length, NULL);
+    id<MTBignum> bnB = [context create];
+    [context assignBinTo:bnB value:b];
     
-    BIGNUM *bnRes = BN_new();
+    id<MTBignum> bnModulus = [context create];
+    [context assignBinTo:bnModulus value:modulus];
     
-    BN_mod_sub(bnRes, bnA, bnB, bnModulus, ctx);
+    id<MTBignum> bnRes = [context create];
     
-    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
-    int resLen = BN_bn2bin(bnRes, res);
+    [context modSubInto:bnRes a:bnA b:bnB mod:bnModulus];
     
-    BN_CTX_free(ctx);
-    BN_free(bnA);
-    BN_free(bnB);
-    BN_free(bnModulus);
-    BN_free(bnRes);
-    
-    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
-    free(res);
-    
-    return result;
+    return [context getBin:bnRes];
 }
 
-NSData *MTModMul(NSData *a, NSData *b, NSData *modulus) {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+NSData *MTModMul(id<EncryptionProvider> provider, NSData *a, NSData *b, NSData *modulus) {
+    id<MTBignumContext> context = [provider createBignumContext];
     
-    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    id<MTBignum> bnA = [context create];
+    [context assignBinTo:bnA value:a];
     
-    BIGNUM *bnModulus = BN_bin2bn(modulus.bytes, (int)modulus.length, NULL);
+    id<MTBignum> bnB = [context create];
+    [context assignBinTo:bnB value:b];
     
-    BIGNUM *bnRes = BN_new();
+    id<MTBignum> bnModulus = [context create];
+    [context assignBinTo:bnModulus value:modulus];
     
-    BN_mod_mul(bnRes, bnA, bnB, bnModulus, ctx);
+    id<MTBignum> bnRes = [context create];
     
-    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
-    int resLen = BN_bn2bin(bnRes, res);
+    [context modMulInto:bnRes a:bnA b:bnB mod:bnModulus];
     
-    BN_CTX_free(ctx);
-    BN_free(bnA);
-    BN_free(bnB);
-    BN_free(bnModulus);
-    BN_free(bnRes);
-    
-    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
-    free(res);
-    
-    return result;
+    return [context getBin:bnRes];
 }
 
-NSData *MTMul(NSData *a, NSData *b) {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+NSData *MTMul(id<EncryptionProvider> provider, NSData *a, NSData *b) {
+    id<MTBignumContext> context = [provider createBignumContext];
     
-    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    id<MTBignum> bnA = [context create];
+    [context assignBinTo:bnA value:a];
     
-    BIGNUM *bnRes = BN_new();
+    id<MTBignum> bnB = [context create];
+    [context assignBinTo:bnB value:b];
     
-    BN_mul(bnRes, bnA, bnB, ctx);
+    id<MTBignum> bnRes = [context create];
     
-    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
-    int resLen = BN_bn2bin(bnRes, res);
+    [context mulInto:bnRes a:bnA b:bnB];
     
-    BN_CTX_free(ctx);
-    BN_free(bnA);
-    BN_free(bnB);
-    BN_free(bnRes);
-    
-    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
-    free(res);
-    
-    return result;
+    return [context getBin:bnRes];
 }
 
-NSData *MTAdd(NSData *a, NSData *b) {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnA = BN_bin2bn(a.bytes, (int)a.length, NULL);
+NSData *MTAdd(id<EncryptionProvider> provider, NSData *a, NSData *b) {
+    id<MTBignumContext> context = [provider createBignumContext];
     
-    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
+    id<MTBignum> bnA = [context create];
+    [context assignBinTo:bnA value:a];
     
-    BIGNUM *bnRes = BN_new();
+    id<MTBignum> bnB = [context create];
+    [context assignBinTo:bnB value:b];
     
-    BN_add(bnRes, bnA, bnB);
+    id<MTBignum> bnRes = [context create];
     
-    unsigned char *res = malloc((size_t)BN_num_bytes(bnRes));
-    int resLen = BN_bn2bin(bnRes, res);
+    [context addInto:bnRes a:bnA b:bnB];
     
-    BN_CTX_free(ctx);
-    BN_free(bnA);
-    BN_free(bnB);
-    BN_free(bnRes);
-    
-    NSData *result = [[NSData alloc] initWithBytes:res length:(NSUInteger)resLen];
-    free(res);
-    
-    return result;
+    return [context getBin:bnRes];
 }
 
-bool MTIsZero(NSData *value) {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnValue = BN_bin2bn(value.bytes, (int)value.length, NULL);
+bool MTIsZero(id<EncryptionProvider> provider, NSData *value) {
+    id<MTBignumContext> context = [provider createBignumContext];
     
-    bool isZero = BN_is_zero(bnValue);
+    id<MTBignum> bnA = [context create];
+    [context assignBinTo:bnA value:value];
     
-    BN_free(bnValue);
-    BN_CTX_free(ctx);
-    
-    return isZero;
+    return [context isZero:bnA];
 }
 
-bool MTCheckIsSafeB(NSData *b, NSData *p) {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnB = BN_bin2bn(b.bytes, (int)b.length, NULL);
-    BIGNUM *bnP = BN_bin2bn(p.bytes, (int)p.length, NULL);
-    BIGNUM *bnZero = BN_new();
-    BN_zero(bnZero);
+bool MTCheckIsSafeB(id<EncryptionProvider> provider, NSData *b, NSData *p) {
+    id<MTBignumContext> context = [provider createBignumContext];
     
-    bool result = BN_cmp(bnB, bnZero) == 1 && BN_cmp(bnB, bnP) == -1;
+    id<MTBignum> bnB = [context create];
+    [context assignBinTo:bnB value:b];
     
-    BN_free(bnB);
-    BN_free(bnP);
-    BN_free(bnZero);
-    BN_CTX_free(ctx);
+    id<MTBignum> bnP = [context create];
+    [context assignBinTo:bnP value:p];
     
-    return result;
+    id<MTBignum> bnZero = [context create];
+    [context assignZeroTo:bnZero];
+    
+    return [context compare:bnB with:bnZero] == 1 && [context compare:bnB with:bnP] == -1;
 }
 
 static inline uint64_t mygcd(uint64_t a, uint64_t b)
@@ -616,27 +563,20 @@ static NSString *hexStringFromData(NSData *data)
     return string;
 }
 
-bool MTCheckIsSafePrime(NSData *numberBytes, id<MTKeychain> keychain)
+bool MTCheckIsSafePrime(id<EncryptionProvider> provider, NSData *numberBytes, id<MTKeychain> keychain)
 {
     NSString *primeKey = [[NSString alloc] initWithFormat:@"isPrimeSafe_%@", hexStringFromData(numberBytes)];
     
     NSNumber *nCachedResult = [keychain objectForKey:primeKey group:@"primes"];
-    if (nCachedResult != nil)
+    if (nCachedResult != nil) {
         return [nCachedResult boolValue];
+    }
     
-    if (numberBytes.length != 256)
-    {
-        [[NSUserDefaults standardUserDefaults] setObject:[[NSNumber alloc] initWithBool:false] forKey:primeKey];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        
+    if (numberBytes.length != 256) {
         return false;
     }
     
-    if (!(((uint8_t *)numberBytes.bytes)[0] & (1 << 7)))
-    {
-        [[NSUserDefaults standardUserDefaults] setObject:[[NSNumber alloc] initWithBool:false] forKey:primeKey];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        
+    if (!(((uint8_t *)numberBytes.bytes)[0] & (1 << 7))) {
         return false;
     }
     
@@ -665,114 +605,108 @@ bool MTCheckIsSafePrime(NSData *numberBytes, id<MTKeychain> keychain)
         0xb9, 0x2f, 0xcc, 0x5b
     };
     
-    if (memcmp(goodPrime0, numberBytes.bytes, 256) == 0)
+    if (memcmp(goodPrime0, numberBytes.bytes, 256) == 0) {
         return true;
-    
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnNumber = BN_bin2bn(numberBytes.bytes, (int)numberBytes.length, NULL);
-    
-    int result = BN_is_prime_ex(bnNumber, 30, ctx, NULL);
-    
-    if (result == 1)
-    {
-        BIGNUM *bnNumberMinus1 = BN_new();
-        BN_sub(bnNumberMinus1, bnNumber, BN_value_one());
-        BIGNUM *bnNumberMinus1DivBy2 = BN_new();
-        BN_rshift1(bnNumberMinus1DivBy2, bnNumberMinus1);
-        
-        result = BN_is_prime_ex(bnNumberMinus1DivBy2, 30, ctx, NULL);
-        
-        BN_free(bnNumberMinus1);
-        BN_free(bnNumberMinus1DivBy2);
     }
     
-    BN_free(bnNumber);
-    BN_CTX_free(ctx);
+    id<MTBignumContext> context = [provider createBignumContext];
+    
+    id<MTBignum> bnNumber = [context create];
+    [context assignBinTo:bnNumber value:numberBytes];
+    
+    int result = [context isPrime:bnNumber numberOfChecks:30];
+    
+    if (result == 1) {
+        id<MTBignum> bnNumberOne = [context create];
+        [context assignOneTo:bnNumberOne];
+        
+        id<MTBignum> bnNumberMinusOne = [context create];
+        [context subInto:bnNumberMinusOne a:bnNumber b:bnNumberOne];
+        
+        id<MTBignum> bnNumberMinusOneDivByTwo = [context create];
+        [context rightShift1Bit:bnNumberMinusOneDivByTwo a:bnNumberMinusOne];
+        
+        int result = [context isPrime:bnNumberMinusOneDivByTwo numberOfChecks:30];
+    }
     
     [keychain setObject:@(result == 1) forKey:primeKey group:@"primes"];
     
     return result == 1;
 }
 
-bool MTCheckIsSafeGAOrB(NSData *gAOrB, NSData *p)
-{
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnNumber = BN_bin2bn(gAOrB.bytes, (int)gAOrB.length, NULL);
-    BIGNUM *bnP = BN_bin2bn(p.bytes, (int)p.length, NULL);
+bool MTCheckIsSafeGAOrB(id<EncryptionProvider> provider, NSData *gAOrB, NSData *p) {
+    id<MTBignumContext> context = [provider createBignumContext];
+    
+    id<MTBignum> bnNumber = [context create];
+    [context assignBinTo:bnNumber value:gAOrB];
+    
+    id<MTBignum> bnP = [context create];
+    [context assignBinTo:bnP value:p];
+    
+    id<MTBignum> bnOne = [context create];
+    [context assignOneTo:bnOne];
     
     bool result = false;
     
-    if (BN_cmp(bnNumber, BN_value_one()) == 1)
-    {
-        BIGNUM *pMinus1 = BN_new();
-        BN_sub(pMinus1, bnP, BN_value_one());
+    if ([context compare:bnNumber with:bnOne] == 1) {
+        id<MTBignum> bnPMinusOne = [context create];
+        [context subInto:bnPMinusOne a:bnP b:bnOne];
         
-        if (BN_cmp(bnNumber, pMinus1) == -1)
-        {
+        if ([context compare:bnNumber with:bnPMinusOne] == -1) {
             result = true;
         }
-        
-        BN_free(pMinus1);
     }
-    
-    BN_free(bnNumber);
-    BN_free(bnP);
-    BN_CTX_free(ctx);
     
     return result;
 }
 
-bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain)
+bool MTCheckMod(id<EncryptionProvider> provider, NSData *numberBytes, unsigned int g, id<MTKeychain> keychain)
 {
     NSString *modKey = [[NSString alloc] initWithFormat:@"isPrimeModSafe_%@_%d", hexStringFromData(numberBytes), g];
     NSNumber *nCachedResult = [keychain objectForKey:modKey group:@"primes"];
-    if (nCachedResult != nil)
+    if (nCachedResult != nil) {
         return [nCachedResult boolValue];
+    }
     
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *bnNumber = BN_bin2bn(numberBytes.bytes, (int)numberBytes.length, NULL);
+    id<MTBignumContext> context = [provider createBignumContext];
+    
+    id<MTBignum> bnNumber = [context create];
+    [context assignBinTo:bnNumber value:numberBytes];
     
     bool result = false;
     
-    switch (g)
-    {
-        case 2:
-        {
-            BN_ULONG modResult = BN_mod_word(bnNumber, 8);
+    switch (g) {
+        case 2: {
+            unsigned long modResult = [context modWord:bnNumber mod:8];
             result = modResult == 7;
             
             break;
         }
-        case 3:
-        {
-            BN_ULONG modResult = BN_mod_word(bnNumber, 3);
+        case 3: {
+            unsigned long modResult = [context modWord:bnNumber mod:3];
             result = modResult == 2;
             
             break;
         }
-        case 4:
-        {
+        case 4: {
             result = true;
             
             break;
         }
-        case 5:
-        {
-            BN_ULONG modResult = BN_mod_word(bnNumber, 5);
+        case 5: {
+            unsigned long modResult = [context modWord:bnNumber mod:5];
             result = modResult == 1 || modResult == 4;
             
             break;
         }
-        case 6:
-        {
-            BN_ULONG modResult = BN_mod_word(bnNumber, 24);
+        case 6: {
+            unsigned long modResult = [context modWord:bnNumber mod:24];
             result = modResult == 19 || modResult == 23;
             
             break;
         }
-        case 7:
-        {
-            BN_ULONG modResult = BN_mod_word(bnNumber, 7);
+        case 7: {
+            unsigned long modResult = [context modWord:bnNumber mod:7];
             result = modResult == 3 || modResult == 5 || modResult == 6;
             
             break;
@@ -780,9 +714,6 @@ bool MTCheckMod(NSData *numberBytes, unsigned int g, id<MTKeychain> keychain)
         default:
             break;
     }
-    
-    BN_free(bnNumber);
-    BN_CTX_free(ctx);
     
     [keychain setObject:@(result) forKey:modKey group:@"primes"];
     
@@ -796,27 +727,21 @@ NSData *MTAesCtrDecrypt(NSData *data, NSData *key, NSData *iv) {
     return outData;
 }
 
-uint64_t MTRsaFingerprint(NSString *key) {
-    BIO *keyBio = BIO_new(BIO_s_mem());
+uint64_t MTRsaFingerprint(id<EncryptionProvider> provider, NSString *key) {
+    id<MTBignumContext> context = [provider createBignumContext];
+    id<MTRsaPublicKey> rsaKey = [provider parseRSAPublicKey:key];
+    if (rsaKey == nil) {
+        return 0;
+    }
     
-    NSData *keyData = [key dataUsingEncoding:NSUTF8StringEncoding];
-    BIO_write(keyBio, keyData.bytes, (int)keyData.length);
-    RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
+    id<MTBignum> rsaKeyN = [context rsaGetN:rsaKey];
+    id<MTBignum> rsaKeyE = [context rsaGetE:rsaKey];
     
-    BIGNUM *rsaKeyN = RSA_get0_n(rsaKey);
-    BIGNUM *rsaKeyE = RSA_get0_e(rsaKey);
-    
-    int nBytes = BN_num_bytes(rsaKeyN);
-    int eBytes = BN_num_bytes(rsaKeyE);
+    NSData *nData = [context getBin:rsaKeyN];
+    NSData *eData = [context getBin:rsaKeyE];
     
     MTBuffer *buffer = [[MTBuffer alloc] init];
-    
-    NSMutableData *nData = [[NSMutableData alloc] initWithLength:nBytes];
-    BN_bn2bin(rsaKeyN, nData.mutableBytes);
     [buffer appendTLBytes:nData];
-    
-    NSMutableData *eData = [[NSMutableData alloc] initWithLength:eBytes];
-    BN_bn2bin(rsaKeyE, eData.mutableBytes);
     [buffer appendTLBytes:eData];
     
     NSData *sha1Data = MTSha1(buffer.data);
@@ -831,40 +756,15 @@ uint64_t MTRsaFingerprint(NSString *key) {
     (((uint64_t) sha1Buffer[14]) << 16) |
     (((uint64_t) sha1Buffer[13]) << 8) |
     ((uint64_t) sha1Buffer[12]);
-    RSA_free(rsaKey);
-    BIO_free(keyBio);
     
     return fingerprint;
 }
 
-NSData *MTRsaEncryptPKCS1OAEP(NSString *key, NSData *data) {
-    BIO *keyBio = BIO_new(BIO_s_mem());
-    
-    NSData *keyData = [key dataUsingEncoding:NSUTF8StringEncoding];
-    BIO_write(keyBio, keyData.bytes, (int)keyData.length);
-    RSA *rsaKey = PEM_read_bio_RSA_PUBKEY(keyBio, NULL, NULL, NULL);
-    if (rsaKey == nil) {
-        BIO_free(keyBio);
-        return nil;
-    }
-    
-    NSMutableData *outData = [[NSMutableData alloc] initWithLength:data.length + 2048];
-    
-    int encryptedLength = RSA_public_encrypt((int)data.length, data.bytes, outData.mutableBytes, rsaKey, RSA_PKCS1_OAEP_PADDING);
-    RSA_free(rsaKey);
-    BIO_free(keyBio);
-    
-    if (encryptedLength < 0) {
-        return nil;
-    }
-    
-    assert(encryptedLength <= outData.length);
-    [outData setLength:encryptedLength];
-    
-    return outData;
+NSData *MTRsaEncryptPKCS1OAEP(id<EncryptionProvider> provider, NSString *key, NSData *data) {
+    return [provider rsaEncryptPKCS1OAEPWithPublicKey:key data:data];
 }
 
-static NSData *decrypt_TL_data(unsigned char buffer[256]) {
+static NSData *decrypt_TL_data(id<EncryptionProvider> provider, unsigned char buffer[256]) {
     NSString *keyString = @"-----BEGIN RSA PUBLIC KEY-----\n"
 "MIIBCgKCAQEAyr+18Rex2ohtVy8sroGPBwXD3DOoKCSpjDqYoXgCqB7ioln4eDCF\n"
 "fOBUlfXUEvM/fnKCpF46VkAftlb4VuPDeQSS/ZxZYEGqHaywlroVnXHIjgqoxiAd\n"
@@ -873,66 +773,73 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
 "fDK/NWcvGqa0w/nriMD6mDjKOryamw0OP9QuYgMN0C9xMW9y8SmP4h92OAWodTYg\n"
 "Y1hZCxdv6cs5UnW9+PWvS+WIbkh+GaWYxwIDAQAB\n"
 "-----END RSA PUBLIC KEY-----";
-    NSData *keyData = [keyString dataUsingEncoding:NSUTF8StringEncoding];
     
-    BIO *keyBio = BIO_new(BIO_s_mem());
-    BIO_write(keyBio, keyData.bytes, (int)keyData.length);
-    
-    RSA *rsaKey = PEM_read_bio_RSAPublicKey(keyBio, NULL, NULL, NULL);
+    id<MTRsaPublicKey> rsaKey = [provider parseRSAPublicKey:keyString];
     if (rsaKey == nil) {
         return nil;
     }
     
-    BIGNUM *x = BN_new();
-    BIGNUM *y = BN_new();
-    BN_CTX *bnContext = BN_CTX_new();
     uint8_t *bytes = buffer;
-    BN_bin2bn(bytes, 256, x);
     
-    BIGNUM *rsaKeyN = RSA_get0_n(rsaKey);
-    BIGNUM *rsaKeyE = RSA_get0_e(rsaKey);
+    id<MTBignumContext> context = [provider createBignumContext];
+    
+    id<MTBignum> x = [context create];
+    id<MTBignum> y = [context create];
+    
+    [context assignBinTo:x value:[NSData dataWithBytesNoCopy:buffer length:256 freeWhenDone:false]];
+    
+    id<MTBignum> rsaKeyN = [context rsaGetN:rsaKey];
+    id<MTBignum> rsaKeyE = [context rsaGetE:rsaKey];
     
     NSData *result = nil;
-    if (BN_mod_exp(y, x, rsaKeyE, rsaKeyN, bnContext) == 1) {
-        unsigned l = 256 - BN_num_bytes(y);
+    
+    if ([context modExpInto:y a:x b:rsaKeyE mod:rsaKeyN]) {
+        NSData *yBytes = [context getBin:y];
+        unsigned l = 256 - (unsigned)yBytes.length;
         memset(bytes, 0, l);
-        if (BN_bn2bin(y, bytes + l) == 256 - l) {
-            AES_KEY aeskey;
-            unsigned char iv[16];
-            memcpy(iv, bytes + 16, 16);
-            AES_set_decrypt_key(bytes, 256, &aeskey);
-            AES_cbc_encrypt(bytes + 32, bytes + 32, 256 - 32, &aeskey, iv, AES_DECRYPT);
+        
+        [yBytes getBytes:bytes + l length:256 - l];
+        
+        NSMutableData *iv = [[NSMutableData alloc] initWithLength:16];
+        memcpy(iv.mutableBytes, bytes + 16, 16);
+        
+        NSData *encryptedBytes = [[NSData alloc] initWithBytes:bytes + 32 length:256 - 32];
+        
+        NSData *keyBytes = [[NSData alloc] initWithBytes:bytes length:32];
+        
+        NSMutableData *decryptedBytes = [[NSMutableData alloc] initWithLength:encryptedBytes.length];
+        MyAesCbcDecrypt(encryptedBytes.bytes, encryptedBytes.length, decryptedBytes.mutableBytes, keyBytes.bytes, keyBytes.length, iv.mutableBytes);
+        
+        if (decryptedBytes == nil) {
+            return nil;
+        }
+        
+        NSData *sha256Bytes = MTSha256([decryptedBytes subdataWithRange:NSMakeRange(0, 256 - 32 - 16)]);
+        
+        unsigned char sha256_out[32];
+        [sha256Bytes getBytes:sha256_out length:32];
+        
+        NSData *sha256Part = [sha256Bytes subdataWithRange:NSMakeRange(0, 16)];
+        NSData *testSha256 = [decryptedBytes subdataWithRange:NSMakeRange(decryptedBytes.length - 16, 16)];
+        
+        if ([sha256Part isEqualToData:testSha256]) {
+            memcpy(bytes + 32, decryptedBytes.bytes, 256 - 32);
             
-            EVP_MD_CTX *ctx = EVP_MD_CTX_new();
-            unsigned char sha256_out[32];
-            unsigned olen = 0;
-            EVP_DigestInit_ex(ctx, EVP_sha256(), NULL);
-            EVP_DigestUpdate(ctx, bytes + 32, 256 - 32 - 16);
-            EVP_DigestFinal_ex(ctx, sha256_out, &olen);
-            EVP_MD_CTX_free(ctx);
-            if (olen == 32) {
-                if (memcmp(bytes + 256 - 16, sha256_out, 16) == 0) {
-                    unsigned data_len = *(unsigned *) (bytes + 32);
-                    if (data_len && data_len <= 256 - 32 - 16 && !(data_len & 3)) {
-                        result = [NSData dataWithBytes:buffer + 32 + 4 length:data_len];
-                    } else {
-                        if (MTLogEnabled()) {
-                            MTLog(@"TL data length field invalid - %d", data_len);
-                        }
-                    }
-                } else {
-                    if (MTLogEnabled()) {
-                        MTLog(@"RSA signature check FAILED (SHA256 mismatch)");
-                    }
+            unsigned data_len = *(unsigned *) (bytes + 32);
+            if (data_len && data_len <= 256 - 32 - 16 && !(data_len & 3)) {
+                result = [NSData dataWithBytes:buffer + 32 + 4 length:data_len];
+            } else {
+                if (MTLogEnabled()) {
+                    MTLog(@"TL data length field invalid - %d", data_len);
                 }
+            }
+        } else {
+            if (MTLogEnabled()) {
+                MTLog(@"RSA signature check FAILED (SHA256 mismatch)");
             }
         }
     }
-    BN_free(x);
-    BN_free(y);
-    RSA_free(rsaKey);
-    BIO_free(keyBio);
-    BN_CTX_free(bnContext);
+
     return result;
 }
 
@@ -965,13 +872,13 @@ static NSData *decrypt_TL_data(unsigned char buffer[256]) {
 
 @end
 
-MTBackupDatacenterData *MTIPDataDecode(NSData *data, NSString *phoneNumber) {
+MTBackupDatacenterData *MTIPDataDecode(id<EncryptionProvider> provider, NSData *data, NSString *phoneNumber) {
     if (data.length < 256) {
         return nil;
     }
     unsigned char buffer[256];
     memcpy(buffer, data.bytes, 256);
-    NSData *result = decrypt_TL_data(buffer);
+    NSData *result = decrypt_TL_data(provider, buffer);
     
     if (result != nil) {
         MTBufferReader *reader = [[MTBufferReader alloc] initWithData:result];

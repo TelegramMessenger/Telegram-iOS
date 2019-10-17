@@ -75,6 +75,8 @@ static NSData *base64_decode(NSString *str) {
         @[@"www.google.com", @"dns.google.com"],
     ];
     
+    id<EncryptionProvider> encryptionProvider = currentContext.encryptionProvider;
+    
     NSMutableArray *signals = [[NSMutableArray alloc] init];
     for (NSArray *hostAndHostname in hosts) {
         NSString *host = hostAndHostname[0];
@@ -117,7 +119,7 @@ static NSData *base64_decode(NSString *str) {
                     NSData *result = base64_decode(finalString);
                     NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
                     [finalData setLength:256];
-                    MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
+                    MTBackupDatacenterData *datacenterData = MTIPDataDecode(encryptionProvider, finalData, phoneNumber);
                     if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime] source:@"resolveGoogle"]) {
                         return [MTSignal single:datacenterData];
                     }
@@ -154,6 +156,8 @@ static NSString *makeRandomPadding() {
 }
 
 + (MTSignal *)fetchBackupIpsResolveCloudflare:(bool)isTesting phoneNumber:(NSString *)phoneNumber currentContext:(MTContext *)currentContext addressOverride:(NSString *)addressOverride {
+    id<EncryptionProvider> encryptionProvider = currentContext.encryptionProvider;
+    
     NSArray *hosts = @[
         @[@"mozilla.cloudflare-dns.com", @""],
     ];
@@ -201,7 +205,7 @@ static NSString *makeRandomPadding() {
                     NSData *result = base64_decode(finalString);
                     NSMutableData *finalData = [[NSMutableData alloc] initWithData:result];
                     [finalData setLength:256];
-                    MTBackupDatacenterData *datacenterData = MTIPDataDecode(finalData, phoneNumber);
+                    MTBackupDatacenterData *datacenterData = MTIPDataDecode(encryptionProvider, finalData, phoneNumber);
                     if (datacenterData != nil && [self checkIpData:datacenterData timestamp:(int32_t)[currentContext globalTime] source:@"resolveCloudflare"]) {
                         return [MTSignal single:datacenterData];
                     }
@@ -234,13 +238,13 @@ static NSString *makeRandomPadding() {
     apiEnvironment.disableUpdates = true;
     apiEnvironment.langPack = currentContext.apiEnvironment.langPack;
     
-    MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:address.datacenterId != 0 ? currentContext.useTempAuthKeys : false];
+    MTContext *context = [[MTContext alloc] initWithSerialization:currentContext.serialization encryptionProvider:currentContext.encryptionProvider apiEnvironment:apiEnvironment isTestingEnvironment:currentContext.isTestingEnvironment useTempAuthKeys:address.datacenterId != 0 ? currentContext.useTempAuthKeys : false];
     
     if (address.datacenterId != 0) {
         //context.keychain = currentContext.keychain;
     }
     
-    MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil];
+    MTProto *mtProto = [[MTProto alloc] initWithContext:context datacenterId:address.datacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
     if (address.datacenterId != 0) {
         mtProto.useTempAuthKeys = currentContext.useTempAuthKeys;
     }

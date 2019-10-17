@@ -335,6 +335,7 @@ apple_binary(
     deps = [
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/MtProtoKit:MtProtoKit#shared",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
@@ -381,6 +382,7 @@ apple_binary(
         "//submodules/Postbox:Postbox#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/BuildConfig:BuildConfig",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

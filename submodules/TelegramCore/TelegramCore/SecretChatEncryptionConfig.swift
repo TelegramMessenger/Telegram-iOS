@@ -50,12 +50,12 @@ func validatedEncryptionConfig(postbox: Postbox, network: Network) -> Signal<Sec
                     return .complete()
                 }
                 
-                if !MTCheckMod(p.makeData(), UInt32(g), network.context.keychain) {
+                if !MTCheckMod(network.encryptionProvider, p.makeData(), UInt32(g), network.context.keychain) {
                     Logger.shared.log("SecretChatEncryptionConfig", "Invalid p or g")
                     return .complete()
                 }
                 
-                if !MTCheckIsSafePrime(p.makeData(), network.context.keychain) {
+                if !MTCheckIsSafePrime(network.encryptionProvider, p.makeData(), network.context.keychain) {
                     Logger.shared.log("SecretChatEncryptionConfig", "Invalid p")
                     return .never()
                 }

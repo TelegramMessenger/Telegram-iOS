@@ -505,10 +505,10 @@ private final class CallSessionManagerContext {
                     switch context.state {
                         case let .requested(_, accessHash, a, gA, config, _):
                             let p = config.p.makeData()
-                            if !MTCheckIsSafeGAOrB(gA, p) {
+                            if !MTCheckIsSafeGAOrB(self.network.encryptionProvider, gA, p) {
                                 self.drop(internalId: internalId, reason: .disconnect)
                             }
-                            var key = MTExp(gB.makeData(), a, p)!
+                            var key = MTExp(self.network.encryptionProvider, gB.makeData(), a, p)!
                             
                             if key.count > 256 {
                                 key.count = 256
@@ -654,7 +654,7 @@ private final class CallSessionManagerContext {
     }
     
     private func makeSessionEncryptionKey(config: SecretChatEncryptionConfig, gAHash: Data, b: Data, gA: Data) -> (key: Data, keyId: Int64, keyVisualHash: Data)? {
-        var key = MTExp(gA, b, config.p.makeData())!
+        var key = MTExp(self.network.encryptionProvider, gA, b, config.p.makeData())!
         
         if key.count > 256 {
             key.count = 256
@@ -831,9 +831,9 @@ private func acceptCallSession(postbox: Postbox, network: Network, stableId: Cal
         
         let bData = b
         
-        let gb = MTExp(g, bData, p)!
+        let gb = MTExp(network.encryptionProvider, g, bData, p)!
         
-        if !MTCheckIsSafeGAOrB(gb, p) {
+        if !MTCheckIsSafeGAOrB(network.encryptionProvider, gb, p) {
             return .single(.failed)
         }
         
@@ -893,8 +893,8 @@ private func requestCallSession(postbox: Postbox, network: Network, peerId: Peer
                 let g = Data(bytes: &gValue, count: 4)
                 let p = config.p.makeData()
                 
-                let ga = MTExp(g, a, p)!
-                if !MTCheckIsSafeGAOrB(ga, p) {
+                let ga = MTExp(network.encryptionProvider, g, a, p)!
+                if !MTCheckIsSafeGAOrB(network.encryptionProvider, ga, p) {
                     return .single(.failed(.generic))
                 }
                 

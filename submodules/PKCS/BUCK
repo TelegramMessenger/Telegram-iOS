@@ -1,13 +1,18 @@
 load("//Config:buck_rule_macros.bzl", "static_library")
 
 static_library(
-    name = "WalletCore",
+    name = "PKCS",
     srcs = glob([
-        "Sources/**/*.swift",
+        "Sources/**/*.m",
+    ]),
+    headers = glob([
+        "Sources/**/*.h",
+    ]),
+    exported_headers = glob([
+        "Sources/**/*.h",
     ]),
     deps = [
-	    "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
-        "//submodules/TonBinding:TonBinding",
+        "//submodules/openssl:openssl",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

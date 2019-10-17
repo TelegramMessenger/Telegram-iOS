@@ -190,6 +190,7 @@ framework(
         "//submodules/Markdown:Markdown",
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/WidgetItems:WidgetItems",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

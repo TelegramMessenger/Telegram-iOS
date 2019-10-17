@@ -286,40 +286,40 @@ public func deleteSecureIdValues(network: Network, keys: Set<SecureIdValueKey>) 
 
 public func dropSecureId(network: Network, currentPassword: String) -> Signal<Void, AuthorizationPasswordVerificationError> {
     return twoStepAuthData(network)
-        |> mapError { _ -> AuthorizationPasswordVerificationError in
-            return .generic
-        }
-        |> mapToSignal { authData -> Signal<Void, AuthorizationPasswordVerificationError> in
-            let checkPassword: Api.InputCheckPasswordSRP
-            if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
-                let kdfResult = passwordKDF(password: currentPassword, derivation: currentPasswordDerivation, srpSessionData: srpSessionData)
-                if let kdfResult = kdfResult {
-                    checkPassword = .inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))
-                } else {
-                    return .fail(.generic)
-                }
+    |> mapError { _ -> AuthorizationPasswordVerificationError in
+        return .generic
+    }
+    |> mapToSignal { authData -> Signal<Void, AuthorizationPasswordVerificationError> in
+        let checkPassword: Api.InputCheckPasswordSRP
+        if let currentPasswordDerivation = authData.currentPasswordDerivation, let srpSessionData = authData.srpSessionData {
+            let kdfResult = passwordKDF(encryptionProvider: network.encryptionProvider, password: currentPassword, derivation: currentPasswordDerivation, srpSessionData: srpSessionData)
+            if let kdfResult = kdfResult {
+                checkPassword = .inputCheckPasswordSRP(srpId: kdfResult.id, A: Buffer(data: kdfResult.A), M1: Buffer(data: kdfResult.M1))
             } else {
-                checkPassword = .inputCheckPasswordEmpty
+                return .fail(.generic)
             }
-            
-            let settings = network.request(Api.functions.account.getPasswordSettings(password: checkPassword), automaticFloodWait: false)
-            |> mapError { error in
-                return AuthorizationPasswordVerificationError.generic
-            }
-            
-            return settings
-            |> mapToSignal { value -> Signal<Void, AuthorizationPasswordVerificationError> in
-                switch value {
-                    case .passwordSettings:
-                        var flags: Int32 = 0
-                        flags |= (1 << 2)
-                        return network.request(Api.functions.account.updatePasswordSettings(password: .inputCheckPasswordEmpty, newSettings: .passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSettings: nil)), automaticFloodWait: false)
-                        |> map { _ in }
-                        |> mapError { _ in
-                            return AuthorizationPasswordVerificationError.generic
-                        }
+        } else {
+            checkPassword = .inputCheckPasswordEmpty
+        }
+        
+        let settings = network.request(Api.functions.account.getPasswordSettings(password: checkPassword), automaticFloodWait: false)
+        |> mapError { error in
+            return AuthorizationPasswordVerificationError.generic
+        }
+        
+        return settings
+        |> mapToSignal { value -> Signal<Void, AuthorizationPasswordVerificationError> in
+            switch value {
+            case .passwordSettings:
+                var flags: Int32 = 0
+                flags |= (1 << 2)
+                return network.request(Api.functions.account.updatePasswordSettings(password: .inputCheckPasswordEmpty, newSettings: .passwordInputSettings(flags: flags, newAlgo: nil, newPasswordHash: nil, hint: nil, email: nil, newSecureSettings: nil)), automaticFloodWait: false)
+                |> map { _ in }
+                |> mapError { _ in
+                    return AuthorizationPasswordVerificationError.generic
                 }
             }
+        }
     }
 }
 

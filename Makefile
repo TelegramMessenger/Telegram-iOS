@@ -3,7 +3,7 @@
 include Utils.makefile
 
 BUCK_OPTIONS=\
-	--config custom.appVersion="5.12" \
+	--config custom.appVersion="5.12.1" \
 	--config custom.developmentCodeSignIdentity="${DEVELOPMENT_CODE_SIGN_IDENTITY}" \
 	--config custom.distributionCodeSignIdentity="${DISTRIBUTION_CODE_SIGN_IDENTITY}" \
 	--config custom.developmentTeam="${DEVELOPMENT_TEAM}" \
@@ -342,6 +342,11 @@ build_openssl: check_env
 	$(BUCK) build \
 	//submodules/openssl:openssl#iphoneos-arm64 \
 	--verbose 7 ${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
+
+build_libphonenumber: check_env
+	$(BUCK) build \
+	//submodules/libphonenumber:libphonenumber#iphoneos-arm64 \
+	${BUCK_OPTIONS} ${BUCK_THREADS_OPTIONS} ${BUCK_DEBUG_OPTIONS}
 
 build_ton: check_env
 	$(BUCK) build \

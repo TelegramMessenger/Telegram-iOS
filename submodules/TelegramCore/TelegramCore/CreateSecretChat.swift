@@ -34,9 +34,9 @@ public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId,
                     let p = config.p.makeData()
                     
                     let aData = a.makeData()
-                    let ga = MTExp(g, aData, p)!
+                    let ga = MTExp(account.network.encryptionProvider, g, aData, p)!
                     
-                    if !MTCheckIsSafeGAOrB(ga, p) {
+                    if !MTCheckIsSafeGAOrB(account.network.encryptionProvider, ga, p) {
                         return .fail(.generic)
                     }
                     
@@ -46,7 +46,7 @@ public func createSecretChat(account: Account, peerId: PeerId) -> Signal<PeerId,
                         }
                         |> mapToSignal { result -> Signal<PeerId, CreateSecretChatError> in
                             return account.postbox.transaction { transaction -> PeerId in
-                                updateSecretChat(accountPeerId: account.peerId, transaction: transaction, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
+                                updateSecretChat(encryptionProvider: account.network.encryptionProvider, accountPeerId: account.peerId, transaction: transaction, chat: result, requestData: SecretChatRequestData(g: config.g, p: config.p, a: a))
                                 
                                 return result.peerId
                             } |> mapError { _ -> CreateSecretChatError in return .generic }

@@ -92,7 +92,7 @@
     {
         if ([context authInfoForDatacenterWithId:_targetDatacenterId] != nil)
         {
-            _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId usageCalculationInfo:nil];
+            _mtProto = [[MTProto alloc] initWithContext:context datacenterId:_targetDatacenterId usageCalculationInfo:nil requiredAuthToken:nil authTokenMasterDatacenterId:0];
             _mtProto.useTempAuthKeys = useTempAuthKeys;
             _requestService = [[MTRequestMessageService alloc] initWithContext:_context];
             _requestService.forceBackgroundRequests = true;
@@ -128,6 +128,9 @@
 {
     if (_context != context || !_awaitingAddresSetUpdate)
         return;
+    if (authInfo == nil) {
+        return;
+    }
     
     if (_targetDatacenterId != 0 && _targetDatacenterId == datacenterId)
     {

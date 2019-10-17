@@ -162,7 +162,8 @@ public final class WalletSplashScreen: ViewController {
             |> restart
             |> take(1)
             
-            strongSelf.actionDisposable.set(check.start(error: { _ in
+            strongSelf.actionDisposable.set((check
+            |> deliverOnMainQueue).start(error: { _ in
                 guard let strongSelf = self else {
                     return
                 }

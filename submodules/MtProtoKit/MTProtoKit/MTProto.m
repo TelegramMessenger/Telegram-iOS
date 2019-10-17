@@ -138,7 +138,7 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
     return queue;
 }
 
-- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo
+- (instancetype)initWithContext:(MTContext *)context datacenterId:(NSInteger)datacenterId usageCalculationInfo:(MTNetworkUsageCalculationInfo *)usageCalculationInfo requiredAuthToken:(id)requiredAuthToken authTokenMasterDatacenterId:(NSInteger)authTokenMasterDatacenterId
 {
 #ifdef DEBUG
     NSAssert(context != nil, @"context should not be nil");
@@ -153,6 +153,8 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         _datacenterId = datacenterId;
         _usageCalculationInfo = usageCalculationInfo;
         _apiEnvironment = context.apiEnvironment;
+        _requiredAuthToken = requiredAuthToken;
+        _authTokenMasterDatacenterId = authTokenMasterDatacenterId;
         
         [_context addChangeListener:self];
         
@@ -2183,6 +2185,23 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 [_context tempAuthKeyForDatacenterWithIdRequired:_datacenterId keyType:tempAuthKeyType];
             }
         }];
+    } else {
+        if (_requiredAuthToken != nil && _authTokenMasterDatacenterId != _datacenterId) {
+            _authInfo = nil;
+            [_context removeTokenForDatacenterWithId:_datacenterId];
+            [_context performBatchUpdates:^{
+                [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
+                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false];
+            }];
+            _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+        } else if (_canResetAuthData) {
+            _authInfo = nil;
+            [_context performBatchUpdates:^{
+                [_context updateAuthInfoForDatacenterWithId:_datacenterId authInfo:nil];
+                [_context authInfoForDatacenterWithIdRequired:_datacenterId isCdn:false];
+            }];
+            _mtState |= MTProtoStateAwaitingDatacenterAuthorization;
+        }
     }
 }
 
@@ -2691,15 +2710,16 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
 {
     [[MTProto managerQueue] dispatchOnQueue:^
     {
-        if (!_useUnauthorizedMode && context == _context && datacenterId == _datacenterId && authInfo != nil)
+        if (!_useUnauthorizedMode && context == _context && datacenterId == _datacenterId)
         {
             _authInfo = authInfo;
             
             bool wasSuspended = _mtState & (MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey);
             
-            if (_mtState & MTProtoStateAwaitingDatacenterAuthorization)
-            {
-                [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterAuthorization)];
+            if (authInfo != nil) {
+                if (_mtState & MTProtoStateAwaitingDatacenterAuthorization) {
+                    [self setMtState:_mtState & (~MTProtoStateAwaitingDatacenterAuthorization)];
+                }
             }
             
             /*if (_transportScheme != nil && _useTempAuthKeys) {
@@ -2732,11 +2752,15 @@ static NSString *dumpHexString(NSData *data, int maxLength) {
                 [self checkTempAuthKeyBinding:_transportScheme.address];
             }*/
             
-            if ((_mtState & (MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey)) == 0) {
-                if (wasSuspended) {
-                    [self resetTransport];
-                    [self requestTransportTransaction];
+            if (authInfo != nil) {
+                if ((_mtState & (MTProtoStateAwaitingDatacenterAuthorization | MTProtoStateAwaitingDatacenterTempAuthKey)) == 0) {
+                    if (wasSuspended) {
+                        [self resetTransport];
+                        [self requestTransportTransaction];
+                    }
                 }
+            } else {
+                [self resetTransport];
             }
         }
     }];

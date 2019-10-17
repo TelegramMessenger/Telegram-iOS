@@ -16,6 +16,8 @@ import Foundation
     import CloudData
 #endif
 
+import EncryptionProvider
+
 public enum ConnectionStatus: Equatable {
     case waitingForNetwork
     case connecting(proxyAddress: String?, proxyHasConnectionIssues: Bool)
@@ -407,19 +409,20 @@ public struct NetworkInitializationArguments {
     public let appVersion: String
     public let voipMaxLayer: Int32
     public let appData: Signal<Data?, NoError>
+    public let encryptionProvider: EncryptionProvider
     
-    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Signal<Data?, NoError>) {
+    public init(apiId: Int32, languagesCategory: String, appVersion: String, voipMaxLayer: Int32, appData: Signal<Data?, NoError>, encryptionProvider: EncryptionProvider) {
         self.apiId = apiId
         self.languagesCategory = languagesCategory
         self.appVersion = appVersion
         self.voipMaxLayer = voipMaxLayer
         self.appData = appData
+        self.encryptionProvider = encryptionProvider
     }
 }
 
-#if os(iOS)
-private let cloudDataContext = makeCloudDataContext()
-#endif
+private let cloudDataContext = Atomic<CloudDataContext?>(value: nil)
+
 func initializedNetwork(arguments: NetworkInitializationArguments, supplementary: Bool, datacenterId: Int, keychain: Keychain, basePath: String, testingEnvironment: Bool, languageCode: String?, proxySettings: ProxySettings?, networkSettings: NetworkSettings?, phoneNumber: String?) -> Signal<Network, NoError> {
     return Signal { subscriber in
         let queue = Queue()
@@ -460,7 +463,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
                 }
             }
             
-            let context = MTContext(serialization: serialization, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: false)!
+            let context = MTContext(serialization: serialization, encryptionProvider: arguments.encryptionProvider, apiEnvironment: apiEnvironment, isTestingEnvironment: testingEnvironment, useTempAuthKeys: false)!
             
             let seedAddressList: [Int: [String]]
             
@@ -487,7 +490,15 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             var wrappedAdditionalSource: MTSignal?
             #if os(iOS)
             if #available(iOS 10.0, *) {
-                if let cloudDataContext = cloudDataContext {
+                var cloudDataContextValue: CloudDataContext?
+                if let value = cloudDataContext.with({ $0 }) {
+                    cloudDataContextValue = value
+                } else {
+                    cloudDataContextValue = makeCloudDataContext(encryptionProvider: arguments.encryptionProvider)
+                    let _ = cloudDataContext.swap(cloudDataContextValue)
+                }
+                
+                if let cloudDataContext = cloudDataContextValue {
                     wrappedAdditionalSource = MTSignal(generator: { subscriber in
                         let disposable = cloudDataContext.get(phoneNumber: .single(phoneNumber)).start(next: { value in
                             subscriber?.putNext(value)
@@ -504,10 +515,10 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             context.setDiscoverBackupAddressListSignal(MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber))
             
             #if DEBUG
-            //let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber).start(next: nil)
+            let _ = MTBackupAddressSignals.fetchBackupIps(testingEnvironment, currentContext: context, additionalSource: wrappedAdditionalSource, phoneNumber: phoneNumber).start(next: nil)
             #endif
             
-            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil))!
+            let mtProto = MTProto(context: context, datacenterId: datacenterId, usageCalculationInfo: usageCalculationInfo(basePath: basePath, category: nil), requiredAuthToken: nil, authTokenMasterDatacenterId: 0)!
             mtProto.useTempAuthKeys = context.useTempAuthKeys
             mtProto.checkForProxyConnectionIssues = true
             
@@ -537,7 +548,7 @@ func initializedNetwork(arguments: NetworkInitializationArguments, supplementary
             mtProto.delegate = connectionStatusDelegate
             mtProto.add(requestService)
             
-            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable)
+            let network = Network(queue: queue, datacenterId: datacenterId, context: context, mtProto: mtProto, requestService: requestService, connectionStatusDelegate: connectionStatusDelegate, _connectionStatus: connectionStatus, basePath: basePath, appDataDisposable: appDataDisposable, encryptionProvider: arguments.encryptionProvider)
             appDataUpdatedImpl = { [weak network] data in
                 guard let data = data else {
                     return
@@ -653,6 +664,8 @@ public enum NetworkRequestResult<T> {
 }
 
 public final class Network: NSObject, MTRequestMessageServiceDelegate {
+    public let encryptionProvider: EncryptionProvider
+    
     private let queue: Queue
     public let datacenterId: Int
     public let context: MTContext
@@ -703,7 +716,9 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
         return "Network context: \(self.context)"
     }
     
-    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable) {
+    fileprivate init(queue: Queue, datacenterId: Int, context: MTContext, mtProto: MTProto, requestService: MTRequestMessageService, connectionStatusDelegate: MTProtoConnectionStatusDelegate, _connectionStatus: Promise<ConnectionStatus>, basePath: String, appDataDisposable: Disposable, encryptionProvider: EncryptionProvider) {
+        self.encryptionProvider = encryptionProvider
+        
         self.queue = queue
         self.datacenterId = datacenterId
         self.context = context
@@ -740,7 +755,7 @@ public final class Network: NSObject, MTRequestMessageServiceDelegate {
                                             if id == Int(dcId) {
                                                 let dict = NSMutableDictionary()
                                                 dict["key"] = publicKey
-                                                dict["fingerprint"] = MTRsaFingerprint(publicKey)
+                                                dict["fingerprint"] = MTRsaFingerprint(encryptionProvider, publicKey)
                                                 array.add(dict)
                                             }
                                     }
@@ -1050,9 +1065,9 @@ class Keychain: NSObject, MTKeychain {
     }
 }
 #if os(iOS)
-func makeCloudDataContext() -> CloudDataContext? {
+func makeCloudDataContext(encryptionProvider: EncryptionProvider) -> CloudDataContext? {
     if #available(iOS 10.0, *) {
-        return CloudDataContextImpl()
+        return CloudDataContextImpl(encryptionProvider: encryptionProvider)
     } else {
         return nil
     }

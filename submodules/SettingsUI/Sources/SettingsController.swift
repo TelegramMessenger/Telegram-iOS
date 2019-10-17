@@ -1169,14 +1169,7 @@ public func settingsController(context: AccountContext, accountManager: AccountM
     
     let hasWallet = contextValue.get()
     |> mapToSignal { context in
-        return context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        |> map { view -> Bool in
-            if #available(iOSApplicationExtension 10.3, iOS 10.3, *) {
-                return true
-            } else {
-                return false
-            }
-        }
+        return context.hasWalletAccess
     }
     
     let hasPassport = ValuePromise<Bool>(false)

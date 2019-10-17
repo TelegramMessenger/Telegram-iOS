@@ -333,7 +333,7 @@ public func grantSecureIdAccess(network: Network, peerId: PeerId, publicKey: Str
     guard let (encryptedCredentialsData, decryptedCredentialsHash) = encryptedCredentialsData(data: credentialsData, secretData: credentialsSecretData) else {
         return .fail(.generic)
     }
-    guard let encryptedSecretData = MTRsaEncryptPKCS1OAEP(publicKey, credentialsSecretData) else {
+    guard let encryptedSecretData = MTRsaEncryptPKCS1OAEP(network.encryptionProvider, publicKey, credentialsSecretData) else {
         return .fail(.generic)
     }
     

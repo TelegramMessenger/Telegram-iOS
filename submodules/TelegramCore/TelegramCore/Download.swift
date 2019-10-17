@@ -48,14 +48,17 @@ class Download: NSObject, MTRequestMessageServiceDelegate {
         self.isCdn = isCdn
         self.context = context
 
-        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo)
+        var requiredAuthToken: Any?
+        var authTokenMasterDatacenterId: Int = 0
+        if !isCdn && datacenterId != masterDatacenterId {
+            authTokenMasterDatacenterId = masterDatacenterId
+            requiredAuthToken = Int(datacenterId) as NSNumber
+        }
+        
+        self.mtProto = MTProto(context: self.context, datacenterId: datacenterId, usageCalculationInfo: usageInfo, requiredAuthToken: requiredAuthToken, authTokenMasterDatacenterId: authTokenMasterDatacenterId)
         self.mtProto.cdn = isCdn
         self.mtProto.useTempAuthKeys = self.context.useTempAuthKeys && !isCdn
         self.mtProto.media = isMedia
-        if !isCdn && datacenterId != masterDatacenterId {
-            self.mtProto.authTokenMasterDatacenterId = masterDatacenterId
-            self.mtProto.requiredAuthToken = Int(datacenterId) as NSNumber
-        }
         self.requestService = MTRequestMessageService(context: self.context)
         self.requestService.forceBackgroundRequests = true
         
