@@ -430,6 +430,9 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
                 info: WalletInfoTheme(
                     incomingFundsTitleColor: UIColor(rgb: 0x00b12c),
                     outgoingFundsTitleColor: UIColor(rgb: 0xff3b30)
+                ), transaction: WalletTransactionTheme(
+                    descriptionBackgroundColor: UIColor(rgb: 0xf1f1f4),
+                    descriptionTextColor: .black
                 ), setup: WalletSetupTheme(
                     buttonFillColor: accentColor,
                     buttonForegroundColor: .white,

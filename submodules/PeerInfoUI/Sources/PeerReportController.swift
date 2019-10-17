@@ -91,7 +91,7 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
                         })
                     }
                 } else {
-                    parent?.present(peerReportController(context: context, subject: subject, completion: completion), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                    parent?.push(peerReportController(context: context, subject: subject, completion: completion))
                 }
                 f(.dismissWithoutContent)
             })))
@@ -102,11 +102,13 @@ public func presentPeerReportOptions(context: AccountContext, parent: ViewContro
         parent.view.endEditing(true)
         parent.present(peerReportOptionsController(context: context, subject: subject, present: { [weak parent] c, a in
             parent?.present(c, in: .window(.root), with: a)
+        }, push: { [weak parent] c in
+            parent?.push(c)
         }, completion: completion), in: .window(.root))
     }
 }
 
-public func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void, completion: @escaping (Bool) -> Void) -> ViewController {
+public func peerReportOptionsController(context: AccountContext, subject: PeerReportSubject, present: @escaping (ViewController, Any?) -> Void, push: @escaping (ViewController) -> Void, completion: @escaping (Bool) -> Void) -> ViewController {
     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
     let controller = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme))
     
@@ -169,7 +171,7 @@ public func peerReportOptionsController(context: AccountContext, subject: PeerRe
                         })
                 }
             } else {
-                controller?.present(peerReportController(context: context, subject: subject, completion: completion), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                push(peerReportController(context: context, subject: subject, completion: completion))
             }
             
             controller?.dismissAnimated()
@@ -348,6 +350,7 @@ private func peerReportController(context: AccountContext, subject: PeerReportSu
     }
     
     let controller = ItemListController(context: context, state: signal)
+    controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }

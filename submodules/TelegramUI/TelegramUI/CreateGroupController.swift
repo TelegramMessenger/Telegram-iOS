@@ -314,6 +314,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     var replaceControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var pushImpl: ((ViewController) -> Void)?
     var endEditingImpl: (() -> Void)?
     var clearHighlightImpl: (() -> Void)?
     
@@ -583,7 +584,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
             clearHighlightImpl?()
         })
-        presentControllerImpl?(controller, nil)
+        pushImpl?(controller)
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(addressPromise.get()))
@@ -618,6 +619,9 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    pushImpl = { [weak controller] c in
+        controller?.push(c)
     }
     controller.willDisappear = { _ in
         endEditingImpl?()

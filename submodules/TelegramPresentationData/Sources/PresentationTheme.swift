@@ -105,8 +105,12 @@ public final class PresentationThemeRootNavigationBar {
     public let badgeBackgroundColor: UIColor
     public let badgeStrokeColor: UIColor
     public let badgeTextColor: UIColor
+    public let segmentedBackgroundColor: UIColor
+    public let segmentedForegroundColor: UIColor
+    public let segmentedTextColor: UIColor
+    public let segmentedDividerColor: UIColor
     
-    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor) {
+    public init(buttonColor: UIColor, disabledButtonColor: UIColor, primaryTextColor: UIColor, secondaryTextColor: UIColor, controlColor: UIColor, accentTextColor: UIColor, backgroundColor: UIColor, separatorColor: UIColor, badgeBackgroundColor: UIColor, badgeStrokeColor: UIColor, badgeTextColor: UIColor, segmentedBackgroundColor: UIColor, segmentedForegroundColor: UIColor, segmentedTextColor: UIColor, segmentedDividerColor: UIColor) {
         self.buttonColor = buttonColor
         self.disabledButtonColor = disabledButtonColor
         self.primaryTextColor = primaryTextColor
@@ -118,6 +122,10 @@ public final class PresentationThemeRootNavigationBar {
         self.badgeBackgroundColor = badgeBackgroundColor
         self.badgeStrokeColor = badgeStrokeColor
         self.badgeTextColor = badgeTextColor
+        self.segmentedBackgroundColor = segmentedBackgroundColor
+        self.segmentedForegroundColor = segmentedForegroundColor
+        self.segmentedTextColor = segmentedTextColor
+        self.segmentedDividerColor = segmentedDividerColor
     }
 }
 

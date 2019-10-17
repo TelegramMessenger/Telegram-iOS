@@ -140,60 +140,63 @@ final class WalletContextImpl: WalletContext {
                     buttonTextColor: .white,
                     incomingFundsTitleColor: theme.chatList.secretTitleColor,
                     outgoingFundsTitleColor: theme.list.itemDestructiveColor
-            ), setup: WalletSetupTheme(
-                buttonFillColor: theme.list.itemCheckColors.fillColor,
-                buttonForegroundColor: theme.list.itemCheckColors.foregroundColor,
-                inputBackgroundColor: theme.actionSheet.inputBackgroundColor,
-                inputPlaceholderColor: theme.actionSheet.inputPlaceholderColor,
-                inputTextColor: theme.actionSheet.inputTextColor,
-                inputClearButtonColor: theme.actionSheet.inputClearButtonColor.withAlphaComponent(0.8)
-            ),
-            list: WalletListTheme(
-                itemPrimaryTextColor: theme.list.itemPrimaryTextColor,
-                itemSecondaryTextColor: theme.list.itemSecondaryTextColor,
-                itemPlaceholderTextColor: theme.list.itemPlaceholderTextColor,
-                itemDestructiveColor: theme.list.itemDestructiveColor,
-                itemAccentColor: theme.list.itemAccentColor,
-                itemDisabledTextColor: theme.list.itemDisabledTextColor,
-                plainBackgroundColor: theme.list.plainBackgroundColor,
-                blocksBackgroundColor: theme.list.blocksBackgroundColor,
-                itemPlainSeparatorColor: theme.list.itemPlainSeparatorColor,
-                itemBlocksBackgroundColor: theme.list.itemBlocksBackgroundColor,
-                itemBlocksSeparatorColor: theme.list.itemBlocksSeparatorColor,
-                itemHighlightedBackgroundColor: theme.list.itemHighlightedBackgroundColor,
-                sectionHeaderTextColor: theme.list.sectionHeaderTextColor,
-                freeTextColor: theme.list.freeTextColor,
-                freeTextErrorColor: theme.list.freeTextErrorColor,
-                inputClearButtonColor: theme.list.inputClearButtonColor
-            ),
-            statusBarStyle: theme.rootController.statusBarStyle.style,
-            navigationBar: navigationBarData.theme,
-            keyboardAppearance: theme.rootController.keyboardColor.keyboardAppearance,
-            alert: AlertControllerTheme(presentationTheme: theme),
-            actionSheet: ActionSheetControllerTheme(presentationTheme: theme)
-        ), strings: WalletStrings(
-            primaryComponent: WalletStringsComponent(
-                languageCode: strings.primaryComponent.languageCode,
-                localizedName: strings.primaryComponent.localizedName,
-                pluralizationRulesCode: strings.primaryComponent.pluralizationRulesCode,
-                dict: strings.primaryComponent.dict
-            ),
-            secondaryComponent: strings.secondaryComponent.flatMap { component in
-                return WalletStringsComponent(
-                    languageCode: component.languageCode,
-                    localizedName: component.localizedName,
-                    pluralizationRulesCode: component.pluralizationRulesCode,
-                    dict: component.dict
-                )
-            },
-            groupingSeparator: strings.groupingSeparator
-        ), dateTimeFormat: WalletPresentationDateTimeFormat(
-            timeFormat: timeFormat,
-            dateFormat: dateFormat,
-            dateSeparator: presentationData.dateTimeFormat.dateSeparator,
-            decimalSeparator: presentationData.dateTimeFormat.decimalSeparator,
-            groupingSeparator: presentationData.dateTimeFormat.groupingSeparator
-        )
+                ), transaction: WalletTransactionTheme(
+                    descriptionBackgroundColor: theme.chat.message.incoming.bubble.withoutWallpaper.fill,
+                    descriptionTextColor: theme.chat.message.incoming.primaryTextColor
+                ), setup: WalletSetupTheme(
+                    buttonFillColor: theme.list.itemCheckColors.fillColor,
+                    buttonForegroundColor: theme.list.itemCheckColors.foregroundColor,
+                    inputBackgroundColor: theme.actionSheet.inputBackgroundColor,
+                    inputPlaceholderColor: theme.actionSheet.inputPlaceholderColor,
+                    inputTextColor: theme.actionSheet.inputTextColor,
+                    inputClearButtonColor: theme.actionSheet.inputClearButtonColor.withAlphaComponent(0.8)
+                ),
+                list: WalletListTheme(
+                    itemPrimaryTextColor: theme.list.itemPrimaryTextColor,
+                    itemSecondaryTextColor: theme.list.itemSecondaryTextColor,
+                    itemPlaceholderTextColor: theme.list.itemPlaceholderTextColor,
+                    itemDestructiveColor: theme.list.itemDestructiveColor,
+                    itemAccentColor: theme.list.itemAccentColor,
+                    itemDisabledTextColor: theme.list.itemDisabledTextColor,
+                    plainBackgroundColor: theme.list.plainBackgroundColor,
+                    blocksBackgroundColor: theme.list.blocksBackgroundColor,
+                    itemPlainSeparatorColor: theme.list.itemPlainSeparatorColor,
+                    itemBlocksBackgroundColor: theme.list.itemBlocksBackgroundColor,
+                    itemBlocksSeparatorColor: theme.list.itemBlocksSeparatorColor,
+                    itemHighlightedBackgroundColor: theme.list.itemHighlightedBackgroundColor,
+                    sectionHeaderTextColor: theme.list.sectionHeaderTextColor,
+                    freeTextColor: theme.list.freeTextColor,
+                    freeTextErrorColor: theme.list.freeTextErrorColor,
+                    inputClearButtonColor: theme.list.inputClearButtonColor
+                ),
+                statusBarStyle: theme.rootController.statusBarStyle.style,
+                navigationBar: navigationBarData.theme,
+                keyboardAppearance: theme.rootController.keyboardColor.keyboardAppearance,
+                alert: AlertControllerTheme(presentationTheme: theme),
+                actionSheet: ActionSheetControllerTheme(presentationTheme: theme)
+            ), strings: WalletStrings(
+                primaryComponent: WalletStringsComponent(
+                    languageCode: strings.primaryComponent.languageCode,
+                    localizedName: strings.primaryComponent.localizedName,
+                    pluralizationRulesCode: strings.primaryComponent.pluralizationRulesCode,
+                    dict: strings.primaryComponent.dict
+                ),
+                secondaryComponent: strings.secondaryComponent.flatMap { component in
+                    return WalletStringsComponent(
+                        languageCode: component.languageCode,
+                        localizedName: component.localizedName,
+                        pluralizationRulesCode: component.pluralizationRulesCode,
+                        dict: component.dict
+                    )
+                },
+                groupingSeparator: strings.groupingSeparator
+            ), dateTimeFormat: WalletPresentationDateTimeFormat(
+                timeFormat: timeFormat,
+                dateFormat: dateFormat,
+                dateSeparator: presentationData.dateTimeFormat.dateSeparator,
+                decimalSeparator: presentationData.dateTimeFormat.decimalSeparator,
+                groupingSeparator: presentationData.dateTimeFormat.groupingSeparator
+            )
         )
     }
     

@@ -383,8 +383,9 @@ apple_binary(
         "//submodules/BuildConfig:BuildConfig",
     ],
     frameworks = [
-        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/Intents.framework",
+        "$SDKROOT/System/Library/Frameworks/Contacts.framework",
     ],
 )
 

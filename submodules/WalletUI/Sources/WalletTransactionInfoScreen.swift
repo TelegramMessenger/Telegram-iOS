@@ -202,12 +202,32 @@ final class WalletTransactionInfoScreen: ViewController {
             }
             var string = NSMutableAttributedString(string: "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and for processing your transactions. More info", font: Font.regular(14.0), textColor: .white, paragraphAlignment: .center)
             string.addAttribute(NSAttributedString.Key.foregroundColor, value: UIColor(rgb: 0x6bb2ff), range: NSMakeRange(string.string.count - 10, 10))
-            let controller = TooltipController(content: .attributedText(string), timeout: 3.0, dismissByTapOutside: true, dismissByTapOutsideSource: false, dismissImmediatelyOnLayoutUpdate: false)
+            let controller = TooltipController(content: .attributedText(string), timeout: 3.0, dismissByTapOutside: true, dismissByTapOutsideSource: false, dismissImmediatelyOnLayoutUpdate: false, arrowOnBottom: false)
+            controller.dismissed = { [weak self] tappedInside in
+                if let strongSelf = self, tappedInside {
+                    strongSelf.context.openUrl(strongSelf.presentationData.strings.Wallet_TransactionInfo_FeeInfoURL)
+                }
+            }
             strongSelf.present(controller, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
                 if let strongSelf = self {
                     return (node.view, rect.insetBy(dx: 0.0, dy: -4.0))
                 }
                 return nil
+            }))
+        }
+        (self.displayNode as! WalletTransactionInfoScreenNode).displayCopyContextMenu = { [weak self] node, frame, text in
+            guard let strongSelf = self else {
+                return
+            }
+            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Wallet_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Wallet_ContextMenuCopy), action: {
+                UIPasteboard.general.string = text
+            })])
+            strongSelf.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                if let strongSelf = self {
+                    return (node, frame.insetBy(dx: 0.0, dy: -2.0), strongSelf.displayNode, strongSelf.displayNode.view.bounds)
+                } else {
+                    return nil
+                }
             }))
         }
         self.displayNodeDidLoad()
@@ -223,7 +243,8 @@ final class WalletTransactionInfoScreen: ViewController {
             textHeight += 24.0
         }
         let insets = layout.insets(options: [])
-        return CGSize(width: layout.size.width, height: 428.0 + insets.bottom + textHeight)
+        
+        return CGSize(width: layout.size.width, height: min(min(720.0, layout.size.height), 428.0 + insets.bottom + textHeight))
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -240,7 +261,7 @@ final class WalletTransactionInfoScreen: ViewController {
 private let integralFont = Font.medium(48.0)
 private let fractionalFont = Font.medium(24.0)
 
-private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
+private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate {
     private let context: WalletContext
     private var presentationData: WalletPresentationData
     private let walletTransaction: WalletInfoTransaction
@@ -249,14 +270,20 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
     private let titleNode: ImmediateTextNode
     private let timeNode: ImmediateTextNode
     
+    private let navigationBackgroundNode: ASDisplayNode
+    private let navigationSeparatorNode: ASDisplayNode
+    
+    private let scrollNode: ASScrollNode
     private let amountNode: ImmediateTextNode
     private let iconNode: AnimatedStickerNode
     private let activateArea: AccessibilityAreaNode
     private let feesNode: ImmediateTextNode
+    private let feesInfoIconNode: ASImageNode
     private let feesButtonNode: ASButtonNode
     
     private let commentBackgroundNode: ASImageNode
     private let commentTextNode: ImmediateTextNode
+    private let commentSeparatorNode: ASDisplayNode
     
     private let addressTextNode: ImmediateTextNode
     
@@ -264,6 +291,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
     
     var send: ((String) -> Void)?
     var displayFeesTooltip: ((ASDisplayNode, CGRect) -> Void)?
+    var displayCopyContextMenu: ((ASDisplayNode, CGRect, String) -> Void)?
   
     init(context: WalletContext, presentationData: WalletPresentationData, walletTransaction: WalletInfoTransaction) {
         self.context = context
@@ -277,6 +305,14 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         self.timeNode = ImmediateTextNode()
         self.timeNode.textAlignment = .center
         self.timeNode.maximumNumberOfLines = 1
+        
+        self.navigationBackgroundNode = ASDisplayNode()
+        self.navigationBackgroundNode.backgroundColor = self.presentationData.theme.navigationBar.backgroundColor
+        self.navigationBackgroundNode.alpha = 0.0
+        self.navigationSeparatorNode = ASDisplayNode()
+        self.navigationSeparatorNode.backgroundColor = self.presentationData.theme.navigationBar.separatorColor
+        
+        self.scrollNode = ASScrollNode()
         
         self.amountNode = ImmediateTextNode()
         self.amountNode.textAlignment = .center
@@ -293,14 +329,24 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         self.feesNode.maximumNumberOfLines = 2
         self.feesNode.lineSpacing = 0.35
         
+        self.feesInfoIconNode = ASImageNode()
+        self.feesInfoIconNode.displaysAsynchronously = false
+        self.feesInfoIconNode.displayWithoutProcessing = true
+        self.feesInfoIconNode.image = UIImage(bundleImageName: "Wallet/InfoIcon")
+        
         self.feesButtonNode = ASButtonNode()
         
         self.commentBackgroundNode = ASImageNode()
         self.commentBackgroundNode.contentMode = .scaleToFill
+        self.commentBackgroundNode.isUserInteractionEnabled = true
         
         self.commentTextNode = ImmediateTextNode()
         self.commentTextNode.textAlignment = .natural
         self.commentTextNode.maximumNumberOfLines = 0
+        self.commentTextNode.isUserInteractionEnabled = false
+        
+        self.commentSeparatorNode = ASDisplayNode()
+        self.commentSeparatorNode.backgroundColor = self.presentationData.theme.list.itemPlainSeparatorColor
         
         self.addressTextNode = ImmediateTextNode()
         self.addressTextNode.maximumNumberOfLines = 4
@@ -327,14 +373,19 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         
         self.backgroundColor = self.presentationData.theme.list.plainBackgroundColor
         
+        self.addSubnode(self.navigationBackgroundNode)
+        self.addSubnode(self.navigationSeparatorNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.timeNode)
         self.addSubnode(self.amountNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.feesNode)
+        self.addSubnode(self.feesInfoIconNode)
         self.addSubnode(self.feesButtonNode)
-        self.addSubnode(self.commentBackgroundNode)
-        self.addSubnode(self.commentTextNode)
+        self.addSubnode(self.scrollNode)
+        self.scrollNode.addSubnode(self.commentBackgroundNode)
+        self.scrollNode.addSubnode(self.commentTextNode)
+        self.addSubnode(self.commentSeparatorNode)
         self.addSubnode(self.addressTextNode)
         self.addSubnode(self.buttonNode)
     
@@ -346,7 +397,6 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         
         self.titleNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_TransactionInfo_Title, font: titleFont, textColor: textColor)
         
-       
         self.timeNode.attributedText = NSAttributedString(string: stringForFullDate(timestamp: Int32(clamping: timestamp), strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat), font: subtitleFont, textColor: seccondaryTextColor)
                 
         let amountString: String
@@ -372,16 +422,18 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
                 feesString.append(formatBalanceText(transaction.otherFee, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator) + " transaction fee")
             }
             
-            if !feesString.isEmpty {
-                feesString.append("(?)")
-            }
+            self.feesInfoIconNode.isHidden = feesString.isEmpty
         }
         self.feesNode.attributedText = NSAttributedString(string: feesString, font: subtitleFont, textColor: seccondaryTextColor)
         
         self.feesButtonNode.addTarget(self, action: #selector(feesPressed), forControlEvents: .touchUpInside)
         
-        self.commentBackgroundNode.image = messageBubbleImage(incoming: transferredValue > 0, fillColor: UIColor(rgb: 0xf1f1f5), strokeColor: UIColor(rgb: 0xf1f1f5))
-        self.commentTextNode.attributedText = NSAttributedString(string: extractDescription(walletTransaction), font: Font.regular(17.0), textColor: .black)
+        var commentBackgroundColor = presentationData.theme.transaction.descriptionBackgroundColor
+        if commentBackgroundColor.distance(to: presentationData.theme.list.plainBackgroundColor) < 100 {
+            commentBackgroundColor = UIColor(rgb: 0xf1f1f4)
+        }
+        self.commentBackgroundNode.image = messageBubbleImage(incoming: transferredValue > 0, fillColor: commentBackgroundColor, strokeColor: presentationData.theme.transaction.descriptionBackgroundColor)
+        self.commentTextNode.attributedText = NSAttributedString(string: extractDescription(walletTransaction), font: Font.regular(17.0), textColor: presentationData.theme.transaction.descriptionTextColor)
         
         let address = extractAddress(walletTransaction)
         var singleAddress: String?
@@ -391,7 +443,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         
         if let address = singleAddress {
             self.addressTextNode.attributedText = NSAttributedString(string: formatAddress(address), font: addressFont, textColor: textColor, paragraphAlignment: .justified)
-            self.buttonNode.title = "Send Grams to This Address"
+            self.buttonNode.title = presentationData.strings.Wallet_TransactionInfo_SendGrams
 
             self.buttonNode.pressed = { [weak self] in
                 self?.send?(address)
@@ -399,8 +451,75 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         }
     }
     
+    override func didLoad() {
+        super.didLoad()
+        
+        let commentGestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapCommentGesture(_:)))
+        commentGestureRecognizer.tapActionAtPoint = { [weak self] point in
+            return .waitForSingleTap
+        }
+        self.commentBackgroundNode.view.addGestureRecognizer(commentGestureRecognizer)
+        
+        let addressGestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapAddressGesture(_:)))
+        addressGestureRecognizer.tapActionAtPoint = { [weak self] point in
+            return .waitForSingleTap
+        }
+        self.addressTextNode.view.addGestureRecognizer(addressGestureRecognizer)
+    }
+    
+    @objc func tapLongTapOrDoubleTapCommentGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .longTap:
+                    let description = extractDescription(self.walletTransaction)
+                    if !description.isEmpty {
+                        self.displayCopyContextMenu?(self, self.commentBackgroundNode.frame, description)
+                    }
+                default:
+                    break
+                }
+            }
+        default:
+            break
+        }
+    }
+    
+    @objc func tapLongTapOrDoubleTapAddressGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .longTap:
+                    let address = extractAddress(self.walletTransaction)
+                    var singleAddress: String?
+                    if case let .list(list) = address, list.count == 1 {
+                        singleAddress = list.first
+                    }
+                           
+                    if let address = singleAddress {
+                        self.displayCopyContextMenu?(self, self.addressTextNode.frame, address)
+                    }
+                default:
+                    break
+                }
+            }
+        default:
+            break
+        }
+    }
+    
     @objc private func feesPressed() {
         self.displayFeesTooltip?(self.feesNode, self.feesNode.bounds)
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        self.updateTitle()
+    }
+    
+    private func updateTitle() {
+        
     }
 
     func containerLayoutUpdated(layout: ContainerViewLayout, navigationHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -430,17 +549,6 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         transition.updateFrame(node: self.feesNode, frame: feesFrame)
         transition.updateFrame(node: self.feesButtonNode, frame: feesFrame)
         
-        let commentSize = self.commentTextNode.updateLayout(CGSize(width: layout.size.width - 36.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        let commentFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - commentSize.width) / 2.0), y: amountFrame.maxY + 84.0), size: CGSize(width: commentSize.width, height: commentSize.height))
-        transition.updateFrame(node: self.commentTextNode, frame: commentFrame)
-        
-        var commentBackgroundFrame = commentSize.width > 0.0 ? commentFrame.insetBy(dx: -11.0, dy: -7.0) : CGRect()
-        commentBackgroundFrame.size.width += 7.0
-        if self.incoming {
-            commentBackgroundFrame.origin.x -= 7.0
-        }
-        transition.updateFrame(node: self.commentBackgroundNode, frame: commentBackgroundFrame)
-        
         let buttonSideInset: CGFloat = 16.0
         let bottomInset = insets.bottom + 10.0
         let buttonWidth = layout.size.width - buttonSideInset * 2.0
@@ -451,6 +559,27 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode {
         self.buttonNode.updateLayout(width: buttonFrame.width, transition: transition)
         
         let addressSize = self.addressTextNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
-        transition.updateFrame(node: self.addressTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - addressSize.width) / 2.0), y: buttonFrame.minY - addressSize.height - 44.0), size: addressSize))
+        let addressFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - addressSize.width) / 2.0), y: buttonFrame.minY - addressSize.height - 38.0), size: addressSize)
+        transition.updateFrame(node: self.addressTextNode, frame: addressFrame)
+        
+        transition.updateFrame(node: self.navigationBackgroundNode, frame: CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: navigationHeight))
+        transition.updateFrame(node: self.navigationSeparatorNode, frame: CGRect(x: 0.0, y: navigationHeight, width: layout.size.width, height: UIScreenPixel))
+        
+        let commentSeparatorFrame = CGRect(x: 0.0, y: addressFrame.minY - 36.0, width: layout.size.width, height: UIScreenPixel)
+        transition.updateFrame(node: self.commentSeparatorNode, frame: commentSeparatorFrame)
+        
+        let scrollFrame = CGRect(x: 0.0, y: navigationHeight, width: layout.size.width, height: commentSeparatorFrame.minY - navigationHeight)
+        transition.updateFrame(node: self.scrollNode, frame: scrollFrame)
+        
+        let commentSize = self.commentTextNode.updateLayout(CGSize(width: layout.size.width - 36.0 * 2.0, height: CGFloat.greatestFiniteMagnitude))
+        let commentFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - commentSize.width) / 2.0), y: amountFrame.maxY + 84.0 - navigationHeight), size: CGSize(width: commentSize.width, height: commentSize.height))
+        transition.updateFrame(node: self.commentTextNode, frame: commentFrame)
+        
+        var commentBackgroundFrame = commentSize.width > 0.0 ? commentFrame.insetBy(dx: -11.0, dy: -7.0) : CGRect()
+        commentBackgroundFrame.size.width += 7.0
+        if self.incoming {
+            commentBackgroundFrame.origin.x -= 7.0
+        }
+        transition.updateFrame(node: self.commentBackgroundNode, frame: commentBackgroundFrame)
     }
 }

@@ -4870,11 +4870,11 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.TransactionInfo.SenderHeader" = "SENDER";
 "Wallet.TransactionInfo.CopyAddress" = "Copy Wallet Address";
 "Wallet.TransactionInfo.AddressCopied" = "Address copied to clipboard.";
-"Wallet.TransactionInfo.SendGrams" = "Send Grams";
+"Wallet.TransactionInfo.SendGrams" = "Send Grams to This Address";
 "Wallet.TransactionInfo.CommentHeader" = "COMMENT";
 "Wallet.TransactionInfo.StorageFeeHeader" = "STORAGE FEE";
 "Wallet.TransactionInfo.OtherFeeHeader" = "TRANSACTION FEE";
-"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet. [More info]()";
+"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and processing your transactions. [More info]()";
 "Wallet.TransactionInfo.OtherFeeInfo" = "Blockchain validators collect a tiny fee for processing your decentralized transactions. [More info]()";
 "Wallet.TransactionInfo.FeeInfoURL" = "https://telegram.org/wallet/fee";
 "Wallet.WordCheck.Title" = "Test Time!";
@@ -4908,6 +4908,7 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.Send.SendAnyway" = "Send Anyway";
 "Wallet.Receive.CreateInvoice" = "Create Invoice";
 "Wallet.Receive.CreateInvoiceInfo" = "You can specify amount and purpose of the payment to save the sender some time.";
+
 "Conversation.WalletRequiredTitle" = "Gram Wallet Required";
 "Conversation.WalletRequiredText" = "This link can be used to send money on the TON Blockchain. To do this, you need to set up a Gram wallet first.";
 "Conversation.WalletRequiredNotNow" = "Not Now";
@@ -4973,3 +4974,9 @@ Any member of this group will be able to see messages in the channel.";
 "Wallet.VoiceOver.Editing.ClearText" = "Clear text";
 
 "Wallet.Receive.ShareInvoiceUrlInfo" = "Share this link with other Gram wallet owners to receive %@ Grams from them.";
+
+"Conversation.ClearCache" = "Clear Cache";
+"ClearCache.Description" = "Media files will be deleted from your phone, but available for re-downloading when necessary.";
+"ClearCache.FreeSpaceDescription" = "If you want to save space on your device, you don't need to delete anything.\n\nYou can use cache settings to remove unnecessary media — and re-download files if you need them again.";
+"ClearCache.FreeSpace" = "Free Space";
+"ClearCache.Success" = "**%@** freed on your phone!";

@@ -79,6 +79,8 @@ static_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/WalletUI:WalletUI",
         "//submodules/Markdown:Markdown",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/DeleteChatPeerActionSheetItem:DeleteChatPeerActionSheetItem",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

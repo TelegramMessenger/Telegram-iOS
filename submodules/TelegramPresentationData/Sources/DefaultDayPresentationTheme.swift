@@ -68,7 +68,11 @@ private func makeDefaultDayPresentationTheme(accentColor: UIColor, serviceBackgr
         separatorColor: UIColor(rgb: 0xb1b1b1),
         badgeBackgroundColor: UIColor(rgb: 0xff3b30),
         badgeStrokeColor: UIColor(rgb: 0xff3b30),
-        badgeTextColor: .white
+        badgeTextColor: .white,
+        segmentedBackgroundColor: UIColor(rgb: 0xe9e9e9),
+        segmentedForegroundColor: UIColor(rgb: 0xf7f7f7),
+        segmentedTextColor: UIColor(rgb: 0x000000),
+        segmentedDividerColor: UIColor(rgb: 0xd6d6dc)
     )
     
     let navigationSearchBar = PresentationThemeNavigationSearchBar(

@@ -63,11 +63,12 @@ open class TooltipController: ViewController, StandalonePresentableController {
     
     public private(set) var content: TooltipControllerContent
     
-    open func updateContent(_ content: TooltipControllerContent, animated: Bool, extendTimer: Bool) {
+    open func updateContent(_ content: TooltipControllerContent, animated: Bool, extendTimer: Bool, arrowOnBottom: Bool = true) {
         if self.content != content {
             self.content = content
             if self.isNodeLoaded {
                 self.controllerNode.updateText(self.content.text, transition: animated ? .animated(duration: 0.25, curve: .easeInOut) : .immediate)
+                self.controllerNode.arrowOnBottom = arrowOnBottom
                 if extendTimer, self.timeoutTimer != nil {
                     self.timeoutTimer?.invalidate()
                     self.timeoutTimer = nil
@@ -84,15 +85,17 @@ open class TooltipController: ViewController, StandalonePresentableController {
     private var timeoutTimer: SwiftSignalKit.Timer?
     
     private var layout: ContainerViewLayout?
+    private var initialArrowOnBottom: Bool
     
-    public var dismissed: (() -> Void)?
+    public var dismissed: ((Bool) -> Void)?
     
-    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false) {
+    public init(content: TooltipControllerContent, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true) {
         self.content = content
         self.timeout = timeout
         self.dismissByTapOutside = dismissByTapOutside
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         self.dismissImmediatelyOnLayoutUpdate = dismissImmediatelyOnLayoutUpdate
+        self.initialArrowOnBottom = arrowOnBottom
         
         super.init(navigationBarPresentationData: nil)
         
@@ -108,9 +111,10 @@ open class TooltipController: ViewController, StandalonePresentableController {
     }
     
     override open func loadDisplayNode() {
-        self.displayNode = TooltipControllerNode(content: self.content, dismiss: { [weak self] in
-            self?.dismiss()
+        self.displayNode = TooltipControllerNode(content: self.content, dismiss: { [weak self] tappedInside in
+            self?.dismiss(tappedInside: tappedInside)
         }, dismissByTapOutside: self.dismissByTapOutside, dismissByTapOutsideSource: self.dismissByTapOutsideSource)
+        self.controllerNode.arrowOnBottom = self.initialArrowOnBottom
         self.displayNodeDidLoad()
     }
     
@@ -154,7 +158,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
         if self.timeoutTimer == nil {
             let timeoutTimer = SwiftSignalKit.Timer(timeout: self.timeout, repeat: false, completion: { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.dismissed?()
+                    strongSelf.dismissed?(false)
                     strongSelf.controllerNode.animateOut {
                         self?.presentingViewController?.dismiss(animated: false)
                     }
@@ -165,16 +169,20 @@ open class TooltipController: ViewController, StandalonePresentableController {
         }
     }
     
-    override open func dismiss(completion: (() -> Void)? = nil) {
-        self.dismissed?()
+    private func dismiss(tappedInside: Bool, completion: (() -> Void)? = nil) {
+        self.dismissed?(tappedInside)
         self.controllerNode.animateOut { [weak self] in
-            self?.presentingViewController?.dismiss(animated: false)
-            completion?()
+             self?.presentingViewController?.dismiss(animated: false)
+             completion?()
         }
     }
     
+    override open func dismiss(completion: (() -> Void)? = nil) {
+        self.dismiss(tappedInside: false, completion: completion)
+    }
+    
     open func dismissImmediately() {
-        self.dismissed?()
+        self.dismissed?(false)
         self.presentingViewController?.dismiss(animated: false)
     }
 }

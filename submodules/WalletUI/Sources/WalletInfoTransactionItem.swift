@@ -113,6 +113,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
     private let iconNode: ASImageNode
     private let textNode: TextNode
     private let descriptionNode: TextNode
+    private let feesNode: TextNode
     private let dateNode: TextNode
     private var statusNode: StatusClockNode?
     
@@ -157,6 +158,11 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         self.descriptionNode.contentMode = .left
         self.descriptionNode.contentsScale = UIScreen.main.scale
         
+        self.feesNode = TextNode()
+        self.feesNode.isUserInteractionEnabled = false
+        self.feesNode.contentMode = .left
+        self.feesNode.contentsScale = UIScreen.main.scale
+        
         self.dateNode = TextNode()
         self.dateNode.isUserInteractionEnabled = false
         self.dateNode.contentMode = .left
@@ -175,6 +181,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         self.addSubnode(self.directionNode)
         self.addSubnode(self.textNode)
         self.addSubnode(self.descriptionNode)
+        self.addSubnode(self.feesNode)
         self.addSubnode(self.dateNode)
         
         self.addSubnode(self.activateArea)
@@ -186,6 +193,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
         let makeDirectionLayout = TextNode.asyncLayout(self.directionNode)
         let makeTextLayout = TextNode.asyncLayout(self.textNode)
         let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
+        let makeFeesLayout = TextNode.asyncLayout(self.feesNode)
         let makeDateLayout = TextNode.asyncLayout(self.dateNode)
         
         let currentItem = self.item
@@ -269,18 +277,15 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                 }
             }
             
+            var feeText: String = ""
             let dateText: String
             switch item.walletTransaction {
             case let .completed(transaction):
                 let fee = transaction.storageFee + transaction.otherFee
                 if fee != 0 {
-                    let feeText = item.strings.Wallet_Info_TransactionBlockchainFee(formatBalanceText(-fee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
-                    if !description.isEmpty {
-                        description.append("\n")
-                    }
-                    description += "\(feeText)"
+                    feeText = item.strings.Wallet_Info_TransactionBlockchainFee(formatBalanceText(-fee, decimalSeparator: item.dateTimeFormat.decimalSeparator)).0
                 }
-            dateText = stringForMessageTimestamp(timestamp: Int32(clamping: transaction.timestamp), dateTimeFormat: item.dateTimeFormat)
+                dateText = stringForMessageTimestamp(timestamp: Int32(clamping: transaction.timestamp), dateTimeFormat: item.dateTimeFormat)
             case let .pending(transaction):
                 dateText = stringForMessageTimestamp(timestamp: Int32(clamping: transaction.timestamp), dateTimeFormat: item.dateTimeFormat)
             }
@@ -307,7 +312,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             
             let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: textFont, textColor: item.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (descriptionLayout, descriptionApply) = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: description, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            let (feesLayout, feesApply) = makeFeesLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: feeText, font: descriptionFont, textColor: item.theme.list.itemSecondaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             var contentSize: CGSize
             var insets: UIEdgeInsets
@@ -327,6 +334,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
             contentSize = CGSize(width: params.width, height: topInset + titleLayout.size.height + titleSpacing + textLayout.size.height + bottomInset)
             if !descriptionLayout.size.width.isZero {
                 contentSize.height += descriptionLayout.size.height + textSpacing
+            }
+            if !feesLayout.size.width.isZero {
+                contentSize.height += feesLayout.size.height + textSpacing
             }
             insets = UIEdgeInsets(top: 0.0, left: 0.0, bottom: 0.0, right: 0.0)
             var topHighlightInset: CGFloat = 0.0
@@ -356,6 +366,7 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let _ = titleApply()
                     let _ = textApply()
                     let _ = descriptionApply()
+                    let _ = feesApply()
                     let _ = dateApply()
                     let _ = directionApply()
                     
@@ -385,7 +396,9 @@ class WalletInfoTransactionItemNode: ListViewItemNode {
                     let textFrame = CGRect(origin: CGPoint(x: leftInset, y: titleFrame.maxY + titleSpacing), size: textLayout.size)
                     strongSelf.textNode.frame = textFrame
                     
-                    strongSelf.descriptionNode.frame = CGRect(origin: CGPoint(x: leftInset, y: textFrame.maxY + textSpacing), size: descriptionLayout.size)
+                    let descriptionFrame = CGRect(origin: CGPoint(x: leftInset, y: textFrame.maxY + textSpacing), size: descriptionLayout.size)
+                    strongSelf.descriptionNode.frame = descriptionFrame
+                    strongSelf.feesNode.frame = CGRect(origin: CGPoint(x: leftInset, y: descriptionFrame.maxY + textSpacing), size: feesLayout.size)
                     
                     let dateFrame = CGRect(origin: CGPoint(x: params.width - leftInset - dateLayout.size.width, y: topInset), size: dateLayout.size)
                     strongSelf.dateNode.frame = dateFrame

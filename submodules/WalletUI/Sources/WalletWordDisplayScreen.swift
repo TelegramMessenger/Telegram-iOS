@@ -254,14 +254,16 @@ private final class WalletWordDisplayScreenNode: ViewControllerTracingNode, UISc
     }
     
     private func updateTitle() {
-        guard let listTitleFrame = self.listTitleFrame else {
+        guard let layout = self.validLayout, let listTitleFrame = self.listTitleFrame else {
             return
         }
         let scrollView = self.scrollNode.view
         
         let navigationHeight = self.navigationHeight ?? 0.0
-        let minY = navigationHeight - 44.0 + floor(44.0 / 2.0)
-        let maxY = minY + 44.0
+        let nominalNavigationHeight = navigationHeight - (layout.0.statusBarHeight ?? 0.0)
+        
+        let minY = navigationHeight - nominalNavigationHeight + floor(nominalNavigationHeight / 2.0)
+        let maxY = minY + nominalNavigationHeight
         let y = max(minY, -scrollView.contentOffset.y + listTitleFrame.midY)
         var t = (y - minY) / (maxY - minY)
         t = max(0.0, min(1.0, t))

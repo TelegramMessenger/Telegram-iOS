@@ -148,6 +148,9 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             
             self.deleteButton.isHidden = !self.deleteButton.isEnabled
             self.reportButton.isHidden = !self.reportButton.isEnabled
+            
+            self.deleteButton.isHidden = false
+            self.deleteButton.isEnabled = true
         } else {
             self.deleteButton.isEnabled = false
             self.deleteButton.isHidden = true
@@ -155,6 +158,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.isHidden = true
             self.forwardButton.isEnabled = false
             self.shareButton.isEnabled = false
+            
+            self.deleteButton.isHidden = false
         }
         
         if self.deleteButton.isHidden && self.reportButton.isHidden {

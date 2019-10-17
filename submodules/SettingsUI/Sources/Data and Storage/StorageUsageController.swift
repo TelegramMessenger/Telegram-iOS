@@ -11,6 +11,8 @@ import PresentationDataUtils
 import OverlayStatusController
 import AccountContext
 import ItemListPeerItem
+import DeleteChatPeerActionSheetItem
+import UndoUI
 
 private final class StorageUsageControllerArguments {
     let account: Account
@@ -284,7 +286,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         return cacheSettings
     })
     
-    var presentControllerImpl: ((ViewController) -> Void)?
+    var presentControllerImpl: ((ViewController, Any?) -> Void)?
     
     let statsPromise = Promise<CacheUsageStatsResult?>()
     let resetStats: () -> Void = {
@@ -338,7 +340,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
             ActionSheetItemGroup(items: timeoutItems),
             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
         ])
-        presentControllerImpl?(controller)
+        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
     }, openClearAll: {
         let _ = (statsPromise.get()
         |> take(1)
@@ -505,7 +507,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: {
                                     cancelImpl?()
                                 }))
-                                presentControllerImpl?(controller)
+                                presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                 return ActionDisposable { [weak controller] in
                                     Queue.mainQueue().async() {
                                         controller?.dismiss()
@@ -529,6 +531,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             clearDisposable.set((signal
                             |> deliverOnMainQueue).start(completed: {
                                 statsPromise.set(.single(.result(resultStats)))
+                                
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: false, action: { _ in }), nil)
                             }))
                         }
                         
@@ -539,7 +543,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                         ActionSheetItemGroup(items: items),
                         ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                         ])
-                    presentControllerImpl?(controller)
+                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                 }
             }
         })
@@ -547,8 +551,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         let _ = (statsPromise.get() |> take(1) |> deliverOnMainQueue).start(next: { [weak statsPromise] result in
             if let result = result, case let .result(stats) = result {
                 var additionalPeerId: PeerId?
-                if var categories = stats.media[peerId] {
-                    if let channel = stats.peers[peerId] as? TelegramChannel, case .group = channel.info {
+                if var categories = stats.media[peerId], let peer = stats.peers[peerId] {
+                    if let channel = peer as? TelegramChannel, case .group = channel.info {
                         for (_, peer) in stats.peers {
                             if let group = peer as? TelegramGroup, let migrationReference = group.migrationReference, migrationReference.peerId == peerId {
                                 if let additionalCategories = stats.media[group.id] {
@@ -604,6 +608,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                         updateTotalSize()
                     }
                     var items: [ActionSheetItem] = []
+                    
+                    items.append(DeleteChatPeerActionSheetItem(context: context, peer: peer, chatPeer: peer, action: .clearCache, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder))
                     
                     let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
 
@@ -680,7 +686,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                     let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
                                         cancelImpl?()
                                     }))
-                                    presentControllerImpl?(controller)
+                                    presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     return ActionDisposable { [weak controller] in
                                         Queue.mainQueue().async() {
                                             controller?.dismiss()
@@ -704,6 +710,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 clearDisposable.set((signal
                                 |> deliverOnMainQueue).start(completed: {
                                     statsPromise.set(.single(.result(resultStats)))
+                                    
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: false, action: { _ in }), nil)
                                 }))
                             }
                             
@@ -714,7 +722,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             ActionSheetItemGroup(items: items),
                             ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
                         ])
-                        presentControllerImpl?(controller)
+                        presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                     }
                 }
             }
@@ -738,8 +746,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
         }
     
     let controller = ItemListController(context: context, state: signal)
-    presentControllerImpl = { [weak controller] c in
-        controller?.present(c, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+    presentControllerImpl = { [weak controller] c, a in
+        controller?.present(c, in: .window(.root), with: a)
     }
     dismissImpl = { [weak controller] in
         controller?.dismiss()

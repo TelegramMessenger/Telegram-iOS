@@ -49,7 +49,7 @@ public final class SegmentedControlTheme: Equatable {
 
 public extension SegmentedControlTheme {
     convenience init(theme: PresentationTheme) {
-        self.init(backgroundColor: theme.rootController.navigationSearchBar.inputFillColor, foregroundColor: theme.rootController.navigationBar.backgroundColor, shadowColor: .black, textColor: theme.rootController.navigationBar.primaryTextColor, dividerColor: theme.list.freeInputField.strokeColor)
+        self.init(backgroundColor: theme.rootController.navigationBar.segmentedBackgroundColor, foregroundColor: theme.rootController.navigationBar.segmentedForegroundColor, shadowColor: .black, textColor: theme.rootController.navigationBar.segmentedTextColor, dividerColor: theme.rootController.navigationBar.segmentedDividerColor)
     }
 }
 

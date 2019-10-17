@@ -79,7 +79,6 @@ private func walletSettingsControllerEntries(presentationData: WalletPresentatio
     entries.append(.deleteWallet(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWallet))
     entries.append(.deleteWalletInfo(presentationData.theme, presentationData.strings.Wallet_Settings_DeleteWalletInfo))
 
-    
     return entries
 }
 
