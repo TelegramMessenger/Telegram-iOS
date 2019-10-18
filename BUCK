@@ -36,6 +36,7 @@ framework_dependencies = [
     "//submodules/MtProtoKit:MtProtoKit",
     "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     "//submodules/Postbox:Postbox",
+    "//submodules/TelegramApi:TelegramApi",
     "//submodules/TelegramCore:TelegramCore",
     "//submodules/AsyncDisplayKit:AsyncDisplayKit",
     "//submodules/Display:Display",
@@ -380,6 +381,7 @@ apple_binary(
     deps = [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared",
         "//submodules/Postbox:Postbox#shared",
+        "//submodules/TelegramApi:TelegramApi#shared",
         "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/BuildConfig:BuildConfig",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",

@@ -6,11 +6,7 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import LegacyComponents
-#if BUCK
 import MtProtoKit
-#else
-import MtProtoKitDynamic
-#endif
 import TelegramPresentationData
 import TelegramUIPreferences
 import DeviceAccess
@@ -37,6 +33,7 @@ import MapResourceToAvatarSizes
 import AppBundle
 import ContextUI
 import WalletUI
+import PhoneNumberFormat
 
 private let maximumNumberOfAccounts = 3
 

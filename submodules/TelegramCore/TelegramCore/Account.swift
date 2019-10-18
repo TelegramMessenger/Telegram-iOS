@@ -1109,40 +1109,7 @@ public class Account {
         }
         
         let networkStateQueue = Queue()
-        /*
-        let previousNetworkStatus = Atomic<Bool?>(value: nil)
-        let delayNetworkStatus = self.shouldBeServiceTaskMaster.get()
-        |> map { mode -> Bool in
-            switch mode {
-                case .now, .always:
-                    return true
-                case .never:
-                    return false
-            }
-        }
-        |> distinctUntilChanged
-        |> deliverOn(networkStateQueue)
-        |> mapToSignal { value -> Signal<Bool, NoError> in
-            var shouldDelay = false
-            let _ = previousNetworkStatus.modify { previous in
-                if let previous = previous {
-                    if !previous && value {
-                        shouldDelay = true
-                    }
-                } else {
-                    shouldDelay = true
-                }
-                return value
-            }
-            if shouldDelay {
-                let delayedFalse = Signal<Bool, NoError>.single(false)
-                |> delay(3.0, queue: networkStateQueue)
-                return .single(true)
-                |> then(delayedFalse)
-            } else {
-                return .single(!value)
-            }
-        }*/
+        
         let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus/*, delayNetworkStatus*/)
         |> map { isUpdating, connectionStatus/*, delayNetworkStatus*/ -> AccountNetworkState in
             /*if delayNetworkStatus {
@@ -1411,6 +1378,12 @@ public class Account {
     
     public func acquireLocalInputActivity(peerId: PeerId, activity: PeerInputActivity) -> Disposable {
         return self.localInputActivityManager.acquireActivity(chatPeerId: peerId, peerId: self.peerId, activity: activity)
+    }
+    
+    public func addUpdates(serializedData: Data) -> Void {
+        if let object = Api.parse(Buffer(data: serializedData)) {
+            //self.stateManager.addUpdates()
+        }
     }
 }
 

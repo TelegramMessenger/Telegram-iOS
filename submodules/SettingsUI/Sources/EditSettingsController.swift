@@ -16,6 +16,7 @@ import ItemListAvatarAndNameInfoItem
 import WebSearchUI
 import PeerAvatarGalleryUI
 import MapResourceToAvatarSizes
+import PhoneNumberFormat
 
 private struct EditSettingsItemArguments {
     let context: AccountContext

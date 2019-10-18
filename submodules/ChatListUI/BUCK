@@ -39,6 +39,7 @@ static_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/AppBundle:AppBundle",
         "//submodules/ContextUI:ContextUI",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

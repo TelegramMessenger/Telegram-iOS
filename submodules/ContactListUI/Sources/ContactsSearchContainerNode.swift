@@ -13,6 +13,7 @@ import SearchUI
 import ChatListSearchItemHeader
 import ContactsPeerItem
 import ContextUI
+import PhoneNumberFormat
 
 private enum ContactListSearchGroup {
     case contacts

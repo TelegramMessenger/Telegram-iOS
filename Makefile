@@ -50,6 +50,8 @@ build_arm64: check_env
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#shared,iphoneos-arm64 \
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-arm64 \
@@ -76,6 +78,8 @@ build_debug_arm64: check_env
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#shared,iphoneos-arm64 \
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-arm64 \
@@ -116,6 +120,8 @@ build_debug_armv7: check_env
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-armv7 \
 	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-armv7 \
 	//submodules/Postbox:Postbox#shared,iphoneos-armv7 \
+	//submodules/TelegramApi:TelegramApi#dwarf-and-dsym,shared,iphoneos-armv7 \
+	//submodules/TelegramApi:TelegramApi#shared,iphoneos-armv7 \
 	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-armv7 \
 	//submodules/TelegramCore:TelegramCore#shared,iphoneos-armv7 \
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-armv7 \
@@ -142,6 +148,8 @@ build: check_env
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/Postbox:Postbox#shared,iphoneos-arm64,iphoneos-armv7 \
+	//submodules/TelegramApi:TelegramApi#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
+	//submodules/TelegramApi:TelegramApi#shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/TelegramCore:TelegramCore#shared,iphoneos-arm64,iphoneos-armv7 \
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-arm64,iphoneos-armv7 \
@@ -282,6 +290,8 @@ build_buckdebug: check_env
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#shared,iphoneos-arm64 \
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-arm64 \
@@ -318,6 +328,8 @@ build_verbose: check_env
 	//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit#shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/Postbox:Postbox#shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#dwarf-and-dsym,shared,iphoneos-arm64 \
+	//submodules/TelegramApi:TelegramApi#shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#dwarf-and-dsym,shared,iphoneos-arm64 \
 	//submodules/TelegramCore:TelegramCore#shared,iphoneos-arm64 \
 	//submodules/AsyncDisplayKit:AsyncDisplayKit#dwarf-and-dsym,shared,iphoneos-arm64 \

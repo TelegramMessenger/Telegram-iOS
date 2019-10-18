@@ -13,6 +13,7 @@ import AvatarNode
 import TelegramStringFormatting
 import PeerPresenceStatusManager
 import AppBundle
+import PhoneNumberFormat
 
 private let updatingAvatarOverlayImage = generateFilledCircleImage(diameter: 66.0, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
 

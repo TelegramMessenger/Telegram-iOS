@@ -10,6 +10,7 @@ import ProgressNavigationButtonNode
 import AccountContext
 import CountrySelectionUI
 import SettingsUI
+import PhoneNumberFormat
 
 final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {

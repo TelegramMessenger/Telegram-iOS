@@ -50,6 +50,7 @@ import AppBundle
 import WalletUI
 import WalletUrl
 import LocalizedPeerData
+import PhoneNumberFormat
 
 public enum ChatControllerPeekActions {
     case standard

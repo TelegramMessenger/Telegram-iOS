@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import TelegramStringFormatting
 import CountrySelectionUI
+import PhoneNumberFormat
 
 enum SecureIdRequestedIdentityDocument: Int32 {
     case passport

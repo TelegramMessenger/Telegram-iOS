@@ -9,6 +9,16 @@ import SwiftSignalKit
 import TelegramApi
 #endif
 
+private func normalizedPhoneNumber(_ value: String) -> String {
+    var result = ""
+    for c in value {
+        if c.isNumber {
+            result.append(c)
+        }
+    }
+    return result
+}
+
 private final class ContactSyncOperation {
     let id: Int32
     var isRunning: Bool = false
@@ -277,7 +287,7 @@ private func pushDeviceContacts(postbox: Postbox, network: Network, importableCo
         var currentContactDetails: [TelegramDeviceContactImportIdentifier: TelegramUser] = [:]
         for peerId in transaction.getContactPeerIds() {
             if let user = transaction.getPeer(peerId) as? TelegramUser, let phone = user.phone, !phone.isEmpty {
-                currentContactDetails[.phoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: formatPhoneNumber(phone)))] = user
+                currentContactDetails[.phoneNumber(DeviceContactNormalizedPhoneNumber(rawValue: normalizedPhoneNumber(phone)))] = user
             }
         }
         

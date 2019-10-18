@@ -23,6 +23,7 @@ static_library(
         "//submodules/Pdf:Pdf",
         "//submodules/AccountContext:AccountContext",
         "//submodules/MimeTypes:MimeTypes",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

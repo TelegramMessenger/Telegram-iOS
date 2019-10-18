@@ -7,6 +7,7 @@ import AddressBook
 import TelegramUIPreferences
 import DeviceAccess
 import AccountContext
+import PhoneNumberFormat
 
 private protocol DeviceContactDataContext {
     func personNameDisplayOrder() -> PresentationPersonNameOrder

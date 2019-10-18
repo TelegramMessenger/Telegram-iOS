@@ -7,6 +7,7 @@ import SwiftSignalKit
 import TelegramCore
 import TelegramPresentationData
 import AppBundle
+import PhoneNumberFormat
 
 private let titleFont = Font.regular(17.0)
 

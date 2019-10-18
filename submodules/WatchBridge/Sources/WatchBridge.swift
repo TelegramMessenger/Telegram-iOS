@@ -4,6 +4,7 @@ import TelegramCore
 import WatchCommon
 import TelegramPresentationData
 import LegacyUI
+import PhoneNumberFormat
 
 func makePeerIdFromBridgeIdentifier(_ identifier: Int64) -> PeerId? {
     if identifier < 0 && identifier > Int32.min {

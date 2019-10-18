@@ -17,6 +17,7 @@ import TextFormat
 import AccountContext
 import CountrySelectionUI
 import SettingsUI
+import PhoneNumberFormat
 
 private enum InnerState: Equatable {
     case state(UnauthorizedAccountStateContents)

@@ -191,6 +191,7 @@ framework(
         "//submodules/SearchPeerMembers:SearchPeerMembers",
         "//submodules/WidgetItems:WidgetItems",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

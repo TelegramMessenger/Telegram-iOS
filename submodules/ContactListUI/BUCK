@@ -27,6 +27,7 @@ static_library(
         "//submodules/ShareController:ShareController",
         "//submodules/AppBundle:AppBundle",
         "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

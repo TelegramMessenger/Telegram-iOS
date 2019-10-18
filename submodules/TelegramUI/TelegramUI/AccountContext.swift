@@ -11,6 +11,7 @@ import LiveLocationManager
 import TemporaryCachedPeerDataManager
 import WalletCore
 import WalletUI
+import PhoneNumberFormat
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()

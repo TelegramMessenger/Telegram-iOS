@@ -14,6 +14,7 @@ import ContactsPeerItem
 import ChatListSearchItemHeader
 import ContactListUI
 import ContextUI
+import PhoneNumberFormat
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers

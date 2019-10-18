@@ -18,6 +18,7 @@ import ItemListAvatarAndNameInfoItem
 import Geocoding
 import ItemListAddressItem
 import LocalizedPeerData
+import PhoneNumberFormat
 
 private enum DeviceContactInfoAction {
     case sendMessage

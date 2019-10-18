@@ -5,6 +5,14 @@ import TelegramCore
 import Contacts
 import Intents
 
+func formatPhoneNumber(_ value: String) -> String {
+    if value.hasPrefix("+") {
+        return value
+    } else {
+        return "+\(value)"
+    }
+}
+
 struct MatchingDeviceContact {
     let stableId: String
     let firstName: String

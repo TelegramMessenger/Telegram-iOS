@@ -8,8 +8,8 @@ static_library(
     deps = [
         "//submodules/AsyncDisplayKit:AsyncDisplayKit#shared",
         "//submodules/Display:Display#shared",
-        "//submodules/TelegramCore:TelegramCore#shared",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

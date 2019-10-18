@@ -27,6 +27,7 @@ static_library(
         "//submodules/PhotoResources:PhotoResources",
         "//submodules/LegacyComponents:LegacyComponents",
         "//submodules/LegacyUI:LegacyUI",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

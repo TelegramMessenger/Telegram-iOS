@@ -22,6 +22,7 @@ import SearchUI
 import TelegramPermissionsUI
 import AppBundle
 import ContextUI
+import PhoneNumberFormat
 
 private let dropDownIcon = { () -> UIImage in
     UIGraphicsBeginImageContextWithOptions(CGSize(width: 12.0, height: 12.0), false, 0.0)

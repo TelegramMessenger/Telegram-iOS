@@ -79,6 +79,7 @@ static_library(
         "//submodules/ContextUI:ContextUI",
         "//submodules/WalletUI:WalletUI",
         "//submodules/Markdown:Markdown",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     frameworks = [
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",

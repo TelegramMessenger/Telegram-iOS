@@ -11,6 +11,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import AuthorizationUI
+import PhoneNumberFormat
 
 private final class ConfirmPhoneNumberCodeControllerArguments {
     let updateEntryText: (String) -> Void

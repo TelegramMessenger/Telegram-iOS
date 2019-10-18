@@ -11,6 +11,7 @@ import AccountContext
 import AlertUI
 import PresentationDataUtils
 import CountrySelectionUI
+import PhoneNumberFormat
 
 private func cleanPhoneNumber(_ text: String?) -> String {
     var cleanNumber = ""

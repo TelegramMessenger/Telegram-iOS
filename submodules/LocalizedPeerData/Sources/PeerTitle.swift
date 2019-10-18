@@ -3,6 +3,7 @@ import TelegramCore
 import Postbox
 import TelegramPresentationData
 import TelegramUIPreferences
+import PhoneNumberFormat
 
 public extension Peer {
     var compactDisplayTitle: String {
