@@ -44,7 +44,10 @@ public enum DeviceMetrics: CaseIterable, Equatable {
         let additionalSize = CGSize(width: screenSize.width, height: screenSize.height + 20.0)
         for device in DeviceMetrics.allCases {
             if let _ = onScreenNavigationHeight, device.onScreenNavigationHeight(inLandscape: false) == nil {
-                continue
+                if case .tablet = device.type {
+                } else {
+                    continue
+                }
             }
             
             let width = device.screenSize.width
