@@ -193,7 +193,7 @@ public extension Message {
     func effectivelyFailed(timestamp: Int32) -> Bool {
         if self.flags.contains(.Failed) {
             return true
-        } else if self.id.namespace == Namespaces.Message.ScheduledCloud {
+        } else if self.id.namespace == Namespaces.Message.ScheduledCloud && self.timestamp != 0x7FFFFFFE {
             return timestamp > self.timestamp + 60
         } else {
             return false

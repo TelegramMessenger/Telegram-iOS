@@ -2123,6 +2123,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 }
                 
+
+                var forwardingToSameChat = false
+                if case let .peer(id) = self.chatPresentationInterfaceState.chatLocation, id.namespace == Namespaces.Peer.CloudUser, id != self.context.account.peerId, let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                    for messageId in forwardMessageIds {
+                        if messageId.peerId == id {
+                            forwardingToSameChat = true
+                        }
+                    }
+                }
+                if !messages.isEmpty && forwardingToSameChat {
+                    //self.controllerInteraction.displaySwipeToReplyHint()
+                }
+                
                 if !messages.isEmpty || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
                     self.setupSendActionOnViewUpdate({ [weak self] in
                         if let strongSelf = self, let textInputPanelNode = strongSelf.inputPanelNode as? ChatTextInputPanelNode {

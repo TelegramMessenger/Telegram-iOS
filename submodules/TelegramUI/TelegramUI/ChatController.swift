@@ -1689,6 +1689,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.present(MessageReactionListController(context: strongSelf.context, messageId: message.id, initialReactions: initialReactions), in: .window(.root))
                 }
             })
+        }, displaySwipeToReplyHint: {  [weak self] in
+            if let strongSelf = self {
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: true, action: { _ in }), in: .window(.root))
+            }
         }, requestMessageUpdate: { [weak self] id in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
@@ -5073,8 +5077,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.dismiss()
         case .clearCache:
             let clearDisposable = MetaDisposable()
-            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
-            
+        
             switch self.chatLocationInfoData {
             case let .peer(peerView):
                 self.navigationActionDisposable.set((peerView.get()
@@ -5244,13 +5247,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     clearDisposable.set(nil)
                                 }
                                 clearDisposable.set((signal
-                                |> deliverOnMainQueue).start(completed: {
-                                    
-                                    
-                                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: false, action: { _ in }), in: .window(.root))
+                                |> deliverOnMainQueue).start(completed: { [weak self] in
+                                    if let strongSelf = self {
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: true, action: { _ in }), in: .window(.root))
+                                    }
                                 }))
 
                                 dismissAction()
+                                
+                                strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                             }))
                             
                             controller.setItemGroups([

@@ -243,11 +243,11 @@ final class WalletContextImpl: WalletContext {
         })
     }
     
-    func pickImage(completion: @escaping (UIImage) -> Void) {
+    func pickImage(present: @escaping (ViewController) -> Void, completion: @escaping (UIImage) -> Void) {
         self.context.sharedContext.openImagePicker(context: self.context, completion: { image in
             completion(image)
         }, present: { [weak self] controller in
-            self?.context.sharedContext.mainWindow?.present(controller, on: .root)
+            present(controller)
         })
     }
 }

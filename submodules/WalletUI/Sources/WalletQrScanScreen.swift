@@ -118,7 +118,9 @@ public final class WalletQrScanScreen: ViewController {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.context.pickImage(completion: { image in
+            strongSelf.context.pickImage(present: { c in
+                strongSelf.push(c)
+            }, completion: { image in
                 let detector = CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: [CIDetectorAccuracy: CIDetectorAccuracyHigh])!
                 if let ciImage = CIImage(image: image) {
                     var options: [String: Any]

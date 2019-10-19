@@ -311,6 +311,7 @@ private final class WalletTransactionInfoScreenNode: ViewControllerTracingNode, 
         self.navigationBackgroundNode.alpha = 0.0
         self.navigationSeparatorNode = ASDisplayNode()
         self.navigationSeparatorNode.backgroundColor = self.presentationData.theme.navigationBar.separatorColor
+        self.navigationSeparatorNode.alpha = 0.0
         
         self.scrollNode = ASScrollNode()
         
