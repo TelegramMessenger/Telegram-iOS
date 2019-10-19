@@ -1532,6 +1532,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             })
         }
         self.searchNavigationNode?.deactivate()
+        
+        self.view.window?.endEditing(true)
     }
     
     private func scheduleLayoutTransitionRequest(_ transition: ContainedViewLayoutTransition) {

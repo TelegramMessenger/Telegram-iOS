@@ -485,6 +485,7 @@ public class Window1 {
                 let screenHeight: CGFloat
                 var inPopover = false
                 if keyboardFrame.width.isEqual(to: UIScreen.main.bounds.width) {
+                    let screenSize = UIScreen.main.bounds.size
                     var portraitScreenSize = UIScreen.main.bounds.size
                     if portraitScreenSize.width > portraitScreenSize.height {
                         portraitScreenSize = CGSize(width: portraitScreenSize.height, height: portraitScreenSize.width)
@@ -493,23 +494,35 @@ public class Window1 {
                     if portraitLayoutSize.width > portraitLayoutSize.height {
                         portraitLayoutSize = CGSize(width: portraitLayoutSize.height, height: portraitLayoutSize.width)
                     }
-                    if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
-                        if abs(portraitLayoutSize.height - portraitScreenSize.height) > 41.0 || abs(portraitLayoutSize.width - portraitScreenSize.width) > 41.0 {
-                            popoverDelta = 48.0
+                    
+                    if strongSelf.windowLayout.size.height != screenSize.height {
+                        let heightDelta = screenSize.height - strongSelf.windowLayout.size.height
+                        
+                        let heightDeltaValid = heightDelta > 0.0 && heightDelta < 100.0
+                        
+                        if heightDeltaValid {
                             inPopover = true
+                            popoverDelta = heightDelta / 2.0
+                        }
+                    }
+                    
+                    if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                        screenHeight = UIScreen.main.bounds.height
+                    } else {
+                        screenHeight = strongSelf.windowLayout.size.height
+                    }
+                    
+                    /*if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 41.0 {
+                        if abs(portraitLayoutSize.height - portraitScreenSize.height) > 41.0 || abs(portraitLayoutSize.width - portraitScreenSize.width) > 41.0 {
                             screenHeight = strongSelf.windowLayout.size.height
                         } else {
                             screenHeight = UIScreen.main.bounds.height
                         }
                     } else if abs(strongSelf.windowLayout.size.height - UIScreen.main.bounds.height) > 39.0 {
                         screenHeight = UIScreen.main.bounds.height
-                        if abs(portraitLayoutSize.height - portraitScreenSize.height) > 39.0 || abs(portraitLayoutSize.width - portraitScreenSize.width) > 39.0 {
-                            popoverDelta = 40.0
-                            inPopover = true
-                        }
                     } else {
                         screenHeight = strongSelf.windowLayout.size.height
-                    }
+                    }*/
                 } else {
                     screenHeight = UIScreen.main.bounds.width
                 }
@@ -519,11 +532,9 @@ public class Window1 {
                     keyboardHeight = 0.0
                 } else {
                     keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
-                    if inPopover {
-                        if strongSelf.windowLayout.onScreenNavigationHeight != nil {
-                            if !keyboardHeight.isZero {
-                                keyboardHeight = max(0.0, keyboardHeight + popoverDelta / 2.0)
-                            }
+                    if inPopover && !keyboardHeight.isZero {
+                        if #available(iOSApplicationExtension 13.0, iOS 13.0, *) {
+                            keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
                         } else {
                             keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
                         }

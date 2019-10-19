@@ -455,6 +455,7 @@ public enum ViewControllerNavigationPresentation {
             }
             navigationController.filterController(self, animated: animated)
         } else {
+            self.presentingViewController?.dismiss(animated: false, completion: nil)
             assertionFailure()
         }
     }
