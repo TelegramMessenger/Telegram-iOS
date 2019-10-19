@@ -5248,8 +5248,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 clearDisposable.set((signal
                                 |> deliverOnMainQueue).start(completed: { [weak self] in
-                                    if let strongSelf = self {
-                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: true, action: { _ in }), in: .window(.root))
+                                    if let strongSelf = self, let layout = strongSelf.validLayout {
+                                        var deviceName: String
+                                        switch layout.deviceMetrics.type {
+                                        case .tablet:
+                                            deviceName = "iPad"
+                                        default:
+                                            deviceName = "iPhone"
+                                        }
+                                        strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: true, action: { _ in }), in: .window(.root))
                                     }
                                 }))
 

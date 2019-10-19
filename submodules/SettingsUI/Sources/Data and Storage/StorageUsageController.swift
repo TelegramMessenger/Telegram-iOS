@@ -531,8 +531,8 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                             clearDisposable.set((signal
                             |> deliverOnMainQueue).start(completed: {
                                 statsPromise.set(.single(.result(resultStats)))
-                                
-                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: false, action: { _ in }), nil)
+                                var deviceName = "iPhone"
+                                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", deviceName).0), elevatedLayout: false, action: { _ in }), nil)
                             }))
                         }
                         
@@ -711,7 +711,7 @@ public func storageUsageController(context: AccountContext, isModal: Bool = fals
                                 |> deliverOnMainQueue).start(completed: {
                                     statsPromise.set(.single(.result(resultStats)))
                                     
-                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: false, action: { _ in }), nil)
+                                    presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))", "").0), elevatedLayout: false, action: { _ in }), nil)
                                 }))
                             }
                             

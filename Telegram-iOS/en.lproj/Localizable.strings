@@ -4979,7 +4979,7 @@ Any member of this group will be able to see messages in the channel.";
 "ClearCache.Description" = "Media files will be deleted from your phone, but available for re-downloading when necessary.";
 "ClearCache.FreeSpaceDescription" = "If you want to save space on your device, you don't need to delete anything.\n\nYou can use cache settings to remove unnecessary media — and re-download files if you need them again.";
 "ClearCache.FreeSpace" = "Free Space";
-"ClearCache.Success" = "**%@** freed on your phone!";
+"ClearCache.Success" = "**%@** freed on your %@!";
 
 "Conversation.ScheduleMessage.SendWhenOnline" = "Send When Online";
 "ScheduledMessages.ScheduledOnline" = "Scheduled until online";
