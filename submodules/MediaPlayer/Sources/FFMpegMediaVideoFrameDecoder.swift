@@ -87,6 +87,10 @@ public final class FFMpegMediaVideoFrameDecoder: MediaTrackFrameDecoder {
         return nil
     }
     
+    public func takeQueuedFrame() -> MediaTrackFrame? {
+        return nil
+    }
+    
     public func takeRemainingFrame() -> MediaTrackFrame? {
         if !self.delayedFrames.isEmpty {
             var minFrameIndex = 0

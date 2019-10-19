@@ -146,6 +146,10 @@ public final class MediaTrackFrameBuffer {
     }
     
     public func takeFrame() -> MediaTrackFrameResult {
+        if let decodedFrame = self.decoder.takeQueuedFrame() {
+            return .frame(decodedFrame)
+        }
+        
         if !self.frames.isEmpty {
             let frame = self.frames.removeFirst()
             if let decodedFrame = self.decoder.decode(frame: frame) {
