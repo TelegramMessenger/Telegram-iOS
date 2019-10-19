@@ -1,12 +1,11 @@
 #import "TGExtensionDelegate.h"
-#import <UserNotifications/UserNotifications.h>
 #import "TGWatchCommon.h"
 #import "TGFileCache.h"
 #import "TGBridgeClient.h"
 #import "TGDateUtils.h"
 #import "TGNeoChatsController.h"
 
-@interface TGExtensionDelegate () <UNUserNotificationCenterDelegate>
+@interface TGExtensionDelegate ()
 {
     NSString *_cachedContentSize;
     TGContentSizeCategory _sizeCategory;
@@ -27,14 +26,8 @@
         _audioCache.defaultFileExtension = @"m4a";
         
         _imageCache = [[TGFileCache alloc] initWithName:@"images" useMemoryCache:true];
-        
-        [UNUserNotificationCenter currentNotificationCenter].delegate = self;
     }
     return self;
-}
-
-- (void)userNotificationCenter:(UNUserNotificationCenter *)center didReceiveNotificationResponse:(UNNotificationResponse *)response withCompletionHandler:(void (^)(void))completionHandler {
-    
 }
 
 - (TGNeoChatsController *)chatsController
