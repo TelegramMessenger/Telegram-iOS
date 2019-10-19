@@ -116,6 +116,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, performTextSelectionAction: { _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, openMessageReactions: { _ in
+        }, displaySwipeToReplyHint: {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false))

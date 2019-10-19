@@ -389,6 +389,11 @@
     completionBlock();
 }
 
+- (NSArray<NSString *> *)suggestionsForResponseToActionWithIdentifier:(NSString *)identifier forNotification:(UNNotification *)notification inputLanguage:(NSString *)inputLanguage
+{
+    return [TGInputController suggestionsForText:nil];
+}
+
 - (NSArray<NSString *> *)suggestionsForResponseToActionWithIdentifier:(NSString *)identifier forLocalNotification:(UILocalNotification *)localNotification inputLanguage:(NSString *)inputLanguage
 {
     return [TGInputController suggestionsForText:nil];

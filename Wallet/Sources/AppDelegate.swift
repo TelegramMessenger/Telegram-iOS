@@ -333,7 +333,7 @@ private final class WalletContextImpl: NSObject, WalletContext, UIImagePickerCon
         }
     }
     
-    func pickImage(completion: @escaping (UIImage) -> Void) {
+    func pickImage(present: @escaping (ViewController) -> Void, completion: @escaping (UIImage) -> Void) {
         self.currentImagePickerCompletion = completion
         
         let pickerController = UIImagePickerController()

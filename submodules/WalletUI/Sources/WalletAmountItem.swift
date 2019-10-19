@@ -65,15 +65,20 @@ class WalletAmountItem: ListViewItem, ItemListItem {
 private let integralFont = Font.medium(48.0)
 private let fractionalFont = Font.medium(24.0)
 
+private let iconSize = CGSize(width: 50.0, height: 50.0)
+private let verticalOffset: CGFloat = -10.0
+
 class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemNode, ItemListItemFocusableNode {
     private let backgroundNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
 
+    private let containerNode: ASDisplayNode
     private let textNode: TextFieldNode
     private let iconNode: AnimatedStickerNode
     private let measureNode: TextNode
         
     private var item: WalletAmountItem?
+    private var validLayout: (CGFloat, CGFloat, CGFloat)?
     
     var tag: ItemListItemTag? {
         return self.item?.tag
@@ -86,6 +91,8 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
         self.bottomStripeNode = ASDisplayNode()
         self.bottomStripeNode.isLayerBacked = true
                 
+        self.containerNode = ASDisplayNode()
+        
         self.textNode = TextFieldNode()
         
         self.iconNode = AnimatedStickerNode()
@@ -100,8 +107,9 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
         
         self.clipsToBounds = false
         
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.iconNode)
+        self.addSubnode(self.containerNode)
+        self.containerNode.addSubnode(self.textNode)
+        self.containerNode.addSubnode(self.iconNode)
     }
     
     override func didLoad() {
@@ -122,9 +130,49 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
         self.textNode.hitTestSlop = UIEdgeInsets(top: -5.0, left: -5.0, bottom: -5.0, right: -5.0)
     }
     
+    private func inputFieldAsyncLayout() -> (_ item: WalletAmountItem, _ params: ListViewItemLayoutParams) -> (NSAttributedString, NSAttributedString, () -> Void) {
+        let makeMeasureLayout = TextNode.asyncLayout(self.measureNode)
+        
+        return { item, params in
+            let contentSize = CGSize(width: params.width, height: 100.0)
+            let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: UIEdgeInsets())
+            
+            let attributedPlaceholderText = NSAttributedString(string: "0", font: integralFont, textColor: item.theme.list.itemPlaceholderTextColor)
+            let attributedAmountText = amountAttributedString(item.amount, integralFont: integralFont, fractionalFont: fractionalFont, color: item.theme.list.itemPrimaryTextColor)
+                 
+            let (measureLayout, _) = makeMeasureLayout(TextNodeLayoutArguments(attributedString: item.amount.isEmpty ? attributedPlaceholderText : attributedAmountText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            return (attributedPlaceholderText, attributedAmountText, { [weak self] in
+                if let strongSelf = self {
+                    let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - max(31.0, measureLayout.size.width)) / 2.0 - 28.0), y: floor((layout.contentSize.height - iconSize.height) / 2.0) - 3.0 + verticalOffset), size: iconSize)
+                    strongSelf.iconNode.updateLayout(size: iconFrame.size)
+                    strongSelf.iconNode.frame = iconFrame
+                    
+                    let totalWidth = measureLayout.size.width + iconSize.width + 6.0
+                    let paddedWidth = layout.size.width - 32.0
+                    if totalWidth > paddedWidth {
+                        let scale = paddedWidth / totalWidth
+                        strongSelf.containerNode.transform = CATransform3DMakeScale(scale, scale, 1.0)
+                    } else {
+                        strongSelf.containerNode.transform = CATransform3DIdentity
+                    }
+                }
+            })
+        }
+    }
+    
+    private func updateInputField() {
+        guard let item = self.item, let validLayout = self.validLayout else {
+            return
+        }
+        let makeInputFieldLayout = self.inputFieldAsyncLayout()
+        let (_, _, inputFieldApply) = makeInputFieldLayout(item, ListViewItemLayoutParams(width: validLayout.0, leftInset: validLayout.1, rightInset: validLayout.2))
+        inputFieldApply()
+    }
+    
     func asyncLayout() -> (_ item: WalletAmountItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let currentItem = self.item
-        let makeMeasureLayout = TextNode.asyncLayout(self.measureNode)
+        let makeInputFieldLayout = self.inputFieldAsyncLayout()
         
         return { item, params, neighbors in
             var updatedTheme: WalletTheme?
@@ -143,16 +191,12 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
             insets.top = 0.0
             
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
-            let layoutSize = layout.size
-            
-            let attributedPlaceholderText = NSAttributedString(string: "0", font: integralFont, textColor: item.theme.list.itemPlaceholderTextColor)
-            let attributedAmountText = amountAttributedString(item.amount, integralFont: integralFont, fractionalFont: fractionalFont, color: item.theme.list.itemPrimaryTextColor)
-            
-            let (measureLayout, _) = makeMeasureLayout(TextNodeLayoutArguments(attributedString: item.amount.isEmpty ? attributedPlaceholderText : attributedAmountText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - leftInset * 2.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (attributedPlaceholderText, attributedAmountText, inputFieldApply) = makeInputFieldLayout(item, params)
             
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     strongSelf.item = item
+                    strongSelf.validLayout = (params.width, params.leftInset, params.rightInset)
                     
                     if let _ = updatedTheme {
                         strongSelf.bottomStripeNode.backgroundColor = item.theme.list.itemBlocksSeparatorColor
@@ -185,10 +229,7 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
                         strongSelf.textNode.textField.attributedText = attributedAmountText
                     }
                     
-                    let iconSize = CGSize(width: 50.0, height: 50.0)
-                    let verticalOffset: CGFloat = -10.0
-                    
-                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset, y: floor((layout.contentSize.height - 48.0) / 2.0) + verticalOffset), size: CGSize(width: max(1.0, params.width - (leftInset + rightInset) + iconSize.width - 5.0), height: 48.0))
+                    strongSelf.textNode.frame = CGRect(origin: CGPoint(x: leftInset - 67.0, y: floor((layout.contentSize.height - 48.0) / 2.0) + verticalOffset), size: CGSize(width: max(1.0, params.width + iconSize.width - 5.0 + 100.0), height: 48.0))
                                                             
                     if strongSelf.backgroundNode.supernode == nil {
                         strongSelf.insertSubnode(strongSelf.backgroundNode, at: 0)
@@ -207,16 +248,15 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
                     }
                                                             
                     strongSelf.backgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -min(insets.top, separatorHeight)), size: CGSize(width: params.width, height: contentSize.height + min(insets.top, separatorHeight) + min(insets.bottom, separatorHeight)))
-                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layoutSize.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.bottomStripeNode.frame = CGRect(origin: CGPoint(x: bottomStripeInset, y: contentSize.height - UIScreenPixel), size: CGSize(width: layout.size.width - bottomStripeInset, height: separatorHeight))
+                    strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     
                     if strongSelf.textNode.textField.attributedPlaceholder == nil || !strongSelf.textNode.textField.attributedPlaceholder!.isEqual(to: attributedPlaceholderText) {
                         strongSelf.textNode.textField.attributedPlaceholder = attributedPlaceholderText
                         strongSelf.textNode.textField.accessibilityHint = attributedPlaceholderText.string
                     }
                    
-                    let iconFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - max(31.0, measureLayout.size.width)) / 2.0 - 28.0), y: floor((layout.contentSize.height - iconSize.height) / 2.0) - 3.0 + verticalOffset), size: iconSize)
-                    strongSelf.iconNode.updateLayout(size: iconFrame.size)
-                    strongSelf.iconNode.frame = iconFrame
+                    inputFieldApply()
                 }
             })
         }
@@ -232,6 +272,7 @@ class WalletAmountItemNode: ListViewItemNode, UITextFieldDelegate, ItemListItemN
     
     @objc private func textFieldTextChanged(_ textField: UITextField) {
         self.textUpdated(self.textNode.textField.text ?? "")
+        self.updateInputField()
     }
     
     @objc private func clearButtonPressed() {

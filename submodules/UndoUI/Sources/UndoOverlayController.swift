@@ -10,6 +10,7 @@ public enum UndoOverlayContent {
     case revealedArchive(title: String, text: String, undo: Bool)
     case succeed(text: String)
     case emoji(path: String, text: String)
+    case swipeToReply(title: String, text: String)
 }
 
 public final class UndoOverlayController: ViewController {
