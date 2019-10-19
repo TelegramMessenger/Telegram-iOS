@@ -147,6 +147,48 @@ static TONTransactionMessage * _Nullable parseTransactionMessage(tonlib_api::obj
 
 @end
 
+@implementation TONFees
+
+- (instancetype)initWithInFwdFee:(int64_t)inFwdFee storageFee:(int64_t)storageFee gasFee:(int64_t)gasFee fwdFee:(int64_t)fwdFee {
+    self = [super init];
+    if (self != nil) {
+        _inFwdFee = inFwdFee;
+        _storageFee = storageFee;
+        _gasFee = gasFee;
+        _fwdFee = fwdFee;
+    }
+    return self;
+}
+
+@end
+
+@implementation TONSendGramsQueryFees
+
+- (instancetype)initWithSourceFees:(TONFees *)sourceFees destinationFees:(TONFees *)destinationFees {
+    self = [super init];
+    if (self != nil) {
+        _sourceFees = sourceFees;
+        _destinationFees = destinationFees;
+    }
+    return self;
+}
+
+@end
+
+@implementation TONPreparedSendGramsQuery
+
+- (instancetype)initWithQueryId:(int64_t)queryId validUntil:(int64_t)validUntil bodyHash:(NSData *)bodyHash {
+    self = [super init];
+    if (self != nil) {
+        _queryId = queryId;
+        _validUntil = validUntil;
+        _bodyHash = bodyHash;
+    }
+    return self;
+}
+
+@end
+
 @implementation TONSendGramsResult
 
 - (instancetype)initWithSentUntil:(int64_t)sentUntil bodyHash:(NSData *)bodyHash {
@@ -524,7 +566,7 @@ typedef enum {
     }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
 }
 
-- (SSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
+- (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId {
     return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
         if ([_sendGramRandomIds containsObject:@(randomId)]) {
             [_sendGramRandomIds addObject:@(randomId)];
@@ -554,17 +596,17 @@ typedef enum {
                 }];
                 auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
                 [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
-            } else if (object->get_id() == tonlib_api::sendGramsResult::ID) {
-                auto result = tonlib_api::move_object_as<tonlib_api::sendGramsResult>(object);
-                TONSendGramsResult *sendResult = [[TONSendGramsResult alloc] initWithSentUntil:result->sent_until_ bodyHash:makeData(result->body_hash_)];
-                [subscriber putNext:sendResult];
+            } else if (object->get_id() == tonlib_api::query_info::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::query_info>(object);
+                TONPreparedSendGramsQuery *preparedQuery = [[TONPreparedSendGramsQuery alloc] initWithQueryId:result->id_ validUntil:result->valid_until_ bodyHash:makeData(result->body_hash_)];
+                [subscriber putNext:preparedQuery];
                 [subscriber putCompletion];
             } else {
                 [subscriber putCompletion];
             }
         }];
         
-        auto query = make_object<tonlib_api::generic_sendGrams>(
+        auto query = make_object<tonlib_api::generic_createSendGramsQuery>(
             make_object<tonlib_api::inputKey>(
                 make_object<tonlib_api::key>(
                     makeString(publicKeyData),
@@ -578,6 +620,101 @@ typedef enum {
             timeout,
             forceIfDestinationNotInitialized,
             makeString(textMessage)
+        );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
+}
+
+- (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        __weak TON *weakSelf = self;
+        SQueue *queue = _queue;
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::query_info::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::query_info>(object);
+                TONPreparedSendGramsQuery *preparedQuery = [[TONPreparedSendGramsQuery alloc] initWithQueryId:result->id_ validUntil:result->valid_until_ bodyHash:makeData(result->body_hash_)];
+                [subscriber putNext:preparedQuery];
+                [subscriber putCompletion];
+            } else {
+                [subscriber putCompletion];
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::generic_createSendGramsQuery>(
+            make_object<tonlib_api::inputKeyFake>(),
+            make_object<tonlib_api::accountAddress>(fromAddress.UTF8String),
+            make_object<tonlib_api::accountAddress>(address.UTF8String),
+            amount,
+            timeout,
+            forceIfDestinationNotInitialized,
+            makeString(textMessage)
+       );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
+}
+
+- (SSignal *)estimateSendGramsQueryFees:(TONPreparedSendGramsQuery *)preparedQuery {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::query_fees::ID) {
+                auto result = tonlib_api::move_object_as<tonlib_api::query_fees>(object);
+                TONFees *sourceFees = [[TONFees alloc] initWithInFwdFee:result->source_fees_->in_fwd_fee_ storageFee:result->source_fees_->storage_fee_ gasFee:result->source_fees_->gas_fee_ fwdFee:result->source_fees_->fwd_fee_];
+                TONFees *destinationFees = [[TONFees alloc] initWithInFwdFee:result->destination_fees_->in_fwd_fee_ storageFee:result->destination_fees_->storage_fee_ gasFee:result->destination_fees_->gas_fee_ fwdFee:result->destination_fees_->fwd_fee_];
+                [subscriber putNext:[[TONSendGramsQueryFees alloc] initWithSourceFees:sourceFees destinationFees:destinationFees]];
+                [subscriber putCompletion];
+            } else {
+                assert(false);
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::query_estimateFees>(
+            preparedQuery.queryId,
+            true
+        );
+        _client->send({ requestId, std::move(query) });
+        
+        return [[SBlockDisposable alloc] initWithBlock:^{
+        }];
+    }] startOn:[SQueue mainQueue]] deliverOn:[SQueue mainQueue]];
+}
+
+- (SSignal *)commitPreparedSendGramsQuery:(TONPreparedSendGramsQuery *)preparedQuery {
+    return [[[[SSignal alloc] initWithGenerator:^id<SDisposable>(SSubscriber *subscriber) {
+        uint64_t requestId = _nextRequestId;
+        _nextRequestId += 1;
+        
+        _requestHandlers[@(requestId)] = [[TONRequestHandler alloc] initWithCompletion:^(tonlib_api::object_ptr<tonlib_api::Object> &object) {
+            if (object->get_id() == tonlib_api::error::ID) {
+                auto error = tonlib_api::move_object_as<tonlib_api::error>(object);
+                [subscriber putError:[[TONError alloc] initWithText:[[NSString alloc] initWithUTF8String:error->message_.c_str()]]];
+            } else if (object->get_id() == tonlib_api::ok::ID) {
+                [subscriber putCompletion];
+            } else {
+                assert(false);
+            }
+        }];
+        
+        auto query = make_object<tonlib_api::query_send>(
+            preparedQuery.queryId
         );
         _client->send({ requestId, std::move(query) });
         

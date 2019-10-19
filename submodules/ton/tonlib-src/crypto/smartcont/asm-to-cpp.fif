@@ -1,0 +1,31 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <source> <destination> <name>" cr
+  ."Compiles asm from <source> file and stores serialization in a way prepared for usage from c++ to <destination> " cr 1 halt
+} : usage
+
+
+$# 3 - ' usage if
+
+
+$1 =: source
+$2 =: destination
+$3 =: name
+
+."Include source from " source type cr
+source include
+
+boc>B
+."Convert boc to base64" cr 
+B>base64 
+
+{ char " chr tuck $+ $+ } : wrp
+wrp  // "<code>"
+"with_tvm_code(" name wrp $+ +", " swap ");" 10 hold $+ $+ // "with_tm_code("<code>");\n"
+
+$>B
+
+."Store tvm code to " destination type cr
+destination B>file

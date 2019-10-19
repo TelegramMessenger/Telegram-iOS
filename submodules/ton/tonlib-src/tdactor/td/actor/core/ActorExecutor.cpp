@@ -76,7 +76,7 @@ void ActorExecutor::send(ActorSignals signals) {
 }
 
 void ActorExecutor::start() noexcept {
-  //LOG(ERROR) << "START " << actor_info_.get_name() << " " << tag("from_queue", options.from_queue);
+  //LOG(ERROR) << "START " << actor_info_.get_name() << " " << tag("from_queue", options_.from_queue);
   if (is_closed()) {
     return;
   }

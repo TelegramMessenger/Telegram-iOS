@@ -42,8 +42,8 @@
 { dup 10 < { 48 } { 55 } cond + } : Digit
 { dup 10 < { 48 } { 87 } cond + } : digit
 // x s b -- x' s'
-{ -rot swap rot /mod Digit rot swap hold } : B#
-{ -rot swap rot /mod digit rot swap hold } : b#
+{ rot swap /mod Digit rot swap hold } : B#
+{ rot swap /mod digit rot swap hold } : b#
 { 16 B# } : X#
 { 16 b# } : x#
 // x s b -- 0 s'
@@ -110,3 +110,4 @@ variable base
 { null ' cons rot times } : list
 { true (atom) drop } : atom
 { bl word atom 1 'nop } ::_ `
+{ hole dup 1 { @ execute } does create } : recursive

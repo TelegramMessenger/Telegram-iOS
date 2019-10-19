@@ -1,4 +1,4 @@
-#!/usr/bin/env fift -s
+#!/usr/bin/fift -s
 "TonUtil.fif" include
 "Asm.fif" include
 
@@ -18,8 +18,8 @@ def? $3 { @' $3 } { "new-wallet" } cond constant file-base
 ."Creating new high-load wallet in workchain " wc . 
 ."with subwallet id " subwallet-id . cr
 
-// Create new high-load wallet; source code included from `highload-wallet-code.fif`
-"highload-wallet-code.fif" include
+// Create new high-load wallet; source code included from `auto/highload-wallet-code.fif`
+"auto/highload-wallet-code.fif" include
 // code
 <b 0 32 u, subwallet-id 32 i,
    file-base +".pk" load-generate-keypair

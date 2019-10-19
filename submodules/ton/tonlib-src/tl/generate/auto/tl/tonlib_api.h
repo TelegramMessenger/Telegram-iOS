@@ -60,7 +60,9 @@ class exportedKey;
 
 class exportedPemKey;
 
-class inputKey;
+class fees;
+
+class InputKey;
 
 class key;
 
@@ -78,13 +80,21 @@ class options;
 
 class sendGramsResult;
 
+class SyncState;
+
 class unpackedAccountAddress;
 
-class updateSendLiteServerQuery;
+class Update;
 
 class generic_AccountState;
 
 class internal_transactionId;
+
+class liteServer_info;
+
+class query_fees;
+
+class query_info;
 
 class raw_accountState;
 
@@ -250,7 +260,30 @@ class exportedPemKey final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
-class inputKey final : public Object {
+class fees final : public Object {
+ public:
+  std::int64_t in_fwd_fee_;
+  std::int64_t storage_fee_;
+  std::int64_t gas_fee_;
+  std::int64_t fwd_fee_;
+
+  fees();
+
+  fees(std::int64_t in_fwd_fee_, std::int64_t storage_fee_, std::int64_t gas_fee_, std::int64_t fwd_fee_);
+
+  static const std::int32_t ID = 1676273340;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class InputKey: public Object {
+ public:
+};
+
+class inputKey final : public InputKey {
  public:
   object_ptr<key> key_;
   td::SecureString local_password_;
@@ -260,6 +293,19 @@ class inputKey final : public Object {
   inputKey(object_ptr<key> &&key_, td::SecureString &&local_password_);
 
   static const std::int32_t ID = 869287093;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class inputKeyFake final : public InputKey {
+ public:
+
+  inputKeyFake();
+
+  static const std::int32_t ID = -1074054722;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -443,6 +489,41 @@ class sendGramsResult final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class SyncState: public Object {
+ public:
+};
+
+class syncStateDone final : public SyncState {
+ public:
+
+  syncStateDone();
+
+  static const std::int32_t ID = 1408448777;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class syncStateInProgress final : public SyncState {
+ public:
+  std::int32_t from_seqno_;
+  std::int32_t to_seqno_;
+  std::int32_t current_seqno_;
+
+  syncStateInProgress();
+
+  syncStateInProgress(std::int32_t from_seqno_, std::int32_t to_seqno_, std::int32_t current_seqno_);
+
+  static const std::int32_t ID = 107726023;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class unpackedAccountAddress final : public Object {
  public:
   std::int32_t workchain_id_;
@@ -462,7 +543,11 @@ class unpackedAccountAddress final : public Object {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
-class updateSendLiteServerQuery final : public Object {
+class Update: public Object {
+ public:
+};
+
+class updateSendLiteServerQuery final : public Update {
  public:
   std::int64_t id_;
   std::string data_;
@@ -472,6 +557,22 @@ class updateSendLiteServerQuery final : public Object {
   updateSendLiteServerQuery(std::int64_t id_, std::string const &data_);
 
   static const std::int32_t ID = -1555130916;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class updateSyncState final : public Update {
+ public:
+  object_ptr<SyncState> sync_state_;
+
+  updateSyncState();
+
+  explicit updateSyncState(object_ptr<SyncState> &&sync_state_);
+
+  static const std::int32_t ID = 1204298718;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -573,6 +674,59 @@ class internal_transactionId final : public Object {
   internal_transactionId(std::int64_t lt_, std::string const &hash_);
 
   static const std::int32_t ID = -989527262;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class liteServer_info final : public Object {
+ public:
+  std::int64_t now_;
+  std::int32_t version_;
+  std::int64_t capabilities_;
+
+  liteServer_info();
+
+  liteServer_info(std::int64_t now_, std::int32_t version_, std::int64_t capabilities_);
+
+  static const std::int32_t ID = -1250165133;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class query_fees final : public Object {
+ public:
+  object_ptr<fees> source_fees_;
+  object_ptr<fees> destination_fees_;
+
+  query_fees();
+
+  query_fees(object_ptr<fees> &&source_fees_, object_ptr<fees> &&destination_fees_);
+
+  static const std::int32_t ID = 725267759;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class query_info final : public Object {
+ public:
+  std::int64_t id_;
+  std::int64_t valid_until_;
+  std::string body_hash_;
+
+  query_info();
+
+  query_info(std::int64_t id_, std::int64_t valid_until_, std::string const &body_hash_);
+
+  static const std::int32_t ID = 1588635915;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -810,14 +964,14 @@ class addLogMessage final : public Function {
 
 class changeLocalPassword final : public Function {
  public:
-  object_ptr<inputKey> input_key_;
+  object_ptr<InputKey> input_key_;
   td::SecureString new_local_password_;
 
   changeLocalPassword();
 
-  changeLocalPassword(object_ptr<inputKey> &&input_key_, td::SecureString &&new_local_password_);
+  changeLocalPassword(object_ptr<InputKey> &&input_key_, td::SecureString &&new_local_password_);
 
-  static const std::int32_t ID = -1685491421;
+  static const std::int32_t ID = -401590337;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -935,14 +1089,14 @@ class encrypt final : public Function {
 
 class exportEncryptedKey final : public Function {
  public:
-  object_ptr<inputKey> input_key_;
+  object_ptr<InputKey> input_key_;
   td::SecureString key_password_;
 
   exportEncryptedKey();
 
-  exportEncryptedKey(object_ptr<inputKey> &&input_key_, td::SecureString &&key_password_);
+  exportEncryptedKey(object_ptr<InputKey> &&input_key_, td::SecureString &&key_password_);
 
-  static const std::int32_t ID = 155352861;
+  static const std::int32_t ID = 218237311;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -954,13 +1108,13 @@ class exportEncryptedKey final : public Function {
 
 class exportKey final : public Function {
  public:
-  object_ptr<inputKey> input_key_;
+  object_ptr<InputKey> input_key_;
 
   exportKey();
 
-  explicit exportKey(object_ptr<inputKey> &&input_key_);
+  explicit exportKey(object_ptr<InputKey> &&input_key_);
 
-  static const std::int32_t ID = 399723440;
+  static const std::int32_t ID = -1622353549;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -972,19 +1126,43 @@ class exportKey final : public Function {
 
 class exportPemKey final : public Function {
  public:
-  object_ptr<inputKey> input_key_;
+  object_ptr<InputKey> input_key_;
   td::SecureString key_password_;
 
   exportPemKey();
 
-  exportPemKey(object_ptr<inputKey> &&input_key_, td::SecureString &&key_password_);
+  exportPemKey(object_ptr<InputKey> &&input_key_, td::SecureString &&key_password_);
 
-  static const std::int32_t ID = -2047752448;
+  static const std::int32_t ID = -643259462;
   std::int32_t get_id() const final {
     return ID;
   }
 
   using ReturnType = object_ptr<exportedPemKey>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class generic_createSendGramsQuery final : public Function {
+ public:
+  object_ptr<InputKey> private_key_;
+  object_ptr<accountAddress> source_;
+  object_ptr<accountAddress> destination_;
+  std::int64_t amount_;
+  std::int32_t timeout_;
+  bool allow_send_to_uninited_;
+  std::string message_;
+
+  generic_createSendGramsQuery();
+
+  generic_createSendGramsQuery(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_);
+
+  static const std::int32_t ID = 208206338;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<query_info>;
 
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
@@ -1009,7 +1187,7 @@ class generic_getAccountState final : public Function {
 
 class generic_sendGrams final : public Function {
  public:
-  object_ptr<inputKey> private_key_;
+  object_ptr<InputKey> private_key_;
   object_ptr<accountAddress> source_;
   object_ptr<accountAddress> destination_;
   std::int64_t amount_;
@@ -1019,9 +1197,9 @@ class generic_sendGrams final : public Function {
 
   generic_sendGrams();
 
-  generic_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_);
+  generic_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&source_, object_ptr<accountAddress> &&destination_, std::int64_t amount_, std::int32_t timeout_, bool allow_send_to_uninited_, std::string const &message_);
 
-  static const std::int32_t ID = -758801136;
+  static const std::int32_t ID = -553513162;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1210,6 +1388,21 @@ class kdf final : public Function {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class liteServer_getInfo final : public Function {
+ public:
+
+  liteServer_getInfo();
+
+  static const std::int32_t ID = 1435327470;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<liteServer_info>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class onLiteServerQueryError final : public Function {
  public:
   std::int64_t id_;
@@ -1284,6 +1477,120 @@ class packAccountAddress final : public Function {
   void store(td::TlStorerToString &s, const char *field_name) const final;
 };
 
+class query_estimateFees final : public Function {
+ public:
+  std::int64_t id_;
+  bool ignore_chksig_;
+
+  query_estimateFees();
+
+  query_estimateFees(std::int64_t id_, bool ignore_chksig_);
+
+  static const std::int32_t ID = -957002175;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<query_fees>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class query_forget final : public Function {
+ public:
+  std::int64_t id_;
+
+  query_forget();
+
+  explicit query_forget(std::int64_t id_);
+
+  static const std::int32_t ID = -1211985313;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class query_getInfo final : public Function {
+ public:
+  std::int64_t id_;
+
+  query_getInfo();
+
+  explicit query_getInfo(std::int64_t id_);
+
+  static const std::int32_t ID = -799333669;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<query_info>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class query_send final : public Function {
+ public:
+  std::int64_t id_;
+
+  query_send();
+
+  explicit query_send(std::int64_t id_);
+
+  static const std::int32_t ID = 925242739;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class raw_createAndSendMessage final : public Function {
+ public:
+  object_ptr<accountAddress> destination_;
+  std::string initial_account_state_;
+  std::string data_;
+
+  raw_createAndSendMessage();
+
+  raw_createAndSendMessage(object_ptr<accountAddress> &&destination_, std::string const &initial_account_state_, std::string const &data_);
+
+  static const std::int32_t ID = -772224603;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class raw_createQuery final : public Function {
+ public:
+  object_ptr<accountAddress> destination_;
+  std::string init_code_;
+  std::string init_data_;
+  std::string body_;
+
+  raw_createQuery();
+
+  raw_createQuery(object_ptr<accountAddress> &&destination_, std::string const &init_code_, std::string const &init_data_, std::string const &body_);
+
+  static const std::int32_t ID = -1928557909;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<query_info>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
 class raw_getAccountAddress final : public Function {
  public:
   object_ptr<raw_initialAccountState> initital_account_state_;
@@ -1341,15 +1648,13 @@ class raw_getTransactions final : public Function {
 
 class raw_sendMessage final : public Function {
  public:
-  object_ptr<accountAddress> destination_;
-  std::string initial_account_state_;
-  std::string data_;
+  std::string body_;
 
   raw_sendMessage();
 
-  raw_sendMessage(object_ptr<accountAddress> &&destination_, std::string const &initial_account_state_, std::string const &data_);
+  explicit raw_sendMessage(std::string const &body_);
 
-  static const std::int32_t ID = 473889461;
+  static const std::int32_t ID = -1789427488;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1423,6 +1728,21 @@ class setLogVerbosityLevel final : public Function {
   explicit setLogVerbosityLevel(std::int32_t new_verbosity_level_);
 
   static const std::int32_t ID = -303429678;
+  std::int32_t get_id() const final {
+    return ID;
+  }
+
+  using ReturnType = object_ptr<ok>;
+
+  void store(td::TlStorerToString &s, const char *field_name) const final;
+};
+
+class sync final : public Function {
+ public:
+
+  sync();
+
+  static const std::int32_t ID = -1617065525;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1521,13 +1841,13 @@ class testWallet_getAccountState final : public Function {
 
 class testWallet_init final : public Function {
  public:
-  object_ptr<inputKey> private_key_;
+  object_ptr<InputKey> private_key_;
 
   testWallet_init();
 
-  explicit testWallet_init(object_ptr<inputKey> &&private_key_);
+  explicit testWallet_init(object_ptr<InputKey> &&private_key_);
 
-  static const std::int32_t ID = 419055225;
+  static const std::int32_t ID = -1417409140;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1539,7 +1859,7 @@ class testWallet_init final : public Function {
 
 class testWallet_sendGrams final : public Function {
  public:
-  object_ptr<inputKey> private_key_;
+  object_ptr<InputKey> private_key_;
   object_ptr<accountAddress> destination_;
   std::int32_t seqno_;
   std::int64_t amount_;
@@ -1547,9 +1867,9 @@ class testWallet_sendGrams final : public Function {
 
   testWallet_sendGrams();
 
-  testWallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_);
+  testWallet_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t amount_, std::string const &message_);
 
-  static const std::int32_t ID = 1290131585;
+  static const std::int32_t ID = 573748322;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1615,13 +1935,13 @@ class wallet_getAccountState final : public Function {
 
 class wallet_init final : public Function {
  public:
-  object_ptr<inputKey> private_key_;
+  object_ptr<InputKey> private_key_;
 
   wallet_init();
 
-  explicit wallet_init(object_ptr<inputKey> &&private_key_);
+  explicit wallet_init(object_ptr<InputKey> &&private_key_);
 
-  static const std::int32_t ID = 1528056782;
+  static const std::int32_t ID = -395706309;
   std::int32_t get_id() const final {
     return ID;
   }
@@ -1633,7 +1953,7 @@ class wallet_init final : public Function {
 
 class wallet_sendGrams final : public Function {
  public:
-  object_ptr<inputKey> private_key_;
+  object_ptr<InputKey> private_key_;
   object_ptr<accountAddress> destination_;
   std::int32_t seqno_;
   std::int64_t valid_until_;
@@ -1642,9 +1962,9 @@ class wallet_sendGrams final : public Function {
 
   wallet_sendGrams();
 
-  wallet_sendGrams(object_ptr<inputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t valid_until_, std::int64_t amount_, std::string const &message_);
+  wallet_sendGrams(object_ptr<InputKey> &&private_key_, object_ptr<accountAddress> &&destination_, std::int32_t seqno_, std::int64_t valid_until_, std::int64_t amount_, std::string const &message_);
 
-  static const std::int32_t ID = -1837893526;
+  static const std::int32_t ID = 297317621;
   std::int32_t get_id() const final {
     return ID;
   }

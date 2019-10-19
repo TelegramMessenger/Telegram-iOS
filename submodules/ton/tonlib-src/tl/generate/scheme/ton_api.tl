@@ -411,13 +411,14 @@ db.root.key.config = db.root.Key;
 db.celldb.value block_id:tonNode.blockIdExt prev:int256 next:int256 root_hash:int256 = db.celldb.Value;
 db.celldb.key.value hash:int256 = db.celldb.key.Value;
 
-db.block.info id:tonNode.blockIdExt flags:# prev_left:flags.1?tonNode.blockIdExt
+db.block.info#4ac6e727 id:tonNode.blockIdExt flags:# prev_left:flags.1?tonNode.blockIdExt
                                             prev_right:flags.2?tonNode.blockIdExt
                                             next_left:flags.3?tonNode.blockIdExt
                                             next_right:flags.4?tonNode.blockIdExt
                                             lt:flags.13?long 
                                             ts:flags.14?int
                                             state:flags.17?int256 = db.block.Info;
+db.block.packedInfo id:tonNode.blockIdExt unixtime:int offset:long = db.block.Info;
 db.block.archivedInfo id:tonNode.blockIdExt flags:# next:flags.0?tonNode.blockIdExt = db.block.Info;
 
 db.blockdb.value next:tonNode.blockIdExt data:bytes = db.blockdb.Value;

@@ -225,6 +225,7 @@ class Promise {
     promise_->set_error(std::move(error));
     promise_.reset();
   }
+
   void set_result(Result<T> &&result) {
     if (!promise_) {
       return;
@@ -259,6 +260,26 @@ class Promise {
 
   explicit operator bool() {
     return static_cast<bool>(promise_);
+  }
+  template <class V, class F>
+  auto do_wrap(V &&value, F &&func) {
+    if (value.is_ok()) {
+      set_result(func(value.move_as_ok()));
+    } else {
+      set_error(value.move_as_error());
+    }
+  }
+
+  template <class F>
+  auto do_wrap(td::Status status, F &&func) {
+    set_error(std::move(status));
+  }
+
+  template <class F>
+  auto wrap(F &&func) {
+    return [promise = std::move(*this), func = std::move(func)](auto &&res) mutable {
+      promise.do_wrap(std::move(res), std::move(func));
+    };
   }
 
  private:

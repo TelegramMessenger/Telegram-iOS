@@ -1,0 +1,22 @@
+forall A, B, C ->
+(B, C, A) rot(A x, B y, C z) {
+  return (y, z, x);
+}
+
+forall A, B, C ->
+_ rot2(A x, B y, C z) {
+  return rot(rot(x, y, z));
+}
+
+_ test() {
+  return rot2(2, 3, 9);
+}
+
+_ test2(cell x, slice y, tuple z) {
+  return rot2(x, y, z);
+}
+
+forall A ->
+_ test3(cell x, A y, int z) {
+  return rot2(x, y, z);
+}

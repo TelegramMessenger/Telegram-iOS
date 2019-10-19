@@ -154,7 +154,7 @@ struct ControlData {
 
 class Continuation : public td::CntObject {
  public:
-  virtual int jump(VmState* st) const & = 0;
+  virtual int jump(VmState* st) const& = 0;
   virtual int jump_w(VmState* st) &;
   virtual ControlData* get_cdata() {
     return 0;
@@ -184,7 +184,7 @@ class QuitCont : public Continuation {
   QuitCont(int _code = 0) : exit_code(_code) {
   }
   ~QuitCont() override = default;
-  int jump(VmState* st) const & override {
+  int jump(VmState* st) const& override {
     return ~exit_code;
   }
 };
@@ -193,7 +193,7 @@ class ExcQuitCont : public Continuation {
  public:
   ExcQuitCont() = default;
   ~ExcQuitCont() override = default;
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
 };
 
 class PushIntCont : public Continuation {
@@ -204,7 +204,7 @@ class PushIntCont : public Continuation {
   PushIntCont(int val, Ref<Continuation> _next) : push_val(val), next(_next) {
   }
   ~PushIntCont() override = default;
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
   int jump_w(VmState* st) & override;
 };
 
@@ -217,7 +217,7 @@ class RepeatCont : public Continuation {
       : body(std::move(_body)), after(std::move(_after)), count(_count) {
   }
   ~RepeatCont() override = default;
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
   int jump_w(VmState* st) & override;
 };
 
@@ -228,7 +228,7 @@ class AgainCont : public Continuation {
   AgainCont(Ref<Continuation> _body) : body(std::move(_body)) {
   }
   ~AgainCont() override = default;
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
   int jump_w(VmState* st) & override;
 };
 
@@ -239,7 +239,7 @@ class UntilCont : public Continuation {
   UntilCont(Ref<Continuation> _body, Ref<Continuation> _after) : body(std::move(_body)), after(std::move(_after)) {
   }
   ~UntilCont() override = default;
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
   int jump_w(VmState* st) & override;
 };
 
@@ -252,7 +252,7 @@ class WhileCont : public Continuation {
       : cond(std::move(_cond)), body(std::move(_body)), after(std::move(_after)), chkcond(_chk) {
   }
   ~WhileCont() override = default;
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
   int jump_w(VmState* st) & override;
 };
 
@@ -268,7 +268,7 @@ class ArgContExt : public Continuation {
   ArgContExt(const ArgContExt&) = default;
   ArgContExt(ArgContExt&&) = default;
   ~ArgContExt() override = default;
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
   int jump_w(VmState* st) & override;
   ControlData* get_cdata() override {
     return &data;
@@ -303,7 +303,7 @@ class OrdCont : public Continuation {
   td::CntObject* make_copy() const override {
     return new OrdCont{*this};
   }
-  int jump(VmState* st) const & override;
+  int jump(VmState* st) const& override;
   int jump_w(VmState* st) & override;
 
   ControlData* get_cdata() override {
@@ -321,7 +321,7 @@ class OrdCont : public Continuation {
   Ref<Stack> get_stack_ref() const {
     return data.stack;
   }
-  Ref<OrdCont> copy_ord() const & {
+  Ref<OrdCont> copy_ord() const& {
     return Ref<OrdCont>{true, *this};
   }
   Ref<OrdCont> copy_ord() && {
@@ -375,10 +375,16 @@ struct GasLimits {
   }
 };
 
+struct CommittedState {
+  Ref<vm::Cell> c4, c5;
+  bool committed{false};
+};
+
 class VmState final : public VmStateInterface {
   Ref<CellSlice> code;
   Ref<Stack> stack;
   ControlRegs cr;
+  CommittedState cstate;
   int cp;
   long long steps{0};
   const DispatchTable* dispatch;
@@ -388,25 +394,37 @@ class VmState final : public VmStateInterface {
   std::vector<Ref<Cell>> libraries;
   int stack_trace{0}, debug_off{0};
 
+  bool chksig_always_succeed{false};
+
  public:
   static constexpr unsigned cell_load_gas_price = 100, cell_create_gas_price = 500, exception_gas_price = 50,
                             tuple_entry_gas_price = 1;
   VmState();
   VmState(Ref<CellSlice> _code);
   VmState(Ref<CellSlice> _code, Ref<Stack> _stack, int flags = 0, Ref<Cell> _data = {}, VmLog log = {},
-          std::vector<Ref<Cell>> _libraries = {});
+          std::vector<Ref<Cell>> _libraries = {}, Ref<Tuple> init_c7 = {});
   VmState(Ref<CellSlice> _code, Ref<Stack> _stack, const GasLimits& _gas, int flags = 0, Ref<Cell> _data = {},
-          VmLog log = {}, std::vector<Ref<Cell>> _libraries = {});
+          VmLog log = {}, std::vector<Ref<Cell>> _libraries = {}, Ref<Tuple> init_c7 = {});
   template <typename... Args>
   VmState(Ref<Cell> code_cell, Args&&... args)
       : VmState(convert_code_cell(std::move(code_cell)), std::forward<Args>(args)...) {
   }
+  VmState(const VmState&) = delete;
+  VmState(VmState&&) = delete;
+  VmState& operator=(const VmState&) = delete;
+  VmState& operator=(VmState&&) = delete;
   bool set_gas_limits(long long _max, long long _limit, long long _credit = 0);
   bool final_gas_ok() const {
     return gas.final_ok();
   }
   long long gas_consumed() const {
     return gas.gas_consumed();
+  }
+  bool committed() const {
+    return cstate.committed;
+  }
+  const CommittedState& get_committed_state() const {
+    return cstate;
   }
   void consume_gas(long long amount) {
     gas.consume(amount);
@@ -567,15 +585,29 @@ class VmState final : public VmStateInterface {
     return cont->is_unique() ? cont.unique_write().jump_w(this) : cont->jump(this);
   }
   static Ref<CellSlice> convert_code_cell(Ref<Cell> code_cell);
+  void commit() {
+    cstate.c4 = cr.d[0];
+    cstate.c5 = cr.d[1];
+    cstate.committed = true;
+  }
+
+  void set_chksig_always_succeed(bool flag) {
+    chksig_always_succeed = flag;
+  }
+  bool get_chksig_always_succeed() const {
+    return chksig_always_succeed;
+  }
 
  private:
   void init_cregs(bool same_c3 = false, bool push_0 = true);
 };
 
 int run_vm_code(Ref<CellSlice> _code, Ref<Stack>& _stack, int flags = 0, Ref<Cell>* data_ptr = 0, VmLog log = {},
-                long long* steps = nullptr, GasLimits* gas_limits = nullptr, std::vector<Ref<Cell>> libraries = {});
+                long long* steps = nullptr, GasLimits* gas_limits = nullptr, std::vector<Ref<Cell>> libraries = {},
+                Ref<Tuple> init_c7 = {});
 int run_vm_code(Ref<CellSlice> _code, Stack& _stack, int flags = 0, Ref<Cell>* data_ptr = 0, VmLog log = {},
-                long long* steps = nullptr, GasLimits* gas_limits = nullptr, std::vector<Ref<Cell>> libraries = {});
+                long long* steps = nullptr, GasLimits* gas_limits = nullptr, std::vector<Ref<Cell>> libraries = {},
+                Ref<Tuple> init_c7 = {});
 
 ControlData* force_cdata(Ref<Continuation>& cont);
 ControlRegs* force_cregs(Ref<Continuation>& cont);

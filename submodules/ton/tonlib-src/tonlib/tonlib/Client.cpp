@@ -56,8 +56,10 @@ class Client::Impl final {
       std::shared_ptr<OutputQueue> output_queue_;
     };
 
-    scheduler_.run_in_context(
-        [&] { tonlib_ = td::actor::create_actor<TonlibClient>("Tonlib", td::make_unique<Callback>(output_queue_)); });
+    scheduler_.run_in_context([&] {
+      tonlib_ = td::actor::create_actor<TonlibClient>(td::actor::ActorOptions().with_name("Tonlib").with_poll(),
+                                                      td::make_unique<Callback>(output_queue_));
+    });
 
     scheduler_thread_ = td::thread([&] { scheduler_.run(); });
   }
@@ -107,7 +109,7 @@ class Client::Impl final {
   std::atomic<bool> receive_lock_{false};
   bool is_closed_{false};
 
-  td::actor::Scheduler scheduler_{{0}};
+  td::actor::Scheduler scheduler_{{1}};
   td::thread scheduler_thread_;
   td::actor::ActorOwn<TonlibClient> tonlib_;
 

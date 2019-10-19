@@ -421,7 +421,7 @@ block_info#9bc7a987 version:uint32
   prev_key_block_seqno:uint32
   master_ref:not_master?^BlkMasterInfo 
   prev_ref:^(BlkPrevInfo after_merge)
-  prev_vert_ref:vert_seq_no?^(BlkPrevInfo 0)
+  prev_vert_ref:vert_seqno_incr?^(BlkPrevInfo 0)
   = BlockInfo;
 
 prev_blk_info$_ prev:ExtBlkRef = BlkPrevInfo 0;

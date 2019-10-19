@@ -349,7 +349,7 @@ VmState::VmState(Ref<CellSlice> _code)
 }
 
 VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, int flags, Ref<Cell> _data, VmLog log,
-                 std::vector<Ref<Cell>> _libraries)
+                 std::vector<Ref<Cell>> _libraries, Ref<Tuple> init_c7)
     : code(std::move(_code))
     , stack(std::move(_stack))
     , cp(-1)
@@ -360,11 +360,14 @@ VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, int flags, Ref<Cell> _
     , libraries(std::move(_libraries)) {
   ensure_throw(init_cp(0));
   set_c4(std::move(_data));
+  if (init_c7.not_null()) {
+    set_c7(std::move(init_c7));
+  }
   init_cregs(flags & 1, flags & 2);
 }
 
 VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, const GasLimits& gas, int flags, Ref<Cell> _data, VmLog log,
-                 std::vector<Ref<Cell>> _libraries)
+                 std::vector<Ref<Cell>> _libraries, Ref<Tuple> init_c7)
     : code(std::move(_code))
     , stack(std::move(_stack))
     , cp(-1)
@@ -376,6 +379,9 @@ VmState::VmState(Ref<CellSlice> _code, Ref<Stack> _stack, const GasLimits& gas, 
     , libraries(std::move(_libraries)) {
   ensure_throw(init_cp(0));
   set_c4(std::move(_data));
+  if (init_c7.not_null()) {
+    set_c7(std::move(init_c7));
+  }
   init_cregs(flags & 1, flags & 2);
 }
 
@@ -738,6 +744,9 @@ int VmState::run() {
     }
   } while (!res);
   // LOG(INFO) << "[EN] data cells: " << DataCell::get_total_data_cells();
+  if ((res | 1) == -1) {
+    commit();
+  }
   return res;
 }
 
@@ -755,10 +764,15 @@ ControlRegs* force_cregs(Ref<Continuation>& cont) {
 }
 
 int run_vm_code(Ref<CellSlice> code, Ref<Stack>& stack, int flags, Ref<Cell>* data_ptr, VmLog log, long long* steps,
-                GasLimits* gas_limits, std::vector<Ref<Cell>> libraries) {
-  VmState vm{
-      code, std::move(stack),    gas_limits ? *gas_limits : GasLimits{}, flags, data_ptr ? *data_ptr : Ref<Cell>{},
-      log,  std::move(libraries)};
+                GasLimits* gas_limits, std::vector<Ref<Cell>> libraries, Ref<Tuple> init_c7) {
+  VmState vm{code,
+             std::move(stack),
+             gas_limits ? *gas_limits : GasLimits{},
+             flags,
+             data_ptr ? *data_ptr : Ref<Cell>{},
+             log,
+             std::move(libraries),
+             std::move(init_c7)};
   int res = vm.run();
   stack = vm.get_stack_ref();
   if (res == -1 && data_ptr) {
@@ -785,11 +799,11 @@ int run_vm_code(Ref<CellSlice> code, Ref<Stack>& stack, int flags, Ref<Cell>* da
 }
 
 int run_vm_code(Ref<CellSlice> code, Stack& stack, int flags, Ref<Cell>* data_ptr, VmLog log, long long* steps,
-                GasLimits* gas_limits, std::vector<Ref<Cell>> libraries) {
+                GasLimits* gas_limits, std::vector<Ref<Cell>> libraries, Ref<Tuple> init_c7) {
   Ref<Stack> stk{true};
   stk.unique_write().set_contents(std::move(stack));
   stack.clear();
-  int res = run_vm_code(code, stk, flags, data_ptr, log, steps, gas_limits, std::move(libraries));
+  int res = run_vm_code(code, stk, flags, data_ptr, log, steps, gas_limits, std::move(libraries), std::move(init_c7));
   CHECK(stack.is_unique());
   if (stk.is_null()) {
     stack.clear();

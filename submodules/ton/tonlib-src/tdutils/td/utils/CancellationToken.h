@@ -32,8 +32,13 @@ struct RawCancellationToken {
 class CancellationToken {
  public:
   explicit operator bool() const {
+    // Empty CancellationToken is never cancelled
+    if (!token_) {
+      return false;
+    }
     return token_->is_cancelled_.load(std::memory_order_acquire);
   }
+  CancellationToken() = default;
   explicit CancellationToken(std::shared_ptr<detail::RawCancellationToken> token) : token_(std::move(token)) {
   }
 

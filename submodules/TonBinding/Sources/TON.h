@@ -74,6 +74,36 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+@interface TONFees : NSObject
+
+@property (nonatomic, readonly) int64_t inFwdFee;
+@property (nonatomic, readonly) int64_t storageFee;
+@property (nonatomic, readonly) int64_t gasFee;
+@property (nonatomic, readonly) int64_t fwdFee;
+
+- (instancetype)initWithInFwdFee:(int64_t)inFwdFee storageFee:(int64_t)storageFee gasFee:(int64_t)gasFee fwdFee:(int64_t)fwdFee;
+
+@end
+
+@interface TONSendGramsQueryFees : NSObject
+
+@property (nonatomic, strong, readonly) TONFees *sourceFees;
+@property (nonatomic, strong, readonly) TONFees *destinationFees;
+
+- (instancetype)initWithSourceFees:(TONFees *)sourceFees destinationFees:(TONFees *)destinationFees;
+
+@end
+
+@interface TONPreparedSendGramsQuery : NSObject
+
+@property (nonatomic, readonly) int64_t queryId;
+@property (nonatomic, readonly) int64_t validUntil;
+@property (nonatomic, strong, readonly) NSData * _Nonnull bodyHash;
+
+- (instancetype)initWithQueryId:(int64_t)queryId validUntil:(int64_t)validUntil bodyHash:(NSData *)bodyHash;
+
+@end
+
 @interface TONSendGramsResult : NSObject
 
 @property (nonatomic, readonly) int64_t sentUntil;
@@ -92,7 +122,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (SSignal *)createKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword;
 - (SSignal *)getWalletAccountAddressWithPublicKey:(NSString *)publicKey;
 - (SSignal *)getAccountStateWithAddress:(NSString *)accountAddress;
-- (SSignal *)sendGramsFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
+- (SSignal *)generateSendGramsQueryFromKey:(TONKey *)key localPassword:(NSData *)localPassword fromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout randomId:(int64_t)randomId;
+- (SSignal *)generateFakeSendGramsQueryFromAddress:(NSString *)fromAddress toAddress:(NSString *)address amount:(int64_t)amount textMessage:(NSData *)textMessage forceIfDestinationNotInitialized:(bool)forceIfDestinationNotInitialized timeout:(int32_t)timeout;
+- (SSignal *)estimateSendGramsQueryFees:(TONPreparedSendGramsQuery *)preparedQuery;
+- (SSignal *)commitPreparedSendGramsQuery:(TONPreparedSendGramsQuery *)preparedQuery;
 - (SSignal *)exportKey:(TONKey *)key localPassword:(NSData *)localPassword;
 - (SSignal *)importKeyWithLocalPassword:(NSData *)localPassword mnemonicPassword:(NSData *)mnemonicPassword wordList:(NSArray<NSString *> *)wordList;
 - (SSignal *)deleteKey:(TONKey *)key;

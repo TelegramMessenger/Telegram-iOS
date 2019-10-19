@@ -1,0 +1,9 @@
+(int, int) nested_if(int id) method_id {
+  dump_stack();
+  if (id > 0) {
+    if (id > 10) {
+      return (2 * id, 3 * id);
+    }
+  }
+  return (5, 6);
+}

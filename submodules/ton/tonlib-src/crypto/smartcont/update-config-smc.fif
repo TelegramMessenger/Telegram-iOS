@@ -1,8 +1,8 @@
-#!/usr/bin/env fift -s
+#!/usr/bin/fift -s
 "TonUtil.fif" include
 
 { ."usage: " @' $0 type ." <filename-base> <seqno> [<savefile>]" cr
-  ."Creates a request to simple configuration smart contract requesting to change configuration smart contract code to the one currently stored in config-code.fif, "
+  ."Creates a request to simple configuration smart contract requesting to change configuration smart contract code to the one currently stored in auto/config-code.fif, "
   ."with private key loaded from file <filename-base>.pk, "
   ."and saves it into <savefile>.boc ('config-query.boc' by default)" cr 1 halt
 } : usage
@@ -12,7 +12,7 @@ $# dup 2 < swap 3 > or ' usage if
 0 constant seqno
 -1 constant idx
 true constant bounce
-"config-code.fif" constant config-source
+"auto/config-code.fif" constant config-source
 100 constant interval  // valid for 100 seconds
 
 $1 =: file-base

@@ -347,6 +347,9 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
         let presentationData = context.presentationData
         let state = stateValue.with { $0 }
         let amount = amountValue(state.amount)
+        let commentData = state.comment.data(using: .utf8)
+        let formattedAddress = String(state.address[state.address.startIndex..<state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)] + " \n " + state.address[state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)..<state.address.endIndex])
+        let destinationAddress = state.address
         
         updateState { state in
             var state = state
@@ -354,66 +357,105 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             return state
         }
         
-        let title = NSAttributedString(string: presentationData.strings.Wallet_Send_Confirmation, font: Font.semibold(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+        let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+        presentControllerImpl?(controller, nil)
         
-        let address = state.address[state.address.startIndex..<state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)] + " \n " + state.address[state.address.index(state.address.startIndex, offsetBy: walletAddressLength / 2)..<state.address.endIndex]
-        
-        let text = presentationData.strings.Wallet_Send_ConfirmationText(formatBalanceText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), String(address)).0
-        let bodyAttributes = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-        let boldAttributes = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-        let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center))
-        attributedText.addAttribute(.font, value: Font.monospace(14.0), range: NSMakeRange(attributedText.string.count - address.count - 1, address.count))
-        
-        var dismissAlertImpl: ((Bool) -> Void)?
-        let theme = context.presentationData.theme
-        let controller = richTextAlertController(alertContext: AlertControllerContext(theme: theme.alert, themeSignal: .single(theme.alert)), title: title, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Wallet_Navigation_Cancel, action: {
-            dismissAlertImpl?(true)
-        }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Send_ConfirmationConfirm, action: {
-            dismissAlertImpl?(false)
-            dismissInputImpl?()
+        let _ = (verifySendGramsRequestAndEstimateFees(tonInstance: context.tonInstance, walletInfo: walletInfo, toAddress: destinationAddress, amount: amount, textMessage: commentData ?? Data(), timeout: 0)
+        |> deliverOnMainQueue).start(next: { [weak controller] fees in
+            controller?.dismiss()
             
             let presentationData = context.presentationData
-            let progressSignal = Signal<Never, NoError> { subscriber in
-                let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: nil))
-                presentControllerImpl?(controller, nil)
-                return ActionDisposable { [weak controller] in
-                    Queue.mainQueue().async() {
-                        controller?.dismiss()
+            
+            let title = NSAttributedString(string: presentationData.strings.Wallet_Send_Confirmation, font: Font.semibold(17.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            
+            let feeAmount = fees.inFwdFee + fees.storageFee + fees.gasFee + fees.fwdFee
+            
+            let text = presentationData.strings.Wallet_Send_ConfirmationText(formatBalanceText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), formattedAddress, "\(formatBalanceText(feeAmount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
+            let bodyAttributes = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            let boldAttributes = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
+            let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center))
+            attributedText.addAttribute(.font, value: Font.monospace(14.0), range: NSMakeRange(attributedText.string.count - formattedAddress.count - 1, formattedAddress.count))
+            
+            var dismissAlertImpl: ((Bool) -> Void)?
+            let theme = context.presentationData.theme
+            let controller = richTextAlertController(alertContext: AlertControllerContext(theme: theme.alert, themeSignal: .single(theme.alert)), title: title, text: attributedText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Wallet_Navigation_Cancel, action: {
+                dismissAlertImpl?(true)
+            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Send_ConfirmationConfirm, action: {
+                dismissAlertImpl?(false)
+                dismissInputImpl?()
+                
+                let presentationData = context.presentationData
+                let progressSignal = Signal<Never, NoError> { subscriber in
+                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: nil))
+                    presentControllerImpl?(controller, nil)
+                    return ActionDisposable { [weak controller] in
+                        Queue.mainQueue().async() {
+                            controller?.dismiss()
+                        }
                     }
                 }
-            }
-            |> runOn(Queue.mainQueue())
-            |> delay(0.15, queue: Queue.mainQueue())
-            let progressDisposable = progressSignal.start()
-            
-            var serverSaltSignal = serverSaltValue.get()
-            |> take(1)
-            
-            serverSaltSignal = serverSaltSignal
-            |> afterDisposed {
-                Queue.mainQueue().async {
-                    progressDisposable.dispose()
+                |> runOn(Queue.mainQueue())
+                |> delay(0.15, queue: Queue.mainQueue())
+                let progressDisposable = progressSignal.start()
+                
+                var serverSaltSignal = serverSaltValue.get()
+                |> take(1)
+                
+                serverSaltSignal = serverSaltSignal
+                    |> afterDisposed {
+                        Queue.mainQueue().async {
+                            progressDisposable.dispose()
+                        }
                 }
-            }
-            
-            let _ = (serverSaltSignal
-            |> deliverOnMainQueue).start(next: { serverSalt in
-                if let serverSalt = serverSalt {
-                    if let commentData = state.comment.data(using: .utf8) {
-                        pushImpl?(WalletSplashScreen(context: context, mode: .sending(walletInfo, state.address, amount, commentData, randomId, serverSalt), walletCreatedPreloadState: nil))
+                
+                let _ = (serverSaltSignal
+                |> deliverOnMainQueue).start(next: { serverSalt in
+                    if let serverSalt = serverSalt {
+                        if let commentData = state.comment.data(using: .utf8) {
+                            pushImpl?(WalletSplashScreen(context: context, mode: .sending(walletInfo, state.address, amount, commentData, randomId, serverSalt), walletCreatedPreloadState: nil))
+                        }
                     }
+                })
+            })], allowInputInset: false, dismissAutomatically: false)
+            presentInGlobalOverlayImpl?(controller, nil)
+            
+            dismissAlertImpl = { [weak controller] animated in
+                if animated {
+                    controller?.dismissAnimated()
+                } else {
+                    controller?.dismiss()
                 }
-            })
-        })], allowInputInset: false, dismissAutomatically: false)
-        presentInGlobalOverlayImpl?(controller, nil)
-        
-        dismissAlertImpl = { [weak controller] animated in
-            if animated {
-                controller?.dismissAnimated()
-            } else {
-                controller?.dismiss()
             }
-        }
+        }, error: { [weak controller] error in
+            controller?.dismiss()
+            
+            let presentationData = context.presentationData
+            
+            var title: String?
+            let text: String
+            switch error {
+            case .generic:
+                text = presentationData.strings.Wallet_UnknownError
+            case .network:
+                title = presentationData.strings.Wallet_Send_NetworkErrorTitle
+                text = presentationData.strings.Wallet_Send_NetworkErrorText
+            case .notEnoughFunds:
+                title = presentationData.strings.Wallet_Send_ErrorNotEnoughFundsTitle
+                text = presentationData.strings.Wallet_Send_ErrorNotEnoughFundsText
+            case .messageTooLong:
+                text = presentationData.strings.Wallet_UnknownError
+            case .invalidAddress:
+                text = presentationData.strings.Wallet_Send_ErrorInvalidAddress
+            case .secretDecryptionFailed:
+                text = presentationData.strings.Wallet_Send_ErrorDecryptionFailed
+            case .destinationIsNotInitialized:
+                text = presentationData.strings.Wallet_UnknownError
+            }
+            let theme = presentationData.theme
+            let controller = textAlertController(alertContext: AlertControllerContext(theme: theme.alert, themeSignal: .single(theme.alert)), title: title, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Wallet_Alert_OK, action: {
+            })])
+            presentControllerImpl?(controller, nil)
+        })
     })
     
     let walletState: Signal<WalletState?, NoError> = getCombinedWalletState(storage: context.storage, subject: .wallet(walletInfo), tonInstance: context.tonInstance, onlyCached: true)

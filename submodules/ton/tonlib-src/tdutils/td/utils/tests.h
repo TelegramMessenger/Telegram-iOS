@@ -38,6 +38,34 @@
 
 namespace td {
 
+class RandomSteps {
+ public:
+  struct Step {
+    std::function<void()> func;
+    td::uint32 weight;
+  };
+  RandomSteps(std::vector<Step> steps) : steps_(std::move(steps)) {
+    for (auto &step : steps_) {
+      steps_sum_ += step.weight;
+    }
+  }
+  template <class Random>
+  void step(Random &rnd) {
+    auto w = rnd() % steps_sum_;
+    for (auto &step : steps_) {
+      if (w < step.weight) {
+        step.func();
+        break;
+      }
+      w -= step.weight;
+    }
+  }
+
+ private:
+  std::vector<Step> steps_;
+  td::int32 steps_sum_ = 0;
+};
+
 class RegressionTester {
  public:
   virtual ~RegressionTester() = default;

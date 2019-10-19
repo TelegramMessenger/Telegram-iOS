@@ -346,20 +346,145 @@ public final class TonInstance {
         }
     }
     
-    fileprivate func sendGramsFromWallet(decryptedSecret: Data, localPassword: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<PendingWalletTransaction, SendGramsFromWalletError> {
+    fileprivate func prepareSendGramsFromWalletQuery(decryptedSecret: Data, localPassword: Data, walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<TONPreparedSendGramsQuery, SendGramsFromWalletError> {
         let key = TONKey(publicKey: walletInfo.publicKey.rawValue, secret: decryptedSecret)
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
                 impl.withInstance { ton in
-                    let cancel = ton.sendGrams(from: key, localPassword: localPassword, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId).start(next: { result in
-                        guard let result = result as? TONSendGramsResult else {
+                    let cancel = ton.generateSendGramsQuery(from: key, localPassword: localPassword, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId).start(next: { result in
+                        guard let result = result as? TONPreparedSendGramsQuery else {
                             subscriber.putError(.generic)
                             return
                         }
-                        subscriber.putNext(PendingWalletTransaction(timestamp: Int64(Date().timeIntervalSince1970), validUntilTimestamp: result.sentUntil, bodyHash: result.bodyHash, address: toAddress, value: amount, comment: textMessage))
+                        subscriber.putNext(result)
                         subscriber.putCompletion()
+                    }, error: { error in
+                        if let error = error as? TONError {
+                            if error.text.hasPrefix("INVALID_ACCOUNT_ADDRESS") {
+                                subscriber.putError(.invalidAddress)
+                            } else if error.text.hasPrefix("DANGEROUS_TRANSACTION") {
+                                subscriber.putError(.destinationIsNotInitialized)
+                            } else if error.text.hasPrefix("MESSAGE_TOO_LONG") {
+                                subscriber.putError(.messageTooLong)
+                            } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
+                                subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("LITE_SERVER_") {
+                                subscriber.putError(.network)
+                            } else {
+                                subscriber.putError(.generic)
+                            }
+                        } else {
+                            subscriber.putError(.generic)
+                        }
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func prepareFakeSendGramsFromWalletQuery(walletInfo: WalletInfo, fromAddress: String, toAddress: String, amount: Int64, textMessage: Data, timeout: Int32) -> Signal<TONPreparedSendGramsQuery, SendGramsFromWalletError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.generateFakeSendGramsQuery(fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: true, timeout: timeout).start(next: { result in
+                        guard let result = result as? TONPreparedSendGramsQuery else {
+                            subscriber.putError(.generic)
+                            return
+                        }
+                        subscriber.putNext(result)
+                        subscriber.putCompletion()
+                    }, error: { error in
+                        if let error = error as? TONError {
+                            if error.text.hasPrefix("INVALID_ACCOUNT_ADDRESS") {
+                                subscriber.putError(.invalidAddress)
+                            } else if error.text.hasPrefix("DANGEROUS_TRANSACTION") {
+                                subscriber.putError(.destinationIsNotInitialized)
+                            } else if error.text.hasPrefix("MESSAGE_TOO_LONG") {
+                                subscriber.putError(.messageTooLong)
+                            } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
+                                subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("LITE_SERVER_") {
+                                subscriber.putError(.network)
+                            } else {
+                                subscriber.putError(.generic)
+                            }
+                        } else {
+                            subscriber.putError(.generic)
+                        }
+                    }, completed: {
+                        subscriber.putCompletion()
+                    })
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func estimateSendGramsQueryFees(preparedQuery: TONPreparedSendGramsQuery) -> Signal<TONSendGramsQueryFees, SendGramsFromWalletError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.estimateSendGramsQueryFees(preparedQuery).start(next: { result in
+                        guard let result = result as? TONSendGramsQueryFees else {
+                            subscriber.putError(.generic)
+                            return
+                        }
+                        subscriber.putNext(result)
+                        subscriber.putCompletion()
+                    }, error: { error in
+                        if let error = error as? TONError {
+                            if error.text.hasPrefix("INVALID_ACCOUNT_ADDRESS") {
+                                subscriber.putError(.invalidAddress)
+                            } else if error.text.hasPrefix("DANGEROUS_TRANSACTION") {
+                                subscriber.putError(.destinationIsNotInitialized)
+                            } else if error.text.hasPrefix("MESSAGE_TOO_LONG") {
+                                subscriber.putError(.messageTooLong)
+                            } else if error.text.hasPrefix("NOT_ENOUGH_FUNDS") {
+                                subscriber.putError(.notEnoughFunds)
+                            } else if error.text.hasPrefix("LITE_SERVER_") {
+                                subscriber.putError(.network)
+                            } else {
+                                subscriber.putError(.generic)
+                            }
+                        } else {
+                            subscriber.putError(.generic)
+                        }
+                    }, completed: nil)
+                    disposable.set(ActionDisposable {
+                        cancel?.dispose()
+                    })
+                }
+            }
+            
+            return disposable
+        }
+    }
+    
+    fileprivate func commitPreparedSendGramsQuery(_ preparedQuery: TONPreparedSendGramsQuery) -> Signal<Never, SendGramsFromWalletError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            
+            self.impl.with { impl in
+                impl.withInstance { ton in
+                    let cancel = ton.commit(preparedQuery).start(next: { result in
+                        preconditionFailure()
                     }, error: { error in
                         if let error = error as? TONError {
                             if error.text.hasPrefix("INVALID_ACCOUNT_ADDRESS") {
@@ -765,28 +890,63 @@ public enum SendGramsFromWalletError {
     case network
 }
 
+public struct EstimatedSendGramsFees {
+    public let inFwdFee: Int64
+    public let storageFee: Int64
+    public let gasFee: Int64
+    public let fwdFee: Int64
+}
+
+public func verifySendGramsRequestAndEstimateFees(tonInstance: TonInstance, walletInfo: WalletInfo, toAddress: String, amount: Int64, textMessage: Data, timeout: Int32) -> Signal<EstimatedSendGramsFees, SendGramsFromWalletError> {
+    return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
+    |> castError(SendGramsFromWalletError.self)
+    |> mapToSignal { fromAddress -> Signal<EstimatedSendGramsFees, SendGramsFromWalletError> in
+        return tonInstance.prepareFakeSendGramsFromWalletQuery(walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, timeout: timeout)
+        |> mapToSignal { preparedQuery -> Signal<EstimatedSendGramsFees, SendGramsFromWalletError> in
+            return tonInstance.estimateSendGramsQueryFees(preparedQuery: preparedQuery)
+            |> map { result -> EstimatedSendGramsFees in
+                return EstimatedSendGramsFees(inFwdFee: result.sourceFees.inFwdFee, storageFee: result.sourceFees.storageFee, gasFee: result.sourceFees.gasFee, fwdFee: result.sourceFees.fwdFee)
+            }
+        }
+    }
+}
+
 public func sendGramsFromWallet(storage: WalletStorageInterface, tonInstance: TonInstance, walletInfo: WalletInfo, decryptedSecret: Data, localPassword: Data, toAddress: String, amount: Int64, textMessage: Data, forceIfDestinationNotInitialized: Bool, timeout: Int32, randomId: Int64) -> Signal<PendingWalletTransaction, SendGramsFromWalletError> {
     return walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonInstance)
     |> castError(SendGramsFromWalletError.self)
     |> mapToSignal { fromAddress -> Signal<PendingWalletTransaction, SendGramsFromWalletError> in
-        return tonInstance.sendGramsFromWallet(decryptedSecret: decryptedSecret, localPassword: localPassword, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId)
-        |> mapToSignal { result -> Signal<PendingWalletTransaction, SendGramsFromWalletError> in
-            return storage.updateWalletRecords { records in
-                var records = records
-                for i in 0 ..< records.count {
-                    if records[i].info.publicKey == walletInfo.publicKey {
-                        if var state = records[i].state {
-                            state.pendingTransactions.insert(result, at: 0)
-                            records[i].state = state
+        return tonInstance.prepareSendGramsFromWalletQuery(decryptedSecret: decryptedSecret, localPassword: localPassword, walletInfo: walletInfo, fromAddress: fromAddress, toAddress: toAddress, amount: amount, textMessage: textMessage, forceIfDestinationNotInitialized: forceIfDestinationNotInitialized, timeout: timeout, randomId: randomId)
+        |> mapToSignal { preparedQuery -> Signal<PendingWalletTransaction, SendGramsFromWalletError> in
+            return tonInstance.commitPreparedSendGramsQuery(preparedQuery)
+            |> retryTonRequest(isNetworkError: { error in
+                if case .network = error {
+                    return true
+                } else {
+                    return false
+                }
+            })
+            |> mapToSignal { _ -> Signal<PendingWalletTransaction, SendGramsFromWalletError> in
+                return .complete()
+            }
+            |> then(.single(PendingWalletTransaction(timestamp: Int64(Date().timeIntervalSince1970), validUntilTimestamp: preparedQuery.validUntil, bodyHash: preparedQuery.bodyHash, address: toAddress, value: amount, comment: textMessage)))
+            |> mapToSignal { result in
+                return storage.updateWalletRecords { records in
+                    var records = records
+                    for i in 0 ..< records.count {
+                        if records[i].info.publicKey == walletInfo.publicKey {
+                            if var state = records[i].state {
+                                state.pendingTransactions.insert(result, at: 0)
+                                records[i].state = state
+                            }
                         }
                     }
+                    return records
                 }
-                return records
+                |> map { _ -> PendingWalletTransaction in
+                    return result
+                }
+                |> castError(SendGramsFromWalletError.self)
             }
-            |> map { _ -> PendingWalletTransaction in
-                return result
-            }
-            |> castError(SendGramsFromWalletError.self)
         }
     }
 }

@@ -1,0 +1,20 @@
+;; inline test
+_ unpack() inline {
+  var ds = get_data().begin_parse();
+  var res = (ds~load_uint(8), ds~load_int(32), ds~load_int(32));
+  return res;
+}
+
+() pack(a, x, y) impure inline_ref {
+  set_data(begin_cell()
+    .store_uint(a, 8)
+    .store_int(x, 32)
+    .store_int(y, 32)
+  .end_cell());
+}
+
+() main() impure {
+  var (a, x, y) = unpack();
+  x += y;
+  pack(a, x, y);
+}

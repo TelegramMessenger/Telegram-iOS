@@ -49,4 +49,23 @@ class TcpListener : public td::actor::Actor, private td::ObserverBase {
 
   void loop() override;
 };
+
+class TcpInfiniteListener : public actor::Actor {
+ public:
+  TcpInfiniteListener(int32 port, std::unique_ptr<TcpListener::Callback> callback);
+
+ private:
+  int32 port_;
+  std::unique_ptr<TcpListener::Callback> callback_;
+  actor::ActorOwn<TcpListener> tcp_listener_;
+  int32 refcnt_{0};
+  bool close_flag_{false};
+
+  void start_up() override;
+
+  void hangup() override;
+  void loop() override;
+  void accept(SocketFd fd);
+  void hangup_shared() override;
+};
 }  // namespace td

@@ -1,4 +1,4 @@
-#!/usr/bin/env fift -s
+#!/usr/bin/fift -s
 "TonUtil.fif" include
 "Asm.fif" include
 
@@ -13,7 +13,7 @@ def? $2 { @' $2 } { "new-wallet" } cond constant file-base
 
 ."Creating new advanced wallet in workchain " wc . cr
 
-// Create new advanced wallet; code adapted from `wallet-code.fif`
+// Create new advanced wallet; code adapted from `auto/wallet-code.fif`
 <{ SETCP0 DUP IFNOTRET // return if recv_internal
    DUP 85143 INT EQUAL IFJMP:<{ // "seqno" get-method
      DROP c4 PUSHCTR CTOS 32 PLDU  // cnt

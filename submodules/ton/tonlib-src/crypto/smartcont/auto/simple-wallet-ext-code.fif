@@ -1,0 +1,104 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/simple-wallet-ext-code.fc` 
+PROGRAM{
+  DECLPROC create_state
+  DECLPROC load_state
+  DECLPROC save_state
+  DECLPROC recv_internal
+  DECLPROC do_verify_message
+  DECLPROC recv_external
+  85143 DECLMETHOD seqno
+  81625 DECLMETHOD create_init_state
+  116960 DECLMETHOD prepare_send_message_with_seqno
+  101633 DECLMETHOD prepare_send_message
+  95420 DECLMETHOD verify_message
+  create_state PROC:<{
+    //  seqno public_key
+    NEWC	//  seqno public_key _2
+    s1 s2 XCHG	//  public_key seqno _2
+    32 STU	//  public_key _4
+    256 STU	//  _6
+    ENDC	//  _7
+  }>
+  load_state PROC:<{
+    // 
+    c4 PUSH	//  _1
+    CTOS	//  cs2
+    32 LDU	//  _3 cs2
+    256 LDU	//  _3 _12 _11
+    DROP	//  _3 _6
+  }>
+  save_state PROC:<{
+    //  seqno public_key
+    create_state CALLDICT	//  _2
+    c4 POP
+  }>
+  recv_internal PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  do_verify_message PROC:<{
+    //  in_msg seqno public_key
+    s0 s2 XCHG
+    9 PUSHPOW2	//  public_key seqno in_msg _5=512
+    LDSLICEX	//  public_key seqno signature in_msg
+    DUP	//  public_key seqno signature in_msg cs
+    32 LDU	//  public_key seqno signature in_msg msg_seqno cs
+    s0 s4 XCHG	//  public_key cs signature in_msg msg_seqno seqno
+    EQUAL	//  public_key cs signature in_msg _13
+    33 THROWIFNOT
+    HASHSU	//  public_key cs signature _16
+    s0 s1 s3 XCHG3	//  cs _16 signature public_key
+    CHKSIGNU	//  cs _17
+    34 THROWIFNOT
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    load_state CALLDICT	//  in_msg stored_seqno public_key
+    s2 s1 s2 XCPU2	//  public_key stored_seqno in_msg stored_seqno public_key
+    do_verify_message CALLDICT	//  public_key stored_seqno cs
+    ACCEPT	//  public_key stored_seqno cs
+    DUP	//  public_key stored_seqno cs cs
+    SREFS	//  public_key stored_seqno cs _9
+    IF:<{	//  public_key stored_seqno cs
+      8 LDU	//  public_key stored_seqno mode cs
+      LDREF	//  public_key stored_seqno mode _14 cs
+      s0 s2 XCHG	//  public_key stored_seqno cs _14 mode
+      SENDRAWMSG
+    }>	//  public_key stored_seqno cs
+    ENDS
+    INC	//  public_key _19
+    SWAP	//  _19 public_key
+    save_state CALLDICT
+  }>
+  seqno PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    32 PLDU	//  _3
+  }>
+  create_init_state PROC:<{
+    //  public_key
+    0 PUSHINT	//  public_key _1=0
+    SWAP	//  _1=0 public_key
+    create_state CALLDICT	//  _2
+  }>
+  prepare_send_message_with_seqno PROC:<{
+    //  mode msg seqno
+    NEWC	//  mode msg seqno _3
+    32 STU	//  mode msg _5
+    s1 s2 XCHG	//  msg mode _5
+    8 STU	//  msg _7
+    STREF	//  _8
+    ENDC	//  _9
+  }>
+  prepare_send_message PROC:<{
+    //  mode msg
+    seqno CALLDICT	//  mode msg _2
+    prepare_send_message_with_seqno CALLDICT	//  _3
+  }>
+  verify_message PROC:<{
+    //  msg
+    load_state CALLDICT	//  msg stored_seqno public_key
+    do_verify_message CALLDICT	//  _4
+  }>
+}END>c

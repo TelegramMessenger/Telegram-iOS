@@ -54,7 +54,7 @@
 "Wallet.Send.Balance" = "Balance: %@";
 "Wallet.Send.AmountText" = "Grams to send";
 "Wallet.Send.Confirmation" = "Confirmation";
-"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** Grams to\n%2$@?";
+"Wallet.Send.ConfirmationText" = "Do you want to send **%1$@** Grams to\n%2$@?\n\nFees: ~%3$@ grams";
 "Wallet.Send.ConfirmationConfirm" = "Confirm";
 "Wallet.Send.Send" = "Send";
 "Wallet.Settings.Title" = "Wallet Settings";
@@ -104,11 +104,11 @@
 "Wallet.TransactionInfo.SenderHeader" = "SENDER";
 "Wallet.TransactionInfo.CopyAddress" = "Copy Wallet Address";
 "Wallet.TransactionInfo.AddressCopied" = "Address copied to clipboard.";
-"Wallet.TransactionInfo.SendGrams" = "Send Grams";
+"Wallet.TransactionInfo.SendGrams" = "Send Grams to This Address";
 "Wallet.TransactionInfo.CommentHeader" = "COMMENT";
 "Wallet.TransactionInfo.StorageFeeHeader" = "STORAGE FEE";
 "Wallet.TransactionInfo.OtherFeeHeader" = "TRANSACTION FEE";
-"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet. [More info]()";
+"Wallet.TransactionInfo.StorageFeeInfo" = "Blockchain validators collect a tiny fee for storing information about your decentralized wallet and processing your transactions. [More info]()";
 "Wallet.TransactionInfo.OtherFeeInfo" = "Blockchain validators collect a tiny fee for processing your decentralized transactions. [More info]()";
 "Wallet.TransactionInfo.FeeInfoURL" = "https://telegram.org/wallet/fee";
 "Wallet.WordCheck.Title" = "Test Time!";

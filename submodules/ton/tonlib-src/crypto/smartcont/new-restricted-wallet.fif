@@ -1,0 +1,33 @@
+#!/usr/bin/fift -s
+"TonUtil.fif" include
+"Asm.fif" include
+
+{ ."usage: " @' $0 type ." <public-key> [<savefile>]" cr
+  ."Creates a restricted wallet in the masterchain controlled by the private key corresponding to the specified public key" cr
+  ."and saves its address into <savefile>.addr ('rwallet.addr' by default)" cr 1 halt
+} : usage
+$# 1- -2 and ' usage if
+
+-1 =: wc
+$1 parse-pubkey =: PubKey
+def? $2 { @' $2 } { "rwallet" } cond constant file-base
+
+."Creating new restricted wallet in workchain " wc . ."controlled by public key " PubKey .pubkey cr
+
+// Create new restricted wallet; code taken from `auto/restricted-wallet-code.fif`
+"auto/restricted-wallet-code.fif" include  // code
+<b 0 32 u, PubKey 256 u, b> // data
+null // no libraries
+<b b{0011} s, 3 roll ref, rot ref, swap dict, b>  // create StateInit
+dup ."StateInit: " <s csr. cr
+dup hashu wc swap 2dup 2constant wallet_addr
+."new wallet address = " 2dup .addr cr
+2dup file-base +".addr" save-address-verbose
+."Non-bounceable address (for init): " 2dup 7 .Addr cr
+."Bounceable address (for later access): " 6 .Addr cr
+<b b{1000100} s, wallet_addr addr, b{000010} s, swap 
+  <s s, b{0} s, 0 256 u, 0 256 u, 0 32 u, -1 32 i, b>
+dup ."External message for initialization is " <s csr. cr
+2 boc+>B dup Bx. cr
+file-base +"-query.boc" tuck B>file
+."(Saved wallet creating query to file " type .")" cr

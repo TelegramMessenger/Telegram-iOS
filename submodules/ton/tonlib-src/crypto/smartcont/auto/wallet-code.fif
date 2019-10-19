@@ -1,0 +1,59 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/wallet-code.fc` 
+PROGRAM{
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  85143 DECLMETHOD seqno
+  recv_internal PROC:<{
+    //  in_msg
+    DROP	// 
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    9 PUSHPOW2	//  in_msg _3=512
+    LDSLICEX	//  signature in_msg
+    DUP	//  signature in_msg cs
+    32 LDU	//  signature in_msg _8 cs
+    32 LDU	//  signature in_msg msg_seqno valid_until cs
+    NOW	//  signature in_msg msg_seqno valid_until cs _15
+    s1 s2 XCHG	//  signature in_msg msg_seqno cs valid_until _15
+    LEQ	//  signature in_msg msg_seqno cs _16
+    35 THROWIF
+    c4 PUSH	//  signature in_msg msg_seqno cs _19
+    CTOS	//  signature in_msg msg_seqno cs ds
+    32 LDU	//  signature in_msg msg_seqno cs _23 ds
+    256 LDU	//  signature in_msg msg_seqno cs stored_seqno public_key ds
+    ENDS
+    s3 s1 XCPU	//  signature in_msg public_key cs stored_seqno msg_seqno stored_seqno
+    EQUAL	//  signature in_msg public_key cs stored_seqno _31
+    33 THROWIFNOT
+    s0 s3 XCHG	//  signature stored_seqno public_key cs in_msg
+    HASHSU	//  signature stored_seqno public_key cs _34
+    s0 s4 s2 XC2PU	//  cs stored_seqno public_key _34 signature public_key
+    CHKSIGNU	//  cs stored_seqno public_key _35
+    34 THROWIFNOT
+    ACCEPT
+    s0 s2 XCHG	//  public_key stored_seqno cs
+    WHILE:<{
+      DUP	//  public_key stored_seqno cs cs
+      SREFS	//  public_key stored_seqno cs _40
+    }>DO<{	//  public_key stored_seqno cs
+      8 LDU	//  public_key stored_seqno mode cs
+      LDREF	//  public_key stored_seqno mode _45 cs
+      s0 s2 XCHG	//  public_key stored_seqno cs _45 mode
+      SENDRAWMSG
+    }>	//  public_key stored_seqno cs
+    ENDS
+    INC	//  public_key _50
+    NEWC	//  public_key _50 _51
+    32 STU	//  public_key _53
+    256 STU	//  _55
+    ENDC	//  _56
+    c4 POP
+  }>
+  seqno PROC:<{
+    // 
+    c4 PUSH	//  _0
+    CTOS	//  _1
+    32 PLDU	//  _3
+  }>
+}END>c

@@ -60,21 +60,36 @@ void generate_output_func(SymDef* func_sym) {
       code.print(std::cerr, 9);
     }
     code.simplify_var_types();
-    // std::cerr << "after simplify_var_types: \n";  code.print(std::cerr, 0);
+    if (verbosity >= 5) {
+      std::cerr << "after simplify_var_types: \n";
+      code.print(std::cerr, 0);
+    }
     code.prune_unreachable_code();
-    // std::cerr << "after prune_unreachable: \n";  code.print(std::cerr, 0);
+    if (verbosity >= 5) {
+      std::cerr << "after prune_unreachable: \n";
+      code.print(std::cerr, 0);
+    }
     code.split_vars(true);
-    // std::cerr << "after split_vars: \n";  code.print(std::cerr, 0);
+    if (verbosity >= 5) {
+      std::cerr << "after split_vars: \n";
+      code.print(std::cerr, 0);
+    }
     for (int i = 0; i < 8; i++) {
       code.compute_used_code_vars();
-      if (verbosity >= 5) {
+      if (verbosity >= 4) {
         std::cerr << "after compute_used_vars: \n";
         code.print(std::cerr, 6);
       }
       code.fwd_analyze();
-      // std::cerr << "after fwd_analyze: \n";  code.print(std::cerr, 6);
+      if (verbosity >= 5) {
+        std::cerr << "after fwd_analyze: \n";
+        code.print(std::cerr, 6);
+      }
       code.prune_unreachable_code();
-      // std::cerr << "after prune_unreachable: \n";  code.print(std::cerr, 6);
+      if (verbosity >= 5) {
+        std::cerr << "after prune_unreachable: \n";
+        code.print(std::cerr, 6);
+      }
     }
     code.mark_noreturn();
     if (verbosity >= 3) {
@@ -83,7 +98,8 @@ void generate_output_func(SymDef* func_sym) {
     if (verbosity >= 2) {
       std::cerr << "\n---------- resulting code for " << name << " -------------\n";
     }
-    *outs << std::string(indent * 2, ' ') << name << " PROC:<{\n";
+    bool inline_ref = (func_val->flags & 2);
+    *outs << std::string(indent * 2, ' ') << name << " PROC" << (inline_ref ? "REF" : "") << ":<{\n";
     code.generate_code(
         *outs,
         (stack_layout_comments ? Stack::_StkCmt | Stack::_CptStkCmt : 0) | (opt_level < 2 ? Stack::_DisableOpt : 0),
