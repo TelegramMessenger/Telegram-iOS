@@ -2071,7 +2071,7 @@ public func groupInfoController(context: AccountContext, peerId originalPeerId: 
             }, sendLiveLocation: { _, _ in }, theme: presentationData.theme, customLocationPicker: true, presentationCompleted: {
                 clearHighlightImpl?()
             })
-            presentControllerImpl?(controller, nil)
+            pushControllerImpl?(controller)
         })
     }, displayLocationContextMenu: { text in
         displayCopyContextMenuImpl?(text, .location)

@@ -756,10 +756,10 @@ public final class Transaction {
         }
     }
     
-    public func enumerateMedia(lowerBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
+    public func enumerateMedia(lowerBound: MessageIndex?, upperBound: MessageIndex?, limit: Int) -> ([PeerId: Set<MediaId>], [MediaId: Media], MessageIndex?) {
         assert(!self.disposed)
         if let postbox = self.postbox {
-            return postbox.messageHistoryTable.enumerateMedia(lowerBound: lowerBound, limit: limit)
+            return postbox.messageHistoryTable.enumerateMedia(lowerBound: lowerBound, upperBound: upperBound, limit: limit)
         } else {
             return ([:], [:], nil)
         }

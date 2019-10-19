@@ -301,7 +301,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController,
                                 strongSelf.didShowProxyUnavailableTooltipController = true
                                 let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.Proxy_TooltipUnavailable), timeout: 60.0, dismissByTapOutside: true)
                                 strongSelf.proxyUnavailableTooltipController = tooltipController
-                                tooltipController.dismissed = { [weak tooltipController] in
+                                tooltipController.dismissed = { [weak tooltipController] _ in
                                     if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
                                         strongSelf.proxyUnavailableTooltipController = nil
                                     }

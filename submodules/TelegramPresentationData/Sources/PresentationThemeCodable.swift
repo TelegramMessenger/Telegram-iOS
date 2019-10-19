@@ -338,6 +338,10 @@ extension PresentationThemeRootNavigationBar: Codable {
         case badgeFill
         case badgeStroke
         case badgeText
+        case segmentedBg
+        case segmentedFg
+        case segmentedText
+        case segmentedDivider
     }
     
     public convenience init(from decoder: Decoder) throws {
@@ -352,7 +356,11 @@ extension PresentationThemeRootNavigationBar: Codable {
                   separatorColor: try decodeColor(values, .separator),
                   badgeBackgroundColor: try decodeColor(values, .badgeFill),
                   badgeStrokeColor: try decodeColor(values, .badgeStroke),
-                  badgeTextColor: try decodeColor(values, .badgeText))
+                  badgeTextColor: try decodeColor(values, .badgeText),
+                  segmentedBackgroundColor: try decodeColor(values, .segmentedBg),
+                  segmentedForegroundColor: try decodeColor(values, .segmentedFg),
+                  segmentedTextColor: try decodeColor(values, .segmentedText),
+                  segmentedDividerColor: try decodeColor(values, .segmentedDivider))
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -368,6 +376,10 @@ extension PresentationThemeRootNavigationBar: Codable {
         try encodeColor(&values, self.badgeBackgroundColor, .badgeFill)
         try encodeColor(&values, self.badgeStrokeColor, .badgeStroke)
         try encodeColor(&values, self.badgeTextColor, .badgeText)
+        try encodeColor(&values, self.segmentedBackgroundColor, .segmentedBg)
+        try encodeColor(&values, self.segmentedForegroundColor, .segmentedFg)
+        try encodeColor(&values, self.segmentedTextColor, .segmentedText)
+        try encodeColor(&values, self.segmentedDividerColor, .segmentedDivider)
     }
 }
 

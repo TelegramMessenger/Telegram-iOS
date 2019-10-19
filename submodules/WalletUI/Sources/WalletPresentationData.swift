@@ -49,6 +49,19 @@ public final class WalletInfoTheme {
     }
 }
 
+public final class WalletTransactionTheme {
+    public let descriptionBackgroundColor: UIColor
+    public let descriptionTextColor: UIColor
+    
+    public init(
+        descriptionBackgroundColor: UIColor,
+        descriptionTextColor: UIColor
+    ) {
+        self.descriptionBackgroundColor = descriptionBackgroundColor
+        self.descriptionTextColor = descriptionTextColor
+    }
+}
+
 public final class WalletSetupTheme {
     public let buttonFillColor: UIColor
     public let buttonForegroundColor: UIColor
@@ -131,6 +144,7 @@ public final class WalletListTheme {
 
 public final class WalletTheme: Equatable {
     public let info: WalletInfoTheme
+    public let transaction: WalletTransactionTheme
     public let setup: WalletSetupTheme
     public let list: WalletListTheme
     public let statusBarStyle: StatusBarStyle
@@ -141,8 +155,9 @@ public final class WalletTheme: Equatable {
     
     private let resourceCache = WalletThemeResourceCache()
     
-    public init(info: WalletInfoTheme, setup: WalletSetupTheme, list: WalletListTheme, statusBarStyle: StatusBarStyle, navigationBar: NavigationBarTheme, keyboardAppearance: UIKeyboardAppearance, alert: AlertControllerTheme, actionSheet: ActionSheetControllerTheme) {
+    public init(info: WalletInfoTheme, transaction: WalletTransactionTheme, setup: WalletSetupTheme, list: WalletListTheme, statusBarStyle: StatusBarStyle, navigationBar: NavigationBarTheme, keyboardAppearance: UIKeyboardAppearance, alert: AlertControllerTheme, actionSheet: ActionSheetControllerTheme) {
         self.info = info
+        self.transaction = transaction
         self.setup = setup
         self.list = list
         self.statusBarStyle = statusBarStyle

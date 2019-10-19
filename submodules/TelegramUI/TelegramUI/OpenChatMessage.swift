@@ -18,6 +18,7 @@ import PeerInfoUI
 import SettingsUI
 import AlertUI
 import PresentationDataUtils
+import ShareController
 
 private enum ChatMessageGalleryControllerData {
     case url(String)
@@ -26,7 +27,7 @@ private enum ChatMessageGalleryControllerData {
     case map(TelegramMediaMap)
     case stickerPack(StickerPackReference)
     case audio(TelegramMediaFile)
-    case document(TelegramMediaFile)
+    case document(TelegramMediaFile, Bool)
     case gallery(GalleryController)
     case secretGallery(SecretMediaPreviewController)
     case chatAvatars(AvatarGalleryController, Media)
@@ -152,14 +153,10 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                             return .gallery(gallery)
                         }
                     }
-                    #if DEBUG
+                    
                     if ext == "mkv" {
-                        let gallery = GalleryController(context: context, source: standalone ? .standaloneMessage(message) : .peerMessagesAtId(message.id), invertItemOrder: reverseMessageGalleryOrder, streamSingleVideo: stream, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, synchronousLoad: synchronousLoad, replaceRootController: { [weak navigationController] controller, ready in
-                            navigationController?.replaceTopController(controller, animated: false, ready: ready)
-                            }, baseNavigationController: navigationController, actionInteraction: actionInteraction)
-                        return .gallery(gallery)
+                        return .document(file, true)
                     }
-                    #endif
                 }
                 
                 if internalDocumentItemSupportsMimeType(file.mimeType, fileName: file.fileName ?? "file") {
@@ -170,7 +167,7 @@ private func chatMessageGalleryControllerData(context: AccountContext, message: 
                 }
                 
                 if !file.isVideo {
-                    return .document(file)
+                    return .document(file, false)
                 }
             }
             
@@ -271,9 +268,12 @@ func openChatMessageImpl(_ params: OpenChatMessageParams) -> Bool {
                 params.dismissInput()
                 params.present(controller, nil)
                 return true
-            case let .document(file):
+            case let .document(file, immediateShare):
                 let presentationData = params.context.sharedContext.currentPresentationData.with { $0 }
-                if let rootController = params.navigationController?.view.window?.rootViewController {
+                if immediateShare {
+                    let controller = ShareController(context: params.context, subject: .media(.standalone(media: file)), immediateExternalShare: true)
+                    params.present(controller, nil)
+                } else if let rootController = params.navigationController?.view.window?.rootViewController {
                     presentDocumentPreviewController(rootController: rootController, theme: presentationData.theme, strings: presentationData.strings, postbox: params.context.account.postbox, file: file)
                 }
                 return true

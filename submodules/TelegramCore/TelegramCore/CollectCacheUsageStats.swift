@@ -53,10 +53,17 @@ private final class CacheUsageStatsState {
     var mediaResourceIds: [MediaId: [MediaResourceId]] = [:]
     var allResourceIds = Set<WrappedMediaResourceId>()
     var lowerBound: MessageIndex?
+    var upperBound: MessageIndex?
 }
 
-public func collectCacheUsageStats(account: Account, additionalCachePaths: [String], logFilesPath: String) -> Signal<CacheUsageStatsResult, NoError> {
-    let state = Atomic<CacheUsageStatsState>(value: CacheUsageStatsState())
+public func collectCacheUsageStats(account: Account, peerId: PeerId? = nil, additionalCachePaths: [String] = [], logFilesPath: String? = nil) -> Signal<CacheUsageStatsResult, NoError> {
+    var initialState = CacheUsageStatsState()
+    if let peerId = peerId {
+        initialState.lowerBound = MessageIndex.lowerBound(peerId: peerId)
+        initialState.upperBound = MessageIndex.upperBound(peerId: peerId)
+    }
+    
+    let state = Atomic<CacheUsageStatsState>(value: initialState)
     
     let excludeResourceIds = account.postbox.transaction { transaction -> Set<WrappedMediaResourceId> in
         var result = Set<WrappedMediaResourceId>()
@@ -70,7 +77,7 @@ public func collectCacheUsageStats(account: Account, additionalCachePaths: [Stri
     return excludeResourceIds
     |> mapToSignal { excludeResourceIds -> Signal<CacheUsageStatsResult, NoError> in
         let fetch = account.postbox.transaction { transaction -> ([PeerId : Set<MediaId>], [MediaId : Media], MessageIndex?) in
-            return transaction.enumerateMedia(lowerBound: state.with { $0.lowerBound }, limit: 1000)
+            return transaction.enumerateMedia(lowerBound: state.with { $0.lowerBound }, upperBound: state.with { $0.upperBound }, limit: 1000)
         }
         |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
         
@@ -167,6 +174,27 @@ public func collectCacheUsageStats(account: Account, additionalCachePaths: [Stri
                     }
                 }
                 if updatedLowerBound == nil {
+                    if peerId != nil {
+                        let (finalMedia, finalMediaResourceIds, allResourceIds) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<WrappedMediaResourceId>) in
+                            return (state.media, state.mediaResourceIds, state.allResourceIds)
+                        }
+                         return account.postbox.transaction { transaction -> CacheUsageStats in
+                           var peers: [PeerId: Peer] = [:]
+                           for peerId in finalMedia.keys {
+                               if let peer = transaction.getPeer(peerId) {
+                                   peers[peer.id] = peer
+                                   if let associatedPeerId = peer.associatedPeerId, let associatedPeer = transaction.getPeer(associatedPeerId) {
+                                       peers[associatedPeer.id] = associatedPeer
+                                   }
+                               }
+                           }
+                           return CacheUsageStats(media: finalMedia, mediaResourceIds: finalMediaResourceIds, peers: peers, otherSize: 0, otherPaths: [], cacheSize: 0, tempPaths: [], tempSize: 0, immutableSize: 0)
+                       } |> mapError { _ -> CollectCacheUsageStatsError in preconditionFailure() }
+                       |> mapToSignal { stats -> Signal<CacheUsageStatsResult, CollectCacheUsageStatsError> in
+                           return .fail(.done(stats))
+                       }
+                    }
+                    
                     let (finalMedia, finalMediaResourceIds, allResourceIds) = state.with { state -> ([PeerId: [PeerCacheUsageCategory: [MediaId: Int64]]], [MediaId: [MediaResourceId]], Set<WrappedMediaResourceId>) in
                         return (state.media, state.mediaResourceIds, state.allResourceIds)
                     }
@@ -203,7 +231,7 @@ public func collectCacheUsageStats(account: Account, additionalCachePaths: [Stri
                                 }
                             }
                         }
-                        if let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: logFilesPath), includingPropertiesForKeys: [URLResourceKey.fileSizeKey], options: []) {
+                        if let logFilesPath = logFilesPath, let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: logFilesPath), includingPropertiesForKeys: [URLResourceKey.fileSizeKey], options: []) {
                             for url in files {
                                 if let fileSize = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize {
                                     immutableSize += Int64(fileSize)

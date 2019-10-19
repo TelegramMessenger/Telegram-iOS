@@ -51,6 +51,7 @@ import WalletUI
 import WalletUrl
 import LocalizedPeerData
 import PhoneNumberFormat
+import SettingsUI
 
 public enum ChatControllerPeekActions {
     case standard
@@ -1148,7 +1149,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     case let .url(url):
                         var cleanUrl = url
                         var canAddToReadingList = true
-                        let canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
+                        var canOpenIn = availableOpenInOptions(context: strongSelf.context, item: .url(url: url)).count > 1
                         let mailtoString = "mailto:"
                         let telString = "tel:"
                         var openText = strongSelf.presentationData.strings.Conversation_LinkDialogOpen
@@ -1161,6 +1162,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             phoneNumber = String(cleanUrl[cleanUrl.index(cleanUrl.startIndex, offsetBy: telString.distance(from: telString.startIndex, to: telString.endIndex))...])
                             cleanUrl = phoneNumber!
                             openText = strongSelf.presentationData.strings.UserInfo_PhoneCall
+                            canOpenIn = false
                         } else if canOpenIn {
                             openText = strongSelf.presentationData.strings.Conversation_FileOpenIn
                         }
@@ -1469,6 +1471,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let strongSelf = self {
                         strongSelf.present(c, in: .window(.root), with: a)
                     }
+                }, push: { [weak self] c in
+                    if let strongSelf = self {
+                        strongSelf.push(c)
+                    }
                 })
                 strongSelf.chatDisplayNode.dismissInput()
                 strongSelf.present(controller, in: .window(.root))
@@ -1523,7 +1529,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.messageTooltipController?.dismiss()
                     let tooltipController = TooltipController(content: .text(text), dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
                     strongSelf.messageTooltipController = tooltipController
-                    tooltipController.dismissed = { [weak tooltipController] in
+                    tooltipController.dismissed = { [weak tooltipController] _ in
                         if let strongSelf = self, let tooltipController = tooltipController, strongSelf.messageTooltipController === tooltipController {
                             strongSelf.messageTooltipController = nil
                         }
@@ -2996,6 +3002,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, let messageIds = strongSelf.presentationInterfaceState.interfaceState.selectionState?.selectedIds, !messageIds.isEmpty {
                 strongSelf.present(peerReportOptionsController(context: strongSelf.context, subject: .messages(Array(messageIds).sorted()), present: { c, a in
                     self?.present(c, in: .window(.root), with: a)
+                }, push: { c in
+                    self?.push(c)
                 }, completion: { _ in }), in: .window(.root))
             }
         }, reportMessages: { [weak self] messages, contextController in
@@ -3561,7 +3569,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let tooltipController = TooltipController(content: .text(banDescription))
                             strongSelf.mediaRestrictedTooltipController = tooltipController
                             strongSelf.mediaRestrictedTooltipControllerMode = isStickers
-                            tooltipController.dismissed = { [weak tooltipController] in
+                            tooltipController.dismissed = { [weak tooltipController] _ in
                                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRestrictedTooltipController === tooltipController {
                                     strongSelf.mediaRestrictedTooltipController = nil
                                 }
@@ -3596,7 +3604,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.videoUnmuteTooltipController?.dismiss()
                 let tooltipController = TooltipController(content: .iconAndText(icon, strongSelf.presentationInterfaceState.strings.Conversation_PressVolumeButtonForSound), timeout: 3.5, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
                 strongSelf.videoUnmuteTooltipController = tooltipController
-                tooltipController.dismissed = { [weak tooltipController] in
+                tooltipController.dismissed = { [weak tooltipController] _ in
                     if let strongSelf = self, let tooltipController = tooltipController, strongSelf.videoUnmuteTooltipController === tooltipController {
                         strongSelf.videoUnmuteTooltipController = nil
                         ApplicationSpecificNotice.setVolumeButtonToUnmute(accountManager: strongSelf.context.sharedContext.accountManager)
@@ -3851,7 +3859,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 } else if let rect = rect {
                     let tooltipController = TooltipController(content: .text(text))
                     strongSelf.silentPostTooltipController = tooltipController
-                    tooltipController.dismissed = { [weak tooltipController] in
+                    tooltipController.dismissed = { [weak tooltipController] _ in
                         if let strongSelf = self, let tooltipController = tooltipController, strongSelf.silentPostTooltipController === tooltipController {
                             strongSelf.silentPostTooltipController = nil
                         }
@@ -5051,19 +5059,211 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             switch self.chatLocationInfoData {
                 case let .peer(peerView):
                     self.navigationActionDisposable.set((peerView.get()
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { [weak self] peerView in
-                            if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios") == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
-                                if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
-                                    strongSelf.effectiveNavigationController?.pushViewController(infoController)
-                                }
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                        if let strongSelf = self, let peer = peerView.peers[peerView.peerId], peer.restrictionText(platform: "ios") == nil && !strongSelf.presentationInterfaceState.isNotAccessible {
+                            if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, peer: peer, mode: .generic) {
+                                strongSelf.effectiveNavigationController?.pushViewController(infoController)
                             }
+                        }
                     }))
             }
         case .search:
             self.interfaceInteraction?.beginMessageSearch(.everything, "")
         case .dismiss:
             self.dismiss()
+        case .clearCache:
+            let clearDisposable = MetaDisposable()
+            self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+            
+            switch self.chatLocationInfoData {
+            case let .peer(peerView):
+                self.navigationActionDisposable.set((peerView.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { [weak self] peerView in
+                    guard let strongSelf = self, let peer = peerView.peers[peerView.peerId] else {
+                        return
+                    }
+                    let peerId = peer.id
+                    
+                    let cacheUsageStats = (collectCacheUsageStats(account: strongSelf.context.account, peerId: peer.id)
+                    |> deliverOnMainQueue).start(next: { [weak self] result in
+                        guard let strongSelf = self,  case let .result(stats) = result, var categories = stats.media[peer.id] else {
+                            return
+                        }
+                        let presentationData = strongSelf.presentationData
+                        let controller = ActionSheetController(presentationTheme: presentationData.theme)
+                        let dismissAction: () -> Void = { [weak controller] in
+                            controller?.dismissAnimated()
+                        }
+                        
+                        var sizeIndex: [PeerCacheUsageCategory: (Bool, Int64)] = [:]
+                        
+                        var itemIndex = 0
+                        
+                        let updateTotalSize: () -> Void = { [weak controller] in
+                            controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                                let title: String
+                                let filteredSize = sizeIndex.values.reduce(0, { $0 + ($1.0 ? $1.1 : 0) })
+                                
+                                if filteredSize == 0 {
+                                    title = presentationData.strings.Cache_ClearNone
+                                } else {
+                                    title = presentationData.strings.Cache_Clear("\(dataSizeString(filteredSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
+                                }
+                                
+                                if let item = item as? ActionSheetButtonItem {
+                                    return ActionSheetButtonItem(title: title, color: filteredSize != 0 ? .accent : .disabled, enabled: filteredSize != 0, action: item.action)
+                                }
+                                return item
+                            })
+                        }
+                        
+                        let toggleCheck: (PeerCacheUsageCategory, Int) -> Void = { [weak controller] category, itemIndex in
+                            if let (value, size) = sizeIndex[category] {
+                                sizeIndex[category] = (!value, size)
+                            }
+                            controller?.updateItem(groupIndex: 0, itemIndex: itemIndex, { item in
+                                if let item = item as? ActionSheetCheckboxItem {
+                                    return ActionSheetCheckboxItem(title: item.title, label: item.label, value: !item.value, action: item.action)
+                                }
+                                return item
+                            })
+                            updateTotalSize()
+                        }
+                        var items: [ActionSheetItem] = []
+                        
+                        items.append(DeleteChatPeerActionSheetItem(context: strongSelf.context, peer: peer, chatPeer: peer, action: .clearCache, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder))
+                        
+                        let validCategories: [PeerCacheUsageCategory] = [.image, .video, .audio, .file]
+                        
+                        var totalSize: Int64 = 0
+                        
+                        func stringForCategory(strings: PresentationStrings, category: PeerCacheUsageCategory) -> String {
+                            switch category {
+                                case .image:
+                                    return strings.Cache_Photos
+                                case .video:
+                                    return strings.Cache_Videos
+                                case .audio:
+                                    return strings.Cache_Music
+                                case .file:
+                                    return strings.Cache_Files
+                            }
+                        }
+                        
+                        for categoryId in validCategories {
+                            if let media = categories[categoryId] {
+                                var categorySize: Int64 = 0
+                                for (_, size) in media {
+                                    categorySize += size
+                                }
+                                sizeIndex[categoryId] = (true, categorySize)
+                                totalSize += categorySize
+                                if categorySize > 1024 {
+                                    let index = itemIndex
+                                    items.append(ActionSheetCheckboxItem(title: stringForCategory(strings: presentationData.strings, category: categoryId), label: dataSizeString(categorySize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), value: true, action: { value in
+                                        toggleCheck(categoryId, index)
+                                    }))
+                                    itemIndex += 1
+                                }
+                            }
+                        }
+                        
+                        if items.isEmpty {
+                            strongSelf.presentClearCacheSuggestion()
+                        } else {
+                            items.append(ActionSheetButtonItem(title: presentationData.strings.Cache_Clear("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0, action: {
+                                let clearCategories = sizeIndex.keys.filter({ sizeIndex[$0]!.0 })
+                                var clearMediaIds = Set<MediaId>()
+                                
+                                var media = stats.media
+                                if var categories = media[peerId] {
+                                    for category in clearCategories {
+                                        if let contents = categories[category] {
+                                            for (mediaId, _) in contents {
+                                                clearMediaIds.insert(mediaId)
+                                            }
+                                        }
+                                        categories.removeValue(forKey: category)
+                                    }
+                                    
+                                    media[peerId] = categories
+                                }
+//                                    if let additionalPeerId = additionalPeerId {
+//                                        if var categories = media[additionalPeerId] {
+//                                            for category in clearCategories {
+//                                                if let contents = categories[category] {
+//                                                    for (mediaId, _) in contents {
+//                                                        clearMediaIds.insert(mediaId)
+//                                                    }
+//                                                }
+//                                                categories.removeValue(forKey: category)
+//                                            }
+//
+//                                            media[additionalPeerId] = categories
+//                                        }
+//                                    }
+                                
+                                var clearResourceIds = Set<WrappedMediaResourceId>()
+                                for id in clearMediaIds {
+                                    if let ids = stats.mediaResourceIds[id] {
+                                        for resourceId in ids {
+                                            clearResourceIds.insert(WrappedMediaResourceId(resourceId))
+                                        }
+                                    }
+                                }
+                                
+                                var signal = clearCachedMediaResources(account: strongSelf.context.account, mediaResourceIds: clearResourceIds)
+                                
+                                let resultStats = CacheUsageStats(media: media, mediaResourceIds: stats.mediaResourceIds, peers: stats.peers, otherSize: stats.otherSize, otherPaths: stats.otherPaths, cacheSize: stats.cacheSize, tempPaths: stats.tempPaths, tempSize: stats.tempSize, immutableSize: stats.immutableSize)
+                                
+                                var cancelImpl: (() -> Void)?
+                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                                let progressSignal = Signal<Never, NoError> { subscriber in
+                                    let controller = OverlayStatusController(theme: presentationData.theme,  type: .loading(cancelled: {
+                                        cancelImpl?()
+                                    }))
+                                    strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                    return ActionDisposable { [weak controller] in
+                                        Queue.mainQueue().async() {
+                                            controller?.dismiss()
+                                        }
+                                    }
+                                }
+                                |> runOn(Queue.mainQueue())
+                                |> delay(0.15, queue: Queue.mainQueue())
+                                let progressDisposable = progressSignal.start()
+                                
+                                signal = signal
+                                |> afterDisposed {
+                                    Queue.mainQueue().async {
+                                        progressDisposable.dispose()
+                                    }
+                                }
+                                cancelImpl = {
+                                    clearDisposable.set(nil)
+                                }
+                                clearDisposable.set((signal
+                                |> deliverOnMainQueue).start(completed: {
+                                    
+                                    
+                                strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .succeed(text: presentationData.strings.ClearCache_Success("\(dataSizeString(totalSize, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0), elevatedLayout: false, action: { _ in }), in: .window(.root))
+                                }))
+
+                                dismissAction()
+                            }))
+                            
+                            controller.setItemGroups([
+                                ActionSheetItemGroup(items: items),
+                                ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
+                            ])
+                            strongSelf.chatDisplayNode.dismissInput()
+                            strongSelf.present(controller, in: .window(.root))
+                        }
+                    })
+                }))
+            }
         }
     }
     
@@ -7505,6 +7705,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
     }
     
+    private func presentClearCacheSuggestion() {
+        guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
+            return
+        }
+        self.updateChatPresentationInterfaceState(animated: true, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
+        
+        let actionSheet = ActionSheetController(presentationTheme: self.presentationData.theme)
+        var items: [ActionSheetItem] = []
+        
+        items.append(DeleteChatPeerActionSheetItem(context: self.context, peer: peer, chatPeer: peer, action: .clearCacheSuggestion, strings: self.presentationData.strings, nameDisplayOrder: self.presentationData.nameDisplayOrder))
+        
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ClearCache_FreeSpace, color: .accent, action: { [weak self, weak actionSheet] in
+           actionSheet?.dismissAnimated()
+            if let strongSelf = self {
+                let controller = storageUsageController(context: strongSelf.context, isModal: true)
+                strongSelf.present(controller, in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+           }
+        }))
+    
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+            ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                actionSheet?.dismissAnimated()
+                
+            })
+        ])])
+        self.chatDisplayNode.dismissInput()
+        self.present(actionSheet, in: .window(.root))
+    }
+    
     @available(iOSApplicationExtension 11.0, iOS 11.0, *)
     public func dropInteraction(_ interaction: UIDropInteraction, canHandle session: UIDropSession) -> Bool {
         return session.hasItemsConforming(toTypeIdentifiers: [kUTTypeImage as String])
@@ -7568,7 +7797,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else if let rect = rect {
             let tooltipController = TooltipController(content: .text(text))
             self.mediaRecordingModeTooltipController = tooltipController
-            tooltipController.dismissed = { [weak self, weak tooltipController] in
+            tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                 if let strongSelf = self, let tooltipController = tooltipController, strongSelf.mediaRecordingModeTooltipController === tooltipController {
                     strongSelf.mediaRecordingModeTooltipController = nil
                 }

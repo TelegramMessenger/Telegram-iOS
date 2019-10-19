@@ -89,6 +89,21 @@ final class WalletReceiveScreen: ViewController {
             }
             self?.push(walletCreateInvoiceScreen(context: strongSelf.context, address: strongSelf.mode.address))
         }
+        (self.displayNode as! WalletReceiveScreenNode).displayCopyContextMenu = { [weak self] node, frame, text in
+            guard let strongSelf = self else {
+                return
+            }
+            let contextMenuController = ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Wallet_ContextMenuCopy, accessibilityLabel: strongSelf.presentationData.strings.Wallet_ContextMenuCopy), action: {
+                UIPasteboard.general.string = text
+            })])
+            strongSelf.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                if let strongSelf = self {
+                    return (node, frame.insetBy(dx: 0.0, dy: -2.0), strongSelf.displayNode, strongSelf.displayNode.view.bounds)
+                } else {
+                    return nil
+                }
+            }))
+        }
         self.displayNodeDidLoad()
     }
     
@@ -120,7 +135,7 @@ final class WalletReceiveScreen: ViewController {
     }
 
     override func preferredContentSizeForLayout(_ layout: ContainerViewLayout) -> CGSize? {
-        return CGSize(width: layout.size.width, height: layout.size.height - 174.0)
+        return CGSize(width: layout.size.width, height: min(640.0, layout.size.height))
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -172,6 +187,7 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
     private let secondaryButtonNode: HighlightableButtonNode
     
     var openCreateInvoice: (() -> Void)?
+    var displayCopyContextMenu: ((ASDisplayNode, CGRect, String) -> Void)?
   
     init(context: WalletContext, presentationData: WalletPresentationData, mode: WalletReceiveScreenMode) {
         self.context = context
@@ -234,21 +250,16 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         }
         
         let textFont = Font.regular(16.0)
-        let addressFont = Font.monospace(17.0)
         let textColor = self.presentationData.theme.list.itemPrimaryTextColor
         let secondaryTextColor = self.presentationData.theme.list.itemSecondaryTextColor
         let url = urlForMode(self.mode)
         switch self.mode {
             case let .receive(address):
                 self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor)
-                self.urlTextNode.attributedText = NSAttributedString(string: formatAddress(url + " "), font: addressFont, textColor: textColor, paragraphAlignment: .justified)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareAddress
                 self.secondaryButtonNode.setTitle(self.presentationData.strings.Wallet_Receive_CreateInvoice, with: Font.regular(17.0), with: self.presentationData.theme.list.itemAccentColor, for: .normal)
             case let .invoice(address, amount, comment):
                 self.textNode.attributedText = NSAttributedString(string: self.presentationData.strings.Wallet_Receive_ShareUrlInfo, font: textFont, textColor: secondaryTextColor, paragraphAlignment: .center)
-                
-                let sliced = String(url.enumerated().map { $0 > 0 && $0 % 32 == 0 ? ["\n", $1] : [$1]}.joined())
-                self.urlTextNode.attributedText = NSAttributedString(string: sliced, font: addressFont, textColor: textColor, paragraphAlignment: .justified)
                 self.buttonNode.title = self.presentationData.strings.Wallet_Receive_ShareInvoiceUrl
         }
         
@@ -256,6 +267,32 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
             context.shareUrl(url)
         }
         self.secondaryButtonNode.addTarget(self, action: #selector(createInvoicePressed), forControlEvents: .touchUpInside)
+    }
+    
+    override func didLoad() {
+        super.didLoad()
+        
+        let addressGestureRecognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapAddressGesture(_:)))
+        addressGestureRecognizer.tapActionAtPoint = { [weak self] point in
+            return .waitForSingleTap
+        }
+        self.urlTextNode.view.addGestureRecognizer(addressGestureRecognizer)
+    }
+    
+    @objc func tapLongTapOrDoubleTapAddressGesture(_ recognizer: TapLongTapOrDoubleTapGestureRecognizer) {
+        switch recognizer.state {
+        case .ended:
+            if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
+                switch gesture {
+                case .longTap:
+                    self.displayCopyContextMenu?(self, self.urlTextNode.frame, urlForMode(self.mode))
+                default:
+                    break
+                }
+            }
+        default:
+            break
+        }
     }
     
     @objc private func qrPressed() {
@@ -292,6 +329,18 @@ private final class WalletReceiveScreenNode: ViewControllerTracingNode {
         self.qrIconNode.updateLayout(size: iconSize)
         transition.updateBounds(node: self.qrIconNode, bounds: CGRect(origin: CGPoint(), size: iconSize))
         transition.updatePosition(node: self.qrIconNode, position: imageFrame.center.offsetBy(dx: 0.0, dy: -1.0))
+        
+        if self.urlTextNode.attributedText?.string.isEmpty ?? true {
+            var url = urlForMode(self.mode)
+            if case .receive = self.mode {
+                url = url + "?"
+            }
+            let count = min(url.count / 2, Int(ceil(min(layout.size.width, layout.size.height) * 0.0853)))
+            let sliced = String(url.enumerated().map { $0 > 0 && $0 % count == 0 ? ["\n", $1] : [$1]}.joined())
+            
+            let addressFont = Font.monospace(17.0)
+            self.urlTextNode.attributedText = NSAttributedString(string: sliced, font: addressFont, textColor: self.presentationData.theme.list.itemPrimaryTextColor, paragraphAlignment: .justified)
+        }
         
         let urlTextSize = self.urlTextNode.updateLayout(CGSize(width: layout.size.width - inset * 2.0, height: CGFloat.greatestFiniteMagnitude))
         transition.updateFrame(node: self.urlTextNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - urlTextSize.width) / 2.0), y: imageFrame.maxY + 25.0), size: urlTextSize))

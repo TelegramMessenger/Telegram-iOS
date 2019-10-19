@@ -389,8 +389,9 @@ apple_binary(
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
     ],
     frameworks = [
-        "$SDKROOT/System/Library/Frameworks/UIKit.framework",
         "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+        "$SDKROOT/System/Library/Frameworks/Intents.framework",
+        "$SDKROOT/System/Library/Frameworks/Contacts.framework",
     ],
 )
 

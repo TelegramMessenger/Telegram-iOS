@@ -274,6 +274,7 @@ public func callFeedbackController(sharedContext: SharedAccountContext, account:
     
     
     let controller = ItemListController(sharedContext: sharedContext, state: signal)
+    controller.navigationPresentation = .modal
     presentControllerImpl = { [weak controller] c in
         controller?.present(c, in: .window(.root))
     }
