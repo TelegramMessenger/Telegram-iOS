@@ -824,31 +824,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                     
-                    func foldLineBreaks(_ text: String, allowTwoLines: Bool) -> String {
-                        var lines = text.split { $0.isNewline }
-                        var startedBothLines = false
-                        var result = ""
-                        for line in lines {
-                            if result.isEmpty {
-                                result += line
-                            } else {
-                                if allowTwoLines && !startedBothLines {
-                                    result += "\n" + line
-                                    startedBothLines = true
-                                } else {
-                                    result += " " + line
-                                }
-                            }
-                        }
-                        return result
-                    }
-                    
                     let messageText: String
                     if let currentChatListText = currentChatListText, currentChatListText.0 == text {
                         messageText = currentChatListText.1
                         chatListText = currentChatListText
                     } else {
-                        messageText = foldLineBreaks(text, allowTwoLines: peerText == nil)
+                        messageText = foldLineBreaks(text)
                         chatListText = (text, messageText)
                     }
                     
@@ -856,7 +837,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         hasDraft = true
                         authorAttributedString = NSAttributedString(string: item.presentationData.strings.DialogList_Draft, font: textFont, textColor: theme.messageDraftTextColor)
                         
-                        attributedText = NSAttributedString(string: foldLineBreaks(embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " "), allowTwoLines: false), font: textFont, textColor: theme.messageTextColor)
+                        attributedText = NSAttributedString(string: foldLineBreaks(embeddedState.text.string.replacingOccurrences(of: "\n\n", with: " ")), font: textFont, textColor: theme.messageTextColor)
                     } else if let message = message {
                         let composedString: NSMutableAttributedString
                         if let inlineAuthorPrefix = inlineAuthorPrefix {
@@ -1837,4 +1818,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             self.revealOptionSelected(ItemListRevealOption(key: action.key, title: "", icon: .none, color: .black, textColor: .white), animated: false)
         }
     }
+}
+
+private func foldLineBreaks(_ text: String) -> String {
+    var lines = text.split { $0.isNewline }
+    var startedBothLines = false
+    var result = ""
+    for line in lines {
+        if line.isEmpty {
+            continue
+        }
+        if result.isEmpty {
+            result += line
+        } else {
+            result += " " + line
+        }
+    }
+    return result
 }
