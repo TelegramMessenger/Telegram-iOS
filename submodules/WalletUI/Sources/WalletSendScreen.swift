@@ -370,11 +370,15 @@ public func walletSendScreen(context: WalletContext, randomId: Int64, walletInfo
             
             let feeAmount = fees.inFwdFee + fees.storageFee + fees.gasFee + fees.fwdFee
             
-            let text = presentationData.strings.Wallet_Send_ConfirmationText(formatBalanceText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), formattedAddress, "\(formatBalanceText(feeAmount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))").0
+            let (text, ranges) = presentationData.strings.Wallet_Send_ConfirmationText(formatBalanceText(amount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator), formattedAddress, "\(formatBalanceText(feeAmount, decimalSeparator: presentationData.dateTimeFormat.decimalSeparator))")
             let bodyAttributes = MarkdownAttributeSet(font: Font.regular(13.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             let boldAttributes = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: bodyAttributes, bold: boldAttributes, link: bodyAttributes, linkAttribute: { _ in return nil }), textAlignment: .center))
-            attributedText.addAttribute(.font, value: Font.monospace(14.0), range: NSMakeRange(attributedText.string.count - formattedAddress.count - 1, formattedAddress.count))
+            for (index, range) in ranges {
+                if index == 1 {
+                    attributedText.addAttribute(.font, value: Font.monospace(14.0), range: range)
+                }
+            }
             
             var dismissAlertImpl: ((Bool) -> Void)?
             let theme = context.presentationData.theme
