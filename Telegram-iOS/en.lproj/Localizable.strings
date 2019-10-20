@@ -4638,12 +4638,12 @@ Any member of this group will be able to see messages in the channel.";
 
 "Conversation.SendMessage.SetReminder" = "Set a Reminder";
 
-"Conversation.SelectedMessages_1" = "%@ Message Selected";
-"Conversation.SelectedMessages_2" = "%@ Messages Selected";
-"Conversation.SelectedMessages_3_10" = "%@ Messages Selected";
-"Conversation.SelectedMessages_any" = "%@ Messages Selected";
-"Conversation.SelectedMessages_many" = "%@ Messages Selected";
-"Conversation.SelectedMessages_0" = "%@ Messages Selected";
+"Conversation.SelectedMessages_1" = "%@ Selected";
+"Conversation.SelectedMessages_2" = "%@ Selected";
+"Conversation.SelectedMessages_3_10" = "%@ Selected";
+"Conversation.SelectedMessages_any" = "%@ Selected";
+"Conversation.SelectedMessages_many" = "%@ Selected";
+"Conversation.SelectedMessages_0" = "%@ Selected";
 
 "AccentColor.Title" = "Accent Color";
 

@@ -519,6 +519,7 @@ public class PeerMediaCollectionController: TelegramBaseController {
         }, displaySlowmodeTooltip: { _, _ in
         }, displaySendMessageOptions: {
         }, openScheduledMessages: {
+        }, displaySearchResultsTooltip: { _, _ in
         }, statuses: nil)
         
         self.updateInterfaceState(animated: false, { return $0 })

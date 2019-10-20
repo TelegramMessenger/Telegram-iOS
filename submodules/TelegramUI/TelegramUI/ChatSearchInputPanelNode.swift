@@ -5,6 +5,7 @@ import Display
 import TelegramCore
 import Postbox
 import SwiftSignalKit
+import TelegramNotices
 import TelegramPresentationData
 import ActivityIndicator
 
@@ -23,6 +24,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     private let activityDisposable = MetaDisposable()
     private var displayActivity = false
+    
+    private var needsSearchResultsTooltip = true
     
     private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, LayoutMetrics)?
     
@@ -79,6 +82,26 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     @objc func upPressed() {
         self.interfaceInteraction?.navigateMessageSearch(.earlier)
+        
+        guard self.needsSearchResultsTooltip, let context = self.context else {
+            return
+        }
+        
+        let _ = (ApplicationSpecificNotice.getChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager)
+        |> deliverOnMainQueue).start(next: { [weak self] counter in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if counter >= 3 {
+                strongSelf.needsSearchResultsTooltip = false
+            } else if arc4random_uniform(4) == 1 {
+                strongSelf.needsSearchResultsTooltip = false
+                
+                let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager).start()
+                strongSelf.interfaceInteraction?.displaySearchResultsTooltip(strongSelf.resultsButton, strongSelf.resultsButton.bounds)
+            }
+        })
     }
     
     @objc func downPressed() {
@@ -95,6 +118,10 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     @objc func resultsPressed() {
         self.interfaceInteraction?.openSearchResults()
+        
+        if let context = self.context {
+            let _ = ApplicationSpecificNotice.incrementChatMessageSearchResultsTip(accountManager: context.sharedContext.accountManager, count: 4).start()
+        }
     }
     
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, maxHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {

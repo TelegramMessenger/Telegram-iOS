@@ -265,6 +265,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var raiseToListen: RaiseToListenManager?
     private var voicePlaylistDidEndTimestamp: Double = 0.0
     
+    private weak var searchResultsTooltipController: TooltipController?
     private weak var messageTooltipController: TooltipController?
     private weak var videoUnmuteTooltipController: TooltipController?
     private weak var silentPostTooltipController: TooltipController?
@@ -1522,9 +1523,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.context.sharedContext.applicationBindings.openAppStorePage()
             }
-        }, displayMessageTooltip: { [weak self] messageId, text, sourceNode, sourceFrame in
+        }, displayMessageTooltip: { [weak self] messageId, text, node, nodeRect in
             if let strongSelf = self {
-                if let sourceNode = sourceNode {
+                if let node = node {
                     strongSelf.messageTooltipController?.dismiss()
                     let tooltipController = TooltipController(content: .text(text), dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
                     strongSelf.messageTooltipController = tooltipController
@@ -1535,9 +1536,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
                         if let strongSelf = self {
-                            var rect = sourceNode.view.convert(sourceNode.view.bounds, to: strongSelf.chatDisplayNode.view)
-                            if let sourceFrame = sourceFrame {
-                                rect = CGRect(origin: rect.origin.offsetBy(dx: sourceFrame.minX, dy: sourceFrame.minY - sourceNode.bounds.minY), size: sourceFrame.size)
+                            var rect = node.view.convert(node.view.bounds, to: strongSelf.chatDisplayNode.view)
+                            if let nodeRect = nodeRect {
+                                rect = CGRect(origin: rect.origin.offsetBy(dx: nodeRect.minX, dy: nodeRect.minY - node.bounds.minY), size: nodeRect.size)
                             }
                             return (strongSelf.chatDisplayNode, rect)
                         }
@@ -4088,6 +4089,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self {
                 strongSelf.openScheduledMessages()
             }
+        }, displaySearchResultsTooltip: { [weak self] node, nodeRect in
+            if let strongSelf = self {
+                strongSelf.searchResultsTooltipController?.dismiss()
+                let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.ChatSearch_ResultsTooltip), dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true)
+                strongSelf.searchResultsTooltipController = tooltipController
+                tooltipController.dismissed = { [weak tooltipController] _ in
+                    if let strongSelf = self, let tooltipController = tooltipController, strongSelf.searchResultsTooltipController === tooltipController {
+                        strongSelf.searchResultsTooltipController = nil
+                    }
+                }
+                strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: {
+                    if let strongSelf = self {
+                        var rect = node.view.convert(node.view.bounds, to: strongSelf.chatDisplayNode.view)
+                        rect = CGRect(origin: rect.origin.offsetBy(dx: nodeRect.minX, dy: nodeRect.minY - node.bounds.minY), size: nodeRect.size)
+                        return (strongSelf.chatDisplayNode, rect)
+                    }
+                    return nil
+                }))
+           }
         }, statuses: ChatPanelInterfaceInteractionStatuses(editingMessage: self.editingMessage.get(), startingBot: self.startingBot.get(), unblockingPeer: self.unblockingPeer.get(), searching: self.searching.get(), loadingMessage: self.loadingMessage.get()))
         
         switch self.chatLocation {
@@ -7817,6 +7837,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func dismissAllTooltips() {
+        self.searchResultsTooltipController?.dismiss()
         self.messageTooltipController?.dismiss()
         self.videoUnmuteTooltipController?.dismiss()
         self.silentPostTooltipController?.dismiss()
