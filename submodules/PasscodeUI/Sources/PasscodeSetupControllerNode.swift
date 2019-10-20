@@ -146,7 +146,7 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         
         self.wrapperNode.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)
         
-        let inputFieldFrame = self.inputFieldNode.updateLayout(layout: layout, topOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 24.0) / 2.0), transition: transition)
+        let inputFieldFrame = self.inputFieldNode.updateLayout(size: layout.size, topOffset: floor(insets.top + navigationBarHeight + (layout.size.height - navigationBarHeight - insets.top - insets.bottom - 24.0) / 2.0), transition: transition)
         transition.updateFrame(node: self.inputFieldNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         transition.updateFrame(node: self.inputFieldBackgroundNode, frame: CGRect(x: 0.0, y: inputFieldFrame.minY - 6.0, width: layout.size.width, height: 48.0))
