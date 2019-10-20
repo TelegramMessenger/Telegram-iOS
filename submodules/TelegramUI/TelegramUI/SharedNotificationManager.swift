@@ -118,7 +118,7 @@ public final class SharedNotificationManager {
         }
     }
     
-    private func beginPollingState(account: Account) {
+    func beginPollingState(account: Account) {
         let accountId = account.id
         let context: PollStateContext
         if let current = self.pollStateContexts[accountId] {

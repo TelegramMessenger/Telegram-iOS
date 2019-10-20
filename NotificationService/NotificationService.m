@@ -3,6 +3,10 @@
 #import <UIKit/UIKit.h>
 #import <BuildConfig/BuildConfig.h>
 
+#ifdef __IPHONE_13_0
+#import <BackgroundTasks/BackgroundTasks.h>
+#endif
+
 #import "StoredAccountInfos.h"
 #import "Attachments.h"
 #import "Api.h"
@@ -64,10 +68,17 @@ static int64_t makePeerId(int32_t namespace, int32_t value) {
 }
 
 - (void)completeWithContent:(UNNotificationContent * _Nonnull)content {
-    /*NSURLSessionConfiguration *configuration = [NSURLSessionConfiguration backgroundSessionConfigurationWithIdentifier:@"org.telegram.Telegram-iOS.background"];
-    NSURLSession *session = [NSURLSession sessionWithConfiguration:configuration];
-    NSURLSessionDownloadTask *task = [session downloadTaskWithURL:[NSURL URLWithString:@"https://telegram.org"]];
-    [task resume];*/
+    #ifdef __IPHONE_13_0
+    if (_baseAppBundleId != nil) {
+        BGAppRefreshTaskRequest *request = [[BGAppRefreshTaskRequest alloc] initWithIdentifier:[_baseAppBundleId stringByAppendingString:@".refresh"]];
+        request.earliestBeginDate = nil;
+        NSError *error = nil;
+        [[BGTaskScheduler sharedScheduler] submitTaskRequest:request error:&error];
+        if (error != nil) {
+            NSLog(@"Error: %@", error);
+        }
+    }
+    #endif
     
     if (_contentHandler) {
         _contentHandler(content);

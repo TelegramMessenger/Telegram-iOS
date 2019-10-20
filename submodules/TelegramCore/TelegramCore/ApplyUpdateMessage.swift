@@ -57,12 +57,12 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         var updatedTimestamp: Int32?
         if let apiMessage = apiMessage {
             switch apiMessage {
-                case let .message(_, _, _, _, _, _, _, date, _, _, _, _, _, _, _, _, _):
-                    updatedTimestamp = date
+                case let .message(message):
+                    updatedTimestamp = message.date
                 case .messageEmpty:
                     break
-                case let .messageService(_, _, _, _, _, date, _):
-                    updatedTimestamp = date
+                case let .messageService(messageService):
+                    updatedTimestamp = messageService.date
             }
         } else {
             switch result {
