@@ -179,7 +179,7 @@ const CGFloat TGLocationMapInset = 100.0f;
         return;
     
     [self updateMapHeightAnimated:false];
-    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f - self.controllerSafeAreaInset.right, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
+    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f - self.controllerSafeAreaInset.right, 56.0f + 6.0f, 45.0f, 90.0f);
     _tableView.contentOffset = CGPointMake(0.0f, -_tableViewTopInset - self.controllerInset.top);
 }
 
@@ -259,7 +259,7 @@ const CGFloat TGLocationMapInset = 100.0f;
         [scrollView setContentOffset:contentOffset animated:false];
     }
     
-    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, self.controllerInset.top + 6.0f, 45.0f, 90.0f);
+    _optionsView.frame = CGRectMake(self.view.bounds.size.width - 45.0f - 6.0f, 56.0f + 6.0f, 45.0f, 90.0f);
 }
 
 - (NSInteger)tableView:(UITableView *)__unused tableView numberOfRowsInSection:(NSInteger)__unused section

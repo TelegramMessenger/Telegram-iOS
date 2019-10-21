@@ -179,13 +179,13 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
     [self.navigationController.view addSubview:_searchBarOverlay];
     
     CGFloat safeAreaInset = self.controllerSafeAreaInset.top > FLT_EPSILON ? self.controllerSafeAreaInset.top : 0.0f;
-    _searchBarWrapper = [[UIView alloc] initWithFrame:CGRectMake(0, -44 - safeAreaInset, self.navigationController.view.frame.size.width, 44 + safeAreaInset)];
+    _searchBarWrapper = [[UIView alloc] initWithFrame:CGRectMake(0, -44.0f, self.navigationController.view.frame.size.width, 44.0f)];
     _searchBarWrapper.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     _searchBarWrapper.backgroundColor = self.pallete != nil ? self.pallete.backgroundColor : [UIColor whiteColor];
     _searchBarWrapper.hidden = true;
     [self.navigationController.view addSubview:_searchBarWrapper];
     
-    _searchBar = [[TGSearchBar alloc] initWithFrame:CGRectMake(0.0f, safeAreaInset, _searchBarWrapper.frame.size.width, [TGSearchBar searchBarBaseHeight]) style:TGSearchBarStyleHeader];
+    _searchBar = [[TGSearchBar alloc] initWithFrame:CGRectMake(0.0f, 0.0f, _searchBarWrapper.frame.size.width, [TGSearchBar searchBarBaseHeight]) style:TGSearchBarStyleHeader];
     if (self.pallete != nil)
         [_searchBar setPallete:self.pallete.searchBarPallete];
     _searchBar.autoresizingMask = UIViewAutoresizingFlexibleWidth;
@@ -808,10 +808,7 @@ const CGPoint TGLocationPickerPinOffset = { 0.0f, 33.0f };
         }
         else
         {
-            frame.origin.y = 0;
-            if (self.navigationController.modalPresentationStyle == UIModalPresentationFormSheet)
-                frame.origin.y -= 20;
-            
+            frame.origin.y = 0;            
             _searchBarOverlay.alpha = 1.0f;
         }
         _searchBarWrapper.frame = frame;
