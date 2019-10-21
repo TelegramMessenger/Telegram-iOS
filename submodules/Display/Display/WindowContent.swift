@@ -1229,7 +1229,11 @@ public class Window1 {
     }
     
     private func collectScreenEdgeGestures() -> UIRectEdge {
-        var edges = self.presentationContext.combinedDeferScreenEdgeGestures()
+        var edges: UIRectEdge = []
+        if let navigationController = self._rootController as? NavigationController, let overlayController = navigationController.topOverlayController {
+            edges = edges.union(overlayController.deferScreenEdgeGestures)
+        }
+        edges = edges.union(self.presentationContext.combinedDeferScreenEdgeGestures())
         
         for controller in self.topLevelOverlayControllers {
             if let controller = controller as? ViewController {
