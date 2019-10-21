@@ -426,13 +426,21 @@ final class PasscodeEntryControllerNode: ASDisplayNode {
         transition.updateFrame(node: self.deleteButtonNode, frame: CGRect(origin: CGPoint(x: floor(keyboardFrame.maxX - keyboardButtonSize.width / 2.0 - deleteSize.width / 2.0), y: bottomButtonY), size: deleteSize))
         
         if let biometricIcon = self.biometricButtonNode.image(for: .normal) {
+            var biometricX = layout.safeInsets.left + floor((layoutSize.width - biometricIcon.size.width) / 2.0)
             var biometricY: CGFloat = 0.0
-            if bottomInset > 0 && keyboardHidden {
-                biometricY = inputFieldFrame.maxY + floor((layout.size.height - bottomInset - inputFieldFrame.maxY - biometricIcon.size.height) / 2.0)
+            if isLandscape {
+                if bottomInset > 0 && keyboardHidden {
+                    biometricX = cancelX + cancelSize.width + 64.0
+                }
+                biometricY = cancelY + floor((cancelSize.height - biometricIcon.size.height) / 2.0)
             } else {
-                biometricY = keyboardFrame.maxY + passcodeLayout.keyboard.biometricsOffset
+                if bottomInset > 0 && keyboardHidden {
+                    biometricY = inputFieldFrame.maxY + floor((layout.size.height - bottomInset - inputFieldFrame.maxY - biometricIcon.size.height) / 2.0)
+                } else {
+                    biometricY = keyboardFrame.maxY + passcodeLayout.keyboard.biometricsOffset
+                }
             }
-            transition.updateFrame(node: self.biometricButtonNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - biometricIcon.size.width) / 2.0), y: biometricY), size: biometricIcon.size))
+            transition.updateFrame(node: self.biometricButtonNode, frame: CGRect(origin: CGPoint(x: biometricX, y: biometricY), size: biometricIcon.size))
         }
     }
 }
